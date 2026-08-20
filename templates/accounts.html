@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block titel %}Accounts{% endblock %}
+{% block inhoud %}
+<h1>Accounts</h1>
+<p class="subtitel">Beheer wie kan inloggen op dit systeem.</p>
+
+<div class="kaart">
+    <h2>Bestaande accounts</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Naam</th><th>Aangemaakt op</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for g in gebruikers %}
+                <tr>
+                    <td>{{ g.naam }}{% if g.naam == huidige_gebruiker %} <span class="tekst-zacht">(jij)</span>{% endif %}</td>
+                    <td>{{ g.aangemaakt_op|datum_nl }}</td>
+                    <td class="tabel-acties">
+                        <form method="post" action="{{ url_for('account_verwijderen', gebruiker_id=g.id) }}"
+                              onsubmit="return confirm('Account \'{{ g.naam }}\' verwijderen?');">
+                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="kaart">
+    <h2>Nieuw account aanmaken</h2>
+    <form method="post" action="{{ url_for('account_nieuw') }}">
+        <div class="formgrid">
+            <div class="veld">
+                <label for="naam">Naam</label>
+                <input type="text" id="naam" name="naam" required>
+            </div>
+            <div class="veld">
+                <label for="wachtwoord">Wachtwoord</label>
+                <input type="password" id="wachtwoord" name="wachtwoord" required minlength="4">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-geel">Account aanmaken</button>
+    </form>
+</div>
+{% endblock %}

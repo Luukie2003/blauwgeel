@@ -28,6 +28,13 @@ CREATE TABLE IF NOT EXISTS bestelregels (
     aantal_ontvangen INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS gebruikers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    naam TEXT NOT NULL UNIQUE,
+    wachtwoord_hash TEXT NOT NULL,
+    aangemaakt_op TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS tellingen (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     datum TEXT NOT NULL,

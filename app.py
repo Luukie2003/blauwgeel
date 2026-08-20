@@ -1,12 +1,26 @@
+import secrets
 from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, Response, flash, redirect, render_template, request, url_for
+from flask import (
+    Flask,
+    Response,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from database import get_db, init_db, register_db
 from pdf import bestellijst_pdf, verkoop_pdf
 
 BASE_DIR = Path(__file__).parent
+SECRET_KEY_PATH = BASE_DIR / "secret_key.txt"
+
+OPEN_ENDPOINTS = {"login", "static"}
 
 NAV_ITEMS = [
     {
@@ -42,15 +56,31 @@ NAV_ITEMS = [
 ]
 
 
+def get_secret_key():
+    if SECRET_KEY_PATH.exists():
+        return SECRET_KEY_PATH.read_text().strip()
+    key = secrets.token_hex(32)
+    SECRET_KEY_PATH.write_text(key)
+    return key
+
+
 def create_app():
     app = Flask(__name__)
     app.config["DATABASE"] = str(BASE_DIR / "voorraad.db")
-    app.config["SECRET_KEY"] = "kantine-voorraad-dev-key"
+    app.config["SECRET_KEY"] = get_secret_key()
 
     register_db(app)
     init_db(app)
 
     app.jinja_env.filters["datum_nl"] = format_datum
+
+    @app.before_request
+    def vereis_login():
+        if request.endpoint in OPEN_ENDPOINTS or request.endpoint is None:
+            return None
+        if "gebruiker_id" not in session:
+            return redirect(url_for("login", next=request.path))
+        return None
 
     @app.context_processor
     def inject_nav():
@@ -58,7 +88,11 @@ def create_app():
             (item for item in NAV_ITEMS if request.endpoint in item["endpoints"]),
             None,
         )
-        return {"nav_items": NAV_ITEMS, "actieve_nav": actieve_nav}
+        return {
+            "nav_items": NAV_ITEMS,
+            "actieve_nav": actieve_nav,
+            "huidige_gebruiker": session.get("gebruiker_naam"),
+        }
 
     register_routes(app)
     return app
@@ -76,6 +110,113 @@ def now_str():
 
 
 def register_routes(app):
+    # ---------- Inloggen / accounts ----------
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if "gebruiker_id" in session:
+            return redirect(url_for("dashboard"))
+
+        if request.method == "POST":
+            naam = request.form.get("naam", "").strip()
+            wachtwoord = request.form.get("wachtwoord", "")
+            db = get_db()
+            gebruiker = db.execute(
+                "SELECT * FROM gebruikers WHERE naam = ?", (naam,)
+            ).fetchone()
+            if gebruiker and check_password_hash(gebruiker["wachtwoord_hash"], wachtwoord):
+                session.clear()
+                session["gebruiker_id"] = gebruiker["id"]
+                session["gebruiker_naam"] = gebruiker["naam"]
+                volgende = request.args.get("next") or url_for("dashboard")
+                return redirect(volgende)
+            flash("Onjuiste naam of wachtwoord.", "error")
+
+        return render_template("login.html")
+
+    @app.route("/logout")
+    def logout():
+        session.clear()
+        flash("Je bent uitgelogd.", "success")
+        return redirect(url_for("login"))
+
+    @app.route("/accounts")
+    def accounts_lijst():
+        db = get_db()
+        gebruikers = db.execute(
+            "SELECT id, naam, aangemaakt_op FROM gebruikers ORDER BY naam"
+        ).fetchall()
+        return render_template("accounts.html", gebruikers=gebruikers)
+
+    @app.route("/accounts/nieuw", methods=["POST"])
+    def account_nieuw():
+        naam = request.form.get("naam", "").strip()
+        wachtwoord = request.form.get("wachtwoord", "")
+        db = get_db()
+
+        if not naam or not wachtwoord:
+            flash("Naam en wachtwoord zijn verplicht.", "error")
+        elif len(wachtwoord) < 4:
+            flash("Wachtwoord moet minstens 4 tekens zijn.", "error")
+        elif db.execute("SELECT id FROM gebruikers WHERE naam = ?", (naam,)).fetchone():
+            flash(f"Er bestaat al een account met de naam '{naam}'.", "error")
+        else:
+            db.execute(
+                "INSERT INTO gebruikers (naam, wachtwoord_hash, aangemaakt_op) VALUES (?, ?, ?)",
+                (naam, generate_password_hash(wachtwoord, method="pbkdf2:sha256"), now_str()),
+            )
+            db.commit()
+            flash(f"Account '{naam}' aangemaakt.", "success")
+        return redirect(url_for("accounts_lijst"))
+
+    @app.route("/accounts/<int:gebruiker_id>/verwijderen", methods=["POST"])
+    def account_verwijderen(gebruiker_id):
+        db = get_db()
+        aantal = db.execute("SELECT COUNT(*) AS n FROM gebruikers").fetchone()["n"]
+        if aantal <= 1:
+            flash("Je kunt het laatste account niet verwijderen.", "error")
+        elif gebruiker_id == session.get("gebruiker_id"):
+            flash("Je kunt je eigen account niet verwijderen terwijl je bent ingelogd.", "error")
+        else:
+            db.execute("DELETE FROM gebruikers WHERE id = ?", (gebruiker_id,))
+            db.commit()
+            flash("Account verwijderd.", "success")
+        return redirect(url_for("accounts_lijst"))
+
+    @app.route("/account/wachtwoord", methods=["GET", "POST"])
+    def account_wachtwoord():
+        if request.method == "POST":
+            huidig = request.form.get("huidig_wachtwoord", "")
+            nieuw = request.form.get("nieuw_wachtwoord", "")
+            nieuw_herhaald = request.form.get("nieuw_wachtwoord_herhaald", "")
+            db = get_db()
+            gebruiker = db.execute(
+                "SELECT * FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)
+            ).fetchone()
+
+            if not check_password_hash(gebruiker["wachtwoord_hash"], huidig):
+                flash("Huidig wachtwoord is onjuist.", "error")
+            elif len(nieuw) < 4:
+                flash("Nieuw wachtwoord moet minstens 4 tekens zijn.", "error")
+            elif nieuw != nieuw_herhaald:
+                flash("Nieuwe wachtwoorden komen niet overeen.", "error")
+            else:
+                db.execute(
+                    "UPDATE gebruikers SET wachtwoord_hash = ? WHERE id = ?",
+                    (generate_password_hash(nieuw, method="pbkdf2:sha256"), gebruiker["id"]),
+                )
+                db.commit()
+                flash("Wachtwoord gewijzigd.", "success")
+                return redirect(url_for("dashboard"))
+
+        return render_template("account_wachtwoord.html")
+
+    @app.route("/help")
+    def help_pagina():
+        return render_template("help.html")
+
+    # ---------- Overzicht ----------
+
     @app.route("/")
     def dashboard():
         db = get_db()

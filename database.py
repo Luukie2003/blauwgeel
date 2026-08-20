@@ -1,9 +1,14 @@
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 from flask import current_app, g
+from werkzeug.security import generate_password_hash
 
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
+
+STANDAARD_GEBRUIKER = "admin"
+STANDAARD_WACHTWOORD = "kantine123"
 
 SEED_PRODUCTEN = [
     # (naam, categorie, eenheid, voorraad, min_voorraad, bestel_hoeveelheid, verkoopprijs)
@@ -68,6 +73,18 @@ def init_db(app):
                    (naam, categorie, eenheid, voorraad, min_voorraad, bestel_hoeveelheid, verkoopprijs)
                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 SEED_PRODUCTEN,
+            )
+            db.commit()
+
+        gebruikers_count = db.execute("SELECT COUNT(*) AS n FROM gebruikers").fetchone()["n"]
+        if gebruikers_count == 0:
+            db.execute(
+                "INSERT INTO gebruikers (naam, wachtwoord_hash, aangemaakt_op) VALUES (?, ?, ?)",
+                (
+                    STANDAARD_GEBRUIKER,
+                    generate_password_hash(STANDAARD_WACHTWOORD, method="pbkdf2:sha256"),
+                    datetime.now().strftime("%Y-%m-%d %H:%M"),
+                ),
             )
             db.commit()
 

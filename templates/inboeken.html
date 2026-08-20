@@ -33,7 +33,7 @@
         </div>
         <div class="veld" style="max-width:300px; margin-top:1rem">
             <label for="naam">Naam (wie boekt dit in)</label>
-            <input type="text" id="naam" name="naam" placeholder="Bijv. Luuk">
+            <input type="text" id="naam" name="naam" value="{{ huidige_gebruiker }}">
         </div>
         <button type="submit" class="btn btn-geel">
             {{ 'Aanpassing opslaan' if is_bewerken else 'Inboeken en voorraad bijwerken' }}

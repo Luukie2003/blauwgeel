@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titel %}Wachtwoord wijzigen{% endblock %}
+{% block inhoud %}
+<h1>Wachtwoord wijzigen</h1>
+<p class="subtitel">Ingelogd als {{ huidige_gebruiker }}.</p>
+
+<div class="kaart" style="max-width:420px">
+    <form method="post">
+        <div class="veld">
+            <label for="huidig_wachtwoord">Huidig wachtwoord</label>
+            <input type="password" id="huidig_wachtwoord" name="huidig_wachtwoord" required>
+        </div>
+        <div class="veld">
+            <label for="nieuw_wachtwoord">Nieuw wachtwoord</label>
+            <input type="password" id="nieuw_wachtwoord" name="nieuw_wachtwoord" required minlength="4">
+        </div>
+        <div class="veld">
+            <label for="nieuw_wachtwoord_herhaald">Nieuw wachtwoord (herhalen)</label>
+            <input type="password" id="nieuw_wachtwoord_herhaald" name="nieuw_wachtwoord_herhaald" required minlength="4">
+        </div>
+        <button type="submit" class="btn btn-geel">Wachtwoord wijzigen</button>
+    </form>
+</div>
+{% endblock %}

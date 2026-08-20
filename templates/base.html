@@ -11,11 +11,53 @@
         <span>Kantine Voorraadbeheer{% if actieve_nav %} &mdash; [{{ actieve_nav.label }}]{% endif %}</span>
     </div>
     <div class="app-menubalk">
-        <span>Bestand</span>
-        <span>Beeld</span>
-        <span>Actie</span>
-        <span>Help</span>
+        <div class="menu-item">
+            <button type="button" class="menu-trigger">Bestand</button>
+            <div class="menu-dropdown">
+                <a href="{{ url_for('bestellijst_pdf_route') }}">Bestellijst downloaden (PDF)</a>
+                <div class="menu-scheiding"></div>
+                <a href="{{ url_for('logout') }}">Uitloggen</a>
+            </div>
+        </div>
+        <div class="menu-item">
+            <button type="button" class="menu-trigger">Beeld</button>
+            <div class="menu-dropdown">
+                <a href="{{ url_for('dashboard') }}">Overzicht</a>
+                <a href="{{ url_for('producten_lijst') }}">Producten</a>
+                <a href="{{ url_for('geschiedenis') }}">Geschiedenis</a>
+            </div>
+        </div>
+        <div class="menu-item">
+            <button type="button" class="menu-trigger">Accounts</button>
+            <div class="menu-dropdown">
+                <span class="menu-label">Ingelogd als {{ huidige_gebruiker }}</span>
+                <div class="menu-scheiding"></div>
+                <a href="{{ url_for('account_wachtwoord') }}">Wachtwoord wijzigen</a>
+                <a href="{{ url_for('accounts_lijst') }}">Accounts beheren</a>
+                <div class="menu-scheiding"></div>
+                <a href="{{ url_for('logout') }}">Uitloggen</a>
+            </div>
+        </div>
+        <div class="menu-item">
+            <button type="button" class="menu-trigger">Help</button>
+            <div class="menu-dropdown">
+                <a href="{{ url_for('help_pagina') }}">Over deze app</a>
+            </div>
+        </div>
     </div>
+    <script>
+        document.addEventListener("click", function (e) {
+            var trigger = e.target.closest(".menu-trigger");
+            document.querySelectorAll(".menu-item.open").forEach(function (item) {
+                if (!trigger || item !== trigger.closest(".menu-item")) {
+                    item.classList.remove("open");
+                }
+            });
+            if (trigger) {
+                trigger.closest(".menu-item").classList.toggle("open");
+            }
+        });
+    </script>
     <div class="app-layout">
         <nav class="app-zijbalk">
             <div class="zijbalk-kop">Navigatie</div>

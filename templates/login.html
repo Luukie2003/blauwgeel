@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inloggen · Kantine Voorraadbeheer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-body">
+    <div class="login-wrap">
+        <div class="login-venster">
+            <div class="app-titelbalk">
+                <span>Kantine Voorraadbeheer — Aanmelden</span>
+            </div>
+            <div class="login-inhoud">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="flashes">
+                            {% for category, message in messages %}
+                                <div class="flash flash-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+                <form method="post">
+                    <div class="veld">
+                        <label for="naam">Gebruikersnaam</label>
+                        <input type="text" id="naam" name="naam" autofocus required>
+                    </div>
+                    <div class="veld">
+                        <label for="wachtwoord">Wachtwoord</label>
+                        <input type="password" id="wachtwoord" name="wachtwoord" required>
+                    </div>
+                    <button type="submit" class="btn btn-geel login-btn">Aanmelden</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
