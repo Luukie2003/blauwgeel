@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from flask import (
@@ -15,7 +15,7 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database import get_db, init_db, register_db
-from pdf import bestellijst_pdf, verkoop_pdf
+from pdf import bestellijst_pdf, periode_verkoop_pdf, verkoop_pdf
 
 BASE_DIR = Path(__file__).parent
 SECRET_KEY_PATH = BASE_DIR / "secret_key.txt"
@@ -629,6 +629,41 @@ def register_routes(app):
             mimetype="application/pdf",
             headers={
                 "Content-Disposition": f"attachment; filename=verkooprapport-telling-{telling_id}.pdf"
+            },
+        )
+
+    @app.route("/verkooprapport")
+    def verkooprapport():
+        van = request.args.get("van") or (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        tot = request.args.get("tot") or datetime.now().strftime("%Y-%m-%d")
+        return render_template("verkooprapport.html", van=van, tot=tot)
+
+    @app.route("/verkooprapport/pdf")
+    def verkooprapport_pdf_route():
+        van = request.args.get("van", "").strip() or (
+            datetime.now() - timedelta(days=7)
+        ).strftime("%Y-%m-%d")
+        tot = request.args.get("tot", "").strip() or datetime.now().strftime("%Y-%m-%d")
+
+        db = get_db()
+        regels = db.execute(
+            """SELECT p.naam AS product_naam, p.categorie, p.eenheid, p.verkoopprijs,
+                      SUM(tr.verkocht) AS verkocht, SUM(tr.correctie) AS correctie
+               FROM telling_regels tr
+               JOIN tellingen t ON t.id = tr.telling_id
+               JOIN producten p ON p.id = tr.product_id
+               WHERE t.datum >= ? AND t.datum <= ?
+               GROUP BY tr.product_id
+               ORDER BY p.categorie, p.naam""",
+            (f"{van} 00:00", f"{tot} 23:59"),
+        ).fetchall()
+
+        pdf_bytes = periode_verkoop_pdf(format_datum(f"{van} 00:00"), format_datum(f"{tot} 23:59"), regels)
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=verkooprapport-{van}-tot-{tot}.pdf"
             },
         )
 

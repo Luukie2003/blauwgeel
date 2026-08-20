@@ -1,10 +1,14 @@
 from datetime import datetime
+from pathlib import Path
 
 from fpdf import FPDF
 
 NAAM_APP = "Kantine Voorraadbeheer"
+NAAM_CLUB = "s.v. Blauw-Geel 1915"
+LOGO_PAD = Path(__file__).parent / "static" / "logo.png"
 
 KLEUR_BLAUW = (30, 58, 138)
+KLEUR_ACCENT = (64, 97, 175)
 KLEUR_GRIJS = (90, 90, 90)
 KLEUR_KOPRIJ = (228, 228, 228)
 KLEUR_ZEBRA = (246, 246, 246)
@@ -25,9 +29,14 @@ class Rapport(FPDF):
         self.add_page()
 
     def header(self):
+        if LOGO_PAD.exists():
+            self.image(str(LOGO_PAD), x=180, y=9, h=16)
         self.set_font("Helvetica", "B", 16)
         self.set_text_color(*KLEUR_BLAUW)
         self.cell(0, 9, NAAM_APP, new_x="LMARGIN", new_y="NEXT")
+        self.set_font("Helvetica", "", 9)
+        self.set_text_color(*KLEUR_ACCENT)
+        self.cell(0, 5, NAAM_CLUB, new_x="LMARGIN", new_y="NEXT")
         self.set_font("Helvetica", "B", 12)
         self.set_text_color(0, 0, 0)
         self.cell(0, 7, self._titel, new_x="LMARGIN", new_y="NEXT")
@@ -117,6 +126,64 @@ def bestellijst_pdf(suggesties):
         )
     if not suggesties:
         pdf.leeg_bericht("Niets te bestellen - alle voorraad zit boven het minimum.")
+    return bytes(pdf.output())
+
+
+def periode_verkoop_pdf(van_tekst, tot_tekst, regels):
+    periode = f"Periode: {van_tekst}  t/m  {tot_tekst}"
+    pdf = Rapport("Verkooprapport per periode", periode)
+
+    kolommen = [
+        ("Product", 50, "L"),
+        ("Categorie", 32, "L"),
+        ("Verkocht", 26, "R"),
+        ("Verkoopprijs", 32, "R"),
+        ("Omzet", 30, "R"),
+    ]
+    pdf.kop_rij(kolommen)
+
+    totaal_omzet = 0.0
+    verkocht_regels = [r for r in regels if r["verkocht"] > 0]
+    for i, r in enumerate(verkocht_regels):
+        omzet = r["verkocht"] * r["verkoopprijs"]
+        totaal_omzet += omzet
+        pdf.data_rij(
+            [
+                (_kort(pdf, r["product_naam"], 50), 50, "L"),
+                (_kort(pdf, r["categorie"], 32), 32, "L"),
+                (f"{r['verkocht']} {r['eenheid']}", 26, "R"),
+                (_euro(r["verkoopprijs"]), 32, "R"),
+                (_euro(omzet), 30, "R"),
+            ],
+            zebra=i % 2 == 1,
+        )
+
+    if not verkocht_regels:
+        pdf.leeg_bericht("Geen verkoop geregistreerd in deze periode.")
+    else:
+        pdf.ln(2)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(108, 8, "", border=0)
+        pdf.cell(32, 8, "Totaal", align="R")
+        pdf.cell(30, 8, _euro(totaal_omzet), align="R", new_x="LMARGIN", new_y="NEXT")
+
+    correcties = [r for r in regels if r["correctie"] > 0]
+    if correcties:
+        pdf.ln(8)
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.set_text_color(*KLEUR_BLAUW)
+        pdf.cell(0, 8, "Correcties (extra gevonden voorraad)", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(0, 0, 0)
+        pdf.kop_rij([("Product", 100, "L"), ("Extra geteld", 40, "R")])
+        for i, r in enumerate(correcties):
+            pdf.data_rij(
+                [
+                    (_kort(pdf, r["product_naam"], 100), 100, "L"),
+                    (f"+{r['correctie']} {r['eenheid']}", 40, "R"),
+                ],
+                zebra=i % 2 == 1,
+            )
+
     return bytes(pdf.output())
 
 

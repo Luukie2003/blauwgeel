@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block titel %}Voorraadbeheer{% endblock %} · Kantine</title>
+    <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_versie }}">
 </head>
 <body>
     <div class="app-titelbalk">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="titelbalk-logo">
         <span>Kantine Voorraadbeheer{% if actieve_nav %} &mdash; [{{ actieve_nav.label }}]{% endif %}</span>
     </div>
     <div class="app-menubalk">
@@ -15,6 +17,7 @@
             <button type="button" class="menu-trigger">Bestand</button>
             <div class="menu-dropdown">
                 <a href="{{ url_for('bestellijst_pdf_route') }}">Bestellijst downloaden (PDF)</a>
+                <a href="{{ url_for('verkooprapport') }}">Verkooprapport per periode (PDF)</a>
                 <div class="menu-scheiding"></div>
                 <a href="{{ url_for('logout') }}">Uitloggen</a>
             </div>
@@ -88,6 +91,6 @@
             </div>
         </main>
     </div>
-    <footer>Kantine Voorraadbeheer</footer>
+    <footer>Kantine Voorraadbeheer &middot; <a href="https://blauwgeel1915.nl" target="_blank" rel="noopener">s.v. Blauw-Geel 1915</a></footer>
 </body>
 </html>

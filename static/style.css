@@ -1,9 +1,9 @@
 :root {
     --blauw: #1e3a8a;
     --blauw-donker: #142a63;
-    --accent: #205493;
-    --geel: #facc15;
-    --geel-donker: #eab308;
+    --accent: #4061af;
+    --geel: #fcd42f;
+    --geel-donker: #e0ba17;
     --achtergrond: #ececec;
     --paneel: #f3f3f3;
     --kaart: #ffffff;
@@ -42,11 +42,19 @@ a:hover { text-decoration: underline; }
 .app-titelbalk {
     background: #1c2b4a;
     color: #f0f2f6;
-    padding: 0.45rem 1rem;
+    padding: 0.4rem 1rem;
     font-weight: 600;
     font-size: 0.86rem;
     letter-spacing: 0.01em;
-    border-bottom: 1px solid #0d1530;
+    border-bottom: 3px solid var(--geel);
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.titelbalk-logo {
+    height: 26px;
+    width: auto;
 }
 
 .app-menubalk {
@@ -553,8 +561,18 @@ footer {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
+.login-logo-groot {
+    text-align: center;
+    padding: 1.3rem 1.3rem 0;
+}
+
+.login-logo-groot img {
+    height: 84px;
+    width: auto;
+}
+
 .login-inhoud {
-    padding: 1.3rem 1.3rem 1.5rem;
+    padding: 1rem 1.3rem 1.5rem;
 }
 
 .login-btn {

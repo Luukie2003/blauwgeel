@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titel %}Verkooprapport per periode{% endblock %}
+{% block inhoud %}
+<h1>Verkooprapport per periode</h1>
+<p class="subtitel">
+    Tel de verkoop op uit alle tellingen binnen een gekozen periode &mdash; bijvoorbeeld een week
+    of een heel seizoen &mdash; en download het als PDF.
+</p>
+
+<div class="kaart" style="max-width:480px">
+    <form method="get" action="{{ url_for('verkooprapport_pdf_route') }}" target="_blank">
+        <div class="formgrid">
+            <div class="veld">
+                <label for="van">Van</label>
+                <input type="date" id="van" name="van" value="{{ van }}">
+            </div>
+            <div class="veld">
+                <label for="tot">Tot en met</label>
+                <input type="date" id="tot" name="tot" value="{{ tot }}">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-geel">Verkooprapport downloaden (PDF)</button>
+    </form>
+</div>
+{% endblock %}

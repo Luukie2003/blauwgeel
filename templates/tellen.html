@@ -17,6 +17,16 @@
     <a href="{{ url_for('tellen_lopen_starten') }}" class="btn btn-geel">Looplijst starten</a>
 </div>
 
+<div class="kaart" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap">
+    <div>
+        <strong>Verkoop over een periode</strong>
+        <p class="tekst-zacht" style="margin:0.2rem 0 0">
+            Bijvoorbeeld een hele week of seizoen in één PDF, over meerdere tellingen heen.
+        </p>
+    </div>
+    <a href="{{ url_for('verkooprapport') }}" class="btn btn-rand">Verkooprapport per periode</a>
+</div>
+
 <div class="kaart">
     <form method="post">
         <fieldset class="groupbox">
