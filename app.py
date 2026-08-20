@@ -119,6 +119,47 @@ def now_datetime_local():
     return datetime.now().strftime("%Y-%m-%dT%H:%M")
 
 
+def bereken_trend(omzet_per_week, huidige_jaar, huidige_week):
+    """Voortschrijdend gemiddelde + trendrichting op basis van volledig
+    afgesloten weken (de lopende week telt niet mee, die is nog niet klaar).
+
+    omzet_per_week: lijst met dicts (jaar, week, omzet, ...), nieuwste eerst.
+    """
+    afgeronde_weken = [
+        w for w in omzet_per_week if (w["jaar"], w["week"]) != (huidige_jaar, huidige_week)
+    ]
+    chronologisch = list(reversed(afgeronde_weken))  # oud -> nieuw
+
+    if len(chronologisch) < 2:
+        return None
+
+    recente = chronologisch[-4:]
+    verwachting = sum(w["omzet"] for w in recente) / len(recente)
+
+    n = len(chronologisch)
+    xs = list(range(n))
+    ys = [w["omzet"] for w in chronologisch]
+    x_gem = sum(xs) / n
+    y_gem = sum(ys) / n
+    teller = sum((x - x_gem) * (y - y_gem) for x, y in zip(xs, ys))
+    noemer = sum((x - x_gem) ** 2 for x in xs)
+    richting_per_week = teller / noemer if noemer else 0
+
+    if abs(richting_per_week) < 0.02 * (y_gem or 1):
+        richting = "stabiel"
+    elif richting_per_week > 0:
+        richting = "stijgend"
+    else:
+        richting = "dalend"
+
+    return {
+        "verwachting": verwachting,
+        "richting": richting,
+        "richting_per_week": richting_per_week,
+        "gebaseerd_op_weken": len(recente),
+    }
+
+
 def register_routes(app):
     # ---------- Inloggen / accounts ----------
 
@@ -660,11 +701,16 @@ def register_routes(app):
         omzet_per_week = sorted(
             weken.values(), key=lambda w: (w["jaar"], w["week"]), reverse=True
         )
+        huidige_jaar, huidige_week, _ = datetime.now().isocalendar()
+        trend = bereken_trend(omzet_per_week, huidige_jaar, huidige_week)
 
         return render_template(
             "tellingen_overzicht.html",
             tellingen=tellingen,
             omzet_per_week=omzet_per_week,
+            huidige_jaar=huidige_jaar,
+            huidige_week=huidige_week,
+            trend=trend,
         )
 
     @app.route("/tellingen/<int:telling_id>")

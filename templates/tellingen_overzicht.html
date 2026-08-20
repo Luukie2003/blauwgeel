@@ -7,6 +7,33 @@
 </div>
 
 <div class="kaart">
+    <h2>Verwachting &amp; trend</h2>
+    {% if trend %}
+    <div class="statgrid">
+        <div class="stat">
+            <div class="getal">{{ "€ %.2f"|format(trend.verwachting) }}</div>
+            <div class="label">Verwachte omzet komende week (gemiddelde laatste {{ trend.gebaseerd_op_weken }} we{{ 'ken' if trend.gebaseerd_op_weken != 1 else 'ek' }})</div>
+        </div>
+        <div class="stat {{ 'waarschuwing' if trend.richting == 'dalend' else '' }}">
+            <div class="getal">
+                {% if trend.richting == 'stijgend' %}&#8599;
+                {% elif trend.richting == 'dalend' %}&#8600;
+                {% else %}&#8594;{% endif %}
+                {{ trend.richting|capitalize }}
+            </div>
+            <div class="label">Trend over de afgesloten weken ({{ "%+.2f"|format(trend.richting_per_week) }} €/week)</div>
+        </div>
+    </div>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Gebaseerd op volledig afgesloten weken (de lopende week telt nog niet mee). Hoe meer
+        weken met tellingen, hoe betrouwbaarder dit wordt.
+    </p>
+    {% else %}
+    <p class="leeg">Nog te weinig volledig afgesloten weken met tellingen voor een trend (minimaal 2 nodig).</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
     <h2>Omzet per week</h2>
     {% if omzet_per_week %}
     <div class="tabel-wrap">
@@ -17,7 +44,12 @@
             <tbody>
                 {% for w in omzet_per_week %}
                 <tr>
-                    <td>Week {{ w.week }}, {{ w.jaar }}</td>
+                    <td>
+                        Week {{ w.week }}, {{ w.jaar }}
+                        {% if w.jaar == huidige_jaar and w.week == huidige_week %}
+                        <span class="badge badge-neutraal">loopt nog</span>
+                        {% endif %}
+                    </td>
                     <td>{{ w.van }} t/m {{ w.tot }}</td>
                     <td>{{ "€ %.2f"|format(w.omzet) }}</td>
                     <td>
