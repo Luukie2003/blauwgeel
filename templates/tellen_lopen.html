@@ -11,9 +11,15 @@
     <div class="loop-voortgang">
         <div class="loop-voortgang-balk" style="width: {{ voortgang_percentage }}%"></div>
     </div>
+    <span class="badge {{ 'badge-in' if fase == 'bar' else 'badge-uit' }} loop-fase-badge">
+        {{ 'Bar tellen' if fase == 'bar' else 'Voorraadhok tellen' }}
+    </span>
     <div class="loop-categorie">{{ product.categorie }}</div>
     <h1 class="loop-product">{{ product.naam }}</h1>
     <p class="tekst-zacht">Geregistreerde voorraad: {{ product.voorraad }} {{ product.eenheid }}</p>
+    {% if fase == 'hok' %}
+    <p class="tekst-zacht">Bar geteld: {{ bar_waarde_hint if bar_waarde_hint else '—' }} {{ product.eenheid }}</p>
+    {% endif %}
 
     <form method="post" id="loop-formulier">
         <input type="number" name="geteld" id="loop-invoer" inputmode="numeric" min="0"
@@ -22,9 +28,15 @@
 
         <div class="loop-knoppen">
             <button type="submit" name="actie" value="vorige" class="btn btn-rand loop-btn-klein"
-                    {{ 'disabled' if index == 0 else '' }}>&larr;&nbsp;Vorige</button>
+                    {{ 'disabled' if fase == 'bar' and index == 0 else '' }}>&larr;&nbsp;Vorige</button>
             <button type="submit" name="actie" value="volgende" class="btn btn-geel loop-btn-groot">
-                {{ 'Afronden en opslaan' if index == totaal - 1 else 'Volgende →' }}
+                {% if fase == 'bar' and index == totaal - 1 %}
+                Door naar voorraadhok →
+                {% elif fase == 'hok' and index == totaal - 1 %}
+                Afronden en opslaan
+                {% else %}
+                Volgende →
+                {% endif %}
             </button>
         </div>
     </form>

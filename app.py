@@ -490,10 +490,12 @@ def register_routes(app):
             nu_datetime_local=now_datetime_local(),
         )
 
+    LOOP_SESSIE_SLEUTELS = ("loop_fase", "loop_index", "loop_bar", "loop_hok")
+
     @app.route("/tellen/lopen/starten")
     def tellen_lopen_starten():
-        session.pop("loop_index", None)
-        session.pop("loop_waarden", None)
+        for sleutel in LOOP_SESSIE_SLEUTELS:
+            session.pop(sleutel, None)
         return redirect(url_for("tellen_lopen"))
 
     @app.route("/tellen/lopen", methods=["GET", "POST"])
@@ -505,72 +507,113 @@ def register_routes(app):
         if not producten:
             flash("Geen actieve producten om te tellen.", "error")
             return redirect(url_for("tellen"))
+        totaal = len(producten)
 
         if request.method == "POST":
             actie = request.form.get("actie", "volgende")
             if actie == "stoppen":
-                session.pop("loop_index", None)
-                session.pop("loop_waarden", None)
+                for sleutel in LOOP_SESSIE_SLEUTELS:
+                    session.pop(sleutel, None)
                 flash("Looplijst afgebroken, er is niets opgeslagen.", "error")
                 return redirect(url_for("tellen"))
 
+            fase = session.get("loop_fase", "bar")
             index = session.get("loop_index", 0)
-            waarden = session.get("loop_waarden", {})
+            bar_waarden = session.get("loop_bar", {})
+            hok_waarden = session.get("loop_hok", {})
+            huidige_dict = bar_waarden if fase == "bar" else hok_waarden
 
-            if 0 <= index < len(producten):
+            if 0 <= index < totaal:
                 product_id = str(producten[index]["id"])
                 waarde = request.form.get("geteld", "").strip()
                 if waarde != "":
-                    waarden[product_id] = waarde
-                elif product_id in waarden:
-                    del waarden[product_id]
+                    huidige_dict[product_id] = waarde
+                elif product_id in huidige_dict:
+                    del huidige_dict[product_id]
 
-            index = max(0, index - 1) if actie == "vorige" else index + 1
+            if actie == "vorige":
+                index -= 1
+                if index < 0:
+                    if fase == "hok":
+                        fase = "bar"
+                        index = totaal - 1
+                    else:
+                        index = 0
+            else:
+                index += 1
+                if index >= totaal:
+                    if fase == "bar":
+                        fase = "hok"
+                        index = 0
+                    else:
+                        # Bar en voorraadhok zijn allebei geteld: optellen en opslaan.
+                        geparsed = {}
+                        for p in producten:
+                            pid_str = str(p["id"])
+                            bar_tekst = bar_waarden.get(pid_str, "")
+                            hok_tekst = hok_waarden.get(pid_str, "")
+                            if bar_tekst == "" and hok_tekst == "":
+                                continue
+                            try:
+                                bar_aantal = int(bar_tekst) if bar_tekst != "" else 0
+                            except ValueError:
+                                bar_aantal = 0
+                            try:
+                                hok_aantal = int(hok_tekst) if hok_tekst != "" else 0
+                            except ValueError:
+                                hok_aantal = 0
+                            geteld_totaal = bar_aantal + hok_aantal
+                            if geteld_totaal >= 0:
+                                geparsed[p["id"]] = geteld_totaal
+
+                        for sleutel in LOOP_SESSIE_SLEUTELS:
+                            session.pop(sleutel, None)
+
+                        telling_id = verwerk_telling(
+                            db,
+                            geparsed,
+                            session.get("gebruiker_naam"),
+                            "Via looplijst geteld (bar + voorraadhok)",
+                            now_str(),
+                        )
+                        if telling_id is None:
+                            flash("Geen aantallen ingevuld -- er is niets geteld.", "error")
+                            return redirect(url_for("tellen"))
+                        flash(
+                            f"Telling #{telling_id} verwerkt: {len(geparsed)} product(en) "
+                            "geteld via de looplijst (bar + voorraadhok).",
+                            "success",
+                        )
+                        return redirect(url_for("telling_detail", telling_id=telling_id))
+
+            session["loop_fase"] = fase
             session["loop_index"] = index
-            session["loop_waarden"] = waarden
+            session["loop_bar"] = bar_waarden
+            session["loop_hok"] = hok_waarden
             session.modified = True
-
-            if index >= len(producten):
-                geparsed = {}
-                for pid_str, waarde in waarden.items():
-                    try:
-                        geteld = int(waarde)
-                    except ValueError:
-                        continue
-                    if geteld >= 0:
-                        geparsed[int(pid_str)] = geteld
-
-                session.pop("loop_index", None)
-                session.pop("loop_waarden", None)
-
-                telling_id = verwerk_telling(
-                    db, geparsed, session.get("gebruiker_naam"), "Via looplijst geteld", now_str()
-                )
-                if telling_id is None:
-                    flash("Geen aantallen ingevuld -- er is niets geteld.", "error")
-                    return redirect(url_for("tellen"))
-                flash(
-                    f"Telling #{telling_id} verwerkt: {len(geparsed)} product(en) "
-                    "geteld via de looplijst.",
-                    "success",
-                )
-                return redirect(url_for("telling_detail", telling_id=telling_id))
-
             return redirect(url_for("tellen_lopen"))
 
+        fase = session.get("loop_fase", "bar")
         index = session.get("loop_index", 0)
-        if index >= len(producten):
+        if index >= totaal:
             index = 0
-        waarden = session.get("loop_waarden", {})
+        bar_waarden = session.get("loop_bar", {})
+        hok_waarden = session.get("loop_hok", {})
         huidig = producten[index]
-        huidige_waarde = waarden.get(str(huidig["id"]), "")
-        voortgang_percentage = round(index / len(producten) * 100, 1)
+        huidige_dict = bar_waarden if fase == "bar" else hok_waarden
+        huidige_waarde = huidige_dict.get(str(huidig["id"]), "")
+        bar_waarde_hint = bar_waarden.get(str(huidig["id"]), "") if fase == "hok" else None
+
+        stap_nu = (0 if fase == "bar" else totaal) + index
+        voortgang_percentage = round(stap_nu / (totaal * 2) * 100, 1)
 
         return render_template(
             "tellen_lopen.html",
             product=huidig,
             index=index,
-            totaal=len(producten),
+            totaal=totaal,
+            fase=fase,
+            bar_waarde_hint=bar_waarde_hint,
             huidige_waarde=huidige_waarde,
             voortgang_percentage=voortgang_percentage,
         )

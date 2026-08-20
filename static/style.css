@@ -495,6 +495,12 @@ footer {
     background: var(--geel-donker);
 }
 
+.loop-fase-badge {
+    font-size: 0.82rem;
+    padding: 0.25rem 0.8rem;
+    margin-bottom: 0.7rem;
+}
+
 .loop-categorie {
     color: var(--tekst-zacht);
     font-size: 0.78rem;
