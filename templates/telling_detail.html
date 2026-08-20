@@ -4,7 +4,8 @@
 <h1>Telling #{{ telling.id }}</h1>
 <p class="subtitel">
     {{ telling.datum|datum_nl }}{% if telling.naam %} &mdash; geteld door {{ telling.naam }}{% endif %}
-    &nbsp;&middot;&nbsp; <a href="{{ url_for('tellen') }}">&larr; Terug naar voorraad tellen</a>
+    &nbsp;&middot;&nbsp; <a href="{{ url_for('tellingen_overzicht') }}">&larr; Alle tellingen</a>
+    &nbsp;&middot;&nbsp; <a href="{{ url_for('tellen') }}">Nieuwe telling</a>
 </p>
 
 <div class="actiebalk">
@@ -54,4 +55,23 @@
         </table>
     </div>
 </div>
+
+{% if besteladvies %}
+<div class="kaart" style="border-color:var(--geel-donker)">
+    <div class="actiebalk" style="margin-bottom:0.6rem">
+        <div>
+            <strong>{{ besteladvies|length }} product(en) staan nu onder het minimum</strong>
+            <p class="tekst-zacht" style="margin:0.2rem 0 0">
+                Op de bestellijst kun je de aantallen nog aanpassen voordat je 'm opslaat en extern bestelt.
+            </p>
+        </div>
+        <a href="{{ url_for('bestellijst') }}" class="btn btn-geel">Naar bestellijst</a>
+    </div>
+    <ul style="margin:0; padding-left:1.2rem">
+        {% for p in besteladvies %}
+        <li>{{ p.naam }} &mdash; <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span> (minimum {{ p.min_voorraad }} {{ p.eenheid }})</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
 {% endblock %}

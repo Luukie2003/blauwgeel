@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block titel %}Tellingen{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">Alle tellingen en de omzet per week, met snelle links naar de PDF's.</p>
+    <a href="{{ url_for('tellen') }}" class="btn btn-geel">Nieuwe telling</a>
+</div>
+
+<div class="kaart">
+    <h2>Omzet per week</h2>
+    {% if omzet_per_week %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Week</th><th>Periode</th><th>Omzet</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for w in omzet_per_week %}
+                <tr>
+                    <td>Week {{ w.week }}, {{ w.jaar }}</td>
+                    <td>{{ w.van }} t/m {{ w.tot }}</td>
+                    <td>{{ "€ %.2f"|format(w.omzet) }}</td>
+                    <td>
+                        <a href="{{ url_for('verkooprapport_pdf_route', van=w.van, tot=w.tot) }}"
+                           class="btn btn-rand btn-klein" target="_blank">PDF</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen verkoop geregistreerd via tellingen.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Alle tellingen</h2>
+    {% if tellingen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Geteld door</th><th>Producten</th><th>Omzet</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for t in tellingen %}
+                <tr>
+                    <td><a href="{{ url_for('telling_detail', telling_id=t.id) }}">{{ t.datum|datum_nl }}</a></td>
+                    <td>{{ t.naam or '—' }}</td>
+                    <td>{{ t.aantal_producten }}</td>
+                    <td>{{ "€ %.2f"|format(t.omzet) }}</td>
+                    <td class="tabel-acties">
+                        <a href="{{ url_for('telling_detail', telling_id=t.id) }}" class="btn btn-rand btn-klein">Bekijken</a>
+                        <a href="{{ url_for('telling_pdf', telling_id=t.id) }}" class="btn btn-rand btn-klein">PDF</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen tellingen uitgevoerd.</p>
+    {% endif %}
+</div>
+{% endblock %}

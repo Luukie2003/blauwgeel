@@ -20,12 +20,12 @@
 
 <div class="kaart" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap">
     <div>
-        <strong>Verkoop over een periode</strong>
+        <strong>Eerdere tellingen en omzet</strong>
         <p class="tekst-zacht" style="margin:0.2rem 0 0">
-            Bijvoorbeeld een hele week of seizoen in één PDF, over meerdere tellingen heen.
+            Bekijk alle tellingen, de omzet per week, en download verkooprapporten per periode.
         </p>
     </div>
-    <a href="{{ url_for('verkooprapport') }}" class="btn btn-rand">Verkooprapport per periode</a>
+    <a href="{{ url_for('tellingen_overzicht') }}" class="btn btn-rand">Naar tellingen &amp; omzet</a>
 </div>
 
 <div class="kaart">
@@ -74,32 +74,5 @@
         </div>
         <button type="submit" class="btn btn-geel">Telling verwerken</button>
     </form>
-</div>
-
-<div class="kaart">
-    <h2>Eerdere tellingen</h2>
-    {% if tellingen %}
-    <div class="tabel-wrap">
-        <table>
-            <thead>
-                <tr><th>Datum</th><th>Geteld door</th><th></th></tr>
-            </thead>
-            <tbody>
-                {% for t in tellingen %}
-                <tr>
-                    <td>{{ t.datum|datum_nl }}</td>
-                    <td>{{ t.naam or '—' }}</td>
-                    <td>
-                        <a href="{{ url_for('telling_detail', telling_id=t.id) }}" class="btn btn-rand btn-klein">Bekijken</a>
-                        <a href="{{ url_for('telling_pdf', telling_id=t.id) }}" class="btn btn-rand btn-klein">PDF</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p class="leeg">Nog geen tellingen uitgevoerd.</p>
-    {% endif %}
 </div>
 {% endblock %}

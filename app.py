@@ -39,9 +39,14 @@ NAV_ITEMS = [
         "label": "In/uit boeken",
     },
     {
-        "endpoints": ["tellen", "telling_detail", "tellen_lopen", "tellen_lopen_starten"],
+        "endpoints": ["tellen", "tellen_lopen", "tellen_lopen_starten"],
         "url_endpoint": "tellen",
         "label": "Voorraad tellen",
+    },
+    {
+        "endpoints": ["tellingen_overzicht", "telling_detail"],
+        "url_endpoint": "tellingen_overzicht",
+        "label": "Tellingen",
     },
     {
         "endpoints": ["bestellijst", "bestelling_aanmaken", "bestelling_inboeken"],
@@ -480,13 +485,9 @@ def register_routes(app):
         producten = db.execute(
             "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
         ).fetchall()
-        tellingen = db.execute(
-            "SELECT * FROM tellingen ORDER BY id DESC LIMIT 15"
-        ).fetchall()
         return render_template(
             "tellen.html",
             producten=producten,
-            tellingen=tellingen,
             nu_datetime_local=now_datetime_local(),
         )
 
@@ -618,6 +619,54 @@ def register_routes(app):
             voortgang_percentage=voortgang_percentage,
         )
 
+    @app.route("/tellingen")
+    def tellingen_overzicht():
+        db = get_db()
+        tellingen = db.execute(
+            """SELECT t.*,
+                      (SELECT COUNT(*) FROM telling_regels WHERE telling_id = t.id) AS aantal_producten,
+                      (SELECT COALESCE(SUM(tr.verkocht * p.verkoopprijs), 0)
+                         FROM telling_regels tr JOIN producten p ON p.id = tr.product_id
+                         WHERE tr.telling_id = t.id) AS omzet
+               FROM tellingen t
+               ORDER BY t.id DESC"""
+        ).fetchall()
+
+        verkoop_regels = db.execute(
+            """SELECT t.datum, tr.verkocht, p.verkoopprijs
+               FROM telling_regels tr
+               JOIN tellingen t ON t.id = tr.telling_id
+               JOIN producten p ON p.id = tr.product_id
+               WHERE tr.verkocht > 0"""
+        ).fetchall()
+
+        weken = {}
+        for r in verkoop_regels:
+            dt = datetime.strptime(r["datum"], "%Y-%m-%d %H:%M")
+            jaar, week, _ = dt.isocalendar()
+            sleutel = (jaar, week)
+            if sleutel not in weken:
+                maandag = dt - timedelta(days=dt.weekday())
+                zondag = maandag + timedelta(days=6)
+                weken[sleutel] = {
+                    "jaar": jaar,
+                    "week": week,
+                    "van": maandag.strftime("%Y-%m-%d"),
+                    "tot": zondag.strftime("%Y-%m-%d"),
+                    "omzet": 0.0,
+                }
+            weken[sleutel]["omzet"] += r["verkocht"] * r["verkoopprijs"]
+
+        omzet_per_week = sorted(
+            weken.values(), key=lambda w: (w["jaar"], w["week"]), reverse=True
+        )
+
+        return render_template(
+            "tellingen_overzicht.html",
+            tellingen=tellingen,
+            omzet_per_week=omzet_per_week,
+        )
+
     @app.route("/tellingen/<int:telling_id>")
     def telling_detail(telling_id):
         db = get_db()
@@ -635,12 +684,14 @@ def register_routes(app):
             (telling_id,),
         ).fetchall()
         totaal_omzet = sum(r["verkocht"] * r["verkoopprijs"] for r in regels)
+        besteladvies = bestel_suggesties(db)
 
         return render_template(
             "telling_detail.html",
             telling=telling,
             regels=regels,
             totaal_omzet=totaal_omzet,
+            besteladvies=besteladvies,
         )
 
     @app.route("/tellingen/<int:telling_id>/pdf")
