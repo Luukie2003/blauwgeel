@@ -442,12 +442,21 @@ def register_routes(app):
             """SELECT * FROM bestellingen WHERE status = 'ontvangen'
                ORDER BY id DESC LIMIT 5"""
         ).fetchall()
+        recent_ontvangen_met_regels = []
+        for b in recent_ontvangen:
+            regels = db.execute(
+                """SELECT br.*, p.naam AS product_naam, p.eenheid
+                   FROM bestelregels br JOIN producten p ON p.id = br.product_id
+                   WHERE br.bestelling_id = ?""",
+                (b["id"],),
+            ).fetchall()
+            recent_ontvangen_met_regels.append((b, regels))
 
         return render_template(
             "bestellijst.html",
             suggesties=suggesties,
             open_bestellingen=open_bestellingen_met_regels,
-            recent_ontvangen=recent_ontvangen,
+            recent_ontvangen=recent_ontvangen_met_regels,
         )
 
     @app.route("/bestellijst/pdf")
@@ -516,23 +525,35 @@ def register_routes(app):
 
         if request.method == "POST":
             naam = request.form.get("naam", "").strip()
+            was_al_ontvangen = bestelling["status"] == "ontvangen"
+
             for regel in regels:
                 aantal_str = request.form.get(f"ontvangen_{regel['id']}", "0")
                 try:
-                    aantal_ontvangen = int(aantal_str)
+                    aantal_ontvangen = max(0, int(aantal_str))
                 except ValueError:
                     aantal_ontvangen = 0
+
+                vorige_ontvangen = regel["aantal_ontvangen"] or 0
+                delta = aantal_ontvangen - vorige_ontvangen
 
                 db.execute(
                     "UPDATE bestelregels SET aantal_ontvangen = ? WHERE id = ?",
                     (aantal_ontvangen, regel["id"]),
                 )
-
-                if aantal_ontvangen > 0:
+                if delta != 0:
                     db.execute(
                         "UPDATE producten SET voorraad = voorraad + ? WHERE id = ?",
-                        (aantal_ontvangen, regel["product_id"]),
+                        (delta, regel["product_id"]),
                     )
+
+                # Mutatie voor deze regel opnieuw opbouwen, zodat de geschiedenis
+                # ook na een correctie het actuele ontvangen aantal weerspiegelt.
+                db.execute(
+                    "DELETE FROM mutaties WHERE bestelling_id = ? AND product_id = ?",
+                    (bestelling_id, regel["product_id"]),
+                )
+                if aantal_ontvangen > 0:
                     db.execute(
                         """INSERT INTO mutaties
                            (product_id, type, aantal, datum, naam, opmerking, bestelling_id)
@@ -542,22 +563,55 @@ def register_routes(app):
                             aantal_ontvangen,
                             now_str(),
                             naam,
-                            "Ontvangen uit bestelling",
+                            "Ontvangen uit bestelling (aangepast)"
+                            if was_al_ontvangen
+                            else "Ontvangen uit bestelling",
                             bestelling_id,
                         ),
                     )
 
-            db.execute(
-                "UPDATE bestellingen SET status = 'ontvangen', ontvangen_op = ? WHERE id = ?",
-                (now_str(), bestelling_id),
-            )
-            db.commit()
-            flash("Bestelling ingeboekt en voorraad bijgewerkt.", "success")
+            if was_al_ontvangen:
+                db.commit()
+                flash("Bestelling aangepast en voorraad bijgewerkt.", "success")
+            else:
+                db.execute(
+                    "UPDATE bestellingen SET status = 'ontvangen', ontvangen_op = ? WHERE id = ?",
+                    (now_str(), bestelling_id),
+                )
+                db.commit()
+                flash("Bestelling ingeboekt en voorraad bijgewerkt.", "success")
             return redirect(url_for("bestellijst"))
 
         return render_template(
             "inboeken.html", bestelling=bestelling, regels=regels
         )
+
+    @app.route("/bestellingen/<int:bestelling_id>/verwijderen", methods=["POST"])
+    def bestelling_verwijderen(bestelling_id):
+        db = get_db()
+        bestelling = db.execute(
+            "SELECT * FROM bestellingen WHERE id = ?", (bestelling_id,)
+        ).fetchone()
+        if bestelling is None:
+            flash("Bestelling niet gevonden.", "error")
+            return redirect(url_for("bestellijst"))
+
+        regels = db.execute(
+            "SELECT * FROM bestelregels WHERE bestelling_id = ?", (bestelling_id,)
+        ).fetchall()
+        for regel in regels:
+            ontvangen = regel["aantal_ontvangen"] or 0
+            if ontvangen > 0:
+                db.execute(
+                    "UPDATE producten SET voorraad = voorraad - ? WHERE id = ?",
+                    (ontvangen, regel["product_id"]),
+                )
+
+        db.execute("DELETE FROM mutaties WHERE bestelling_id = ?", (bestelling_id,))
+        db.execute("DELETE FROM bestellingen WHERE id = ?", (bestelling_id,))
+        db.commit()
+        flash(f"Bestelling #{bestelling_id} verwijderd.", "success")
+        return redirect(url_for("bestellijst"))
 
     # ---------- Geschiedenis ----------
 

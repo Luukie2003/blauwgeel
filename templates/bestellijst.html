@@ -55,7 +55,13 @@
                 <strong>Bestelling #{{ b.id }}</strong>
                 <span class="tekst-zacht">— aangemaakt {{ b.aangemaakt_op|datum_nl }}{% if b.besteld_door %} door {{ b.besteld_door }}{% endif %}</span>
             </div>
-            <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-klein">Inboeken</a>
+            <div class="tabel-acties">
+                <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-klein">Inboeken</a>
+                <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
+                      onsubmit="return confirm('Bestelling #{{ b.id }} verwijderen?');">
+                    <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                </form>
+            </div>
         </div>
         <ul style="margin:0; padding-left:1.2rem">
             {% for r in regels %}
@@ -72,16 +78,29 @@
 {% if recent_ontvangen %}
 <div class="kaart">
     <h2>Recent ontvangen</h2>
-    <div class="tabel-wrap">
-        <table>
-            <thead><tr><th>Bestelling</th><th>Ontvangen op</th></tr></thead>
-            <tbody>
-                {% for b in recent_ontvangen %}
-                <tr><td>#{{ b.id }}</td><td>{{ b.ontvangen_op|datum_nl }}</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    {% for b, regels in recent_ontvangen %}
+    <div style="border:1px solid var(--rand); border-radius:8px; padding:0.9rem; margin-bottom:0.9rem;">
+        <div class="actiebalk" style="margin-bottom:0.6rem">
+            <div>
+                <strong>Bestelling #{{ b.id }}</strong>
+                <span class="tekst-zacht">— ontvangen {{ b.ontvangen_op|datum_nl }}</span>
+            </div>
+            <div class="tabel-acties">
+                <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
+                      onsubmit="return confirm('Bestelling #{{ b.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan.');">
+                    <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                </form>
+            </div>
+        </div>
+        <ul style="margin:0; padding-left:1.2rem">
+            {% for r in regels %}
+            <li>{{ r.aantal_ontvangen or 0 }} {{ r.eenheid }} — {{ r.product_naam }}
+                <span class="tekst-zacht">(besteld: {{ r.aantal_besteld }} {{ r.eenheid }})</span></li>
+            {% endfor %}
+        </ul>
     </div>
+    {% endfor %}
 </div>
 {% endif %}
 {% endblock %}
