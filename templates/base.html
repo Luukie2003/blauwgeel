@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titel %}Voorraadbeheer{% endblock %} · Kantine</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-titelbalk">
+        <span>Kantine Voorraadbeheer{% if actieve_nav %} &mdash; [{{ actieve_nav.label }}]{% endif %}</span>
+    </div>
+    <div class="app-menubalk">
+        <span>Bestand</span>
+        <span>Beeld</span>
+        <span>Actie</span>
+        <span>Help</span>
+    </div>
+    <div class="app-layout">
+        <nav class="app-zijbalk">
+            <div class="zijbalk-kop">Navigatie</div>
+            <ul>
+                {% for item in nav_items %}
+                <li>
+                    <a href="{{ url_for(item.url_endpoint) }}"
+                       class="{{ 'actief' if item == actieve_nav else '' }}">{{ item.label }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+        <main>
+            {% if actieve_nav %}
+            <div class="venster-titel">{{ actieve_nav.label }}</div>
+            {% endif %}
+            <div class="venster-inhoud">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="flashes">
+                            {% for category, message in messages %}
+                                <div class="flash flash-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+                {% block inhoud %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    <footer>Kantine Voorraadbeheer</footer>
+</body>
+</html>

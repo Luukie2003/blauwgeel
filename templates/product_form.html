@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block titel %}{{ 'Product bewerken' if product else 'Nieuw product' }}{% endblock %}
+{% block inhoud %}
+<h1>{{ 'Product bewerken' if product else 'Nieuw product' }}</h1>
+<p class="subtitel"><a href="{{ url_for('producten_lijst') }}">&larr; Terug naar producten</a></p>
+
+<div class="kaart">
+    <form method="post">
+        <fieldset class="groupbox">
+            <legend>Productgegevens</legend>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="naam">Naam</label>
+                    <input type="text" id="naam" name="naam" required value="{{ product.naam if product else '' }}">
+                </div>
+                <div class="veld">
+                    <label for="categorie">Categorie</label>
+                    <input type="text" id="categorie" name="categorie" placeholder="Drank, Snacks, Non-food, ..."
+                           value="{{ product.categorie if product else '' }}">
+                </div>
+                <div class="veld">
+                    <label for="eenheid">Eenheid</label>
+                    <input type="text" id="eenheid" name="eenheid" placeholder="stuks, krat, fles, ..."
+                           value="{{ product.eenheid if product else 'stuks' }}">
+                </div>
+                <div class="veld">
+                    <label for="verkoopprijs">Verkoopprijs per eenheid</label>
+                    <input type="number" id="verkoopprijs" name="verkoopprijs" min="0" step="0.01"
+                           value="{{ '%.2f'|format(product.verkoopprijs) if product else '0.00' }}">
+                    <span class="tekst-zacht">Gebruikt voor de omzet in het verkooprapport.</span>
+                </div>
+            </div>
+        </fieldset>
+        <fieldset class="groupbox">
+            <legend>Voorraad</legend>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="voorraad">Huidige voorraad</label>
+                    <input type="number" id="voorraad" name="voorraad" min="0" required
+                           value="{{ product.voorraad if product else 0 }}">
+                </div>
+                <div class="veld">
+                    <label for="min_voorraad">Minimum voorraad</label>
+                    <input type="number" id="min_voorraad" name="min_voorraad" min="0" required
+                           value="{{ product.min_voorraad if product else 0 }}">
+                    <span class="tekst-zacht">Onder dit aantal komt het product op de bestellijst.</span>
+                </div>
+                <div class="veld">
+                    <label for="bestel_hoeveelheid">Standaard bestelhoeveelheid</label>
+                    <input type="number" id="bestel_hoeveelheid" name="bestel_hoeveelheid" min="0"
+                           value="{{ product.bestel_hoeveelheid if product else 0 }}">
+                    <span class="tekst-zacht">Voorgesteld aantal op de bestellijst (mag je aanpassen).</span>
+                </div>
+            </div>
+            <div class="veld">
+                <label for="opmerking">Opmerking</label>
+                <textarea id="opmerking" name="opmerking" rows="2">{{ product.opmerking if product else '' }}</textarea>
+            </div>
+        </fieldset>
+        <button type="submit" class="btn btn-geel">{{ 'Opslaan' if product else 'Toevoegen' }}</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block titel %}Overzicht{% endblock %}
+{% block inhoud %}
+<p class="subtitel">Actuele status van de kantinevoorraad.</p>
+
+<div class="statgrid">
+    <div class="stat">
+        <div class="getal">{{ producten|length }}</div>
+        <div class="label">Producten</div>
+    </div>
+    <div class="stat {{ 'waarschuwing' if laag|length > 0 }}">
+        <div class="getal">{{ laag|length }}</div>
+        <div class="label">Onder minimum voorraad</div>
+    </div>
+    <div class="stat">
+        <div class="getal">{{ open_bestellingen }}</div>
+        <div class="label">Openstaande bestellingen</div>
+    </div>
+</div>
+
+<div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">Producten met te lage voorraad</h2>
+        {% if laag %}<a href="{{ url_for('bestellijst') }}" class="btn btn-geel btn-klein">Naar bestellijst</a>{% endif %}
+    </div>
+    {% if laag %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Product</th><th>Categorie</th><th>Voorraad</th><th>Minimum</th></tr>
+            </thead>
+            <tbody>
+                {% for p in laag %}
+                <tr>
+                    <td>{{ p.naam }}</td>
+                    <td>{{ p.categorie }}</td>
+                    <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
+                    <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Alles zit boven het minimum. Niets te bestellen.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Recente boekingen</h2>
+    {% if recente_mutaties %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Product</th><th>Type</th><th>Aantal</th><th>Door</th></tr>
+            </thead>
+            <tbody>
+                {% for m in recente_mutaties %}
+                <tr>
+                    <td>{{ m.datum|datum_nl }}</td>
+                    <td>{{ m.product_naam }}</td>
+                    <td><span class="badge badge-{{ m.type }}">{{ 'in' if m.type == 'in' else 'uit' }}</span></td>
+                    <td>{{ m.aantal }} {{ m.eenheid }}</td>
+                    <td>{{ m.naam or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen boekingen.</p>
+    {% endif %}
+</div>
+{% endblock %}

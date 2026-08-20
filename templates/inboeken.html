@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titel %}Bestelling inboeken{% endblock %}
+{% block inhoud %}
+<h1>Bestelling #{{ bestelling.id }} inboeken</h1>
+<p class="subtitel"><a href="{{ url_for('bestellijst') }}">&larr; Terug naar bestellijst</a></p>
+
+<div class="kaart">
+    <p class="tekst-zacht">Vul in hoeveel er daadwerkelijk is binnengekomen per product. Dit wordt bijgeteld bij de voorraad.</p>
+    <form method="post">
+        <div class="tabel-wrap">
+            <table>
+                <thead>
+                    <tr><th>Product</th><th>Besteld</th><th>Ontvangen</th></tr>
+                </thead>
+                <tbody>
+                    {% for r in regels %}
+                    <tr>
+                        <td>{{ r.product_naam }}</td>
+                        <td>{{ r.aantal_besteld }} {{ r.eenheid }}</td>
+                        <td>
+                            <input type="number" name="ontvangen_{{ r.id }}" min="0" style="width:6rem"
+                                   value="{{ r.aantal_besteld }}"> {{ r.eenheid }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="veld" style="max-width:300px; margin-top:1rem">
+            <label for="naam">Naam (wie boekt dit in)</label>
+            <input type="text" id="naam" name="naam" placeholder="Bijv. Luuk">
+        </div>
+        <button type="submit" class="btn btn-geel">Inboeken en voorraad bijwerken</button>
+    </form>
+</div>
+{% endblock %}

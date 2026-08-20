@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titel %}Geschiedenis{% endblock %}
+{% block inhoud %}
+<p class="subtitel">Alle in- en uitboekingen, meest recent eerst.</p>
+
+<div class="kaart">
+    <form method="get" class="veld" style="max-width:320px">
+        <label for="product_id">Filter op product</label>
+        <select id="product_id" name="product_id" onchange="this.form.submit()">
+            <option value="">Alle producten</option>
+            {% for p in producten %}
+            <option value="{{ p.id }}" {{ 'selected' if gekozen_product_id == p.id }}>{{ p.naam }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
+    {% if mutaties %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Product</th><th>Type</th><th>Aantal</th><th>Door</th><th>Opmerking</th></tr>
+            </thead>
+            <tbody>
+                {% for m in mutaties %}
+                <tr>
+                    <td>{{ m.datum|datum_nl }}</td>
+                    <td>{{ m.product_naam }}</td>
+                    <td><span class="badge badge-{{ m.type }}">{{ 'in' if m.type == 'in' else 'uit' }}</span></td>
+                    <td>{{ m.aantal }} {{ m.eenheid }}</td>
+                    <td>{{ m.naam or '—' }}</td>
+                    <td class="tekst-zacht">{{ m.opmerking or '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Geen boekingen gevonden.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block titel %}Producten{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">Beheer het assortiment en de minimumvoorraad.</p>
+    <a href="{{ url_for('product_nieuw') }}" class="btn btn-geel">+ Nieuw product</a>
+</div>
+
+<div class="kaart">
+    {% if producten %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Naam</th><th>Categorie</th><th>Voorraad</th><th>Minimum</th>
+                    <th>Bestel­hoeveelheid</th><th>Verkoopprijs</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in producten %}
+                <tr>
+                    <td>{{ p.naam }}</td>
+                    <td>{{ p.categorie }}</td>
+                    <td>
+                        {% if p.voorraad < p.min_voorraad %}
+                        <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
+                        {% else %}
+                        <span class="badge badge-ok">{{ p.voorraad }} {{ p.eenheid }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
+                    <td>{{ p.bestel_hoeveelheid }} {{ p.eenheid }}</td>
+                    <td>{{ "€ %.2f"|format(p.verkoopprijs) }}</td>
+                    <td class="tabel-acties">
+                        <a href="{{ url_for('product_bewerken', product_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                        <form method="post" action="{{ url_for('product_verwijderen', product_id=p.id) }}"
+                              onsubmit="return confirm('Product \'{{ p.naam }}\' verwijderen? Dit verwijdert ook de boekingsgeschiedenis.');">
+                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen producten toegevoegd.</p>
+    {% endif %}
+</div>
+{% endblock %}

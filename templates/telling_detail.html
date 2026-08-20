@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block titel %}Telling #{{ telling.id }}{% endblock %}
+{% block inhoud %}
+<h1>Telling #{{ telling.id }}</h1>
+<p class="subtitel">
+    {{ telling.datum|datum_nl }}{% if telling.naam %} &mdash; geteld door {{ telling.naam }}{% endif %}
+    &nbsp;&middot;&nbsp; <a href="{{ url_for('tellen') }}">&larr; Terug naar voorraad tellen</a>
+</p>
+
+<div class="actiebalk">
+    <span></span>
+    <a href="{{ url_for('telling_pdf', telling_id=telling.id) }}" class="btn btn-geel">Verkooprapport (PDF)</a>
+</div>
+
+<div class="kaart">
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Voorraad voor telling</th>
+                    <th>Geteld</th>
+                    <th>Verkocht</th>
+                    <th>Correctie</th>
+                    <th>Omzet</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in regels %}
+                <tr>
+                    <td>{{ r.product_naam }}</td>
+                    <td>{{ r.voorraad_voor }} {{ r.eenheid }}</td>
+                    <td>{{ r.geteld_aantal }} {{ r.eenheid }}</td>
+                    <td>
+                        {% if r.verkocht > 0 %}
+                        <span class="badge badge-uit">{{ r.verkocht }} {{ r.eenheid }}</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if r.correctie > 0 %}
+                        <span class="badge badge-in">+{{ r.correctie }} {{ r.eenheid }}</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>{{ "€ %.2f"|format(r.verkocht * r.verkoopprijs) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5" style="text-align:right"><strong>Totaal omzet</strong></td>
+                    <td><strong>{{ "€ %.2f"|format(totaal_omzet) }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

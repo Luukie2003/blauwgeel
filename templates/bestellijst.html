@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block titel %}Bestellijst{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">Producten onder de minimumvoorraad. Vink aan wat je gaat bestellen, pas het aantal aan waar nodig.</p>
+    {% if suggesties %}
+    <a href="{{ url_for('bestellijst_pdf_route') }}" class="btn btn-rand">Bestellijst (PDF)</a>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Voorgesteld om te bestellen</h2>
+    {% if suggesties %}
+    <form method="post" action="{{ url_for('bestelling_aanmaken') }}">
+        <div class="tabel-wrap">
+            <table>
+                <thead>
+                    <tr><th></th><th>Product</th><th>Voorraad</th><th>Minimum</th><th>Aantal bestellen</th></tr>
+                </thead>
+                <tbody>
+                    {% for p in suggesties %}
+                    <tr>
+                        <td><input type="checkbox" name="product_id" value="{{ p.id }}" checked></td>
+                        <td>{{ p.naam }}</td>
+                        <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
+                        <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
+                        <td>
+                            <input type="number" name="aantal_{{ p.id }}" min="0" style="width:6rem"
+                                   value="{{ p.bestel_hoeveelheid if p.bestel_hoeveelheid > 0 else (p.min_voorraad - p.voorraad) }}">
+                            {{ p.eenheid }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="veld" style="max-width:300px; margin-top:1rem">
+            <label for="besteld_door">Besteld door</label>
+            <input type="text" id="besteld_door" name="besteld_door" placeholder="Bijv. Luuk">
+        </div>
+        <button type="submit" class="btn btn-geel">Bestelling aanmaken</button>
+    </form>
+    {% else %}
+    <p class="leeg">Niets nodig — alle voorraad zit boven het minimum.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Openstaande bestellingen</h2>
+    {% if open_bestellingen %}
+    {% for b, regels in open_bestellingen %}
+    <div style="border:1px solid var(--rand); border-radius:8px; padding:0.9rem; margin-bottom:0.9rem;">
+        <div class="actiebalk" style="margin-bottom:0.6rem">
+            <div>
+                <strong>Bestelling #{{ b.id }}</strong>
+                <span class="tekst-zacht">— aangemaakt {{ b.aangemaakt_op|datum_nl }}{% if b.besteld_door %} door {{ b.besteld_door }}{% endif %}</span>
+            </div>
+            <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-klein">Inboeken</a>
+        </div>
+        <ul style="margin:0; padding-left:1.2rem">
+            {% for r in regels %}
+            <li>{{ r.aantal_besteld }} {{ r.eenheid }} — {{ r.product_naam }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="leeg">Geen openstaande bestellingen.</p>
+    {% endif %}
+</div>
+
+{% if recent_ontvangen %}
+<div class="kaart">
+    <h2>Recent ontvangen</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Bestelling</th><th>Ontvangen op</th></tr></thead>
+            <tbody>
+                {% for b in recent_ontvangen %}
+                <tr><td>#{{ b.id }}</td><td>{{ b.ontvangen_op|datum_nl }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
