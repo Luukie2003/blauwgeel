@@ -2,6 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS producten (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    artikelcode TEXT,
     naam TEXT NOT NULL,
     categorie TEXT NOT NULL DEFAULT 'Overig',
     eenheid TEXT NOT NULL DEFAULT 'stuks',
@@ -9,6 +10,7 @@ CREATE TABLE IF NOT EXISTS producten (
     min_voorraad INTEGER NOT NULL DEFAULT 0,
     bestel_hoeveelheid INTEGER NOT NULL DEFAULT 0,
     verkoopprijs REAL NOT NULL DEFAULT 0,
+    actief INTEGER NOT NULL DEFAULT 1,
     opmerking TEXT
 );
 

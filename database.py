@@ -11,16 +11,50 @@ STANDAARD_GEBRUIKER = "admin"
 STANDAARD_WACHTWOORD = "kantine123"
 
 SEED_PRODUCTEN = [
-    # (naam, categorie, eenheid, voorraad, min_voorraad, bestel_hoeveelheid, verkoopprijs)
-    ("Pilsbier (krat 24 flesjes)", "Drank", "krat", 8, 3, 5, 45.00),
-    ("Cola 33cl (blikje)", "Drank", "blikje", 48, 24, 48, 1.50),
-    ("Sinas 33cl (blikje)", "Drank", "blikje", 24, 12, 24, 1.50),
-    ("Koffie (pak 250g)", "Drank", "pak", 4, 2, 4, 0.00),
-    ("Chips (zak)", "Snacks", "zak", 15, 10, 20, 1.00),
-    ("Frikandel", "Snacks", "stuks", 30, 20, 50, 2.00),
-    ("Frietsaus (bak)", "Snacks", "bak", 3, 2, 4, 0.00),
-    ("Toiletpapier", "Non-food", "rol", 12, 6, 12, 0.00),
-    ("Afwasmiddel", "Non-food", "fles", 2, 1, 2, 0.00),
+    # (artikelcode, naam, categorie, eenheid, voorraad, min_voorraad, bestel_hoeveelheid, verkoopprijs, actief)
+    ("KAN", "Grote kan", "Bier", "Pitcher", 0, 0, 0, 12.00, 1),
+    ("BIER", "Tap Bier", "Bier", "Glas", 0, 0, 0, 2.00, 1),
+    ("HERTOG", "Hertog Jan Fles", "Bier", "Fles", 0, 0, 0, 2.20, 1),
+    ("HERTOG0.0", "Hertog Jan 0.0 Fles", "Bier", "Fles", 0, 0, 0, 2.20, 1),
+    ("GUINNESS", "Guinness Export", "Bier", "Fles", 0, 0, 0, 3.00, 1),
+    ("LIEFMANS", "Liefmans Fruitesse", "Bier", "Fles", 0, 0, 0, 3.50, 1),
+    ("SINASBB", "Sonnema Sinas", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
+    ("BACARDI", "Bacardi Cola", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
+    ("COLABB", "Sonnema Cola", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
+    ("BOZUBLUE", "Bozu Blueberry", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
+    ("BOZUGREEN", "Bozu Green", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
+    ("WIJN", "Assorti Wijn", "Kassa knop", "Los", 0, 0, 0, 2.00, 1),
+    ("PROSECCO", "Fles Prosecco", "Wijn", "Fles", 0, 0, 0, 8.00, 1),
+    ("RADLER", "Amstel Radler", "Bier", "Fles", 0, 0, 0, 1.80, 1),
+    ("SHOT", "Shot", "Kassa knop", "Los", 0, 0, 0, 1.50, 1),
+    ("SNAKE", "Snakebite", "Shot", "Los", 0, 0, 0, 1.50, 1),
+    ("MAGNERS", "Magners", "Bier", "Fles", 0, 0, 0, 5.00, 1),
+    ("CAPTAIN", "Captain Morgan", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
+    ("TRAYBB", "Tray Berenburg", "Tray", "Tray", 0, 0, 0, 42.00, 1),
+    ("GUINNESSBLK", "Guinness Draugt Blik", "Bier", "Blik", 0, 0, 0, 5.00, 1),
+    ("AA", "AA Drink", "Fris", "Fles", 0, 0, 0, 2.00, 1),
+    ("POWERG", "Powerrade Geel", "Fris", "Fles", 0, 0, 0, 2.00, 1),
+    ("POWERB", "Powerrade Blauw", "Fris", "Fles", 0, 0, 0, 2.00, 1),
+    ("COCA", "Coca Cola", "Fris", "Fles", 0, 0, 0, 2.00, 1),
+    ("COCAZERO", "Coca Cola Zero", "Fris", "Fles", 0, 0, 0, 2.00, 1),
+    ("FANTA", "Fanta", "Fris", "Fles", 0, 0, 0, 2.00, 1),
+    ("RIV", "Rivella", "Fris", "Fles", 0, 0, 0, 2.00, 1),
+    ("WATER", "Water", "Fris", "Fles", 0, 0, 0, 1.85, 1),
+    ("BOZUDARK", "Bozu Hard Icetea", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
+    ("BOZUORANJE", "Bozu Peach", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
+    ("HJFUST", "Fust Hertog Jan", "Telling", "Fust", 0, 0, 0, 0.00, 1),
+    ("DORITOS", "Doritos", "Chips", "Zakje", 0, 0, 0, 1.20, 1),
+    ("DORITOSZW", "Doritos Zwart", "Chips", "Zakje", 0, 0, 0, 1.20, 1),
+    ("LAYS", "Lays Groen", "Chips", "Zakje", 0, 0, 0, 1.20, 1),
+    ("LAYSBLW", "Lays Blauw", "Chips", "Zakje", 0, 0, 0, 1.20, 1),
+    ("DROGE", "Droge Worst", "Snoep", "Worst", 0, 3, 0, 0.00, 1),
+    ("HARIBO", "Haribo Starmix", "Snoep", "Zakje", 0, 0, 0, 1.50, 1),
+    ("SNICKER", "Snicker", "Snoep", "Reep", 0, 0, 0, 1.00, 1),
+    ("MARS", "Mars", "Snoep", "Reep", 0, 0, 0, 1.00, 1),
+    ("TWIX", "Twix", "Snoep", "Reep", 0, 0, 0, 1.00, 1),
+    ("MM", "M&M Geel", "Snoep", "Zakje", 0, 0, 0, 14.00, 1),
+    ("CHOCO", "Chocolade melk", "Fris", "Flesje", 0, 0, 0, 1.20, 1),
+    ("ABSO", "Absolute Sprite", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
 ]
 
 
@@ -29,6 +63,8 @@ SEED_PRODUCTEN = [
 # existed, so they're added by hand on every connection (cheap PRAGMA check).
 KOLOM_MIGRATIES = [
     ("producten", "verkoopprijs", "REAL NOT NULL DEFAULT 0"),
+    ("producten", "artikelcode", "TEXT"),
+    ("producten", "actief", "INTEGER NOT NULL DEFAULT 1"),
     ("mutaties", "telling_id", "INTEGER REFERENCES tellingen(id)"),
 ]
 
@@ -70,8 +106,9 @@ def init_db(app):
         if count == 0:
             db.executemany(
                 """INSERT INTO producten
-                   (naam, categorie, eenheid, voorraad, min_voorraad, bestel_hoeveelheid, verkoopprijs)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                   (artikelcode, naam, categorie, eenheid, voorraad, min_voorraad,
+                    bestel_hoeveelheid, verkoopprijs, actief)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 SEED_PRODUCTEN,
             )
             db.commit()

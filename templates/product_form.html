@@ -10,6 +10,11 @@
             <legend>Productgegevens</legend>
             <div class="formgrid">
                 <div class="veld">
+                    <label for="artikelcode">Artikelcode</label>
+                    <input type="text" id="artikelcode" name="artikelcode" placeholder="Bijv. COCA"
+                           value="{{ product.artikelcode if product and product.artikelcode else '' }}">
+                </div>
+                <div class="veld">
                     <label for="naam">Naam</label>
                     <input type="text" id="naam" name="naam" required value="{{ product.naam if product else '' }}">
                 </div>
@@ -56,6 +61,11 @@
                 <label for="opmerking">Opmerking</label>
                 <textarea id="opmerking" name="opmerking" rows="2">{{ product.opmerking if product else '' }}</textarea>
             </div>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer">
+                <input type="checkbox" id="actief" name="actief" style="width:auto"
+                       {{ 'checked' if not product or product.actief }}>
+                Actief (staat op bestellijst, tellen en in/uit boeken)
+            </label>
         </fieldset>
         <button type="submit" class="btn btn-geel">{{ 'Opslaan' if product else 'Toevoegen' }}</button>
     </form>

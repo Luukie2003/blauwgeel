@@ -39,7 +39,7 @@ NAV_ITEMS = [
         "label": "In/uit boeken",
     },
     {
-        "endpoints": ["tellen", "telling_detail"],
+        "endpoints": ["tellen", "telling_detail", "tellen_lopen", "tellen_lopen_starten"],
         "url_endpoint": "tellen",
         "label": "Voorraad tellen",
     },
@@ -92,6 +92,7 @@ def create_app():
             "nav_items": NAV_ITEMS,
             "actieve_nav": actieve_nav,
             "huidige_gebruiker": session.get("gebruiker_naam"),
+            "css_versie": int((BASE_DIR / "static" / "style.css").stat().st_mtime),
         }
 
     register_routes(app)
@@ -107,6 +108,10 @@ def format_datum(value):
 
 def now_str():
     return datetime.now().strftime("%Y-%m-%d %H:%M")
+
+
+def now_datetime_local():
+    return datetime.now().strftime("%Y-%m-%dT%H:%M")
 
 
 def register_routes(app):
@@ -221,7 +226,7 @@ def register_routes(app):
     def dashboard():
         db = get_db()
         producten = db.execute(
-            "SELECT * FROM producten ORDER BY categorie, naam"
+            "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
         ).fetchall()
         laag = [p for p in producten if p["voorraad"] < p["min_voorraad"]]
         recente_mutaties = db.execute(
@@ -256,10 +261,11 @@ def register_routes(app):
             db = get_db()
             db.execute(
                 """INSERT INTO producten
-                   (naam, categorie, eenheid, voorraad, min_voorraad, bestel_hoeveelheid,
-                    verkoopprijs, opmerking)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (artikelcode, naam, categorie, eenheid, voorraad, min_voorraad,
+                    bestel_hoeveelheid, verkoopprijs, actief, opmerking)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
+                    request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
                     request.form["categorie"].strip() or "Overig",
                     request.form["eenheid"].strip() or "stuks",
@@ -267,6 +273,7 @@ def register_routes(app):
                     int(request.form["min_voorraad"] or 0),
                     int(request.form["bestel_hoeveelheid"] or 0),
                     float(request.form["verkoopprijs"] or 0),
+                    1 if request.form.get("actief") else 0,
                     request.form.get("opmerking", "").strip(),
                 ),
             )
@@ -288,11 +295,12 @@ def register_routes(app):
         if request.method == "POST":
             db.execute(
                 """UPDATE producten
-                   SET naam = ?, categorie = ?, eenheid = ?, voorraad = ?,
+                   SET artikelcode = ?, naam = ?, categorie = ?, eenheid = ?, voorraad = ?,
                        min_voorraad = ?, bestel_hoeveelheid = ?, verkoopprijs = ?,
-                       opmerking = ?
+                       actief = ?, opmerking = ?
                    WHERE id = ?""",
                 (
+                    request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
                     request.form["categorie"].strip() or "Overig",
                     request.form["eenheid"].strip() or "stuks",
@@ -300,6 +308,7 @@ def register_routes(app):
                     int(request.form["min_voorraad"] or 0),
                     int(request.form["bestel_hoeveelheid"] or 0),
                     float(request.form["verkoopprijs"] or 0),
+                    1 if request.form.get("actief") else 0,
                     request.form.get("opmerking", "").strip(),
                     product_id,
                 ),
@@ -367,7 +376,7 @@ def register_routes(app):
             return redirect(url_for("boeken"))
 
         producten = db.execute(
-            "SELECT * FROM producten ORDER BY categorie, naam"
+            "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
         ).fetchall()
         recente_mutaties = db.execute(
             """SELECT m.*, p.naam AS product_naam, p.eenheid
@@ -380,17 +389,71 @@ def register_routes(app):
 
     # ---------- Voorraad tellen ----------
 
+    def verwerk_telling(db, waarden, naam, opmerking, datum):
+        """waarden: dict {product_id: geteld_aantal}. Maakt een telling aan,
+        berekent per product het verschil met de huidige voorraad, en werkt
+        voorraad + geschiedenis bij. Retourneert het nieuwe telling_id, of
+        None als er niets te verwerken viel."""
+        if not waarden:
+            return None
+
+        cur = db.execute(
+            "INSERT INTO tellingen (datum, naam, opmerking) VALUES (?, ?, ?)",
+            (datum, naam, opmerking),
+        )
+        telling_id = cur.lastrowid
+
+        for product_id, geteld in waarden.items():
+            product = db.execute(
+                "SELECT * FROM producten WHERE id = ?", (product_id,)
+            ).fetchone()
+            if product is None:
+                continue
+            verschil = geteld - product["voorraad"]
+            verkocht = max(0, -verschil)
+            correctie = max(0, verschil)
+
+            db.execute(
+                """INSERT INTO telling_regels
+                   (telling_id, product_id, voorraad_voor, geteld_aantal, verkocht, correctie)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (telling_id, product_id, product["voorraad"], geteld, verkocht, correctie),
+            )
+            db.execute(
+                "UPDATE producten SET voorraad = ? WHERE id = ?", (geteld, product_id)
+            )
+            if verkocht > 0:
+                db.execute(
+                    """INSERT INTO mutaties
+                       (product_id, type, aantal, datum, naam, opmerking, telling_id)
+                       VALUES (?, 'uit', ?, ?, ?, ?, ?)""",
+                    (product_id, verkocht, datum, naam, f"Verkocht (telling #{telling_id})", telling_id),
+                )
+            elif correctie > 0:
+                db.execute(
+                    """INSERT INTO mutaties
+                       (product_id, type, aantal, datum, naam, opmerking, telling_id)
+                       VALUES (?, 'in', ?, ?, ?, ?, ?)""",
+                    (product_id, correctie, datum, naam, f"Correctie (telling #{telling_id})", telling_id),
+                )
+
+        db.commit()
+        return telling_id
+
     @app.route("/tellen", methods=["GET", "POST"])
     def tellen():
         db = get_db()
         if request.method == "POST":
             naam = request.form.get("naam", "").strip()
             opmerking = request.form.get("opmerking", "").strip()
+            datum_input = request.form.get("datum", "").strip()
+            datum = datum_input.replace("T", " ") if datum_input else now_str()
+
             producten = db.execute(
-                "SELECT * FROM producten ORDER BY categorie, naam"
+                "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
             ).fetchall()
 
-            regels = []
+            waarden = {}
             for p in producten:
                 waarde = request.form.get(f"geteld_{p['id']}", "").strip()
                 if waarde == "":
@@ -401,88 +464,116 @@ def register_routes(app):
                     continue
                 if geteld < 0:
                     continue
-                verschil = geteld - p["voorraad"]
-                regels.append(
-                    {
-                        "product": p,
-                        "voorraad_voor": p["voorraad"],
-                        "geteld": geteld,
-                        "verkocht": max(0, -verschil),
-                        "correctie": max(0, verschil),
-                    }
-                )
+                waarden[p["id"]] = geteld
 
-            if not regels:
+            telling_id = verwerk_telling(db, waarden, naam, opmerking, datum)
+            if telling_id is None:
                 flash("Geen aantallen ingevuld -- er is niets geteld.", "error")
                 return redirect(url_for("tellen"))
 
-            cur = db.execute(
-                "INSERT INTO tellingen (datum, naam, opmerking) VALUES (?, ?, ?)",
-                (now_str(), naam, opmerking),
-            )
-            telling_id = cur.lastrowid
-
-            for r in regels:
-                db.execute(
-                    """INSERT INTO telling_regels
-                       (telling_id, product_id, voorraad_voor, geteld_aantal, verkocht, correctie)
-                       VALUES (?, ?, ?, ?, ?, ?)""",
-                    (
-                        telling_id,
-                        r["product"]["id"],
-                        r["voorraad_voor"],
-                        r["geteld"],
-                        r["verkocht"],
-                        r["correctie"],
-                    ),
-                )
-                db.execute(
-                    "UPDATE producten SET voorraad = ? WHERE id = ?",
-                    (r["geteld"], r["product"]["id"]),
-                )
-                if r["verkocht"] > 0:
-                    db.execute(
-                        """INSERT INTO mutaties
-                           (product_id, type, aantal, datum, naam, opmerking, telling_id)
-                           VALUES (?, 'uit', ?, ?, ?, ?, ?)""",
-                        (
-                            r["product"]["id"],
-                            r["verkocht"],
-                            now_str(),
-                            naam,
-                            f"Verkocht (telling #{telling_id})",
-                            telling_id,
-                        ),
-                    )
-                elif r["correctie"] > 0:
-                    db.execute(
-                        """INSERT INTO mutaties
-                           (product_id, type, aantal, datum, naam, opmerking, telling_id)
-                           VALUES (?, 'in', ?, ?, ?, ?, ?)""",
-                        (
-                            r["product"]["id"],
-                            r["correctie"],
-                            now_str(),
-                            naam,
-                            f"Correctie (telling #{telling_id})",
-                            telling_id,
-                        ),
-                    )
-
-            db.commit()
             flash(
-                f"Telling #{telling_id} verwerkt: {len(regels)} product(en) geteld.",
+                f"Telling #{telling_id} verwerkt: {len(waarden)} product(en) geteld.",
                 "success",
             )
             return redirect(url_for("telling_detail", telling_id=telling_id))
 
         producten = db.execute(
-            "SELECT * FROM producten ORDER BY categorie, naam"
+            "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
         ).fetchall()
         tellingen = db.execute(
             "SELECT * FROM tellingen ORDER BY id DESC LIMIT 15"
         ).fetchall()
-        return render_template("tellen.html", producten=producten, tellingen=tellingen)
+        return render_template(
+            "tellen.html",
+            producten=producten,
+            tellingen=tellingen,
+            nu_datetime_local=now_datetime_local(),
+        )
+
+    @app.route("/tellen/lopen/starten")
+    def tellen_lopen_starten():
+        session.pop("loop_index", None)
+        session.pop("loop_waarden", None)
+        return redirect(url_for("tellen_lopen"))
+
+    @app.route("/tellen/lopen", methods=["GET", "POST"])
+    def tellen_lopen():
+        db = get_db()
+        producten = db.execute(
+            "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
+        ).fetchall()
+        if not producten:
+            flash("Geen actieve producten om te tellen.", "error")
+            return redirect(url_for("tellen"))
+
+        if request.method == "POST":
+            actie = request.form.get("actie", "volgende")
+            if actie == "stoppen":
+                session.pop("loop_index", None)
+                session.pop("loop_waarden", None)
+                flash("Looplijst afgebroken, er is niets opgeslagen.", "error")
+                return redirect(url_for("tellen"))
+
+            index = session.get("loop_index", 0)
+            waarden = session.get("loop_waarden", {})
+
+            if 0 <= index < len(producten):
+                product_id = str(producten[index]["id"])
+                waarde = request.form.get("geteld", "").strip()
+                if waarde != "":
+                    waarden[product_id] = waarde
+                elif product_id in waarden:
+                    del waarden[product_id]
+
+            index = max(0, index - 1) if actie == "vorige" else index + 1
+            session["loop_index"] = index
+            session["loop_waarden"] = waarden
+            session.modified = True
+
+            if index >= len(producten):
+                geparsed = {}
+                for pid_str, waarde in waarden.items():
+                    try:
+                        geteld = int(waarde)
+                    except ValueError:
+                        continue
+                    if geteld >= 0:
+                        geparsed[int(pid_str)] = geteld
+
+                session.pop("loop_index", None)
+                session.pop("loop_waarden", None)
+
+                telling_id = verwerk_telling(
+                    db, geparsed, session.get("gebruiker_naam"), "Via looplijst geteld", now_str()
+                )
+                if telling_id is None:
+                    flash("Geen aantallen ingevuld -- er is niets geteld.", "error")
+                    return redirect(url_for("tellen"))
+                flash(
+                    f"Telling #{telling_id} verwerkt: {len(geparsed)} product(en) "
+                    "geteld via de looplijst.",
+                    "success",
+                )
+                return redirect(url_for("telling_detail", telling_id=telling_id))
+
+            return redirect(url_for("tellen_lopen"))
+
+        index = session.get("loop_index", 0)
+        if index >= len(producten):
+            index = 0
+        waarden = session.get("loop_waarden", {})
+        huidig = producten[index]
+        huidige_waarde = waarden.get(str(huidig["id"]), "")
+        voortgang_percentage = round(index / len(producten) * 100, 1)
+
+        return render_template(
+            "tellen_lopen.html",
+            product=huidig,
+            index=index,
+            totaal=len(producten),
+            huidige_waarde=huidige_waarde,
+            voortgang_percentage=voortgang_percentage,
+        )
 
     @app.route("/tellingen/<int:telling_id>")
     def telling_detail(telling_id):
@@ -555,7 +646,9 @@ def register_routes(app):
         return [
             p
             for p in db.execute(
-                "SELECT * FROM producten WHERE voorraad < min_voorraad ORDER BY categorie, naam"
+                """SELECT * FROM producten
+                   WHERE actief = 1 AND voorraad < min_voorraad
+                   ORDER BY categorie, naam"""
             ).fetchall()
             if p["id"] not in product_ids_in_open_bestelling
         ]

@@ -456,6 +456,78 @@ footer {
     padding: 1.25rem 1rem;
 }
 
+/* ---------- Looplijst (mobiel tellen) ---------- */
+
+.loop-aankondiging {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: var(--selectie-bg);
+    border-color: var(--accent);
+}
+
+.loop-kaart {
+    max-width: 480px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.loop-voortgang {
+    height: 6px;
+    background: var(--rand-licht);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 1.1rem;
+}
+
+.loop-voortgang-balk {
+    height: 100%;
+    background: var(--geel-donker);
+}
+
+.loop-categorie {
+    color: var(--tekst-zacht);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 700;
+}
+
+.loop-product {
+    font-size: 1.6rem;
+    margin: 0.3rem 0 0.9rem;
+}
+
+.loop-invoer {
+    width: 100%;
+    font-size: 2.2rem;
+    text-align: center;
+    padding: 0.7rem;
+    margin-bottom: 1.1rem;
+}
+
+.loop-knoppen {
+    display: flex;
+    gap: 0.6rem;
+}
+
+.loop-btn-klein {
+    flex: 0 0 auto;
+    padding: 1rem 1.1rem;
+}
+
+.loop-btn-groot {
+    flex: 1;
+    padding: 1rem;
+    font-size: 1.05rem;
+}
+
+.loop-stop {
+    margin-top: 1.4rem;
+}
+
 /* ---------- Login ---------- */
 
 .login-body {

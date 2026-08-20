@@ -12,13 +12,14 @@
         <table>
             <thead>
                 <tr>
-                    <th>Naam</th><th>Categorie</th><th>Voorraad</th><th>Minimum</th>
-                    <th>Bestel­hoeveelheid</th><th>Verkoopprijs</th><th></th>
+                    <th>Code</th><th>Naam</th><th>Categorie</th><th>Voorraad</th><th>Minimum</th>
+                    <th>Bestel­hoeveelheid</th><th>Verkoopprijs</th><th>Status</th><th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for p in producten %}
                 <tr>
+                    <td>{{ p.artikelcode or '—' }}</td>
                     <td>{{ p.naam }}</td>
                     <td>{{ p.categorie }}</td>
                     <td>
@@ -31,6 +32,13 @@
                     <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
                     <td>{{ p.bestel_hoeveelheid }} {{ p.eenheid }}</td>
                     <td>{{ "€ %.2f"|format(p.verkoopprijs) }}</td>
+                    <td>
+                        {% if p.actief %}
+                        <span class="badge badge-ok">Actief</span>
+                        {% else %}
+                        <span class="badge badge-neutraal">Inactief</span>
+                        {% endif %}
+                    </td>
                     <td class="tabel-acties">
                         <a href="{{ url_for('product_bewerken', product_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
                         <form method="post" action="{{ url_for('product_verwijderen', product_id=p.id) }}"

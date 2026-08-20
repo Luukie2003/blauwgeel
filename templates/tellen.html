@@ -7,6 +7,16 @@
     Laat een veld leeg om dat product over te slaan.
 </p>
 
+<div class="kaart loop-aankondiging">
+    <div>
+        <strong>Onderweg tellen met je telefoon?</strong>
+        <p class="tekst-zacht" style="margin:0.2rem 0 0">
+            Loop met de looplijst product voor product langs, in plaats van deze hele tabel.
+        </p>
+    </div>
+    <a href="{{ url_for('tellen_lopen_starten') }}" class="btn btn-geel">Looplijst starten</a>
+</div>
+
 <div class="kaart">
     <form method="post">
         <fieldset class="groupbox">
@@ -45,6 +55,10 @@
             <div class="veld">
                 <label for="opmerking">Opmerking (optioneel)</label>
                 <input type="text" id="opmerking" name="opmerking">
+            </div>
+            <div class="veld">
+                <label for="datum">Datum/tijd van deze telling</label>
+                <input type="datetime-local" id="datum" name="datum" value="{{ nu_datetime_local }}">
             </div>
         </div>
         <button type="submit" class="btn btn-geel">Telling verwerken</button>
