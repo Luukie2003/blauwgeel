@@ -2,6 +2,7 @@ venv/
 voorraad.db
 secret_key.txt
 backups/
+email_instellingen.py
 __pycache__/
 *.pyc
 .DS_Store

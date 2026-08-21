@@ -17,6 +17,7 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import backup as backup_module
+import mail
 from database import get_db, init_db, register_db
 from pdf import bestellijst_pdf, periode_verkoop_pdf, verkoop_pdf, voorraadoverzicht_pdf
 
@@ -820,7 +821,7 @@ def register_routes(app):
                 "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
             ).fetchall()
 
-            aantal_geboekt = 0
+            geboekte_regels = []
             for p in producten:
                 waarde = request.form.get(f"aantal_{p['id']}", "").strip()
                 if waarde == "":
@@ -840,16 +841,30 @@ def register_routes(app):
                        VALUES (?, 'in', ?, ?, ?, ?)""",
                     (p["id"], aantal, datum, naam, opmerking),
                 )
-                aantal_geboekt += 1
+                geboekte_regels.append((p, aantal))
 
-            if aantal_geboekt == 0:
+            if not geboekte_regels:
                 flash("Geen aantallen ingevuld -- er is niets ingeboekt.", "error")
                 return redirect(url_for("levering_inboeken"))
 
             db.commit()
             flash(
-                f"Levering ingeboekt: {aantal_geboekt} product(en) bijgewerkt.", "success"
+                f"Levering ingeboekt: {len(geboekte_regels)} product(en) bijgewerkt.",
+                "success",
             )
+
+            regels_tekst = "\n".join(
+                f"  - {p['naam']}: +{aantal} {p['eenheid']}" for p, aantal in geboekte_regels
+            )
+            mail.stuur_mail(
+                f"Levering ingeboekt{f' -- {referentie}' if referentie else ''}",
+                f"Er is een levering ingeboekt in het voorraadsysteem.\n\n"
+                f"Datum: {format_datum(datum)}\n"
+                f"Door: {naam or 'onbekend'}\n"
+                f"Referentie: {referentie or '-'}\n\n"
+                f"Producten:\n{regels_tekst}",
+            )
+
             return redirect(url_for("boeken"))
 
         producten = db.execute(
