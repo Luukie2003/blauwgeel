@@ -40,6 +40,7 @@ NAV_ITEMS = [
             "product_nieuw",
             "product_bewerken",
             "categorieen_lijst",
+            "producten_minimumvoorraad",
         ],
         "url_endpoint": "producten_lijst",
         "label": "Producten",
@@ -388,6 +389,36 @@ def register_routes(app):
         return render_template(
             "producten.html", producten=producten, categorieen=categorieen
         )
+
+    @app.route("/producten/minimumvoorraad", methods=["GET", "POST"])
+    def producten_minimumvoorraad():
+        db = get_db()
+        if request.method == "POST":
+            producten = db.execute("SELECT id FROM producten").fetchall()
+            aangepast = 0
+            for p in producten:
+                waarde = request.form.get(f"min_{p['id']}", "").strip()
+                if waarde == "":
+                    continue
+                try:
+                    nieuw_minimum = int(waarde)
+                except ValueError:
+                    continue
+                if nieuw_minimum < 0:
+                    continue
+                db.execute(
+                    "UPDATE producten SET min_voorraad = ? WHERE id = ?",
+                    (nieuw_minimum, p["id"]),
+                )
+                aangepast += 1
+            db.commit()
+            flash(f"Minimumvoorraad bijgewerkt voor {aangepast} product(en).", "success")
+            return redirect(url_for("producten_minimumvoorraad"))
+
+        producten = db.execute(
+            "SELECT * FROM producten ORDER BY categorie, naam"
+        ).fetchall()
+        return render_template("producten_minimum.html", producten=producten)
 
     @app.route("/producten/nieuw", methods=["GET", "POST"])
     def product_nieuw():
