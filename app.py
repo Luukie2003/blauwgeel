@@ -1,3 +1,4 @@
+import re
 import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -9,16 +10,19 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_from_directory,
     session,
     url_for,
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
+import backup as backup_module
 from database import get_db, init_db, register_db
 from pdf import bestellijst_pdf, periode_verkoop_pdf, verkoop_pdf
 
 BASE_DIR = Path(__file__).parent
 SECRET_KEY_PATH = BASE_DIR / "secret_key.txt"
+BACKUP_BESTANDSNAAM = re.compile(r"^voorraad-\d{4}-\d{2}-\d{2}\.db$")
 
 OPEN_ENDPOINTS = {"login", "static"}
 
@@ -265,6 +269,46 @@ def register_routes(app):
     @app.route("/help")
     def help_pagina():
         return render_template("help.html")
+
+    # ---------- Back-ups ----------
+
+    @app.route("/backups")
+    def backups_lijst():
+        backup_module.BACKUP_MAP.mkdir(exist_ok=True)
+        bestanden = sorted(
+            backup_module.BACKUP_MAP.glob("voorraad-*.db"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        backups = [
+            {
+                "naam": b.name,
+                "grootte_kb": round(b.stat().st_size / 1024, 1),
+                "datum": datetime.fromtimestamp(b.stat().st_mtime).strftime(
+                    "%d-%m-%Y %H:%M"
+                ),
+            }
+            for b in bestanden
+        ]
+        return render_template("backups.html", backups=backups)
+
+    @app.route("/backups/nu", methods=["POST"])
+    def backup_nu():
+        resultaat = backup_module.maak_backup()
+        if resultaat is None:
+            flash("Nog geen voorraad.db aanwezig om te back-uppen.", "error")
+        else:
+            flash(f"Back-up gemaakt: {resultaat.name}", "success")
+        return redirect(url_for("backups_lijst"))
+
+    @app.route("/backups/<bestandsnaam>/download")
+    def backup_download(bestandsnaam):
+        if not BACKUP_BESTANDSNAAM.match(bestandsnaam):
+            flash("Ongeldige back-up.", "error")
+            return redirect(url_for("backups_lijst"))
+        return send_from_directory(
+            backup_module.BACKUP_MAP, bestandsnaam, as_attachment=True
+        )
 
     # ---------- Overzicht ----------
 

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block titel %}Back-ups{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Elke dag wordt hier automatisch een back-up van de database bijgezet
+        (bewaard tot 90 dagen terug). Je kunt ook zelf op elk moment een
+        back-up maken of downloaden.
+    </p>
+    <form method="post" action="{{ url_for('backup_nu') }}">
+        <button type="submit" class="btn btn-geel">Nu een back-up maken</button>
+    </form>
+</div>
+
+<div class="kaart">
+    {% if backups %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Bestand</th><th>Grootte</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for b in backups %}
+                <tr>
+                    <td>{{ b.datum }}</td>
+                    <td>{{ b.naam }}</td>
+                    <td>{{ b.grootte_kb }} KB</td>
+                    <td>
+                        <a href="{{ url_for('backup_download', bestandsnaam=b.naam) }}" class="btn btn-rand btn-klein">Downloaden</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen back-ups. Klik hierboven op "Nu een back-up maken" om de eerste te maken.</p>
+    {% endif %}
+</div>
+{% endblock %}

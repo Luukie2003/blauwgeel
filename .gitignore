@@ -1,6 +1,7 @@
 venv/
 voorraad.db
 secret_key.txt
+backups/
 __pycache__/
 *.pyc
 .DS_Store
