@@ -33,11 +33,12 @@
                     <td>{{ p.bestel_hoeveelheid }} {{ p.eenheid }}</td>
                     <td>{{ "€ %.2f"|format(p.verkoopprijs) }}</td>
                     <td>
-                        {% if p.actief %}
-                        <span class="badge badge-ok">Actief</span>
-                        {% else %}
-                        <span class="badge badge-neutraal">Inactief</span>
-                        {% endif %}
+                        <form method="post" action="{{ url_for('product_actief_wisselen', product_id=p.id) }}" class="inline">
+                            <label class="schuif" title="{{ 'Actief -- klik om uit te zetten' if p.actief else 'Inactief -- klik om aan te zetten' }}">
+                                <input type="checkbox" {{ 'checked' if p.actief else '' }} onchange="this.form.submit()">
+                                <span class="schuif-balk"></span>
+                            </label>
+                        </form>
                     </td>
                     <td class="tabel-acties">
                         <a href="{{ url_for('product_bewerken', product_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a>

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block titel %}Bijzonderheden{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Het prikbord voor de kantine: bijzonderheden, opmerkingen of dingen die
+    de volgende persoon moet weten. Iedereen kan hier iets op zetten.
+</p>
+
+<div class="kaart">
+    <form method="post">
+        <div class="veld">
+            <label for="tekst">Nieuwe mededeling</label>
+            <textarea id="tekst" name="tekst" rows="3" required
+                      placeholder="Bijv. 'Tapkraan lekt een beetje, graag even naar kijken'"></textarea>
+        </div>
+        <button type="submit" class="btn btn-geel">Plaatsen</button>
+    </form>
+</div>
+
+{% if mededelingen %}
+<div class="prikbord">
+    {% for m in mededelingen %}
+    <div class="prikbriefje">
+        <p>{{ m.tekst }}</p>
+        <div class="prikbriefje-voet">
+            <span>{{ m.naam or 'Onbekend' }} &middot; {{ m.datum|datum_nl }}</span>
+            <form method="post" action="{{ url_for('mededeling_verwijderen', mededeling_id=m.id) }}"
+                  onsubmit="return confirm('Deze mededeling verwijderen?');">
+                <button type="submit" class="btn-tekstlink">Verwijderen</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="leeg">Nog geen mededelingen.</p>
+{% endif %}
+{% endblock %}

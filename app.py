@@ -64,6 +64,11 @@ NAV_ITEMS = [
         "url_endpoint": "geschiedenis",
         "label": "Geschiedenis",
     },
+    {
+        "endpoints": ["bijzonderheden"],
+        "url_endpoint": "bijzonderheden",
+        "label": "Bijzonderheden",
+    },
 ]
 
 
@@ -442,6 +447,22 @@ def register_routes(app):
             db.execute("DELETE FROM producten WHERE id = ?", (product_id,))
             db.commit()
             flash(f"Product '{product['naam']}' verwijderd.", "success")
+        return redirect(url_for("producten_lijst"))
+
+    @app.route("/producten/<int:product_id>/actief", methods=["POST"])
+    def product_actief_wisselen(product_id):
+        db = get_db()
+        product = db.execute(
+            "SELECT * FROM producten WHERE id = ?", (product_id,)
+        ).fetchone()
+        if product is None:
+            flash("Product niet gevonden.", "error")
+            return redirect(url_for("producten_lijst"))
+        nieuwe_status = 0 if product["actief"] else 1
+        db.execute(
+            "UPDATE producten SET actief = ? WHERE id = ?", (nieuwe_status, product_id)
+        )
+        db.commit()
         return redirect(url_for("producten_lijst"))
 
     # ---------- In / uit boeken ----------
@@ -1113,6 +1134,35 @@ def register_routes(app):
             producten=producten,
             gekozen_product_id=product_id,
         )
+
+    # ---------- Bijzonderheden (prikbord) ----------
+
+    @app.route("/bijzonderheden", methods=["GET", "POST"])
+    def bijzonderheden():
+        db = get_db()
+        if request.method == "POST":
+            tekst = request.form.get("tekst", "").strip()
+            if not tekst:
+                flash("Vul een tekst in.", "error")
+                return redirect(url_for("bijzonderheden"))
+            db.execute(
+                "INSERT INTO mededelingen (tekst, naam, datum) VALUES (?, ?, ?)",
+                (tekst, session.get("gebruiker_naam"), now_str()),
+            )
+            db.commit()
+            return redirect(url_for("bijzonderheden"))
+
+        mededelingen = db.execute(
+            "SELECT * FROM mededelingen ORDER BY id DESC"
+        ).fetchall()
+        return render_template("bijzonderheden.html", mededelingen=mededelingen)
+
+    @app.route("/bijzonderheden/<int:mededeling_id>/verwijderen", methods=["POST"])
+    def mededeling_verwijderen(mededeling_id):
+        db = get_db()
+        db.execute("DELETE FROM mededelingen WHERE id = ?", (mededeling_id,))
+        db.commit()
+        return redirect(url_for("bijzonderheden"))
 
 
 app = create_app()

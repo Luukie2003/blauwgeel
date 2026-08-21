@@ -105,6 +105,7 @@ a:hover { text-decoration: underline; }
     min-width: 230px;
     padding: 0.3rem 0;
     border-radius: var(--radius);
+    z-index: 30;
 }
 
 .menu-item.open .menu-dropdown {
@@ -451,6 +452,98 @@ input:focus, select:focus, textarea:focus {
     border-color: var(--accent);
     background: var(--selectie-bg);
     color: var(--blauw-donker);
+}
+
+/* ---------- Aan/uit-schuifje ---------- */
+
+.schuif {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    vertical-align: middle;
+}
+.schuif input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.schuif .schuif-balk {
+    position: absolute;
+    inset: 0;
+    background: #bfbfbf;
+    border: 1px solid var(--rand);
+    border-radius: 22px;
+    cursor: pointer;
+    transition: background-color .15s ease;
+}
+.schuif .schuif-balk::before {
+    content: "";
+    position: absolute;
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    top: 2px;
+    background: #ffffff;
+    border-radius: 50%;
+    transition: transform .15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.schuif input:checked + .schuif-balk {
+    background: var(--groen);
+    border-color: #0f5a29;
+}
+.schuif input:checked + .schuif-balk::before {
+    transform: translateX(18px);
+}
+.schuif input:focus-visible + .schuif-balk {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* ---------- Prikbord ---------- */
+
+.prikbord {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 0.9rem;
+}
+
+.prikbriefje {
+    background: #fdf6d8;
+    border: 1px solid #e6d98a;
+    border-top: 6px solid var(--geel-donker);
+    border-radius: var(--radius);
+    padding: 0.9rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.prikbriefje p {
+    margin: 0 0 0.8rem;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.prikbriefje-voet {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    color: var(--tekst-zacht);
+}
+
+.prikbriefje-voet form { margin: 0; }
+
+.btn-tekstlink {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--rood);
+    font-size: 0.72rem;
+    cursor: pointer;
+    text-decoration: underline;
 }
 
 .tabel-wrap { overflow-x: auto; }

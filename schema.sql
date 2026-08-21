@@ -66,6 +66,13 @@ CREATE TABLE IF NOT EXISTS mutaties (
     telling_id INTEGER REFERENCES tellingen(id)
 );
 
+CREATE TABLE IF NOT EXISTS mededelingen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tekst TEXT NOT NULL,
+    naam TEXT,
+    datum TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_mutaties_product ON mutaties(product_id);
 CREATE INDEX IF NOT EXISTS idx_mutaties_datum ON mutaties(datum);
 CREATE INDEX IF NOT EXISTS idx_bestelregels_bestelling ON bestelregels(bestelling_id);
