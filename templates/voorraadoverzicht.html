@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block titel %}Voorraadoverzicht{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">Volledige stand van zaken van de kantinevoorraad.</p>
+    <a href="{{ url_for('voorraadoverzicht_pdf_route') }}" class="btn btn-geel">Uitgebreide PDF</a>
+</div>
+
+<div class="statgrid">
+    <div class="stat">
+        <div class="getal">{{ "€ %.2f"|format(totale_waarde) }}</div>
+        <div class="label">Totale voorraadwaarde (verkoopprijs)</div>
+    </div>
+    <div class="stat">
+        <div class="getal">{{ aantal_producten }}</div>
+        <div class="label">Producten in {{ aantal_categorieen }} categorieën</div>
+    </div>
+    <div class="stat {{ 'waarschuwing' if onder_minimum|length > 0 }}">
+        <div class="getal">{{ onder_minimum|length }}</div>
+        <div class="label">Onder minimumvoorraad</div>
+    </div>
+    <div class="stat {{ 'waarschuwing' if zonder_voorraad|length > 0 }}">
+        <div class="getal">{{ zonder_voorraad|length }}</div>
+        <div class="label">Producten op 0 voorraad</div>
+    </div>
+</div>
+
+<div class="kaart">
+    <h2>Voorraadwaarde per categorie</h2>
+    {% if categorie_lijst %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Categorie</th><th>Producten</th><th>Waarde</th><th>Aandeel</th></tr>
+            </thead>
+            <tbody>
+                {% for c in categorie_lijst %}
+                <tr>
+                    <td>{{ c.naam }}</td>
+                    <td>{{ c.aantal }}</td>
+                    <td>{{ "€ %.2f"|format(c.waarde) }}</td>
+                    <td>
+                        <div class="waarde-balk-wrap">
+                            <div class="waarde-balk" style="width: {{ c.percentage }}%"></div>
+                            <span>{{ "%.1f"|format(c.percentage) }}%</span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen producten.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Top 10 producten op voorraadwaarde</h2>
+    {% if top_waarde %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Product</th><th>Voorraad</th><th>Verkoopprijs</th><th>Waarde</th></tr>
+            </thead>
+            <tbody>
+                {% for p in top_waarde %}
+                <tr>
+                    <td>{{ p.naam }}</td>
+                    <td>{{ p.voorraad }} {{ p.eenheid }}</td>
+                    <td>{{ "€ %.2f"|format(p.verkoopprijs) }}</td>
+                    <td>{{ "€ %.2f"|format(p.voorraad * p.verkoopprijs) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen producten.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Opvallende zaken</h2>
+    <div class="opvallend-grid">
+        {% if inactief_met_voorraad %}
+        <div class="opvallend-kaart opvallend-waarschuwing">
+            <strong>{{ inactief_met_voorraad|length }} inactieve product(en) met nog voorraad</strong>
+            <p class="tekst-zacht">Deze staan niet meer bij tellen/boeken, maar er ligt nog wel voorraad.</p>
+            <ul>
+                {% for p in inactief_met_voorraad %}
+                <li>{{ p.naam }} — {{ p.voorraad }} {{ p.eenheid }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if zonder_prijs %}
+        <div class="opvallend-kaart">
+            <strong>{{ zonder_prijs|length }} product(en) zonder verkoopprijs</strong>
+            <p class="tekst-zacht">Deze tellen voor € 0 mee in de voorraadwaarde en omzetrapporten.</p>
+            <ul>
+                {% for p in zonder_prijs %}
+                <li>{{ p.naam }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if langst_niet_geteld %}
+        <div class="opvallend-kaart">
+            <strong>Langst niet geteld</strong>
+            <ul>
+                {% for r in langst_niet_geteld %}
+                <li>{{ r.product.naam }} — {{ r.laatste_datum|datum_nl }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if nooit_geteld %}
+        <div class="opvallend-kaart">
+            <strong>{{ nooit_geteld|length }} product(en) nog nooit geteld</strong>
+            <p class="tekst-zacht">De voorraad hiervan staat nog op wat er handmatig is ingevoerd.</p>
+        </div>
+        {% endif %}
+
+        {% if not inactief_met_voorraad and not zonder_prijs and not langst_niet_geteld and not nooit_geteld %}
+        <p class="leeg">Niets opvallends gevonden — alles ziet er netjes uit.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

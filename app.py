@@ -18,7 +18,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import backup as backup_module
 from database import get_db, init_db, register_db
-from pdf import bestellijst_pdf, periode_verkoop_pdf, verkoop_pdf
+from pdf import bestellijst_pdf, periode_verkoop_pdf, verkoop_pdf, voorraadoverzicht_pdf
 
 BASE_DIR = Path(__file__).parent
 SECRET_KEY_PATH = BASE_DIR / "secret_key.txt"
@@ -33,6 +33,11 @@ NAV_ITEMS = [
         "endpoints": ["dashboard"],
         "url_endpoint": "dashboard",
         "label": "Overzicht",
+    },
+    {
+        "endpoints": ["voorraadoverzicht"],
+        "url_endpoint": "voorraadoverzicht",
+        "label": "Voorraadoverzicht",
     },
     {
         "endpoints": [
@@ -373,6 +378,89 @@ def register_routes(app):
             laag=laag,
             recente_mutaties=recente_mutaties,
             open_bestellingen=open_bestellingen,
+        )
+
+    def bereken_voorraadoverzicht(db):
+        """Verzamelt alle cijfers voor het voorraadoverzicht -- gebruikt door
+        zowel de webpagina als de PDF, zodat ze altijd hetzelfde tonen."""
+        producten = db.execute("SELECT * FROM producten ORDER BY categorie, naam").fetchall()
+
+        totale_waarde = sum(p["voorraad"] * p["verkoopprijs"] for p in producten)
+        zonder_voorraad = [p for p in producten if p["actief"] and p["voorraad"] == 0]
+        onder_minimum = [p for p in producten if p["actief"] and p["voorraad"] < p["min_voorraad"]]
+        zonder_prijs = [p for p in producten if p["actief"] and p["verkoopprijs"] == 0]
+        inactief_met_voorraad = [p for p in producten if not p["actief"] and p["voorraad"] > 0]
+
+        per_categorie = {}
+        for p in producten:
+            c = per_categorie.setdefault(p["categorie"], {"aantal": 0, "waarde": 0.0})
+            c["aantal"] += 1
+            c["waarde"] += p["voorraad"] * p["verkoopprijs"]
+        categorie_lijst = sorted(
+            [
+                {
+                    "naam": naam,
+                    "aantal": info["aantal"],
+                    "waarde": info["waarde"],
+                    "percentage": (info["waarde"] / totale_waarde * 100) if totale_waarde else 0,
+                }
+                for naam, info in per_categorie.items()
+            ],
+            key=lambda x: x["waarde"],
+            reverse=True,
+        )
+
+        top_waarde = sorted(
+            producten, key=lambda p: p["voorraad"] * p["verkoopprijs"], reverse=True
+        )[:10]
+
+        laatste_tellingen = db.execute(
+            """SELECT tr.product_id, MAX(t.datum) AS laatste_datum
+               FROM telling_regels tr JOIN tellingen t ON t.id = tr.telling_id
+               GROUP BY tr.product_id"""
+        ).fetchall()
+        laatste_per_product = {r["product_id"]: r["laatste_datum"] for r in laatste_tellingen}
+        nooit_geteld = [p for p in producten if p["actief"] and p["id"] not in laatste_per_product]
+        langst_niet_geteld = sorted(
+            (
+                {"product": p, "laatste_datum": laatste_per_product[p["id"]]}
+                for p in producten
+                if p["id"] in laatste_per_product
+            ),
+            key=lambda x: x["laatste_datum"],
+        )[:5]
+
+        return {
+            "producten": producten,
+            "totale_waarde": totale_waarde,
+            "aantal_producten": len(producten),
+            "aantal_categorieen": len(per_categorie),
+            "zonder_voorraad": zonder_voorraad,
+            "onder_minimum": onder_minimum,
+            "zonder_prijs": zonder_prijs,
+            "inactief_met_voorraad": inactief_met_voorraad,
+            "nooit_geteld": nooit_geteld,
+            "categorie_lijst": categorie_lijst,
+            "top_waarde": top_waarde,
+            "langst_niet_geteld": langst_niet_geteld,
+        }
+
+    @app.route("/voorraadoverzicht")
+    def voorraadoverzicht():
+        db = get_db()
+        return render_template(
+            "voorraadoverzicht.html", **bereken_voorraadoverzicht(db)
+        )
+
+    @app.route("/voorraadoverzicht/pdf")
+    def voorraadoverzicht_pdf_route():
+        db = get_db()
+        gegevens = bereken_voorraadoverzicht(db)
+        pdf_bytes = voorraadoverzicht_pdf(gegevens)
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=voorraadoverzicht.pdf"},
         )
 
     # ---------- Producten ----------

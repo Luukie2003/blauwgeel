@@ -86,6 +86,19 @@ class Rapport(FPDF):
         self.cell(0, 8, tekst, new_x="LMARGIN", new_y="NEXT")
         self.set_text_color(0, 0, 0)
 
+    def sectie(self, titel):
+        self.ln(6)
+        self.set_font("Helvetica", "B", 12)
+        self.set_text_color(*KLEUR_BLAUW)
+        self.cell(0, 8, titel, new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
+
+    def statregel(self, label, waarde):
+        self.set_font("Helvetica", "", 10)
+        self.cell(90, 6.5, label, new_x="RIGHT")
+        self.set_font("Helvetica", "B", 10)
+        self.cell(0, 6.5, str(waarde), new_x="LMARGIN", new_y="NEXT")
+
 
 def _kort(pdf, tekst, breedte_mm):
     max_breedte = breedte_mm - 2
@@ -183,6 +196,142 @@ def periode_verkoop_pdf(van_tekst, tot_tekst, regels):
                 ],
                 zebra=i % 2 == 1,
             )
+
+    return bytes(pdf.output())
+
+
+def voorraadoverzicht_pdf(gegevens):
+    pdf = Rapport("Voorraadoverzicht", "Volledige stand van zaken van de kantinevoorraad")
+
+    pdf.sectie("Samenvatting")
+    pdf.statregel("Totale voorraadwaarde (verkoopprijs):", _euro(gegevens["totale_waarde"]))
+    pdf.statregel("Aantal producten:", gegevens["aantal_producten"])
+    pdf.statregel("Aantal categorieën:", gegevens["aantal_categorieen"])
+    pdf.statregel("Producten zonder voorraad:", len(gegevens["zonder_voorraad"]))
+    pdf.statregel("Producten onder minimum:", len(gegevens["onder_minimum"]))
+    pdf.statregel("Nog nooit geteld:", len(gegevens["nooit_geteld"]))
+
+    pdf.sectie("Voorraadwaarde per categorie")
+    pdf.kop_rij(
+        [
+            ("Categorie", 70, "L"),
+            ("Producten", 30, "R"),
+            ("Waarde", 40, "R"),
+            ("Aandeel", 30, "R"),
+        ]
+    )
+    for i, c in enumerate(gegevens["categorie_lijst"]):
+        pdf.data_rij(
+            [
+                (_kort(pdf, c["naam"], 70), 70, "L"),
+                (c["aantal"], 30, "R"),
+                (_euro(c["waarde"]), 40, "R"),
+                (f"{c['percentage']:.1f}%", 30, "R"),
+            ],
+            zebra=i % 2 == 1,
+        )
+
+    pdf.sectie("Top 10 producten op voorraadwaarde")
+    pdf.kop_rij(
+        [
+            ("Product", 66, "L"),
+            ("Voorraad", 34, "R"),
+            ("Verkoopprijs", 32, "R"),
+            ("Waarde", 38, "R"),
+        ]
+    )
+    for i, p in enumerate(gegevens["top_waarde"]):
+        waarde = p["voorraad"] * p["verkoopprijs"]
+        pdf.data_rij(
+            [
+                (_kort(pdf, p["naam"], 66), 66, "L"),
+                (f"{p['voorraad']} {p['eenheid']}", 34, "R"),
+                (_euro(p["verkoopprijs"]), 32, "R"),
+                (_euro(waarde), 38, "R"),
+            ],
+            zebra=i % 2 == 1,
+        )
+
+    pdf.sectie("Opvallende zaken")
+    if gegevens["inactief_met_voorraad"]:
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(
+            0,
+            7,
+            f"Inactieve producten met nog voorraad ({len(gegevens['inactief_met_voorraad'])}):",
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+        pdf.set_font("Helvetica", "", 9)
+        for p in gegevens["inactief_met_voorraad"]:
+            pdf.cell(
+                0,
+                6,
+                f"  -  {p['naam']}: {p['voorraad']} {p['eenheid']} nog op voorraad",
+                new_x="LMARGIN",
+                new_y="NEXT",
+            )
+        pdf.ln(2)
+
+    if gegevens["zonder_prijs"]:
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(
+            0,
+            7,
+            f"Actieve producten zonder verkoopprijs ({len(gegevens['zonder_prijs'])}):",
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+        pdf.set_font("Helvetica", "", 9)
+        namen = ", ".join(p["naam"] for p in gegevens["zonder_prijs"])
+        pdf.multi_cell(0, 6, f"  {namen}")
+        pdf.ln(2)
+
+    if gegevens["langst_niet_geteld"]:
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(0, 7, "Langst niet geteld:", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", "", 9)
+        for regel in gegevens["langst_niet_geteld"]:
+            pdf.cell(
+                0,
+                6,
+                f"  -  {regel['product']['naam']}: laatst geteld op {regel['laatste_datum']}",
+                new_x="LMARGIN",
+                new_y="NEXT",
+            )
+        pdf.ln(2)
+
+    if (
+        not gegevens["inactief_met_voorraad"]
+        and not gegevens["zonder_prijs"]
+        and not gegevens["langst_niet_geteld"]
+    ):
+        pdf.leeg_bericht("Niets opvallends gevonden.")
+
+    pdf.sectie("Volledige productenlijst")
+    pdf.kop_rij(
+        [
+            ("Code", 22, "L"),
+            ("Product", 52, "L"),
+            ("Categorie", 34, "L"),
+            ("Voorraad", 26, "R"),
+            ("Minimum", 24, "R"),
+            ("Waarde", 32, "R"),
+        ]
+    )
+    for i, p in enumerate(gegevens["producten"]):
+        waarde = p["voorraad"] * p["verkoopprijs"]
+        pdf.data_rij(
+            [
+                (p["artikelcode"] or "-", 22, "L"),
+                (_kort(pdf, p["naam"], 52), 52, "L"),
+                (_kort(pdf, p["categorie"], 34), 34, "L"),
+                (f"{p['voorraad']} {p['eenheid']}", 26, "R"),
+                (f"{p['min_voorraad']} {p['eenheid']}", 24, "R"),
+                (_euro(waarde), 32, "R"),
+            ],
+            zebra=i % 2 == 1,
+        )
 
     return bytes(pdf.output())
 
