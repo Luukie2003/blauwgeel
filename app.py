@@ -134,6 +134,18 @@ def create_app():
             return None
         if "gebruiker_id" not in session:
             return redirect(url_for("login", next=request.path))
+        if "gebruiker_rol" not in session:
+            # Sessie is aangemaakt voor rollen bestonden (of anderszins
+            # verouderd) -- rol alsnog ophalen zodat je niet handmatig
+            # hoeft uit/in te loggen na een update.
+            db = get_db()
+            gebruiker = db.execute(
+                "SELECT rol FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)
+            ).fetchone()
+            if gebruiker is None:
+                session.clear()
+                return redirect(url_for("login", next=request.path))
+            session["gebruiker_rol"] = gebruiker["rol"]
         if request.endpoint in BEHEERDER_ENDPOINTS and session.get("gebruiker_rol") != "beheerder":
             flash("Deze pagina is alleen voor beheerders.", "error")
             return redirect(url_for("dashboard"))
