@@ -3,13 +3,26 @@
 {% block inhoud %}
 <div class="actiebalk">
     <p class="subtitel" style="margin:0">Beheer het assortiment en de minimumvoorraad.</p>
-    <a href="{{ url_for('product_nieuw') }}" class="btn btn-geel">+ Nieuw product</a>
+    <div style="display:flex; gap:0.5rem">
+        <a href="{{ url_for('categorieen_lijst') }}" class="btn btn-rand">Categorieën beheren</a>
+        <a href="{{ url_for('product_nieuw') }}" class="btn btn-geel">+ Nieuw product</a>
+    </div>
 </div>
 
 <div class="kaart">
     {% if producten %}
+    <div class="filterbalk">
+        <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">
+        <select id="filter-categorie">
+            <option value="">Alle categorieën</option>
+            {% for c in categorieen %}
+            <option value="{{ c.naam }}">{{ c.naam }}</option>
+            {% endfor %}
+        </select>
+        <span id="filter-aantal" class="tekst-zacht"></span>
+    </div>
     <div class="tabel-wrap">
-        <table>
+        <table id="producten-tabel">
             <thead>
                 <tr>
                     <th>Code</th><th>Naam</th><th>Categorie</th><th>Voorraad</th><th>Minimum</th>
@@ -18,7 +31,7 @@
             </thead>
             <tbody>
                 {% for p in producten %}
-                <tr>
+                <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie)|lower }}" data-categorie="{{ p.categorie }}">
                     <td>{{ p.artikelcode or '—' }}</td>
                     <td>{{ p.naam }}</td>
                     <td>{{ p.categorie }}</td>
@@ -52,8 +65,41 @@
             </tbody>
         </table>
     </div>
+    <p class="leeg" id="filter-leeg" style="display:none">Geen producten gevonden voor dit filter.</p>
     {% else %}
     <p class="leeg">Nog geen producten toegevoegd.</p>
     {% endif %}
 </div>
+
+<script>
+(function () {
+    var zoekVeld = document.getElementById('filter-zoek');
+    var catVeld = document.getElementById('filter-categorie');
+    var aantalLabel = document.getElementById('filter-aantal');
+    var leegMelding = document.getElementById('filter-leeg');
+    if (!zoekVeld) return;
+    var rijen = Array.prototype.slice.call(
+        document.querySelectorAll('#producten-tabel tbody tr')
+    );
+
+    function filter() {
+        var zoek = zoekVeld.value.trim().toLowerCase();
+        var categorie = catVeld.value;
+        var zichtbaar = 0;
+        rijen.forEach(function (rij) {
+            var matchZoek = !zoek || rij.dataset.zoek.indexOf(zoek) !== -1;
+            var matchCategorie = !categorie || rij.dataset.categorie === categorie;
+            var toon = matchZoek && matchCategorie;
+            rij.style.display = toon ? '' : 'none';
+            if (toon) zichtbaar++;
+        });
+        aantalLabel.textContent = zichtbaar + ' van ' + rijen.length + ' producten';
+        leegMelding.style.display = zichtbaar === 0 ? '' : 'none';
+    }
+
+    zoekVeld.addEventListener('input', filter);
+    catVeld.addEventListener('change', filter);
+    filter();
+})();
+</script>
 {% endblock %}

@@ -76,6 +76,27 @@ def _migreer_kolommen(db):
             db.execute(f"ALTER TABLE {tabel} ADD COLUMN {kolom} {definitie}")
 
 
+def _migreer_categorieen(db):
+    """De categorieen-tabel is nieuw: als hij leeg is (nieuwe kolom op een
+    bestaande database, of een gloednieuwe installatie), vullen we 'm met de
+    categorieen die al in gebruik zijn bij bestaande producten, zodat er
+    niets verandert aan wat er al stond. Bij een lege producten-tabel (verse
+    installatie, vlak voordat SEED_PRODUCTEN is ingeladen) vallen we terug
+    op de categorieen uit SEED_PRODUCTEN zelf, zodat de volgorde waarin
+    init_db() dingen inlaadt er niet toe doet."""
+    aantal = db.execute("SELECT COUNT(*) AS n FROM categorieen").fetchone()["n"]
+    if aantal > 0:
+        return
+    bestaande = db.execute(
+        "SELECT DISTINCT categorie FROM producten WHERE categorie IS NOT NULL AND categorie != ''"
+    ).fetchall()
+    namen = [row["categorie"] for row in bestaande]
+    if not namen:
+        namen = sorted({rij[2] for rij in SEED_PRODUCTEN})
+    for naam in namen:
+        db.execute("INSERT OR IGNORE INTO categorieen (naam) VALUES (?)", (naam,))
+
+
 def get_db():
     if "db" not in g:
         g.db = sqlite3.connect(current_app.config["DATABASE"])
@@ -89,6 +110,7 @@ def get_db():
         with open(SCHEMA_PATH) as f:
             g.db.executescript(f.read())
         _migreer_kolommen(g.db)
+        _migreer_categorieen(g.db)
         g.db.commit()
     return g.db
 

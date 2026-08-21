@@ -35,7 +35,12 @@ NAV_ITEMS = [
         "label": "Overzicht",
     },
     {
-        "endpoints": ["producten_lijst", "product_nieuw", "product_bewerken"],
+        "endpoints": [
+            "producten_lijst",
+            "product_nieuw",
+            "product_bewerken",
+            "categorieen_lijst",
+        ],
         "url_endpoint": "producten_lijst",
         "label": "Producten",
     },
@@ -377,12 +382,17 @@ def register_routes(app):
         producten = db.execute(
             "SELECT * FROM producten ORDER BY categorie, naam"
         ).fetchall()
-        return render_template("producten.html", producten=producten)
+        categorieen = db.execute(
+            "SELECT naam FROM categorieen ORDER BY naam"
+        ).fetchall()
+        return render_template(
+            "producten.html", producten=producten, categorieen=categorieen
+        )
 
     @app.route("/producten/nieuw", methods=["GET", "POST"])
     def product_nieuw():
+        db = get_db()
         if request.method == "POST":
-            db = get_db()
             db.execute(
                 """INSERT INTO producten
                    (artikelcode, naam, categorie, eenheid, voorraad, min_voorraad,
@@ -404,7 +414,10 @@ def register_routes(app):
             db.commit()
             flash(f"Product '{request.form['naam']}' toegevoegd.", "success")
             return redirect(url_for("producten_lijst"))
-        return render_template("product_form.html", product=None)
+        categorieen = db.execute(
+            "SELECT naam FROM categorieen ORDER BY naam"
+        ).fetchall()
+        return render_template("product_form.html", product=None, categorieen=categorieen)
 
     @app.route("/producten/<int:product_id>/bewerken", methods=["GET", "POST"])
     def product_bewerken(product_id):
@@ -440,7 +453,12 @@ def register_routes(app):
             db.commit()
             flash(f"Product '{request.form['naam']}' bijgewerkt.", "success")
             return redirect(url_for("producten_lijst"))
-        return render_template("product_form.html", product=product)
+        categorieen = db.execute(
+            "SELECT naam FROM categorieen ORDER BY naam"
+        ).fetchall()
+        return render_template(
+            "product_form.html", product=product, categorieen=categorieen
+        )
 
     @app.route("/producten/<int:product_id>/verwijderen", methods=["POST"])
     def product_verwijderen(product_id):
@@ -469,6 +487,55 @@ def register_routes(app):
         )
         db.commit()
         return redirect(url_for("producten_lijst"))
+
+    @app.route("/categorieen", methods=["GET", "POST"])
+    def categorieen_lijst():
+        db = get_db()
+        if request.method == "POST":
+            naam = request.form.get("naam", "").strip()
+            if not naam:
+                flash("Vul een naam in voor de categorie.", "error")
+            else:
+                bestaat = db.execute(
+                    "SELECT id FROM categorieen WHERE naam = ?", (naam,)
+                ).fetchone()
+                if bestaat:
+                    flash(f"Categorie '{naam}' bestaat al.", "error")
+                else:
+                    db.execute("INSERT INTO categorieen (naam) VALUES (?)", (naam,))
+                    db.commit()
+                    flash(f"Categorie '{naam}' toegevoegd.", "success")
+            return redirect(url_for("categorieen_lijst"))
+
+        categorieen = db.execute(
+            """SELECT c.*, (SELECT COUNT(*) FROM producten WHERE categorie = c.naam) AS aantal_producten
+               FROM categorieen c ORDER BY c.naam"""
+        ).fetchall()
+        return render_template("categorieen.html", categorieen=categorieen)
+
+    @app.route("/categorieen/<int:categorie_id>/verwijderen", methods=["POST"])
+    def categorie_verwijderen(categorie_id):
+        db = get_db()
+        categorie = db.execute(
+            "SELECT * FROM categorieen WHERE id = ?", (categorie_id,)
+        ).fetchone()
+        if categorie is None:
+            flash("Categorie niet gevonden.", "error")
+            return redirect(url_for("categorieen_lijst"))
+        in_gebruik = db.execute(
+            "SELECT COUNT(*) AS n FROM producten WHERE categorie = ?", (categorie["naam"],)
+        ).fetchone()["n"]
+        if in_gebruik > 0:
+            flash(
+                f"Categorie '{categorie['naam']}' is nog in gebruik bij {in_gebruik} "
+                "product(en) en kan niet verwijderd worden.",
+                "error",
+            )
+            return redirect(url_for("categorieen_lijst"))
+        db.execute("DELETE FROM categorieen WHERE id = ?", (categorie_id,))
+        db.commit()
+        flash(f"Categorie '{categorie['naam']}' verwijderd.", "success")
+        return redirect(url_for("categorieen_lijst"))
 
     # ---------- In / uit boeken ----------
 

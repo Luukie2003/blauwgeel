@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block titel %}Categorieën{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    De vaste lijst categorieën waaruit je kunt kiezen bij een product.
+    <a href="{{ url_for('producten_lijst') }}">&larr; Terug naar producten</a>
+</p>
+
+<div class="kaart">
+    <h2>Bestaande categorieën</h2>
+    {% if categorieen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Naam</th><th>Aantal producten</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for c in categorieen %}
+                <tr>
+                    <td>{{ c.naam }}</td>
+                    <td>{{ c.aantal_producten }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('categorie_verwijderen', categorie_id=c.id) }}"
+                              onsubmit="return confirm('Categorie \'{{ c.naam }}\' verwijderen?');">
+                            <button type="submit" class="btn btn-gevaar btn-klein"
+                                    {{ 'disabled title="Nog in gebruik bij producten"' if c.aantal_producten > 0 else '' }}>
+                                Verwijderen
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen categorieën.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Nieuwe categorie</h2>
+    <form method="post" class="formgrid">
+        <div class="veld">
+            <label for="naam">Naam</label>
+            <input type="text" id="naam" name="naam" required placeholder="Bijv. Ijs">
+        </div>
+        <div class="veld" style="justify-content:flex-end">
+            <button type="submit" class="btn btn-geel">Toevoegen</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

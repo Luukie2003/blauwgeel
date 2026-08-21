@@ -546,6 +546,28 @@ input:focus, select:focus, textarea:focus {
     text-decoration: underline;
 }
 
+/* ---------- Filterbalk ---------- */
+
+.filterbalk {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.9rem;
+}
+
+.filterbalk input[type="text"] {
+    flex: 1 1 220px;
+}
+
+.filterbalk select {
+    flex: 0 1 200px;
+}
+
+.filterbalk .tekst-zacht {
+    white-space: nowrap;
+}
+
 .tabel-wrap { overflow-x: auto; }
 
 .tekst-zacht { color: var(--tekst-zacht); font-size: 0.82rem; }

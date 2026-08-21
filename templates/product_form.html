@@ -20,8 +20,20 @@
                 </div>
                 <div class="veld">
                     <label for="categorie">Categorie</label>
-                    <input type="text" id="categorie" name="categorie" placeholder="Drank, Snacks, Non-food, ..."
-                           value="{{ product.categorie if product else '' }}">
+                    <select id="categorie" name="categorie" required>
+                        {% set huidige_categorie = product.categorie if product else '' %}
+                        {% set categorie_namen = categorieen|map(attribute='naam')|list %}
+                        {% if not product %}
+                        <option value="" disabled selected>Kies een categorie</option>
+                        {% endif %}
+                        {% if huidige_categorie and huidige_categorie not in categorie_namen %}
+                        <option value="{{ huidige_categorie }}" selected>{{ huidige_categorie }} (niet meer in de lijst)</option>
+                        {% endif %}
+                        {% for c in categorieen %}
+                        <option value="{{ c.naam }}" {{ 'selected' if c.naam == huidige_categorie else '' }}>{{ c.naam }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="tekst-zacht">Staat je categorie er niet bij? <a href="{{ url_for('categorieen_lijst') }}">Beheer categorieën</a>.</span>
                 </div>
                 <div class="veld">
                     <label for="eenheid">Eenheid</label>
