@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block titel %}Levering inboeken{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Boek een levering of factuur met meerdere producten in één keer in, los
+    van een eventuele bestellijst. Vul per product het aantal in dat is
+    binnengekomen; laat een veld leeg om dat product over te slaan.
+    <a href="{{ url_for('boeken') }}">&larr; Terug naar in/uit boeken</a>
+</p>
+
+<div class="kaart">
+    <form method="post">
+        <fieldset class="groupbox">
+            <legend>Levering</legend>
+            <div class="tabel-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Categorie</th>
+                            <th>Huidige voorraad</th>
+                            <th>Aantal ontvangen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in producten %}
+                        <tr>
+                            <td>{{ p.naam }}</td>
+                            <td>{{ p.categorie }}</td>
+                            <td>{{ p.voorraad }} {{ p.eenheid }}</td>
+                            <td>
+                                <input type="number" name="aantal_{{ p.id }}" min="0" style="width:6rem"
+                                       placeholder="overslaan"> {{ p.eenheid }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </fieldset>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="referentie">Leverancier / factuurnummer (optioneel)</label>
+                <input type="text" id="referentie" name="referentie" placeholder="Bijv. Heineken factuur 12345">
+            </div>
+            <div class="veld">
+                <label for="naam">Ingeboekt door</label>
+                <input type="text" id="naam" name="naam" value="{{ huidige_gebruiker }}">
+            </div>
+            <div class="veld">
+                <label for="datum">Datum/tijd van deze levering</label>
+                <input type="datetime-local" id="datum" name="datum" value="{{ nu_datetime_local }}">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-geel">Levering inboeken</button>
+    </form>
+</div>
+{% endblock %}

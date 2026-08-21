@@ -3,6 +3,16 @@
 {% block inhoud %}
 <p class="subtitel">Levering binnengekomen? Boek 'in'. Verkocht of verbruikt? Boek 'uit'.</p>
 
+<div class="kaart" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap">
+    <div>
+        <strong>Factuur of levering met meerdere producten?</strong>
+        <p class="tekst-zacht" style="margin:0.2rem 0 0">
+            Boek in één keer een hele levering in, los van een eventuele bestellijst.
+        </p>
+    </div>
+    <a href="{{ url_for('levering_inboeken') }}" class="btn btn-rand">Levering inboeken</a>
+</div>
+
 <div class="kaart">
     <form method="post">
         <div class="toggle-type">

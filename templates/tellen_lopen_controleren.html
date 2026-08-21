@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block titel %}Telling controleren{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Je hebt de bar en het voorraadhok geteld. Controleer de totalen hieronder
+    en pas aan waar nodig, voordat je de telling definitief opslaat.
+</p>
+
+<div class="kaart">
+    <form method="post">
+        <div class="tabel-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Bar</th>
+                        <th>Voorraadhok</th>
+                        <th>Totaal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in regels %}
+                    <tr>
+                        <td>{{ r.product.naam }}</td>
+                        <td class="tekst-zacht">{{ r.bar }} {{ r.product.eenheid }}</td>
+                        <td class="tekst-zacht">{{ r.hok }} {{ r.product.eenheid }}</td>
+                        <td>
+                            <input type="number" name="totaal_{{ r.product.id }}" min="0" style="width:6rem"
+                                   value="{{ r.totaal }}"> {{ r.product.eenheid }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="loop-knoppen" style="margin-top:1.1rem">
+            <button type="submit" name="actie" value="annuleren" class="btn btn-gevaar loop-btn-klein"
+                    onclick="return confirm('Looplijst afbreken? Er wordt dan niets opgeslagen.');">
+                Annuleren
+            </button>
+            <button type="submit" name="actie" value="bevestigen" class="btn btn-geel loop-btn-groot">
+                Bevestigen en opslaan
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
