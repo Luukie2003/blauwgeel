@@ -66,6 +66,8 @@ KOLOM_MIGRATIES = [
     ("producten", "artikelcode", "TEXT"),
     ("producten", "actief", "INTEGER NOT NULL DEFAULT 1"),
     ("mutaties", "telling_id", "INTEGER REFERENCES tellingen(id)"),
+    ("gebruikers", "rol", "TEXT NOT NULL DEFAULT 'beheerder'"),
+    ("gebruikers", "laatste_login", "TEXT"),
 ]
 
 

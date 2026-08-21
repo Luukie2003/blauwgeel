@@ -34,7 +34,9 @@ CREATE TABLE IF NOT EXISTS gebruikers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     naam TEXT NOT NULL UNIQUE,
     wachtwoord_hash TEXT NOT NULL,
-    aangemaakt_op TEXT NOT NULL
+    rol TEXT NOT NULL DEFAULT 'beheerder' CHECK (rol IN ('beheerder', 'vrijwilliger')),
+    aangemaakt_op TEXT NOT NULL,
+    laatste_login TEXT
 );
 
 CREATE TABLE IF NOT EXISTS tellingen (

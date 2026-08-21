@@ -3,11 +3,13 @@
 {% block inhoud %}
 <div class="actiebalk">
     <p class="subtitel" style="margin:0">Beheer het assortiment en de minimumvoorraad.</p>
+    {% if huidige_gebruiker_rol == 'beheerder' %}
     <div style="display:flex; gap:0.5rem">
         <a href="{{ url_for('categorieen_lijst') }}" class="btn btn-rand">Categorieën beheren</a>
         <a href="{{ url_for('producten_minimumvoorraad') }}" class="btn btn-rand">Minimumvoorraad instellen</a>
         <a href="{{ url_for('product_nieuw') }}" class="btn btn-geel">+ Nieuw product</a>
     </div>
+    {% endif %}
 </div>
 
 <div class="kaart">
@@ -47,19 +49,25 @@
                     <td>{{ p.bestel_hoeveelheid }} {{ p.eenheid }}</td>
                     <td>{{ "€ %.2f"|format(p.verkoopprijs) }}</td>
                     <td>
+                        {% if huidige_gebruiker_rol == 'beheerder' %}
                         <form method="post" action="{{ url_for('product_actief_wisselen', product_id=p.id) }}" class="inline">
                             <label class="schuif" title="{{ 'Actief -- klik om uit te zetten' if p.actief else 'Inactief -- klik om aan te zetten' }}">
                                 <input type="checkbox" {{ 'checked' if p.actief else '' }} onchange="this.form.submit()">
                                 <span class="schuif-balk"></span>
                             </label>
                         </form>
+                        {% else %}
+                        {% if p.actief %}<span class="badge badge-ok">Actief</span>{% else %}<span class="badge badge-neutraal">Inactief</span>{% endif %}
+                        {% endif %}
                     </td>
                     <td class="tabel-acties">
+                        {% if huidige_gebruiker_rol == 'beheerder' %}
                         <a href="{{ url_for('product_bewerken', product_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
                         <form method="post" action="{{ url_for('product_verwijderen', product_id=p.id) }}"
                               onsubmit="return confirm('Product \'{{ p.naam }}\' verwijderen? Dit verwijdert ook de boekingsgeschiedenis.');">
                             <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                         </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

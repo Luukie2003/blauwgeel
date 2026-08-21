@@ -9,8 +9,13 @@
 </head>
 <body>
     <div class="app-titelbalk">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="titelbalk-logo">
-        <span>Kantine Voorraadbeheer{% if actieve_nav %} &mdash; [{{ actieve_nav.label }}]{% endif %}</span>
+        <a href="{{ url_for('dashboard') }}" class="titelbalk-link">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="titelbalk-logo">
+            <span>Kantine Voorraadbeheer{% if actieve_nav %} &mdash; [{{ actieve_nav.label }}]{% endif %}</span>
+        </a>
+        {% if huidige_gebruiker %}
+        <span class="titelbalk-welkom">Welkom, {{ huidige_gebruiker }}</span>
+        {% endif %}
     </div>
     <div class="app-menubalk">
         <div class="menu-item">
@@ -18,8 +23,10 @@
             <div class="menu-dropdown">
                 <a href="{{ url_for('bestellijst_pdf_route') }}">Bestellijst downloaden (PDF)</a>
                 <a href="{{ url_for('verkooprapport') }}">Verkooprapport per periode (PDF)</a>
+                {% if huidige_gebruiker_rol == 'beheerder' %}
                 <div class="menu-scheiding"></div>
                 <a href="{{ url_for('backups_lijst') }}">Back-ups</a>
+                {% endif %}
                 <div class="menu-scheiding"></div>
                 <a href="{{ url_for('logout') }}">Uitloggen</a>
             </div>
@@ -35,10 +42,12 @@
         <div class="menu-item">
             <button type="button" class="menu-trigger">Accounts</button>
             <div class="menu-dropdown">
-                <span class="menu-label">Ingelogd als {{ huidige_gebruiker }}</span>
+                <span class="menu-label">Ingelogd als {{ huidige_gebruiker }} ({{ huidige_gebruiker_rol }})</span>
                 <div class="menu-scheiding"></div>
                 <a href="{{ url_for('account_wachtwoord') }}">Wachtwoord wijzigen</a>
+                {% if huidige_gebruiker_rol == 'beheerder' %}
                 <a href="{{ url_for('accounts_lijst') }}">Accounts beheren</a>
+                {% endif %}
                 <div class="menu-scheiding"></div>
                 <a href="{{ url_for('logout') }}">Uitloggen</a>
             </div>

@@ -2,21 +2,40 @@
 {% block titel %}Accounts{% endblock %}
 {% block inhoud %}
 <h1>Accounts</h1>
-<p class="subtitel">Beheer wie kan inloggen op dit systeem.</p>
+<p class="subtitel">
+    Beheer wie kan inloggen op dit systeem, en met welke rechten.
+    <strong>Beheerder</strong> heeft overal toegang (accounts, categorieën,
+    back-ups, assortiment). <strong>Vrijwilliger</strong> kan de dagelijkse
+    dingen doen (tellen, boeken, bestellijst, bijzonderheden) maar niet het
+    systeem zelf beheren.
+</p>
 
 <div class="kaart">
     <h2>Bestaande accounts</h2>
     <div class="tabel-wrap">
         <table>
             <thead>
-                <tr><th>Naam</th><th>Aangemaakt op</th><th></th></tr>
+                <tr><th>Naam</th><th>Rol</th><th>Laatste inlog</th><th>Aangemaakt op</th><th></th></tr>
             </thead>
             <tbody>
                 {% for g in gebruikers %}
                 <tr>
                     <td>{{ g.naam }}{% if g.naam == huidige_gebruiker %} <span class="tekst-zacht">(jij)</span>{% endif %}</td>
+                    <td>
+                        {% if g.rol == 'beheerder' %}
+                        <span class="badge badge-ok">Beheerder</span>
+                        {% else %}
+                        <span class="badge badge-neutraal">Vrijwilliger</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ g.laatste_login|datum_nl if g.laatste_login else 'Nog nooit ingelogd' }}</td>
                     <td>{{ g.aangemaakt_op|datum_nl }}</td>
                     <td class="tabel-acties">
+                        <form method="post" action="{{ url_for('account_rol_wijzigen', gebruiker_id=g.id) }}">
+                            <button type="submit" class="btn btn-rand btn-klein">
+                                {{ 'Maak vrijwilliger' if g.rol == 'beheerder' else 'Maak beheerder' }}
+                            </button>
+                        </form>
                         <form method="post" action="{{ url_for('account_verwijderen', gebruiker_id=g.id) }}"
                               onsubmit="return confirm('Account \'{{ g.naam }}\' verwijderen?');">
                             <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
@@ -27,6 +46,10 @@
             </tbody>
         </table>
     </div>
+    <p class="tekst-zacht" style="margin-top:0.8rem">
+        {{ aantal_beheerders }} van de {{ gebruikers|length }} account(s) is/zijn beheerder.
+        Er moet er altijd minstens één blijven.
+    </p>
 </div>
 
 <div class="kaart">
@@ -40,6 +63,13 @@
             <div class="veld">
                 <label for="wachtwoord">Wachtwoord</label>
                 <input type="password" id="wachtwoord" name="wachtwoord" required minlength="4">
+            </div>
+            <div class="veld">
+                <label for="rol">Rol</label>
+                <select id="rol" name="rol">
+                    <option value="vrijwilliger" selected>Vrijwilliger</option>
+                    <option value="beheerder">Beheerder</option>
+                </select>
             </div>
         </div>
         <button type="submit" class="btn btn-geel">Account aanmaken</button>

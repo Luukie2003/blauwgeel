@@ -28,6 +28,28 @@ BACKUP_BESTANDSNAAM = re.compile(
 
 OPEN_ENDPOINTS = {"login", "static"}
 
+# Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers
+# komen hier niet in -- zij kunnen de dagelijkse operatie doen (tellen,
+# boeken, bestellijst, bijzonderheden) maar niet het assortiment, accounts,
+# categorieën of back-ups beheren.
+BEHEERDER_ENDPOINTS = {
+    "accounts_lijst",
+    "account_nieuw",
+    "account_verwijderen",
+    "account_rol_wijzigen",
+    "categorieen_lijst",
+    "categorie_verwijderen",
+    "backups_lijst",
+    "backup_nu",
+    "backup_download",
+    "backup_herstellen",
+    "product_nieuw",
+    "product_bewerken",
+    "product_verwijderen",
+    "product_actief_wisselen",
+    "producten_minimumvoorraad",
+}
+
 NAV_ITEMS = [
     {
         "endpoints": ["dashboard"],
@@ -112,6 +134,9 @@ def create_app():
             return None
         if "gebruiker_id" not in session:
             return redirect(url_for("login", next=request.path))
+        if request.endpoint in BEHEERDER_ENDPOINTS and session.get("gebruiker_rol") != "beheerder":
+            flash("Deze pagina is alleen voor beheerders.", "error")
+            return redirect(url_for("dashboard"))
         return None
 
     @app.context_processor
@@ -124,6 +149,7 @@ def create_app():
             "nav_items": NAV_ITEMS,
             "actieve_nav": actieve_nav,
             "huidige_gebruiker": session.get("gebruiker_naam"),
+            "huidige_gebruiker_rol": session.get("gebruiker_rol"),
             "css_versie": int((BASE_DIR / "static" / "style.css").stat().st_mtime),
         }
 
@@ -206,6 +232,12 @@ def register_routes(app):
                 session.clear()
                 session["gebruiker_id"] = gebruiker["id"]
                 session["gebruiker_naam"] = gebruiker["naam"]
+                session["gebruiker_rol"] = gebruiker["rol"]
+                db.execute(
+                    "UPDATE gebruikers SET laatste_login = ? WHERE id = ?",
+                    (now_str(), gebruiker["id"]),
+                )
+                db.commit()
                 volgende = request.args.get("next") or url_for("dashboard")
                 return redirect(volgende)
             flash("Onjuiste naam of wachtwoord.", "error")
@@ -222,14 +254,22 @@ def register_routes(app):
     def accounts_lijst():
         db = get_db()
         gebruikers = db.execute(
-            "SELECT id, naam, aangemaakt_op FROM gebruikers ORDER BY naam"
+            "SELECT id, naam, rol, aangemaakt_op, laatste_login FROM gebruikers ORDER BY naam"
         ).fetchall()
-        return render_template("accounts.html", gebruikers=gebruikers)
+        aantal_beheerders = db.execute(
+            "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder'"
+        ).fetchone()["n"]
+        return render_template(
+            "accounts.html", gebruikers=gebruikers, aantal_beheerders=aantal_beheerders
+        )
 
     @app.route("/accounts/nieuw", methods=["POST"])
     def account_nieuw():
         naam = request.form.get("naam", "").strip()
         wachtwoord = request.form.get("wachtwoord", "")
+        rol = request.form.get("rol", "vrijwilliger")
+        if rol not in ("beheerder", "vrijwilliger"):
+            rol = "vrijwilliger"
         db = get_db()
 
         if not naam or not wachtwoord:
@@ -240,21 +280,60 @@ def register_routes(app):
             flash(f"Er bestaat al een account met de naam '{naam}'.", "error")
         else:
             db.execute(
-                "INSERT INTO gebruikers (naam, wachtwoord_hash, aangemaakt_op) VALUES (?, ?, ?)",
-                (naam, generate_password_hash(wachtwoord, method="pbkdf2:sha256"), now_str()),
+                "INSERT INTO gebruikers (naam, wachtwoord_hash, rol, aangemaakt_op) VALUES (?, ?, ?, ?)",
+                (naam, generate_password_hash(wachtwoord, method="pbkdf2:sha256"), rol, now_str()),
             )
             db.commit()
-            flash(f"Account '{naam}' aangemaakt.", "success")
+            flash(f"Account '{naam}' aangemaakt als {rol}.", "success")
+        return redirect(url_for("accounts_lijst"))
+
+    @app.route("/accounts/<int:gebruiker_id>/rol", methods=["POST"])
+    def account_rol_wijzigen(gebruiker_id):
+        db = get_db()
+        gebruiker = db.execute(
+            "SELECT * FROM gebruikers WHERE id = ?", (gebruiker_id,)
+        ).fetchone()
+        if gebruiker is None:
+            flash("Account niet gevonden.", "error")
+            return redirect(url_for("accounts_lijst"))
+
+        nieuwe_rol = "vrijwilliger" if gebruiker["rol"] == "beheerder" else "beheerder"
+        if gebruiker["rol"] == "beheerder" and nieuwe_rol == "vrijwilliger":
+            aantal_beheerders = db.execute(
+                "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder'"
+            ).fetchone()["n"]
+            if aantal_beheerders <= 1:
+                flash(
+                    "Dit is de laatste beheerder -- er moet altijd minstens één overblijven.",
+                    "error",
+                )
+                return redirect(url_for("accounts_lijst"))
+
+        db.execute("UPDATE gebruikers SET rol = ? WHERE id = ?", (nieuwe_rol, gebruiker_id))
+        db.commit()
+        flash(f"'{gebruiker['naam']}' is nu {nieuwe_rol}.", "success")
         return redirect(url_for("accounts_lijst"))
 
     @app.route("/accounts/<int:gebruiker_id>/verwijderen", methods=["POST"])
     def account_verwijderen(gebruiker_id):
         db = get_db()
+        gebruiker = db.execute(
+            "SELECT * FROM gebruikers WHERE id = ?", (gebruiker_id,)
+        ).fetchone()
         aantal = db.execute("SELECT COUNT(*) AS n FROM gebruikers").fetchone()["n"]
-        if aantal <= 1:
+        if gebruiker is None:
+            flash("Account niet gevonden.", "error")
+        elif aantal <= 1:
             flash("Je kunt het laatste account niet verwijderen.", "error")
         elif gebruiker_id == session.get("gebruiker_id"):
             flash("Je kunt je eigen account niet verwijderen terwijl je bent ingelogd.", "error")
+        elif gebruiker["rol"] == "beheerder" and db.execute(
+            "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder'"
+        ).fetchone()["n"] <= 1:
+            flash(
+                "Dit is de laatste beheerder -- er moet altijd minstens één overblijven.",
+                "error",
+            )
         else:
             db.execute("DELETE FROM gebruikers WHERE id = ?", (gebruiker_id,))
             db.commit()
