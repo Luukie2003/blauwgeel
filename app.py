@@ -22,7 +22,9 @@ from pdf import bestellijst_pdf, periode_verkoop_pdf, verkoop_pdf
 
 BASE_DIR = Path(__file__).parent
 SECRET_KEY_PATH = BASE_DIR / "secret_key.txt"
-BACKUP_BESTANDSNAAM = re.compile(r"^voorraad-\d{4}-\d{2}-\d{2}\.db$")
+BACKUP_BESTANDSNAAM = re.compile(
+    r"^voorraad-(\d{4}-\d{2}-\d{2}|voor-herstel-\d{8}-\d{6})\.db$"
+)
 
 OPEN_ENDPOINTS = {"login", "static"}
 
@@ -309,6 +311,28 @@ def register_routes(app):
         return send_from_directory(
             backup_module.BACKUP_MAP, bestandsnaam, as_attachment=True
         )
+
+    @app.route("/backups/<bestandsnaam>/herstellen", methods=["POST"])
+    def backup_herstellen(bestandsnaam):
+        if not BACKUP_BESTANDSNAAM.match(bestandsnaam):
+            flash("Ongeldige back-up.", "error")
+            return redirect(url_for("backups_lijst"))
+
+        veiligheidskopie_naam = (
+            f"voorraad-voor-herstel-{datetime.now().strftime('%Y%m%d-%H%M%S')}.db"
+        )
+        backup_module.maak_backup_met_naam(veiligheidskopie_naam)
+
+        if backup_module.herstel_backup(bestandsnaam):
+            flash(
+                f"Database hersteld vanaf '{bestandsnaam}'. De staat van vlak "
+                f"hiervoor is bewaard als '{veiligheidskopie_naam}', voor het "
+                f"geval je dit ongedaan wilt maken.",
+                "success",
+            )
+        else:
+            flash("Herstellen is mislukt -- back-up niet gevonden.", "error")
+        return redirect(url_for("dashboard"))
 
     # ---------- Overzicht ----------
 

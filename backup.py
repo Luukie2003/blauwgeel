@@ -41,6 +41,37 @@ def maak_backup():
     return doel
 
 
+def maak_backup_met_naam(bestandsnaam):
+    """Maakt een eenmalige back-up onder een specifieke bestandsnaam, buiten
+    het dagelijkse voorraad-JJJJ-MM-DD.db-patroon om. Gebruikt als
+    veiligheidskopie vlak voor een herstel-actie."""
+    if not BRON.exists():
+        return None
+    BACKUP_MAP.mkdir(exist_ok=True)
+    doel = BACKUP_MAP / bestandsnaam
+    bron_conn = sqlite3.connect(BRON)
+    doel_conn = sqlite3.connect(doel)
+    with doel_conn:
+        bron_conn.backup(doel_conn)
+    bron_conn.close()
+    doel_conn.close()
+    return doel
+
+
+def herstel_backup(bestandsnaam):
+    """Zet voorraad.db terug naar de inhoud van de gekozen back-up."""
+    gekozen_backup = BACKUP_MAP / bestandsnaam
+    if not gekozen_backup.exists():
+        return False
+    backup_conn = sqlite3.connect(gekozen_backup)
+    live_conn = sqlite3.connect(BRON)
+    with live_conn:
+        backup_conn.backup(live_conn)
+    backup_conn.close()
+    live_conn.close()
+    return True
+
+
 def ruim_oude_backups_op():
     if not BACKUP_MAP.exists():
         return
