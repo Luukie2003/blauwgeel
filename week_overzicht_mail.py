@@ -28,6 +28,23 @@ def bouw_mailtekst(overzicht):
         for p in overzicht["onder_minimum"]
     ) or "  (niets onder het minimum)"
 
+    regels_bestellingen = "\n".join(
+        f"  - aangemaakt {b['aangemaakt_op']} door {b['besteld_door'] or 'onbekend'}"
+        for b in overzicht["open_bestellingen"]
+    ) or "  (geen openstaande bestellingen)"
+
+    regels_mededelingen = "\n".join(
+        f"  - {m['datum']} ({m['naam'] or 'onbekend'}): {m['tekst']}"
+        for m in overzicht["nieuwe_mededelingen"]
+    ) or "  (geen nieuwe bijzonderheden deze week)"
+
+    regels_zonder_prijs = "\n".join(
+        f"  - {p['naam']}"
+        + (" -- geen inkoopprijs" if p["inkoopprijs"] == 0 else "")
+        + (" -- geen verkoopprijs" if p["verkoopprijs"] == 0 else "")
+        for p in overzicht["zonder_prijs"]
+    ) or "  (alle actieve producten hebben een in- en verkoopprijs)"
+
     verschil = ""
     if overzicht["verschil_percentage"] is not None:
         teken = "+" if overzicht["verschil_percentage"] >= 0 else ""
@@ -38,6 +55,9 @@ def bouw_mailtekst(overzicht):
         f"Omzet: € {overzicht['totale_omzet']:.2f}{verschil}\n\n"
         f"Top verkopers:\n{regels_top}\n\n"
         f"Onder minimumvoorraad:\n{regels_minimum}\n\n"
+        f"Openstaande bestellingen:\n{regels_bestellingen}\n\n"
+        f"Bijzonderheden van deze week:\n{regels_mededelingen}\n\n"
+        f"Producten zonder in- of verkoopprijs:\n{regels_zonder_prijs}\n\n"
         f"Volledig overzicht: {SITE_URL}/week-overzicht"
     )
 

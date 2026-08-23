@@ -398,6 +398,21 @@ def bereken_week_overzicht(db, vandaag=None):
             (huidige["totale_omzet"] - vorige["totale_omzet"]) / vorige["totale_omzet"] * 100
         )
 
+    open_bestellingen = db.execute(
+        "SELECT * FROM bestellingen WHERE status = 'besteld' ORDER BY aangemaakt_op"
+    ).fetchall()
+
+    nieuwe_mededelingen = db.execute(
+        "SELECT * FROM mededelingen WHERE datum >= ? AND datum <= ? ORDER BY id DESC",
+        (f"{week_van.isoformat()} 00:00", f"{week_tot.isoformat()} 23:59"),
+    ).fetchall()
+
+    zonder_prijs = db.execute(
+        """SELECT * FROM producten
+           WHERE actief = 1 AND (verkoopprijs = 0 OR inkoopprijs = 0)
+           ORDER BY categorie, naam"""
+    ).fetchall()
+
     return {
         "week_van": week_van,
         "week_tot": week_tot,
@@ -406,6 +421,9 @@ def bereken_week_overzicht(db, vandaag=None):
         "verschil_percentage": verschil_percentage,
         "top_verkopers": huidige["top_verkopers"],
         "onder_minimum": bestel_suggesties(db),
+        "open_bestellingen": open_bestellingen,
+        "nieuwe_mededelingen": nieuwe_mededelingen,
+        "zonder_prijs": zonder_prijs,
     }
 
 

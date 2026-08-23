@@ -25,6 +25,10 @@
         <div class="getal">{{ overzicht.onder_minimum|length }}</div>
         <div class="label">Onder minimum voorraad</div>
     </div>
+    <div class="stat">
+        <div class="getal">{{ overzicht.open_bestellingen|length }}</div>
+        <div class="label">Openstaande bestellingen</div>
+    </div>
 </div>
 
 <div class="kaart">
@@ -76,6 +80,88 @@
     </div>
     {% else %}
     <p class="leeg">Alles zit boven het minimum.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">Openstaande bestellingen</h2>
+        {% if overzicht.open_bestellingen %}<a href="{{ url_for('bestellijst') }}" class="btn btn-rand btn-klein">Naar bestellijst</a>{% endif %}
+    </div>
+    {% if overzicht.open_bestellingen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Aangemaakt</th><th>Besteld door</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for b in overzicht.open_bestellingen %}
+                <tr>
+                    <td>{{ b.aangemaakt_op|datum_nl }}</td>
+                    <td>{{ b.besteld_door or '—' }}</td>
+                    <td><a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Inboeken</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Geen openstaande bestellingen.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Bijzonderheden van deze week</h2>
+    {% if overzicht.nieuwe_mededelingen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Door</th><th>Tekst</th></tr>
+            </thead>
+            <tbody>
+                {% for m in overzicht.nieuwe_mededelingen %}
+                <tr>
+                    <td>{{ m.datum|datum_nl }}</td>
+                    <td>{{ m.naam or '—' }}</td>
+                    <td>{{ m.tekst }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Geen nieuwe bijzonderheden deze week.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Producten zonder in- of verkoopprijs</h2>
+    {% if overzicht.zonder_prijs %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Product</th><th>Categorie</th><th>Inkoop</th><th>Verkoop</th></tr>
+            </thead>
+            <tbody>
+                {% for p in overzicht.zonder_prijs %}
+                <tr>
+                    <td>{{ p.naam }}</td>
+                    <td>{{ p.categorie }}</td>
+                    <td>
+                        {% if p.inkoopprijs == 0 %}<span class="badge badge-uit">€ 0.00 ontbreekt</span>
+                        {% else %}€ {{ '%.2f'|format(p.inkoopprijs) }}{% endif %}
+                    </td>
+                    <td>
+                        {% if p.verkoopprijs == 0 %}<span class="badge badge-laag">€ 0.00 ontbreekt</span>
+                        {% else %}€ {{ '%.2f'|format(p.verkoopprijs) }}{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Alle actieve producten hebben een in- en verkoopprijs.</p>
     {% endif %}
 </div>
 {% endblock %}
