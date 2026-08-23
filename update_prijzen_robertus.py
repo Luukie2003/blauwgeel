@@ -54,6 +54,11 @@ UPDATES = [
     # Afgestemd met Luuk:
     ("AA", "183001", "Krat", 24, 19.34),  # High Energy Orange + Iso Lemon: zelfde prijs, code van Orange gebruikt
     ("WATER", "111003", "Krat", 24, 14.90),  # Chaudfontaine
+    # Geen directe SKU-match, wel de grondstof: Tray Berenburg wordt
+    # kennelijk zelf samengesteld uit flessen Beerenburg. Fles-naar-tray
+    # verhouding is onbekend, dus geen besteleenheid-omrekening toegepast --
+    # dit is puur een referentieprijs per fles.
+    ("TRAYBB", "203102", "Fles", 1, 14.60),
 ]
 
 
