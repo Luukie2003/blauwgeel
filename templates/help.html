@@ -16,4 +16,22 @@
         beheert (zie Accounts).
     </p>
 </div>
+
+<div class="kaart">
+    <h2>Versie-informatie</h2>
+    <p class="tekst-zacht" style="margin-top:0">Huidige versie: <strong>{{ huidige_versie }}</strong></p>
+    {% for release in wijzigingen %}
+    <div style="margin-bottom:1.1rem">
+        <div style="font-weight:700">
+            Versie {{ release.versie }}
+            <span class="tekst-zacht" style="font-weight:400">&mdash; {{ release.datum }}</span>
+        </div>
+        <ul style="margin:0.3rem 0 0; padding-left:1.2rem">
+            {% for item in release.punten %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endfor %}
+</div>
 {% endblock %}

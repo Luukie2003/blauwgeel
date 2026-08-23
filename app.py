@@ -28,6 +28,64 @@ BACKUP_BESTANDSNAAM = re.compile(
     r"^voorraad-(\d{4}-\d{2}-\d{2}|voor-herstel-\d{8}-\d{6})\.db$"
 )
 
+# Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
+# geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
+# van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
+HUIDIGE_VERSIE = "1.0.0"
+WIJZIGINGEN = [
+    {
+        "versie": "1.0.0",
+        "datum": "24 augustus 2026",
+        "punten": [
+            "Nieuwe kassa-module: tellen per coupure, afdracht/toevoeging boeken, kassa-geschiedenis",
+            "Wekelijks overzicht: nieuwe pagina + opgemaakte maandagochtend-mail met logo",
+            "Boekingen gekoppeld aan het echte ingelogde account i.p.v. een vrij in te typen naam",
+            "Wegklikbare mededelingenbalk bovenaan de site, instelbaar door de beheerder",
+            "Omzettrend op het dashboard en het verkooprapport",
+        ],
+    },
+    {
+        "versie": "0.4.0",
+        "datum": "23 augustus 2026",
+        "punten": [
+            "Bestellen, ontvangen en leveringen inboeken per besteleenheid (bijv. kratten, dozen)",
+            "Verkoopprijs vastgezet per telling, zodat latere prijswijzigingen historische omzet niet meer aantasten",
+            "Inkoopprijzen, artikelcodes en besteleenheden bijgewerkt op basis van de leverancierslijst",
+            "Subcategorieën onder hoofdcategorieën",
+            "Zelf-registratie via e-mail, wachtwoord vergeten, en mailvoorkeuren per account",
+            "Mobiele navigatie herzien, homescreen-icoon, eigen 404/500-paginas, favicons",
+        ],
+    },
+    {
+        "versie": "0.3.0",
+        "datum": "22 augustus 2026",
+        "punten": [
+            "Categorieën als beheerbare lijst, filter/zoekbalk op de Producten-pagina",
+            "Rollen en rechten voor accounts (beheerder/vrijwilliger)",
+            "Uitgebreid voorraadoverzicht met waarde per categorie en PDF",
+        ],
+    },
+    {
+        "versie": "0.2.0",
+        "datum": "21 augustus 2026",
+        "punten": [
+            "Automatische dagelijkse back-up, met terugzetten vanuit de app",
+            "Prikbord (Bijzonderheden)",
+            "Losse levering/factuur inboeken, controlescherm na de looplijst",
+        ],
+    },
+    {
+        "versie": "0.1.0",
+        "datum": "20 augustus 2026",
+        "punten": [
+            "Eerste versie: producten, voorraad bijhouden, in-/uitboeken",
+            "Inloggen en accountbeheer",
+            "Voorraad tellen, ook via een looplijst voor onderweg met de telefoon",
+            "Verkooprapport per periode (PDF), huisstijl s.v. Blauw-Geel 1915",
+        ],
+    },
+]
+
 OPEN_ENDPOINTS = {"login", "static", "favicon_ico", "wachtwoord_vergeten", "wachtwoord_instellen"}
 
 # Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers
@@ -782,7 +840,9 @@ def register_routes(app):
 
     @app.route("/help")
     def help_pagina():
-        return render_template("help.html")
+        return render_template(
+            "help.html", huidige_versie=HUIDIGE_VERSIE, wijzigingen=WIJZIGINGEN
+        )
 
     # ---------- Instellingen ----------
 
