@@ -92,6 +92,12 @@ CREATE TABLE IF NOT EXISTS mededelingen (
     datum TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS instellingen (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    notificatie_email TEXT
+);
+INSERT OR IGNORE INTO instellingen (id, notificatie_email) VALUES (1, NULL);
+
 CREATE INDEX IF NOT EXISTS idx_mutaties_product ON mutaties(product_id);
 CREATE INDEX IF NOT EXISTS idx_mutaties_datum ON mutaties(datum);
 CREATE INDEX IF NOT EXISTS idx_bestelregels_bestelling ON bestelregels(bestelling_id);

@@ -52,6 +52,7 @@ BEHEERDER_ENDPOINTS = {
     "product_actief_wisselen",
     "producten_minimumvoorraad",
     "producten_besteleenheid",
+    "instellingen_pagina",
 }
 
 NAV_ITEMS = [
@@ -409,6 +410,29 @@ def register_routes(app):
     @app.route("/help")
     def help_pagina():
         return render_template("help.html")
+
+    # ---------- Instellingen ----------
+
+    @app.route("/instellingen", methods=["GET", "POST"])
+    def instellingen_pagina():
+        db = get_db()
+        if request.method == "POST":
+            notificatie_email = request.form.get("notificatie_email", "").strip()
+            db.execute(
+                "UPDATE instellingen SET notificatie_email = ? WHERE id = 1",
+                (notificatie_email or None,),
+            )
+            db.commit()
+            flash("Instellingen opgeslagen.", "success")
+            return redirect(url_for("instellingen_pagina"))
+
+        rij = db.execute(
+            "SELECT notificatie_email FROM instellingen WHERE id = 1"
+        ).fetchone()
+        return render_template(
+            "instellingen.html",
+            notificatie_email=rij["notificatie_email"] if rij else None,
+        )
 
     # ---------- Back-ups ----------
 
@@ -1043,6 +1067,9 @@ def register_routes(app):
                 f"  - {p['naam']}: +{aantal_be} {besteleenheid_naam(p)} (= {aantal} {p['eenheid']})"
                 for p, aantal, aantal_be in geboekte_regels
             )
+            instelling = db.execute(
+                "SELECT notificatie_email FROM instellingen WHERE id = 1"
+            ).fetchone()
             mail.stuur_mail(
                 f"Levering ingeboekt{f' -- {referentie}' if referentie else ''}",
                 f"Er is een levering ingeboekt in het voorraadsysteem.\n\n"
@@ -1050,6 +1077,7 @@ def register_routes(app):
                 f"Door: {naam or 'onbekend'}\n"
                 f"Referentie: {referentie or '-'}\n\n"
                 f"Producten:\n{regels_tekst}",
+                naar=instelling["notificatie_email"] if instelling else None,
             )
 
             return redirect(url_for("boeken"))

@@ -16,18 +16,23 @@ except ImportError:
     MAIL_BESCHIKBAAR = False
 
 
-def stuur_mail(onderwerp, tekst):
+def stuur_mail(onderwerp, tekst, naar=None):
     """Verstuurt een e-mail. Geeft True/False terug; gooit nooit een
     uitzondering -- een mislukte mail mag de rest van een boeking nooit
-    laten mislukken."""
+    laten mislukken.
+
+    naar: ontvangersadres. Als dit leeg is (geen instelling opgeslagen in de
+    app), valt de functie terug op MAIL_NAAR uit email_instellingen.py."""
     if not MAIL_BESCHIKBAAR:
         print(f"[mail] Overgeslagen (geen email_instellingen.py): {onderwerp}")
         return False
 
+    ontvanger = naar or instellingen.MAIL_NAAR
+
     bericht = EmailMessage()
     bericht["Subject"] = onderwerp
     bericht["From"] = instellingen.SMTP_GEBRUIKER
-    bericht["To"] = instellingen.MAIL_NAAR
+    bericht["To"] = ontvanger
     bericht.set_content(tekst)
 
     try:

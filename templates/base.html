@@ -26,6 +26,7 @@
                 {% if huidige_gebruiker_rol == 'beheerder' %}
                 <div class="menu-scheiding"></div>
                 <a href="{{ url_for('backups_lijst') }}">Back-ups</a>
+                <a href="{{ url_for('instellingen_pagina') }}">Instellingen</a>
                 {% endif %}
                 <div class="menu-scheiding"></div>
                 <a href="{{ url_for('logout') }}">Uitloggen</a>
