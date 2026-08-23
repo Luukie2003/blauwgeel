@@ -71,6 +71,7 @@ KOLOM_MIGRATIES = [
     ("producten", "besteleenheid", "TEXT"),
     ("producten", "besteleenheid_factor", "INTEGER NOT NULL DEFAULT 1"),
     ("producten", "inkoopprijs", "REAL NOT NULL DEFAULT 0"),
+    ("producten", "subcategorie", "TEXT"),
 ]
 
 

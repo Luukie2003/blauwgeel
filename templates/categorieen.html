@@ -2,41 +2,9 @@
 {% block titel %}Categorieën{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
-    De vaste lijst categorieën waaruit je kunt kiezen bij een product.
+    De vaste lijst categorieën (en eventuele subcategorieën) waaruit je kunt kiezen bij een product.
     <a href="{{ url_for('producten_lijst') }}">&larr; Terug naar producten</a>
 </p>
-
-<div class="kaart">
-    <h2>Bestaande categorieën</h2>
-    {% if categorieen %}
-    <div class="tabel-wrap">
-        <table>
-            <thead>
-                <tr><th>Naam</th><th>Aantal producten</th><th></th></tr>
-            </thead>
-            <tbody>
-                {% for c in categorieen %}
-                <tr>
-                    <td>{{ c.naam }}</td>
-                    <td>{{ c.aantal_producten }}</td>
-                    <td>
-                        <form method="post" action="{{ url_for('categorie_verwijderen', categorie_id=c.id) }}"
-                              onsubmit="return confirm('Categorie \'{{ c.naam }}\' verwijderen?');">
-                            <button type="submit" class="btn btn-gevaar btn-klein"
-                                    {{ 'disabled title="Nog in gebruik bij producten"' if c.aantal_producten > 0 else '' }}>
-                                Verwijderen
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p class="leeg">Nog geen categorieën.</p>
-    {% endif %}
-</div>
 
 <div class="kaart">
     <h2>Nieuwe categorie</h2>
@@ -50,4 +18,65 @@
         </div>
     </form>
 </div>
+
+<h2 style="margin-top:2rem">Bestaande categorieën</h2>
+{% if categorieen %}
+{% for c in categorieen %}
+{% set subs = subcategorieen_per_categorie.get(c.naam, []) %}
+<div class="kaart">
+    <div class="actiebalk" style="margin-bottom:0.5rem">
+        <h3 style="margin:0">{{ c.naam }} <span class="tekst-zacht">({{ c.aantal_producten }} product{{ 'en' if c.aantal_producten != 1 else '' }})</span></h3>
+        <form method="post" action="{{ url_for('categorie_verwijderen', categorie_id=c.id) }}"
+              onsubmit="return confirm('Categorie \'{{ c.naam }}\' verwijderen? Dit verwijdert ook de bijbehorende subcategorieën.');">
+            <button type="submit" class="btn btn-gevaar btn-klein"
+                    {{ 'disabled title="Nog in gebruik bij producten"' if c.aantal_producten > 0 else '' }}>
+                Categorie verwijderen
+            </button>
+        </form>
+    </div>
+
+    {% if subs %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Subcategorie</th><th>Aantal producten</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for s in subs %}
+                <tr>
+                    <td>{{ s.naam }}</td>
+                    <td>{{ s.aantal_producten }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('subcategorie_verwijderen', subcategorie_id=s.id) }}"
+                              onsubmit="return confirm('Subcategorie \'{{ s.naam }}\' verwijderen?');">
+                            <button type="submit" class="btn btn-gevaar btn-klein"
+                                    {{ 'disabled title="Nog in gebruik bij producten"' if s.aantal_producten > 0 else '' }}>
+                                Verwijderen
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen subcategorieën binnen {{ c.naam }}.</p>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('subcategorie_nieuw') }}" class="formgrid" style="margin-top:0.75rem">
+        <input type="hidden" name="categorie" value="{{ c.naam }}">
+        <div class="veld">
+            <label for="sub-naam-{{ c.id }}">Nieuwe subcategorie binnen {{ c.naam }}</label>
+            <input type="text" id="sub-naam-{{ c.id }}" name="naam" required placeholder="Bijv. Sonnema">
+        </div>
+        <div class="veld" style="justify-content:flex-end">
+            <button type="submit" class="btn btn-rand">Toevoegen</button>
+        </div>
+    </form>
+</div>
+{% endfor %}
+{% else %}
+<div class="kaart"><p class="leeg">Nog geen categorieën.</p></div>
+{% endif %}
 {% endblock %}

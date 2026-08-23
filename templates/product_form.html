@@ -36,6 +36,17 @@
                     <span class="tekst-zacht">Staat je categorie er niet bij? <a href="{{ url_for('categorieen_lijst') }}">Beheer categorieën</a>.</span>
                 </div>
                 <div class="veld">
+                    <label for="subcategorie">Subcategorie</label>
+                    <select id="subcategorie" name="subcategorie">
+                        {% set huidige_subcategorie = product.subcategorie if product and product.subcategorie else '' %}
+                        <option value="">Geen subcategorie</option>
+                        {% for s in subcategorieen %}
+                        <option value="{{ s.naam }}" data-categorie="{{ s.categorie }}" {{ 'selected' if s.naam == huidige_subcategorie and s.categorie == huidige_categorie else '' }}>{{ s.naam }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="tekst-zacht">Optioneel, alleen subcategorieën van de gekozen categorie worden getoond.</span>
+                </div>
+                <div class="veld">
                     <label for="eenheid">Eenheid</label>
                     <input type="text" id="eenheid" name="eenheid" placeholder="stuks, krat, fles, ..."
                            value="{{ product.eenheid if product else 'stuks' }}">
@@ -102,4 +113,29 @@
         <button type="submit" class="btn btn-geel">{{ 'Opslaan' if product else 'Toevoegen' }}</button>
     </form>
 </div>
+
+<script>
+(function () {
+    var catVeld = document.getElementById('categorie');
+    var subVeld = document.getElementById('subcategorie');
+    if (!catVeld || !subVeld) return;
+    var alleOpties = Array.prototype.slice.call(subVeld.options);
+
+    function filterSub() {
+        var categorie = catVeld.value;
+        var huidige = subVeld.value;
+        var nogGeldig = false;
+        alleOpties.forEach(function (optie) {
+            if (!optie.value) { optie.style.display = ''; return; }
+            var toon = optie.dataset.categorie === categorie;
+            optie.style.display = toon ? '' : 'none';
+            if (toon && optie.value === huidige) nogGeldig = true;
+        });
+        if (!nogGeldig) subVeld.value = '';
+    }
+
+    catVeld.addEventListener('change', filterSub);
+    filterSub();
+})();
+</script>
 {% endblock %}

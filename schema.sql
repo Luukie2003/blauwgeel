@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS producten (
     artikelcode TEXT,
     naam TEXT NOT NULL,
     categorie TEXT NOT NULL DEFAULT 'Overig',
+    subcategorie TEXT,
     eenheid TEXT NOT NULL DEFAULT 'stuks',
     voorraad INTEGER NOT NULL DEFAULT 0,
     min_voorraad INTEGER NOT NULL DEFAULT 0,
@@ -75,6 +76,13 @@ CREATE TABLE IF NOT EXISTS mutaties (
 CREATE TABLE IF NOT EXISTS categorieen (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     naam TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS subcategorieen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    categorie TEXT NOT NULL,
+    naam TEXT NOT NULL,
+    UNIQUE(categorie, naam)
 );
 
 CREATE TABLE IF NOT EXISTS mededelingen (

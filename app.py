@@ -40,6 +40,8 @@ BEHEERDER_ENDPOINTS = {
     "account_rol_wijzigen",
     "categorieen_lijst",
     "categorie_verwijderen",
+    "subcategorie_nieuw",
+    "subcategorie_verwijderen",
     "backups_lijst",
     "backup_nu",
     "backup_download",
@@ -584,13 +586,19 @@ def register_routes(app):
     def producten_lijst():
         db = get_db()
         producten = db.execute(
-            "SELECT * FROM producten ORDER BY categorie, naam"
+            "SELECT * FROM producten ORDER BY categorie, subcategorie, naam"
         ).fetchall()
         categorieen = db.execute(
             "SELECT naam FROM categorieen ORDER BY naam"
         ).fetchall()
+        subcategorieen = db.execute(
+            "SELECT categorie, naam FROM subcategorieen ORDER BY categorie, naam"
+        ).fetchall()
         return render_template(
-            "producten.html", producten=producten, categorieen=categorieen
+            "producten.html",
+            producten=producten,
+            categorieen=categorieen,
+            subcategorieen=subcategorieen,
         )
 
     @app.route("/producten/minimumvoorraad", methods=["GET", "POST"])
@@ -660,14 +668,15 @@ def register_routes(app):
         if request.method == "POST":
             db.execute(
                 """INSERT INTO producten
-                   (artikelcode, naam, categorie, eenheid, voorraad, min_voorraad,
+                   (artikelcode, naam, categorie, subcategorie, eenheid, voorraad, min_voorraad,
                     bestel_hoeveelheid, verkoopprijs, inkoopprijs, actief, besteleenheid,
                     besteleenheid_factor, opmerking)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
                     request.form["categorie"].strip() or "Overig",
+                    request.form.get("subcategorie", "").strip() or None,
                     request.form["eenheid"].strip() or "stuks",
                     int(request.form["voorraad"] or 0),
                     int(request.form["min_voorraad"] or 0),
@@ -686,7 +695,15 @@ def register_routes(app):
         categorieen = db.execute(
             "SELECT naam FROM categorieen ORDER BY naam"
         ).fetchall()
-        return render_template("product_form.html", product=None, categorieen=categorieen)
+        subcategorieen = db.execute(
+            "SELECT categorie, naam FROM subcategorieen ORDER BY categorie, naam"
+        ).fetchall()
+        return render_template(
+            "product_form.html",
+            product=None,
+            categorieen=categorieen,
+            subcategorieen=subcategorieen,
+        )
 
     @app.route("/producten/<int:product_id>/bewerken", methods=["GET", "POST"])
     def product_bewerken(product_id):
@@ -701,14 +718,16 @@ def register_routes(app):
         if request.method == "POST":
             db.execute(
                 """UPDATE producten
-                   SET artikelcode = ?, naam = ?, categorie = ?, eenheid = ?, voorraad = ?,
-                       min_voorraad = ?, bestel_hoeveelheid = ?, verkoopprijs = ?, inkoopprijs = ?,
-                       actief = ?, besteleenheid = ?, besteleenheid_factor = ?, opmerking = ?
+                   SET artikelcode = ?, naam = ?, categorie = ?, subcategorie = ?, eenheid = ?,
+                       voorraad = ?, min_voorraad = ?, bestel_hoeveelheid = ?, verkoopprijs = ?,
+                       inkoopprijs = ?, actief = ?, besteleenheid = ?, besteleenheid_factor = ?,
+                       opmerking = ?
                    WHERE id = ?""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
                     request.form["categorie"].strip() or "Overig",
+                    request.form.get("subcategorie", "").strip() or None,
                     request.form["eenheid"].strip() or "stuks",
                     int(request.form["voorraad"] or 0),
                     int(request.form["min_voorraad"] or 0),
@@ -728,8 +747,14 @@ def register_routes(app):
         categorieen = db.execute(
             "SELECT naam FROM categorieen ORDER BY naam"
         ).fetchall()
+        subcategorieen = db.execute(
+            "SELECT categorie, naam FROM subcategorieen ORDER BY categorie, naam"
+        ).fetchall()
         return render_template(
-            "product_form.html", product=product, categorieen=categorieen
+            "product_form.html",
+            product=product,
+            categorieen=categorieen,
+            subcategorieen=subcategorieen,
         )
 
     @app.route("/producten/<int:product_id>/verwijderen", methods=["POST"])
@@ -821,7 +846,19 @@ def register_routes(app):
             """SELECT c.*, (SELECT COUNT(*) FROM producten WHERE categorie = c.naam) AS aantal_producten
                FROM categorieen c ORDER BY c.naam"""
         ).fetchall()
-        return render_template("categorieen.html", categorieen=categorieen)
+        subcategorieen = db.execute(
+            """SELECT s.*, (SELECT COUNT(*) FROM producten
+                             WHERE categorie = s.categorie AND subcategorie = s.naam) AS aantal_producten
+               FROM subcategorieen s ORDER BY s.categorie, s.naam"""
+        ).fetchall()
+        subcategorieen_per_categorie = {}
+        for s in subcategorieen:
+            subcategorieen_per_categorie.setdefault(s["categorie"], []).append(s)
+        return render_template(
+            "categorieen.html",
+            categorieen=categorieen,
+            subcategorieen_per_categorie=subcategorieen_per_categorie,
+        )
 
     @app.route("/categorieen/<int:categorie_id>/verwijderen", methods=["POST"])
     def categorie_verwijderen(categorie_id):
@@ -843,8 +880,57 @@ def register_routes(app):
             )
             return redirect(url_for("categorieen_lijst"))
         db.execute("DELETE FROM categorieen WHERE id = ?", (categorie_id,))
+        db.execute("DELETE FROM subcategorieen WHERE categorie = ?", (categorie["naam"],))
         db.commit()
         flash(f"Categorie '{categorie['naam']}' verwijderd.", "success")
+        return redirect(url_for("categorieen_lijst"))
+
+    @app.route("/subcategorieen/nieuw", methods=["POST"])
+    def subcategorie_nieuw():
+        db = get_db()
+        categorie = request.form.get("categorie", "").strip()
+        naam = request.form.get("naam", "").strip()
+        if not categorie or not naam:
+            flash("Vul een categorie en een naam in voor de subcategorie.", "error")
+        else:
+            bestaat = db.execute(
+                "SELECT id FROM subcategorieen WHERE categorie = ? AND naam = ?",
+                (categorie, naam),
+            ).fetchone()
+            if bestaat:
+                flash(f"Subcategorie '{naam}' bestaat al binnen '{categorie}'.", "error")
+            else:
+                db.execute(
+                    "INSERT INTO subcategorieen (categorie, naam) VALUES (?, ?)",
+                    (categorie, naam),
+                )
+                db.commit()
+                flash(f"Subcategorie '{naam}' toegevoegd aan '{categorie}'.", "success")
+        return redirect(url_for("categorieen_lijst"))
+
+    @app.route("/subcategorieen/<int:subcategorie_id>/verwijderen", methods=["POST"])
+    def subcategorie_verwijderen(subcategorie_id):
+        db = get_db()
+        subcategorie = db.execute(
+            "SELECT * FROM subcategorieen WHERE id = ?", (subcategorie_id,)
+        ).fetchone()
+        if subcategorie is None:
+            flash("Subcategorie niet gevonden.", "error")
+            return redirect(url_for("categorieen_lijst"))
+        in_gebruik = db.execute(
+            "SELECT COUNT(*) AS n FROM producten WHERE categorie = ? AND subcategorie = ?",
+            (subcategorie["categorie"], subcategorie["naam"]),
+        ).fetchone()["n"]
+        if in_gebruik > 0:
+            flash(
+                f"Subcategorie '{subcategorie['naam']}' is nog in gebruik bij {in_gebruik} "
+                "product(en) en kan niet verwijderd worden.",
+                "error",
+            )
+            return redirect(url_for("categorieen_lijst"))
+        db.execute("DELETE FROM subcategorieen WHERE id = ?", (subcategorie_id,))
+        db.commit()
+        flash(f"Subcategorie '{subcategorie['naam']}' verwijderd.", "success")
         return redirect(url_for("categorieen_lijst"))
 
     # ---------- In / uit boeken ----------

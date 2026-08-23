@@ -23,22 +23,29 @@
             <option value="{{ c.naam }}">{{ c.naam }}</option>
             {% endfor %}
         </select>
+        <select id="filter-subcategorie">
+            <option value="">Alle subcategorieën</option>
+            {% for s in subcategorieen %}
+            <option value="{{ s.naam }}" data-categorie="{{ s.categorie }}">{{ s.naam }}</option>
+            {% endfor %}
+        </select>
         <span id="filter-aantal" class="tekst-zacht"></span>
     </div>
     <div class="tabel-wrap">
         <table id="producten-tabel">
             <thead>
                 <tr>
-                    <th>Code</th><th>Naam</th><th>Categorie</th><th>Voorraad</th><th>Minimum</th>
+                    <th>Code</th><th>Naam</th><th>Categorie</th><th>Subcategorie</th><th>Voorraad</th><th>Minimum</th>
                     <th>Bestel­hoeveelheid</th><th>Inkoop</th><th>Verkoop</th><th>Status</th><th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for p in producten %}
-                <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie)|lower }}" data-categorie="{{ p.categorie }}">
+                <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie ~ ' ' ~ (p.subcategorie or ''))|lower }}" data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}">
                     <td>{{ p.artikelcode or '—' }}</td>
                     <td>{{ p.naam }}</td>
                     <td>{{ p.categorie }}</td>
+                    <td>{{ p.subcategorie or '—' }}</td>
                     <td>
                         {% if p.voorraad < p.min_voorraad %}
                         <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
@@ -98,21 +105,38 @@
 (function () {
     var zoekVeld = document.getElementById('filter-zoek');
     var catVeld = document.getElementById('filter-categorie');
+    var subVeld = document.getElementById('filter-subcategorie');
     var aantalLabel = document.getElementById('filter-aantal');
     var leegMelding = document.getElementById('filter-leeg');
     if (!zoekVeld) return;
     var rijen = Array.prototype.slice.call(
         document.querySelectorAll('#producten-tabel tbody tr')
     );
+    var alleSubOpties = Array.prototype.slice.call(subVeld.options);
+
+    function filterSubOpties() {
+        var categorie = catVeld.value;
+        var huidige = subVeld.value;
+        var nogGeldig = false;
+        alleSubOpties.forEach(function (optie) {
+            if (!optie.value) { optie.style.display = ''; return; }
+            var toon = !categorie || optie.dataset.categorie === categorie;
+            optie.style.display = toon ? '' : 'none';
+            if (toon && optie.value === huidige) nogGeldig = true;
+        });
+        if (!nogGeldig) subVeld.value = '';
+    }
 
     function filter() {
         var zoek = zoekVeld.value.trim().toLowerCase();
         var categorie = catVeld.value;
+        var subcategorie = subVeld.value;
         var zichtbaar = 0;
         rijen.forEach(function (rij) {
             var matchZoek = !zoek || rij.dataset.zoek.indexOf(zoek) !== -1;
             var matchCategorie = !categorie || rij.dataset.categorie === categorie;
-            var toon = matchZoek && matchCategorie;
+            var matchSubcategorie = !subcategorie || rij.dataset.subcategorie === subcategorie;
+            var toon = matchZoek && matchCategorie && matchSubcategorie;
             rij.style.display = toon ? '' : 'none';
             if (toon) zichtbaar++;
         });
@@ -121,7 +145,8 @@
     }
 
     zoekVeld.addEventListener('input', filter);
-    catVeld.addEventListener('change', filter);
+    catVeld.addEventListener('change', function () { filterSubOpties(); filter(); });
+    subVeld.addEventListener('change', filter);
     filter();
 })();
 </script>
