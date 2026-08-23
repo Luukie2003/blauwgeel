@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inloggen · Kantine Voorraadbeheer</title>
+    <title>Wachtwoord instellen · Kantine Voorraadbeheer</title>
     <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_versie }}">
 </head>
@@ -12,7 +12,7 @@
         <div class="login-venster">
             <div class="app-titelbalk">
                 <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="titelbalk-logo">
-                <span>Kantine Voorraadbeheer — Aanmelden</span>
+                <span>Kantine Voorraadbeheer — Wachtwoord instellen</span>
             </div>
             <div class="login-logo-groot">
                 <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915">
@@ -27,20 +27,20 @@
                         </div>
                     {% endif %}
                 {% endwith %}
+                <p class="subtitel" style="margin-top:0">
+                    Kies een wachtwoord voor <strong>{{ gebruiker.naam }}</strong>.
+                </p>
                 <form method="post">
                     <div class="veld">
-                        <label for="naam">Gebruikersnaam</label>
-                        <input type="text" id="naam" name="naam" autofocus required>
+                        <label for="nieuw_wachtwoord">Nieuw wachtwoord</label>
+                        <input type="password" id="nieuw_wachtwoord" name="nieuw_wachtwoord" autofocus required minlength="4">
                     </div>
                     <div class="veld">
-                        <label for="wachtwoord">Wachtwoord</label>
-                        <input type="password" id="wachtwoord" name="wachtwoord" required>
+                        <label for="nieuw_wachtwoord_herhaald">Nieuw wachtwoord (herhalen)</label>
+                        <input type="password" id="nieuw_wachtwoord_herhaald" name="nieuw_wachtwoord_herhaald" required minlength="4">
                     </div>
-                    <button type="submit" class="btn btn-geel login-btn">Aanmelden</button>
+                    <button type="submit" class="btn btn-geel login-btn">Wachtwoord instellen</button>
                 </form>
-                <p class="subtitel" style="text-align:center; margin-top:1rem">
-                    <a href="{{ url_for('wachtwoord_vergeten') }}">Wachtwoord vergeten?</a>
-                </p>
             </div>
         </div>
     </div>

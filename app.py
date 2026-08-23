@@ -1,3 +1,4 @@
+import hashlib
 import re
 import secrets
 from datetime import datetime, timedelta
@@ -27,7 +28,7 @@ BACKUP_BESTANDSNAAM = re.compile(
     r"^voorraad-(\d{4}-\d{2}-\d{2}|voor-herstel-\d{8}-\d{6})\.db$"
 )
 
-OPEN_ENDPOINTS = {"login", "static"}
+OPEN_ENDPOINTS = {"login", "static", "wachtwoord_vergeten", "wachtwoord_instellen"}
 
 # Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers
 # komen hier niet in -- zij kunnen de dagelijkse operatie doen (tellen,
@@ -38,6 +39,7 @@ BEHEERDER_ENDPOINTS = {
     "account_nieuw",
     "account_verwijderen",
     "account_rol_wijzigen",
+    "account_email_wijzigen",
     "categorieen_lijst",
     "categorie_verwijderen",
     "subcategorie_nieuw",
@@ -192,6 +194,35 @@ def now_datetime_local():
     return datetime.now().strftime("%Y-%m-%dT%H:%M")
 
 
+def genereer_wachtwoord_token(db, gebruiker_id, geldig_uren):
+    """Maakt een eenmalige, tijdelijke link-token om een wachtwoord in te
+    stellen (gebruikt voor zowel account-activatie als wachtwoord-vergeten).
+    Er wordt alleen een hash van de token opgeslagen -- niet de token zelf --
+    zodat een gelekte database-backup geen bruikbare inlogtokens bevat."""
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    verloopt = (datetime.now() + timedelta(hours=geldig_uren)).strftime("%Y-%m-%d %H:%M")
+    db.execute(
+        "UPDATE gebruikers SET reset_token_hash = ?, reset_token_verloopt = ? WHERE id = ?",
+        (token_hash, verloopt, gebruiker_id),
+    )
+    db.commit()
+    return token
+
+
+def vind_gebruiker_bij_token(db, token):
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    gebruiker = db.execute(
+        "SELECT * FROM gebruikers WHERE reset_token_hash = ?", (token_hash,)
+    ).fetchone()
+    if gebruiker is None or not gebruiker["reset_token_verloopt"]:
+        return None
+    verloopt = datetime.strptime(gebruiker["reset_token_verloopt"], "%Y-%m-%d %H:%M")
+    if verloopt < datetime.now():
+        return None
+    return gebruiker
+
+
 def besteleenheid_naam(product):
     return product["besteleenheid"] or product["eenheid"]
 
@@ -289,11 +320,78 @@ def register_routes(app):
         flash("Je bent uitgelogd.", "success")
         return redirect(url_for("login"))
 
+    @app.route("/wachtwoord-vergeten", methods=["GET", "POST"])
+    def wachtwoord_vergeten():
+        if request.method == "POST":
+            identificatie = request.form.get("naam_of_email", "").strip()
+            db = get_db()
+            gebruiker = db.execute(
+                "SELECT * FROM gebruikers WHERE naam = ? OR email = ?",
+                (identificatie, identificatie),
+            ).fetchone()
+            if gebruiker and gebruiker["email"]:
+                token = genereer_wachtwoord_token(db, gebruiker["id"], geldig_uren=24)
+                link = url_for("wachtwoord_instellen", token=token, _external=True)
+                mail.stuur_mail(
+                    "Wachtwoord opnieuw instellen -- Kantine Voorraadbeheer",
+                    f"Hoi {gebruiker['naam']},\n\n"
+                    f"Er is een verzoek gedaan om je wachtwoord opnieuw in te stellen.\n"
+                    f"Gebruik onderstaande link om een nieuw wachtwoord te kiezen "
+                    f"(deze link is 24 uur geldig):\n\n"
+                    f"{link}\n\n"
+                    f"Heb je dit zelf niet aangevraagd? Dan kun je deze e-mail negeren.",
+                    naar=gebruiker["email"],
+                )
+            flash(
+                "Als dit account bestaat en er een e-mailadres bekend is, is er een "
+                "e-mail met een link verstuurd.",
+                "success",
+            )
+            return redirect(url_for("login"))
+
+        return render_template("wachtwoord_vergeten.html")
+
+    @app.route("/wachtwoord-instellen/<token>", methods=["GET", "POST"])
+    def wachtwoord_instellen(token):
+        db = get_db()
+        gebruiker = vind_gebruiker_bij_token(db, token)
+        if gebruiker is None:
+            flash("Deze link is ongeldig of verlopen. Vraag een nieuwe aan.", "error")
+            return redirect(url_for("wachtwoord_vergeten"))
+
+        if request.method == "POST":
+            nieuw = request.form.get("nieuw_wachtwoord", "")
+            nieuw_herhaald = request.form.get("nieuw_wachtwoord_herhaald", "")
+            if len(nieuw) < 4:
+                flash("Wachtwoord moet minstens 4 tekens zijn.", "error")
+            elif nieuw != nieuw_herhaald:
+                flash("De wachtwoorden komen niet overeen.", "error")
+            else:
+                db.execute(
+                    """UPDATE gebruikers
+                       SET wachtwoord_hash = ?, reset_token_hash = NULL, reset_token_verloopt = NULL
+                       WHERE id = ?""",
+                    (generate_password_hash(nieuw, method="pbkdf2:sha256"), gebruiker["id"]),
+                )
+                db.execute(
+                    "UPDATE gebruikers SET laatste_login = ? WHERE id = ?",
+                    (now_str(), gebruiker["id"]),
+                )
+                db.commit()
+                session.clear()
+                session["gebruiker_id"] = gebruiker["id"]
+                session["gebruiker_naam"] = gebruiker["naam"]
+                session["gebruiker_rol"] = gebruiker["rol"]
+                flash("Wachtwoord ingesteld. Je bent nu ingelogd.", "success")
+                return redirect(url_for("dashboard"))
+
+        return render_template("wachtwoord_instellen.html", gebruiker=gebruiker, token=token)
+
     @app.route("/accounts")
     def accounts_lijst():
         db = get_db()
         gebruikers = db.execute(
-            "SELECT id, naam, rol, aangemaakt_op, laatste_login FROM gebruikers ORDER BY naam"
+            "SELECT id, naam, email, rol, aangemaakt_op, laatste_login FROM gebruikers ORDER BY naam"
         ).fetchall()
         aantal_beheerders = db.execute(
             "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder'"
@@ -305,25 +403,59 @@ def register_routes(app):
     @app.route("/accounts/nieuw", methods=["POST"])
     def account_nieuw():
         naam = request.form.get("naam", "").strip()
-        wachtwoord = request.form.get("wachtwoord", "")
+        email = request.form.get("email", "").strip()
         rol = request.form.get("rol", "vrijwilliger")
         if rol not in ("beheerder", "vrijwilliger"):
             rol = "vrijwilliger"
         db = get_db()
 
-        if not naam or not wachtwoord:
-            flash("Naam en wachtwoord zijn verplicht.", "error")
-        elif len(wachtwoord) < 4:
-            flash("Wachtwoord moet minstens 4 tekens zijn.", "error")
+        if not naam or not email:
+            flash("Naam en e-mailadres zijn verplicht.", "error")
         elif db.execute("SELECT id FROM gebruikers WHERE naam = ?", (naam,)).fetchone():
             flash(f"Er bestaat al een account met de naam '{naam}'.", "error")
         else:
-            db.execute(
-                "INSERT INTO gebruikers (naam, wachtwoord_hash, rol, aangemaakt_op) VALUES (?, ?, ?, ?)",
-                (naam, generate_password_hash(wachtwoord, method="pbkdf2:sha256"), rol, now_str()),
+            onbruikbaar_wachtwoord = generate_password_hash(
+                secrets.token_hex(16), method="pbkdf2:sha256"
+            )
+            cursor = db.execute(
+                """INSERT INTO gebruikers (naam, email, wachtwoord_hash, rol, aangemaakt_op)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (naam, email, onbruikbaar_wachtwoord, rol, now_str()),
             )
             db.commit()
-            flash(f"Account '{naam}' aangemaakt als {rol}.", "success")
+            token = genereer_wachtwoord_token(db, cursor.lastrowid, geldig_uren=72)
+            link = url_for("wachtwoord_instellen", token=token, _external=True)
+            mail.stuur_mail(
+                "Welkom bij Kantine Voorraadbeheer",
+                f"Hoi {naam},\n\n"
+                f"Er is een account voor je aangemaakt in het voorraadsysteem van de kantine.\n"
+                f"Kies via onderstaande link je eigen wachtwoord (deze link is 72 uur geldig):\n\n"
+                f"{link}\n\n"
+                f"Je gebruikersnaam is: {naam}",
+                naar=email,
+            )
+            flash(
+                f"Account '{naam}' aangemaakt. Er is een e-mail verstuurd naar {email} "
+                "om een wachtwoord in te stellen.",
+                "success",
+            )
+        return redirect(url_for("accounts_lijst"))
+
+    @app.route("/accounts/<int:gebruiker_id>/email", methods=["POST"])
+    def account_email_wijzigen(gebruiker_id):
+        db = get_db()
+        email = request.form.get("email", "").strip()
+        gebruiker = db.execute(
+            "SELECT * FROM gebruikers WHERE id = ?", (gebruiker_id,)
+        ).fetchone()
+        if gebruiker is None:
+            flash("Account niet gevonden.", "error")
+        else:
+            db.execute(
+                "UPDATE gebruikers SET email = ? WHERE id = ?", (email or None, gebruiker_id)
+            )
+            db.commit()
+            flash(f"E-mailadres van '{gebruiker['naam']}' bijgewerkt.", "success")
         return redirect(url_for("accounts_lijst"))
 
     @app.route("/accounts/<int:gebruiker_id>/rol", methods=["POST"])
@@ -406,6 +538,28 @@ def register_routes(app):
                 return redirect(url_for("dashboard"))
 
         return render_template("account_wachtwoord.html")
+
+    @app.route("/account/voorkeuren", methods=["GET", "POST"])
+    def account_voorkeuren():
+        db = get_db()
+        gebruiker_id = session["gebruiker_id"]
+        if request.method == "POST":
+            db.execute(
+                "UPDATE gebruikers SET mail_factuur = ?, mail_week_overzicht = ? WHERE id = ?",
+                (
+                    1 if request.form.get("mail_factuur") else 0,
+                    1 if request.form.get("mail_week_overzicht") else 0,
+                    gebruiker_id,
+                ),
+            )
+            db.commit()
+            flash("Voorkeuren opgeslagen.", "success")
+            return redirect(url_for("account_voorkeuren"))
+
+        gebruiker = db.execute(
+            "SELECT * FROM gebruikers WHERE id = ?", (gebruiker_id,)
+        ).fetchone()
+        return render_template("account_voorkeuren.html", gebruiker=gebruiker)
 
     @app.route("/help")
     def help_pagina():
@@ -1067,18 +1221,30 @@ def register_routes(app):
                 f"  - {p['naam']}: +{aantal_be} {besteleenheid_naam(p)} (= {aantal} {p['eenheid']})"
                 for p, aantal, aantal_be in geboekte_regels
             )
-            instelling = db.execute(
-                "SELECT notificatie_email FROM instellingen WHERE id = 1"
-            ).fetchone()
-            mail.stuur_mail(
-                f"Levering ingeboekt{f' -- {referentie}' if referentie else ''}",
+            ontvangers = [
+                r["email"]
+                for r in db.execute(
+                    """SELECT email FROM gebruikers
+                       WHERE mail_factuur = 1 AND email IS NOT NULL AND email != ''"""
+                ).fetchall()
+            ]
+            if not ontvangers:
+                instelling = db.execute(
+                    "SELECT notificatie_email FROM instellingen WHERE id = 1"
+                ).fetchone()
+                if instelling and instelling["notificatie_email"]:
+                    ontvangers = [instelling["notificatie_email"]]
+
+            onderwerp = f"Levering ingeboekt{f' -- {referentie}' if referentie else ''}"
+            tekst = (
                 f"Er is een levering ingeboekt in het voorraadsysteem.\n\n"
                 f"Datum: {format_datum(datum)}\n"
                 f"Door: {naam or 'onbekend'}\n"
                 f"Referentie: {referentie or '-'}\n\n"
-                f"Producten:\n{regels_tekst}",
-                naar=instelling["notificatie_email"] if instelling else None,
+                f"Producten:\n{regels_tekst}"
             )
+            for ontvanger in ontvangers:
+                mail.stuur_mail(onderwerp, tekst, naar=ontvanger)
 
             return redirect(url_for("boeken"))
 

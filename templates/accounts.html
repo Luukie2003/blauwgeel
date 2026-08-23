@@ -15,12 +15,18 @@
     <div class="tabel-wrap">
         <table>
             <thead>
-                <tr><th>Naam</th><th>Rol</th><th>Laatste inlog</th><th>Aangemaakt op</th><th></th></tr>
+                <tr><th>Naam</th><th>E-mailadres</th><th>Rol</th><th>Laatste inlog</th><th>Aangemaakt op</th><th></th></tr>
             </thead>
             <tbody>
                 {% for g in gebruikers %}
                 <tr>
                     <td>{{ g.naam }}{% if g.naam == huidige_gebruiker %} <span class="tekst-zacht">(jij)</span>{% endif %}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('account_email_wijzigen', gebruiker_id=g.id) }}" class="inline" style="display:flex; gap:0.4rem">
+                            <input type="email" name="email" value="{{ g.email or '' }}" placeholder="nog geen e-mailadres" style="min-width:180px">
+                            <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
+                        </form>
+                    </td>
                     <td>
                         {% if g.rol == 'beheerder' %}
                         <span class="badge badge-ok">Beheerder</span>
@@ -54,6 +60,10 @@
 
 <div class="kaart">
     <h2>Nieuw account aanmaken</h2>
+    <p class="tekst-zacht" style="margin-top:0">
+        Er wordt automatisch een e-mail gestuurd naar het opgegeven adres waarmee de
+        persoon zelf een wachtwoord kan instellen.
+    </p>
     <form method="post" action="{{ url_for('account_nieuw') }}">
         <div class="formgrid">
             <div class="veld">
@@ -61,8 +71,8 @@
                 <input type="text" id="naam" name="naam" required>
             </div>
             <div class="veld">
-                <label for="wachtwoord">Wachtwoord</label>
-                <input type="password" id="wachtwoord" name="wachtwoord" required minlength="4">
+                <label for="email">E-mailadres</label>
+                <input type="email" id="email" name="email" required>
             </div>
             <div class="veld">
                 <label for="rol">Rol</label>

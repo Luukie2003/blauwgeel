@@ -72,6 +72,11 @@ KOLOM_MIGRATIES = [
     ("producten", "besteleenheid_factor", "INTEGER NOT NULL DEFAULT 1"),
     ("producten", "inkoopprijs", "REAL NOT NULL DEFAULT 0"),
     ("producten", "subcategorie", "TEXT"),
+    ("gebruikers", "email", "TEXT"),
+    ("gebruikers", "reset_token_hash", "TEXT"),
+    ("gebruikers", "reset_token_verloopt", "TEXT"),
+    ("gebruikers", "mail_factuur", "INTEGER NOT NULL DEFAULT 0"),
+    ("gebruikers", "mail_week_overzicht", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

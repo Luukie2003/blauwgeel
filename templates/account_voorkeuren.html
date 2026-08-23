@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block titel %}Mijn voorkeuren{% endblock %}
+{% block inhoud %}
+<h1>Mijn voorkeuren</h1>
+<p class="subtitel">Ingelogd als {{ huidige_gebruiker }}.</p>
+
+<div class="kaart" style="max-width:480px">
+    {% if not gebruiker.email %}
+    <p class="tekst-zacht">
+        Er is nog geen e-mailadres bij jouw account bekend. Vraag een beheerder om dit
+        in te stellen op de Accounts-pagina -- zonder e-mailadres ontvang je geen mail,
+        ook niet als je hieronder iets aanvinkt.
+    </p>
+    {% endif %}
+    <form method="post">
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.75rem">
+            <input type="checkbox" name="mail_factuur" style="width:auto"
+                   {{ 'checked' if gebruiker.mail_factuur }}>
+            Mail ontvangen bij het inboeken van een levering/factuur
+        </label>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer">
+            <input type="checkbox" name="mail_week_overzicht" style="width:auto"
+                   {{ 'checked' if gebruiker.mail_week_overzicht }}>
+            Wekelijks overzicht ontvangen
+            <span class="tekst-zacht">(binnenkort beschikbaar)</span>
+        </label>
+        <button type="submit" class="btn btn-geel" style="margin-top:1rem">Opslaan</button>
+    </form>
+</div>
+{% endblock %}

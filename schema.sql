@@ -40,7 +40,12 @@ CREATE TABLE IF NOT EXISTS gebruikers (
     wachtwoord_hash TEXT NOT NULL,
     rol TEXT NOT NULL DEFAULT 'beheerder' CHECK (rol IN ('beheerder', 'vrijwilliger')),
     aangemaakt_op TEXT NOT NULL,
-    laatste_login TEXT
+    laatste_login TEXT,
+    email TEXT,
+    reset_token_hash TEXT,
+    reset_token_verloopt TEXT,
+    mail_factuur INTEGER NOT NULL DEFAULT 0,
+    mail_week_overzicht INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS tellingen (
