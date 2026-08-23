@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekoverzicht</title>
+</head>
+<body style="margin:0; padding:0; background:#ececec; font-family: Arial, Helvetica, sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ececec; padding:24px 0;">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:4px; border:1px solid #d6d6d6;">
+
+  <tr>
+    <td style="background:#1c2b4a; padding:20px 24px; border-bottom:3px solid #fcd42f; border-radius:4px 4px 0 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding-right:14px;">
+            <img src="{{ site_url }}/static/logo.png" width="40" height="47" alt="s.v. Blauw-Geel 1915" style="display:block;">
+          </td>
+          <td>
+            <div style="color:#ffffff; font-size:19px; font-weight:bold; font-family:Arial, Helvetica, sans-serif;">Weekoverzicht</div>
+            <div style="color:#d8def0; font-size:13px; font-family:Arial, Helvetica, sans-serif;">{{ overzicht.week_van.strftime('%d-%m-%Y') }} t/m {{ overzicht.week_tot.strftime('%d-%m-%Y') }}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:24px; font-family:Arial, Helvetica, sans-serif; color:#1c2333;">
+
+      <div style="font-size:30px; font-weight:bold; color:#1c2333;">
+        &euro; {{ '%.0f'|format(overzicht.totale_omzet) }}
+        {% if overzicht.verschil_percentage is not none %}
+        <span style="font-size:14px; font-weight:bold; color:{{ '#146c34' if overzicht.verschil_percentage >= 0 else '#a91c1c' }};">
+          {{ '+' if overzicht.verschil_percentage >= 0 else '' }}{{ '%.0f'|format(overzicht.verschil_percentage) }}%
+        </span>
+        {% endif %}
+      </div>
+      <div style="font-size:13px; color:#5b6270; margin-bottom:24px;">
+        Omzet deze week{% if overzicht.verschil_percentage is not none %} t.o.v. week ervoor{% endif %}
+      </div>
+
+      <div style="font-size:15px; font-weight:bold; color:#1c2333; margin:0 0 8px; padding-top:16px; border-top:1px solid #eee;">Top verkopers</div>
+      {% if overzicht.top_verkopers %}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;">
+        {% for tv in overzicht.top_verkopers %}
+        <tr>
+          <td style="padding:5px 0; border-bottom:1px solid #f0f0f0;">{{ tv.product_naam }}</td>
+          <td style="padding:5px 0; border-bottom:1px solid #f0f0f0; color:#5b6270;">{{ tv.verkocht }} {{ tv.eenheid }}</td>
+          <td align="right" style="padding:5px 0; border-bottom:1px solid #f0f0f0;">&euro; {{ '%.2f'|format(tv.omzet) }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <div style="font-size:13px; color:#5b6270;">Geen verkoop verwerkt deze week.</div>
+      {% endif %}
+
+      <div style="font-size:15px; font-weight:bold; color:#1c2333; margin:20px 0 8px; padding-top:16px; border-top:1px solid #eee;">Onder minimumvoorraad</div>
+      {% if overzicht.onder_minimum %}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;">
+        {% for p in overzicht.onder_minimum %}
+        <tr>
+          <td style="padding:5px 0; border-bottom:1px solid #f0f0f0;">{{ p.naam }}</td>
+          <td style="padding:5px 0; border-bottom:1px solid #f0f0f0; color:#5b6270;">{{ p.categorie }}</td>
+          <td align="right" style="padding:5px 0; border-bottom:1px solid #f0f0f0; color:#a91c1c; font-weight:bold;">{{ p.voorraad }} / {{ p.min_voorraad }} {{ p.eenheid }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <div style="font-size:13px; color:#5b6270;">Alles zit boven het minimum.</div>
+      {% endif %}
+
+      <div style="font-size:15px; font-weight:bold; color:#1c2333; margin:20px 0 8px; padding-top:16px; border-top:1px solid #eee;">Openstaande bestellingen</div>
+      {% if overzicht.open_bestellingen %}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;">
+        {% for b in overzicht.open_bestellingen %}
+        <tr>
+          <td style="padding:5px 0; border-bottom:1px solid #f0f0f0;">{{ b.aangemaakt_op|datum_nl }}</td>
+          <td align="right" style="padding:5px 0; border-bottom:1px solid #f0f0f0; color:#5b6270;">{{ b.besteld_door or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <div style="font-size:13px; color:#5b6270;">Geen openstaande bestellingen.</div>
+      {% endif %}
+
+      <div style="font-size:15px; font-weight:bold; color:#1c2333; margin:20px 0 8px; padding-top:16px; border-top:1px solid #eee;">Bijzonderheden van deze week</div>
+      {% if overzicht.nieuwe_mededelingen %}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;">
+        {% for m in overzicht.nieuwe_mededelingen %}
+        <tr>
+          <td style="padding:5px 0; border-bottom:1px solid #f0f0f0;">
+            {{ m.tekst }}<br>
+            <span style="color:#5b6270; font-size:12px;">{{ m.datum|datum_nl }} &middot; {{ m.naam or 'onbekend' }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <div style="font-size:13px; color:#5b6270;">Geen nieuwe bijzonderheden deze week.</div>
+      {% endif %}
+
+      <div style="font-size:15px; font-weight:bold; color:#1c2333; margin:20px 0 8px; padding-top:16px; border-top:1px solid #eee;">Producten zonder in- of verkoopprijs</div>
+      {% if overzicht.zonder_prijs %}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;">
+        {% for p in overzicht.zonder_prijs %}
+        <tr>
+          <td style="padding:5px 0; border-bottom:1px solid #f0f0f0;">{{ p.naam }}</td>
+          <td align="right" style="padding:5px 0; border-bottom:1px solid #f0f0f0; color:#a6590a;">
+            {% if p.inkoopprijs == 0 %}geen inkoopprijs{% endif %}{% if p.inkoopprijs == 0 and p.verkoopprijs == 0 %}, {% endif %}{% if p.verkoopprijs == 0 %}geen verkoopprijs{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <div style="font-size:13px; color:#5b6270;">Alle actieve producten hebben een in- en verkoopprijs.</div>
+      {% endif %}
+
+      <div style="margin-top:28px; text-align:center;">
+        <a href="{{ site_url }}/week-overzicht" style="display:inline-block; background:#fcd42f; color:#1c2333; font-weight:bold; padding:11px 22px; border-radius:2px; text-decoration:none; font-size:14px; font-family:Arial, Helvetica, sans-serif;">Volledig overzicht bekijken</a>
+      </div>
+
+    </td>
+  </tr>
+
+  <tr>
+    <td style="background:#f3f3f3; padding:14px 24px; font-size:12px; color:#5b6270; text-align:center; font-family:Arial, Helvetica, sans-serif; border-radius:0 0 4px 4px;">
+      Kantine Beheer &middot; s.v. Blauw-Geel 1915
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

@@ -10,6 +10,8 @@ Draait binnen de Flask-appcontext, dus met de virtualenv actief.
 
 from datetime import datetime
 
+from flask import render_template
+
 import mail
 from app import bereken_week_overzicht, create_app
 from database import get_db
@@ -68,10 +70,17 @@ def main():
         return
 
     app = create_app()
-    with app.app_context():
+    # test_request_context (i.p.v. alleen app_context) omdat render_template
+    # via de globale context_processor ook request/session raadpleegt -- dat
+    # bestaat normaal alleen tijdens een echt HTTP-verzoek, niet in dit
+    # losstaande script.
+    with app.test_request_context():
         db = get_db()
         overzicht = bereken_week_overzicht(db)
         tekst = bouw_mailtekst(overzicht)
+        html = render_template(
+            "email_week_overzicht.html", overzicht=overzicht, site_url=SITE_URL
+        )
 
         ontvangers = [
             r["email"]
@@ -88,7 +97,7 @@ def main():
             f"Weekoverzicht {overzicht['week_van']:%d-%m} t/m {overzicht['week_tot']:%d-%m}"
         )
         for ontvanger in ontvangers:
-            gelukt = mail.stuur_mail(onderwerp, tekst, naar=ontvanger)
+            gelukt = mail.stuur_mail(onderwerp, tekst, naar=ontvanger, html=html)
             print(f"  {ontvanger}: {'verstuurd' if gelukt else 'mislukt'}")
 
 
