@@ -74,6 +74,12 @@
             }
         });
 
+        document.addEventListener("click", function (e) {
+            if (e.target.closest("#zijbalk-toggle")) {
+                document.getElementById("app-zijbalk").classList.toggle("open");
+            }
+        });
+
         function modalOpenen(id) {
             document.getElementById(id).classList.add("open");
         }
@@ -87,7 +93,11 @@
         });
     </script>
     <div class="app-layout">
-        <nav class="app-zijbalk">
+        <nav class="app-zijbalk" id="app-zijbalk">
+            <button type="button" class="zijbalk-toggle" id="zijbalk-toggle">
+                <span>{{ actieve_nav.label if actieve_nav else 'Navigatie' }}</span>
+                <span class="zijbalk-toggle-pijl">&#9662;</span>
+            </button>
             <div class="zijbalk-kop">Navigatie</div>
             <ul>
                 {% for item in nav_items %}
