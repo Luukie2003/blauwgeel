@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wachtwoord vergeten · Kantine Voorraadbeheer</title>
     <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Kantine Voorraadbeheer">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_versie }}">
 </head>
 <body class="login-body">
@@ -34,7 +37,7 @@
                 <form method="post">
                     <div class="veld">
                         <label for="naam_of_email">Gebruikersnaam of e-mailadres</label>
-                        <input type="text" id="naam_of_email" name="naam_of_email" autofocus required>
+                        <input type="text" id="naam_of_email" name="naam_of_email" autocomplete="username" autofocus required>
                     </div>
                     <button type="submit" class="btn btn-geel login-btn">Verstuur link</button>
                 </form>
