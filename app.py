@@ -1007,9 +1007,18 @@ def register_routes(app):
 
             db.execute(
                 """INSERT INTO telling_regels
-                   (telling_id, product_id, voorraad_voor, geteld_aantal, verkocht, correctie)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (telling_id, product_id, product["voorraad"], geteld, verkocht, correctie),
+                   (telling_id, product_id, voorraad_voor, geteld_aantal, verkocht,
+                    correctie, verkoopprijs)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    telling_id,
+                    product_id,
+                    product["voorraad"],
+                    geteld,
+                    verkocht,
+                    correctie,
+                    product["verkoopprijs"],
+                ),
             )
             db.execute(
                 "UPDATE producten SET voorraad = ? WHERE id = ?", (geteld, product_id)
@@ -1273,18 +1282,17 @@ def register_routes(app):
         tellingen = db.execute(
             """SELECT t.*,
                       (SELECT COUNT(*) FROM telling_regels WHERE telling_id = t.id) AS aantal_producten,
-                      (SELECT COALESCE(SUM(tr.verkocht * p.verkoopprijs), 0)
-                         FROM telling_regels tr JOIN producten p ON p.id = tr.product_id
+                      (SELECT COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0)
+                         FROM telling_regels tr
                          WHERE tr.telling_id = t.id) AS omzet
                FROM tellingen t
                ORDER BY t.id DESC"""
         ).fetchall()
 
         verkoop_regels = db.execute(
-            """SELECT t.datum, tr.verkocht, p.verkoopprijs
+            """SELECT t.datum, tr.verkocht, tr.verkoopprijs
                FROM telling_regels tr
                JOIN tellingen t ON t.id = tr.telling_id
-               JOIN producten p ON p.id = tr.product_id
                WHERE tr.verkocht > 0"""
         ).fetchall()
 
@@ -1331,7 +1339,7 @@ def register_routes(app):
             return redirect(url_for("tellen"))
 
         regels = db.execute(
-            """SELECT tr.*, p.naam AS product_naam, p.eenheid, p.verkoopprijs
+            """SELECT tr.*, p.naam AS product_naam, p.eenheid
                FROM telling_regels tr JOIN producten p ON p.id = tr.product_id
                WHERE tr.telling_id = ? ORDER BY p.categorie, p.naam""",
             (telling_id,),
@@ -1358,7 +1366,7 @@ def register_routes(app):
             return redirect(url_for("tellen"))
 
         regels = db.execute(
-            """SELECT tr.*, p.naam AS product_naam, p.eenheid, p.verkoopprijs
+            """SELECT tr.*, p.naam AS product_naam, p.eenheid
                FROM telling_regels tr JOIN producten p ON p.id = tr.product_id
                WHERE tr.telling_id = ? ORDER BY p.categorie, p.naam""",
             (telling_id,),
@@ -1393,9 +1401,13 @@ def register_routes(app):
         tot = request.args.get("tot", "").strip() or datetime.now().strftime("%Y-%m-%d")
 
         db = get_db()
+        # Sommeert per regel verkocht * de destijds vastgezette prijs, i.p.v.
+        # de huidige prijs van het product -- een periode kan meerdere
+        # tellingen omvatten waartussen de prijs kan zijn gewijzigd.
         regels = db.execute(
-            """SELECT p.naam AS product_naam, p.categorie, p.eenheid, p.verkoopprijs,
-                      SUM(tr.verkocht) AS verkocht, SUM(tr.correctie) AS correctie
+            """SELECT p.naam AS product_naam, p.categorie, p.eenheid,
+                      SUM(tr.verkocht) AS verkocht, SUM(tr.correctie) AS correctie,
+                      SUM(tr.verkocht * tr.verkoopprijs) AS omzet
                FROM telling_regels tr
                JOIN tellingen t ON t.id = tr.telling_id
                JOIN producten p ON p.id = tr.product_id

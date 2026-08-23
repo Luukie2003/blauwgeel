@@ -156,22 +156,26 @@ def periode_verkoop_pdf(van_tekst, tot_tekst, regels):
         ("Product", 50, "L"),
         ("Categorie", 32, "L"),
         ("Verkocht", 26, "R"),
-        ("Verkoopprijs", 32, "R"),
+        ("Gem. prijs", 32, "R"),
         ("Omzet", 30, "R"),
     ]
     pdf.kop_rij(kolommen)
 
+    # Omzet komt al kant-en-klaar uit de database (verkocht * de destijds
+    # vastgezette prijs, per telling gesommeerd) -- niet hier opnieuw
+    # berekenen met de huidige prijs, want die kan intussen zijn gewijzigd.
     totaal_omzet = 0.0
     verkocht_regels = [r for r in regels if r["verkocht"] > 0]
     for i, r in enumerate(verkocht_regels):
-        omzet = r["verkocht"] * r["verkoopprijs"]
+        omzet = r["omzet"]
         totaal_omzet += omzet
+        gem_prijs = omzet / r["verkocht"] if r["verkocht"] else 0
         pdf.data_rij(
             [
                 (_kort(pdf, r["product_naam"], 50), 50, "L"),
                 (_kort(pdf, r["categorie"], 32), 32, "L"),
                 (f"{r['verkocht']} {r['eenheid']}", 26, "R"),
-                (_euro(r["verkoopprijs"]), 32, "R"),
+                (_euro(gem_prijs), 32, "R"),
                 (_euro(omzet), 30, "R"),
             ],
             zebra=i % 2 == 1,

@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS telling_regels (
     voorraad_voor INTEGER NOT NULL,
     geteld_aantal INTEGER NOT NULL,
     verkocht INTEGER NOT NULL DEFAULT 0,
-    correctie INTEGER NOT NULL DEFAULT 0
+    correctie INTEGER NOT NULL DEFAULT 0,
+    verkoopprijs REAL NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS mutaties (

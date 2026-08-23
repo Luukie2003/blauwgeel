@@ -80,6 +80,28 @@ def _migreer_kolommen(db):
             db.execute(f"ALTER TABLE {tabel} ADD COLUMN {kolom} {definitie}")
 
 
+def _migreer_telling_verkoopprijs(db):
+    """telling_regels.verkoopprijs bestaat pas sinds de prijs-per-telling
+    functie. Dit is bewust GEEN gewone kolom-migratie: die zou de kolom
+    steeds op 0 laten staan voor bestaande tellingen, waardoor oude
+    omzetcijfers ineens op nul zouden komen. In plaats daarvan vullen we 'm,
+    precies op het moment dat de kolom voor het eerst wordt aangemaakt,
+    eenmalig met de dan geldende (huidige) verkoopprijs -- zodat bestaande
+    rapportages ongewijzigd blijven. Bestaat de kolom al, dan raken we niets
+    meer aan: nieuwe tellingen zetten hun eigen prijs vast bij verwerking,
+    en die mag nooit meer worden overschreven."""
+    bestaande = {row["name"] for row in db.execute("PRAGMA table_info(telling_regels)")}
+    if "verkoopprijs" in bestaande:
+        return
+    db.execute("ALTER TABLE telling_regels ADD COLUMN verkoopprijs REAL NOT NULL DEFAULT 0")
+    db.execute(
+        """UPDATE telling_regels
+           SET verkoopprijs = (
+               SELECT verkoopprijs FROM producten WHERE producten.id = telling_regels.product_id
+           )"""
+    )
+
+
 def _migreer_categorieen(db):
     """De categorieen-tabel is nieuw: als hij leeg is (nieuwe kolom op een
     bestaande database, of een gloednieuwe installatie), vullen we 'm met de
@@ -115,6 +137,7 @@ def get_db():
             g.db.executescript(f.read())
         _migreer_kolommen(g.db)
         _migreer_categorieen(g.db)
+        _migreer_telling_verkoopprijs(g.db)
         g.db.commit()
     return g.db
 
