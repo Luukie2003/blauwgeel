@@ -77,6 +77,10 @@ KOLOM_MIGRATIES = [
     ("gebruikers", "reset_token_verloopt", "TEXT"),
     ("gebruikers", "mail_factuur", "INTEGER NOT NULL DEFAULT 0"),
     ("gebruikers", "mail_week_overzicht", "INTEGER NOT NULL DEFAULT 0"),
+    ("instellingen", "banner_tekst", "TEXT"),
+    ("mutaties", "gebruiker_id", "INTEGER REFERENCES gebruikers(id)"),
+    ("tellingen", "gebruiker_id", "INTEGER REFERENCES gebruikers(id)"),
+    ("bestellingen", "besteld_door_id", "INTEGER REFERENCES gebruikers(id)"),
 ]
 
 

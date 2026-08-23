@@ -24,6 +24,12 @@
         <span class="titelbalk-welkom">Welkom, {{ huidige_gebruiker }}</span>
         {% endif %}
     </div>
+    {% if site_banner_tekst %}
+    <div class="site-banner" id="site-banner" data-banner-tekst="{{ site_banner_tekst }}">
+        <span>{{ site_banner_tekst }}</span>
+        <button type="button" class="site-banner-sluiten" id="site-banner-sluiten" aria-label="Melding sluiten">&times;</button>
+    </div>
+    {% endif %}
     <div class="app-menubalk">
         <div class="menu-item">
             <button type="button" class="menu-trigger">Bestand</button>
@@ -98,6 +104,21 @@
                 e.target.classList.remove("open");
             }
         });
+
+        (function () {
+            var banner = document.getElementById("site-banner");
+            if (!banner) return;
+            var tekst = banner.dataset.bannerTekst;
+            if (localStorage.getItem("banner-weggeklikt") === tekst) {
+                banner.style.display = "none";
+                return;
+            }
+            var sluiten = document.getElementById("site-banner-sluiten");
+            sluiten.addEventListener("click", function () {
+                localStorage.setItem("banner-weggeklikt", tekst);
+                banner.style.display = "none";
+            });
+        })();
     </script>
     <div class="app-layout">
         <nav class="app-zijbalk" id="app-zijbalk">

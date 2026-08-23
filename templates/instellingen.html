@@ -4,21 +4,34 @@
 <p class="subtitel">Algemene instellingen voor de app.</p>
 
 <div class="kaart">
-    <h2>E-mailmeldingen</h2>
-    <p class="tekst-zacht" style="margin-top:0">
-        Het adres waar meldingen naartoe gaan, bijvoorbeeld als er een levering wordt ingeboekt.
-        Laat je dit leeg, dan wordt teruggevallen op het adres dat op de server is ingesteld.
-    </p>
-    <form method="post" class="formgrid">
-        <div class="veld">
-            <label for="notificatie_email">Meldingen versturen naar</label>
-            <input type="email" id="notificatie_email" name="notificatie_email"
-                   placeholder="bijv. voorraad@kantineblauwgeel.nl"
-                   value="{{ notificatie_email or '' }}">
-        </div>
-        <div class="veld" style="justify-content:flex-end">
-            <button type="submit" class="btn btn-geel">Opslaan</button>
-        </div>
+    <form method="post">
+        <fieldset class="groupbox">
+            <legend>E-mailmeldingen</legend>
+            <p class="tekst-zacht" style="margin-top:0">
+                Het adres waar meldingen naartoe gaan, bijvoorbeeld als er een levering wordt ingeboekt.
+                Laat je dit leeg, dan wordt teruggevallen op het adres dat op de server is ingesteld.
+            </p>
+            <div class="veld">
+                <label for="notificatie_email">Meldingen versturen naar</label>
+                <input type="email" id="notificatie_email" name="notificatie_email"
+                       placeholder="bijv. voorraad@kantineblauwgeel.nl"
+                       value="{{ notificatie_email or '' }}">
+            </div>
+        </fieldset>
+        <fieldset class="groupbox">
+            <legend>Mededeling bovenaan de site</legend>
+            <p class="tekst-zacht" style="margin-top:0">
+                Verschijnt als een balk bovenaan elke pagina, voor iedereen die is ingelogd.
+                Ze kunnen 'm wegklikken. Laat leeg om de mededeling te verbergen.
+            </p>
+            <div class="veld">
+                <label for="banner_tekst">Tekst</label>
+                <input type="text" id="banner_tekst" name="banner_tekst"
+                       placeholder="Bijv. Kantine dit weekend gesloten wegens onderhoud"
+                       value="{{ banner_tekst or '' }}">
+            </div>
+        </fieldset>
+        <button type="submit" class="btn btn-geel">Opslaan</button>
     </form>
 </div>
 {% endblock %}

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS bestellingen (
     status TEXT NOT NULL DEFAULT 'besteld' CHECK (status IN ('besteld', 'ontvangen')),
     aangemaakt_op TEXT NOT NULL,
     besteld_door TEXT,
+    besteld_door_id INTEGER REFERENCES gebruikers(id),
     ontvangen_op TEXT
 );
 
@@ -52,6 +53,7 @@ CREATE TABLE IF NOT EXISTS tellingen (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     datum TEXT NOT NULL,
     naam TEXT,
+    gebruiker_id INTEGER REFERENCES gebruikers(id),
     opmerking TEXT
 );
 
@@ -73,6 +75,7 @@ CREATE TABLE IF NOT EXISTS mutaties (
     aantal INTEGER NOT NULL,
     datum TEXT NOT NULL,
     naam TEXT,
+    gebruiker_id INTEGER REFERENCES gebruikers(id),
     opmerking TEXT,
     bestelling_id INTEGER REFERENCES bestellingen(id),
     telling_id INTEGER REFERENCES tellingen(id)
@@ -99,7 +102,8 @@ CREATE TABLE IF NOT EXISTS mededelingen (
 
 CREATE TABLE IF NOT EXISTS instellingen (
     id INTEGER PRIMARY KEY CHECK (id = 1),
-    notificatie_email TEXT
+    notificatie_email TEXT,
+    banner_tekst TEXT
 );
 INSERT OR IGNORE INTO instellingen (id, notificatie_email) VALUES (1, NULL);
 

@@ -167,12 +167,19 @@ def create_app():
             (item for item in NAV_ITEMS if request.endpoint in item["endpoints"]),
             None,
         )
+        banner_tekst = None
+        if "gebruiker_id" in session:
+            rij = get_db().execute(
+                "SELECT banner_tekst FROM instellingen WHERE id = 1"
+            ).fetchone()
+            banner_tekst = rij["banner_tekst"] if rij else None
         return {
             "nav_items": NAV_ITEMS,
             "actieve_nav": actieve_nav,
             "huidige_gebruiker": session.get("gebruiker_naam"),
             "huidige_gebruiker_rol": session.get("gebruiker_rol"),
             "css_versie": int((BASE_DIR / "static" / "style.css").stat().st_mtime),
+            "site_banner_tekst": banner_tekst,
         }
 
     @app.route("/favicon.ico")
@@ -584,20 +591,22 @@ def register_routes(app):
         db = get_db()
         if request.method == "POST":
             notificatie_email = request.form.get("notificatie_email", "").strip()
+            banner_tekst = request.form.get("banner_tekst", "").strip()
             db.execute(
-                "UPDATE instellingen SET notificatie_email = ? WHERE id = 1",
-                (notificatie_email or None,),
+                "UPDATE instellingen SET notificatie_email = ?, banner_tekst = ? WHERE id = 1",
+                (notificatie_email or None, banner_tekst or None),
             )
             db.commit()
             flash("Instellingen opgeslagen.", "success")
             return redirect(url_for("instellingen_pagina"))
 
         rij = db.execute(
-            "SELECT notificatie_email FROM instellingen WHERE id = 1"
+            "SELECT notificatie_email, banner_tekst FROM instellingen WHERE id = 1"
         ).fetchone()
         return render_template(
             "instellingen.html",
             notificatie_email=rij["notificatie_email"] if rij else None,
+            banner_tekst=rij["banner_tekst"] if rij else None,
         )
 
     # ---------- Back-ups ----------
@@ -1247,7 +1256,8 @@ def register_routes(app):
             product_id = int(request.form["product_id"])
             mtype = request.form["type"]
             aantal = int(request.form["aantal"])
-            naam = request.form.get("naam", "").strip()
+            naam = session.get("gebruiker_naam")
+            gebruiker_id = session.get("gebruiker_id")
             opmerking = request.form.get("opmerking", "").strip()
 
             product = db.execute(
@@ -1266,9 +1276,9 @@ def register_routes(app):
                 (nieuwe_voorraad, product_id),
             )
             db.execute(
-                """INSERT INTO mutaties (product_id, type, aantal, datum, naam, opmerking)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (product_id, mtype, aantal, now_str(), naam, opmerking),
+                """INSERT INTO mutaties (product_id, type, aantal, datum, naam, gebruiker_id, opmerking)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (product_id, mtype, aantal, now_str(), naam, gebruiker_id, opmerking),
             )
             db.commit()
 
@@ -1299,7 +1309,8 @@ def register_routes(app):
     def levering_inboeken():
         db = get_db()
         if request.method == "POST":
-            naam = request.form.get("naam", "").strip()
+            naam = session.get("gebruiker_naam")
+            gebruiker_id = session.get("gebruiker_id")
             referentie = request.form.get("referentie", "").strip()
             datum_input = request.form.get("datum", "").strip()
             datum = datum_input.replace("T", " ") if datum_input else now_str()
@@ -1328,9 +1339,9 @@ def register_routes(app):
                     (aantal, p["id"]),
                 )
                 db.execute(
-                    """INSERT INTO mutaties (product_id, type, aantal, datum, naam, opmerking)
-                       VALUES (?, 'in', ?, ?, ?, ?)""",
-                    (p["id"], aantal, datum, naam, opmerking),
+                    """INSERT INTO mutaties (product_id, type, aantal, datum, naam, gebruiker_id, opmerking)
+                       VALUES (?, 'in', ?, ?, ?, ?, ?)""",
+                    (p["id"], aantal, datum, naam, gebruiker_id, opmerking),
                 )
                 geboekte_regels.append((p, aantal, aantal_besteleenheden))
 
@@ -1390,7 +1401,7 @@ def register_routes(app):
 
     # ---------- Voorraad tellen ----------
 
-    def verwerk_telling(db, waarden, naam, opmerking, datum):
+    def verwerk_telling(db, waarden, naam, opmerking, datum, gebruiker_id=None):
         """waarden: dict {product_id: geteld_aantal}. Maakt een telling aan,
         berekent per product het verschil met de huidige voorraad, en werkt
         voorraad + geschiedenis bij. Retourneert het nieuwe telling_id, of
@@ -1399,8 +1410,8 @@ def register_routes(app):
             return None
 
         cur = db.execute(
-            "INSERT INTO tellingen (datum, naam, opmerking) VALUES (?, ?, ?)",
-            (datum, naam, opmerking),
+            "INSERT INTO tellingen (datum, naam, gebruiker_id, opmerking) VALUES (?, ?, ?, ?)",
+            (datum, naam, gebruiker_id, opmerking),
         )
         telling_id = cur.lastrowid
 
@@ -1435,16 +1446,16 @@ def register_routes(app):
             if verkocht > 0:
                 db.execute(
                     """INSERT INTO mutaties
-                       (product_id, type, aantal, datum, naam, opmerking, telling_id)
-                       VALUES (?, 'uit', ?, ?, ?, ?, ?)""",
-                    (product_id, verkocht, datum, naam, f"Verkocht (telling #{telling_id})", telling_id),
+                       (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, telling_id)
+                       VALUES (?, 'uit', ?, ?, ?, ?, ?, ?)""",
+                    (product_id, verkocht, datum, naam, gebruiker_id, f"Verkocht (telling #{telling_id})", telling_id),
                 )
             elif correctie > 0:
                 db.execute(
                     """INSERT INTO mutaties
-                       (product_id, type, aantal, datum, naam, opmerking, telling_id)
-                       VALUES (?, 'in', ?, ?, ?, ?, ?)""",
-                    (product_id, correctie, datum, naam, f"Correctie (telling #{telling_id})", telling_id),
+                       (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, telling_id)
+                       VALUES (?, 'in', ?, ?, ?, ?, ?, ?)""",
+                    (product_id, correctie, datum, naam, gebruiker_id, f"Correctie (telling #{telling_id})", telling_id),
                 )
 
         db.commit()
@@ -1454,7 +1465,8 @@ def register_routes(app):
     def tellen():
         db = get_db()
         if request.method == "POST":
-            naam = request.form.get("naam", "").strip()
+            naam = session.get("gebruiker_naam")
+            gebruiker_id = session.get("gebruiker_id")
             opmerking = request.form.get("opmerking", "").strip()
             datum_input = request.form.get("datum", "").strip()
             datum = datum_input.replace("T", " ") if datum_input else now_str()
@@ -1476,7 +1488,7 @@ def register_routes(app):
                     continue
                 waarden[p["id"]] = geteld
 
-            telling_id = verwerk_telling(db, waarden, naam, opmerking, datum)
+            telling_id = verwerk_telling(db, waarden, naam, opmerking, datum, gebruiker_id)
             if telling_id is None:
                 flash("Geen aantallen ingevuld -- er is niets geteld.", "error")
                 return redirect(url_for("tellen"))
@@ -1654,6 +1666,7 @@ def register_routes(app):
                 session.get("gebruiker_naam"),
                 "Via looplijst geteld (bar + voorraadhok)",
                 now_str(),
+                session.get("gebruiker_id"),
             )
             if telling_id is None:
                 flash("Geen aantallen ingevuld -- er is niets geteld.", "error")
@@ -1917,7 +1930,8 @@ def register_routes(app):
     def bestelling_aanmaken():
         db = get_db()
         product_ids = request.form.getlist("product_id")
-        besteld_door = request.form.get("besteld_door", "").strip()
+        besteld_door = session.get("gebruiker_naam")
+        besteld_door_id = session.get("gebruiker_id")
 
         regels = []
         for pid in product_ids:
@@ -1941,9 +1955,9 @@ def register_routes(app):
             return redirect(url_for("bestellijst"))
 
         cur = db.execute(
-            """INSERT INTO bestellingen (status, aangemaakt_op, besteld_door)
-               VALUES ('besteld', ?, ?)""",
-            (now_str(), besteld_door),
+            """INSERT INTO bestellingen (status, aangemaakt_op, besteld_door, besteld_door_id)
+               VALUES ('besteld', ?, ?, ?)""",
+            (now_str(), besteld_door, besteld_door_id),
         )
         bestelling_id = cur.lastrowid
         for product_id, aantal in regels:
@@ -1975,7 +1989,8 @@ def register_routes(app):
         ).fetchall()
 
         if request.method == "POST":
-            naam = request.form.get("naam", "").strip()
+            naam = session.get("gebruiker_naam")
+            gebruiker_id = session.get("gebruiker_id")
             was_al_ontvangen = bestelling["status"] == "ontvangen"
 
             for regel in regels:
@@ -2008,13 +2023,14 @@ def register_routes(app):
                 if aantal_ontvangen > 0:
                     db.execute(
                         """INSERT INTO mutaties
-                           (product_id, type, aantal, datum, naam, opmerking, bestelling_id)
-                           VALUES (?, 'in', ?, ?, ?, ?, ?)""",
+                           (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, bestelling_id)
+                           VALUES (?, 'in', ?, ?, ?, ?, ?, ?)""",
                         (
                             regel["product_id"],
                             aantal_ontvangen,
                             now_str(),
                             naam,
+                            gebruiker_id,
                             "Ontvangen uit bestelling (aangepast)"
                             if was_al_ontvangen
                             else "Ontvangen uit bestelling",

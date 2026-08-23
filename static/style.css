@@ -78,6 +78,32 @@ a:hover { text-decoration: underline; }
     white-space: nowrap;
 }
 
+.site-banner {
+    background: var(--geel);
+    color: var(--tekst);
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--geel-donker);
+}
+
+.site-banner-sluiten {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--tekst);
+    padding: 0.1rem 0.3rem;
+    flex-shrink: 0;
+}
+
+.site-banner-sluiten:hover { opacity: 0.65; }
+
 .app-menubalk {
     background: var(--paneel);
     border-bottom: 1px solid var(--rand);
@@ -483,6 +509,15 @@ form.inline { display: inline; }
 
 .veld { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.9rem; }
 .veld label { font-size: 0.78rem; font-weight: 700; color: var(--tekst-zacht); }
+
+.veld-waarde {
+    padding: 0.42rem 0.55rem;
+    border: 1px solid var(--rand-licht);
+    border-radius: var(--radius);
+    font-size: 0.87rem;
+    background: var(--paneel);
+    color: var(--tekst);
+}
 
 input, select, textarea {
     padding: 0.42rem 0.55rem;
