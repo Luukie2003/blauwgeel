@@ -664,6 +664,68 @@ def register_routes(app):
 
     # ---------- Overzicht ----------
 
+    def bereken_omzet_trend(db, aantal_tellingen=8):
+        """Omzet per telling (chronologisch) plus de best verkopende producten
+        over die periode -- gebruikt voor het trendgrafiekje op het dashboard.
+        Rekent altijd met de bevroren telling-prijs (tr.verkoopprijs), niet de
+        actuele productprijs, om dezelfde reden als het verkooprapport."""
+        ruwe_tellingen = db.execute(
+            """SELECT t.id, t.datum, t.naam,
+                      COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0) AS omzet
+               FROM tellingen t
+               LEFT JOIN telling_regels tr ON tr.telling_id = t.id
+               GROUP BY t.id
+               ORDER BY t.datum DESC
+               LIMIT ?""",
+            (aantal_tellingen,),
+        ).fetchall()
+        tellingen = list(reversed(ruwe_tellingen))
+
+        top_verkopers = []
+        if tellingen:
+            telling_ids = [t["id"] for t in tellingen]
+            placeholders = ",".join("?" for _ in telling_ids)
+            top_verkopers = db.execute(
+                f"""SELECT p.naam AS product_naam, p.eenheid,
+                           SUM(tr.verkocht) AS verkocht,
+                           SUM(tr.verkocht * tr.verkoopprijs) AS omzet
+                    FROM telling_regels tr
+                    JOIN producten p ON p.id = tr.product_id
+                    WHERE tr.telling_id IN ({placeholders})
+                    GROUP BY tr.product_id
+                    HAVING verkocht > 0
+                    ORDER BY omzet DESC
+                    LIMIT 6""",
+                telling_ids,
+            ).fetchall()
+
+        max_omzet = max((t["omzet"] for t in tellingen), default=0)
+        laatste_omzet = tellingen[-1]["omzet"] if tellingen else 0
+        eerdere_omzetten = [t["omzet"] for t in tellingen[:-1]]
+        gemiddelde_omzet = (
+            sum(eerdere_omzetten) / len(eerdere_omzetten) if eerdere_omzetten else 0
+        )
+        verschil_percentage = None
+        if gemiddelde_omzet > 0:
+            verschil_percentage = (laatste_omzet - gemiddelde_omzet) / gemiddelde_omzet * 100
+
+        balken = [
+            {
+                "datum_kort": datetime.strptime(t["datum"], "%Y-%m-%d %H:%M").strftime("%d-%m"),
+                "omzet": t["omzet"],
+                "hoogte_pct": (t["omzet"] / max_omzet * 100) if max_omzet else 0,
+            }
+            for t in tellingen
+        ]
+
+        return {
+            "balken": balken,
+            "top_verkopers": top_verkopers,
+            "laatste_omzet": laatste_omzet,
+            "gemiddelde_omzet": gemiddelde_omzet,
+            "verschil_percentage": verschil_percentage,
+        }
+
     @app.route("/")
     def dashboard():
         db = get_db()
@@ -679,12 +741,14 @@ def register_routes(app):
         open_bestellingen = db.execute(
             "SELECT COUNT(*) AS n FROM bestellingen WHERE status = 'besteld'"
         ).fetchone()["n"]
+        omzet_trend = bereken_omzet_trend(db)
         return render_template(
             "dashboard.html",
             producten=producten,
             laag=laag,
             recente_mutaties=recente_mutaties,
             open_bestellingen=open_bestellingen,
+            omzet_trend=omzet_trend,
         )
 
     def bereken_voorraadoverzicht(db):

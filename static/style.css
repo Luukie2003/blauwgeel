@@ -325,6 +325,57 @@ fieldset.groupbox legend {
     font-size: 0.8rem;
 }
 
+/* ---------- Omzettrend (dashboard) ---------- */
+
+.omzet-trend-grafiek {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.7rem;
+    height: 150px;
+    padding: 0 0.2rem;
+    margin-top: 0.5rem;
+    border-bottom: 1px solid var(--rand-licht);
+}
+
+.omzet-bar-kolom {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    min-width: 0;
+}
+
+.omzet-bar-waarde {
+    font-size: 0.68rem;
+    color: var(--tekst-zacht);
+    white-space: nowrap;
+    margin-bottom: 0.25rem;
+}
+
+.omzet-bar {
+    width: 100%;
+    max-width: 38px;
+    background: var(--accent);
+    border-radius: var(--radius) var(--radius) 0 0;
+    min-height: 3px;
+}
+
+.omzet-bar-label {
+    font-size: 0.68rem;
+    color: var(--tekst-zacht);
+    margin-top: 0.4rem;
+    white-space: nowrap;
+}
+
+.omzet-delta {
+    font-weight: 700;
+}
+
+.omzet-delta.positief { color: var(--groen); }
+.omzet-delta.negatief { color: var(--rood); }
+
 /* ---------- Data grid ---------- */
 
 table {

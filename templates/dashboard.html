@@ -47,6 +47,53 @@
 </div>
 
 <div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">Omzettrend</h2>
+        {% if omzet_trend.verschil_percentage is not none %}
+        <span class="tekst-zacht">
+            Laatste telling:
+            <span class="omzet-delta {{ 'positief' if omzet_trend.verschil_percentage >= 0 else 'negatief' }}">
+                {{ '+' if omzet_trend.verschil_percentage >= 0 else '' }}{{ '%.0f'|format(omzet_trend.verschil_percentage) }}%
+            </span>
+            t.o.v. gemiddelde
+        </span>
+        {% endif %}
+    </div>
+    {% if omzet_trend.balken %}
+    <div class="omzet-trend-grafiek">
+        {% for balk in omzet_trend.balken %}
+        <div class="omzet-bar-kolom">
+            <span class="omzet-bar-waarde">€{{ '%.0f'|format(balk.omzet) }}</span>
+            <div class="omzet-bar" style="height: {{ balk.hoogte_pct }}%" title="€ {{ '%.2f'|format(balk.omzet) }}"></div>
+            <span class="omzet-bar-label">{{ balk.datum_kort }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% if omzet_trend.top_verkopers %}
+    <h3 style="margin-top:1.2rem">Top verkopers in deze periode</h3>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Product</th><th>Verkocht</th><th>Omzet</th></tr>
+            </thead>
+            <tbody>
+                {% for tv in omzet_trend.top_verkopers %}
+                <tr>
+                    <td>{{ tv.product_naam }}</td>
+                    <td>{{ tv.verkocht }} {{ tv.eenheid }}</td>
+                    <td>€ {{ '%.2f'|format(tv.omzet) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="leeg">Nog geen tellingen verwerkt -- de trend verschijnt zodra er verkocht is.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
     <h2>Recente boekingen</h2>
     {% if recente_mutaties %}
     <div class="tabel-wrap">
