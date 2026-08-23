@@ -48,8 +48,20 @@
                     </td>
                     <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
                     <td>{{ p.bestel_hoeveelheid }} {{ p.eenheid }}</td>
-                    <td>{{ "€ %.2f"|format(p.inkoopprijs) }} <span class="tekst-zacht">/ {{ p|besteleenheid_naam }}</span></td>
-                    <td>{{ "€ %.2f"|format(p.verkoopprijs) }}</td>
+                    <td>
+                        {% if p.actief and p.inkoopprijs == 0 %}
+                        <span class="badge badge-uit" title="Nog geen inkoopprijs ingevuld">€ 0.00 ontbreekt</span>
+                        {% else %}
+                        {{ "€ %.2f"|format(p.inkoopprijs) }} <span class="tekst-zacht">/ {{ p|besteleenheid_naam }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if p.actief and p.verkoopprijs == 0 %}
+                        <span class="badge badge-laag" title="Nog geen verkoopprijs ingevuld">€ 0.00 ontbreekt</span>
+                        {% else %}
+                        {{ "€ %.2f"|format(p.verkoopprijs) }}
+                        {% endif %}
+                    </td>
                     <td>
                         {% if huidige_gebruiker_rol == 'beheerder' %}
                         <form method="post" action="{{ url_for('product_actief_wisselen', product_id=p.id) }}" class="inline">
