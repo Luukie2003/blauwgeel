@@ -70,6 +70,7 @@ KOLOM_MIGRATIES = [
     ("gebruikers", "laatste_login", "TEXT"),
     ("producten", "besteleenheid", "TEXT"),
     ("producten", "besteleenheid_factor", "INTEGER NOT NULL DEFAULT 1"),
+    ("producten", "inkoopprijs", "REAL NOT NULL DEFAULT 0"),
 ]
 
 

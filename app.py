@@ -661,9 +661,9 @@ def register_routes(app):
             db.execute(
                 """INSERT INTO producten
                    (artikelcode, naam, categorie, eenheid, voorraad, min_voorraad,
-                    bestel_hoeveelheid, verkoopprijs, actief, besteleenheid,
+                    bestel_hoeveelheid, verkoopprijs, inkoopprijs, actief, besteleenheid,
                     besteleenheid_factor, opmerking)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
@@ -673,6 +673,7 @@ def register_routes(app):
                     int(request.form["min_voorraad"] or 0),
                     int(request.form["bestel_hoeveelheid"] or 0),
                     float(request.form["verkoopprijs"] or 0),
+                    float(request.form.get("inkoopprijs") or 0),
                     1 if request.form.get("actief") else 0,
                     request.form.get("besteleenheid", "").strip() or None,
                     int(request.form.get("besteleenheid_factor") or 1),
@@ -701,7 +702,7 @@ def register_routes(app):
             db.execute(
                 """UPDATE producten
                    SET artikelcode = ?, naam = ?, categorie = ?, eenheid = ?, voorraad = ?,
-                       min_voorraad = ?, bestel_hoeveelheid = ?, verkoopprijs = ?,
+                       min_voorraad = ?, bestel_hoeveelheid = ?, verkoopprijs = ?, inkoopprijs = ?,
                        actief = ?, besteleenheid = ?, besteleenheid_factor = ?, opmerking = ?
                    WHERE id = ?""",
                 (
@@ -713,6 +714,7 @@ def register_routes(app):
                     int(request.form["min_voorraad"] or 0),
                     int(request.form["bestel_hoeveelheid"] or 0),
                     float(request.form["verkoopprijs"] or 0),
+                    float(request.form.get("inkoopprijs") or 0),
                     1 if request.form.get("actief") else 0,
                     request.form.get("besteleenheid", "").strip() or None,
                     int(request.form.get("besteleenheid_factor") or 1),

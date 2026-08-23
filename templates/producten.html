@@ -30,7 +30,7 @@
             <thead>
                 <tr>
                     <th>Code</th><th>Naam</th><th>Categorie</th><th>Voorraad</th><th>Minimum</th>
-                    <th>Bestel­hoeveelheid</th><th>Verkoopprijs</th><th>Status</th><th></th>
+                    <th>Bestel­hoeveelheid</th><th>Inkoop</th><th>Verkoop</th><th>Status</th><th></th>
                 </tr>
             </thead>
             <tbody>
@@ -48,6 +48,7 @@
                     </td>
                     <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
                     <td>{{ p.bestel_hoeveelheid }} {{ p.eenheid }}</td>
+                    <td>{{ "€ %.2f"|format(p.inkoopprijs) }} <span class="tekst-zacht">/ {{ p|besteleenheid_naam }}</span></td>
                     <td>{{ "€ %.2f"|format(p.verkoopprijs) }}</td>
                     <td>
                         {% if huidige_gebruiker_rol == 'beheerder' %}
