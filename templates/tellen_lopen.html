@@ -26,6 +26,18 @@
                class="loop-invoer" placeholder="Aantal {{ product.eenheid }}"
                value="{{ huidige_waarde }}" autofocus>
 
+        <div class="loop-snelknoppen">
+            <button type="button" class="btn btn-rand loop-snelknop" onclick="loopAanpassen(0, true)">0</button>
+            <button type="button" class="btn btn-rand loop-snelknop" onclick="loopAanpassen(-1)">−1</button>
+            <button type="button" class="btn btn-rand loop-snelknop" onclick="loopAanpassen(1)">+1</button>
+            {% if product.besteleenheid_factor and product.besteleenheid_factor > 1 %}
+            <button type="button" class="btn btn-rand loop-snelknop loop-snelknop-breed"
+                    onclick="loopAanpassen({{ product.besteleenheid_factor }})">
+                +1 {{ product|besteleenheid_naam }} ({{ product.besteleenheid_factor }})
+            </button>
+            {% endif %}
+        </div>
+
         <div class="loop-knoppen">
             <button type="submit" name="actie" value="vorige" class="btn btn-rand loop-btn-klein"
                     {{ 'disabled' if fase == 'bar' and index == 0 else '' }}>&larr;&nbsp;Vorige</button>
@@ -47,4 +59,14 @@
         <button type="submit" class="btn btn-gevaar btn-klein">Stoppen zonder opslaan</button>
     </form>
 </div>
+
+<script>
+function loopAanpassen(delta, isReset) {
+    var veld = document.getElementById('loop-invoer');
+    var huidig = parseInt(veld.value, 10);
+    if (isNaN(huidig)) huidig = 0;
+    veld.value = isReset ? 0 : Math.max(0, huidig + delta);
+    veld.focus();
+}
+</script>
 {% endblock %}

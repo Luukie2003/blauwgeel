@@ -1,12 +1,15 @@
 {% extends "base.html" %}
 {% block titel %}Levering inboeken{% endblock %}
 {% block inhoud %}
-<p class="subtitel">
-    Boek een levering of factuur met meerdere producten in één keer in, los
-    van een eventuele bestellijst. Vul per product het aantal in dat is
-    binnengekomen; laat een veld leeg om dat product over te slaan.
-    <a href="{{ url_for('boeken') }}">&larr; Terug naar in/uit boeken</a>
-</p>
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Boek een levering of factuur met meerdere producten in één keer in, los
+        van een eventuele bestellijst. Vul per product het aantal in dat is
+        binnengekomen; laat een veld leeg om dat product over te slaan.
+        <a href="{{ url_for('boeken') }}">&larr; Terug naar in/uit boeken</a>
+    </p>
+    <button type="button" class="btn btn-rand" onclick="modalOpenen('modal-nieuw-product')">+ Product niet in de lijst?</button>
+</div>
 
 <div class="kaart">
     <form method="post">
@@ -57,5 +60,57 @@
         </div>
         <button type="submit" class="btn btn-geel">Levering inboeken</button>
     </form>
+</div>
+
+<div class="modal-overlay" id="modal-nieuw-product">
+    <div class="modal-venster">
+        <div class="modal-kop">
+            <h2 style="margin:0">Nieuw product</h2>
+            <button type="button" class="modal-sluiten" onclick="modalSluiten('modal-nieuw-product')">&times;</button>
+        </div>
+        <p class="tekst-zacht" style="margin-top:0">
+            Staat er iets op de factuur wat nog niet in het systeem staat? Voeg
+            het hier snel toe -- je komt terug op deze pagina en kunt er
+            meteen een aantal bij invullen.
+        </p>
+        <form method="post" action="{{ url_for('product_snel_toevoegen') }}">
+            <input type="hidden" name="terug_naar" value="levering_inboeken">
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="snel_artikelcode">Artikelcode (optioneel)</label>
+                    <input type="text" id="snel_artikelcode" name="artikelcode" placeholder="Bijv. COCA">
+                </div>
+                <div class="veld">
+                    <label for="snel_naam">Naam</label>
+                    <input type="text" id="snel_naam" name="naam" required autofocus>
+                </div>
+                <div class="veld">
+                    <label for="snel_categorie">Categorie</label>
+                    <select id="snel_categorie" name="categorie">
+                        {% for c in categorieen %}
+                        <option value="{{ c.naam }}">{{ c.naam }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="veld">
+                    <label for="snel_eenheid">Voorraad-eenheid</label>
+                    <input type="text" id="snel_eenheid" name="eenheid" placeholder="stuks, fles, blik, ..." value="stuks">
+                </div>
+                <div class="veld">
+                    <label for="snel_besteleenheid">Besteleenheid (optioneel)</label>
+                    <input type="text" id="snel_besteleenheid" name="besteleenheid" placeholder="Bijv. Krat">
+                </div>
+                <div class="veld">
+                    <label for="snel_factor">Aantal per besteleenheid</label>
+                    <input type="number" id="snel_factor" name="besteleenheid_factor" min="1" value="1">
+                </div>
+            </div>
+            <p class="tekst-zacht">
+                Voorraad start op 0. Prijs, minimumvoorraad e.d. stel je later
+                in bij Producten.
+            </p>
+            <button type="submit" class="btn btn-geel">Product toevoegen</button>
+        </form>
+    </div>
 </div>
 {% endblock %}

@@ -71,6 +71,18 @@
                 trigger.closest(".menu-item").classList.toggle("open");
             }
         });
+
+        function modalOpenen(id) {
+            document.getElementById(id).classList.add("open");
+        }
+        function modalSluiten(id) {
+            document.getElementById(id).classList.remove("open");
+        }
+        document.addEventListener("click", function (e) {
+            if (e.target.classList.contains("modal-overlay")) {
+                e.target.classList.remove("open");
+            }
+        });
     </script>
     <div class="app-layout">
         <nav class="app-zijbalk">

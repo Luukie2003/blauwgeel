@@ -742,6 +742,44 @@ def register_routes(app):
             flash(f"Product '{product['naam']}' verwijderd.", "success")
         return redirect(url_for("producten_lijst"))
 
+    # Endpoints waar het snel-toevoegen-formulier (pop-up) naar mag
+    # terugsturen. Whitelist i.p.v. een vrije URL, om open redirects te voorkomen.
+    TERUG_NAAR_ENDPOINTS = {
+        "levering_inboeken": "levering_inboeken",
+        "producten_lijst": "producten_lijst",
+    }
+
+    @app.route("/producten/snel-toevoegen", methods=["POST"])
+    def product_snel_toevoegen():
+        db = get_db()
+        terug_naar = TERUG_NAAR_ENDPOINTS.get(
+            request.form.get("terug_naar", ""), "producten_lijst"
+        )
+        naam = request.form.get("naam", "").strip()
+
+        if not naam:
+            flash("Naam is verplicht.", "error")
+            return redirect(url_for(terug_naar))
+
+        db.execute(
+            """INSERT INTO producten
+               (artikelcode, naam, categorie, eenheid, voorraad, min_voorraad,
+                bestel_hoeveelheid, verkoopprijs, actief, besteleenheid,
+                besteleenheid_factor, opmerking)
+               VALUES (?, ?, ?, ?, 0, 0, 0, 0, 1, ?, ?, '')""",
+            (
+                request.form.get("artikelcode", "").strip() or None,
+                naam,
+                request.form.get("categorie", "").strip() or "Overig",
+                request.form.get("eenheid", "").strip() or "stuks",
+                request.form.get("besteleenheid", "").strip() or None,
+                int(request.form.get("besteleenheid_factor") or 1),
+            ),
+        )
+        db.commit()
+        flash(f"Product '{naam}' toegevoegd. Vul hieronder het aantal in.", "success")
+        return redirect(url_for(terug_naar))
+
     @app.route("/producten/<int:product_id>/actief", methods=["POST"])
     def product_actief_wisselen(product_id):
         db = get_db()
@@ -931,9 +969,13 @@ def register_routes(app):
         producten = db.execute(
             "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
         ).fetchall()
+        categorieen = db.execute(
+            "SELECT naam FROM categorieen ORDER BY naam"
+        ).fetchall()
         return render_template(
             "levering_inboeken.html",
             producten=producten,
+            categorieen=categorieen,
             nu_datetime_local=now_datetime_local(),
         )
 
