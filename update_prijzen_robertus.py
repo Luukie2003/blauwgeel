@@ -51,6 +51,9 @@ UPDATES = [
     ("LAYS", "304001", "Doos", 20, 12.87),  # groen = paprika aangenomen
     ("LAYSBLW", "304003", "Doos", 20, 12.87),  # blauw = naturel aangenomen
     ("MM", "302110", "Doos", 24, 17.24),  # enige M&M-optie in de lijst (pinda)
+    # Afgestemd met Luuk:
+    ("AA", "183001", "Krat", 24, 19.34),  # High Energy Orange + Iso Lemon: zelfde prijs, code van Orange gebruikt
+    ("WATER", "111003", "Krat", 24, 14.90),  # Chaudfontaine
 ]
 
 
