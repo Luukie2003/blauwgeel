@@ -28,7 +28,7 @@ BACKUP_BESTANDSNAAM = re.compile(
     r"^voorraad-(\d{4}-\d{2}-\d{2}|voor-herstel-\d{8}-\d{6})\.db$"
 )
 
-OPEN_ENDPOINTS = {"login", "static", "wachtwoord_vergeten", "wachtwoord_instellen"}
+OPEN_ENDPOINTS = {"login", "static", "favicon_ico", "wachtwoord_vergeten", "wachtwoord_instellen"}
 
 # Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers
 # komen hier niet in -- zij kunnen de dagelijkse operatie doen (tellen,
@@ -174,6 +174,18 @@ def create_app():
             "huidige_gebruiker_rol": session.get("gebruiker_rol"),
             "css_versie": int((BASE_DIR / "static" / "style.css").stat().st_mtime),
         }
+
+    @app.route("/favicon.ico")
+    def favicon_ico():
+        return send_from_directory(app.static_folder, "favicon.ico")
+
+    @app.errorhandler(404)
+    def pagina_niet_gevonden(fout):
+        return render_template("404.html"), 404
+
+    @app.errorhandler(500)
+    def interne_fout(fout):
+        return render_template("500.html"), 500
 
     register_routes(app)
     return app
