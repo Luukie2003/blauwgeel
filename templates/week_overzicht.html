@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block titel %}Weekoverzicht{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Week van {{ overzicht.week_van.strftime('%d-%m-%Y') }} t/m {{ overzicht.week_tot.strftime('%d-%m-%Y') }}.
+    Dit overzicht wordt elke maandagochtend automatisch bijgewerkt met de cijfers van de
+    afgelopen week, en gaat dan ook per mail naar iedereen die dat heeft aangevinkt bij
+    Accounts &rarr; Mijn voorkeuren.
+</p>
+
+<div class="statgrid">
+    <div class="stat">
+        <div class="getal">€ {{ '%.0f'|format(overzicht.totale_omzet) }}</div>
+        <div class="label">
+            Omzet deze week
+            {% if overzicht.verschil_percentage is not none %}
+            <span class="omzet-delta {{ 'positief' if overzicht.verschil_percentage >= 0 else 'negatief' }}">
+                {{ '+' if overzicht.verschil_percentage >= 0 else '' }}{{ '%.0f'|format(overzicht.verschil_percentage) }}%
+            </span>
+            t.o.v. week ervoor
+            {% endif %}
+        </div>
+    </div>
+    <div class="stat {{ 'waarschuwing' if overzicht.onder_minimum|length > 0 }}">
+        <div class="getal">{{ overzicht.onder_minimum|length }}</div>
+        <div class="label">Onder minimum voorraad</div>
+    </div>
+</div>
+
+<div class="kaart">
+    <h2>Top verkopers deze week</h2>
+    {% if overzicht.top_verkopers %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Product</th><th>Verkocht</th><th>Omzet</th></tr>
+            </thead>
+            <tbody>
+                {% for tv in overzicht.top_verkopers %}
+                <tr>
+                    <td>{{ tv.product_naam }}</td>
+                    <td>{{ tv.verkocht }} {{ tv.eenheid }}</td>
+                    <td>€ {{ '%.2f'|format(tv.omzet) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Geen tellingen verwerkt in deze week.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">Producten onder minimumvoorraad</h2>
+        {% if overzicht.onder_minimum %}<a href="{{ url_for('bestellijst') }}" class="btn btn-geel btn-klein">Naar bestellijst</a>{% endif %}
+    </div>
+    {% if overzicht.onder_minimum %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Product</th><th>Categorie</th><th>Voorraad</th><th>Minimum</th></tr>
+            </thead>
+            <tbody>
+                {% for p in overzicht.onder_minimum %}
+                <tr>
+                    <td>{{ p.naam }}</td>
+                    <td>{{ p.categorie }}</td>
+                    <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
+                    <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Alles zit boven het minimum.</p>
+    {% endif %}
+</div>
+{% endblock %}

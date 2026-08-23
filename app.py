@@ -302,6 +302,113 @@ def bereken_trend(omzet_per_week, huidige_jaar, huidige_week):
     }
 
 
+def bereken_omzet_trend_periode(db, van, tot):
+    """Omzet + best verkopende producten voor alle tellingen binnen een zelf
+    gekozen periode -- gebruikt door het verkooprapport en het weekoverzicht.
+    Rekent met de bevroren telling-prijs (tr.verkoopprijs), niet de actuele
+    productprijs, zodat latere prijswijzigingen oude cijfers niet aanpassen."""
+    tellingen = db.execute(
+        """SELECT t.id, t.datum, t.naam,
+                  COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0) AS omzet
+           FROM tellingen t
+           LEFT JOIN telling_regels tr ON tr.telling_id = t.id
+           WHERE t.datum >= ? AND t.datum <= ?
+           GROUP BY t.id
+           ORDER BY t.datum""",
+        (f"{van} 00:00", f"{tot} 23:59"),
+    ).fetchall()
+
+    top_verkopers = []
+    if tellingen:
+        telling_ids = [t["id"] for t in tellingen]
+        placeholders = ",".join("?" for _ in telling_ids)
+        top_verkopers = db.execute(
+            f"""SELECT p.naam AS product_naam, p.eenheid,
+                       SUM(tr.verkocht) AS verkocht,
+                       SUM(tr.verkocht * tr.verkoopprijs) AS omzet
+                FROM telling_regels tr
+                JOIN producten p ON p.id = tr.product_id
+                WHERE tr.telling_id IN ({placeholders})
+                GROUP BY tr.product_id
+                HAVING verkocht > 0
+                ORDER BY omzet DESC
+                LIMIT 6""",
+            telling_ids,
+        ).fetchall()
+
+    max_omzet = max((t["omzet"] for t in tellingen), default=0)
+    totale_omzet = sum(t["omzet"] for t in tellingen)
+
+    balken = [
+        {
+            "datum_kort": datetime.strptime(t["datum"], "%Y-%m-%d %H:%M").strftime("%d-%m"),
+            "omzet": t["omzet"],
+            "hoogte_pct": (t["omzet"] / max_omzet * 100) if max_omzet else 0,
+        }
+        for t in tellingen
+    ]
+
+    return {
+        "balken": balken,
+        "top_verkopers": top_verkopers,
+        "totale_omzet": totale_omzet,
+    }
+
+
+def bestel_suggesties(db):
+    product_ids_in_open_bestelling = {
+        row["product_id"]
+        for row in db.execute(
+            """SELECT br.product_id FROM bestelregels br
+               JOIN bestellingen b ON b.id = br.bestelling_id
+               WHERE b.status = 'besteld'"""
+        ).fetchall()
+    }
+    return [
+        p
+        for p in db.execute(
+            """SELECT * FROM producten
+               WHERE actief = 1 AND voorraad < min_voorraad
+               ORDER BY categorie, naam"""
+        ).fetchall()
+        if p["id"] not in product_ids_in_open_bestelling
+    ]
+
+
+def bereken_week_overzicht(db, vandaag=None):
+    """Overzicht van de meest recente volledig afgesloten week (maandag t/m
+    zondag): omzet met vergelijking t.o.v. de week ervoor, top verkopers, en
+    producten onder minimumvoorraad. Wordt zowel gebruikt voor de
+    weekoverzicht-pagina als voor het wekelijkse e-mailtje (elke maandag)."""
+    vandaag = vandaag or datetime.now().date()
+    deze_week_maandag = vandaag - timedelta(days=vandaag.weekday())
+    week_tot = deze_week_maandag - timedelta(days=1)
+    week_van = week_tot - timedelta(days=6)
+    vorige_week_tot = week_van - timedelta(days=1)
+    vorige_week_van = vorige_week_tot - timedelta(days=6)
+
+    huidige = bereken_omzet_trend_periode(db, week_van.isoformat(), week_tot.isoformat())
+    vorige = bereken_omzet_trend_periode(
+        db, vorige_week_van.isoformat(), vorige_week_tot.isoformat()
+    )
+
+    verschil_percentage = None
+    if vorige["totale_omzet"] > 0:
+        verschil_percentage = (
+            (huidige["totale_omzet"] - vorige["totale_omzet"]) / vorige["totale_omzet"] * 100
+        )
+
+    return {
+        "week_van": week_van,
+        "week_tot": week_tot,
+        "totale_omzet": huidige["totale_omzet"],
+        "vorige_omzet": vorige["totale_omzet"],
+        "verschil_percentage": verschil_percentage,
+        "top_verkopers": huidige["top_verkopers"],
+        "onder_minimum": bestel_suggesties(db),
+    }
+
+
 def register_routes(app):
     # ---------- Inloggen / accounts ----------
 
@@ -733,57 +840,6 @@ def register_routes(app):
             "laatste_omzet": laatste_omzet,
             "gemiddelde_omzet": gemiddelde_omzet,
             "verschil_percentage": verschil_percentage,
-        }
-
-    def bereken_omzet_trend_periode(db, van, tot):
-        """Zelfde soort trendgegevens als bereken_omzet_trend, maar dan voor
-        alle tellingen binnen een zelf gekozen periode (verkooprapport) i.p.v.
-        de laatste N tellingen (dashboard)."""
-        tellingen = db.execute(
-            """SELECT t.id, t.datum, t.naam,
-                      COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0) AS omzet
-               FROM tellingen t
-               LEFT JOIN telling_regels tr ON tr.telling_id = t.id
-               WHERE t.datum >= ? AND t.datum <= ?
-               GROUP BY t.id
-               ORDER BY t.datum""",
-            (f"{van} 00:00", f"{tot} 23:59"),
-        ).fetchall()
-
-        top_verkopers = []
-        if tellingen:
-            telling_ids = [t["id"] for t in tellingen]
-            placeholders = ",".join("?" for _ in telling_ids)
-            top_verkopers = db.execute(
-                f"""SELECT p.naam AS product_naam, p.eenheid,
-                           SUM(tr.verkocht) AS verkocht,
-                           SUM(tr.verkocht * tr.verkoopprijs) AS omzet
-                    FROM telling_regels tr
-                    JOIN producten p ON p.id = tr.product_id
-                    WHERE tr.telling_id IN ({placeholders})
-                    GROUP BY tr.product_id
-                    HAVING verkocht > 0
-                    ORDER BY omzet DESC
-                    LIMIT 6""",
-                telling_ids,
-            ).fetchall()
-
-        max_omzet = max((t["omzet"] for t in tellingen), default=0)
-        totale_omzet = sum(t["omzet"] for t in tellingen)
-
-        balken = [
-            {
-                "datum_kort": datetime.strptime(t["datum"], "%Y-%m-%d %H:%M").strftime("%d-%m"),
-                "omzet": t["omzet"],
-                "hoogte_pct": (t["omzet"] / max_omzet * 100) if max_omzet else 0,
-            }
-            for t in tellingen
-        ]
-
-        return {
-            "balken": balken,
-            "top_verkopers": top_verkopers,
-            "totale_omzet": totale_omzet,
         }
 
     @app.route("/")
@@ -1819,6 +1875,12 @@ def register_routes(app):
             "verkooprapport.html", van=van, tot=tot, omzet_trend=omzet_trend
         )
 
+    @app.route("/week-overzicht")
+    def week_overzicht():
+        db = get_db()
+        overzicht = bereken_week_overzicht(db)
+        return render_template("week_overzicht.html", overzicht=overzicht)
+
     @app.route("/verkooprapport/pdf")
     def verkooprapport_pdf_route():
         van = request.args.get("van", "").strip() or (
@@ -1853,25 +1915,6 @@ def register_routes(app):
         )
 
     # ---------- Bestellijst ----------
-
-    def bestel_suggesties(db):
-        product_ids_in_open_bestelling = {
-            row["product_id"]
-            for row in db.execute(
-                """SELECT br.product_id FROM bestelregels br
-                   JOIN bestellingen b ON b.id = br.bestelling_id
-                   WHERE b.status = 'besteld'"""
-            ).fetchall()
-        }
-        return [
-            p
-            for p in db.execute(
-                """SELECT * FROM producten
-                   WHERE actief = 1 AND voorraad < min_voorraad
-                   ORDER BY categorie, naam"""
-            ).fetchall()
-            if p["id"] not in product_ids_in_open_bestelling
-        ]
 
     @app.route("/bestellijst")
     def bestellijst():
