@@ -333,7 +333,7 @@ def register_routes(app):
                 token = genereer_wachtwoord_token(db, gebruiker["id"], geldig_uren=24)
                 link = url_for("wachtwoord_instellen", token=token, _external=True)
                 mail.stuur_mail(
-                    "Wachtwoord opnieuw instellen -- Kantine Voorraadbeheer",
+                    "Wachtwoord opnieuw instellen -- Kantine Beheer",
                     f"Hoi {gebruiker['naam']},\n\n"
                     f"Er is een verzoek gedaan om je wachtwoord opnieuw in te stellen.\n"
                     f"Gebruik onderstaande link om een nieuw wachtwoord te kiezen "
@@ -426,7 +426,7 @@ def register_routes(app):
             token = genereer_wachtwoord_token(db, cursor.lastrowid, geldig_uren=72)
             link = url_for("wachtwoord_instellen", token=token, _external=True)
             mail.stuur_mail(
-                "Welkom bij Kantine Voorraadbeheer",
+                "Welkom bij Kantine Beheer",
                 f"Hoi {naam},\n\n"
                 f"Er is een account voor je aangemaakt in het voorraadsysteem van de kantine.\n"
                 f"Kies via onderstaande link je eigen wachtwoord (deze link is 72 uur geldig):\n\n"

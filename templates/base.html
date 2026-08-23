@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block titel %}Voorraadbeheer{% endblock %} · Kantine</title>
+    <title>{% block titel %}Voorraadbeheer{% endblock %} · Kantine Beheer</title>
     <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Kantine Voorraadbeheer">
+    <meta name="apple-mobile-web-app-title" content="Kantine Beheer">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_versie }}">
 </head>
 <body>
     <div class="app-titelbalk">
         <a href="{{ url_for('dashboard') }}" class="titelbalk-link">
             <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="titelbalk-logo">
-            <span>Kantine Voorraadbeheer{% if actieve_nav %} &mdash; [{{ actieve_nav.label }}]{% endif %}</span>
+            <span>Kantine Beheer{% if actieve_nav %} &mdash; [{{ actieve_nav.label }}]{% endif %}</span>
         </a>
         {% if huidige_gebruiker %}
         <span class="titelbalk-welkom">Welkom, {{ huidige_gebruiker }}</span>
@@ -129,6 +129,6 @@
             </div>
         </main>
     </div>
-    <footer>Kantine Voorraadbeheer &middot; <a href="https://blauwgeel1915.nl" target="_blank" rel="noopener">s.v. Blauw-Geel 1915</a></footer>
+    <footer>Kantine Beheer &middot; <a href="https://blauwgeel1915.nl" target="_blank" rel="noopener">s.v. Blauw-Geel 1915</a></footer>
 </body>
 </html>

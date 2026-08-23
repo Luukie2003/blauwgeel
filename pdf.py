@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fpdf import FPDF
 
-NAAM_APP = "Kantine Voorraadbeheer"
+NAAM_APP = "Kantine Beheer"
 NAAM_CLUB = "s.v. Blauw-Geel 1915"
 LOGO_PAD = Path(__file__).parent / "static" / "logo.png"
 
