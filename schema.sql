@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS producten (
     bestel_hoeveelheid INTEGER NOT NULL DEFAULT 0,
     verkoopprijs REAL NOT NULL DEFAULT 0,
     actief INTEGER NOT NULL DEFAULT 1,
+    besteleenheid TEXT,
+    besteleenheid_factor INTEGER NOT NULL DEFAULT 1,
     opmerking TEXT
 );
 

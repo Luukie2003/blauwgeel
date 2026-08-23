@@ -19,6 +19,8 @@
                 </thead>
                 <tbody>
                     {% for p in suggesties %}
+                    {% set tekort = p.bestel_hoeveelheid if p.bestel_hoeveelheid > 0 else (p.min_voorraad - p.voorraad) %}
+                    {% set besteleenheden = tekort|naar_besteleenheden(p) %}
                     <tr>
                         <td><input type="checkbox" name="product_id" value="{{ p.id }}" checked></td>
                         <td>{{ p.naam }}</td>
@@ -26,8 +28,11 @@
                         <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
                         <td>
                             <input type="number" name="aantal_{{ p.id }}" min="0" style="width:6rem"
-                                   value="{{ p.bestel_hoeveelheid if p.bestel_hoeveelheid > 0 else (p.min_voorraad - p.voorraad) }}">
-                            {{ p.eenheid }}
+                                   value="{{ besteleenheden }}">
+                            {{ p|besteleenheid_naam }}
+                            {% if p.besteleenheid_factor > 1 %}
+                            <div class="tekst-zacht" style="font-size:0.72rem">= {{ besteleenheden * p.besteleenheid_factor }} {{ p.eenheid }}</div>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -65,7 +70,8 @@
         </div>
         <ul style="margin:0; padding-left:1.2rem">
             {% for r in regels %}
-            <li>{{ r.aantal_besteld }} {{ r.eenheid }} — {{ r.product_naam }}</li>
+            <li>{{ r.aantal_besteld|naar_besteleenheden(r) }} {{ r|besteleenheid_naam }} — {{ r.product_naam }}
+                {% if r.besteleenheid_factor > 1 %}<span class="tekst-zacht">({{ r.aantal_besteld }} {{ r.eenheid }})</span>{% endif %}</li>
             {% endfor %}
         </ul>
     </div>
@@ -95,8 +101,8 @@
         </div>
         <ul style="margin:0; padding-left:1.2rem">
             {% for r in regels %}
-            <li>{{ r.aantal_ontvangen or 0 }} {{ r.eenheid }} — {{ r.product_naam }}
-                <span class="tekst-zacht">(besteld: {{ r.aantal_besteld }} {{ r.eenheid }})</span></li>
+            <li>{{ (r.aantal_ontvangen or 0)|naar_besteleenheden(r) }} {{ r|besteleenheid_naam }} — {{ r.product_naam }}
+                <span class="tekst-zacht">(besteld: {{ r.aantal_besteld|naar_besteleenheden(r) }} {{ r|besteleenheid_naam }})</span></li>
             {% endfor %}
         </ul>
     </div>

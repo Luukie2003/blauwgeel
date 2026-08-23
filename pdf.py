@@ -116,24 +116,30 @@ def _euro(bedrag):
 def bestellijst_pdf(suggesties):
     pdf = Rapport("Bestellijst", "Producten onder de minimumvoorraad")
     kolommen = [
-        ("Product", 68, "L"),
-        ("Categorie", 32, "L"),
-        ("Voorraad", 28, "R"),
-        ("Minimum", 28, "R"),
-        ("Aantal bestellen", 34, "R"),
+        ("Product", 60, "L"),
+        ("Categorie", 28, "L"),
+        ("Voorraad", 26, "R"),
+        ("Minimum", 26, "R"),
+        ("Aantal bestellen", 46, "R"),
     ]
     pdf.kop_rij(kolommen)
     for i, p in enumerate(suggesties):
-        aantal = p["bestel_hoeveelheid"] if p["bestel_hoeveelheid"] > 0 else max(
+        tekort = p["bestel_hoeveelheid"] if p["bestel_hoeveelheid"] > 0 else max(
             0, p["min_voorraad"] - p["voorraad"]
         )
+        factor = p["besteleenheid_factor"] or 1
+        besteleenheid = p["besteleenheid"] or p["eenheid"]
+        besteleenheden = -(-tekort // factor)
+        aantal_tekst = f"{besteleenheden} {besteleenheid}"
+        if factor > 1:
+            aantal_tekst += f" ({besteleenheden * factor} {p['eenheid']})"
         pdf.data_rij(
             [
-                (_kort(pdf, p["naam"], 68), 68, "L"),
-                (p["categorie"], 32, "L"),
-                (f"{p['voorraad']} {p['eenheid']}", 28, "R"),
-                (f"{p['min_voorraad']} {p['eenheid']}", 28, "R"),
-                (f"{aantal} {p['eenheid']}", 34, "R"),
+                (_kort(pdf, p["naam"], 60), 60, "L"),
+                (p["categorie"], 28, "L"),
+                (f"{p['voorraad']} {p['eenheid']}", 26, "R"),
+                (f"{p['min_voorraad']} {p['eenheid']}", 26, "R"),
+                (aantal_tekst, 46, "R"),
             ],
             zebra=i % 2 == 1,
         )

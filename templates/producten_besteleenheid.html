@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block titel %}Besteleenheid instellen{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Stel per product in waarin je 'm bij de leverancier bestelt (bijv. een
+    krat van 24), los van de voorraad-eenheid waarin je telt. Laat de
+    besteleenheid leeg als je gewoon per voorraad-eenheid bestelt.
+    <a href="{{ url_for('producten_lijst') }}">&larr; Terug naar producten</a>
+</p>
+
+<div class="kaart">
+    {% if producten %}
+    <div class="filterbalk">
+        <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">
+        <span id="filter-aantal" class="tekst-zacht"></span>
+    </div>
+    <form method="post">
+        <div class="tabel-wrap">
+            <table id="producten-tabel">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Categorie</th>
+                        <th>Voorraad-eenheid</th>
+                        <th>Besteleenheid</th>
+                        <th>Aantal per besteleenheid</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in producten %}
+                    <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie)|lower }}">
+                        <td>{{ p.naam }}{% if not p.actief %} <span class="badge badge-neutraal">Inactief</span>{% endif %}</td>
+                        <td>{{ p.categorie }}</td>
+                        <td class="tekst-zacht">{{ p.eenheid }}</td>
+                        <td>
+                            <input type="text" name="eenheid_{{ p.id }}" style="width:8rem"
+                                   placeholder="{{ p.eenheid }}" value="{{ p.besteleenheid or '' }}">
+                        </td>
+                        <td>
+                            <input type="number" name="factor_{{ p.id }}" min="1" style="width:5rem"
+                                   value="{{ p.besteleenheid_factor }}">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <button type="submit" class="btn btn-geel" style="margin-top:1rem">Alles opslaan</button>
+    </form>
+    {% else %}
+    <p class="leeg">Nog geen producten toegevoegd.</p>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    var zoekVeld = document.getElementById('filter-zoek');
+    var aantalLabel = document.getElementById('filter-aantal');
+    if (!zoekVeld) return;
+    var rijen = Array.prototype.slice.call(
+        document.querySelectorAll('#producten-tabel tbody tr')
+    );
+
+    function filter() {
+        var zoek = zoekVeld.value.trim().toLowerCase();
+        var zichtbaar = 0;
+        rijen.forEach(function (rij) {
+            var toon = !zoek || rij.dataset.zoek.indexOf(zoek) !== -1;
+            rij.style.display = toon ? '' : 'none';
+            if (toon) zichtbaar++;
+        });
+        aantalLabel.textContent = zichtbaar + ' van ' + rijen.length + ' producten';
+    }
+
+    zoekVeld.addEventListener('input', filter);
+    filter();
+})();
+</script>
+{% endblock %}

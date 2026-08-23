@@ -66,7 +66,21 @@
                     <label for="bestel_hoeveelheid">Standaard bestelhoeveelheid</label>
                     <input type="number" id="bestel_hoeveelheid" name="bestel_hoeveelheid" min="0"
                            value="{{ product.bestel_hoeveelheid if product else 0 }}">
-                    <span class="tekst-zacht">Voorgesteld aantal op de bestellijst (mag je aanpassen).</span>
+                    <span class="tekst-zacht">Voorgesteld aantal (in de voorraad-eenheid) op de bestellijst.</span>
+                </div>
+            </div>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="besteleenheid">Besteleenheid</label>
+                    <input type="text" id="besteleenheid" name="besteleenheid" placeholder="Bijv. Krat (leeg = zelfde als voorraad-eenheid)"
+                           value="{{ product.besteleenheid if product and product.besteleenheid else '' }}">
+                    <span class="tekst-zacht">De eenheid waarin je dit bij de leverancier bestelt.</span>
+                </div>
+                <div class="veld">
+                    <label for="besteleenheid_factor">Aantal per besteleenheid</label>
+                    <input type="number" id="besteleenheid_factor" name="besteleenheid_factor" min="1"
+                           value="{{ product.besteleenheid_factor if product else 1 }}">
+                    <span class="tekst-zacht">Bijv. 24 als 1 krat = 24 flesjes voorraad-eenheid.</span>
                 </div>
             </div>
             <div class="veld">

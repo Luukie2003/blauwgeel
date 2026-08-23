@@ -19,12 +19,19 @@
                 </thead>
                 <tbody>
                     {% for r in regels %}
+                    {% set besteld_eenh = r.aantal_besteld|naar_besteleenheden(r) %}
+                    {% set ontvangen_eenh = r.aantal_ontvangen|naar_besteleenheden(r) if r.aantal_ontvangen is not none else besteld_eenh %}
                     <tr>
                         <td>{{ r.product_naam }}</td>
-                        <td>{{ r.aantal_besteld }} {{ r.eenheid }}</td>
+                        <td>
+                            {{ besteld_eenh }} {{ r|besteleenheid_naam }}
+                            {% if r.besteleenheid_factor > 1 %}
+                            <div class="tekst-zacht" style="font-size:0.72rem">= {{ r.aantal_besteld }} {{ r.eenheid }}</div>
+                            {% endif %}
+                        </td>
                         <td>
                             <input type="number" name="ontvangen_{{ r.id }}" min="0" style="width:6rem"
-                                   value="{{ r.aantal_ontvangen if r.aantal_ontvangen is not none else r.aantal_besteld }}"> {{ r.eenheid }}
+                                   value="{{ ontvangen_eenh }}"> {{ r|besteleenheid_naam }}
                         </td>
                     </tr>
                     {% endfor %}

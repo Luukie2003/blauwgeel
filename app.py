@@ -49,6 +49,7 @@ BEHEERDER_ENDPOINTS = {
     "product_verwijderen",
     "product_actief_wisselen",
     "producten_minimumvoorraad",
+    "producten_besteleenheid",
 }
 
 NAV_ITEMS = [
@@ -69,6 +70,7 @@ NAV_ITEMS = [
             "product_bewerken",
             "categorieen_lijst",
             "producten_minimumvoorraad",
+            "producten_besteleenheid",
         ],
         "url_endpoint": "producten_lijst",
         "label": "Producten",
@@ -128,6 +130,8 @@ def create_app():
     init_db(app)
 
     app.jinja_env.filters["datum_nl"] = format_datum
+    app.jinja_env.filters["besteleenheid_naam"] = besteleenheid_naam
+    app.jinja_env.filters["naar_besteleenheden"] = naar_besteleenheden
 
     @app.before_request
     def vereis_login():
@@ -183,6 +187,25 @@ def now_str():
 
 def now_datetime_local():
     return datetime.now().strftime("%Y-%m-%dT%H:%M")
+
+
+def besteleenheid_naam(product):
+    return product["besteleenheid"] or product["eenheid"]
+
+
+def besteleenheid_factor(product):
+    factor = product["besteleenheid_factor"] or 1
+    return factor if factor > 0 else 1
+
+
+def naar_besteleenheden(aantal_voorraadeenheden, product):
+    """Rondt naar boven af naar hele besteleenheden (je bestelt geen halve krat)."""
+    factor = besteleenheid_factor(product)
+    return -(-max(0, aantal_voorraadeenheden) // factor)
+
+
+def naar_voorraadeenheden(aantal_besteleenheden, product):
+    return max(0, aantal_besteleenheden) * besteleenheid_factor(product)
 
 
 def bereken_trend(omzet_per_week, huidige_jaar, huidige_week):
@@ -600,6 +623,37 @@ def register_routes(app):
         ).fetchall()
         return render_template("producten_minimum.html", producten=producten)
 
+    @app.route("/producten/besteleenheid", methods=["GET", "POST"])
+    def producten_besteleenheid():
+        db = get_db()
+        if request.method == "POST":
+            producten = db.execute("SELECT id FROM producten").fetchall()
+            aangepast = 0
+            for p in producten:
+                eenheid_waarde = request.form.get(f"eenheid_{p['id']}", "").strip()
+                factor_waarde = request.form.get(f"factor_{p['id']}", "").strip()
+                if factor_waarde == "":
+                    continue
+                try:
+                    nieuwe_factor = int(factor_waarde)
+                except ValueError:
+                    continue
+                if nieuwe_factor < 1:
+                    continue
+                db.execute(
+                    "UPDATE producten SET besteleenheid = ?, besteleenheid_factor = ? WHERE id = ?",
+                    (eenheid_waarde or None, nieuwe_factor, p["id"]),
+                )
+                aangepast += 1
+            db.commit()
+            flash(f"Besteleenheid bijgewerkt voor {aangepast} product(en).", "success")
+            return redirect(url_for("producten_besteleenheid"))
+
+        producten = db.execute(
+            "SELECT * FROM producten ORDER BY categorie, naam"
+        ).fetchall()
+        return render_template("producten_besteleenheid.html", producten=producten)
+
     @app.route("/producten/nieuw", methods=["GET", "POST"])
     def product_nieuw():
         db = get_db()
@@ -607,8 +661,9 @@ def register_routes(app):
             db.execute(
                 """INSERT INTO producten
                    (artikelcode, naam, categorie, eenheid, voorraad, min_voorraad,
-                    bestel_hoeveelheid, verkoopprijs, actief, opmerking)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    bestel_hoeveelheid, verkoopprijs, actief, besteleenheid,
+                    besteleenheid_factor, opmerking)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
@@ -619,6 +674,8 @@ def register_routes(app):
                     int(request.form["bestel_hoeveelheid"] or 0),
                     float(request.form["verkoopprijs"] or 0),
                     1 if request.form.get("actief") else 0,
+                    request.form.get("besteleenheid", "").strip() or None,
+                    int(request.form.get("besteleenheid_factor") or 1),
                     request.form.get("opmerking", "").strip(),
                 ),
             )
@@ -645,7 +702,7 @@ def register_routes(app):
                 """UPDATE producten
                    SET artikelcode = ?, naam = ?, categorie = ?, eenheid = ?, voorraad = ?,
                        min_voorraad = ?, bestel_hoeveelheid = ?, verkoopprijs = ?,
-                       actief = ?, opmerking = ?
+                       actief = ?, besteleenheid = ?, besteleenheid_factor = ?, opmerking = ?
                    WHERE id = ?""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
@@ -657,6 +714,8 @@ def register_routes(app):
                     int(request.form["bestel_hoeveelheid"] or 0),
                     float(request.form["verkoopprijs"] or 0),
                     1 if request.form.get("actief") else 0,
+                    request.form.get("besteleenheid", "").strip() or None,
+                    int(request.form.get("besteleenheid_factor") or 1),
                     request.form.get("opmerking", "").strip(),
                     product_id,
                 ),
@@ -827,11 +886,12 @@ def register_routes(app):
                 if waarde == "":
                     continue
                 try:
-                    aantal = int(waarde)
+                    aantal_besteleenheden = int(waarde)
                 except ValueError:
                     continue
-                if aantal <= 0:
+                if aantal_besteleenheden <= 0:
                     continue
+                aantal = naar_voorraadeenheden(aantal_besteleenheden, p)
                 db.execute(
                     "UPDATE producten SET voorraad = voorraad + ? WHERE id = ?",
                     (aantal, p["id"]),
@@ -841,7 +901,7 @@ def register_routes(app):
                        VALUES (?, 'in', ?, ?, ?, ?)""",
                     (p["id"], aantal, datum, naam, opmerking),
                 )
-                geboekte_regels.append((p, aantal))
+                geboekte_regels.append((p, aantal, aantal_besteleenheden))
 
             if not geboekte_regels:
                 flash("Geen aantallen ingevuld -- er is niets ingeboekt.", "error")
@@ -854,7 +914,8 @@ def register_routes(app):
             )
 
             regels_tekst = "\n".join(
-                f"  - {p['naam']}: +{aantal} {p['eenheid']}" for p, aantal in geboekte_regels
+                f"  - {p['naam']}: +{aantal_be} {besteleenheid_naam(p)} (= {aantal} {p['eenheid']})"
+                for p, aantal, aantal_be in geboekte_regels
             )
             mail.stuur_mail(
                 f"Levering ingeboekt{f' -- {referentie}' if referentie else ''}",
@@ -1344,7 +1405,8 @@ def register_routes(app):
         open_bestellingen_met_regels = []
         for b in open_bestellingen:
             regels = db.execute(
-                """SELECT br.*, p.naam AS product_naam, p.eenheid
+                """SELECT br.*, p.naam AS product_naam, p.eenheid,
+                          p.besteleenheid, p.besteleenheid_factor
                    FROM bestelregels br JOIN producten p ON p.id = br.product_id
                    WHERE br.bestelling_id = ?""",
                 (b["id"],),
@@ -1358,7 +1420,8 @@ def register_routes(app):
         recent_ontvangen_met_regels = []
         for b in recent_ontvangen:
             regels = db.execute(
-                """SELECT br.*, p.naam AS product_naam, p.eenheid
+                """SELECT br.*, p.naam AS product_naam, p.eenheid,
+                          p.besteleenheid, p.besteleenheid_factor
                    FROM bestelregels br JOIN producten p ON p.id = br.product_id
                    WHERE br.bestelling_id = ?""",
                 (b["id"],),
@@ -1391,13 +1454,20 @@ def register_routes(app):
 
         regels = []
         for pid in product_ids:
-            aantal = request.form.get(f"aantal_{pid}", "0")
+            aantal_besteleenheden = request.form.get(f"aantal_{pid}", "0")
             try:
-                aantal = int(aantal)
+                aantal_besteleenheden = int(aantal_besteleenheden)
             except ValueError:
-                aantal = 0
-            if aantal > 0:
-                regels.append((int(pid), aantal))
+                aantal_besteleenheden = 0
+            if aantal_besteleenheden > 0:
+                product = db.execute(
+                    "SELECT * FROM producten WHERE id = ?", (int(pid),)
+                ).fetchone()
+                if product is None:
+                    continue
+                aantal = naar_voorraadeenheden(aantal_besteleenheden, product)
+                if aantal > 0:
+                    regels.append((int(pid), aantal))
 
         if not regels:
             flash("Geen producten geselecteerd voor de bestelling.", "error")
@@ -1430,7 +1500,8 @@ def register_routes(app):
             return redirect(url_for("bestellijst"))
 
         regels = db.execute(
-            """SELECT br.*, p.naam AS product_naam, p.eenheid
+            """SELECT br.*, p.naam AS product_naam, p.eenheid,
+                      p.besteleenheid, p.besteleenheid_factor
                FROM bestelregels br JOIN producten p ON p.id = br.product_id
                WHERE br.bestelling_id = ?""",
             (bestelling_id,),
@@ -1443,9 +1514,10 @@ def register_routes(app):
             for regel in regels:
                 aantal_str = request.form.get(f"ontvangen_{regel['id']}", "0")
                 try:
-                    aantal_ontvangen = max(0, int(aantal_str))
+                    aantal_besteleenheden = max(0, int(aantal_str))
                 except ValueError:
-                    aantal_ontvangen = 0
+                    aantal_besteleenheden = 0
+                aantal_ontvangen = naar_voorraadeenheden(aantal_besteleenheden, regel)
 
                 vorige_ontvangen = regel["aantal_ontvangen"] or 0
                 delta = aantal_ontvangen - vorige_ontvangen
