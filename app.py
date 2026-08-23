@@ -726,6 +726,57 @@ def register_routes(app):
             "verschil_percentage": verschil_percentage,
         }
 
+    def bereken_omzet_trend_periode(db, van, tot):
+        """Zelfde soort trendgegevens als bereken_omzet_trend, maar dan voor
+        alle tellingen binnen een zelf gekozen periode (verkooprapport) i.p.v.
+        de laatste N tellingen (dashboard)."""
+        tellingen = db.execute(
+            """SELECT t.id, t.datum, t.naam,
+                      COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0) AS omzet
+               FROM tellingen t
+               LEFT JOIN telling_regels tr ON tr.telling_id = t.id
+               WHERE t.datum >= ? AND t.datum <= ?
+               GROUP BY t.id
+               ORDER BY t.datum""",
+            (f"{van} 00:00", f"{tot} 23:59"),
+        ).fetchall()
+
+        top_verkopers = []
+        if tellingen:
+            telling_ids = [t["id"] for t in tellingen]
+            placeholders = ",".join("?" for _ in telling_ids)
+            top_verkopers = db.execute(
+                f"""SELECT p.naam AS product_naam, p.eenheid,
+                           SUM(tr.verkocht) AS verkocht,
+                           SUM(tr.verkocht * tr.verkoopprijs) AS omzet
+                    FROM telling_regels tr
+                    JOIN producten p ON p.id = tr.product_id
+                    WHERE tr.telling_id IN ({placeholders})
+                    GROUP BY tr.product_id
+                    HAVING verkocht > 0
+                    ORDER BY omzet DESC
+                    LIMIT 6""",
+                telling_ids,
+            ).fetchall()
+
+        max_omzet = max((t["omzet"] for t in tellingen), default=0)
+        totale_omzet = sum(t["omzet"] for t in tellingen)
+
+        balken = [
+            {
+                "datum_kort": datetime.strptime(t["datum"], "%Y-%m-%d %H:%M").strftime("%d-%m"),
+                "omzet": t["omzet"],
+                "hoogte_pct": (t["omzet"] / max_omzet * 100) if max_omzet else 0,
+            }
+            for t in tellingen
+        ]
+
+        return {
+            "balken": balken,
+            "top_verkopers": top_verkopers,
+            "totale_omzet": totale_omzet,
+        }
+
     @app.route("/")
     def dashboard():
         db = get_db()
@@ -1749,7 +1800,11 @@ def register_routes(app):
     def verkooprapport():
         van = request.args.get("van") or (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
         tot = request.args.get("tot") or datetime.now().strftime("%Y-%m-%d")
-        return render_template("verkooprapport.html", van=van, tot=tot)
+        db = get_db()
+        omzet_trend = bereken_omzet_trend_periode(db, van, tot)
+        return render_template(
+            "verkooprapport.html", van=van, tot=tot, omzet_trend=omzet_trend
+        )
 
     @app.route("/verkooprapport/pdf")
     def verkooprapport_pdf_route():
