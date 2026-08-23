@@ -59,16 +59,31 @@ BEHEERDER_ENDPOINTS = {
 
 NAV_ITEMS = [
     {
+        "groep": "Algemeen",
         "endpoints": ["dashboard"],
         "url_endpoint": "dashboard",
         "label": "Overzicht",
     },
     {
+        "groep": "Algemeen",
+        "endpoints": ["geschiedenis"],
+        "url_endpoint": "geschiedenis",
+        "label": "Geschiedenis",
+    },
+    {
+        "groep": "Algemeen",
+        "endpoints": ["bijzonderheden"],
+        "url_endpoint": "bijzonderheden",
+        "label": "Bijzonderheden",
+    },
+    {
+        "groep": "Voorraad",
         "endpoints": ["voorraadoverzicht"],
         "url_endpoint": "voorraadoverzicht",
         "label": "Voorraadoverzicht",
     },
     {
+        "groep": "Voorraad",
         "endpoints": [
             "producten_lijst",
             "product_nieuw",
@@ -81,11 +96,13 @@ NAV_ITEMS = [
         "label": "Producten",
     },
     {
+        "groep": "Voorraad",
         "endpoints": ["boeken", "levering_inboeken"],
         "url_endpoint": "boeken",
         "label": "In/uit boeken",
     },
     {
+        "groep": "Voorraad",
         "endpoints": [
             "tellen",
             "tellen_lopen",
@@ -96,24 +113,34 @@ NAV_ITEMS = [
         "label": "Voorraad tellen",
     },
     {
+        "groep": "Voorraad",
         "endpoints": ["tellingen_overzicht", "telling_detail"],
         "url_endpoint": "tellingen_overzicht",
         "label": "Tellingen",
     },
     {
+        "groep": "Voorraad",
         "endpoints": ["bestellijst", "bestelling_aanmaken", "bestelling_inboeken"],
         "url_endpoint": "bestellijst",
         "label": "Bestellijst",
     },
     {
-        "endpoints": ["geschiedenis"],
-        "url_endpoint": "geschiedenis",
-        "label": "Geschiedenis",
+        "groep": "Kassa",
+        "endpoints": ["kassa_tellen", "kassa_telling_detail"],
+        "url_endpoint": "kassa_tellen",
+        "label": "Kassa tellen",
     },
     {
-        "endpoints": ["bijzonderheden"],
-        "url_endpoint": "bijzonderheden",
-        "label": "Bijzonderheden",
+        "groep": "Kassa",
+        "endpoints": ["kassa_geschiedenis"],
+        "url_endpoint": "kassa_geschiedenis",
+        "label": "Kassa geschiedenis",
+    },
+    {
+        "groep": "Kassa",
+        "endpoints": ["kassa_mutatie_nieuw"],
+        "url_endpoint": "kassa_mutatie_nieuw",
+        "label": "Afdracht / toevoeging",
     },
 ]
 
@@ -424,6 +451,54 @@ def bereken_week_overzicht(db, vandaag=None):
         "open_bestellingen": open_bestellingen,
         "nieuwe_mededelingen": nieuwe_mededelingen,
         "zonder_prijs": zonder_prijs,
+    }
+
+
+# (kolomnaam, waarde in euro's, weergavenaam) -- geen 1- en 2-centstukken,
+# die worden bij contant afrekenen in Nederland toch afgerond op 5 cent.
+KASSA_COUPURES = [
+    ("aantal_50", 50.00, "€ 50"),
+    ("aantal_20", 20.00, "€ 20"),
+    ("aantal_10", 10.00, "€ 10"),
+    ("aantal_5", 5.00, "€ 5"),
+    ("aantal_2", 2.00, "€ 2"),
+    ("aantal_1", 1.00, "€ 1"),
+    ("aantal_050", 0.50, "€ 0,50"),
+    ("aantal_020", 0.20, "€ 0,20"),
+    ("aantal_010", 0.10, "€ 0,10"),
+    ("aantal_005", 0.05, "€ 0,05"),
+]
+
+
+def bereken_kassa_coupure_bedrag(request_form):
+    """Leest de aantallen per coupure uit een POST-formulier en telt het
+    totaalbedrag op. Retourneert (aantallen-dict, totaalbedrag)."""
+    aantallen = {}
+    totaal = 0.0
+    for kolom, waarde, _ in KASSA_COUPURES:
+        try:
+            aantal = max(0, int(request_form.get(kolom, "0") or 0))
+        except ValueError:
+            aantal = 0
+        aantallen[kolom] = aantal
+        totaal += aantal * waarde
+    return aantallen, round(totaal, 2)
+
+
+def bereken_kassa_stand(db):
+    """Het laatst bekende (verwachte) bedrag in de kassa. Wordt direct
+    bijgehouden in instellingen.kassa_stand -- elke afdracht/toevoeging past
+    'm meteen aan, en elke telling zet 'm gelijk aan het getelde bedrag
+    (zelfde patroon als producten.voorraad). Dat voorkomt dat je bij het
+    afleiden via datums misgrijpt wanneer twee dingen binnen dezelfde minuut
+    gebeuren (de datumvelden in deze app hebben geen secondeprecisie)."""
+    rij = db.execute("SELECT kassa_stand FROM instellingen WHERE id = 1").fetchone()
+    laatste_telling = db.execute(
+        "SELECT * FROM kassa_tellingen ORDER BY datum DESC, id DESC LIMIT 1"
+    ).fetchone()
+    return {
+        "stand": round(rij["kassa_stand"] if rij else 0.0, 2),
+        "laatste_telling": laatste_telling,
     }
 
 
@@ -2194,6 +2269,148 @@ def register_routes(app):
         db.execute("DELETE FROM mededelingen WHERE id = ?", (mededeling_id,))
         db.commit()
         return redirect(url_for("bijzonderheden"))
+
+    # ---------- Kassa ----------
+
+    @app.route("/kassa/tellen", methods=["GET", "POST"])
+    def kassa_tellen():
+        db = get_db()
+        if request.method == "POST":
+            try:
+                contante_omzet = round(
+                    float(request.form.get("contante_omzet", "0").replace(",", ".")), 2
+                )
+            except ValueError:
+                contante_omzet = 0.0
+            opmerking = request.form.get("opmerking", "").strip()
+
+            aantallen, geteld_bedrag = bereken_kassa_coupure_bedrag(request.form)
+            kassa_stand = bereken_kassa_stand(db)
+            verwacht_bedrag = round(kassa_stand["stand"] + contante_omzet, 2)
+            verschil = round(geteld_bedrag - verwacht_bedrag, 2)
+
+            cur = db.execute(
+                """INSERT INTO kassa_tellingen
+                   (datum, naam, gebruiker_id, verwacht_bedrag, contante_omzet,
+                    geteld_bedrag, verschil, aantal_50, aantal_20, aantal_10,
+                    aantal_5, aantal_2, aantal_1, aantal_050, aantal_020,
+                    aantal_010, aantal_005, opmerking)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    now_str(),
+                    session.get("gebruiker_naam"),
+                    session.get("gebruiker_id"),
+                    verwacht_bedrag,
+                    contante_omzet,
+                    geteld_bedrag,
+                    verschil,
+                    aantallen["aantal_50"],
+                    aantallen["aantal_20"],
+                    aantallen["aantal_10"],
+                    aantallen["aantal_5"],
+                    aantallen["aantal_2"],
+                    aantallen["aantal_1"],
+                    aantallen["aantal_050"],
+                    aantallen["aantal_020"],
+                    aantallen["aantal_010"],
+                    aantallen["aantal_005"],
+                    opmerking,
+                ),
+            )
+            db.execute(
+                "UPDATE instellingen SET kassa_stand = ? WHERE id = 1", (geteld_bedrag,)
+            )
+            db.commit()
+            if verschil == 0:
+                flash("Kassatelling opgeslagen: het klopt precies.", "success")
+            elif verschil > 0:
+                flash(f"Kassatelling opgeslagen: € {verschil:.2f} overschot.", "warning")
+            else:
+                flash(f"Kassatelling opgeslagen: € {-verschil:.2f} tekort.", "warning")
+            return redirect(url_for("kassa_telling_detail", telling_id=cur.lastrowid))
+
+        kassa_stand = bereken_kassa_stand(db)
+        return render_template(
+            "kassa_tellen.html", kassa_stand=kassa_stand, coupures=KASSA_COUPURES
+        )
+
+    @app.route("/kassa/tellingen/<int:telling_id>")
+    def kassa_telling_detail(telling_id):
+        db = get_db()
+        telling = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
+        ).fetchone()
+        if telling is None:
+            flash("Kassatelling niet gevonden.", "error")
+            return redirect(url_for("kassa_geschiedenis"))
+        return render_template(
+            "kassa_telling_detail.html", telling=telling, coupures=KASSA_COUPURES
+        )
+
+    @app.route("/kassa/geschiedenis")
+    def kassa_geschiedenis():
+        db = get_db()
+        kassa_stand = bereken_kassa_stand(db)
+
+        tellingen = db.execute(
+            "SELECT * FROM kassa_tellingen ORDER BY datum DESC, id DESC"
+        ).fetchall()
+        mutaties = db.execute(
+            "SELECT * FROM kassa_mutaties ORDER BY datum DESC, id DESC"
+        ).fetchall()
+
+        tijdlijn = [{"soort": "telling", "datum": t["datum"], "item": t} for t in tellingen]
+        tijdlijn += [{"soort": m["type"], "datum": m["datum"], "item": m} for m in mutaties]
+        tijdlijn.sort(key=lambda r: r["datum"], reverse=True)
+
+        return render_template(
+            "kassa_geschiedenis.html", kassa_stand=kassa_stand, tijdlijn=tijdlijn
+        )
+
+    @app.route("/kassa/mutatie/nieuw", methods=["GET", "POST"])
+    def kassa_mutatie_nieuw():
+        db = get_db()
+        if request.method == "POST":
+            type_ = request.form.get("type", "").strip()
+            if type_ not in ("afdracht", "toevoeging"):
+                flash("Ongeldig type.", "error")
+                return redirect(url_for("kassa_mutatie_nieuw"))
+            try:
+                bedrag = round(float(request.form.get("bedrag", "0").replace(",", ".")), 2)
+            except ValueError:
+                bedrag = 0.0
+            if bedrag <= 0:
+                flash("Vul een bedrag groter dan 0 in.", "error")
+                return redirect(url_for("kassa_mutatie_nieuw"))
+            ontvanger = request.form.get("ontvanger", "").strip()
+            opmerking = request.form.get("opmerking", "").strip()
+
+            db.execute(
+                """INSERT INTO kassa_mutaties
+                   (type, bedrag, datum, naam, gebruiker_id, ontvanger, opmerking)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    type_,
+                    bedrag,
+                    now_str(),
+                    session.get("gebruiker_naam"),
+                    session.get("gebruiker_id"),
+                    ontvanger,
+                    opmerking,
+                ),
+            )
+            delta = bedrag if type_ == "toevoeging" else -bedrag
+            db.execute(
+                "UPDATE instellingen SET kassa_stand = kassa_stand + ? WHERE id = 1",
+                (delta,),
+            )
+            db.commit()
+            werkwoord = "Afdracht" if type_ == "afdracht" else "Toevoeging"
+            flash(f"{werkwoord} van € {bedrag:.2f} geboekt.", "success")
+            return redirect(url_for("kassa_geschiedenis"))
+
+        kassa_stand = bereken_kassa_stand(db)
+        return render_template("kassa_mutatie_nieuw.html", kassa_stand=kassa_stand)
 
 
 app = create_app()

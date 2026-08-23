@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block titel %}Kassa tellen{% endblock %}
+{% block inhoud %}
+<h1>Kassa tellen</h1>
+<p class="subtitel">
+    Tel de kassa per coupure. Vul ook de contante omzet in sinds de vorige telling
+    (zie PayPal &mdash; contant, niet pin) zodat het systeem weet wat er verwacht wordt.
+</p>
+
+<div class="statgrid">
+    <div class="stat">
+        <div class="getal">€ {{ '%.2f'|format(kassa_stand.stand) }}</div>
+        <div class="label">
+            Bekende stand
+            {% if kassa_stand.laatste_telling %}
+            <span class="tekst-zacht">(sinds telling van {{ kassa_stand.laatste_telling.datum|datum_nl }})</span>
+            {% else %}
+            <span class="tekst-zacht">(nog geen eerdere telling)</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="kaart">
+    <form method="post" id="kassa-form">
+        <fieldset class="groupbox">
+            <legend>Contante omzet sinds vorige telling</legend>
+            <div class="veld" style="max-width:260px">
+                <label for="contante_omzet">Bedrag volgens PayPal (contant)</label>
+                <input type="text" inputmode="decimal" id="contante_omzet" name="contante_omzet" value="0,00">
+            </div>
+        </fieldset>
+
+        <fieldset class="groupbox">
+            <legend>Geteld in de kassa</legend>
+            <div class="formgrid">
+                {% for kolom, waarde, label in coupures %}
+                <div class="veld">
+                    <label for="{{ kolom }}">{{ label }}</label>
+                    <input type="number" inputmode="numeric" min="0" id="{{ kolom }}" name="{{ kolom }}"
+                           class="kassa-coupure" data-waarde="{{ waarde }}" value="0">
+                </div>
+                {% endfor %}
+            </div>
+            <div class="veld">
+                <label for="opmerking">Opmerking (optioneel)</label>
+                <input type="text" id="opmerking" name="opmerking" placeholder="Bijv. briefje van de vorige dienst">
+            </div>
+        </fieldset>
+
+        <div class="statgrid" style="margin-bottom:1.1rem">
+            <div class="stat">
+                <div class="getal" id="uitkomst-geteld">€ 0,00</div>
+                <div class="label">Geteld bedrag</div>
+            </div>
+            <div class="stat">
+                <div class="getal" id="uitkomst-verwacht">€ {{ '%.2f'|format(kassa_stand.stand) }}</div>
+                <div class="label">Verwacht bedrag</div>
+            </div>
+            <div class="stat" id="uitkomst-verschil-stat">
+                <div class="getal" id="uitkomst-verschil">€ 0,00</div>
+                <div class="label">Verschil</div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-geel">Telling opslaan</button>
+    </form>
+</div>
+
+<script>
+(function () {
+    var basisStand = {{ kassa_stand.stand }};
+    var contanteOmzetVeld = document.getElementById('contante_omzet');
+    var coupureVelden = Array.prototype.slice.call(document.querySelectorAll('.kassa-coupure'));
+    var uitkomstGeteld = document.getElementById('uitkomst-geteld');
+    var uitkomstVerwacht = document.getElementById('uitkomst-verwacht');
+    var uitkomstVerschil = document.getElementById('uitkomst-verschil');
+    var uitkomstVerschilStat = document.getElementById('uitkomst-verschil-stat');
+
+    function euro(bedrag) {
+        return '€ ' + bedrag.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    function herbereken() {
+        var geteld = 0;
+        coupureVelden.forEach(function (veld) {
+            var aantal = parseInt(veld.value, 10) || 0;
+            geteld += aantal * parseFloat(veld.dataset.waarde);
+        });
+        var contanteOmzet = parseFloat((contanteOmzetVeld.value || '0').replace(',', '.')) || 0;
+        var verwacht = basisStand + contanteOmzet;
+        var verschil = geteld - verwacht;
+
+        uitkomstGeteld.textContent = euro(geteld);
+        uitkomstVerwacht.textContent = euro(verwacht);
+        uitkomstVerschil.textContent = (verschil > 0 ? '+' : '') + euro(verschil);
+        uitkomstVerschilStat.classList.remove('waarschuwing');
+        if (Math.abs(verschil) > 0.001) {
+            uitkomstVerschilStat.classList.add('waarschuwing');
+        }
+    }
+
+    coupureVelden.forEach(function (veld) { veld.addEventListener('input', herbereken); });
+    contanteOmzetVeld.addEventListener('input', herbereken);
+    herbereken();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block titel %}Kassa geschiedenis{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">Alle tellingen, afdrachten en toevoegingen op een rij.</p>
+    <div style="display:flex; gap:0.5rem">
+        <a href="{{ url_for('kassa_mutatie_nieuw') }}" class="btn btn-rand">Afdracht / toevoeging boeken</a>
+        <a href="{{ url_for('kassa_tellen') }}" class="btn btn-geel">Kassa tellen</a>
+    </div>
+</div>
+
+<div class="statgrid">
+    <div class="stat">
+        <div class="getal">€ {{ '%.2f'|format(kassa_stand.stand) }}</div>
+        <div class="label">
+            Huidige bekende stand
+            {% if kassa_stand.laatste_telling %}
+            <span class="tekst-zacht">(sinds telling van {{ kassa_stand.laatste_telling.datum|datum_nl }})</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="kaart">
+    {% if tijdlijn %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Gebeurtenis</th><th>Door</th><th>Bedrag</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for regel in tijdlijn %}
+                {% set item = regel.item %}
+                <tr>
+                    <td>{{ regel.datum|datum_nl }}</td>
+                    <td>
+                        {% if regel.soort == 'telling' %}
+                        <span class="badge {{ 'badge-ok' if item.verschil == 0 else 'badge-laag' }}">
+                            Telling &mdash; {{ 'klopt' if item.verschil == 0 else ('+€ %.2f overschot'|format(item.verschil) if item.verschil > 0 else '€ %.2f tekort'|format(-item.verschil)) }}
+                        </span>
+                        {% elif regel.soort == 'afdracht' %}
+                        <span class="badge badge-uit">Afdracht{% if item.ontvanger %} aan {{ item.ontvanger }}{% endif %}</span>
+                        {% else %}
+                        <span class="badge badge-in">Toevoeging</span>
+                        {% endif %}
+                        {% if item.opmerking %}<div class="tekst-zacht" style="margin-top:0.2rem">{{ item.opmerking }}</div>{% endif %}
+                    </td>
+                    <td>{{ item.naam or '—' }}</td>
+                    <td>
+                        {% if regel.soort == 'telling' %}
+                        € {{ '%.2f'|format(item.geteld_bedrag) }}
+                        {% elif regel.soort == 'afdracht' %}
+                        &minus; € {{ '%.2f'|format(item.bedrag) }}
+                        {% else %}
+                        + € {{ '%.2f'|format(item.bedrag) }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if regel.soort == 'telling' %}
+                        <a href="{{ url_for('kassa_telling_detail', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bekijken</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen kassatellingen of -mutaties.</p>
+    {% endif %}
+</div>
+{% endblock %}

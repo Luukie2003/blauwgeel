@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block titel %}Afdracht / toevoeging{% endblock %}
+{% block inhoud %}
+<h1>Afdracht / toevoeging</h1>
+<p class="subtitel">
+    Boek geld dat uit de kassa is gehaald (afgedragen aan de beheerder) of erbij is gedaan
+    (wisselgeld aangevuld), zonder meteen een volledige telling te doen.
+</p>
+
+<div class="statgrid">
+    <div class="stat">
+        <div class="getal">€ {{ '%.2f'|format(kassa_stand.stand) }}</div>
+        <div class="label">Huidige bekende stand</div>
+    </div>
+</div>
+
+<div class="kaart" style="max-width:480px">
+    <form method="post">
+        <div class="veld">
+            <label for="type">Type</label>
+            <select id="type" name="type" required>
+                <option value="afdracht">Afdracht (geld uit de kassa, naar de beheerder)</option>
+                <option value="toevoeging">Toevoeging (geld erbij, bijv. wisselgeld aangevuld)</option>
+            </select>
+        </div>
+        <div class="veld">
+            <label for="bedrag">Bedrag</label>
+            <input type="text" inputmode="decimal" id="bedrag" name="bedrag" required placeholder="Bijv. 50,00">
+        </div>
+        <div class="veld" id="ontvanger-veld">
+            <label for="ontvanger">Ontvangen door (bij afdracht)</label>
+            <input type="text" id="ontvanger" name="ontvanger" placeholder="Naam van de beheerder">
+        </div>
+        <div class="veld">
+            <label for="opmerking">Opmerking (optioneel)</label>
+            <input type="text" id="opmerking" name="opmerking">
+        </div>
+        <button type="submit" class="btn btn-geel">Opslaan</button>
+    </form>
+</div>
+
+<script>
+(function () {
+    var typeVeld = document.getElementById('type');
+    var ontvangerVeld = document.getElementById('ontvanger-veld');
+    function toonOntvanger() {
+        ontvangerVeld.style.display = typeVeld.value === 'afdracht' ? '' : 'none';
+    }
+    typeVeld.addEventListener('change', toonOntvanger);
+    toonOntvanger();
+})();
+</script>
+{% endblock %}

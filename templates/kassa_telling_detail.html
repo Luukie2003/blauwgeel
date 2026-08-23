@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block titel %}Kassatelling #{{ telling.id }}{% endblock %}
+{% block inhoud %}
+<h1>Kassatelling #{{ telling.id }}</h1>
+<p class="subtitel">
+    {{ telling.datum|datum_nl }}{% if telling.naam %} &mdash; geteld door {{ telling.naam }}{% endif %}
+    &nbsp;&middot;&nbsp; <a href="{{ url_for('kassa_geschiedenis') }}">&larr; Kassa geschiedenis</a>
+    &nbsp;&middot;&nbsp; <a href="{{ url_for('kassa_tellen') }}">Nieuwe telling</a>
+</p>
+
+<div class="statgrid">
+    <div class="stat">
+        <div class="getal">€ {{ '%.2f'|format(telling.geteld_bedrag) }}</div>
+        <div class="label">Geteld bedrag</div>
+    </div>
+    <div class="stat">
+        <div class="getal">€ {{ '%.2f'|format(telling.verwacht_bedrag) }}</div>
+        <div class="label">Verwacht bedrag</div>
+    </div>
+    <div class="stat {{ 'waarschuwing' if telling.verschil != 0 }}">
+        <div class="getal">{{ '+' if telling.verschil > 0 else '' }}€ {{ '%.2f'|format(telling.verschil) }}</div>
+        <div class="label">{{ 'Overschot' if telling.verschil > 0 else 'Tekort' if telling.verschil < 0 else 'Verschil' }}</div>
+    </div>
+</div>
+
+<div class="kaart">
+    <h2>Coupures</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Coupure</th><th>Aantal</th><th>Subtotaal</th></tr>
+            </thead>
+            <tbody>
+                {% for kolom, waarde, label in coupures %}
+                {% set aantal = telling[kolom] %}
+                <tr>
+                    <td>{{ label }}</td>
+                    <td>{{ aantal }}</td>
+                    <td>€ {{ '%.2f'|format(aantal * waarde) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2" style="text-align:right"><strong>Totaal geteld</strong></td>
+                    <td><strong>€ {{ '%.2f'|format(telling.geteld_bedrag) }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<div class="kaart">
+    <h2>Berekening</h2>
+    <table>
+        <tbody>
+            <tr><td>Contante omzet sinds vorige telling (volgens PayPal)</td><td>€ {{ '%.2f'|format(telling.contante_omzet) }}</td></tr>
+            <tr><td>Verwacht bedrag (bekende stand + contante omzet)</td><td>€ {{ '%.2f'|format(telling.verwacht_bedrag) }}</td></tr>
+            <tr><td>Geteld bedrag</td><td>€ {{ '%.2f'|format(telling.geteld_bedrag) }}</td></tr>
+            <tr>
+                <td><strong>{{ 'Overschot' if telling.verschil > 0 else 'Tekort' if telling.verschil < 0 else 'Verschil' }}</strong></td>
+                <td><strong>{{ '+' if telling.verschil > 0 else '' }}€ {{ '%.2f'|format(telling.verschil) }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    {% if telling.opmerking %}
+    <p class="tekst-zacht" style="margin-top:1rem">Opmerking: {{ telling.opmerking }}</p>
+    {% endif %}
+</div>
+{% endblock %}

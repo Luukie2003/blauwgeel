@@ -103,11 +103,47 @@ CREATE TABLE IF NOT EXISTS mededelingen (
 CREATE TABLE IF NOT EXISTS instellingen (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     notificatie_email TEXT,
-    banner_tekst TEXT
+    banner_tekst TEXT,
+    kassa_stand REAL NOT NULL DEFAULT 0
 );
 INSERT OR IGNORE INTO instellingen (id, notificatie_email) VALUES (1, NULL);
+
+CREATE TABLE IF NOT EXISTS kassa_tellingen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    datum TEXT NOT NULL,
+    naam TEXT,
+    gebruiker_id INTEGER REFERENCES gebruikers(id),
+    verwacht_bedrag REAL NOT NULL DEFAULT 0,
+    contante_omzet REAL NOT NULL DEFAULT 0,
+    geteld_bedrag REAL NOT NULL DEFAULT 0,
+    verschil REAL NOT NULL DEFAULT 0,
+    aantal_50 INTEGER NOT NULL DEFAULT 0,
+    aantal_20 INTEGER NOT NULL DEFAULT 0,
+    aantal_10 INTEGER NOT NULL DEFAULT 0,
+    aantal_5 INTEGER NOT NULL DEFAULT 0,
+    aantal_2 INTEGER NOT NULL DEFAULT 0,
+    aantal_1 INTEGER NOT NULL DEFAULT 0,
+    aantal_050 INTEGER NOT NULL DEFAULT 0,
+    aantal_020 INTEGER NOT NULL DEFAULT 0,
+    aantal_010 INTEGER NOT NULL DEFAULT 0,
+    aantal_005 INTEGER NOT NULL DEFAULT 0,
+    opmerking TEXT
+);
+
+CREATE TABLE IF NOT EXISTS kassa_mutaties (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL CHECK (type IN ('afdracht', 'toevoeging')),
+    bedrag REAL NOT NULL,
+    datum TEXT NOT NULL,
+    naam TEXT,
+    gebruiker_id INTEGER REFERENCES gebruikers(id),
+    ontvanger TEXT,
+    opmerking TEXT
+);
 
 CREATE INDEX IF NOT EXISTS idx_mutaties_product ON mutaties(product_id);
 CREATE INDEX IF NOT EXISTS idx_mutaties_datum ON mutaties(datum);
 CREATE INDEX IF NOT EXISTS idx_bestelregels_bestelling ON bestelregels(bestelling_id);
 CREATE INDEX IF NOT EXISTS idx_telling_regels_telling ON telling_regels(telling_id);
+CREATE INDEX IF NOT EXISTS idx_kassa_tellingen_datum ON kassa_tellingen(datum);
+CREATE INDEX IF NOT EXISTS idx_kassa_mutaties_datum ON kassa_mutaties(datum);

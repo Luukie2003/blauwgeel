@@ -210,6 +210,21 @@ a:hover { text-decoration: underline; }
     border-bottom: 1px solid var(--rand-licht);
 }
 
+.zijbalk-groepkop {
+    padding: 0.55rem 0.9rem 0.2rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tekst-zacht);
+}
+
+.zijbalk-groepkop:not(:first-child) {
+    margin-top: 0.35rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid var(--rand-licht);
+}
+
 .app-zijbalk ul {
     list-style: none;
     margin: 0;
@@ -921,6 +936,7 @@ footer {
         text-align: left;
     }
     .app-zijbalk a.actief { border-left-color: var(--accent); }
+    .zijbalk-groepkop { padding: 0.7rem 1rem 0.3rem; }
     main { padding: 1rem; }
 }
 

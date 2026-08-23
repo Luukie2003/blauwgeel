@@ -129,7 +129,12 @@
             </button>
             <div class="zijbalk-kop">Navigatie</div>
             <ul>
+                {% set ns = namespace(vorige_groep=None) %}
                 {% for item in nav_items %}
+                {% if item.groep != ns.vorige_groep %}
+                <li class="zijbalk-groepkop">{{ item.groep }}</li>
+                {% set ns.vorige_groep = item.groep %}
+                {% endif %}
                 <li>
                     <a href="{{ url_for(item.url_endpoint) }}"
                        class="{{ 'actief' if item == actieve_nav else '' }}">{{ item.label }}</a>
