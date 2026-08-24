@@ -57,6 +57,51 @@ def test_telling_zonder_ingevulde_aantallen_maakt_niets_aan(ingelogde_client, db
     assert aantal_na == aantal_voor
 
 
+def test_bestelling_handmatig_klaarzetten_raakt_voorraad_niet_tot_inboeken(ingelogde_client, db):
+    """Regressietest voor de 'factuur klaarzetten'-flow: een handmatig
+    aangemaakte bestelling (los van de lage-voorraad-suggesties) mag de
+    voorraad pas wijzigen op het moment van inboeken, niet bij het
+    klaarzetten zelf."""
+    product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    voorraad_voor = product["voorraad"]
+
+    resp = ingelogde_client.post(
+        "/bestellijst/nieuw",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "referentie": "Testfactuur 123",
+            f"aantal_{product['id']}": "3",
+        },
+    )
+    assert resp.status_code == 302
+
+    bestelling = db.execute(
+        "SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    assert bestelling["status"] == "besteld"
+    assert bestelling["referentie"] == "Testfactuur 123"
+
+    regel = db.execute(
+        "SELECT * FROM bestelregels WHERE bestelling_id = ?", (bestelling["id"],)
+    ).fetchone()
+    besteleenheid_factor = product["besteleenheid_factor"] or 1
+    assert regel["aantal_besteld"] == 3 * besteleenheid_factor
+
+    onveranderd = db.execute(
+        "SELECT * FROM producten WHERE id = ?", (product["id"],)
+    ).fetchone()
+    assert onveranderd["voorraad"] == voorraad_voor  # nog niet ingeboekt
+
+    ingelogde_client.post(
+        f"/bestellingen/{bestelling['id']}/inboeken",
+        data={"csrf_token": _csrf(ingelogde_client), f"ontvangen_{regel['id']}": "3"},
+    )
+    bijgewerkt = db.execute(
+        "SELECT * FROM producten WHERE id = ?", (product["id"],)
+    ).fetchone()
+    assert bijgewerkt["voorraad"] == voorraad_voor + 3 * besteleenheid_factor
+
+
 def test_negatief_geteld_aantal_wordt_genegeerd(ingelogde_client, db):
     product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
     db.execute("UPDATE producten SET voorraad = 5 WHERE id = ?", (product["id"],))

@@ -211,7 +211,7 @@ NAV_ITEMS = [
     },
     {
         "groep": "Voorraad",
-        "endpoints": ["bestellijst", "bestelling_aanmaken", "bestelling_inboeken"],
+        "endpoints": ["bestellijst", "bestelling_aanmaken", "bestelling_nieuw", "bestelling_inboeken"],
         "url_endpoint": "bestellijst",
         "label": "Bestellijst",
     },
@@ -2448,6 +2448,65 @@ def register_routes(app):
         db.commit()
         flash(f"Bestelling aangemaakt met {len(regels)} product(en).", "success")
         return redirect(url_for("bestellijst"))
+
+    @app.route("/bestellijst/nieuw", methods=["GET", "POST"])
+    def bestelling_nieuw():
+        """Een factuur/bestelling handmatig klaarzetten -- los van de
+        automatische lage-voorraad-suggesties. Voor als je al ergens hebt
+        besteld (telefonisch, via een website) en dat vast wilt vastleggen,
+        om 'm pas te boeken zodra de levering echt binnenkomt."""
+        db = get_db()
+        if request.method == "POST":
+            referentie = request.form.get("referentie", "").strip()
+            besteld_door = session.get("gebruiker_naam")
+            besteld_door_id = session.get("gebruiker_id")
+
+            producten = db.execute(
+                "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
+            ).fetchall()
+            regels = []
+            for p in producten:
+                waarde = request.form.get(f"aantal_{p['id']}", "").strip()
+                if waarde == "":
+                    continue
+                try:
+                    aantal_besteleenheden = int(waarde)
+                except ValueError:
+                    continue
+                if aantal_besteleenheden <= 0:
+                    continue
+                aantal = naar_voorraadeenheden(aantal_besteleenheden, p)
+                if aantal > 0:
+                    regels.append((p["id"], aantal))
+
+            if not regels:
+                flash("Geen aantallen ingevuld -- er is niets klaargezet.", "error")
+                return redirect(url_for("bestelling_nieuw"))
+
+            cur = db.execute(
+                """INSERT INTO bestellingen (status, aangemaakt_op, besteld_door, besteld_door_id, referentie)
+                   VALUES ('besteld', ?, ?, ?, ?)""",
+                (now_str(), besteld_door, besteld_door_id, referentie or None),
+            )
+            bestelling_id = cur.lastrowid
+            for product_id, aantal in regels:
+                db.execute(
+                    """INSERT INTO bestelregels (bestelling_id, product_id, aantal_besteld)
+                       VALUES (?, ?, ?)""",
+                    (bestelling_id, product_id, aantal),
+                )
+            db.commit()
+            flash(
+                f"Bestelling #{bestelling_id} klaargezet met {len(regels)} product(en) -- "
+                "boek 'm in zodra de levering binnenkomt.",
+                "success",
+            )
+            return redirect(url_for("bestellijst"))
+
+        producten = db.execute(
+            "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
+        ).fetchall()
+        return render_template("bestelling_nieuw.html", producten=producten)
 
     @app.route("/bestellingen/<int:bestelling_id>/inboeken", methods=["GET", "POST"])
     def bestelling_inboeken(bestelling_id):

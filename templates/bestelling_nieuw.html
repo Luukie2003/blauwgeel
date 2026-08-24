@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block titel %}Bestelling klaarzetten{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Al ergens besteld (telefonisch, via een website) of een factuur op zak?
+        Zet 'm hier klaar met de aantallen die je hebt besteld. De voorraad
+        wordt pas bijgewerkt zodra je 'm straks inboekt bij binnenkomst.
+        <a href="{{ url_for('bestellijst') }}">&larr; Terug naar de bestellijst</a>
+    </p>
+</div>
+
+<div class="kaart">
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld" style="max-width:360px; margin-bottom:1rem">
+            <label for="referentie">Leverancier / factuurnummer (optioneel)</label>
+            <input type="text" id="referentie" name="referentie" placeholder="Bijv. Robertus factuur 12345">
+        </div>
+        <fieldset class="groupbox">
+            <legend>Bestelde producten</legend>
+            <div class="tabel-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Categorie</th>
+                            <th>Huidige voorraad</th>
+                            <th>Aantal besteld (besteleenheid)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in producten %}
+                        <tr>
+                            <td>{{ p.naam }}</td>
+                            <td>{{ p.categorie }}</td>
+                            <td>{{ p.voorraad }} {{ p.eenheid }}</td>
+                            <td>
+                                <input type="number" name="aantal_{{ p.id }}" min="0" style="width:6rem"
+                                       placeholder="overslaan"> {{ p|besteleenheid_naam }}
+                                {% if p.besteleenheid_factor > 1 %}
+                                <div class="tekst-zacht" style="font-size:0.72rem">1 {{ p|besteleenheid_naam }} = {{ p.besteleenheid_factor }} {{ p.eenheid }}</div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </fieldset>
+        <div class="veld" style="max-width:300px; margin-top:1rem">
+            <label>Besteld door</label>
+            <p class="veld-waarde">{{ huidige_gebruiker }}</p>
+        </div>
+        <button type="submit" class="btn btn-geel">Bestelling klaarzetten</button>
+    </form>
+</div>
+{% endblock %}

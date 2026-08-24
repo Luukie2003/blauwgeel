@@ -3,9 +3,12 @@
 {% block inhoud %}
 <div class="actiebalk">
     <p class="subtitel" style="margin:0">Producten onder de minimumvoorraad. Vink aan wat je gaat bestellen, pas het aantal aan waar nodig.</p>
-    {% if suggesties %}
-    <a href="{{ url_for('bestellijst_pdf_route') }}" class="btn btn-rand">Bestellijst (PDF)</a>
-    {% endif %}
+    <div style="display:flex; gap:0.5rem">
+        {% if suggesties %}
+        <a href="{{ url_for('bestellijst_pdf_route') }}" class="btn btn-rand">Bestellijst (PDF)</a>
+        {% endif %}
+        <a href="{{ url_for('bestelling_nieuw') }}" class="btn btn-rand">Al besteld? Factuur klaarzetten</a>
+    </div>
 </div>
 
 <div class="kaart">
@@ -58,7 +61,7 @@
     <div style="border:1px solid var(--rand); border-radius:8px; padding:0.9rem; margin-bottom:0.9rem;">
         <div class="actiebalk" style="margin-bottom:0.6rem">
             <div>
-                <strong>Bestelling #{{ b.id }}</strong>
+                <strong>Bestelling #{{ b.id }}</strong>{% if b.referentie %} — <span>{{ b.referentie }}</span>{% endif %}
                 <span class="tekst-zacht">— aangemaakt {{ b.aangemaakt_op|datum_nl }}{% if b.besteld_door %} door {{ b.besteld_door }}{% endif %}</span>
             </div>
             <div class="tabel-acties">

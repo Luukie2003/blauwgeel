@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS bestellingen (
     aangemaakt_op TEXT NOT NULL,
     besteld_door TEXT,
     besteld_door_id INTEGER REFERENCES gebruikers(id),
-    ontvangen_op TEXT
+    ontvangen_op TEXT,
+    referentie TEXT
 );
 
 CREATE TABLE IF NOT EXISTS bestelregels (

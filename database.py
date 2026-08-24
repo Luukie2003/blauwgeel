@@ -82,6 +82,7 @@ KOLOM_MIGRATIES = [
     ("mutaties", "gebruiker_id", "INTEGER REFERENCES gebruikers(id)"),
     ("tellingen", "gebruiker_id", "INTEGER REFERENCES gebruikers(id)"),
     ("bestellingen", "besteld_door_id", "INTEGER REFERENCES gebruikers(id)"),
+    ("bestellingen", "referentie", "TEXT"),
 ]
 
 
