@@ -497,6 +497,11 @@ tbody tr:nth-child(even) td { background: var(--grid-alt); }
 
 tbody tr:hover td { background: var(--selectie-bg); }
 
+/* Lichte waarschuwingskleur voor een rij, bijv. correcties in de
+   geschiedenis -- moet na de zebra-striping en hover staan om die te
+   kunnen overstemmen. */
+tbody tr.rij-waarschuwing td { background: var(--rood-bg); }
+
 .badge {
     display: inline-block;
     padding: 0.1rem 0.5rem;

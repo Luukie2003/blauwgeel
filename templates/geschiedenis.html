@@ -22,7 +22,7 @@
             </thead>
             <tbody>
                 {% for m in mutaties %}
-                <tr>
+                <tr class="{{ 'rij-waarschuwing' if m.opmerking and m.opmerking.startswith('Correctie') }}">
                     <td>{{ m.datum|datum_nl }}</td>
                     <td>{{ m.product_naam }}</td>
                     <td><span class="badge badge-{{ m.type }}">{{ 'in' if m.type == 'in' else 'uit' }}</span></td>
