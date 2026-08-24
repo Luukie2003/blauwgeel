@@ -1076,44 +1076,46 @@ def register_routes(app):
 
     # ---------- Overzicht ----------
 
-    def bereken_omzet_trend(db, aantal_tellingen=8):
-        """Omzet per telling (chronologisch) plus de best verkopende producten
-        over die periode -- gebruikt voor het trendgrafiekje op het dashboard.
-        Rekent altijd met de bevroren telling-prijs (tr.verkoopprijs), niet de
-        actuele productprijs, om dezelfde reden als het verkooprapport."""
-        ruwe_tellingen = db.execute(
-            """SELECT t.id, t.datum, t.naam,
+    def bereken_omzet_trend(db, aantal_dagen=8):
+        """Omzet per dag (chronologisch, tellingen van dezelfde dag samengevoegd
+        tot één balk) plus de best verkopende producten over die periode --
+        gebruikt voor het trendgrafiekje op het dashboard. Rekent altijd met
+        de bevroren telling-prijs (tr.verkoopprijs), niet de actuele
+        productprijs, om dezelfde reden als het verkooprapport."""
+        ruwe_dagen = db.execute(
+            """SELECT date(t.datum) AS dag,
                       COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0) AS omzet
                FROM tellingen t
                LEFT JOIN telling_regels tr ON tr.telling_id = t.id
-               GROUP BY t.id
-               ORDER BY t.datum DESC
+               GROUP BY dag
+               ORDER BY dag DESC
                LIMIT ?""",
-            (aantal_tellingen,),
+            (aantal_dagen,),
         ).fetchall()
-        tellingen = list(reversed(ruwe_tellingen))
+        dagen = list(reversed(ruwe_dagen))
 
         top_verkopers = []
-        if tellingen:
-            telling_ids = [t["id"] for t in tellingen]
-            placeholders = ",".join("?" for _ in telling_ids)
+        if dagen:
+            dag_lijst = [d["dag"] for d in dagen]
+            placeholders = ",".join("?" for _ in dag_lijst)
             top_verkopers = db.execute(
                 f"""SELECT p.naam AS product_naam, p.eenheid,
                            SUM(tr.verkocht) AS verkocht,
                            SUM(tr.verkocht * tr.verkoopprijs) AS omzet
                     FROM telling_regels tr
                     JOIN producten p ON p.id = tr.product_id
-                    WHERE tr.telling_id IN ({placeholders})
+                    JOIN tellingen t ON t.id = tr.telling_id
+                    WHERE date(t.datum) IN ({placeholders})
                     GROUP BY tr.product_id
                     HAVING SUM(tr.verkocht) > 0
                     ORDER BY omzet DESC
                     LIMIT 6""",
-                telling_ids,
+                dag_lijst,
             ).fetchall()
 
-        max_omzet = max((t["omzet"] for t in tellingen), default=0)
-        laatste_omzet = tellingen[-1]["omzet"] if tellingen else 0
-        eerdere_omzetten = [t["omzet"] for t in tellingen[:-1]]
+        max_omzet = max((d["omzet"] for d in dagen), default=0)
+        laatste_omzet = dagen[-1]["omzet"] if dagen else 0
+        eerdere_omzetten = [d["omzet"] for d in dagen[:-1]]
         gemiddelde_omzet = (
             sum(eerdere_omzetten) / len(eerdere_omzetten) if eerdere_omzetten else 0
         )
@@ -1123,11 +1125,11 @@ def register_routes(app):
 
         balken = [
             {
-                "datum_kort": datetime.strptime(t["datum"], "%Y-%m-%d %H:%M").strftime("%d-%m"),
-                "omzet": t["omzet"],
-                "hoogte_pct": (t["omzet"] / max_omzet * 100) if max_omzet else 0,
+                "datum_kort": datetime.strptime(d["dag"], "%Y-%m-%d").strftime("%d-%m"),
+                "omzet": d["omzet"],
+                "hoogte_pct": (d["omzet"] / max_omzet * 100) if max_omzet else 0,
             }
-            for t in tellingen
+            for d in dagen
         ]
 
         return {

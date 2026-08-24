@@ -51,7 +51,7 @@
         <h2 style="margin:0">Omzettrend</h2>
         {% if omzet_trend.verschil_percentage is not none %}
         <span class="tekst-zacht">
-            Laatste telling:
+            Laatste dag:
             <span class="omzet-delta {{ 'positief' if omzet_trend.verschil_percentage >= 0 else 'negatief' }}">
                 {{ '+' if omzet_trend.verschil_percentage >= 0 else '' }}{{ '%.0f'|format(omzet_trend.verschil_percentage) }}%
             </span>
