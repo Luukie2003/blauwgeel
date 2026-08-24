@@ -289,7 +289,7 @@ def create_app(database_path=None):
             verwacht = session.get("csrf_token")
             verzonden = request.form.get("csrf_token", "")
             if not verwacht or not secrets.compare_digest(verzonden, verwacht):
-                abort(400, "Ongeldig of verlopen formulier -- herlaad de pagina en probeer opnieuw.")
+                abort(400, "Ongeldig of verlopen formulier. Herlaad de pagina en probeer opnieuw.")
 
     @app.before_request
     def vereis_login():
@@ -826,7 +826,7 @@ def bereken_kassa_telling_status(db):
     if laatste_ooit is not None and not laatste_ooit["afgesloten"]:
         return {
             "status": "oranje",
-            "tekst": "Concept -- nog niet afgesloten",
+            "tekst": "Concept, nog niet afgesloten",
             "laatste_kassatelling": laatste_ooit,
         }
 
@@ -1013,7 +1013,7 @@ def register_routes(app):
                 token = genereer_wachtwoord_token(db, gebruiker["id"], geldig_uren=24)
                 link = url_for("wachtwoord_instellen", token=token, _external=True)
                 mail.stuur_mail(
-                    "Wachtwoord opnieuw instellen -- Kantine Beheer",
+                    "Kantine Beheer: wachtwoord opnieuw instellen",
                     f"Hoi {gebruiker['naam']},\n\n"
                     f"Er is een verzoek gedaan om je wachtwoord opnieuw in te stellen.\n"
                     f"Gebruik onderstaande link om een nieuw wachtwoord te kiezen "
@@ -1155,7 +1155,7 @@ def register_routes(app):
             ).fetchone()["n"]
             if aantal_beheerders <= 1:
                 flash(
-                    "Dit is de laatste beheerder -- er moet altijd minstens één overblijven.",
+                    "Dit is de laatste beheerder. Er moet altijd minstens één overblijven.",
                     "error",
                 )
                 return redirect(url_for("accounts_lijst"))
@@ -1182,7 +1182,7 @@ def register_routes(app):
             "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder'"
         ).fetchone()["n"] <= 1:
             flash(
-                "Dit is de laatste beheerder -- er moet altijd minstens één overblijven.",
+                "Dit is de laatste beheerder. Er moet altijd minstens één overblijven.",
                 "error",
             )
         else:
@@ -1390,7 +1390,7 @@ def register_routes(app):
                 "success",
             )
         else:
-            flash("Herstellen is mislukt -- back-up niet gevonden.", "error")
+            flash("Herstellen is mislukt: back-up niet gevonden.", "error")
         return redirect(url_for("dashboard"))
 
     # ---------- Overzicht ----------
@@ -2075,7 +2075,7 @@ def register_routes(app):
                 geboekte_regels.append((p, aantal, aantal_besteleenheden))
 
             if not geboekte_regels:
-                flash("Geen aantallen ingevuld -- er is niets ingeboekt.", "error")
+                flash("Geen aantallen ingevuld: er is niets ingeboekt.", "error")
                 return redirect(url_for("levering_inboeken"))
 
             db.commit()
@@ -2102,7 +2102,7 @@ def register_routes(app):
                 if instelling and instelling["notificatie_email"]:
                     ontvangers = [instelling["notificatie_email"]]
 
-            onderwerp = f"Levering ingeboekt{f' -- {referentie}' if referentie else ''}"
+            onderwerp = f"Levering ingeboekt{f' ({referentie})' if referentie else ''}"
             tekst = (
                 f"Er is een levering ingeboekt in het voorraadsysteem.\n\n"
                 f"Datum: {format_datum(datum)}\n"
@@ -2219,7 +2219,7 @@ def register_routes(app):
 
             telling_id = verwerk_telling(db, waarden, naam, opmerking, datum, gebruiker_id)
             if telling_id is None:
-                flash("Geen aantallen ingevuld -- er is niets geteld.", "error")
+                flash("Geen aantallen ingevuld: er is niets geteld.", "error")
                 return redirect(url_for("tellen"))
 
             flash(
@@ -2317,7 +2317,7 @@ def register_routes(app):
                         if not geparsed:
                             for sleutel in LOOP_SESSIE_SLEUTELS:
                                 session.pop(sleutel, None)
-                            flash("Geen aantallen ingevuld -- er is niets geteld.", "error")
+                            flash("Geen aantallen ingevuld: er is niets geteld.", "error")
                             return redirect(url_for("tellen"))
 
                         session["loop_review"] = geparsed
@@ -2398,7 +2398,7 @@ def register_routes(app):
                 session.get("gebruiker_id"),
             )
             if telling_id is None:
-                flash("Geen aantallen ingevuld -- er is niets geteld.", "error")
+                flash("Geen aantallen ingevuld: er is niets geteld.", "error")
                 return redirect(url_for("tellen"))
             flash(
                 f"Telling #{telling_id} bevestigd: {len(waarden)} product(en) opgeslagen.",
@@ -2810,7 +2810,7 @@ def register_routes(app):
                     regels.append((p["id"], aantal))
 
             if not regels:
-                flash("Geen aantallen ingevuld -- er is niets klaargezet.", "error")
+                flash("Geen aantallen ingevuld: er is niets klaargezet.", "error")
                 return redirect(url_for("bestelling_nieuw"))
 
             cur = db.execute(
@@ -2827,8 +2827,8 @@ def register_routes(app):
                 )
             db.commit()
             flash(
-                f"Bestelling #{bestelling_id} klaargezet met {len(regels)} product(en) -- "
-                "boek 'm in zodra de levering binnenkomt.",
+                f"Bestelling #{bestelling_id} klaargezet met {len(regels)} product(en). "
+                "Boek 'm in zodra de levering binnenkomt.",
                 "success",
             )
             return redirect(url_for("bestellijst"))
@@ -3054,7 +3054,7 @@ def register_routes(app):
             # aangepast kan worden zonder de lopende stand te verstoren.
             db.commit()
             flash(
-                "Kassatelling opgeslagen als concept -- controleer de aantallen en sluit "
+                "Kassatelling opgeslagen als concept. Controleer de aantallen en sluit "
                 "'m af zodra je klaar bent.",
                 "success",
             )
@@ -3114,7 +3114,7 @@ def register_routes(app):
             (round(telling["verwacht_bedrag"] - telling["contante_omzet"], 2),),
         )
         db.commit()
-        flash("Kassatelling heropend -- je kunt 'm weer aanpassen.", "success")
+        flash("Kassatelling heropend. Je kunt 'm weer aanpassen.", "success")
         return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
 
     @app.route("/kassa/tellingen/<int:telling_id>/bewerken", methods=["GET", "POST"])

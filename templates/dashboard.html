@@ -71,7 +71,7 @@
 <div class="kaart">
     <h2>Komende thuiswedstrijden</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Uit de gekoppelde teamagenda's en de weersverwachting -- ververst
+        Uit de gekoppelde teamagenda's en de weersverwachting. Ververst
         automatisch elke nacht, puur ter indicatie, geen automatische
         correctie op de omzetverwachting verderop.
     </p>
@@ -99,7 +99,7 @@
                     </td>
                     <td>
                         {% if dag.wedstrijden|length > 1 %}
-                        <span class="badge badge-laag">{{ dag.wedstrijden|length }}x thuis -- kan drukker zijn</span>
+                        <span class="badge badge-laag">{{ dag.wedstrijden|length }}x thuis, kan drukker zijn</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -181,7 +181,7 @@
     </div>
     {% endif %}
     {% else %}
-    <p class="leeg">Nog geen tellingen verwerkt -- de trend verschijnt zodra er verkocht is.</p>
+    <p class="leeg">Nog geen tellingen verwerkt. De trend verschijnt zodra er verkocht is.</p>
     {% endif %}
 </div>
 

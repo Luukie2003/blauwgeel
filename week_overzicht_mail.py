@@ -42,8 +42,8 @@ def bouw_mailtekst(overzicht):
 
     regels_zonder_prijs = "\n".join(
         f"  - {p['naam']}"
-        + (" -- geen inkoopprijs" if p["inkoopprijs"] == 0 else "")
-        + (" -- geen verkoopprijs" if p["verkoopprijs"] == 0 else "")
+        + (", geen inkoopprijs" if p["inkoopprijs"] == 0 else "")
+        + (", geen verkoopprijs" if p["verkoopprijs"] == 0 else "")
         for p in overzicht["zonder_prijs"]
     ) or "  (alle actieve producten hebben een in- en verkoopprijs)"
 
