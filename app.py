@@ -798,6 +798,59 @@ def bereken_voorspelde_tekorten(db, dagen_vooruit=7):
     return resultaat
 
 
+def bereken_laatste_telling_status(db):
+    """Status van de laatste voorraadtelling voor het statusblokje op het
+    dashboard: groen binnen 7 dagen, rood daarboven (of als er nog nooit
+    geteld is)."""
+    laatste = db.execute("SELECT * FROM tellingen ORDER BY datum DESC, id DESC LIMIT 1").fetchone()
+    if laatste is None:
+        return {"laatste": None, "dagen_geleden": None, "ok": False}
+    dagen_geleden = (datetime.now() - datetime.strptime(laatste["datum"], "%Y-%m-%d %H:%M")).days
+    return {"laatste": laatste, "dagen_geleden": dagen_geleden, "ok": dagen_geleden <= 7}
+
+
+def bereken_kassa_telling_status(db):
+    """Status van het statusblokje 'Kassa tellen': moet altijd binnen 2
+    dagen na de laatste (afgelopen) thuiswedstrijd gebeurd zijn. Groen als
+    er een afgesloten kassatelling is sinds die wedstrijd, rood als de
+    deadline al verstreken is zonder telling, neutraal als het nog niet
+    zover is."""
+    vandaag = date.today()
+    laatste_wedstrijd = db.execute(
+        "SELECT datum FROM wedstrijden WHERE thuis = 1 AND datum <= ? ORDER BY datum DESC LIMIT 1",
+        (vandaag.isoformat(),),
+    ).fetchone()
+    laatste_kassatelling = db.execute(
+        "SELECT * FROM kassa_tellingen WHERE afgesloten = 1 ORDER BY datum DESC, id DESC LIMIT 1"
+    ).fetchone()
+
+    if laatste_wedstrijd is None:
+        return {
+            "status": "neutraal",
+            "tekst": "Nog geen wedstrijd bekend",
+            "laatste_kassatelling": laatste_kassatelling,
+        }
+
+    wedstrijd_datum = datetime.strptime(laatste_wedstrijd["datum"], "%Y-%m-%d").date()
+    deadline = wedstrijd_datum + timedelta(days=2)
+    geteld_sinds_wedstrijd = (
+        laatste_kassatelling is not None
+        and datetime.strptime(laatste_kassatelling["datum"], "%Y-%m-%d %H:%M").date()
+        >= wedstrijd_datum
+    )
+
+    if geteld_sinds_wedstrijd:
+        status, tekst = "groen", "Kassa geteld sinds laatste wedstrijd"
+    elif vandaag > deadline:
+        status = "rood"
+        tekst = f"Nog niet geteld sinds wedstrijd van {wedstrijd_datum.strftime('%d-%m')}"
+    else:
+        status = "neutraal"
+        tekst = f"Nog tijd tot {deadline.strftime('%d-%m')}"
+
+    return {"status": status, "tekst": tekst, "laatste_kassatelling": laatste_kassatelling}
+
+
 def register_routes(app):
     # ---------- Inloggen / accounts ----------
 
@@ -1372,6 +1425,8 @@ def register_routes(app):
             open_bestellingen=open_bestellingen,
             omzet_trend=omzet_trend,
             komende_thuiswedstrijden=komende_thuiswedstrijden,
+            laatste_telling_status=bereken_laatste_telling_status(db),
+            kassa_telling_status=bereken_kassa_telling_status(db),
         )
 
     def bereken_voorraadoverzicht(db):

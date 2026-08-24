@@ -3,6 +3,37 @@
 {% block inhoud %}
 <p class="subtitel">Actuele status van de kantinevoorraad.</p>
 
+<div class="statgrid statgrid-4">
+    <div class="stat">
+        <div class="label">Laatste telling</div>
+        {% if laatste_telling_status.laatste %}
+        <div style="font-size:1.1rem; font-weight:700; margin:0.3rem 0">{{ laatste_telling_status.laatste.datum|datum_nl }}</div>
+        <div class="tekst-zacht" style="margin-bottom:0.4rem">door {{ laatste_telling_status.laatste.naam or '—' }}</div>
+        <span class="badge {{ 'badge-ok' if laatste_telling_status.ok else 'badge-laag' }}">
+            {{ laatste_telling_status.dagen_geleden }} dag{{ '' if laatste_telling_status.dagen_geleden == 1 else 'en' }} geleden
+        </span>
+        {% else %}
+        <p class="tekst-zacht" style="margin:0.5rem 0 0">Nog nooit geteld</p>
+        {% endif %}
+    </div>
+    <div class="stat">
+        <div class="label">Kassa tellen</div>
+        {% if kassa_telling_status.laatste_kassatelling %}
+        <div style="font-size:1.1rem; font-weight:700; margin:0.3rem 0">{{ kassa_telling_status.laatste_kassatelling.datum|datum_nl }}</div>
+        <div class="tekst-zacht" style="margin-bottom:0.4rem">door {{ kassa_telling_status.laatste_kassatelling.naam or '—' }}</div>
+        {% endif %}
+        <span class="badge {{ 'badge-ok' if kassa_telling_status.status == 'groen' else ('badge-laag' if kassa_telling_status.status == 'rood' else 'badge-neutraal') }}">
+            {{ kassa_telling_status.tekst }}
+        </span>
+    </div>
+    <div class="stat" style="display:flex; align-items:center; justify-content:center; border-style:dashed">
+        <span class="tekst-zacht">Binnenkort</span>
+    </div>
+    <div class="stat" style="display:flex; align-items:center; justify-content:center; border-style:dashed">
+        <span class="tekst-zacht">Binnenkort</span>
+    </div>
+</div>
+
 <div class="statgrid">
     <div class="stat">
         <div class="getal">{{ producten|length }}</div>
