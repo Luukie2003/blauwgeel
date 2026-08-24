@@ -38,6 +38,7 @@
                     Kies een wachtwoord voor <strong>{{ gebruiker.naam }}</strong>.
                 </p>
                 <form method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="veld">
                         <label for="nieuw_wachtwoord">Nieuw wachtwoord</label>
                         <input type="password" id="nieuw_wachtwoord" name="nieuw_wachtwoord" autocomplete="new-password" autofocus required minlength="4">

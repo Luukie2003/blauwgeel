@@ -8,6 +8,7 @@
 
 <div class="kaart">
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="tabel-wrap">
             <table>
                 <thead>

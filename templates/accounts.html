@@ -23,6 +23,7 @@
                     <td>{{ g.naam }}{% if g.naam == huidige_gebruiker %} <span class="tekst-zacht">(jij)</span>{% endif %}</td>
                     <td>
                         <form method="post" action="{{ url_for('account_email_wijzigen', gebruiker_id=g.id) }}" class="inline" style="display:flex; gap:0.4rem">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="email" name="email" value="{{ g.email or '' }}" placeholder="nog geen e-mailadres" style="min-width:180px">
                             <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
                         </form>
@@ -38,12 +39,14 @@
                     <td>{{ g.aangemaakt_op|datum_nl }}</td>
                     <td class="tabel-acties">
                         <form method="post" action="{{ url_for('account_rol_wijzigen', gebruiker_id=g.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-rand btn-klein">
                                 {{ 'Maak vrijwilliger' if g.rol == 'beheerder' else 'Maak beheerder' }}
                             </button>
                         </form>
                         <form method="post" action="{{ url_for('account_verwijderen', gebruiker_id=g.id) }}"
                               onsubmit="return confirm('Account \'{{ g.naam }}\' verwijderen?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                         </form>
                     </td>
@@ -65,6 +68,7 @@
         persoon zelf een wachtwoord kan instellen.
     </p>
     <form method="post" action="{{ url_for('account_nieuw') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="formgrid">
             <div class="veld">
                 <label for="naam">Naam</label>

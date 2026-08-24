@@ -12,6 +12,7 @@
     <p class="tekst-zacht">Vul in hoeveel er daadwerkelijk is binnengekomen per product. Dit wordt bijgeteld bij de voorraad.</p>
     {% endif %}
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="tabel-wrap">
             <table>
                 <thead>
@@ -53,6 +54,7 @@
         <span class="tekst-zacht">Bestelling volledig verwijderen? Dit maakt ook de voorraadwijziging ervan ongedaan.</span>
         <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=bestelling.id) }}"
               onsubmit="return confirm('Bestelling #{{ bestelling.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan en kan niet ongedaan worden gemaakt.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-gevaar btn-klein">Bestelling verwijderen</button>
         </form>
     </div>

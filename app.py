@@ -7,6 +7,7 @@ from pathlib import Path
 from flask import (
     Flask,
     Response,
+    abort,
     flash,
     redirect,
     render_template,
@@ -221,6 +222,12 @@ def create_app():
     app = Flask(__name__)
     app.config["DATABASE"] = str(BASE_DIR / "voorraad.db")
     app.config["SECRET_KEY"] = get_secret_key()
+    # Secure staat hier standaard aan omdat de site altijd via https draait
+    # (PythonAnywhere dwingt dit af); voor lokaal testen over http wordt dit
+    # in het "__main__"-blok onderaan dit bestand weer uitgezet.
+    app.config["SESSION_COOKIE_SECURE"] = True
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
     register_db(app)
     init_db(app)
@@ -228,6 +235,21 @@ def create_app():
     app.jinja_env.filters["datum_nl"] = format_datum
     app.jinja_env.filters["besteleenheid_naam"] = besteleenheid_naam
     app.jinja_env.filters["naar_besteleenheden"] = naar_besteleenheden
+
+    @app.before_request
+    def csrf_beschermen():
+        """Simpele CSRF-bescherming zonder externe library: elk formulier op
+        de site bevat een verborgen csrf_token-veld (zie de context_processor
+        hieronder), dat moet overeenkomen met de waarde die bij het laden van
+        de pagina in de sessie is gezet. Geldt voor alle POSTs, ook naar
+        open endpoints (login e.d.) -- geen uitzonderingen, dat voorkomt dat
+        er per ongeluk een nieuw gat ontstaat als er later een open endpoint
+        bijkomt."""
+        if request.method == "POST":
+            verwacht = session.get("csrf_token")
+            verzonden = request.form.get("csrf_token", "")
+            if not verwacht or not secrets.compare_digest(verzonden, verwacht):
+                abort(400, "Ongeldig of verlopen formulier -- herlaad de pagina en probeer opnieuw.")
 
     @app.before_request
     def vereis_login():
@@ -271,6 +293,7 @@ def create_app():
             "huidige_gebruiker_rol": session.get("gebruiker_rol"),
             "css_versie": int((BASE_DIR / "static" / "style.css").stat().st_mtime),
             "site_banner_tekst": banner_tekst,
+            "csrf_token": csrf_token,
         }
 
     @app.route("/favicon.ico")
@@ -302,6 +325,16 @@ def now_str():
 
 def now_datetime_local():
     return datetime.now().strftime("%Y-%m-%dT%H:%M")
+
+
+def csrf_token():
+    """Geeft het CSRF-token voor de huidige sessie terug, en maakt er een aan
+    als die nog niet bestaat. Wordt zowel gebruikt om het verborgen
+    formuliersveld te vullen (via de context_processor) als om binnenkomende
+    POSTs tegen te controleren (csrf_beschermen)."""
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(32)
+    return session["csrf_token"]
 
 
 def genereer_wachtwoord_token(db, gebruiker_id, geldig_uren):
@@ -2535,4 +2568,8 @@ def register_routes(app):
 app = create_app()
 
 if __name__ == "__main__":
+    # Lokaal draait de app over gewone http, niet https -- met
+    # SESSION_COOKIE_SECURE aan zou de browser de sessie-cookie dan nooit
+    # terugsturen en zou inloggen niet werken.
+    app.config["SESSION_COOKIE_SECURE"] = False
     app.run(debug=True, host="0.0.0.0", port=5050)

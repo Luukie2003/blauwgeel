@@ -12,6 +12,7 @@
     <h2>Voorgesteld om te bestellen</h2>
     {% if suggesties %}
     <form method="post" action="{{ url_for('bestelling_aanmaken') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="tabel-wrap">
             <table>
                 <thead>
@@ -64,6 +65,7 @@
                 <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-klein">Inboeken</a>
                 <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
                       onsubmit="return confirm('Bestelling #{{ b.id }} verwijderen?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                 </form>
             </div>
@@ -95,6 +97,7 @@
                 <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
                 <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
                       onsubmit="return confirm('Bestelling #{{ b.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                 </form>
             </div>

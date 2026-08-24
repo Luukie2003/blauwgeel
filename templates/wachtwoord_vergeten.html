@@ -39,6 +39,7 @@
                     bekend e-mailadres, dan sturen we een link om een nieuw wachtwoord te kiezen.
                 </p>
                 <form method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="veld">
                         <label for="naam_of_email">Gebruikersnaam of e-mailadres</label>
                         <input type="text" id="naam_of_email" name="naam_of_email" autocomplete="username" autofocus required>

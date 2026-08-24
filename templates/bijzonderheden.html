@@ -8,6 +8,7 @@
 
 <div class="kaart">
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="veld">
             <label for="tekst">Nieuwe mededeling</label>
             <textarea id="tekst" name="tekst" rows="3" required
@@ -26,6 +27,7 @@
             <span>{{ m.naam or 'Onbekend' }} &middot; {{ m.datum|datum_nl }}</span>
             <form method="post" action="{{ url_for('mededeling_verwijderen', mededeling_id=m.id) }}"
                   onsubmit="return confirm('Deze mededeling verwijderen?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn-tekstlink">Verwijderen</button>
             </form>
         </div>

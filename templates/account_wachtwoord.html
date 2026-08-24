@@ -6,6 +6,7 @@
 
 <div class="kaart" style="max-width:420px">
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="veld">
             <label for="huidig_wachtwoord">Huidig wachtwoord</label>
             <input type="password" id="huidig_wachtwoord" name="huidig_wachtwoord" autocomplete="current-password" required>

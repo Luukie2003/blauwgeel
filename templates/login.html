@@ -35,6 +35,7 @@
                     {% endif %}
                 {% endwith %}
                 <form method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="veld">
                         <label for="naam">Gebruikersnaam</label>
                         <input type="text" id="naam" name="naam" autocomplete="username" autofocus required>

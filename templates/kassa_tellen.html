@@ -23,6 +23,7 @@
 
 <div class="kaart">
     <form method="post" id="kassa-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <fieldset class="groupbox">
             <legend>Contante omzet sinds vorige telling</legend>
             <div class="veld" style="max-width:260px">

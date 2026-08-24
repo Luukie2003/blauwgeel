@@ -22,6 +22,7 @@
     {% endif %}
 
     <form method="post" id="loop-formulier">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="number" name="geteld" id="loop-invoer" inputmode="numeric" min="0"
                class="loop-invoer" placeholder="Aantal {{ product.eenheid }}"
                value="{{ huidige_waarde }}" autofocus>
@@ -55,6 +56,7 @@
 
     <form method="post" class="loop-stop"
           onsubmit="return confirm('Looplijst afbreken? Wat je tot nu toe hebt ingevuld wordt niet opgeslagen.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="actie" value="stoppen">
         <button type="submit" class="btn btn-gevaar btn-klein">Stoppen zonder opslaan</button>
     </form>

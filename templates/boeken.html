@@ -15,6 +15,7 @@
 
 <div class="kaart">
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="toggle-type">
             <label><input type="radio" name="type" value="in" checked><span>In (levering / aanvulling)</span></label>
             <label><input type="radio" name="type" value="uit"><span>Uit (verkocht / verbruikt)</span></label>

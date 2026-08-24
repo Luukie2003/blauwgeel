@@ -140,6 +140,10 @@ def get_db():
         g.db = sqlite3.connect(current_app.config["DATABASE"])
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA foreign_keys = ON")
+        # WAL i.p.v. de standaard journal-mode: lezers blokkeren schrijvers
+        # niet meer (en andersom minder snel), belangrijk omdat meerdere
+        # vrijwilligers tegelijk kunnen boeken/tellen.
+        g.db.execute("PRAGMA journal_mode = WAL")
         # Always (re)apply the schema on a fresh connection. This is cheap
         # (CREATE ... IF NOT EXISTS) and makes the app self-healing if the
         # database file is ever replaced or wiped out from under a running

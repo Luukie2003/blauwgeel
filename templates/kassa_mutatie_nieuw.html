@@ -16,6 +16,7 @@
 
 <div class="kaart" style="max-width:480px">
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="veld">
             <label for="type">Type</label>
             <select id="type" name="type" required>

@@ -13,6 +13,7 @@
 
 <div class="kaart">
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <fieldset class="groupbox">
             <legend>Levering</legend>
             <div class="tabel-wrap">
@@ -74,6 +75,7 @@
             meteen een aantal bij invullen.
         </p>
         <form method="post" action="{{ url_for('product_snel_toevoegen') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="terug_naar" value="levering_inboeken">
             <div class="formgrid">
                 <div class="veld">
