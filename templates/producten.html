@@ -35,8 +35,8 @@
         <table id="producten-tabel">
             <thead>
                 <tr>
-                    <th>Code</th><th>Naam</th><th>Categorie</th><th>Subcategorie</th><th>Voorraad</th><th>Minimum</th>
-                    <th>Bestel­hoeveelheid</th><th>Inkoop</th><th>Verkoop</th><th>Status</th><th></th>
+                    <th>Code</th><th>Naam</th><th>Status</th><th>Categorie</th><th>Subcategorie</th><th>Voorraad</th><th>Minimum</th>
+                    <th>Bestel­hoeveelheid</th><th>Inkoop</th><th>Verkoop</th><th></th>
                 </tr>
             </thead>
             <tbody>
@@ -44,6 +44,19 @@
                 <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie ~ ' ' ~ (p.subcategorie or ''))|lower }}" data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}">
                     <td>{{ p.artikelcode or '—' }}</td>
                     <td>{{ p.naam }}</td>
+                    <td>
+                        {% if huidige_gebruiker_rol == 'beheerder' %}
+                        <form method="post" action="{{ url_for('product_actief_wisselen', product_id=p.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <label class="schuif" title="{{ 'Actief -- klik om uit te zetten' if p.actief else 'Inactief -- klik om aan te zetten' }}">
+                                <input type="checkbox" {{ 'checked' if p.actief else '' }} onchange="this.form.submit()">
+                                <span class="schuif-balk"></span>
+                            </label>
+                        </form>
+                        {% else %}
+                        {% if p.actief %}<span class="badge badge-ok">Actief</span>{% else %}<span class="badge badge-neutraal">Inactief</span>{% endif %}
+                        {% endif %}
+                    </td>
                     <td>{{ p.categorie }}</td>
                     <td>{{ p.subcategorie or '—' }}</td>
                     <td>
@@ -67,19 +80,6 @@
                         <span class="badge badge-laag" title="Nog geen verkoopprijs ingevuld">€ 0.00 ontbreekt</span>
                         {% else %}
                         {{ "€ %.2f"|format(p.verkoopprijs) }}
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if huidige_gebruiker_rol == 'beheerder' %}
-                        <form method="post" action="{{ url_for('product_actief_wisselen', product_id=p.id) }}" class="inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <label class="schuif" title="{{ 'Actief -- klik om uit te zetten' if p.actief else 'Inactief -- klik om aan te zetten' }}">
-                                <input type="checkbox" {{ 'checked' if p.actief else '' }} onchange="this.form.submit()">
-                                <span class="schuif-balk"></span>
-                            </label>
-                        </form>
-                        {% else %}
-                        {% if p.actief %}<span class="badge badge-ok">Actief</span>{% else %}<span class="badge badge-neutraal">Inactief</span>{% endif %}
                         {% endif %}
                     </td>
                     <td class="tabel-acties">
