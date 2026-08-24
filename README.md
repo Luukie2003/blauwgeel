@@ -48,6 +48,18 @@ De database (`voorraad.db`) wordt automatisch aangemaakt bij de eerste start,
 inclusief een paar voorbeeldproducten om mee te beginnen. Pas die gerust aan
 of verwijder ze via de Producten-pagina.
 
+## Tests draaien
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+De tests draaien tegen een tijdelijke, lege database per test (nooit tegen
+`voorraad.db`) en dekken de kernberekeningen: kassa-tellingen (concept →
+afsluiten → heropenen), voorraadmutaties bij het tellen, inloggen/CSRF en de
+brute-force-blokkade.
+
 ## Straks online hosten
 
 Omdat dit een normale Flask-app met een SQLite-bestand is, kun je hem op veel

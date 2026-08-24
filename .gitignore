@@ -1,8 +1,11 @@
 venv/
 voorraad.db
+voorraad.db-shm
+voorraad.db-wal
 secret_key.txt
 backups/
 email_instellingen.py
 __pycache__/
 *.pyc
 .DS_Store
+.pytest_cache/

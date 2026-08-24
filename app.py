@@ -231,9 +231,9 @@ def get_secret_key():
     return key
 
 
-def create_app():
+def create_app(database_path=None):
     app = Flask(__name__)
-    app.config["DATABASE"] = str(BASE_DIR / "voorraad.db")
+    app.config["DATABASE"] = database_path or str(BASE_DIR / "voorraad.db")
     app.config["SECRET_KEY"] = get_secret_key()
     # Secure staat hier standaard aan omdat de site altijd via https draait
     # (PythonAnywhere dwingt dit af); voor lokaal testen over http wordt dit
