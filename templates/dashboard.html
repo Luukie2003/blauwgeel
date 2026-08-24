@@ -46,6 +46,40 @@
     {% endif %}
 </div>
 
+{% if komende_thuiswedstrijden %}
+<div class="kaart">
+    <h2>Komende thuiswedstrijden</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Uit de gekoppelde teamagenda's -- puur ter indicatie, geen automatische
+        correctie op de omzetverwachting hieronder.
+    </p>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Teams thuis</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for dag in komende_thuiswedstrijden %}
+                <tr>
+                    <td>{{ dag.datum_weergave }}</td>
+                    <td>
+                        {% for w in dag.wedstrijden %}
+                        {{ w.omschrijving }}{% if not loop.last %}<br>{% endif %}
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% if dag.wedstrijden|length > 1 %}
+                        <span class="badge badge-laag">{{ dag.wedstrijden|length }}x thuis -- kan drukker zijn</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 <div class="kaart">
     <div class="actiebalk">
         <h2 style="margin:0">Omzettrend</h2>

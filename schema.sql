@@ -150,6 +150,15 @@ CREATE TABLE IF NOT EXISTS kassa_mutaties (
     opmerking TEXT
 );
 
+CREATE TABLE IF NOT EXISTS wedstrijden (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team TEXT NOT NULL,
+    datum TEXT NOT NULL,
+    omschrijving TEXT NOT NULL,
+    thuis INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_wedstrijden_datum ON wedstrijden(datum);
 CREATE INDEX IF NOT EXISTS idx_mutaties_product ON mutaties(product_id);
 CREATE INDEX IF NOT EXISTS idx_mutaties_datum ON mutaties(datum);
 CREATE INDEX IF NOT EXISTS idx_bestelregels_bestelling ON bestelregels(bestelling_id);

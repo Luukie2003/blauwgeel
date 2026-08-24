@@ -3,7 +3,7 @@ import hashlib
 import io
 import re
 import secrets
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from flask import (
@@ -668,6 +668,34 @@ def bereken_kassa_stand(db):
     }
 
 
+def bereken_komende_thuiswedstrijden(db, dagen=14):
+    """Groepeert de komende thuiswedstrijden per datum -- gevuld door
+    agenda.py (de gekoppelde teamagenda's). Puur informatief: laat zien welke
+    dagen er meerdere teams tegelijk thuis spelen, als indicatie dat het dan
+    drukker kan worden dan gemiddeld. Rekent nog niets automatisch door in de
+    omzetverwachting -- daarvoor is eerst wat geschiedenis van gekoppelde
+    agenda- en omzetgegevens nodig."""
+    vandaag = date.today().isoformat()
+    grens = (date.today() + timedelta(days=dagen)).isoformat()
+    rijen = db.execute(
+        """SELECT datum, team, omschrijving FROM wedstrijden
+           WHERE thuis = 1 AND datum >= ? AND datum <= ?
+           ORDER BY datum, team""",
+        (vandaag, grens),
+    ).fetchall()
+    per_datum = {}
+    for r in rijen:
+        per_datum.setdefault(r["datum"], []).append(r)
+    return [
+        {
+            "datum": datum,
+            "datum_weergave": datetime.strptime(datum, "%Y-%m-%d").strftime("%d-%m-%Y"),
+            "wedstrijden": lijst,
+        }
+        for datum, lijst in sorted(per_datum.items())
+    ]
+
+
 def register_routes(app):
     # ---------- Inloggen / accounts ----------
 
@@ -1174,6 +1202,7 @@ def register_routes(app):
             "SELECT COUNT(*) AS n FROM bestellingen WHERE status = 'besteld'"
         ).fetchone()["n"]
         omzet_trend = bereken_omzet_trend(db)
+        komende_thuiswedstrijden = bereken_komende_thuiswedstrijden(db)
         return render_template(
             "dashboard.html",
             producten=producten,
@@ -1181,6 +1210,7 @@ def register_routes(app):
             recente_mutaties=recente_mutaties,
             open_bestellingen=open_bestellingen,
             omzet_trend=omzet_trend,
+            komende_thuiswedstrijden=komende_thuiswedstrijden,
         )
 
     def bereken_voorraadoverzicht(db):
