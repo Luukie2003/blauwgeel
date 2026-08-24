@@ -1279,10 +1279,25 @@ def register_routes(app):
         db = get_db()
         feeds = db.execute("SELECT * FROM agenda_feeds ORDER BY id").fetchall()
         aantal_wedstrijden = db.execute(
-            "SELECT COUNT(*) AS n FROM wedstrijden"
+            "SELECT COUNT(*) AS n FROM wedstrijden WHERE datum >= ?", (date.today().isoformat(),)
         ).fetchone()["n"]
+        wedstrijd_geschiedenis = [
+            {
+                "datum_weergave": datetime.strptime(w["datum"], "%Y-%m-%d").strftime("%d-%m-%Y"),
+                "team": w["team"],
+                "omschrijving": w["omschrijving"],
+                "thuis": w["thuis"],
+            }
+            for w in db.execute(
+                "SELECT * FROM wedstrijden WHERE datum < ? ORDER BY datum DESC, team LIMIT 25",
+                (date.today().isoformat(),),
+            ).fetchall()
+        ]
         return render_template(
-            "club_instellingen.html", feeds=feeds, aantal_wedstrijden=aantal_wedstrijden
+            "club_instellingen.html",
+            feeds=feeds,
+            aantal_wedstrijden=aantal_wedstrijden,
+            wedstrijd_geschiedenis=wedstrijd_geschiedenis,
         )
 
     @app.route("/club-instellingen/toevoegen", methods=["POST"])
@@ -1311,7 +1326,7 @@ def register_routes(app):
         if aantal is None:
             flash("Geen agenda-links ingesteld om te verversen.", "error")
         else:
-            flash(f"Agenda's ververst: {aantal} komende wedstrijden bijgewerkt.", "success")
+            flash(f"Agenda's ververst: {aantal} nieuwe wedstrijden toegevoegd.", "success")
         return redirect(url_for("club_instellingen"))
 
     @app.route("/club-instellingen/controleren", methods=["POST"])

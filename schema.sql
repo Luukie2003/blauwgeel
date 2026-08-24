@@ -184,6 +184,11 @@ CREATE TABLE IF NOT EXISTS prijs_geschiedenis (
 
 CREATE INDEX IF NOT EXISTS idx_prijs_geschiedenis_product ON prijs_geschiedenis(product_id);
 CREATE INDEX IF NOT EXISTS idx_wedstrijden_datum ON wedstrijden(datum);
+-- Voorkomt dubbele rijen als dezelfde wedstrijd bij een volgende ververs-
+-- ronde opnieuw uit de feed komt (agenda.py gebruikt hierdoor veilig
+-- INSERT OR IGNORE, zodat gespeelde wedstrijden als geschiedenis blijven
+-- staan in plaats van verwijderd te worden).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_wedstrijden_uniek ON wedstrijden(team, datum, omschrijving);
 CREATE INDEX IF NOT EXISTS idx_mutaties_product ON mutaties(product_id);
 CREATE INDEX IF NOT EXISTS idx_mutaties_datum ON mutaties(datum);
 CREATE INDEX IF NOT EXISTS idx_bestelregels_bestelling ON bestelregels(bestelling_id);

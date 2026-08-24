@@ -52,6 +52,35 @@
     {% endif %}
 </div>
 
+{% if wedstrijd_geschiedenis %}
+<div class="kaart">
+    <h2>Gespeelde wedstrijden</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Blijft bewaard nadat een wedstrijd is geweest, laatste 25.
+    </p>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Team</th><th>Wedstrijd</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for w in wedstrijd_geschiedenis %}
+                <tr>
+                    <td>{{ w.datum_weergave }}</td>
+                    <td>{{ w.team }}</td>
+                    <td>{{ w.omschrijving }}</td>
+                    <td>
+                        {% if w.thuis %}<span class="badge badge-ok">Thuis</span>
+                        {% else %}<span class="badge badge-neutraal">Uit</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 <div class="kaart" style="max-width:560px">
     <h2>Agenda-link toevoegen</h2>
     <form method="post" action="{{ url_for('club_agenda_toevoegen') }}">

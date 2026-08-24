@@ -15,7 +15,7 @@ virtualenv nodig)."""
 
 import re
 import sqlite3
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
 from urllib.request import urlopen
 
@@ -87,16 +87,20 @@ def controleer_feeds(urls):
     return resultaten
 
 
-def ververs_wedstrijden(db_pad=None, vandaag=None):
-    """Haalt alle ingestelde feeds op en vervangt de inhoud van de
-    wedstrijden-tabel door de wedstrijden vanaf vandaag. Werkt de teamnaam
-    per feed bij zodra die bekend is. Geeft het aantal weggeschreven
-    wedstrijden terug, of None als er geen feeds zijn ingesteld."""
+def ververs_wedstrijden(db_pad=None):
+    """Haalt alle ingestelde feeds op en voegt nieuwe wedstrijden toe aan de
+    database -- zowel komende als al gespeelde, want gespeelde wedstrijden
+    blijven bewust bewaard als geschiedenis in plaats van verwijderd te
+    worden. INSERT OR IGNORE (samen met de unieke index op
+    team+datum+omschrijving) zorgt dat een wedstrijd die al bekend was niet
+    dubbel wordt weggeschreven bij een volgende ververs-ronde. Werkt de
+    teamnaam per feed bij zodra die bekend is. Geeft het aantal nieuw
+    toegevoegde wedstrijden terug, of None als er geen feeds zijn
+    ingesteld."""
     db_pad = db_pad or DB_PAD
     if not Path(db_pad).exists():
         print("[agenda] Database bestaat nog niet -- niets te doen.")
         return None
-    vandaag = vandaag or date.today()
 
     conn = sqlite3.connect(db_pad)
     conn.row_factory = sqlite3.Row
@@ -106,7 +110,6 @@ def ververs_wedstrijden(db_pad=None, vandaag=None):
         print("[agenda] Geen agenda-links ingesteld -- niets te doen.")
         return None
 
-    conn.execute("DELETE FROM wedstrijden")
     aantal = 0
     for feed in feeds:
         try:
@@ -116,17 +119,17 @@ def ververs_wedstrijden(db_pad=None, vandaag=None):
             continue
         conn.execute("UPDATE agenda_feeds SET team = ? WHERE id = ?", (team, feed["id"]))
         for wedstrijd in wedstrijden:
-            if wedstrijd["datum"] < vandaag.isoformat():
-                continue
-            conn.execute(
-                "INSERT INTO wedstrijden (team, datum, omschrijving, thuis) VALUES (?, ?, ?, ?)",
+            cursor = conn.execute(
+                """INSERT OR IGNORE INTO wedstrijden (team, datum, omschrijving, thuis)
+                   VALUES (?, ?, ?, ?)""",
                 (team, wedstrijd["datum"], wedstrijd["omschrijving"], int(wedstrijd["thuis"])),
             )
-            aantal += 1
+            if cursor.rowcount:
+                aantal += 1
 
     conn.commit()
     conn.close()
-    print(f"[agenda] {aantal} komende wedstrijden bijgewerkt")
+    print(f"[agenda] {aantal} nieuwe wedstrijden toegevoegd")
     return aantal
 
 
