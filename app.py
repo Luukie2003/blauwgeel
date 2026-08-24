@@ -1621,6 +1621,23 @@ def register_routes(app):
             return redirect(url_for("producten_lijst"))
 
         if request.method == "POST":
+            nieuwe_verkoopprijs = float(request.form["verkoopprijs"] or 0)
+            nieuwe_inkoopprijs = float(request.form.get("inkoopprijs") or 0)
+            datum = now_str()
+            naam = session.get("gebruiker_naam")
+            gebruiker_id = session.get("gebruiker_id")
+            for veld, oude_prijs, nieuwe_prijs in (
+                ("verkoopprijs", product["verkoopprijs"], nieuwe_verkoopprijs),
+                ("inkoopprijs", product["inkoopprijs"], nieuwe_inkoopprijs),
+            ):
+                if abs(oude_prijs - nieuwe_prijs) > 0.001:
+                    db.execute(
+                        """INSERT INTO prijs_geschiedenis
+                           (product_id, veld, oude_prijs, nieuwe_prijs, datum, naam, gebruiker_id)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                        (product_id, veld, oude_prijs, nieuwe_prijs, datum, naam, gebruiker_id),
+                    )
+
             db.execute(
                 """UPDATE producten
                    SET artikelcode = ?, naam = ?, categorie = ?, subcategorie = ?, eenheid = ?,
@@ -1637,8 +1654,8 @@ def register_routes(app):
                     int(request.form["voorraad"] or 0),
                     int(request.form["min_voorraad"] or 0),
                     int(request.form["bestel_hoeveelheid"] or 0),
-                    float(request.form["verkoopprijs"] or 0),
-                    float(request.form.get("inkoopprijs") or 0),
+                    nieuwe_verkoopprijs,
+                    nieuwe_inkoopprijs,
                     1 if request.form.get("actief") else 0,
                     request.form.get("besteleenheid", "").strip() or None,
                     int(request.form.get("besteleenheid_factor") or 1),
@@ -1655,11 +1672,17 @@ def register_routes(app):
         subcategorieen = db.execute(
             "SELECT categorie, naam FROM subcategorieen ORDER BY categorie, naam"
         ).fetchall()
+        prijs_geschiedenis = db.execute(
+            """SELECT * FROM prijs_geschiedenis WHERE product_id = ?
+               ORDER BY datum DESC, id DESC""",
+            (product_id,),
+        ).fetchall()
         return render_template(
             "product_form.html",
             product=product,
             categorieen=categorieen,
             subcategorieen=subcategorieen,
+            prijs_geschiedenis=prijs_geschiedenis,
         )
 
     @app.route("/producten/<int:product_id>/verwijderen", methods=["POST"])

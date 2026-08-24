@@ -115,6 +115,30 @@
     </form>
 </div>
 
+{% if product and prijs_geschiedenis %}
+<div class="kaart">
+    <h2>Prijsgeschiedenis</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Prijs</th><th>Van</th><th>Naar</th><th>Door</th></tr>
+            </thead>
+            <tbody>
+                {% for r in prijs_geschiedenis %}
+                <tr>
+                    <td>{{ r.datum|datum_nl }}</td>
+                    <td>{{ 'Verkoopprijs' if r.veld == 'verkoopprijs' else 'Inkoopprijs' }}</td>
+                    <td>€ {{ '%.2f'|format(r.oude_prijs) }}</td>
+                    <td>€ {{ '%.2f'|format(r.nieuwe_prijs) }}</td>
+                    <td>{{ r.naam or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 <script>
 (function () {
     var catVeld = document.getElementById('categorie');

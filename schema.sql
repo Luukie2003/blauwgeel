@@ -171,6 +171,18 @@ CREATE TABLE IF NOT EXISTS weer_voorspelling (
     weercode INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS prijs_geschiedenis (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL REFERENCES producten(id) ON DELETE CASCADE,
+    veld TEXT NOT NULL CHECK (veld IN ('verkoopprijs', 'inkoopprijs')),
+    oude_prijs REAL NOT NULL,
+    nieuwe_prijs REAL NOT NULL,
+    datum TEXT NOT NULL,
+    naam TEXT,
+    gebruiker_id INTEGER REFERENCES gebruikers(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_prijs_geschiedenis_product ON prijs_geschiedenis(product_id);
 CREATE INDEX IF NOT EXISTS idx_wedstrijden_datum ON wedstrijden(datum);
 CREATE INDEX IF NOT EXISTS idx_mutaties_product ON mutaties(product_id);
 CREATE INDEX IF NOT EXISTS idx_mutaties_datum ON mutaties(datum);
