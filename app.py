@@ -1,4 +1,6 @@
+import csv
 import hashlib
+import io
 import re
 import secrets
 from datetime import datetime, timedelta
@@ -358,6 +360,22 @@ def create_app(database_path=None):
 
     register_routes(app)
     return app
+
+
+def csv_response(bestandsnaam, kop, rijen):
+    """Bouwt een CSV-downloadresponse. kop: lijst kolomnamen, rijen: lijst
+    van lijsten/tuples in dezelfde volgorde. Puntkomma als scheidingsteken
+    en een UTF-8 BOM vooraan, want dat is wat Excel met een Nederlandse
+    landinstelling verwacht om het bestand meteen goed te openen."""
+    buffer = io.StringIO()
+    schrijver = csv.writer(buffer, delimiter=";")
+    schrijver.writerow(kop)
+    schrijver.writerows(rijen)
+    return Response(
+        "﻿" + buffer.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={bestandsnaam}"},
+    )
 
 
 def format_datum(value):
@@ -1246,6 +1264,34 @@ def register_routes(app):
             pdf_bytes,
             mimetype="application/pdf",
             headers={"Content-Disposition": "attachment; filename=voorraadoverzicht.pdf"},
+        )
+
+    @app.route("/voorraadoverzicht/csv")
+    def voorraadoverzicht_csv_route():
+        db = get_db()
+        producten = db.execute(
+            "SELECT * FROM producten ORDER BY categorie, subcategorie, naam"
+        ).fetchall()
+        rijen = [
+            (
+                p["artikelcode"] or "",
+                p["naam"],
+                p["categorie"],
+                p["subcategorie"] or "",
+                p["voorraad"],
+                p["eenheid"],
+                p["min_voorraad"],
+                f"{p['verkoopprijs']:.2f}".replace(".", ","),
+                f"{p['voorraad'] * p['verkoopprijs']:.2f}".replace(".", ","),
+                "Ja" if p["actief"] else "Nee",
+            )
+            for p in producten
+        ]
+        return csv_response(
+            "voorraadoverzicht.csv",
+            ["Artikelcode", "Naam", "Categorie", "Subcategorie", "Voorraad", "Eenheid",
+             "Minimum", "Verkoopprijs", "Waarde", "Actief"],
+            rijen,
         )
 
     # ---------- Producten ----------
@@ -2265,6 +2311,43 @@ def register_routes(app):
             headers={
                 "Content-Disposition": f"attachment; filename=verkooprapport-{van}-tot-{tot}.pdf"
             },
+        )
+
+    @app.route("/verkooprapport/csv")
+    def verkooprapport_csv_route():
+        van = request.args.get("van", "").strip() or (
+            datetime.now() - timedelta(days=7)
+        ).strftime("%Y-%m-%d")
+        tot = request.args.get("tot", "").strip() or datetime.now().strftime("%Y-%m-%d")
+
+        db = get_db()
+        regels = db.execute(
+            """SELECT p.naam AS product_naam, p.categorie, p.eenheid,
+                      SUM(tr.verkocht) AS verkocht, SUM(tr.correctie) AS correctie,
+                      SUM(tr.verkocht * tr.verkoopprijs) AS omzet
+               FROM telling_regels tr
+               JOIN tellingen t ON t.id = tr.telling_id
+               JOIN producten p ON p.id = tr.product_id
+               WHERE t.datum >= ? AND t.datum <= ?
+               GROUP BY tr.product_id
+               ORDER BY p.categorie, p.naam""",
+            (f"{van} 00:00", f"{tot} 23:59"),
+        ).fetchall()
+        rijen = [
+            (
+                r["product_naam"],
+                r["categorie"],
+                r["verkocht"],
+                r["eenheid"],
+                f"{r['omzet']:.2f}".replace(".", ","),
+            )
+            for r in regels
+            if r["verkocht"] > 0
+        ]
+        return csv_response(
+            f"verkooprapport-{van}-tot-{tot}.csv",
+            ["Product", "Categorie", "Verkocht", "Eenheid", "Omzet"],
+            rijen,
         )
 
     # ---------- Bestellijst ----------

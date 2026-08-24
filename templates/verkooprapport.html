@@ -21,6 +21,8 @@
         </div>
         <div style="display:flex; gap:0.5rem">
             <button type="submit" class="btn btn-rand">Periode tonen</button>
+            <a href="{{ url_for('verkooprapport_csv_route', van=van, tot=tot) }}"
+               class="btn btn-rand">Excel (CSV)</a>
             <a href="{{ url_for('verkooprapport_pdf_route', van=van, tot=tot) }}"
                class="btn btn-geel" target="_blank">Downloaden als PDF</a>
         </div>

@@ -3,7 +3,10 @@
 {% block inhoud %}
 <div class="actiebalk">
     <p class="subtitel" style="margin:0">Volledige stand van zaken van de kantinevoorraad.</p>
-    <a href="{{ url_for('voorraadoverzicht_pdf_route') }}" class="btn btn-geel">Uitgebreide PDF</a>
+    <div style="display:flex; gap:0.5rem">
+        <a href="{{ url_for('voorraadoverzicht_csv_route') }}" class="btn btn-rand">Excel (CSV)</a>
+        <a href="{{ url_for('voorraadoverzicht_pdf_route') }}" class="btn btn-geel">Uitgebreide PDF</a>
+    </div>
 </div>
 
 <div class="statgrid">
