@@ -130,6 +130,13 @@ CREATE TABLE IF NOT EXISTS kassa_tellingen (
     opmerking TEXT
 );
 
+CREATE TABLE IF NOT EXISTS login_pogingen (
+    naam TEXT PRIMARY KEY,
+    mislukte_pogingen INTEGER NOT NULL DEFAULT 0,
+    laatste_poging TEXT,
+    geblokkeerd_tot TEXT
+);
+
 CREATE TABLE IF NOT EXISTS kassa_mutaties (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL CHECK (type IN ('afdracht', 'toevoeging')),

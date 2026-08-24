@@ -88,6 +88,12 @@ WIJZIGINGEN = [
 
 OPEN_ENDPOINTS = {"login", "static", "favicon_ico", "wachtwoord_vergeten", "wachtwoord_instellen"}
 
+# Brute-force-bescherming op het inlogscherm: na dit aantal mislukte
+# pogingen voor dezelfde gebruikersnaam wordt die naam tijdelijk geblokkeerd,
+# ongeacht of het wachtwoord daarna wel klopt.
+LOGIN_MAX_POGINGEN = 5
+LOGIN_LOCKOUT_MINUTEN = 15
+
 # Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers
 # komen hier niet in -- zij kunnen de dagelijkse operatie doen (tellen,
 # boeken, bestellijst, bijzonderheden) maar niet het assortiment, accounts,
@@ -572,10 +578,33 @@ def register_routes(app):
             naam = request.form.get("naam", "").strip()
             wachtwoord = request.form.get("wachtwoord", "")
             db = get_db()
+
+            poging = db.execute(
+                "SELECT * FROM login_pogingen WHERE naam = ?", (naam,)
+            ).fetchone()
+            mislukte_pogingen = poging["mislukte_pogingen"] if poging else 0
+            if poging and poging["geblokkeerd_tot"]:
+                geblokkeerd_tot = datetime.strptime(
+                    poging["geblokkeerd_tot"], "%Y-%m-%d %H:%M"
+                )
+                if geblokkeerd_tot > datetime.now():
+                    resterend = max(
+                        1, round((geblokkeerd_tot - datetime.now()).total_seconds() / 60)
+                    )
+                    flash(
+                        f"Te veel mislukte inlogpogingen. Probeer het over ongeveer "
+                        f"{resterend} minuut(en) opnieuw.",
+                        "error",
+                    )
+                    return render_template("login.html")
+                # Blokkade is verlopen -- weer met een schone lei beginnen.
+                mislukte_pogingen = 0
+
             gebruiker = db.execute(
                 "SELECT * FROM gebruikers WHERE naam = ?", (naam,)
             ).fetchone()
             if gebruiker and check_password_hash(gebruiker["wachtwoord_hash"], wachtwoord):
+                db.execute("DELETE FROM login_pogingen WHERE naam = ?", (naam,))
                 session.clear()
                 session["gebruiker_id"] = gebruiker["id"]
                 session["gebruiker_naam"] = gebruiker["naam"]
@@ -587,7 +616,37 @@ def register_routes(app):
                 db.commit()
                 volgende = request.args.get("next") or url_for("dashboard")
                 return redirect(volgende)
-            flash("Onjuiste naam of wachtwoord.", "error")
+
+            nieuw_aantal = mislukte_pogingen + 1
+            nieuwe_blokkade = None
+            if nieuw_aantal >= LOGIN_MAX_POGINGEN:
+                nieuwe_blokkade = (
+                    datetime.now() + timedelta(minutes=LOGIN_LOCKOUT_MINUTEN)
+                ).strftime("%Y-%m-%d %H:%M")
+            if poging:
+                db.execute(
+                    """UPDATE login_pogingen
+                       SET mislukte_pogingen = ?, laatste_poging = ?, geblokkeerd_tot = ?
+                       WHERE naam = ?""",
+                    (nieuw_aantal, now_str(), nieuwe_blokkade, naam),
+                )
+            else:
+                db.execute(
+                    """INSERT INTO login_pogingen
+                       (naam, mislukte_pogingen, laatste_poging, geblokkeerd_tot)
+                       VALUES (?, ?, ?, ?)""",
+                    (naam, nieuw_aantal, now_str(), nieuwe_blokkade),
+                )
+            db.commit()
+
+            if nieuwe_blokkade:
+                flash(
+                    f"Te veel mislukte inlogpogingen. Probeer het over ongeveer "
+                    f"{LOGIN_LOCKOUT_MINUTEN} minuten opnieuw.",
+                    "error",
+                )
+            else:
+                flash("Onjuiste naam of wachtwoord.", "error")
 
         return render_template("login.html")
 
