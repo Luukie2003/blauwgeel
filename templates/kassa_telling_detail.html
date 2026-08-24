@@ -26,6 +26,12 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-geel">Afsluiten</button>
         </form>
+        {% elif (kassa_stand.stand - telling.geteld_bedrag)|abs < 0.001 %}
+        <form method="post" action="{{ url_for('kassa_telling_heropenen', telling_id=telling.id) }}"
+              onsubmit="return confirm('Kassatelling #{{ telling.id }} heropenen? Daarna kan hij weer aangepast worden.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-rand">Heropenen</button>
+        </form>
         {% endif %}
     </div>
 </div>

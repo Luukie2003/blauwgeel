@@ -203,6 +203,7 @@ NAV_ITEMS = [
             "kassa_telling_bewerken",
             "kassa_telling_afsluiten",
             "kassa_telling_pdf",
+            "kassa_telling_heropenen",
         ],
         "url_endpoint": "kassa_tellen",
         "label": "Kassa tellen",
@@ -2509,9 +2510,48 @@ def register_routes(app):
         if telling is None:
             flash("Kassatelling niet gevonden.", "error")
             return redirect(url_for("kassa_geschiedenis"))
+        kassa_stand = bereken_kassa_stand(db)
         return render_template(
-            "kassa_telling_detail.html", telling=telling, coupures=KASSA_COUPURES
+            "kassa_telling_detail.html",
+            telling=telling,
+            coupures=KASSA_COUPURES,
+            kassa_stand=kassa_stand,
         )
+
+    @app.route("/kassa/tellingen/<int:telling_id>/heropenen", methods=["POST"])
+    def kassa_telling_heropenen(telling_id):
+        db = get_db()
+        telling = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
+        ).fetchone()
+        if telling is None:
+            flash("Kassatelling niet gevonden.", "error")
+            return redirect(url_for("kassa_geschiedenis"))
+        if not telling["afgesloten"]:
+            flash("Deze kassatelling staat al open.", "error")
+            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+        # Alleen veilig als er sindsdien niets anders aan de kassa-stand
+        # heeft gezeten (geen nieuwere telling afgesloten, geen afdracht of
+        # toevoeging geboekt) -- anders zou heropenen die latere acties
+        # ongedaan maken zonder dat de gebruiker dat doorheeft.
+        kassa_stand = bereken_kassa_stand(db)
+        if abs(kassa_stand["stand"] - telling["geteld_bedrag"]) > 0.001:
+            flash(
+                "Heropenen kan niet meer: er zijn hierna al andere kassa-acties geweest "
+                "(een afdracht, toevoeging of nieuwere afgesloten telling).",
+                "error",
+            )
+            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+        db.execute("UPDATE kassa_tellingen SET afgesloten = 0 WHERE id = ?", (telling_id,))
+        db.execute(
+            "UPDATE instellingen SET kassa_stand = ? WHERE id = 1",
+            (round(telling["verwacht_bedrag"] - telling["contante_omzet"], 2),),
+        )
+        db.commit()
+        flash("Kassatelling heropend -- je kunt 'm weer aanpassen.", "success")
+        return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
 
     @app.route("/kassa/tellingen/<int:telling_id>/bewerken", methods=["GET", "POST"])
     def kassa_telling_bewerken(telling_id):
