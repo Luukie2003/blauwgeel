@@ -397,18 +397,17 @@ fieldset.groupbox legend {
     justify-content: center;
     gap: 0.5rem;
     text-align: center;
-    color: #fff;
 }
 
-.statuskaart-goed .statuskaart-body { background: var(--groen); }
-.statuskaart-slecht .statuskaart-body { background: var(--rood); }
-.statuskaart-neutraal .statuskaart-body { background: #6b7280; }
+.statuskaart-goed .statuskaart-body { background: var(--groen-bg); color: var(--groen); }
+.statuskaart-slecht .statuskaart-body { background: var(--rood-bg); color: var(--rood); }
+.statuskaart-neutraal .statuskaart-body { background: #eef0f2; color: var(--tekst-zacht); }
 
 .statuskaart-vak {
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 6px;
     padding: 0.5rem 0.9rem;
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.55);
     font-weight: 700;
     line-height: 1.4;
 }
@@ -416,7 +415,7 @@ fieldset.groupbox legend {
 .statuskaart-opmerking {
     margin: 0;
     font-size: 0.78rem;
-    opacity: 0.92;
+    opacity: 0.85;
 }
 
 .stat .label {

@@ -1,8 +1,6 @@
 {% extends "base.html" %}
 {% block titel %}Overzicht{% endblock %}
 {% block inhoud %}
-<p class="subtitel">Actuele status van de kantinevoorraad.</p>
-
 <div class="statgrid statgrid-4">
     <div class="statuskaart {{ 'statuskaart-goed' if laatste_telling_status.ok else 'statuskaart-slecht' }}">
         <div class="statuskaart-titel">Telling</div>
