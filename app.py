@@ -38,8 +38,16 @@ BACKUP_BESTANDSNAAM = re.compile(
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.0.0"
+HUIDIGE_VERSIE = "1.1.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.1.0",
+        "datum": "24 augustus 2026",
+        "punten": [
+            "Geautomatiseerde tests voor de kernberekeningen (kassa, voorraad, inloggen)",
+            "Overgestapt naar Python 3.13 (voorheen 3.9), zowel lokaal als op de server",
+        ],
+    },
     {
         "versie": "1.0.0",
         "datum": "24 augustus 2026",
