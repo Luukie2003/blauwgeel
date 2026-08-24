@@ -33,10 +33,21 @@
             <p class="statuskaart-opmerking">{{ kassa_telling_status.tekst }}</p>
         </div>
     </div>
-    <div class="statuskaart statuskaart-neutraal">
-        <div class="statuskaart-titel">&nbsp;</div>
+    {% set bestelling_klasse = {'groen': 'statuskaart-goed', 'rood': 'statuskaart-slecht', 'oranje': 'statuskaart-oranje'}.get(bestelling_status.status, 'statuskaart-neutraal') %}
+    {% set bestelling_label = {'groen': 'Ingeboekt', 'rood': 'Te laat', 'oranje': 'Nog inboeken'}.get(bestelling_status.status, '—') %}
+    <div class="statuskaart {{ bestelling_klasse }}">
+        <div class="statuskaart-titel">Bestelling inboeken</div>
         <div class="statuskaart-body">
-            <div class="statuskaart-vak">Binnenkort</div>
+            {% if bestelling_status.laatste_bestelling %}
+            <div class="statuskaart-vak">
+                {{ bestelling_label }}<br>
+                op {{ (bestelling_status.laatste_bestelling.ontvangen_op or bestelling_status.laatste_bestelling.aangemaakt_op)|datum_nl }}
+            </div>
+            <p class="statuskaart-opmerking">door {{ bestelling_status.laatste_bestelling.besteld_door or '—' }}</p>
+            {% else %}
+            <div class="statuskaart-vak">{{ bestelling_label }}</div>
+            {% endif %}
+            <p class="statuskaart-opmerking">{{ bestelling_status.tekst }}</p>
         </div>
     </div>
     <div class="statuskaart statuskaart-neutraal">

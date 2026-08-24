@@ -879,6 +879,37 @@ def bereken_kassa_telling_status(db):
     return {"status": status, "tekst": tekst, "laatste_kassatelling": laatste_kassatelling}
 
 
+def bereken_bestelling_status(db):
+    """Status van het statusblokje 'Bestelling inboeken'. Oranje zolang er
+    nog een openstaande bestelling is (besteld, nog niet ontvangen) --
+    gaat voor de andere regels. Anders: groen als de laatst ontvangen
+    bestelling binnen 7 dagen was, rood daarboven (of als er nog nooit een
+    bestelling ontvangen is)."""
+    open_bestelling = db.execute(
+        "SELECT * FROM bestellingen WHERE status = 'besteld' ORDER BY aangemaakt_op DESC LIMIT 1"
+    ).fetchone()
+    if open_bestelling is not None:
+        return {"status": "oranje", "tekst": "Nog niet ingeboekt", "laatste_bestelling": open_bestelling}
+
+    laatste_ontvangen = db.execute(
+        "SELECT * FROM bestellingen WHERE status = 'ontvangen' ORDER BY ontvangen_op DESC LIMIT 1"
+    ).fetchone()
+    if laatste_ontvangen is None:
+        return {"status": "rood", "tekst": "Nog nooit ontvangen", "laatste_bestelling": None}
+
+    dagen_geleden = (
+        datetime.now() - datetime.strptime(laatste_ontvangen["ontvangen_op"], "%Y-%m-%d %H:%M")
+    ).days
+    if dagen_geleden <= 7:
+        status = "groen"
+        tekst = f"{dagen_geleden} dag{'' if dagen_geleden == 1 else 'en'} geleden"
+    else:
+        status = "rood"
+        tekst = "Meer dan 7 dagen niet ontvangen"
+
+    return {"status": status, "tekst": tekst, "laatste_bestelling": laatste_ontvangen}
+
+
 def register_routes(app):
     # ---------- Inloggen / accounts ----------
 
@@ -1455,6 +1486,7 @@ def register_routes(app):
             komende_thuiswedstrijden=komende_thuiswedstrijden,
             laatste_telling_status=bereken_laatste_telling_status(db),
             kassa_telling_status=bereken_kassa_telling_status(db),
+            bestelling_status=bereken_bestelling_status(db),
         )
 
     def bereken_voorraadoverzicht(db):
