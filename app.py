@@ -502,7 +502,7 @@ def bereken_omzet_trend_periode(db, van, tot):
                 JOIN producten p ON p.id = tr.product_id
                 WHERE tr.telling_id IN ({placeholders})
                 GROUP BY tr.product_id
-                HAVING verkocht > 0
+                HAVING SUM(tr.verkocht) > 0
                 ORDER BY omzet DESC
                 LIMIT 6""",
             telling_ids,
@@ -1105,7 +1105,7 @@ def register_routes(app):
                     JOIN producten p ON p.id = tr.product_id
                     WHERE tr.telling_id IN ({placeholders})
                     GROUP BY tr.product_id
-                    HAVING verkocht > 0
+                    HAVING SUM(tr.verkocht) > 0
                     ORDER BY omzet DESC
                     LIMIT 6""",
                 telling_ids,

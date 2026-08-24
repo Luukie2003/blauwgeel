@@ -1,5 +1,10 @@
+from datetime import date
+
+from conftest import stel_csrf_token_in as _csrf
+
 from app import (
     bereken_kassa_coupure_bedrag,
+    bereken_omzet_trend_periode,
     bereken_trend,
     besteleenheid_factor,
     besteleenheid_naam,
@@ -109,3 +114,32 @@ class TestBerekenTrend:
         ]
         resultaat = bereken_trend(weken, huidige_jaar=2026, huidige_week=5)
         assert resultaat["richting"] == "stabiel"
+
+
+class TestOmzetTrendPeriode:
+    def test_top_verkopers_bevat_alle_verkochte_producten(self, ingelogde_client, db):
+        """Regressietest: HAVING verkocht > 0 (met een bare alias) liet
+        SQLite alle producten behalve één laten vallen, ook als ze duidelijk
+        verkocht waren. HAVING SUM(tr.verkocht) > 0 is de fix."""
+        producten = db.execute(
+            "SELECT * FROM producten WHERE actief = 1 LIMIT 2"
+        ).fetchall()
+        assert len(producten) == 2
+        for p in producten:
+            db.execute("UPDATE producten SET voorraad = 20 WHERE id = ?", (p["id"],))
+        db.commit()
+
+        ingelogde_client.post(
+            "/tellen",
+            data={
+                "csrf_token": _csrf(ingelogde_client),
+                f"geteld_{producten[0]['id']}": "5",  # 15 verkocht
+                f"geteld_{producten[1]['id']}": "18",  # 2 verkocht
+            },
+        )
+
+        vandaag = date.today().isoformat()
+        resultaat = bereken_omzet_trend_periode(db, vandaag, vandaag)
+        verkochte_namen = {r["product_naam"] for r in resultaat["top_verkopers"]}
+        assert producten[0]["naam"] in verkochte_namen
+        assert producten[1]["naam"] in verkochte_namen
