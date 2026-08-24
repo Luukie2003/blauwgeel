@@ -6,6 +6,7 @@ werken (bijvoorbeeld lokaal tijdens ontwikkelen).
 
 import smtplib
 from email.message import EmailMessage
+from pathlib import Path
 
 try:
     import email_instellingen as instellingen
@@ -16,7 +17,7 @@ except ImportError:
     MAIL_BESCHIKBAAR = False
 
 
-def stuur_mail(onderwerp, tekst, naar=None, html=None):
+def stuur_mail(onderwerp, tekst, naar=None, html=None, bijlage_pad=None):
     """Verstuurt een e-mail. Geeft True/False terug; gooit nooit een
     uitzondering -- een mislukte mail mag de rest van een boeking nooit
     laten mislukken.
@@ -26,7 +27,10 @@ def stuur_mail(onderwerp, tekst, naar=None, html=None):
 
     html: optionele opgemaakte versie van het bericht. tekst blijft altijd
     meegestuurd als platte-tekst-fallback voor mailclients die geen HTML
-    tonen."""
+    tonen.
+
+    bijlage_pad: optioneel pad naar een bestand dat als bijlage wordt
+    meegestuurd (bijv. een back-up-bestand)."""
     if not MAIL_BESCHIKBAAR:
         print(f"[mail] Overgeslagen (geen email_instellingen.py): {onderwerp}")
         return False
@@ -40,6 +44,14 @@ def stuur_mail(onderwerp, tekst, naar=None, html=None):
     bericht.set_content(tekst)
     if html:
         bericht.add_alternative(html, subtype="html")
+    if bijlage_pad:
+        bijlage_pad = Path(bijlage_pad)
+        bericht.add_attachment(
+            bijlage_pad.read_bytes(),
+            maintype="application",
+            subtype="octet-stream",
+            filename=bijlage_pad.name,
+        )
 
     try:
         with smtplib.SMTP(instellingen.SMTP_HOST, instellingen.SMTP_POORT, timeout=10) as server:
