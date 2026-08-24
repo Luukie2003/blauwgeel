@@ -810,11 +810,13 @@ def bereken_laatste_telling_status(db):
 
 
 def bereken_kassa_telling_status(db):
-    """Status van het statusblokje 'Kassa tellen': moet altijd binnen 2
-    dagen na de laatste (afgelopen) thuiswedstrijd gebeurd zijn. Groen als
-    er een afgesloten kassatelling is sinds die wedstrijd, rood als de
-    deadline al verstreken is zonder telling, neutraal als het nog niet
-    zover is."""
+    """Status van het statusblokje 'Kassa tellen'. Twee regels:
+    - Algemeen: minstens 1x per 7 dagen geteld -> groen.
+    - Na een thuiswedstrijd: binnen 3 dagen daarna geteld -> groen; meer dan
+      3 dagen verstreken zonder telling sinds die wedstrijd -> rood (gaat
+      voor de algemene regel, want geld na een wedstrijd moet tijdig
+      afgehandeld worden). Binnen de eerste 3 dagen na een wedstrijd zonder
+      telling is het nog niet mis: neutraal."""
     vandaag = date.today()
     laatste_wedstrijd = db.execute(
         "SELECT datum FROM wedstrijden WHERE thuis = 1 AND datum <= ? ORDER BY datum DESC LIMIT 1",
@@ -824,29 +826,42 @@ def bereken_kassa_telling_status(db):
         "SELECT * FROM kassa_tellingen WHERE afgesloten = 1 ORDER BY datum DESC, id DESC LIMIT 1"
     ).fetchone()
 
-    if laatste_wedstrijd is None:
-        return {
-            "status": "neutraal",
-            "tekst": "Nog geen wedstrijd bekend",
-            "laatste_kassatelling": laatste_kassatelling,
-        }
+    dagen_sinds_telling = None
+    if laatste_kassatelling is not None:
+        dagen_sinds_telling = (
+            datetime.now() - datetime.strptime(laatste_kassatelling["datum"], "%Y-%m-%d %H:%M")
+        ).days
 
-    wedstrijd_datum = datetime.strptime(laatste_wedstrijd["datum"], "%Y-%m-%d").date()
-    deadline = wedstrijd_datum + timedelta(days=2)
-    geteld_sinds_wedstrijd = (
-        laatste_kassatelling is not None
-        and datetime.strptime(laatste_kassatelling["datum"], "%Y-%m-%d %H:%M").date()
-        >= wedstrijd_datum
-    )
+    wedstrijd_datum = None
+    geteld_na_wedstrijd = False
+    if laatste_wedstrijd is not None:
+        wedstrijd_datum = datetime.strptime(laatste_wedstrijd["datum"], "%Y-%m-%d").date()
+        geteld_na_wedstrijd = (
+            laatste_kassatelling is not None
+            and datetime.strptime(laatste_kassatelling["datum"], "%Y-%m-%d %H:%M").date()
+            >= wedstrijd_datum
+        )
+        wedstrijd_deadline_gemist = (
+            not geteld_na_wedstrijd and (vandaag - wedstrijd_datum).days > 3
+        )
+    else:
+        wedstrijd_deadline_gemist = False
 
-    if geteld_sinds_wedstrijd:
-        status, tekst = "groen", "Kassa geteld sinds laatste wedstrijd"
-    elif vandaag > deadline:
+    if wedstrijd_deadline_gemist:
         status = "rood"
         tekst = f"Nog niet geteld sinds wedstrijd van {wedstrijd_datum.strftime('%d-%m')}"
-    else:
+    elif dagen_sinds_telling is not None and dagen_sinds_telling <= 7:
+        status = "groen"
+        tekst = (
+            "Kassa geteld sinds laatste wedstrijd" if geteld_na_wedstrijd else "Recent geteld"
+        )
+    elif laatste_wedstrijd is not None and not geteld_na_wedstrijd:
+        deadline = wedstrijd_datum + timedelta(days=3)
         status = "neutraal"
         tekst = f"Nog tijd tot {deadline.strftime('%d-%m')}"
+    else:
+        status = "rood"
+        tekst = "Meer dan 7 dagen niet geteld" if laatste_kassatelling else "Nog nooit geteld"
 
     return {"status": status, "tekst": tekst, "laatste_kassatelling": laatste_kassatelling}
 

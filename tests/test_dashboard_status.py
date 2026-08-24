@@ -28,9 +28,9 @@ def test_laatste_telling_status_boven_zeven_dagen_is_rood(db):
     assert resultaat["ok"] is False
 
 
-def test_kassa_status_zonder_wedstrijden_is_neutraal(db):
+def test_kassa_status_zonder_wedstrijd_en_nog_nooit_geteld_is_rood(db):
     resultaat = bereken_kassa_telling_status(db)
-    assert resultaat["status"] == "neutraal"
+    assert resultaat["status"] == "rood"
 
 
 def _voeg_thuiswedstrijd_toe(db, dagen_geleden):
@@ -75,6 +75,30 @@ def test_kassa_status_neutraal_binnen_de_deadline(db):
 def test_kassa_status_negeert_telling_van_voor_de_wedstrijd(db):
     _sluit_kassatelling_af(db, dagen_geleden=10)  # oude telling, telt niet mee
     _voeg_thuiswedstrijd_toe(db, dagen_geleden=5)
+
+    resultaat = bereken_kassa_telling_status(db)
+    assert resultaat["status"] == "rood"
+
+
+def test_kassa_status_groen_bij_algemene_zeven_dagen_regel_zonder_wedstrijd(db):
+    _sluit_kassatelling_af(db, dagen_geleden=3)  # geen wedstrijd, maar wel recent geteld
+
+    resultaat = bereken_kassa_telling_status(db)
+    assert resultaat["status"] == "groen"
+
+
+def test_kassa_status_rood_boven_zeven_dagen_zonder_wedstrijd(db):
+    _sluit_kassatelling_af(db, dagen_geleden=10)  # geen wedstrijd, te lang geleden geteld
+
+    resultaat = bereken_kassa_telling_status(db)
+    assert resultaat["status"] == "rood"
+
+
+def test_kassa_status_wedstrijdregel_gaat_voor_algemene_regel(db):
+    """Ook al is er ooit binnen 7 dagen geteld, een wedstrijd van >3 dagen
+    geleden zonder telling sindsdien moet toch rood geven."""
+    _sluit_kassatelling_af(db, dagen_geleden=6)
+    _voeg_thuiswedstrijd_toe(db, dagen_geleden=4)  # na de laatste telling, deadline verstreken
 
     resultaat = bereken_kassa_telling_status(db)
     assert resultaat["status"] == "rood"
