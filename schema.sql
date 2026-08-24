@@ -127,7 +127,8 @@ CREATE TABLE IF NOT EXISTS kassa_tellingen (
     aantal_020 INTEGER NOT NULL DEFAULT 0,
     aantal_010 INTEGER NOT NULL DEFAULT 0,
     aantal_005 INTEGER NOT NULL DEFAULT 0,
-    opmerking TEXT
+    opmerking TEXT,
+    afgesloten INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS login_pogingen (

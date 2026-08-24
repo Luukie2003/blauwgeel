@@ -21,7 +21,13 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import backup as backup_module
 import mail
 from database import get_db, init_db, register_db
-from pdf import bestellijst_pdf, periode_verkoop_pdf, verkoop_pdf, voorraadoverzicht_pdf
+from pdf import (
+    bestellijst_pdf,
+    kassa_pdf,
+    periode_verkoop_pdf,
+    verkoop_pdf,
+    voorraadoverzicht_pdf,
+)
 
 BASE_DIR = Path(__file__).parent
 SECRET_KEY_PATH = BASE_DIR / "secret_key.txt"
@@ -191,7 +197,13 @@ NAV_ITEMS = [
     },
     {
         "groep": "Kassa",
-        "endpoints": ["kassa_tellen", "kassa_telling_detail"],
+        "endpoints": [
+            "kassa_tellen",
+            "kassa_telling_detail",
+            "kassa_telling_bewerken",
+            "kassa_telling_afsluiten",
+            "kassa_telling_pdf",
+        ],
         "url_endpoint": "kassa_tellen",
         "label": "Kassa tellen",
     },
@@ -590,8 +602,11 @@ def bereken_kassa_stand(db):
     afleiden via datums misgrijpt wanneer twee dingen binnen dezelfde minuut
     gebeuren (de datumvelden in deze app hebben geen secondeprecisie)."""
     rij = db.execute("SELECT kassa_stand FROM instellingen WHERE id = 1").fetchone()
+    # Alleen afgesloten tellingen tellen mee -- een nog openstaande (concept)
+    # telling heeft zijn bedrag nog niet in kassa_stand verrekend, dus die
+    # mag hier niet als "laatste telling" worden aangezien.
     laatste_telling = db.execute(
-        "SELECT * FROM kassa_tellingen ORDER BY datum DESC, id DESC LIMIT 1"
+        "SELECT * FROM kassa_tellingen WHERE afgesloten = 1 ORDER BY datum DESC, id DESC LIMIT 1"
     ).fetchone()
     return {
         "stand": round(rij["kassa_stand"] if rij else 0.0, 2),
@@ -2469,16 +2484,15 @@ def register_routes(app):
                     opmerking,
                 ),
             )
-            db.execute(
-                "UPDATE instellingen SET kassa_stand = ? WHERE id = 1", (geteld_bedrag,)
-            )
+            # Nog niet in instellingen.kassa_stand verrekenen -- dat gebeurt
+            # pas bij het afsluiten, zodat de telling tot die tijd nog
+            # aangepast kan worden zonder de lopende stand te verstoren.
             db.commit()
-            if verschil == 0:
-                flash("Kassatelling opgeslagen: het klopt precies.", "success")
-            elif verschil > 0:
-                flash(f"Kassatelling opgeslagen: € {verschil:.2f} overschot.", "warning")
-            else:
-                flash(f"Kassatelling opgeslagen: € {-verschil:.2f} tekort.", "warning")
+            flash(
+                "Kassatelling opgeslagen als concept -- controleer de aantallen en sluit "
+                "'m af zodra je klaar bent.",
+                "success",
+            )
             return redirect(url_for("kassa_telling_detail", telling_id=cur.lastrowid))
 
         kassa_stand = bereken_kassa_stand(db)
@@ -2497,6 +2511,112 @@ def register_routes(app):
             return redirect(url_for("kassa_geschiedenis"))
         return render_template(
             "kassa_telling_detail.html", telling=telling, coupures=KASSA_COUPURES
+        )
+
+    @app.route("/kassa/tellingen/<int:telling_id>/bewerken", methods=["GET", "POST"])
+    def kassa_telling_bewerken(telling_id):
+        db = get_db()
+        telling = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
+        ).fetchone()
+        if telling is None:
+            flash("Kassatelling niet gevonden.", "error")
+            return redirect(url_for("kassa_geschiedenis"))
+        if telling["afgesloten"]:
+            flash("Deze kassatelling is al afgesloten en kan niet meer aangepast worden.", "error")
+            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+        if request.method == "POST":
+            try:
+                contante_omzet = round(
+                    float(request.form.get("contante_omzet", "0").replace(",", ".")), 2
+                )
+            except ValueError:
+                contante_omzet = 0.0
+            opmerking = request.form.get("opmerking", "").strip()
+
+            aantallen, geteld_bedrag = bereken_kassa_coupure_bedrag(request.form)
+            # Verwacht bedrag o.b.v. de huidige (afgesloten) stand -- deze
+            # telling zelf telt daar nog niet in mee zolang hij open staat.
+            kassa_stand = bereken_kassa_stand(db)
+            verwacht_bedrag = round(kassa_stand["stand"] + contante_omzet, 2)
+            verschil = round(geteld_bedrag - verwacht_bedrag, 2)
+
+            db.execute(
+                """UPDATE kassa_tellingen
+                   SET verwacht_bedrag = ?, contante_omzet = ?, geteld_bedrag = ?,
+                       verschil = ?, aantal_50 = ?, aantal_20 = ?, aantal_10 = ?,
+                       aantal_5 = ?, aantal_2 = ?, aantal_1 = ?, aantal_050 = ?,
+                       aantal_020 = ?, aantal_010 = ?, aantal_005 = ?, opmerking = ?
+                   WHERE id = ?""",
+                (
+                    verwacht_bedrag,
+                    contante_omzet,
+                    geteld_bedrag,
+                    verschil,
+                    aantallen["aantal_50"],
+                    aantallen["aantal_20"],
+                    aantallen["aantal_10"],
+                    aantallen["aantal_5"],
+                    aantallen["aantal_2"],
+                    aantallen["aantal_1"],
+                    aantallen["aantal_050"],
+                    aantallen["aantal_020"],
+                    aantallen["aantal_010"],
+                    aantallen["aantal_005"],
+                    opmerking,
+                    telling_id,
+                ),
+            )
+            db.commit()
+            flash("Kassatelling bijgewerkt.", "success")
+            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+        kassa_stand = bereken_kassa_stand(db)
+        return render_template(
+            "kassa_telling_bewerken.html",
+            telling=telling,
+            coupures=KASSA_COUPURES,
+            kassa_stand=kassa_stand,
+        )
+
+    @app.route("/kassa/tellingen/<int:telling_id>/afsluiten", methods=["POST"])
+    def kassa_telling_afsluiten(telling_id):
+        db = get_db()
+        telling = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
+        ).fetchone()
+        if telling is None:
+            flash("Kassatelling niet gevonden.", "error")
+            return redirect(url_for("kassa_geschiedenis"))
+        if telling["afgesloten"]:
+            flash("Deze kassatelling was al afgesloten.", "error")
+            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+        db.execute("UPDATE kassa_tellingen SET afgesloten = 1 WHERE id = ?", (telling_id,))
+        db.execute(
+            "UPDATE instellingen SET kassa_stand = ? WHERE id = 1", (telling["geteld_bedrag"],)
+        )
+        db.commit()
+        flash("Kassatelling afgesloten.", "success")
+        return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+    @app.route("/kassa/tellingen/<int:telling_id>/pdf")
+    def kassa_telling_pdf(telling_id):
+        db = get_db()
+        telling = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
+        ).fetchone()
+        if telling is None:
+            flash("Kassatelling niet gevonden.", "error")
+            return redirect(url_for("kassa_geschiedenis"))
+        pdf_bytes = kassa_pdf(telling, KASSA_COUPURES)
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=kassatelling-{telling_id}.pdf"
+            },
         )
 
     @app.route("/kassa/geschiedenis")

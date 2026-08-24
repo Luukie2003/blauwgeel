@@ -35,9 +35,13 @@
                     <td>{{ regel.datum|datum_nl }}</td>
                     <td>
                         {% if regel.soort == 'telling' %}
+                        {% if not item.afgesloten %}
+                        <span class="badge badge-neutraal">Telling &mdash; nog open (concept)</span>
+                        {% else %}
                         <span class="badge {{ 'badge-ok' if item.verschil == 0 else 'badge-laag' }}">
                             Telling &mdash; {{ 'klopt' if item.verschil == 0 else ('+€ %.2f overschot'|format(item.verschil) if item.verschil > 0 else '€ %.2f tekort'|format(-item.verschil)) }}
                         </span>
+                        {% endif %}
                         {% elif regel.soort == 'afdracht' %}
                         <span class="badge badge-uit">Afdracht{% if item.ontvanger %} aan {{ item.ontvanger }}{% endif %}</span>
                         {% else %}
@@ -58,6 +62,9 @@
                     <td>
                         {% if regel.soort == 'telling' %}
                         <a href="{{ url_for('kassa_telling_detail', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bekijken</a>
+                        {% if not item.afgesloten %}
+                        <a href="{{ url_for('kassa_telling_bewerken', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                        {% endif %}
                         {% endif %}
                     </td>
                 </tr>

@@ -135,6 +135,21 @@ def _migreer_categorieen(db):
         db.execute("INSERT OR IGNORE INTO categorieen (naam) VALUES (?)", (naam,))
 
 
+def _migreer_kassa_afgesloten(db):
+    """De kolom afgesloten is nieuw: kassa-tellingen werden voorheen meteen
+    definitief verwerkt (direct verrekend in instellingen.kassa_stand).
+    Bij het toevoegen van deze kolom markeren we alle op dat moment
+    bestaande tellingen daarom in één keer als afgesloten, zodat hun invloed
+    op de kassa-stand niet per ongeluk dubbel telt (of verdwijnt) doordat ze
+    er ineens als 'nog open' uitzien. Tellingen die hierna worden
+    aangemaakt starten gewoon standaard op open (0)."""
+    bestaande = {row["name"] for row in db.execute("PRAGMA table_info(kassa_tellingen)")}
+    if "afgesloten" in bestaande:
+        return
+    db.execute("ALTER TABLE kassa_tellingen ADD COLUMN afgesloten INTEGER NOT NULL DEFAULT 0")
+    db.execute("UPDATE kassa_tellingen SET afgesloten = 1")
+
+
 def get_db():
     if "db" not in g:
         g.db = sqlite3.connect(current_app.config["DATABASE"])
@@ -154,6 +169,7 @@ def get_db():
         _migreer_kolommen(g.db)
         _migreer_categorieen(g.db)
         _migreer_telling_verkoopprijs(g.db)
+        _migreer_kassa_afgesloten(g.db)
         g.db.commit()
     return g.db
 

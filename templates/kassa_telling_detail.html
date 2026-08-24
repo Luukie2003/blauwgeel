@@ -1,12 +1,34 @@
 {% extends "base.html" %}
 {% block titel %}Kassatelling #{{ telling.id }}{% endblock %}
 {% block inhoud %}
-<h1>Kassatelling #{{ telling.id }}</h1>
-<p class="subtitel">
-    {{ telling.datum|datum_nl }}{% if telling.naam %} &mdash; geteld door {{ telling.naam }}{% endif %}
-    &nbsp;&middot;&nbsp; <a href="{{ url_for('kassa_geschiedenis') }}">&larr; Kassa geschiedenis</a>
-    &nbsp;&middot;&nbsp; <a href="{{ url_for('kassa_tellen') }}">Nieuwe telling</a>
-</p>
+<div class="actiebalk">
+    <div>
+        <h1 style="margin-bottom:0.2rem">
+            Kassatelling #{{ telling.id }}
+            {% if telling.afgesloten %}
+            <span class="badge badge-ok">Afgesloten</span>
+            {% else %}
+            <span class="badge badge-laag">Nog open (concept)</span>
+            {% endif %}
+        </h1>
+        <p class="subtitel" style="margin:0">
+            {{ telling.datum|datum_nl }}{% if telling.naam %} &mdash; geteld door {{ telling.naam }}{% endif %}
+            &nbsp;&middot;&nbsp; <a href="{{ url_for('kassa_geschiedenis') }}">&larr; Kassa geschiedenis</a>
+            &nbsp;&middot;&nbsp; <a href="{{ url_for('kassa_tellen') }}">Nieuwe telling</a>
+        </p>
+    </div>
+    <div style="display:flex; gap:0.5rem">
+        <a href="{{ url_for('kassa_telling_pdf', telling_id=telling.id) }}" class="btn btn-rand">PDF</a>
+        {% if not telling.afgesloten %}
+        <a href="{{ url_for('kassa_telling_bewerken', telling_id=telling.id) }}" class="btn btn-rand">Bewerken</a>
+        <form method="post" action="{{ url_for('kassa_telling_afsluiten', telling_id=telling.id) }}"
+              onsubmit="return confirm('Kassatelling #{{ telling.id }} afsluiten? Hierna kan hij niet meer aangepast worden.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-geel">Afsluiten</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
 
 <div class="statgrid">
     <div class="stat">
