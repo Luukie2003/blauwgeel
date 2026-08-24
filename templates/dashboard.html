@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block titel %}Overzicht{% endblock %}
 {% block inhoud %}
-<div class="statgrid statgrid-4">
+<div class="statgrid">
     <div class="statuskaart {{ 'statuskaart-goed' if laatste_telling_status.ok else 'statuskaart-slecht' }}">
         <div class="statuskaart-titel">Telling</div>
         <div class="statuskaart-body">
@@ -19,7 +19,7 @@
     {% set kassa_klasse = {'groen': 'statuskaart-goed', 'rood': 'statuskaart-slecht', 'oranje': 'statuskaart-oranje'}.get(kassa_telling_status.status, 'statuskaart-neutraal') %}
     {% set kassa_label = {'groen': 'Geteld', 'rood': 'Te laat', 'oranje': 'Concept'}.get(kassa_telling_status.status, 'Nog niet nodig') %}
     <div class="statuskaart {{ kassa_klasse }}">
-        <div class="statuskaart-titel">Kassa tellen</div>
+        <div class="statuskaart-titel">Kassa</div>
         <div class="statuskaart-body">
             {% if kassa_telling_status.laatste_kassatelling %}
             <div class="statuskaart-vak">
@@ -36,7 +36,7 @@
     {% set bestelling_klasse = {'groen': 'statuskaart-goed', 'rood': 'statuskaart-slecht', 'oranje': 'statuskaart-oranje'}.get(bestelling_status.status, 'statuskaart-neutraal') %}
     {% set bestelling_label = {'groen': 'Ingeboekt', 'rood': 'Te laat', 'oranje': 'Nog inboeken'}.get(bestelling_status.status, '—') %}
     <div class="statuskaart {{ bestelling_klasse }}">
-        <div class="statuskaart-titel">Bestelling inboeken</div>
+        <div class="statuskaart-titel">Bestelling</div>
         <div class="statuskaart-body">
             {% if bestelling_status.laatste_bestelling %}
             <div class="statuskaart-vak">
@@ -48,12 +48,6 @@
             <div class="statuskaart-vak">{{ bestelling_label }}</div>
             {% endif %}
             <p class="statuskaart-opmerking">{{ bestelling_status.tekst }}</p>
-        </div>
-    </div>
-    <div class="statuskaart statuskaart-neutraal">
-        <div class="statuskaart-titel">&nbsp;</div>
-        <div class="statuskaart-body">
-            <div class="statuskaart-vak">Binnenkort</div>
         </div>
     </div>
 </div>

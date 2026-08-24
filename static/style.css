@@ -346,13 +346,6 @@ fieldset.groupbox legend {
     margin-bottom: 1.1rem;
 }
 
-/* Iets smallere minimumbreedte zodat 4 statusblokjes eerder naast elkaar
-   passen i.p.v. te wrappen -- gebruikt door de statusblokjes bovenaan het
-   dashboard. */
-.statgrid-4 {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-}
-
 .stat {
     background: var(--kaart);
     border: 1px solid var(--rand);
