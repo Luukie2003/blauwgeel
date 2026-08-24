@@ -203,7 +203,7 @@ NAV_ITEMS = [
     },
     {
         "groep": "Voorraad",
-        "endpoints": ["tellingen_overzicht", "telling_detail"],
+        "endpoints": ["tellingen_overzicht", "telling_detail", "tellingen_gecombineerd_pdf"],
         "url_endpoint": "tellingen_overzicht",
         "label": "Tellingen",
     },
@@ -2065,6 +2065,18 @@ def register_routes(app):
                ORDER BY t.id DESC"""
         ).fetchall()
 
+        # Per telling de regels erbij, voor de "Bekijken"-pop-up -- scheelt
+        # een aparte pagina-navigatie voor een snel kijkje.
+        regels_per_telling = {
+            t["id"]: db.execute(
+                """SELECT tr.*, p.naam AS product_naam, p.eenheid
+                   FROM telling_regels tr JOIN producten p ON p.id = tr.product_id
+                   WHERE tr.telling_id = ? ORDER BY p.categorie, p.naam""",
+                (t["id"],),
+            ).fetchall()
+            for t in tellingen
+        }
+
         verkoop_regels = db.execute(
             """SELECT t.datum, tr.verkocht, tr.verkoopprijs
                FROM telling_regels tr
@@ -2098,10 +2110,53 @@ def register_routes(app):
         return render_template(
             "tellingen_overzicht.html",
             tellingen=tellingen,
+            regels_per_telling=regels_per_telling,
             omzet_per_week=omzet_per_week,
             huidige_jaar=huidige_jaar,
             huidige_week=huidige_week,
             trend=trend,
+        )
+
+    @app.route("/tellingen/gecombineerd/pdf")
+    def tellingen_gecombineerd_pdf():
+        """PDF van een zelf geselecteerde greep tellingen -- de regels worden
+        per product bij elkaar opgeteld, net als bij het periode-verkooprapport
+        (dat gebruikt een datumrange; dit gebruikt een losse selectie)."""
+        ids = request.args.getlist("ids", type=int)
+        if not ids:
+            flash("Selecteer minstens één telling om te combineren.", "error")
+            return redirect(url_for("tellingen_overzicht"))
+
+        db = get_db()
+        placeholders = ",".join("?" for _ in ids)
+        regels = db.execute(
+            f"""SELECT p.naam AS product_naam, p.categorie, p.eenheid,
+                       SUM(tr.verkocht) AS verkocht, SUM(tr.correctie) AS correctie,
+                       SUM(tr.verkocht * tr.verkoopprijs) AS omzet
+                FROM telling_regels tr
+                JOIN tellingen t ON t.id = tr.telling_id
+                JOIN producten p ON p.id = tr.product_id
+                WHERE tr.telling_id IN ({placeholders})
+                GROUP BY tr.product_id
+                ORDER BY p.categorie, p.naam""",
+            ids,
+        ).fetchall()
+        grens = db.execute(
+            f"SELECT MIN(datum) AS van, MAX(datum) AS tot FROM tellingen WHERE id IN ({placeholders})",
+            ids,
+        ).fetchone()
+
+        pdf_bytes = periode_verkoop_pdf(
+            format_datum(grens["van"]) if grens["van"] else "",
+            format_datum(grens["tot"]) if grens["tot"] else "",
+            regels,
+        )
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=verkooprapport-selectie-{len(ids)}-tellingen.pdf"
+            },
         )
 
     @app.route("/tellingen/<int:telling_id>")

@@ -69,29 +69,86 @@
 <div class="kaart">
     <h2>Alle tellingen</h2>
     {% if tellingen %}
-    <div class="tabel-wrap">
-        <table>
-            <thead>
-                <tr><th>Datum</th><th>Geteld door</th><th>Producten</th><th>Omzet</th><th></th></tr>
-            </thead>
-            <tbody>
-                {% for t in tellingen %}
-                <tr>
-                    <td><a href="{{ url_for('telling_detail', telling_id=t.id) }}">{{ t.datum|datum_nl }}</a></td>
-                    <td>{{ t.naam or '—' }}</td>
-                    <td>{{ t.aantal_producten }}</td>
-                    <td>{{ "€ %.2f"|format(t.omzet) }}</td>
-                    <td class="tabel-acties">
-                        <a href="{{ url_for('telling_detail', telling_id=t.id) }}" class="btn btn-rand btn-klein">Bekijken</a>
-                        <a href="{{ url_for('telling_pdf', telling_id=t.id) }}" class="btn btn-rand btn-klein">PDF</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    <form method="get" action="{{ url_for('tellingen_gecombineerd_pdf') }}">
+        <div class="tabel-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="tellingen-alles" title="Alles selecteren"></th>
+                        <th>Datum</th><th>Geteld door</th><th>Producten</th><th>Omzet</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tellingen %}
+                    <tr>
+                        <td><input type="checkbox" name="ids" value="{{ t.id }}" class="tellingen-checkbox"></td>
+                        <td>{{ t.datum|datum_nl }}</td>
+                        <td>{{ t.naam or '—' }}</td>
+                        <td>{{ t.aantal_producten }}</td>
+                        <td>{{ "€ %.2f"|format(t.omzet) }}</td>
+                        <td class="tabel-acties">
+                            <button type="button" class="btn btn-rand btn-klein" onclick="modalOpenen('modal-telling-{{ t.id }}')">Bekijken</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="margin-top:0.8rem">
+            <button type="submit" class="btn btn-geel">PDF van selectie downloaden</button>
+        </div>
+    </form>
     {% else %}
     <p class="leeg">Nog geen tellingen uitgevoerd.</p>
     {% endif %}
 </div>
+
+{% for t in tellingen %}
+<div class="modal-overlay" id="modal-telling-{{ t.id }}">
+    <div class="modal-venster">
+        <div class="modal-kop">
+            <h2 style="margin:0">Telling van {{ t.datum|datum_nl }}</h2>
+            <button type="button" class="modal-sluiten" onclick="modalSluiten('modal-telling-{{ t.id }}')">&times;</button>
+        </div>
+        <p class="tekst-zacht" style="margin-top:0">Geteld door {{ t.naam or '—' }}</p>
+        {% set regels = regels_per_telling[t.id] %}
+        {% if regels %}
+        <div class="tabel-wrap" style="max-height:50vh; overflow-y:auto">
+            <table>
+                <thead>
+                    <tr><th>Product</th><th>Geteld</th><th>Verkocht</th><th>Omzet</th></tr>
+                </thead>
+                <tbody>
+                    {% for r in regels %}
+                    <tr>
+                        <td>{{ r.product_naam }}</td>
+                        <td>{{ r.geteld_aantal }} {{ r.eenheid }}</td>
+                        <td>{{ r.verkocht }} {{ r.eenheid }}</td>
+                        <td>€ {{ '%.2f'|format(r.verkocht * r.verkoopprijs) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="leeg">Geen producten in deze telling.</p>
+        {% endif %}
+        <div style="margin-top:1rem">
+            <a href="{{ url_for('telling_pdf', telling_id=t.id) }}" class="btn btn-rand">PDF downloaden</a>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+(function () {
+    var alles = document.getElementById('tellingen-alles');
+    if (!alles) return;
+    alles.addEventListener('change', function () {
+        document.querySelectorAll('.tellingen-checkbox').forEach(function (cb) {
+            cb.checked = alles.checked;
+        });
+    });
+})();
+</script>
 {% endblock %}
