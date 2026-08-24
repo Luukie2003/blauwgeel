@@ -18,7 +18,7 @@
     <div class="app-titelbalk">
         <a href="{{ url_for('dashboard') }}" class="titelbalk-link">
             <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="titelbalk-logo">
-            <span>Kantine Beheer{% if actieve_nav %} &mdash; [{{ actieve_nav.label }}]{% endif %}</span>
+            <span>BG 1915 - Kantine Beheer{% if actieve_nav %} <em>{{ actieve_nav.label }}</em>{% endif %}</span>
         </a>
         {% if huidige_gebruiker %}
         <span class="titelbalk-welkom">Welkom, {{ huidige_gebruiker }}</span>
