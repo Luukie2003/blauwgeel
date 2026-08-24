@@ -321,6 +321,23 @@ def create_app(database_path=None):
     def favicon_ico():
         return send_from_directory(app.static_folder, "favicon.ico")
 
+    @app.after_request
+    def beveiligingsheaders(response):
+        """Standaard beveiligingsheaders. De site heeft geen externe
+        scripts/stijlen/fonts -- alleen 'self' plus 'unsafe-inline' omdat
+        sommige pagina's nog inline <script>- en onsubmit-attributen
+        gebruiken."""
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:"
+        )
+        return response
+
     @app.errorhandler(404)
     def pagina_niet_gevonden(fout):
         return render_template("404.html"), 404
