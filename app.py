@@ -675,6 +675,23 @@ def bereken_kassa_stand(db):
     }
 
 
+def bereken_wedstrijd_geschiedenis(db, limiet=25):
+    """De laatst gespeelde wedstrijden (alle teams, thuis en uit) --
+    gedeeld tussen de Wedstrijden-pagina en Club instellingen."""
+    return [
+        {
+            "datum_weergave": datetime.strptime(w["datum"], "%Y-%m-%d").strftime("%d-%m-%Y"),
+            "team": w["team"],
+            "omschrijving": w["omschrijving"],
+            "thuis": w["thuis"],
+        }
+        for w in db.execute(
+            "SELECT * FROM wedstrijden WHERE datum < ? ORDER BY datum DESC, team LIMIT ?",
+            (date.today().isoformat(), limiet),
+        ).fetchall()
+    ]
+
+
 def bereken_komende_thuiswedstrijden(db, dagen=14):
     """Groepeert de komende thuiswedstrijden per datum -- gevuld door
     agenda.py (de gekoppelde teamagenda's) -- samen met de weersverwachting
@@ -1281,23 +1298,10 @@ def register_routes(app):
         aantal_wedstrijden = db.execute(
             "SELECT COUNT(*) AS n FROM wedstrijden WHERE datum >= ?", (date.today().isoformat(),)
         ).fetchone()["n"]
-        wedstrijd_geschiedenis = [
-            {
-                "datum_weergave": datetime.strptime(w["datum"], "%Y-%m-%d").strftime("%d-%m-%Y"),
-                "team": w["team"],
-                "omschrijving": w["omschrijving"],
-                "thuis": w["thuis"],
-            }
-            for w in db.execute(
-                "SELECT * FROM wedstrijden WHERE datum < ? ORDER BY datum DESC, team LIMIT 25",
-                (date.today().isoformat(),),
-            ).fetchall()
-        ]
         return render_template(
             "club_instellingen.html",
             feeds=feeds,
             aantal_wedstrijden=aantal_wedstrijden,
-            wedstrijd_geschiedenis=wedstrijd_geschiedenis,
         )
 
     @app.route("/club-instellingen/toevoegen", methods=["POST"])
@@ -2623,6 +2627,17 @@ def register_routes(app):
         db = get_db()
         overzicht = bereken_week_overzicht(db)
         return render_template("week_overzicht.html", overzicht=overzicht)
+
+    @app.route("/wedstrijden")
+    def wedstrijden_overzicht():
+        db = get_db()
+        komende_thuiswedstrijden = bereken_komende_thuiswedstrijden(db)
+        wedstrijd_geschiedenis = bereken_wedstrijd_geschiedenis(db)
+        return render_template(
+            "wedstrijden.html",
+            komende_thuiswedstrijden=komende_thuiswedstrijden,
+            wedstrijd_geschiedenis=wedstrijd_geschiedenis,
+        )
 
     @app.route("/verkooprapport/pdf")
     def verkooprapport_pdf_route():

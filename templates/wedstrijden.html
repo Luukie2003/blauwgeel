@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block titel %}Wedstrijden{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Uit de gekoppelde teamagenda's en de weersverwachting. Ververst automatisch elke nacht.
+</p>
+
+<div class="kaart">
+    <h2>Komende thuiswedstrijden</h2>
+    {% if komende_thuiswedstrijden %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Teams thuis</th><th>Weer</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for dag in komende_thuiswedstrijden %}
+                <tr>
+                    <td>{{ dag.datum_weergave }}</td>
+                    <td>
+                        {% for w in dag.wedstrijden %}
+                        {{ w.omschrijving }}{% if not loop.last %}<br>{% endif %}
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% if dag.weer %}
+                        {{ dag.weer.label }}, {{ '%.0f'|format(dag.weer.max_temp) }}°C
+                        <span class="tekst-zacht">({{ dag.weer.neerslag_kans }}% neerslag)</span>
+                        {% else %}
+                        <span class="tekst-zacht">nog geen voorspelling</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if dag.wedstrijden|length > 1 %}
+                        <span class="badge badge-laag">{{ dag.wedstrijden|length }}x thuis, kan drukker zijn</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Geen komende thuiswedstrijden bekend.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Gespeelde wedstrijden</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Blijft bewaard nadat een wedstrijd is geweest, laatste 25.
+    </p>
+    {% if wedstrijd_geschiedenis %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Team</th><th>Wedstrijd</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for w in wedstrijd_geschiedenis %}
+                <tr>
+                    <td>{{ w.datum_weergave }}</td>
+                    <td>{{ w.team }}</td>
+                    <td>{{ w.omschrijving }}</td>
+                    <td>
+                        {% if w.thuis %}<span class="badge badge-ok">Thuis</span>
+                        {% else %}<span class="badge badge-neutraal">Uit</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen wedstrijden gespeeld.</p>
+    {% endif %}
+</div>
+
+{% if huidige_gebruiker_rol == 'beheerder' %}
+<p class="tekst-zacht">
+    Agenda-links beheren kan via <a href="{{ url_for('club_instellingen') }}">Club instellingen</a>.
+</p>
+{% endif %}
+{% endblock %}
