@@ -122,6 +122,11 @@
         <div class="opvallend-kaart">
             <strong>{{ nooit_geteld|length }} product(en) nog nooit geteld</strong>
             <p class="tekst-zacht">De voorraad hiervan staat nog op wat er handmatig is ingevoerd.</p>
+            <ul>
+                {% for p in nooit_geteld %}
+                <li>{{ p.naam }}</li>
+                {% endfor %}
+            </ul>
         </div>
         {% endif %}
 
