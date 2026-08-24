@@ -151,27 +151,38 @@ def _migreer_kassa_afgesloten(db):
     db.execute("UPDATE kassa_tellingen SET afgesloten = 1")
 
 
+# Databasepaden waarvoor het schema al is toegepast in dit proces -- zie
+# get_db() hieronder.
+_SCHEMA_TOEGEPAST_VOOR = set()
+
+
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(current_app.config["DATABASE"])
+        db_pad = current_app.config["DATABASE"]
+        g.db = sqlite3.connect(db_pad)
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA foreign_keys = ON")
         # WAL i.p.v. de standaard journal-mode: lezers blokkeren schrijvers
         # niet meer (en andersom minder snel), belangrijk omdat meerdere
         # vrijwilligers tegelijk kunnen boeken/tellen.
         g.db.execute("PRAGMA journal_mode = WAL")
-        # Always (re)apply the schema on a fresh connection. This is cheap
-        # (CREATE ... IF NOT EXISTS) and makes the app self-healing if the
-        # database file is ever replaced or wiped out from under a running
-        # process -- e.g. by iCloud Drive syncing/evicting the .db file,
-        # which is where this project lives.
-        with open(SCHEMA_PATH) as f:
-            g.db.executescript(f.read())
-        _migreer_kolommen(g.db)
-        _migreer_categorieen(g.db)
-        _migreer_telling_verkoopprijs(g.db)
-        _migreer_kassa_afgesloten(g.db)
-        g.db.commit()
+        # Schema + migraties toepassen is zelfhelend (CREATE ... IF NOT
+        # EXISTS) en hoeft dus maar 1x per proces, niet op elke request --
+        # het db-pad wordt hierboven al bijgehouden zodat een volgende
+        # request in hetzelfde proces dit overslaat. Wordt de database ooit
+        # vervangen of leeggehaald onder een lopend proces (bijv. door
+        # iCloud Drive dat het .db-bestand synchroniseert/evict, waar dit
+        # project staat), dan herstelt de eerstvolgende procesherstart dit
+        # weer vanzelf.
+        if db_pad not in _SCHEMA_TOEGEPAST_VOOR:
+            with open(SCHEMA_PATH) as f:
+                g.db.executescript(f.read())
+            _migreer_kolommen(g.db)
+            _migreer_categorieen(g.db)
+            _migreer_telling_verkoopprijs(g.db)
+            _migreer_kassa_afgesloten(g.db)
+            g.db.commit()
+            _SCHEMA_TOEGEPAST_VOOR.add(db_pad)
     return g.db
 
 
