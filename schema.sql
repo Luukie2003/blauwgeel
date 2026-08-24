@@ -164,6 +164,13 @@ CREATE TABLE IF NOT EXISTS agenda_feeds (
     team TEXT
 );
 
+CREATE TABLE IF NOT EXISTS weer_voorspelling (
+    datum TEXT PRIMARY KEY,
+    max_temp REAL,
+    neerslag_kans INTEGER,
+    weercode INTEGER
+);
+
 CREATE INDEX IF NOT EXISTS idx_wedstrijden_datum ON wedstrijden(datum);
 CREATE INDEX IF NOT EXISTS idx_mutaties_product ON mutaties(product_id);
 CREATE INDEX IF NOT EXISTS idx_mutaties_datum ON mutaties(datum);

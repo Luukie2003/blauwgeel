@@ -54,6 +54,35 @@
     {% endif %}
 </div>
 
+{% if voorspelde_tekorten %}
+<div class="kaart">
+    <h2>Voorspelde tekorten</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Zit nog boven het minimum, maar op basis van de gemiddelde verkoop,
+        de komende thuiswedstrijden en het weer wordt geschat dat dit
+        krap kan worden vóór het weekend. Een eerste, grove inschatting --
+        wordt betrouwbaarder naarmate er meer tellingen bijkomen.
+    </p>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Product</th><th>Huidige voorraad</th><th>Verwacht verbruik</th><th>Geschat tekort</th></tr>
+            </thead>
+            <tbody>
+                {% for r in voorspelde_tekorten %}
+                <tr>
+                    <td>{{ r.product.naam }}</td>
+                    <td>{{ r.product.voorraad }} {{ r.product.eenheid }}</td>
+                    <td>{{ r.verwacht_verbruik }} {{ r.product.eenheid }}</td>
+                    <td><span class="badge badge-laag">{{ r.verwacht_tekort }} {{ r.product.eenheid }} tekort</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 <div class="kaart">
     <h2>Openstaande bestellingen</h2>
     {% if open_bestellingen %}

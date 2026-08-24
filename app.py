@@ -23,6 +23,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import agenda
 import backup as backup_module
 import mail
+import weer
 from database import get_db, init_db, register_db
 from pdf import (
     bestellijst_pdf,
@@ -676,11 +677,11 @@ def bereken_kassa_stand(db):
 
 def bereken_komende_thuiswedstrijden(db, dagen=14):
     """Groepeert de komende thuiswedstrijden per datum -- gevuld door
-    agenda.py (de gekoppelde teamagenda's). Puur informatief: laat zien welke
-    dagen er meerdere teams tegelijk thuis spelen, als indicatie dat het dan
-    drukker kan worden dan gemiddeld. Rekent nog niets automatisch door in de
-    omzetverwachting -- daarvoor is eerst wat geschiedenis van gekoppelde
-    agenda- en omzetgegevens nodig."""
+    agenda.py (de gekoppelde teamagenda's) -- samen met de weersverwachting
+    van diezelfde dag (gevuld door weer.py), als indicatie hoe druk het kan
+    worden: een thuiswedstrijd bij mooi weer trekt meer mensen dan bij
+    regen. Rekent nog niets automatisch door in de omzetverwachting -- zie
+    bereken_voorspelde_tekorten() voor waar dat wel gebeurt."""
     vandaag = date.today().isoformat()
     grens = (date.today() + timedelta(days=dagen)).isoformat()
     rijen = db.execute(
@@ -692,14 +693,109 @@ def bereken_komende_thuiswedstrijden(db, dagen=14):
     per_datum = {}
     for r in rijen:
         per_datum.setdefault(r["datum"], []).append(r)
-    return [
-        {
-            "datum": datum,
-            "datum_weergave": datetime.strptime(datum, "%Y-%m-%d").strftime("%d-%m-%Y"),
-            "wedstrijden": lijst,
-        }
-        for datum, lijst in sorted(per_datum.items())
-    ]
+
+    weer_per_datum = {
+        w["datum"]: w
+        for w in db.execute(
+            "SELECT * FROM weer_voorspelling WHERE datum >= ? AND datum <= ?",
+            (vandaag, grens),
+        ).fetchall()
+    }
+
+    resultaat = []
+    for datum, lijst in sorted(per_datum.items()):
+        w = weer_per_datum.get(datum)
+        resultaat.append(
+            {
+                "datum": datum,
+                "datum_weergave": datetime.strptime(datum, "%Y-%m-%d").strftime("%d-%m-%Y"),
+                "wedstrijden": lijst,
+                "weer": (
+                    {
+                        "label": weer.weer_label(w["weercode"]),
+                        "max_temp": w["max_temp"],
+                        "neerslag_kans": w["neerslag_kans"],
+                    }
+                    if w
+                    else None
+                ),
+            }
+        )
+    return resultaat
+
+
+def bereken_voorspelde_tekorten(db, dagen_vooruit=7):
+    """Schat welke producten waarschijnlijk uitverkocht raken in de komende
+    `dagen_vooruit` dagen, ook als de voorraad nu nog boven het minimum
+    zit -- in tegenstelling tot bestel_suggesties(), dat pas waarschuwt als
+    het al te laat is. Combineert de gemiddelde historische verkoop per week
+    met het aantal thuiswedstrijden en de weersverwachting in die periode.
+
+    Dit is een eerste, simpele versie: met weinig telling-geschiedenis is de
+    schatting grof. Hoe meer tellingen er bijkomen, hoe betrouwbaarder het
+    gemiddelde per week wordt."""
+    eerste_telling = db.execute("SELECT MIN(datum) AS datum FROM tellingen").fetchone()["datum"]
+    if not eerste_telling:
+        return []
+    verstreken_weken = max(
+        1.0,
+        (datetime.now() - datetime.strptime(eerste_telling, "%Y-%m-%d %H:%M")).days / 7,
+    )
+
+    verkoop_per_product = {
+        r["product_id"]: r["totaal_verkocht"]
+        for r in db.execute(
+            "SELECT product_id, SUM(verkocht) AS totaal_verkocht FROM telling_regels GROUP BY product_id"
+        ).fetchall()
+    }
+
+    vandaag = date.today()
+    grens = vandaag + timedelta(days=dagen_vooruit)
+    aantal_wedstrijddagen = db.execute(
+        """SELECT COUNT(DISTINCT datum) AS n FROM wedstrijden
+           WHERE thuis = 1 AND datum >= ? AND datum <= ?""",
+        (vandaag.isoformat(), grens.isoformat()),
+    ).fetchone()["n"]
+
+    weer_rijen = db.execute(
+        "SELECT * FROM weer_voorspelling WHERE datum >= ? AND datum <= ?",
+        (vandaag.isoformat(), grens.isoformat()),
+    ).fetchall()
+    weer_factor = 1.0
+    if weer_rijen:
+        gem_neerslag = sum(w["neerslag_kans"] for w in weer_rijen) / len(weer_rijen)
+        gem_temp = sum(w["max_temp"] for w in weer_rijen) / len(weer_rijen)
+        if gem_neerslag < 30 and gem_temp > 18:
+            weer_factor = 1.15
+        elif gem_neerslag > 60:
+            weer_factor = 0.9
+
+    # Elke thuiswedstrijddag telt als een fikse boost bovenop een gemiddelde
+    # dag -- een ruwe aanname (30% meer verkoop per wedstrijddag), niet
+    # afgeleid uit eigen historie omdat daar simpelweg nog te weinig
+    # gekoppelde agenda- en omzetgegevens voor zijn.
+    wedstrijd_factor = 1 + 0.3 * aantal_wedstrijddagen
+    periode_factor = dagen_vooruit / 7
+
+    reeds_gesignaleerd = {p["id"] for p in bestel_suggesties(db)}
+
+    resultaat = []
+    for p in db.execute("SELECT * FROM producten WHERE actief = 1").fetchall():
+        if p["id"] in reeds_gesignaleerd:
+            continue
+        gem_per_week = verkoop_per_product.get(p["id"], 0) / verstreken_weken
+        verwacht_verbruik = gem_per_week * periode_factor * wedstrijd_factor * weer_factor
+        verwachte_voorraad = p["voorraad"] - verwacht_verbruik
+        if verwacht_verbruik > 0 and verwachte_voorraad < 0:
+            resultaat.append(
+                {
+                    "product": p,
+                    "verwacht_verbruik": round(verwacht_verbruik),
+                    "verwacht_tekort": round(-verwachte_voorraad),
+                }
+            )
+    resultaat.sort(key=lambda x: x["verwacht_tekort"], reverse=True)
+    return resultaat
 
 
 def register_routes(app):
@@ -2485,6 +2581,7 @@ def register_routes(app):
         return render_template(
             "bestellijst.html",
             suggesties=suggesties,
+            voorspelde_tekorten=bereken_voorspelde_tekorten(db),
             open_bestellingen=open_bestellingen_met_regels,
             recent_ontvangen=recent_ontvangen_met_regels,
         )

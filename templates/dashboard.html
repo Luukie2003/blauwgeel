@@ -50,13 +50,13 @@
 <div class="kaart">
     <h2>Komende thuiswedstrijden</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Uit de gekoppelde teamagenda's -- puur ter indicatie, geen automatische
-        correctie op de omzetverwachting hieronder.
+        Uit de gekoppelde teamagenda's en de weersverwachting -- puur ter
+        indicatie, geen automatische correctie op de omzetverwachting hieronder.
     </p>
     <div class="tabel-wrap">
         <table>
             <thead>
-                <tr><th>Datum</th><th>Teams thuis</th><th></th></tr>
+                <tr><th>Datum</th><th>Teams thuis</th><th>Weer</th><th></th></tr>
             </thead>
             <tbody>
                 {% for dag in komende_thuiswedstrijden %}
@@ -66,6 +66,14 @@
                         {% for w in dag.wedstrijden %}
                         {{ w.omschrijving }}{% if not loop.last %}<br>{% endif %}
                         {% endfor %}
+                    </td>
+                    <td>
+                        {% if dag.weer %}
+                        {{ dag.weer.label }}, {{ '%.0f'|format(dag.weer.max_temp) }}°C
+                        <span class="tekst-zacht">({{ dag.weer.neerslag_kans }}% neerslag)</span>
+                        {% else %}
+                        <span class="tekst-zacht">nog geen voorspelling</span>
+                        {% endif %}
                     </td>
                     <td>
                         {% if dag.wedstrijden|length > 1 %}
