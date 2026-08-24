@@ -19,10 +19,15 @@
         </div>
         <fieldset class="groupbox">
             <legend>Bestelde producten</legend>
+            <div class="filterbalk">
+                <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">
+                <span id="filter-aantal" class="tekst-zacht"></span>
+            </div>
             <div class="tabel-wrap">
-                <table>
+                <table id="bestelling-tabel">
                     <thead>
                         <tr>
+                            <th>Code</th>
                             <th>Product</th>
                             <th>Categorie</th>
                             <th>Huidige voorraad</th>
@@ -31,7 +36,8 @@
                     </thead>
                     <tbody>
                         {% for p in producten %}
-                        <tr>
+                        <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or ''))|lower }}">
+                            <td>{{ p.artikelcode or '—' }}</td>
                             <td>{{ p.naam }}</td>
                             <td>{{ p.categorie }}</td>
                             <td>{{ p.voorraad }} {{ p.eenheid }}</td>
@@ -55,4 +61,29 @@
         <button type="submit" class="btn btn-geel">Bestelling klaarzetten</button>
     </form>
 </div>
+
+<script>
+(function () {
+    var zoekVeld = document.getElementById('filter-zoek');
+    var aantalLabel = document.getElementById('filter-aantal');
+    if (!zoekVeld) return;
+    var rijen = Array.prototype.slice.call(
+        document.querySelectorAll('#bestelling-tabel tbody tr')
+    );
+
+    function filter() {
+        var zoek = zoekVeld.value.trim().toLowerCase();
+        var zichtbaar = 0;
+        rijen.forEach(function (rij) {
+            var toon = !zoek || rij.dataset.zoek.indexOf(zoek) !== -1;
+            rij.style.display = toon ? '' : 'none';
+            if (toon) zichtbaar++;
+        });
+        aantalLabel.textContent = zichtbaar + ' van ' + rijen.length + ' producten';
+    }
+
+    zoekVeld.addEventListener('input', filter);
+    filter();
+})();
+</script>
 {% endblock %}
