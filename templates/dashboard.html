@@ -18,40 +18,13 @@
     </div>
 </div>
 
-<div class="kaart">
-    <div class="actiebalk">
-        <h2 style="margin:0">Producten met te lage voorraad</h2>
-        {% if laag %}<a href="{{ url_for('bestellijst') }}" class="btn btn-geel btn-klein">Naar bestellijst</a>{% endif %}
-    </div>
-    {% if laag %}
-    <div class="tabel-wrap">
-        <table>
-            <thead>
-                <tr><th>Product</th><th>Categorie</th><th>Voorraad</th><th>Minimum</th></tr>
-            </thead>
-            <tbody>
-                {% for p in laag %}
-                <tr>
-                    <td>{{ p.naam }}</td>
-                    <td>{{ p.categorie }}</td>
-                    <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
-                    <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p class="leeg">Alles zit boven het minimum. Niets te bestellen.</p>
-    {% endif %}
-</div>
-
 {% if komende_thuiswedstrijden %}
 <div class="kaart">
     <h2>Komende thuiswedstrijden</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Uit de gekoppelde teamagenda's en de weersverwachting -- puur ter
-        indicatie, geen automatische correctie op de omzetverwachting hieronder.
+        Uit de gekoppelde teamagenda's en de weersverwachting -- ververst
+        automatisch elke nacht, puur ter indicatie, geen automatische
+        correctie op de omzetverwachting verderop.
     </p>
     <div class="tabel-wrap">
         <table>
@@ -87,6 +60,34 @@
     </div>
 </div>
 {% endif %}
+
+<div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">Producten met te lage voorraad</h2>
+        {% if laag %}<a href="{{ url_for('bestellijst') }}" class="btn btn-geel btn-klein">Naar bestellijst</a>{% endif %}
+    </div>
+    {% if laag %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Product</th><th>Categorie</th><th>Voorraad</th><th>Minimum</th></tr>
+            </thead>
+            <tbody>
+                {% for p in laag %}
+                <tr>
+                    <td>{{ p.naam }}</td>
+                    <td>{{ p.categorie }}</td>
+                    <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
+                    <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Alles zit boven het minimum. Niets te bestellen.</p>
+    {% endif %}
+</div>
 
 <div class="kaart">
     <div class="actiebalk">
