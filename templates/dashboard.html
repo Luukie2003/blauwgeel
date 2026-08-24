@@ -16,17 +16,19 @@
             {% endif %}
         </div>
     </div>
-    <div class="statuskaart {{ 'statuskaart-goed' if kassa_telling_status.status == 'groen' else ('statuskaart-slecht' if kassa_telling_status.status == 'rood' else 'statuskaart-neutraal') }}">
+    {% set kassa_klasse = {'groen': 'statuskaart-goed', 'rood': 'statuskaart-slecht', 'oranje': 'statuskaart-oranje'}.get(kassa_telling_status.status, 'statuskaart-neutraal') %}
+    {% set kassa_label = {'groen': 'Geteld', 'rood': 'Te laat', 'oranje': 'Concept'}.get(kassa_telling_status.status, 'Nog niet nodig') %}
+    <div class="statuskaart {{ kassa_klasse }}">
         <div class="statuskaart-titel">Kassa tellen</div>
         <div class="statuskaart-body">
             {% if kassa_telling_status.laatste_kassatelling %}
             <div class="statuskaart-vak">
-                {{ 'Geteld' if kassa_telling_status.status == 'groen' else 'Te laat' if kassa_telling_status.status == 'rood' else 'Nog niet nodig' }}<br>
+                {{ kassa_label }}<br>
                 op {{ kassa_telling_status.laatste_kassatelling.datum|datum_nl }}
             </div>
             <p class="statuskaart-opmerking">door {{ kassa_telling_status.laatste_kassatelling.naam or '—' }}</p>
             {% else %}
-            <div class="statuskaart-vak">{{ 'Te laat' if kassa_telling_status.status == 'rood' else 'Nog niet nodig' }}</div>
+            <div class="statuskaart-vak">{{ kassa_label }}</div>
             {% endif %}
             <p class="statuskaart-opmerking">{{ kassa_telling_status.tekst }}</p>
         </div>

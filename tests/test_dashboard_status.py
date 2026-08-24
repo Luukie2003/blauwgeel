@@ -50,6 +50,14 @@ def _sluit_kassatelling_af(db, dagen_geleden):
     db.commit()
 
 
+def _open_kassatelling(db, dagen_geleden=0):
+    datum = (datetime.now() - timedelta(days=dagen_geleden)).strftime("%Y-%m-%d %H:%M")
+    db.execute(
+        "INSERT INTO kassa_tellingen (datum, naam, afgesloten) VALUES (?, 'Luuk', 0)", (datum,)
+    )
+    db.commit()
+
+
 def test_kassa_status_groen_als_geteld_sinds_wedstrijd(db):
     _voeg_thuiswedstrijd_toe(db, dagen_geleden=3)
     _sluit_kassatelling_af(db, dagen_geleden=1)  # na de wedstrijd
@@ -102,3 +110,29 @@ def test_kassa_status_wedstrijdregel_gaat_voor_algemene_regel(db):
 
     resultaat = bereken_kassa_telling_status(db)
     assert resultaat["status"] == "rood"
+
+
+def test_kassa_status_oranje_bij_openstaand_concept(db):
+    _open_kassatelling(db)
+
+    resultaat = bereken_kassa_telling_status(db)
+    assert resultaat["status"] == "oranje"
+
+
+def test_kassa_status_concept_gaat_voor_alle_andere_regels(db):
+    """Zelfs met een gemiste wedstrijd-deadline moet een openstaand concept
+    (de allerlaatste telling) oranje laten zien -- iemand is er al mee
+    bezig."""
+    _voeg_thuiswedstrijd_toe(db, dagen_geleden=5)
+    _open_kassatelling(db, dagen_geleden=0)
+
+    resultaat = bereken_kassa_telling_status(db)
+    assert resultaat["status"] == "oranje"
+
+
+def test_kassa_status_negeert_afgesloten_telling_als_er_daarna_een_concept_is(db):
+    _sluit_kassatelling_af(db, dagen_geleden=1)
+    _open_kassatelling(db, dagen_geleden=0)  # nieuwere, nog open telling
+
+    resultaat = bereken_kassa_telling_status(db)
+    assert resultaat["status"] == "oranje"

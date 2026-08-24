@@ -816,7 +816,20 @@ def bereken_kassa_telling_status(db):
       3 dagen verstreken zonder telling sinds die wedstrijd -> rood (gaat
       voor de algemene regel, want geld na een wedstrijd moet tijdig
       afgehandeld worden). Binnen de eerste 3 dagen na een wedstrijd zonder
-      telling is het nog niet mis: neutraal."""
+      telling is het nog niet mis: neutraal.
+
+    Staat de allerlaatste telling nog open (concept, nog niet afgesloten),
+    dan gaat dat voor alle andere regels: oranje."""
+    laatste_ooit = db.execute(
+        "SELECT * FROM kassa_tellingen ORDER BY datum DESC, id DESC LIMIT 1"
+    ).fetchone()
+    if laatste_ooit is not None and not laatste_ooit["afgesloten"]:
+        return {
+            "status": "oranje",
+            "tekst": "Concept -- nog niet afgesloten",
+            "laatste_kassatelling": laatste_ooit,
+        }
+
     vandaag = date.today()
     laatste_wedstrijd = db.execute(
         "SELECT datum FROM wedstrijden WHERE thuis = 1 AND datum <= ? ORDER BY datum DESC LIMIT 1",

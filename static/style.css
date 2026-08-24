@@ -401,6 +401,7 @@ fieldset.groupbox legend {
 
 .statuskaart-goed .statuskaart-body { background: var(--groen-bg); color: var(--groen); }
 .statuskaart-slecht .statuskaart-body { background: var(--rood-bg); color: var(--rood); }
+.statuskaart-oranje .statuskaart-body { background: var(--oranje-bg); color: var(--oranje); }
 .statuskaart-neutraal .statuskaart-body { background: #eef0f2; color: var(--tekst-zacht); }
 
 .statuskaart-vak {
