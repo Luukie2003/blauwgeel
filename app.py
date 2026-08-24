@@ -20,6 +20,7 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
+import agenda
 import backup as backup_module
 import mail
 from database import get_db, init_db, register_db
@@ -146,6 +147,11 @@ BEHEERDER_ENDPOINTS = {
     "producten_minimumvoorraad",
     "producten_besteleenheid",
     "instellingen_pagina",
+    "club_instellingen",
+    "club_agenda_toevoegen",
+    "club_agenda_verwijderen",
+    "club_agenda_verversen",
+    "club_agenda_controleren",
 }
 
 NAV_ITEMS = [
@@ -1057,6 +1063,65 @@ def register_routes(app):
             notificatie_email=rij["notificatie_email"] if rij else None,
             banner_tekst=rij["banner_tekst"] if rij else None,
         )
+
+    # ---------- Club instellingen (teamagenda's) ----------
+
+    @app.route("/club-instellingen")
+    def club_instellingen():
+        db = get_db()
+        feeds = db.execute("SELECT * FROM agenda_feeds ORDER BY id").fetchall()
+        aantal_wedstrijden = db.execute(
+            "SELECT COUNT(*) AS n FROM wedstrijden"
+        ).fetchone()["n"]
+        return render_template(
+            "club_instellingen.html", feeds=feeds, aantal_wedstrijden=aantal_wedstrijden
+        )
+
+    @app.route("/club-instellingen/toevoegen", methods=["POST"])
+    def club_agenda_toevoegen():
+        url = request.form.get("url", "").strip()
+        if not url:
+            flash("Vul een agenda-link in.", "error")
+        else:
+            db = get_db()
+            db.execute("INSERT INTO agenda_feeds (url) VALUES (?)", (url,))
+            db.commit()
+            flash("Agenda-link toegevoegd. Klik op 'Nu verversen' om 'm op te halen.", "success")
+        return redirect(url_for("club_instellingen"))
+
+    @app.route("/club-instellingen/<int:feed_id>/verwijderen", methods=["POST"])
+    def club_agenda_verwijderen(feed_id):
+        db = get_db()
+        db.execute("DELETE FROM agenda_feeds WHERE id = ?", (feed_id,))
+        db.commit()
+        flash("Agenda-link verwijderd.", "success")
+        return redirect(url_for("club_instellingen"))
+
+    @app.route("/club-instellingen/verversen", methods=["POST"])
+    def club_agenda_verversen():
+        aantal = agenda.ververs_wedstrijden(db_pad=app.config["DATABASE"])
+        if aantal is None:
+            flash("Geen agenda-links ingesteld om te verversen.", "error")
+        else:
+            flash(f"Agenda's ververst: {aantal} komende wedstrijden bijgewerkt.", "success")
+        return redirect(url_for("club_instellingen"))
+
+    @app.route("/club-instellingen/controleren", methods=["POST"])
+    def club_agenda_controleren():
+        db = get_db()
+        urls = [r["url"] for r in db.execute("SELECT url FROM agenda_feeds").fetchall()]
+        if not urls:
+            flash("Geen agenda-links om te controleren.", "error")
+        else:
+            for resultaat in agenda.controleer_feeds(urls):
+                if resultaat["ok"]:
+                    flash(
+                        f"{resultaat['team']}: bereikbaar, {resultaat['aantal']} wedstrijden gevonden.",
+                        "success",
+                    )
+                else:
+                    flash(f"Link mislukt ({resultaat['url']}): {resultaat['fout']}", "error")
+        return redirect(url_for("club_instellingen"))
 
     # ---------- Back-ups ----------
 

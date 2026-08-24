@@ -2,29 +2,22 @@
 komende wedstrijden in de database, zodat het dashboard kan laten zien welk
 weekend het druk wordt -- handig om de verwachte omzet mee in te schatten.
 
+De feed-links worden beheerd via Club instellingen in de app (tabel
+agenda_feeds) -- dit script leest ze rechtstreeks uit de database, er is
+geen los configbestand meer nodig.
+
 Bedoeld om dagelijks te draaien via een PythonAnywhere Scheduled Task:
 
     python3 agenda.py
 
 Gebruikt alleen de standaardbibliotheek (net als backup.py -- geen
-virtualenv nodig). Werkt alleen als agenda_instellingen.py bestaat; ontbreekt
-dat bestand, dan doet dit script niets en blijft de rest van de app gewoon
-werken.
-"""
+virtualenv nodig)."""
 
 import re
 import sqlite3
 from datetime import date, datetime
 from pathlib import Path
 from urllib.request import urlopen
-
-try:
-    import agenda_instellingen as instellingen
-
-    AGENDA_BESCHIKBAAR = True
-except ImportError:
-    instellingen = None
-    AGENDA_BESCHIKBAAR = False
 
 BASE_DIR = Path(__file__).parent
 DB_PAD = BASE_DIR / "voorraad.db"
@@ -72,14 +65,33 @@ def _parse_ics(tekst):
     return wedstrijden
 
 
-def ververs_wedstrijden(db_pad=None, vandaag=None):
-    """Haalt alle feeds op en vervangt de inhoud van de wedstrijden-tabel
-    door de wedstrijden vanaf vandaag. Geeft het aantal weggeschreven
-    wedstrijden terug, of None als er geen agenda_instellingen.py is."""
-    if not AGENDA_BESCHIKBAAR:
-        print("[agenda] Overgeslagen (geen agenda_instellingen.py)")
-        return None
+def haal_feed_op(url):
+    """Haalt en parseert 1 iCal-feed. Gooit een uitzondering door bij een
+    netwerk- of parseerfout; de aanroeper bepaalt hoe dat getoond wordt."""
+    with urlopen(url, timeout=TIMEOUT_SECONDEN) as response:
+        tekst = response.read().decode("utf-8", errors="replace")
+    team = _team_naam(tekst) or "Onbekend team"
+    return team, _parse_ics(tekst)
 
+
+def controleer_feeds(urls):
+    """Test elke feed-link zonder de database te wijzigen -- voor de
+    'Controleren'-knop in Club instellingen."""
+    resultaten = []
+    for url in urls:
+        try:
+            team, wedstrijden = haal_feed_op(url)
+            resultaten.append({"url": url, "ok": True, "team": team, "aantal": len(wedstrijden)})
+        except Exception as fout:
+            resultaten.append({"url": url, "ok": False, "team": None, "fout": str(fout)})
+    return resultaten
+
+
+def ververs_wedstrijden(db_pad=None, vandaag=None):
+    """Haalt alle ingestelde feeds op en vervangt de inhoud van de
+    wedstrijden-tabel door de wedstrijden vanaf vandaag. Werkt de teamnaam
+    per feed bij zodra die bekend is. Geeft het aantal weggeschreven
+    wedstrijden terug, of None als er geen feeds zijn ingesteld."""
     db_pad = db_pad or DB_PAD
     if not Path(db_pad).exists():
         print("[agenda] Database bestaat nog niet -- niets te doen.")
@@ -87,18 +99,23 @@ def ververs_wedstrijden(db_pad=None, vandaag=None):
     vandaag = vandaag or date.today()
 
     conn = sqlite3.connect(db_pad)
-    conn.execute("DELETE FROM wedstrijden")
+    conn.row_factory = sqlite3.Row
+    feeds = conn.execute("SELECT id, url FROM agenda_feeds ORDER BY id").fetchall()
+    if not feeds:
+        conn.close()
+        print("[agenda] Geen agenda-links ingesteld -- niets te doen.")
+        return None
 
+    conn.execute("DELETE FROM wedstrijden")
     aantal = 0
-    for feed in instellingen.AGENDA_FEEDS:
+    for feed in feeds:
         try:
-            with urlopen(feed["url"], timeout=TIMEOUT_SECONDEN) as response:
-                tekst = response.read().decode("utf-8", errors="replace")
+            team, wedstrijden = haal_feed_op(feed["url"])
         except Exception as fout:
-            print(f"[agenda] Ophalen mislukt voor feed: {fout}")
+            print(f"[agenda] Ophalen mislukt voor feed #{feed['id']}: {fout}")
             continue
-        team = _team_naam(tekst) or "Onbekend team"
-        for wedstrijd in _parse_ics(tekst):
+        conn.execute("UPDATE agenda_feeds SET team = ? WHERE id = ?", (team, feed["id"]))
+        for wedstrijd in wedstrijden:
             if wedstrijd["datum"] < vandaag.isoformat():
                 continue
             conn.execute(

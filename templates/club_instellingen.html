@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block titel %}Club instellingen{% endblock %}
+{% block inhoud %}
+<p class="subtitel">Koppel de team-agenda's (iCal-links, bijv. van Sportlink), zodat het dashboard laat zien welke dagen er thuis gespeeld wordt.</p>
+
+<div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">Teamagenda's</h2>
+        <div style="display:flex; gap:0.5rem">
+            <form method="post" action="{{ url_for('club_agenda_controleren') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-rand">Controleren</button>
+            </form>
+            <form method="post" action="{{ url_for('club_agenda_verversen') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-geel">Nu verversen</button>
+            </form>
+        </div>
+    </div>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        "Controleren" test of de links nog bereikbaar zijn, zonder iets aan te passen.
+        "Nu verversen" haalt de wedstrijden echt op en werkt het dashboard bij
+        (gebeurt ook automatisch, elke nacht). Er staan nu
+        <strong>{{ aantal_wedstrijden }}</strong> komende wedstrijden in het systeem.
+    </p>
+
+    {% if feeds %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Team</th><th>Link</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for feed in feeds %}
+                <tr>
+                    <td>{{ feed.team or '— nog niet opgehaald —' }}</td>
+                    <td class="tekst-zacht" style="word-break:break-all">{{ feed.url }}</td>
+                    <td class="tabel-acties">
+                        <form method="post" action="{{ url_for('club_agenda_verwijderen', feed_id=feed.id) }}"
+                              onsubmit="return confirm('Deze agenda-link verwijderen?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen agenda-links gekoppeld.</p>
+    {% endif %}
+</div>
+
+<div class="kaart" style="max-width:560px">
+    <h2>Agenda-link toevoegen</h2>
+    <form method="post" action="{{ url_for('club_agenda_toevoegen') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="url">iCal-link (bijv. van Sportlink)</label>
+            <input type="url" id="url" name="url" required
+                   placeholder="https://data.sportlink.com/ical-team?token=...">
+        </div>
+        <button type="submit" class="btn btn-geel">Toevoegen</button>
+    </form>
+</div>
+{% endblock %}

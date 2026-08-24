@@ -158,6 +158,12 @@ CREATE TABLE IF NOT EXISTS wedstrijden (
     thuis INTEGER NOT NULL DEFAULT 1
 );
 
+CREATE TABLE IF NOT EXISTS agenda_feeds (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url TEXT NOT NULL,
+    team TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_wedstrijden_datum ON wedstrijden(datum);
 CREATE INDEX IF NOT EXISTS idx_mutaties_product ON mutaties(product_id);
 CREATE INDEX IF NOT EXISTS idx_mutaties_datum ON mutaties(datum);
