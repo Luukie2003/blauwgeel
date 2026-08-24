@@ -38,8 +38,18 @@ BACKUP_BESTANDSNAAM = re.compile(
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.1.0"
+HUIDIGE_VERSIE = "1.2.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.2.0",
+        "datum": "24 augustus 2026",
+        "punten": [
+            "Automatische tests bij elke push naar GitHub (CI)",
+            "Signalering van verouderde dependencies (Dependabot)",
+            "Beveiligingsheaders toegevoegd (Content-Security-Policy e.a.)",
+            "Uurlijkse controle of de site bereikbaar is, met mailmelding bij storing",
+        ],
+    },
     {
         "versie": "1.1.0",
         "datum": "24 augustus 2026",
