@@ -1208,7 +1208,7 @@ def register_routes(app):
             (
                 {"product": p, "laatste_datum": laatste_per_product[p["id"]]}
                 for p in producten
-                if p["id"] in laatste_per_product
+                if p["actief"] and p["id"] in laatste_per_product
             ),
             key=lambda x: x["laatste_datum"],
         )[:5]
