@@ -176,12 +176,6 @@ NAV_ITEMS = [
     },
     {
         "groep": "Algemeen",
-        "endpoints": ["geschiedenis"],
-        "url_endpoint": "geschiedenis",
-        "label": "Geschiedenis",
-    },
-    {
-        "groep": "Algemeen",
         "endpoints": ["bijzonderheden"],
         "url_endpoint": "bijzonderheden",
         "label": "Bijzonderheden",
@@ -210,6 +204,12 @@ NAV_ITEMS = [
         "endpoints": ["boeken", "levering_inboeken"],
         "url_endpoint": "boeken",
         "label": "In/uit boeken",
+    },
+    {
+        "groep": "Voorraad",
+        "endpoints": ["geschiedenis"],
+        "url_endpoint": "geschiedenis",
+        "label": "Mutatieoverzicht",
     },
     {
         "groep": "Voorraad",
