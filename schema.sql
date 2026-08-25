@@ -129,7 +129,11 @@ CREATE TABLE IF NOT EXISTS kassa_tellingen (
     aantal_010 INTEGER NOT NULL DEFAULT 0,
     aantal_005 INTEGER NOT NULL DEFAULT 0,
     opmerking TEXT,
-    afgesloten INTEGER NOT NULL DEFAULT 0
+    afgesloten INTEGER NOT NULL DEFAULT 0,
+    goedgekeurd_door_id INTEGER REFERENCES gebruikers(id),
+    goedgekeurd_door TEXT,
+    goedgekeurd_op TEXT,
+    goedkeuring_opmerking TEXT
 );
 
 CREATE TABLE IF NOT EXISTS login_pogingen (

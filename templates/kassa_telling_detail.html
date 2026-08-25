@@ -6,13 +6,14 @@
         <h1 style="margin-bottom:0.2rem">
             Kassatelling #{{ telling.id }}
             {% if telling.afgesloten %}
-            <span class="badge badge-ok">Afgesloten</span>
+            <span class="badge badge-ok">Goedgekeurd</span>
             {% else %}
             <span class="badge badge-laag">Nog open (concept)</span>
             {% endif %}
         </h1>
         <p class="subtitel" style="margin:0">
             {{ telling.datum|datum_nl }}{% if telling.naam %} &mdash; geteld door {{ telling.naam }}{% endif %}
+            {% if telling.afgesloten and telling.goedgekeurd_door %} &mdash; goedgekeurd door {{ telling.goedgekeurd_door }}{% if telling.goedgekeurd_op %} op {{ telling.goedgekeurd_op|datum_nl }}{% endif %}{% endif %}
             &nbsp;&middot;&nbsp; <a href="{{ url_for('kassa_geschiedenis') }}">&larr; Kassa geschiedenis</a>
             &nbsp;&middot;&nbsp; <a href="{{ url_for('kassa_tellen') }}">Nieuwe telling</a>
         </p>
@@ -21,11 +22,20 @@
         <a href="{{ url_for('kassa_telling_pdf', telling_id=telling.id) }}" class="btn btn-rand">PDF</a>
         {% if not telling.afgesloten %}
         <a href="{{ url_for('kassa_telling_bewerken', telling_id=telling.id) }}" class="btn btn-rand">Bewerken</a>
-        <form method="post" action="{{ url_for('kassa_telling_afsluiten', telling_id=telling.id) }}"
-              onsubmit="return confirm('Kassatelling #{{ telling.id }} afsluiten? Hierna kan hij niet meer aangepast worden.');">
+        {% if mag_goedkeuren %}
+        <form method="post" action="{{ url_for('kassa_telling_goedkeuren', telling_id=telling.id) }}"
+              onsubmit="return confirm('Kassatelling #{{ telling.id }} goedkeuren? Hierna kan hij niet meer aangepast worden.');"
+              style="display:flex; gap:0.4rem; align-items:center">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-geel">Afsluiten</button>
+            <input type="text" name="goedkeuring_opmerking" placeholder="Opmerking bij goedkeuring (optioneel)"
+                   style="width:14rem">
+            <button type="submit" class="btn btn-geel">Goedkeuren</button>
         </form>
+        {% else %}
+        <span class="badge badge-neutraal" title="Vier-ogen-principe: wie zelf geteld heeft, mag niet ook zelf goedkeuren.">
+            Wacht op goedkeuring door een ander
+        </span>
+        {% endif %}
         {% elif (kassa_stand.stand - telling.geteld_bedrag)|abs < 0.001 %}
         <form method="post" action="{{ url_for('kassa_telling_heropenen', telling_id=telling.id) }}"
               onsubmit="return confirm('Kassatelling #{{ telling.id }} heropenen? Daarna kan hij weer aangepast worden.');">
@@ -92,7 +102,10 @@
         </tbody>
     </table>
     {% if telling.opmerking %}
-    <p class="tekst-zacht" style="margin-top:1rem">Opmerking: {{ telling.opmerking }}</p>
+    <p class="tekst-zacht" style="margin-top:1rem">Opmerking (teller): {{ telling.opmerking }}</p>
+    {% endif %}
+    {% if telling.goedkeuring_opmerking %}
+    <p class="tekst-zacht" style="margin-top:0.3rem">Opmerking (goedkeurder): {{ telling.goedkeuring_opmerking }}</p>
     {% endif %}
 </div>
 {% endblock %}

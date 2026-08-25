@@ -347,7 +347,7 @@ def voorraadoverzicht_pdf(gegevens):
 
 
 def kassa_pdf(telling, coupures):
-    status = "Afgesloten" if telling["afgesloten"] else "Nog open (concept)"
+    status = "Goedgekeurd" if telling["afgesloten"] else "Nog open (concept)"
     subtitel = f"{telling['datum']}  -  {status}"
     pdf = Rapport(f"Kassatelling #{telling['id']}", subtitel)
 
@@ -381,12 +381,18 @@ def kassa_pdf(telling, coupures):
         verschil_label = "Verschil:"
     pdf.statregel(verschil_label, _euro(abs(telling["verschil"])))
 
-    if telling["naam"] or telling["opmerking"]:
+    if telling["naam"] or telling["opmerking"] or telling["goedgekeurd_door"]:
         pdf.sectie("Details")
         if telling["naam"]:
             pdf.statregel("Geteld door:", telling["naam"])
         if telling["opmerking"]:
-            pdf.statregel("Opmerking:", telling["opmerking"])
+            pdf.statregel("Opmerking (teller):", telling["opmerking"])
+        if telling["goedgekeurd_door"]:
+            pdf.statregel("Goedgekeurd door:", telling["goedgekeurd_door"])
+        if telling["goedgekeurd_op"]:
+            pdf.statregel("Goedgekeurd op:", telling["goedgekeurd_op"])
+        if telling["goedkeuring_opmerking"]:
+            pdf.statregel("Opmerking (goedkeurder):", telling["goedkeuring_opmerking"])
 
     return bytes(pdf.output())
 

@@ -42,8 +42,20 @@ BACKUP_BESTANDSNAAM = re.compile(
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.2.0"
+HUIDIGE_VERSIE = "1.3.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.3.0",
+        "datum": "25 augustus 2026",
+        "punten": [
+            "Vier-ogen-principe bij kassatellingen: de teller keurt zijn eigen telling niet meer zelf goed",
+            "Opmerking bij goedkeuring, apart van de opmerking van de teller",
+            "Wie geteld en wie goedgekeurd heeft staat nu in het kasverslag (scherm en PDF)",
+            "Team-agenda's en weer gecombineerd op de nieuwe Wedstrijden-pagina",
+            "Voorspelde tekorten op de bestellijst, ook boven het minimum",
+            "Correctie-boekingen licht rood gemarkeerd in de geschiedenis",
+        ],
+    },
     {
         "versie": "1.2.0",
         "datum": "24 augustus 2026",
@@ -228,7 +240,7 @@ NAV_ITEMS = [
             "kassa_tellen",
             "kassa_telling_detail",
             "kassa_telling_bewerken",
-            "kassa_telling_afsluiten",
+            "kassa_telling_goedkeuren",
             "kassa_telling_pdf",
             "kassa_telling_heropenen",
         ],
@@ -673,6 +685,21 @@ def bereken_kassa_stand(db):
         "stand": round(rij["kassa_stand"] if rij else 0.0, 2),
         "laatste_telling": laatste_telling,
     }
+
+
+KASSA_GOEDKEUREN_WACHTDAGEN = 7
+
+
+def mag_kassa_telling_goedkeuren(telling, gebruiker_id):
+    """Vier-ogen-principe: wie de telling zelf heeft gedaan mag 'm niet ook
+    zelf goedkeuren. Uitzondering: staat de telling langer dan
+    KASSA_GOEDKEUREN_WACHTDAGEN dagen als concept (niemand anders heeft 'm
+    opgepakt), dan mag de teller 'm alsnog zelf goedkeuren -- anders zou
+    hij voor altijd blijven hangen."""
+    if telling["gebruiker_id"] != gebruiker_id:
+        return True
+    ouderdom = datetime.now() - datetime.strptime(telling["datum"], "%Y-%m-%d %H:%M")
+    return ouderdom.days > KASSA_GOEDKEUREN_WACHTDAGEN
 
 
 def bereken_wedstrijd_geschiedenis(db, limiet=25):
@@ -3110,6 +3137,7 @@ def register_routes(app):
             telling=telling,
             coupures=KASSA_COUPURES,
             kassa_stand=kassa_stand,
+            mag_goedkeuren=mag_kassa_telling_goedkeuren(telling, session.get("gebruiker_id")),
         )
 
     @app.route("/kassa/tellingen/<int:telling_id>/heropenen", methods=["POST"])
@@ -3138,7 +3166,13 @@ def register_routes(app):
             )
             return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
 
-        db.execute("UPDATE kassa_tellingen SET afgesloten = 0 WHERE id = ?", (telling_id,))
+        db.execute(
+            """UPDATE kassa_tellingen
+               SET afgesloten = 0, goedgekeurd_door_id = NULL, goedgekeurd_door = NULL,
+                   goedgekeurd_op = NULL, goedkeuring_opmerking = NULL
+               WHERE id = ?""",
+            (telling_id,),
+        )
         db.execute(
             "UPDATE instellingen SET kassa_stand = ? WHERE id = 1",
             (round(telling["verwacht_bedrag"] - telling["contante_omzet"], 2),),
@@ -3214,8 +3248,8 @@ def register_routes(app):
             kassa_stand=kassa_stand,
         )
 
-    @app.route("/kassa/tellingen/<int:telling_id>/afsluiten", methods=["POST"])
-    def kassa_telling_afsluiten(telling_id):
+    @app.route("/kassa/tellingen/<int:telling_id>/goedkeuren", methods=["POST"])
+    def kassa_telling_goedkeuren(telling_id):
         db = get_db()
         telling = db.execute(
             "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
@@ -3224,15 +3258,35 @@ def register_routes(app):
             flash("Kassatelling niet gevonden.", "error")
             return redirect(url_for("kassa_geschiedenis"))
         if telling["afgesloten"]:
-            flash("Deze kassatelling was al afgesloten.", "error")
+            flash("Deze kassatelling was al goedgekeurd.", "error")
+            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+        if not mag_kassa_telling_goedkeuren(telling, session.get("gebruiker_id")):
+            flash(
+                "Je kunt je eigen telling niet goedkeuren -- dat moet iemand anders doen "
+                f"(of wacht {KASSA_GOEDKEUREN_WACHTDAGEN} dagen, dan mag het alsnog).",
+                "error",
+            )
             return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
 
-        db.execute("UPDATE kassa_tellingen SET afgesloten = 1 WHERE id = ?", (telling_id,))
+        goedkeuring_opmerking = request.form.get("goedkeuring_opmerking", "").strip()
+        db.execute(
+            """UPDATE kassa_tellingen
+               SET afgesloten = 1, goedgekeurd_door_id = ?, goedgekeurd_door = ?,
+                   goedgekeurd_op = ?, goedkeuring_opmerking = ?
+               WHERE id = ?""",
+            (
+                session.get("gebruiker_id"),
+                session.get("gebruiker_naam"),
+                now_str(),
+                goedkeuring_opmerking or None,
+                telling_id,
+            ),
+        )
         db.execute(
             "UPDATE instellingen SET kassa_stand = ? WHERE id = 1", (telling["geteld_bedrag"],)
         )
         db.commit()
-        flash("Kassatelling afgesloten.", "success")
+        flash("Kassatelling goedgekeurd.", "success")
         return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
 
     @app.route("/kassa/tellingen/<int:telling_id>/pdf")
