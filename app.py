@@ -42,8 +42,17 @@ BACKUP_BESTANDSNAAM = re.compile(
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.3.0"
+HUIDIGE_VERSIE = "1.4.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.4.0",
+        "datum": "25 augustus 2026",
+        "punten": [
+            "Bijzonderheden: mededelingen 'afhandelen' i.p.v. alleen verwijderen, met wie en wanneer",
+            "Urgente mededelingen vallen op tussen de rest van het prikbord",
+            "Een mededeling met één klik als de site-brede banner tonen",
+        ],
+    },
     {
         "versie": "1.3.0",
         "datum": "25 augustus 2026",
@@ -165,6 +174,7 @@ BEHEERDER_ENDPOINTS = {
     "club_agenda_verwijderen",
     "club_agenda_verversen",
     "club_agenda_controleren",
+    "mededeling_pinnen_als_banner",
 }
 
 NAV_ITEMS = [
@@ -3041,14 +3051,18 @@ def register_routes(app):
                 flash("Vul een tekst in.", "error")
                 return redirect(url_for("bijzonderheden"))
             db.execute(
-                "INSERT INTO mededelingen (tekst, naam, datum) VALUES (?, ?, ?)",
-                (tekst, session.get("gebruiker_naam"), now_str()),
+                "INSERT INTO mededelingen (tekst, naam, datum, urgent) VALUES (?, ?, ?, ?)",
+                (tekst, session.get("gebruiker_naam"), now_str(), 1 if request.form.get("urgent") else 0),
             )
             db.commit()
             return redirect(url_for("bijzonderheden"))
 
+        # Nog niet afgehandeld eerst (urgent bovenaan), afgehandelde
+        # onderaan -- zodat het prikbord niet dichtslibt met opgeloste
+        # dingen, maar ze ook niet spoorloos verdwijnen zoals bij
+        # verwijderen.
         mededelingen = db.execute(
-            "SELECT * FROM mededelingen ORDER BY id DESC"
+            "SELECT * FROM mededelingen ORDER BY afgehandeld ASC, urgent DESC, id DESC"
         ).fetchall()
         return render_template("bijzonderheden.html", mededelingen=mededelingen)
 
@@ -3057,6 +3071,46 @@ def register_routes(app):
         db = get_db()
         db.execute("DELETE FROM mededelingen WHERE id = ?", (mededeling_id,))
         db.commit()
+        return redirect(url_for("bijzonderheden"))
+
+    @app.route("/bijzonderheden/<int:mededeling_id>/afhandelen", methods=["POST"])
+    def mededeling_afhandelen(mededeling_id):
+        db = get_db()
+        db.execute(
+            """UPDATE mededelingen
+               SET afgehandeld = 1, afgehandeld_door = ?, afgehandeld_op = ?
+               WHERE id = ?""",
+            (session.get("gebruiker_naam"), now_str(), mededeling_id),
+        )
+        db.commit()
+        return redirect(url_for("bijzonderheden"))
+
+    @app.route("/bijzonderheden/<int:mededeling_id>/heropenen", methods=["POST"])
+    def mededeling_heropenen(mededeling_id):
+        db = get_db()
+        db.execute(
+            """UPDATE mededelingen
+               SET afgehandeld = 0, afgehandeld_door = NULL, afgehandeld_op = NULL
+               WHERE id = ?""",
+            (mededeling_id,),
+        )
+        db.commit()
+        return redirect(url_for("bijzonderheden"))
+
+    @app.route("/bijzonderheden/<int:mededeling_id>/pin-als-banner", methods=["POST"])
+    def mededeling_pinnen_als_banner(mededeling_id):
+        db = get_db()
+        mededeling = db.execute(
+            "SELECT * FROM mededelingen WHERE id = ?", (mededeling_id,)
+        ).fetchone()
+        if mededeling is None:
+            flash("Mededeling niet gevonden.", "error")
+            return redirect(url_for("bijzonderheden"))
+        db.execute(
+            "UPDATE instellingen SET banner_tekst = ? WHERE id = 1", (mededeling["tekst"],)
+        )
+        db.commit()
+        flash("Mededeling als banner bovenaan de site gezet.", "success")
         return redirect(url_for("bijzonderheden"))
 
     # ---------- Kassa ----------

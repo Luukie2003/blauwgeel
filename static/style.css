@@ -738,6 +738,20 @@ input:focus, select:focus, textarea:focus {
 
 .prikbriefje-voet form { margin: 0; }
 
+.prikbriefje-urgent {
+    background: var(--rood-bg);
+    border-color: #e6b3b3;
+    border-top-color: var(--rood);
+}
+
+.prikbriefje-afgehandeld {
+    background: var(--kaart);
+    border-top-color: var(--rand);
+    opacity: 0.75;
+}
+
+.prikbriefje-afgehandeld p { text-decoration: line-through; color: var(--tekst-zacht); }
+
 .btn-tekstlink {
     background: none;
     border: none;

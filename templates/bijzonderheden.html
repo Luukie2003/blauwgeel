@@ -14,6 +14,10 @@
             <textarea id="tekst" name="tekst" rows="3" required
                       placeholder="Bijv. 'Tapkraan lekt een beetje, graag even naar kijken'"></textarea>
         </div>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.8rem">
+            <input type="checkbox" id="urgent" name="urgent" style="width:auto">
+            Urgent (bijv. een storing) -- valt op tussen de andere mededelingen
+        </label>
         <button type="submit" class="btn btn-geel">Plaatsen</button>
     </form>
 </div>
@@ -21,15 +25,42 @@
 {% if mededelingen %}
 <div class="prikbord">
     {% for m in mededelingen %}
-    <div class="prikbriefje">
+    <div class="prikbriefje {{ 'prikbriefje-afgehandeld' if m.afgehandeld else ('prikbriefje-urgent' if m.urgent) }}">
+        {% if m.urgent and not m.afgehandeld %}
+        <span class="badge badge-laag" style="margin-bottom:0.5rem">Urgent</span>
+        {% endif %}
         <p>{{ m.tekst }}</p>
-        <div class="prikbriefje-voet">
-            <span>{{ m.naam or 'Onbekend' }} &middot; {{ m.datum|datum_nl }}</span>
-            <form method="post" action="{{ url_for('mededeling_verwijderen', mededeling_id=m.id) }}"
-                  onsubmit="return confirm('Deze mededeling verwijderen?');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn-tekstlink">Verwijderen</button>
-            </form>
+        <div class="prikbriefje-voet" style="flex-direction:column; align-items:stretch; gap:0.5rem">
+            <span>
+                {{ m.naam or 'Onbekend' }} &middot; {{ m.datum|datum_nl }}
+                {% if m.afgehandeld %}
+                <br>Afgehandeld door {{ m.afgehandeld_door or 'onbekend' }}{% if m.afgehandeld_op %} op {{ m.afgehandeld_op|datum_nl }}{% endif %}
+                {% endif %}
+            </span>
+            <div style="display:flex; flex-wrap:wrap; gap:0.6rem">
+                {% if m.afgehandeld %}
+                <form method="post" action="{{ url_for('mededeling_heropenen', mededeling_id=m.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-tekstlink">Heropenen</button>
+                </form>
+                {% else %}
+                <form method="post" action="{{ url_for('mededeling_afhandelen', mededeling_id=m.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-tekstlink">Afgehandeld</button>
+                </form>
+                {% if huidige_gebruiker_rol == 'beheerder' %}
+                <form method="post" action="{{ url_for('mededeling_pinnen_als_banner', mededeling_id=m.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-tekstlink">Als banner tonen</button>
+                </form>
+                {% endif %}
+                {% endif %}
+                <form method="post" action="{{ url_for('mededeling_verwijderen', mededeling_id=m.id) }}"
+                      onsubmit="return confirm('Deze mededeling verwijderen?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-tekstlink">Verwijderen</button>
+                </form>
+            </div>
         </div>
     </div>
     {% endfor %}

@@ -87,6 +87,10 @@ KOLOM_MIGRATIES = [
     ("kassa_tellingen", "goedgekeurd_door", "TEXT"),
     ("kassa_tellingen", "goedgekeurd_op", "TEXT"),
     ("kassa_tellingen", "goedkeuring_opmerking", "TEXT"),
+    ("mededelingen", "urgent", "INTEGER NOT NULL DEFAULT 0"),
+    ("mededelingen", "afgehandeld", "INTEGER NOT NULL DEFAULT 0"),
+    ("mededelingen", "afgehandeld_door", "TEXT"),
+    ("mededelingen", "afgehandeld_op", "TEXT"),
 ]
 
 

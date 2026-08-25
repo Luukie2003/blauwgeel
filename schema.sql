@@ -98,7 +98,11 @@ CREATE TABLE IF NOT EXISTS mededelingen (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tekst TEXT NOT NULL,
     naam TEXT,
-    datum TEXT NOT NULL
+    datum TEXT NOT NULL,
+    urgent INTEGER NOT NULL DEFAULT 0,
+    afgehandeld INTEGER NOT NULL DEFAULT 0,
+    afgehandeld_door TEXT,
+    afgehandeld_op TEXT
 );
 
 CREATE TABLE IF NOT EXISTS instellingen (
