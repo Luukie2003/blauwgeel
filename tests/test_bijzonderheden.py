@@ -1,5 +1,7 @@
 from conftest import stel_csrf_token_in as _csrf
 
+import mail
+
 
 def _plaats_mededeling(client, tekst="Tapkraan lekt", urgent=False):
     data = {"csrf_token": _csrf(client), "tekst": tekst}
@@ -94,3 +96,98 @@ def test_vrijwilliger_mag_niet_pinnen_als_banner(client, db, csrf):
     assert resp.status_code == 302  # geweerd, terug naar dashboard
     instelling = db.execute("SELECT banner_tekst FROM instellingen WHERE id = 1").fetchone()
     assert instelling["banner_tekst"] is None
+
+
+def test_opmerking_toevoegen(ingelogde_client, db):
+    _plaats_mededeling(ingelogde_client)
+    m = db.execute("SELECT * FROM mededelingen ORDER BY id DESC LIMIT 1").fetchone()
+
+    resp = ingelogde_client.post(
+        f"/bijzonderheden/{m['id']}/opmerking",
+        data={"csrf_token": _csrf(ingelogde_client), "tekst": "Al naar gekeken, wordt morgen gemaakt"},
+    )
+    assert resp.status_code == 302
+
+    opmerking = db.execute(
+        "SELECT * FROM mededeling_opmerkingen WHERE mededeling_id = ?", (m["id"],)
+    ).fetchone()
+    assert opmerking["tekst"] == "Al naar gekeken, wordt morgen gemaakt"
+    assert opmerking["naam"] == "admin"
+
+    resp = ingelogde_client.get("/bijzonderheden")
+    assert b"Al naar gekeken" in resp.data
+
+
+def test_lege_opmerking_wordt_niet_toegevoegd(ingelogde_client, db):
+    _plaats_mededeling(ingelogde_client)
+    m = db.execute("SELECT * FROM mededelingen ORDER BY id DESC LIMIT 1").fetchone()
+    ingelogde_client.post(
+        f"/bijzonderheden/{m['id']}/opmerking",
+        data={"csrf_token": _csrf(ingelogde_client), "tekst": "   "},
+    )
+    aantal = db.execute(
+        "SELECT COUNT(*) AS n FROM mededeling_opmerkingen WHERE mededeling_id = ?", (m["id"],)
+    ).fetchone()["n"]
+    assert aantal == 0
+
+
+def test_tag_wordt_gerenderd_als_span(ingelogde_client, db):
+    _plaats_mededeling(ingelogde_client, tekst="Hoi @admin, kun je dit oppakken?")
+    resp = ingelogde_client.get("/bijzonderheden")
+    assert b'<span class="tag-mention">@admin</span>' in resp.data
+
+
+def test_tag_op_bestaande_gebruiker_mailt_die_gebruiker(ingelogde_client, db, monkeypatch):
+    db.execute(
+        "INSERT INTO gebruikers (naam, wachtwoord_hash, rol, aangemaakt_op, email) "
+        "VALUES ('koen', 'x', 'vrijwilliger', '2026-01-01 10:00', 'koen@example.com')"
+    )
+    db.commit()
+
+    verstuurd = []
+    monkeypatch.setattr(
+        mail, "stuur_mail", lambda onderwerp, tekst, naar=None, **kw: verstuurd.append(naar)
+    )
+
+    _plaats_mededeling(ingelogde_client, tekst="@koen kun je de bestelling ophalen?")
+    assert verstuurd == ["koen@example.com"]
+
+
+def test_tag_op_zichzelf_mailt_niet(ingelogde_client, db, monkeypatch):
+    db.execute("UPDATE gebruikers SET email = 'admin@example.com' WHERE naam = 'admin'")
+    db.commit()
+    verstuurd = []
+    monkeypatch.setattr(
+        mail, "stuur_mail", lambda onderwerp, tekst, naar=None, **kw: verstuurd.append(naar)
+    )
+    _plaats_mededeling(ingelogde_client, tekst="@admin noteer dit even voor mezelf")
+    assert verstuurd == []
+
+
+def test_tag_op_onbekende_naam_mailt_niemand(ingelogde_client, db, monkeypatch):
+    verstuurd = []
+    monkeypatch.setattr(
+        mail, "stuur_mail", lambda onderwerp, tekst, naar=None, **kw: verstuurd.append(naar)
+    )
+    _plaats_mededeling(ingelogde_client, tekst="@nietbestaand kijk hier even naar")
+    assert verstuurd == []
+
+
+def test_tag_in_opmerking_mailt_getagde_gebruiker(ingelogde_client, db, monkeypatch):
+    db.execute(
+        "INSERT INTO gebruikers (naam, wachtwoord_hash, rol, aangemaakt_op, email) "
+        "VALUES ('koen', 'x', 'vrijwilliger', '2026-01-01 10:00', 'koen@example.com')"
+    )
+    db.commit()
+    _plaats_mededeling(ingelogde_client)
+    m = db.execute("SELECT * FROM mededelingen ORDER BY id DESC LIMIT 1").fetchone()
+
+    verstuurd = []
+    monkeypatch.setattr(
+        mail, "stuur_mail", lambda onderwerp, tekst, naar=None, **kw: verstuurd.append(naar)
+    )
+    ingelogde_client.post(
+        f"/bijzonderheden/{m['id']}/opmerking",
+        data={"csrf_token": _csrf(ingelogde_client), "tekst": "@koen wat vind jij hiervan?"},
+    )
+    assert verstuurd == ["koen@example.com"]

@@ -18,6 +18,7 @@ from flask import (
     session,
     url_for,
 )
+from markupsafe import Markup, escape
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import agenda
@@ -38,6 +39,11 @@ SECRET_KEY_PATH = BASE_DIR / "secret_key.txt"
 BACKUP_BESTANDSNAAM = re.compile(
     r"^voorraad-(\d{4}-\d{2}-\d{2}|voor-herstel-\d{8}-\d{6})\.db$"
 )
+
+# Voor het @taggen van gebruikers in mededelingen/opmerkingen op het
+# prikbord. Gebruikersnamen bevatten in de praktijk geen spaties, dus een
+# eenvoudige woordmatch is genoeg.
+TAG_PATROON = re.compile(r"@([A-Za-z0-9_.\-]+)")
 
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
@@ -297,6 +303,7 @@ def create_app(database_path=None):
     app.jinja_env.filters["datum_nl"] = format_datum
     app.jinja_env.filters["besteleenheid_naam"] = besteleenheid_naam
     app.jinja_env.filters["naar_besteleenheden"] = naar_besteleenheden
+    app.jinja_env.filters["met_tags"] = met_tags_filter
 
     @app.before_request
     def csrf_beschermen():
@@ -958,6 +965,52 @@ def bereken_bestelling_status(db):
         tekst = "Meer dan 7 dagen niet ontvangen"
 
     return {"status": status, "tekst": tekst, "laatste_bestelling": laatste_ontvangen}
+
+
+def vind_getagde_gebruikers(db, tekst):
+    """Zoekt @naam-vermeldingen in tekst en matcht ze tegen bestaande
+    gebruikersnamen (hoofdletterongevoelig). Geeft de bijbehorende
+    gebruikersrijen terug, zonder duplicaten."""
+    namen = {m.group(1).lower() for m in TAG_PATROON.finditer(tekst)}
+    if not namen:
+        return []
+    gebruikers = db.execute("SELECT * FROM gebruikers").fetchall()
+    gezien = set()
+    resultaat = []
+    for g in gebruikers:
+        if g["naam"].lower() in namen and g["id"] not in gezien:
+            gezien.add(g["id"])
+            resultaat.append(g)
+    return resultaat
+
+
+def stuur_tag_notificaties(db, tekst, wie_plaatste, omschrijving, link):
+    """Mailt elke getagde gebruiker (met een e-mailadres, en niet de
+    plaatser zelf) een korte melding. Een mislukte mail mag het plaatsen
+    van de mededeling/opmerking nooit laten mislukken -- stuur_mail() vangt
+    dat zelf al af."""
+    for gebruiker in vind_getagde_gebruikers(db, tekst):
+        if gebruiker["naam"] == wie_plaatste or not gebruiker["email"]:
+            continue
+        mail.stuur_mail(
+            f"Je bent getagd op het prikbord: {omschrijving}",
+            f"{wie_plaatste or 'Iemand'} tagde je op het prikbord:\n\n"
+            f"\"{tekst}\"\n\nBekijk het op {link}",
+            naar=gebruiker["email"],
+        )
+
+
+def met_tags_filter(tekst):
+    """Jinja-filter: rendert @naam-vermeldingen als een opvallend label. De
+    tekst wordt eerst zelf ge-escaped (het staat verder los van autoescape,
+    dus dat gebeurt hier handmatig) en pas daarna vervangen we de
+    @vermeldingen door veilige, vaste HTML."""
+    escaped = str(escape(tekst or ""))
+
+    def vervang(match):
+        return f'<span class="tag-mention">@{escape(match.group(1))}</span>'
+
+    return Markup(TAG_PATROON.sub(vervang, escaped))
 
 
 def register_routes(app):
@@ -3046,11 +3099,15 @@ def register_routes(app):
             if not tekst:
                 flash("Vul een tekst in.", "error")
                 return redirect(url_for("bijzonderheden"))
-            db.execute(
+            naam = session.get("gebruiker_naam")
+            cur = db.execute(
                 "INSERT INTO mededelingen (tekst, naam, datum, urgent) VALUES (?, ?, ?, ?)",
-                (tekst, session.get("gebruiker_naam"), now_str(), 1 if request.form.get("urgent") else 0),
+                (tekst, naam, now_str(), 1 if request.form.get("urgent") else 0),
             )
             db.commit()
+            stuur_tag_notificaties(
+                db, tekst, naam, "nieuwe mededeling", url_for("bijzonderheden", _external=True)
+            )
             return redirect(url_for("bijzonderheden"))
 
         # Nog niet afgehandeld eerst (urgent bovenaan), afgehandelde
@@ -3060,7 +3117,45 @@ def register_routes(app):
         mededelingen = db.execute(
             "SELECT * FROM mededelingen ORDER BY afgehandeld ASC, urgent DESC, id DESC"
         ).fetchall()
-        return render_template("bijzonderheden.html", mededelingen=mededelingen)
+        opmerkingen_per_mededeling = {}
+        for regel in db.execute(
+            "SELECT * FROM mededeling_opmerkingen ORDER BY id ASC"
+        ).fetchall():
+            opmerkingen_per_mededeling.setdefault(regel["mededeling_id"], []).append(regel)
+        gebruikersnamen = [
+            g["naam"] for g in db.execute("SELECT naam FROM gebruikers ORDER BY naam").fetchall()
+        ]
+        return render_template(
+            "bijzonderheden.html",
+            mededelingen=mededelingen,
+            opmerkingen_per_mededeling=opmerkingen_per_mededeling,
+            gebruikersnamen=gebruikersnamen,
+        )
+
+    @app.route("/bijzonderheden/<int:mededeling_id>/opmerking", methods=["POST"])
+    def mededeling_opmerking_toevoegen(mededeling_id):
+        db = get_db()
+        mededeling = db.execute(
+            "SELECT * FROM mededelingen WHERE id = ?", (mededeling_id,)
+        ).fetchone()
+        if mededeling is None:
+            flash("Mededeling niet gevonden.", "error")
+            return redirect(url_for("bijzonderheden"))
+        tekst = request.form.get("tekst", "").strip()
+        if not tekst:
+            flash("Vul een tekst in.", "error")
+            return redirect(url_for("bijzonderheden"))
+        naam = session.get("gebruiker_naam")
+        db.execute(
+            "INSERT INTO mededeling_opmerkingen (mededeling_id, tekst, naam, gebruiker_id, datum) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (mededeling_id, tekst, naam, session.get("gebruiker_id"), now_str()),
+        )
+        db.commit()
+        stuur_tag_notificaties(
+            db, tekst, naam, "reactie op een mededeling", url_for("bijzonderheden", _external=True)
+        )
+        return redirect(url_for("bijzonderheden"))
 
     @app.route("/bijzonderheden/<int:mededeling_id>/verwijderen", methods=["POST"])
     def mededeling_verwijderen(mededeling_id):

@@ -105,6 +105,17 @@ CREATE TABLE IF NOT EXISTS mededelingen (
     afgehandeld_op TEXT
 );
 
+CREATE TABLE IF NOT EXISTS mededeling_opmerkingen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mededeling_id INTEGER NOT NULL REFERENCES mededelingen(id) ON DELETE CASCADE,
+    tekst TEXT NOT NULL,
+    naam TEXT,
+    gebruiker_id INTEGER REFERENCES gebruikers(id),
+    datum TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_mededeling_opmerkingen_mededeling ON mededeling_opmerkingen(mededeling_id);
+
 CREATE TABLE IF NOT EXISTS instellingen (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     notificatie_email TEXT,

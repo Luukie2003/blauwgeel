@@ -11,12 +11,12 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="veld">
             <label for="tekst">Nieuwe mededeling</label>
-            <textarea id="tekst" name="tekst" rows="3" required
-                      placeholder="Bijv. 'Tapkraan lekt een beetje, graag even naar kijken'"></textarea>
+            <textarea id="tekst" name="tekst" rows="3" required data-tag-autocomplete
+                      placeholder="Bijv. 'Tapkraan lekt een beetje, graag even naar kijken'. Typ @ om iemand te taggen."></textarea>
         </div>
         <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.8rem">
             <input type="checkbox" id="urgent" name="urgent" style="width:auto">
-            Urgent (bijv. een storing) -- valt op tussen de andere mededelingen
+            Urgent (bijv. een storing), valt op tussen de andere mededelingen
         </label>
         <button type="submit" class="btn btn-geel">Plaatsen</button>
     </form>
@@ -29,7 +29,7 @@
         {% if m.urgent and not m.afgehandeld %}
         <span class="badge badge-laag" style="margin-bottom:0.5rem">Urgent</span>
         {% endif %}
-        <p>{{ m.tekst }}</p>
+        <p>{{ m.tekst|met_tags }}</p>
         <div class="prikbriefje-voet" style="flex-direction:column; align-items:stretch; gap:0.5rem">
             <span>
                 {{ m.naam or 'Onbekend' }} &middot; {{ m.datum|datum_nl }}
@@ -62,10 +62,85 @@
                 </form>
             </div>
         </div>
+
+        {% set opmerkingen = opmerkingen_per_mededeling.get(m.id, []) %}
+        <div class="prikbriefje-opmerkingen">
+            {% for o in opmerkingen %}
+            <div class="prikbriefje-opmerking">
+                <p>{{ o.tekst|met_tags }}</p>
+                <span class="tekst-zacht">{{ o.naam or 'Onbekend' }} &middot; {{ o.datum|datum_nl }}</span>
+            </div>
+            {% endfor %}
+            <form method="post" action="{{ url_for('mededeling_opmerking_toevoegen', mededeling_id=m.id) }}"
+                  class="prikbriefje-opmerking-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="tekst" placeholder="Reageer (typ @ om iemand te taggen)" data-tag-autocomplete>
+                <button type="submit" class="btn-tekstlink">Reageren</button>
+            </form>
+        </div>
     </div>
     {% endfor %}
 </div>
 {% else %}
 <p class="leeg">Nog geen mededelingen.</p>
 {% endif %}
+
+<script id="gebruikersnamen-data" type="application/json">{{ gebruikersnamen|tojson }}</script>
+<script>
+(function () {
+    var gebruikersnamenEl = document.getElementById('gebruikersnamen-data');
+    if (!gebruikersnamenEl) return;
+    var gebruikersnamen = JSON.parse(gebruikersnamenEl.textContent);
+    if (!gebruikersnamen.length) return;
+
+    document.querySelectorAll('[data-tag-autocomplete]').forEach(function (veld) {
+        var lijst = document.createElement('div');
+        lijst.className = 'tag-suggesties';
+        lijst.style.display = 'none';
+        veld.insertAdjacentElement('afterend', lijst);
+
+        function huidigeAtWoord() {
+            var pos = veld.selectionStart;
+            var voor = veld.value.slice(0, pos);
+            var match = voor.match(/@([A-Za-z0-9_.\-]*)$/);
+            return match ? match[1] : null;
+        }
+
+        function verbergen() {
+            lijst.style.display = 'none';
+            lijst.innerHTML = '';
+        }
+
+        function bijwerken() {
+            var deel = huidigeAtWoord();
+            if (deel === null) { verbergen(); return; }
+            var suggesties = gebruikersnamen.filter(function (naam) {
+                return naam.toLowerCase().indexOf(deel.toLowerCase()) === 0;
+            });
+            if (!suggesties.length) { verbergen(); return; }
+            lijst.innerHTML = '';
+            suggesties.forEach(function (naam) {
+                var item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'tag-suggestie';
+                item.textContent = '@' + naam;
+                item.addEventListener('click', function () {
+                    var pos = veld.selectionStart;
+                    var voor = veld.value.slice(0, pos).replace(/@([A-Za-z0-9_.\-]*)$/, '@' + naam + ' ');
+                    veld.value = voor + veld.value.slice(pos);
+                    verbergen();
+                    veld.focus();
+                });
+                lijst.appendChild(item);
+            });
+            lijst.style.display = 'block';
+        }
+
+        veld.addEventListener('input', bijwerken);
+        veld.addEventListener('blur', function () {
+            setTimeout(verbergen, 150); // laat een klik op een suggestie nog wel doorkomen
+        });
+    });
+})();
+</script>
 {% endblock %}

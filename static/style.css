@@ -752,6 +752,77 @@ input:focus, select:focus, textarea:focus {
 
 .prikbriefje-afgehandeld p { text-decoration: line-through; color: var(--tekst-zacht); }
 
+.prikbriefje-opmerkingen {
+    margin-top: 0.7rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid #e6d98a;
+}
+
+.prikbriefje-opmerking {
+    margin-bottom: 0.5rem;
+}
+
+.prikbriefje-opmerking p {
+    margin: 0 0 0.15rem;
+    font-size: 0.82rem;
+}
+
+.prikbriefje-opmerking .tekst-zacht {
+    font-size: 0.68rem;
+}
+
+.prikbriefje-opmerking-form {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    position: relative;
+}
+
+.prikbriefje-opmerking-form input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.82rem;
+    padding: 0.35rem 0.5rem;
+}
+
+.tag-mention {
+    background: rgba(252, 212, 47, 0.35);
+    color: var(--blauw-donker);
+    padding: 0.05em 0.35em;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.tag-suggesties {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 5;
+    background: var(--kaart);
+    border: 1px solid var(--rand);
+    border-radius: var(--radius);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    max-height: 10rem;
+    overflow-y: auto;
+    min-width: 10rem;
+}
+
+.tag-suggestie {
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--tekst);
+}
+
+.tag-suggestie:hover {
+    background: var(--selectie-bg);
+}
+
 .btn-tekstlink {
     background: none;
     border: none;
