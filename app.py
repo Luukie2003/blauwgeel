@@ -9,7 +9,6 @@ from pathlib import Path
 from flask import (
     Flask,
     Response,
-    abort,
     flash,
     redirect,
     render_template,
@@ -313,12 +312,18 @@ def create_app(database_path=None):
         de pagina in de sessie is gezet. Geldt voor alle POSTs, ook naar
         open endpoints (login e.d.) -- geen uitzonderingen, dat voorkomt dat
         er per ongeluk een nieuw gat ontstaat als er later een open endpoint
-        bijkomt."""
+        bijkomt.
+
+        Bij een mismatch (bijv. een pagina die via de terug-knop/cache met
+        een verouderd token werd getoond) sturen we terug naar dezelfde
+        pagina i.p.v. een kale 400-foutpagina te tonen -- die pagina heeft
+        dan meteen weer een geldig token."""
         if request.method == "POST":
             verwacht = session.get("csrf_token")
             verzonden = request.form.get("csrf_token", "")
             if not verwacht or not secrets.compare_digest(verzonden, verwacht):
-                abort(400, "Ongeldig of verlopen formulier. Herlaad de pagina en probeer opnieuw.")
+                flash("Deze pagina was verlopen -- probeer het nog eens.", "error")
+                return redirect(request.referrer or url_for("login"))
 
     @app.before_request
     def vereis_login():
@@ -384,6 +389,11 @@ def create_app(database_path=None):
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data:"
         )
+        if request.endpoint == "login":
+            # Voorkomt dat de browser (of terug-knop/bfcache) een oude
+            # inlogpagina met een inmiddels verlopen csrf-token laat zien --
+            # dat gaf af en toe een "Bad Request" bij het inloggen.
+            response.headers["Cache-Control"] = "no-store"
         return response
 
     @app.errorhandler(404)
