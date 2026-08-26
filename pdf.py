@@ -388,7 +388,12 @@ def kassa_pdf(telling, coupures):
         if telling["opmerking"]:
             pdf.statregel("Opmerking (teller):", telling["opmerking"])
         if telling["goedgekeurd_door"]:
-            pdf.statregel("Goedgekeurd door:", telling["goedgekeurd_door"])
+            zelf_goedgekeurd = (
+                telling["gebruiker_id"] is not None
+                and telling["gebruiker_id"] == telling["goedgekeurd_door_id"]
+            )
+            waarde = telling["goedgekeurd_door"] + (" (zelf goedgekeurd)" if zelf_goedgekeurd else "")
+            pdf.statregel("Goedgekeurd door:", waarde)
         if telling["goedgekeurd_op"]:
             pdf.statregel("Goedgekeurd op:", telling["goedgekeurd_op"])
         if telling["goedkeuring_opmerking"]:

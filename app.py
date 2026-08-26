@@ -697,19 +697,15 @@ def bereken_kassa_stand(db):
     }
 
 
-KASSA_GOEDKEUREN_WACHTDAGEN = 7
-
-
-def mag_kassa_telling_goedkeuren(telling, gebruiker_id):
-    """Vier-ogen-principe: wie de telling zelf heeft gedaan mag 'm niet ook
-    zelf goedkeuren. Uitzondering: staat de telling langer dan
-    KASSA_GOEDKEUREN_WACHTDAGEN dagen als concept (niemand anders heeft 'm
-    opgepakt), dan mag de teller 'm alsnog zelf goedkeuren -- anders zou
-    hij voor altijd blijven hangen."""
-    if telling["gebruiker_id"] != gebruiker_id:
-        return True
-    ouderdom = datetime.now() - datetime.strptime(telling["datum"], "%Y-%m-%d %H:%M")
-    return ouderdom.days > KASSA_GOEDKEUREN_WACHTDAGEN
+def kassa_telling_is_zelf_goedgekeurd(telling):
+    """Of de teller zijn eigen telling heeft goedgekeurd (mag, maar wordt
+    apart getoond zodat dat niet verstopt blijft t.o.v. een onafhankelijke
+    goedkeuring door iemand anders)."""
+    return (
+        telling["afgesloten"]
+        and telling["gebruiker_id"] is not None
+        and telling["gebruiker_id"] == telling["goedgekeurd_door_id"]
+    )
 
 
 def bereken_wedstrijd_geschiedenis(db, limiet=25):
@@ -3191,7 +3187,7 @@ def register_routes(app):
             telling=telling,
             coupures=KASSA_COUPURES,
             kassa_stand=kassa_stand,
-            mag_goedkeuren=mag_kassa_telling_goedkeuren(telling, session.get("gebruiker_id")),
+            zelf_goedgekeurd=kassa_telling_is_zelf_goedgekeurd(telling),
         )
 
     @app.route("/kassa/tellingen/<int:telling_id>/heropenen", methods=["POST"])
@@ -3314,14 +3310,6 @@ def register_routes(app):
         if telling["afgesloten"]:
             flash("Deze kassatelling was al goedgekeurd.", "error")
             return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
-        if not mag_kassa_telling_goedkeuren(telling, session.get("gebruiker_id")):
-            flash(
-                "Je kunt je eigen telling niet goedkeuren -- dat moet iemand anders doen "
-                f"(of wacht {KASSA_GOEDKEUREN_WACHTDAGEN} dagen, dan mag het alsnog).",
-                "error",
-            )
-            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
-
         goedkeuring_opmerking = request.form.get("goedkeuring_opmerking", "").strip()
         db.execute(
             """UPDATE kassa_tellingen
@@ -3340,7 +3328,10 @@ def register_routes(app):
             "UPDATE instellingen SET kassa_stand = ? WHERE id = 1", (telling["geteld_bedrag"],)
         )
         db.commit()
-        flash("Kassatelling goedgekeurd.", "success")
+        if telling["gebruiker_id"] is not None and telling["gebruiker_id"] == session.get("gebruiker_id"):
+            flash("Kassatelling goedgekeurd -- je hebt je eigen telling goedgekeurd.", "success")
+        else:
+            flash("Kassatelling goedgekeurd.", "success")
         return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
 
     @app.route("/kassa/tellingen/<int:telling_id>/pdf")

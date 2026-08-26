@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta
-
 from app import bereken_kassa_stand
 from conftest import stel_csrf_token_in as _csrf
 
@@ -23,9 +21,9 @@ def _stand(db):
 
 
 def _wissel_naar_andere_gebruiker(client, db, naam="goedkeurder"):
-    """Vier-ogen-principe: de teller mag zijn eigen telling niet meteen
-    zelf goedkeuren, dus voor tests die dat wel willen (om iets anders te
-    testen) is een tweede sessie nodig."""
+    """Simuleert een tweede, onafhankelijke gebruiker die de telling
+    goedkeurt -- voor tests die willen controleren dat een goedkeuring door
+    een ander niet als 'zelf goedgekeurd' wordt gemarkeerd."""
     db.execute(
         "INSERT OR IGNORE INTO gebruikers (naam, wachtwoord_hash, rol, aangemaakt_op) "
         f"VALUES ('{naam}', 'x', 'beheerder', '2026-01-01 10:00')"
@@ -180,35 +178,34 @@ class TestKassaLevenscyclus:
         assert _stand(db) == -10.0
 
 
-class TestKassaVierOgenPrincipe:
-    def test_teller_kan_eigen_telling_niet_meteen_goedkeuren(self, ingelogde_client, db):
+class TestKassaZelfGoedkeuren:
+    def test_teller_mag_eigen_telling_meteen_goedkeuren(self, ingelogde_client, db):
         telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1)
         resp = ingelogde_client.post(
             f"/kassa/tellingen/{telling_id}/goedkeuren",
             data={"csrf_token": _csrf(ingelogde_client)},
-            follow_redirects=True,
         )
-        assert "niet goedkeuren".encode() in resp.data
-        assert _stand(db) == 0.0  # geblokkeerd, dus niets verrekend
-
-    def test_andere_gebruiker_mag_direct_goedkeuren(self, ingelogde_client, db):
-        telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1)
-        resp = _keur_goed_als_ander(ingelogde_client, db, telling_id)
         assert resp.status_code == 302
         assert _stand(db) == 50.0
 
-    def test_teller_mag_na_wachtdagen_alsnog_zelf_goedkeuren(self, ingelogde_client, db):
+    def test_zelf_goedgekeurd_wordt_apart_getoond(self, ingelogde_client, db):
         telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1)
-        oude_datum = (datetime.now() - timedelta(days=8)).strftime("%Y-%m-%d %H:%M")
-        db.execute(
-            "UPDATE kassa_tellingen SET datum = ? WHERE id = ?", (oude_datum, telling_id)
-        )
-        db.commit()
-
-        resp = ingelogde_client.post(
+        ingelogde_client.post(
             f"/kassa/tellingen/{telling_id}/goedkeuren",
             data={"csrf_token": _csrf(ingelogde_client)},
         )
+        resp = ingelogde_client.get(f"/kassa/tellingen/{telling_id}")
+        assert "zelf goedgekeurd".encode() in resp.data
+
+    def test_goedkeuring_door_ander_wordt_niet_als_zelf_gemarkeerd(self, ingelogde_client, db):
+        telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1)
+        _keur_goed_als_ander(ingelogde_client, db, telling_id)
+        resp = ingelogde_client.get(f"/kassa/tellingen/{telling_id}")
+        assert "zelf goedgekeurd".encode() not in resp.data
+
+    def test_andere_gebruiker_mag_ook_gewoon_goedkeuren(self, ingelogde_client, db):
+        telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1)
+        resp = _keur_goed_als_ander(ingelogde_client, db, telling_id)
         assert resp.status_code == 302
         assert _stand(db) == 50.0
 
