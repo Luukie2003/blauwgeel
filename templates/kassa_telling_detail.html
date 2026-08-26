@@ -18,16 +18,16 @@
             &nbsp;&middot;&nbsp; <a href="{{ url_for('kassa_tellen') }}">Nieuwe telling</a>
         </p>
     </div>
-    <div style="display:flex; gap:0.5rem">
+    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; max-width:100%">
         <a href="{{ url_for('kassa_telling_pdf', telling_id=telling.id) }}" class="btn btn-rand">PDF</a>
         {% if not telling.afgesloten %}
         <a href="{{ url_for('kassa_telling_bewerken', telling_id=telling.id) }}" class="btn btn-rand">Bewerken</a>
         <form method="post" action="{{ url_for('kassa_telling_goedkeuren', telling_id=telling.id) }}"
               onsubmit="return confirm('Kassatelling #{{ telling.id }} goedkeuren? Hierna kan hij niet meer aangepast worden.');"
-              style="display:flex; gap:0.4rem; align-items:center">
+              style="display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center; max-width:100%">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="text" name="goedkeuring_opmerking" placeholder="Opmerking bij goedkeuring (optioneel)"
-                   style="width:14rem">
+                   style="flex:1 1 12rem; min-width:0; max-width:16rem">
             <button type="submit" class="btn btn-geel">Goedkeuren</button>
         </form>
         {% elif (kassa_stand.stand - telling.geteld_bedrag)|abs < 0.001 %}
