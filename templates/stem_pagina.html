@@ -48,14 +48,37 @@
         .melding-fout { background: #fbe4e4; color: #a91c1c; }
         .melding-ok { background: #e3f4e8; color: #146c34; }
         form { margin: 0; }
-        .optie-knop {
+        .naam-veld {
+            width: 100%;
+            text-align: left;
+            margin-bottom: 1.1rem;
+        }
+        .naam-veld label {
             display: block;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--blauw-donker);
+            margin-bottom: 0.3rem;
+        }
+        .naam-veld input {
+            width: 100%;
+            border: 2px solid #e3e7f2;
+            border-radius: 12px;
+            padding: 0.75rem 0.9rem;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        .naam-veld input:focus { outline: none; border-color: var(--geel-donker); }
+        .optie-knop {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
             width: 100%;
             text-align: left;
             background: #f4f6fb;
             border: 2px solid #e3e7f2;
             border-radius: 14px;
-            padding: 0.95rem 1.1rem;
+            padding: 0.7rem 1.1rem;
             font-size: 1rem;
             font-weight: 600;
             color: var(--blauw-donker);
@@ -65,6 +88,14 @@
         }
         .optie-knop:hover { border-color: var(--geel); background: #fffbea; }
         .optie-knop:active { transform: scale(0.98); }
+        .optie-thumb, .uitslag-thumb {
+            width: 2.6rem;
+            height: 2.6rem;
+            object-fit: cover;
+            border-radius: 9px;
+            flex-shrink: 0;
+        }
+        .uitslag-thumb { width: 2rem; height: 2rem; margin-right: 0.5rem; }
         .stem-knop {
             width: 100%;
             background: var(--geel);
@@ -112,7 +143,12 @@
         {% set percentage = (o.aantal / totaal_stemmen * 100) if totaal_stemmen else 0 %}
         <div class="uitslag-regel">
             <div class="uitslag-label">
-                <span>{{ o.tekst }}</span>
+                <span style="display:flex; align-items:center">
+                    {% if o.afbeelding %}
+                    <img class="uitslag-thumb" src="{{ url_for('static', filename='stem_afbeeldingen/' + o.afbeelding) }}" alt="">
+                    {% endif %}
+                    {{ o.tekst }}
+                </span>
                 <span class="aantal">{{ o.aantal }} &middot; {{ '%.0f'|format(percentage) }}%</span>
             </div>
             <div class="uitslag-balk-achtergrond">
@@ -122,12 +158,36 @@
         {% endfor %}
         <p class="totaal">{{ totaal_stemmen }} stem{{ '' if totaal_stemmen == 1 else 'men' }} tot nu toe</p>
         {% else %}
-        <form method="post">
+        <form method="post" id="stem-formulier">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="naam-veld">
+                <label for="naam">Jouw naam</label>
+                <input type="text" id="naam" name="naam" required autocomplete="name"
+                       value="{{ ingevulde_naam }}" placeholder="Voor- en achternaam">
+            </div>
             {% for o in opties %}
-            <button type="submit" name="optie_id" value="{{ o.id }}" class="optie-knop">{{ o.tekst }}</button>
+            <button type="submit" name="optie_id" value="{{ o.id }}" class="optie-knop">
+                {% if o.afbeelding %}
+                <img class="optie-thumb" src="{{ url_for('static', filename='stem_afbeeldingen/' + o.afbeelding) }}" alt="">
+                {% endif %}
+                {{ o.tekst }}
+            </button>
             {% endfor %}
         </form>
+        <script>
+            (function () {
+                var naamVeld = document.getElementById('naam');
+                if (!naamVeld) return;
+                try {
+                    var onthouden = localStorage.getItem('stem_naam');
+                    if (onthouden && !naamVeld.value) naamVeld.value = onthouden;
+                } catch (e) { /* localStorage kan geblokkeerd zijn, dan negeren we het gewoon */ }
+                var form = document.getElementById('stem-formulier');
+                form.addEventListener('submit', function () {
+                    try { localStorage.setItem('stem_naam', naamVeld.value.trim()); } catch (e) {}
+                });
+            })();
+        </script>
         {% endif %}
 
         <p class="voetnoot">Kantine Beheer &middot; s.v. Blauw-Geel 1915</p>

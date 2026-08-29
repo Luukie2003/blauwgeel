@@ -1,3 +1,4 @@
+import io
 from datetime import datetime
 from pathlib import Path
 
@@ -8,7 +9,9 @@ NAAM_CLUB = "s.v. Blauw-Geel 1915"
 LOGO_PAD = Path(__file__).parent / "static" / "logo.png"
 
 KLEUR_BLAUW = (30, 58, 138)
+KLEUR_BLAUW_DONKER = (15, 31, 77)
 KLEUR_ACCENT = (64, 97, 175)
+KLEUR_GEEL = (252, 212, 47)
 KLEUR_GRIJS = (90, 90, 90)
 KLEUR_KOPRIJ = (228, 228, 228)
 KLEUR_ZEBRA = (246, 246, 246)
@@ -453,5 +456,57 @@ def verkoop_pdf(telling_id, periode_tekst, regels):
                 ],
                 zebra=i % 2 == 1,
             )
+
+    return bytes(pdf.output())
+
+
+def stemming_poster_pdf(titel, qr_png_bytes):
+    """Een A4-poster om op te hangen/neer te leggen bij de bar: groot de
+    vraag, groot de QR-code. Bewust geen Rapport (dat is de kleine,
+    zakelijke koptekst-stijl) -- dit mag een blikvanger zijn."""
+    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf.set_auto_page_break(False)
+    pdf.add_page()
+
+    pdf.set_fill_color(*KLEUR_BLAUW)
+    pdf.rect(0, 0, 210, 297, style="F")
+
+    if LOGO_PAD.exists():
+        pdf.image(str(LOGO_PAD), x=85, y=18, w=40)
+
+    pdf.set_xy(15, 66)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(*KLEUR_GEEL)
+    pdf.cell(180, 7, "S.V. BLAUW-GEEL 1915 - STEMMEN!", align="C", new_x="LMARGIN", new_y="NEXT")
+
+    pdf.set_xy(15, 78)
+    pdf.set_font("Helvetica", "B", 30)
+    pdf.set_text_color(*KLEUR_WIT)
+    pdf.multi_cell(180, 13, titel, align="C")
+
+    kaart_breedte = 125
+    kaart_x = (210 - kaart_breedte) / 2
+    kaart_y = 128
+    kaart_hoogte = 118
+    pdf.set_fill_color(*KLEUR_WIT)
+    pdf.rect(kaart_x, kaart_y, kaart_breedte, kaart_hoogte, style="F")
+
+    qr_grootte = 95
+    pdf.image(
+        io.BytesIO(qr_png_bytes),
+        x=(210 - qr_grootte) / 2,
+        y=kaart_y + (kaart_hoogte - qr_grootte) / 2,
+        w=qr_grootte,
+    )
+
+    pdf.set_xy(15, kaart_y + kaart_hoogte + 10)
+    pdf.set_font("Helvetica", "B", 20)
+    pdf.set_text_color(*KLEUR_GEEL)
+    pdf.cell(180, 10, "Scan en stem mee!", align="C", new_x="LMARGIN", new_y="NEXT")
+
+    pdf.set_xy(15, 283)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.set_text_color(*KLEUR_WIT)
+    pdf.cell(180, 6, "Kantine Beheer - s.v. Blauw-Geel 1915", align="C")
 
     return bytes(pdf.output())

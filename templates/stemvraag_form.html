@@ -5,7 +5,7 @@
 <p class="subtitel"><a href="{{ url_for('stemmen_overzicht') }}">&larr; Terug naar stemmen</a></p>
 
 <div class="kaart" style="max-width:640px">
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="veld">
             <label for="titel">Vraag</label>
@@ -19,27 +19,22 @@
         </div>
         <fieldset class="groupbox">
             <legend>Keuzes</legend>
-            <p class="tekst-zacht" style="margin-top:0">Minstens 2, lege velden worden genegeerd.</p>
-            <div class="veld">
-                <label for="optie1">Keuze 1</label>
-                <input type="text" id="optie1" name="optie" required placeholder="Bijv. Fust A">
+            <p class="tekst-zacht" style="margin-top:0">
+                Minstens 2, lege velden worden genegeerd. Een afbeelding per keuze is optioneel.
+            </p>
+            {% for i in range(1, 6) %}
+            <div class="formgrid" style="margin-bottom:0.6rem">
+                <div class="veld">
+                    <label for="optie{{ i }}">Keuze {{ i }}{{ '' if i <= 2 else ' (optioneel)' }}</label>
+                    <input type="text" id="optie{{ i }}" name="optie{{ i }}" {{ 'required' if i <= 2 }}
+                           placeholder="{{ ('Bijv. Fust ' ~ 'ABC'[i-1]) if i <= 3 else '' }}">
+                </div>
+                <div class="veld">
+                    <label for="afbeelding{{ i }}">Afbeelding (optioneel)</label>
+                    <input type="file" id="afbeelding{{ i }}" name="afbeelding{{ i }}" accept="image/*">
+                </div>
             </div>
-            <div class="veld">
-                <label for="optie2">Keuze 2</label>
-                <input type="text" id="optie2" name="optie" required placeholder="Bijv. Fust B">
-            </div>
-            <div class="veld">
-                <label for="optie3">Keuze 3 (optioneel)</label>
-                <input type="text" id="optie3" name="optie" placeholder="Bijv. Fust C">
-            </div>
-            <div class="veld">
-                <label for="optie4">Keuze 4 (optioneel)</label>
-                <input type="text" id="optie4" name="optie">
-            </div>
-            <div class="veld">
-                <label for="optie5">Keuze 5 (optioneel)</label>
-                <input type="text" id="optie5" name="optie">
-            </div>
+            {% endfor %}
         </fieldset>
         <button type="submit" class="btn btn-geel">Stemming aanmaken</button>
     </form>

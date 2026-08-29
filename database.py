@@ -91,6 +91,9 @@ KOLOM_MIGRATIES = [
     ("mededelingen", "afgehandeld", "INTEGER NOT NULL DEFAULT 0"),
     ("mededelingen", "afgehandeld_door", "TEXT"),
     ("mededelingen", "afgehandeld_op", "TEXT"),
+    ("stemopties", "afbeelding", "TEXT"),
+    ("stemmen", "naam", "TEXT"),
+    ("stemmen", "afgekeurd", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

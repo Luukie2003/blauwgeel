@@ -30,6 +30,7 @@ from pdf import (
     bestellijst_pdf,
     kassa_pdf,
     periode_verkoop_pdf,
+    stemming_poster_pdf,
     verkoop_pdf,
     voorraadoverzicht_pdf,
 )
@@ -158,6 +159,24 @@ OPEN_ENDPOINTS = {
 # van de Flask-sessie zelf: die wordt bij inloggen geleegd, en stemmers zijn
 # meestal niet eens ingelogd.
 STEM_COOKIE = "stem_kiezer"
+
+STEM_AFBEELDINGEN_MAP = BASE_DIR / "static" / "stem_afbeeldingen"
+TOEGESTANE_AFBEELDING_EXTENSIES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+
+
+def sla_stemoptie_afbeelding_op(bestand):
+    """Slaat een geuploade afbeelding voor een stemoptie veilig op (een
+    willekeurige bestandsnaam, alleen bekende afbeeldingsextensies) en geeft
+    de bestandsnaam terug. None als er niets bruikbaars is geupload."""
+    if not bestand or not bestand.filename:
+        return None
+    extensie = Path(bestand.filename).suffix.lower()
+    if extensie not in TOEGESTANE_AFBEELDING_EXTENSIES:
+        return None
+    STEM_AFBEELDINGEN_MAP.mkdir(parents=True, exist_ok=True)
+    bestandsnaam = f"{secrets.token_hex(16)}{extensie}"
+    bestand.save(STEM_AFBEELDINGEN_MAP / bestandsnaam)
+    return bestandsnaam
 
 # Brute-force-bescherming op het inlogscherm: na dit aantal mislukte
 # pogingen voor dezelfde gebruikersnaam wordt die naam tijdelijk geblokkeerd,
@@ -311,6 +330,9 @@ def create_app(database_path=None):
     app.config["SESSION_COOKIE_SECURE"] = True
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    # Ruim genoeg voor een paar afbeeldingen bij stemopties, of het
+    # terugzetten van een back-up.
+    app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 
     register_db(app)
     init_db(app)
@@ -338,7 +360,7 @@ def create_app(database_path=None):
             verwacht = session.get("csrf_token")
             verzonden = request.form.get("csrf_token", "")
             if not verwacht or not secrets.compare_digest(verzonden, verwacht):
-                flash("Deze pagina was verlopen -- probeer het nog eens.", "error")
+                flash("Deze pagina was verlopen, probeer het nog eens.", "error")
                 return redirect(request.referrer or url_for("login"))
 
     @app.before_request
@@ -3251,11 +3273,17 @@ def register_routes(app):
         if request.method == "POST":
             titel = request.form.get("titel", "").strip()
             omschrijving = request.form.get("omschrijving", "").strip()
-            opties = [o.strip() for o in request.form.getlist("optie") if o.strip()]
+            regels = []
+            for i in range(1, 6):
+                tekst = request.form.get(f"optie{i}", "").strip()
+                if not tekst:
+                    continue
+                afbeelding = sla_stemoptie_afbeelding_op(request.files.get(f"afbeelding{i}"))
+                regels.append((tekst, afbeelding))
             if not titel:
                 flash("Vul een titel/vraag in.", "error")
                 return redirect(url_for("stemvraag_nieuw"))
-            if len(opties) < 2:
+            if len(regels) < 2:
                 flash("Vul minstens 2 keuzes in.", "error")
                 return redirect(url_for("stemvraag_nieuw"))
             cur = db.execute(
@@ -3264,10 +3292,10 @@ def register_routes(app):
                 (titel, omschrijving or None, now_str(), session.get("gebruiker_naam")),
             )
             stemvraag_id = cur.lastrowid
-            for volgorde, tekst in enumerate(opties):
+            for volgorde, (tekst, afbeelding) in enumerate(regels):
                 db.execute(
-                    "INSERT INTO stemopties (stemvraag_id, tekst, volgorde) VALUES (?, ?, ?)",
-                    (stemvraag_id, tekst, volgorde),
+                    "INSERT INTO stemopties (stemvraag_id, tekst, volgorde, afbeelding) VALUES (?, ?, ?, ?)",
+                    (stemvraag_id, tekst, volgorde, afbeelding),
                 )
             db.commit()
             flash("Stemming aangemaakt.", "success")
@@ -3284,20 +3312,69 @@ def register_routes(app):
             flash("Stemming niet gevonden.", "error")
             return redirect(url_for("stemmen_overzicht"))
         opties = db.execute(
-            """SELECT so.*, (SELECT COUNT(*) FROM stemmen s WHERE s.stemoptie_id = so.id) AS aantal
+            """SELECT so.*,
+                      (SELECT COUNT(*) FROM stemmen s WHERE s.stemoptie_id = so.id AND s.afgekeurd = 0) AS aantal
                FROM stemopties so WHERE so.stemvraag_id = ? ORDER BY so.volgorde""",
             (stemvraag_id,),
         ).fetchall()
         totaal_stemmen = sum(o["aantal"] for o in opties)
+        stemmen = db.execute(
+            """SELECT s.*, so.tekst AS optie_tekst
+               FROM stemmen s JOIN stemopties so ON so.id = s.stemoptie_id
+               WHERE s.stemvraag_id = ? ORDER BY s.id DESC""",
+            (stemvraag_id,),
+        ).fetchall()
         stem_url = url_for("stem_pagina", stemvraag_id=stemvraag_id, _external=True)
         return render_template(
             "stemvraag_detail.html",
             stemvraag=stemvraag,
             opties=opties,
             totaal_stemmen=totaal_stemmen,
+            stemmen=stemmen,
             stem_url=stem_url,
             qr_svg=qr.qr_svg(stem_url),
         )
+
+    @app.route("/stemmen/<int:stemvraag_id>/poster.pdf")
+    def stemvraag_poster_pdf(stemvraag_id):
+        db = get_db()
+        stemvraag = db.execute(
+            "SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)
+        ).fetchone()
+        if stemvraag is None:
+            flash("Stemming niet gevonden.", "error")
+            return redirect(url_for("stemmen_overzicht"))
+        stem_url = url_for("stem_pagina", stemvraag_id=stemvraag_id, _external=True)
+        pdf_bytes = stemming_poster_pdf(stemvraag["titel"], qr.qr_png_bytes(stem_url))
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=stemming-{stemvraag_id}-poster.pdf"},
+        )
+
+    @app.route("/stemmen/stem/<int:stem_id>/afkeuren", methods=["POST"])
+    def stem_afkeuren(stem_id):
+        db = get_db()
+        stem = db.execute("SELECT * FROM stemmen WHERE id = ?", (stem_id,)).fetchone()
+        if stem is None:
+            flash("Stem niet gevonden.", "error")
+            return redirect(url_for("stemmen_overzicht"))
+        db.execute("UPDATE stemmen SET afgekeurd = 1 WHERE id = ?", (stem_id,))
+        db.commit()
+        flash("Stem afgekeurd, telt niet meer mee in de uitslag.", "success")
+        return redirect(url_for("stemvraag_detail", stemvraag_id=stem["stemvraag_id"]))
+
+    @app.route("/stemmen/stem/<int:stem_id>/goedkeuren", methods=["POST"])
+    def stem_goedkeuren(stem_id):
+        db = get_db()
+        stem = db.execute("SELECT * FROM stemmen WHERE id = ?", (stem_id,)).fetchone()
+        if stem is None:
+            flash("Stem niet gevonden.", "error")
+            return redirect(url_for("stemmen_overzicht"))
+        db.execute("UPDATE stemmen SET afgekeurd = 0 WHERE id = ?", (stem_id,))
+        db.commit()
+        flash("Stem telt weer mee.", "success")
+        return redirect(url_for("stemvraag_detail", stemvraag_id=stem["stemvraag_id"]))
 
     @app.route("/stemmen/<int:stemvraag_id>/sluiten", methods=["POST"])
     def stemvraag_sluiten(stemvraag_id):
@@ -3340,20 +3417,36 @@ def register_routes(app):
             kiezer_sleutel = secrets.token_hex(16)
             nieuwe_cookie = kiezer_sleutel
 
-        al_gestemd = (
-            db.execute(
-                "SELECT 1 FROM stemmen WHERE stemvraag_id = ? AND kiezer_sleutel = ?",
+        def _al_gestemd(naam=None):
+            """Twee onafhankelijke controles op maar 1x stemmen: dit device
+            (cookie) en, zodra er een naam is, deze naam -- zodat wissen van
+            cookies niet als omweg werkt. Een afgekeurde stem telt niet mee,
+            die mag opnieuw."""
+            if db.execute(
+                "SELECT 1 FROM stemmen WHERE stemvraag_id = ? AND kiezer_sleutel = ? AND afgekeurd = 0",
                 (stemvraag_id, kiezer_sleutel),
-            ).fetchone()
-            is not None
-        )
+            ).fetchone():
+                return True
+            if naam and db.execute(
+                "SELECT 1 FROM stemmen WHERE stemvraag_id = ? AND lower(naam) = lower(?) AND afgekeurd = 0",
+                (stemvraag_id, naam),
+            ).fetchone():
+                return True
+            return False
+
+        al_gestemd = _al_gestemd()
+        ingevulde_naam = ""
 
         foutmelding = None
         if request.method == "POST":
+            ingevulde_naam = request.form.get("naam", "").strip()
             if not stemvraag["actief"]:
                 foutmelding = "Deze stemming is gesloten."
-            elif al_gestemd:
+            elif not ingevulde_naam:
+                foutmelding = "Vul je naam in."
+            elif _al_gestemd(ingevulde_naam):
                 foutmelding = "Je hebt al gestemd, bedankt!"
+                al_gestemd = True
             else:
                 optie_id = request.form.get("optie_id", type=int)
                 optie = db.execute(
@@ -3364,15 +3457,16 @@ def register_routes(app):
                     foutmelding = "Kies eerst een van de opties."
                 else:
                     db.execute(
-                        """INSERT INTO stemmen (stemvraag_id, stemoptie_id, kiezer_sleutel, datum)
-                           VALUES (?, ?, ?, ?)""",
-                        (stemvraag_id, optie_id, kiezer_sleutel, now_str()),
+                        """INSERT INTO stemmen (stemvraag_id, stemoptie_id, kiezer_sleutel, naam, datum)
+                           VALUES (?, ?, ?, ?, ?)""",
+                        (stemvraag_id, optie_id, kiezer_sleutel, ingevulde_naam, now_str()),
                     )
                     db.commit()
                     al_gestemd = True
 
         opties = db.execute(
-            """SELECT so.*, (SELECT COUNT(*) FROM stemmen s WHERE s.stemoptie_id = so.id) AS aantal
+            """SELECT so.*,
+                      (SELECT COUNT(*) FROM stemmen s WHERE s.stemoptie_id = so.id AND s.afgekeurd = 0) AS aantal
                FROM stemopties so WHERE so.stemvraag_id = ? ORDER BY so.volgorde""",
             (stemvraag_id,),
         ).fetchall()
@@ -3385,6 +3479,7 @@ def register_routes(app):
             totaal_stemmen=totaal_stemmen,
             al_gestemd=al_gestemd,
             foutmelding=foutmelding,
+            ingevulde_naam=ingevulde_naam,
         )
         respons = Response(pagina)
         if nieuwe_cookie:
@@ -3618,7 +3713,7 @@ def register_routes(app):
         )
         db.commit()
         if telling["gebruiker_id"] is not None and telling["gebruiker_id"] == session.get("gebruiker_id"):
-            flash("Kassatelling goedgekeurd -- je hebt je eigen telling goedgekeurd.", "success")
+            flash("Kassatelling goedgekeurd. Je hebt je eigen telling goedgekeurd.", "success")
         else:
             flash("Kassatelling goedgekeurd.", "success")
         return redirect(url_for("kassa_telling_detail", telling_id=telling_id))

@@ -1175,3 +1175,11 @@ footer {
     width: 12rem;
     height: 12rem;
 }
+
+.stemresultaat-thumb {
+    width: 2rem;
+    height: 2rem;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--rand-licht);
+}

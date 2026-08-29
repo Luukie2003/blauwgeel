@@ -1,14 +1,25 @@
+import io
+
 from conftest import stel_csrf_token_in as _csrf
+
+from app import STEM_AFBEELDINGEN_MAP
 
 
 def _maak_stemvraag(client, titel="Welk fust voor het weizen?", opties=("Fust A", "Fust B", "Fust C")):
-    resp = client.post(
-        "/stemmen/nieuw",
-        data={"csrf_token": _csrf(client), "titel": titel, "optie": list(opties)},
-        follow_redirects=False,
-    )
+    data = {"csrf_token": _csrf(client), "titel": titel}
+    for i, tekst in enumerate(opties, start=1):
+        data[f"optie{i}"] = tekst
+    resp = client.post("/stemmen/nieuw", data=data, follow_redirects=False)
     assert resp.status_code == 302
-    return resp.headers["Location"].rsplit("/", 1)[-1]  # stemvraag_id
+    return int(resp.headers["Location"].rsplit("/", 1)[-1])
+
+
+def _stem(client, stemvraag_id, optie_id, naam="Jan Jansen"):
+    client.get(f"/stem/{stemvraag_id}")  # zorgt voor het stem_kiezer-cookie
+    return client.post(
+        f"/stem/{stemvraag_id}",
+        data={"csrf_token": _csrf(client), "optie_id": optie_id, "naam": naam},
+    )
 
 
 def test_stemvraag_aanmaken(ingelogde_client, db):
@@ -25,7 +36,7 @@ def test_stemvraag_aanmaken(ingelogde_client, db):
 def test_stemvraag_met_minder_dan_2_opties_wordt_geweigerd(ingelogde_client, db):
     resp = ingelogde_client.post(
         "/stemmen/nieuw",
-        data={"csrf_token": _csrf(ingelogde_client), "titel": "Test", "optie": ["Enige optie"]},
+        data={"csrf_token": _csrf(ingelogde_client), "titel": "Test", "optie1": "Enige optie"},
     )
     assert resp.status_code == 302
     aantal = db.execute("SELECT COUNT(*) AS n FROM stemvragen").fetchone()["n"]
@@ -54,20 +65,47 @@ def test_niet_bestaande_stemvraag_geeft_404(client):
     assert resp.status_code == 404
 
 
-def test_stemmen_zet_een_stem_weg_en_cookie(ingelogde_client, db):
+def test_naam_is_verplicht(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
+    ).fetchone()
+    ingelogde_client.get(f"/stem/{stemvraag_id}")
+    resp = ingelogde_client.post(
+        f"/stem/{stemvraag_id}",
+        data={"csrf_token": _csrf(ingelogde_client), "optie_id": optie["id"], "naam": "  "},
+    )
+    assert b"Vul je naam in" in resp.data
+    aantal = db.execute(
+        "SELECT COUNT(*) AS n FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)
+    ).fetchone()["n"]
+    assert aantal == 0
+
+
+def test_stemmen_zet_een_stem_weg_met_naam(ingelogde_client, db):
     stemvraag_id = _maak_stemvraag(ingelogde_client)
     optie = db.execute(
         "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
     ).fetchone()
 
-    # Eerst GET om het stem_kiezer-cookie te krijgen (net als een echte bezoeker).
-    ingelogde_client.get(f"/stem/{stemvraag_id}")
-    resp = ingelogde_client.post(
-        f"/stem/{stemvraag_id}",
-        data={"csrf_token": _csrf(ingelogde_client), "optie_id": optie["id"]},
-    )
+    resp = _stem(ingelogde_client, stemvraag_id, optie["id"], naam="Jan Jansen")
     assert resp.status_code == 200
     assert b"Bedankt voor je stem" in resp.data
+
+    stem = db.execute("SELECT * FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)).fetchone()
+    assert stem["naam"] == "Jan Jansen"
+    assert stem["afgekeurd"] == 0
+
+
+def test_dubbel_stemmen_via_zelfde_cookie_wordt_geweerd(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
+    ).fetchone()
+    _stem(ingelogde_client, stemvraag_id, optie["id"], naam="Jan Jansen")
+
+    resp = _stem(ingelogde_client, stemvraag_id, optie["id"], naam="Piet Pietersen")
+    assert b"al gestemd" in resp.data
 
     aantal = db.execute(
         "SELECT COUNT(*) AS n FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)
@@ -75,25 +113,22 @@ def test_stemmen_zet_een_stem_weg_en_cookie(ingelogde_client, db):
     assert aantal == 1
 
 
-def test_dubbel_stemmen_wordt_geweerd(ingelogde_client, db):
+def test_dubbel_stemmen_op_naam_wordt_geweerd_ook_met_ander_cookie(ingelogde_client, db):
+    """De naam-check moet ook een omweg via het wissen van het
+    stem_kiezer-cookie afvangen."""
     stemvraag_id = _maak_stemvraag(ingelogde_client)
     optie = db.execute(
         "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
     ).fetchone()
-    ingelogde_client.get(f"/stem/{stemvraag_id}")
-    token = _csrf(ingelogde_client)
-    ingelogde_client.post(f"/stem/{stemvraag_id}", data={"csrf_token": token, "optie_id": optie["id"]})
+    _stem(ingelogde_client, stemvraag_id, optie["id"], naam="Jan Jansen")
+    ingelogde_client.delete_cookie("stem_kiezer")
 
-    # Tweede poging, zelfde browser/cookie.
-    resp = ingelogde_client.post(
-        f"/stem/{stemvraag_id}", data={"csrf_token": token, "optie_id": optie["id"]}
-    )
+    resp = _stem(ingelogde_client, stemvraag_id, optie["id"], naam="jan jansen")  # zelfde naam, andere case
     assert b"al gestemd" in resp.data
-
     aantal = db.execute(
         "SELECT COUNT(*) AS n FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)
     ).fetchone()["n"]
-    assert aantal == 1  # niet dubbel geteld
+    assert aantal == 1
 
 
 def test_gesloten_stemming_accepteert_geen_nieuwe_stem(ingelogde_client, db):
@@ -105,10 +140,7 @@ def test_gesloten_stemming_accepteert_geen_nieuwe_stem(ingelogde_client, db):
         f"/stemmen/{stemvraag_id}/sluiten", data={"csrf_token": _csrf(ingelogde_client)}
     )
 
-    ingelogde_client.get(f"/stem/{stemvraag_id}")
-    resp = ingelogde_client.post(
-        f"/stem/{stemvraag_id}", data={"csrf_token": _csrf(ingelogde_client), "optie_id": optie["id"]}
-    )
+    resp = _stem(ingelogde_client, stemvraag_id, optie["id"])
     assert b"is gesloten" in resp.data
     aantal = db.execute(
         "SELECT COUNT(*) AS n FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)
@@ -136,3 +168,97 @@ def test_detailpagina_toont_qr_code(ingelogde_client, db):
     assert resp.status_code == 200
     assert b"<svg" in resp.data
     assert f"/stem/{stemvraag_id}".encode() in resp.data
+
+
+def test_poster_pdf_wordt_gegenereerd(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    resp = ingelogde_client.get(f"/stemmen/{stemvraag_id}/poster.pdf")
+    assert resp.status_code == 200
+    assert resp.mimetype == "application/pdf"
+    assert resp.data[:4] == b"%PDF"
+
+
+def test_afkeuren_telt_niet_meer_mee_in_uitslag(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
+    ).fetchone()
+    _stem(ingelogde_client, stemvraag_id, optie["id"], naam="Jan Jansen")
+    stem = db.execute("SELECT * FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)).fetchone()
+
+    resp = ingelogde_client.post(
+        f"/stemmen/stem/{stem['id']}/afkeuren", data={"csrf_token": _csrf(ingelogde_client)}
+    )
+    assert resp.status_code == 302
+    stem = db.execute("SELECT * FROM stemmen WHERE id = ?", (stem["id"],)).fetchone()
+    assert stem["afgekeurd"] == 1
+
+    detail = ingelogde_client.get(f"/stemmen/{stemvraag_id}")
+    assert b">0 (0%)<" in detail.data or b"0 (0%)" in detail.data
+
+
+def test_afkeuren_maakt_naam_weer_vrij_om_te_stemmen(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
+    ).fetchone()
+    _stem(ingelogde_client, stemvraag_id, optie["id"], naam="Jan Jansen")
+    stem = db.execute("SELECT * FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)).fetchone()
+    ingelogde_client.post(
+        f"/stemmen/stem/{stem['id']}/afkeuren", data={"csrf_token": _csrf(ingelogde_client)}
+    )
+    ingelogde_client.delete_cookie("stem_kiezer")
+
+    resp = _stem(ingelogde_client, stemvraag_id, optie["id"], naam="Jan Jansen")
+    assert b"Bedankt voor je stem" in resp.data
+    aantal = db.execute(
+        "SELECT COUNT(*) AS n FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)
+    ).fetchone()["n"]
+    assert aantal == 2  # oude (afgekeurde) + nieuwe stem
+
+
+def test_afbeelding_bij_optie_wordt_opgeslagen(ingelogde_client, db):
+    kleine_png = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00"
+        b"\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0"
+        b"\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    resp = ingelogde_client.post(
+        "/stemmen/nieuw",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "titel": "Met plaatje",
+            "optie1": "Fust A",
+            "optie2": "Fust B",
+            "afbeelding1": (io.BytesIO(kleine_png), "fust_a.png"),
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+    stemvraag_id = int(resp.headers["Location"].rsplit("/", 1)[-1])
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? AND tekst = 'Fust A'", (stemvraag_id,)
+    ).fetchone()
+    assert optie["afbeelding"] is not None
+    assert optie["afbeelding"].endswith(".png")
+
+    afbeelding_pad = STEM_AFBEELDINGEN_MAP / optie["afbeelding"]
+    assert afbeelding_pad.exists()
+    afbeelding_pad.unlink()  # niet laten rondslingeren na de test
+
+
+def test_goedkeuren_telt_weer_mee(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
+    ).fetchone()
+    _stem(ingelogde_client, stemvraag_id, optie["id"], naam="Jan Jansen")
+    stem = db.execute("SELECT * FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)).fetchone()
+    ingelogde_client.post(
+        f"/stemmen/stem/{stem['id']}/afkeuren", data={"csrf_token": _csrf(ingelogde_client)}
+    )
+    ingelogde_client.post(
+        f"/stemmen/stem/{stem['id']}/goedkeuren", data={"csrf_token": _csrf(ingelogde_client)}
+    )
+    stem = db.execute("SELECT * FROM stemmen WHERE id = ?", (stem["id"],)).fetchone()
+    assert stem["afgekeurd"] == 0

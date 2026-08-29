@@ -14,6 +14,7 @@
         </p>
     </div>
     <div style="display:flex; flex-wrap:wrap; gap:0.5rem">
+        <a href="{{ url_for('stemvraag_poster_pdf', stemvraag_id=stemvraag.id) }}" class="btn btn-rand">Poster (A4 PDF)</a>
         {% if stemvraag.actief %}
         <form method="post" action="{{ url_for('stemvraag_sluiten', stemvraag_id=stemvraag.id) }}"
               onsubmit="return confirm('Stemming sluiten voor nieuwe stemmen?');">
@@ -46,7 +47,13 @@
         {% set percentage = (o.aantal / totaal_stemmen * 100) if totaal_stemmen else 0 %}
         <div class="stemresultaat-regel">
             <div class="stemresultaat-label">
-                <span>{{ o.tekst }}</span>
+                <span style="display:flex; align-items:center; gap:0.5rem">
+                    {% if o.afbeelding %}
+                    <img src="{{ url_for('static', filename='stem_afbeeldingen/' + o.afbeelding) }}"
+                         alt="" class="stemresultaat-thumb">
+                    {% endif %}
+                    {{ o.tekst }}
+                </span>
                 <span class="tekst-zacht">{{ o.aantal }} ({{ '%.0f'|format(percentage) }}%)</span>
             </div>
             <div class="stemresultaat-balk-achtergrond">
@@ -58,11 +65,55 @@
 
     <div class="kaart" style="text-align:center; max-width:320px">
         <h2>QR-code</h2>
-        <p class="tekst-zacht" style="margin-top:-0.4rem">Print of toon 'm, dan kan iedereen scannen en stemmen.</p>
+        <p class="tekst-zacht" style="margin-top:-0.4rem">Print de poster, of toon 'm hier, dan kan iedereen scannen en stemmen.</p>
         <div class="stem-qr">{{ qr_svg|safe }}</div>
         <p style="word-break:break-all; font-size:0.8rem">
             <a href="{{ stem_url }}" target="_blank" rel="noopener">{{ stem_url }}</a>
         </p>
     </div>
+</div>
+
+<div class="kaart">
+    <h2>Stemmen</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Twijfel je aan een stem (bijv. geen clublid, of overduidelijk dubbel)? Keur 'm af, dan telt hij niet meer mee.
+    </p>
+    {% if stemmen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Naam</th><th>Keuze</th><th>Datum</th><th></th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for s in stemmen %}
+                <tr class="{{ 'rij-waarschuwing' if s.afgekeurd }}">
+                    <td>{{ s.naam or 'Onbekend' }}</td>
+                    <td>{{ s.optie_tekst }}</td>
+                    <td>{{ s.datum|datum_nl }}</td>
+                    <td>
+                        {% if s.afgekeurd %}<span class="badge badge-laag">Afgekeurd</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if s.afgekeurd %}
+                        <form method="post" action="{{ url_for('stem_goedkeuren', stem_id=s.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-tekstlink">Goedkeuren</button>
+                        </form>
+                        {% else %}
+                        <form method="post" action="{{ url_for('stem_afkeuren', stem_id=s.id) }}"
+                              onsubmit="return confirm('Deze stem afkeuren? Telt dan niet meer mee in de uitslag.');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-tekstlink">Afkeuren</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen stemmen.</p>
+    {% endif %}
 </div>
 {% endblock %}

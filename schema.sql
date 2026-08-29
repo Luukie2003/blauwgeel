@@ -230,7 +230,8 @@ CREATE TABLE IF NOT EXISTS stemopties (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     stemvraag_id INTEGER NOT NULL REFERENCES stemvragen(id) ON DELETE CASCADE,
     tekst TEXT NOT NULL,
-    volgorde INTEGER NOT NULL DEFAULT 0
+    volgorde INTEGER NOT NULL DEFAULT 0,
+    afbeelding TEXT
 );
 
 CREATE TABLE IF NOT EXISTS stemmen (
@@ -238,6 +239,8 @@ CREATE TABLE IF NOT EXISTS stemmen (
     stemvraag_id INTEGER NOT NULL REFERENCES stemvragen(id) ON DELETE CASCADE,
     stemoptie_id INTEGER NOT NULL REFERENCES stemopties(id) ON DELETE CASCADE,
     kiezer_sleutel TEXT NOT NULL,
+    naam TEXT,
+    afgekeurd INTEGER NOT NULL DEFAULT 0,
     datum TEXT NOT NULL,
     UNIQUE(stemvraag_id, kiezer_sleutel)
 );
