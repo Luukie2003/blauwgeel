@@ -320,6 +320,36 @@ def test_verlopen_stemming_accepteert_geen_nieuwe_stem(ingelogde_client, db):
     assert aantal == 0
 
 
+def test_publiek_overzicht_toont_open_stemmingen(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client, titel="Welke actie voor de zomer?")
+    resp = ingelogde_client.get("/stem")
+    assert resp.status_code == 200
+    assert b"Welke actie voor de zomer?" in resp.data
+    assert f"/stem/{stemvraag_id}".encode() in resp.data
+
+
+def test_publiek_overzicht_verbergt_gesloten_en_verlopen_stemmingen(ingelogde_client, db):
+    open_id = _maak_stemvraag(ingelogde_client, titel="Open stemming")
+    gesloten_id = _maak_stemvraag(ingelogde_client, titel="Gesloten stemming")
+    verlopen_id = _maak_stemvraag(ingelogde_client, titel="Verlopen stemming")
+    ingelogde_client.post(
+        f"/stemmen/{gesloten_id}/sluiten", data={"csrf_token": _csrf(ingelogde_client)}
+    )
+    db.execute("UPDATE stemvragen SET sluit_op = ? WHERE id = ?", ("2000-01-01 23:59", verlopen_id))
+    db.commit()
+
+    resp = ingelogde_client.get("/stem")
+    assert b"Open stemming" in resp.data
+    assert b"Gesloten stemming" not in resp.data
+    assert b"Verlopen stemming" not in resp.data
+    assert open_id  # sanity, id werd gebruikt
+
+
+def test_publiek_overzicht_zonder_login_bereikbaar(client, db):
+    resp = client.get("/stem")
+    assert resp.status_code == 200
+
+
 def test_goedkeuren_telt_weer_mee(ingelogde_client, db):
     stemvraag_id = _maak_stemvraag(ingelogde_client)
     optie = db.execute(

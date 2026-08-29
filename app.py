@@ -149,9 +149,10 @@ OPEN_ENDPOINTS = {
     "favicon_ico",
     "wachtwoord_vergeten",
     "wachtwoord_instellen",
-    # De publieke stempagina heeft geen account nodig -- bezoekers scannen
-    # 'm via een QR-code, ze loggen nergens in.
+    # De publieke stempagina's hebben geen account nodig, bezoekers scannen
+    # 'm via een QR-code of stemmen.kantineblauwgeel.nl, ze loggen nergens in.
     "stem_pagina",
+    "stem_overzicht_publiek",
 }
 
 # Naam van het los cookie waarmee een anonieme stemmer wordt herkend (om
@@ -3426,6 +3427,16 @@ def register_routes(app):
         return redirect(url_for("stemmen_overzicht"))
 
     # ---------- Publieke stempagina (geen account nodig) ----------
+
+    @app.route("/stem")
+    def stem_overzicht_publiek():
+        db = get_db()
+        open_stemmingen = [
+            v
+            for v in db.execute("SELECT * FROM stemvragen ORDER BY aangemaakt_op DESC").fetchall()
+            if stemming_is_open(v)
+        ]
+        return render_template("stem_overzicht_publiek.html", stemmingen=open_stemmingen)
 
     @app.route("/stem/<int:stemvraag_id>", methods=["GET", "POST"])
     def stem_pagina(stemvraag_id):
