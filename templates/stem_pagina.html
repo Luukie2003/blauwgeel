@@ -122,6 +122,19 @@
         .uitslag-balk { background: linear-gradient(90deg, var(--geel-donker), var(--geel)); height: 100%; border-radius: 8px; transition: width 0.6s ease; }
         .bedankt { font-size: 2.2rem; margin-bottom: 0.3rem; }
         .totaal { color: var(--tekst-zacht); font-size: 0.82rem; margin-top: 1.2rem; }
+        .terug-link {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.65rem 1.3rem;
+            border: 2px solid #e3e7f2;
+            border-radius: 14px;
+            color: var(--blauw-donker);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+        .terug-link:hover { border-color: var(--geel); background: #fffbea; }
         .voetnoot { color: var(--tekst-zacht); font-size: 0.75rem; margin-top: 1.4rem; opacity: 0.8; }
     </style>
 </head>
@@ -165,6 +178,7 @@
         {% endfor %}
         <p class="totaal">{{ totaal_stemmen }} stem{{ '' if totaal_stemmen == 1 else 'men' }} tot nu toe</p>
         {% endif %}
+        <a href="{{ url_for('stem_overzicht_publiek') }}" class="terug-link">&larr; Alle stemmingen</a>
         {% else %}
         <form method="post" id="stem-formulier">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
