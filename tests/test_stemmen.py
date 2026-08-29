@@ -219,6 +219,31 @@ def test_afkeuren_maakt_naam_weer_vrij_om_te_stemmen(ingelogde_client, db):
     assert aantal == 2  # oude (afgekeurde) + nieuwe stem
 
 
+def test_afkeuren_en_opnieuw_stemmen_vanaf_zelfde_toestel_crasht_niet(ingelogde_client, db):
+    """Regressietest voor een crash in productie: dezelfde kiezer_sleutel
+    (cookie) botst met de UNIQUE-constraint als iemand na een afkeuring
+    opnieuw stemt zonder z'n cookie te wissen. Moet de bestaande (afgekeurde)
+    rij bijwerken in plaats van te crashen."""
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    opties = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde", (stemvraag_id,)
+    ).fetchall()
+    _stem(ingelogde_client, stemvraag_id, opties[0]["id"], naam="Jan Jansen")
+    stem = db.execute("SELECT * FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)).fetchone()
+    ingelogde_client.post(
+        f"/stemmen/stem/{stem['id']}/afkeuren", data={"csrf_token": _csrf(ingelogde_client)}
+    )
+
+    resp = _stem(ingelogde_client, stemvraag_id, opties[1]["id"], naam="Jan Jansen")
+    assert resp.status_code == 200
+    assert b"Bedankt voor je stem" in resp.data
+
+    stemmen = db.execute("SELECT * FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)).fetchall()
+    assert len(stemmen) == 1  # bestaande rij bijgewerkt, geen crash of dubbele rij
+    assert stemmen[0]["afgekeurd"] == 0
+    assert stemmen[0]["stemoptie_id"] == opties[1]["id"]
+
+
 def test_afbeelding_bij_optie_wordt_opgeslagen(ingelogde_client, db):
     kleine_png = (
         b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00"

@@ -3517,7 +3517,13 @@ def register_routes(app):
                         opmerking = request.form.get("opmerking", "").strip() or None
                     db.execute(
                         """INSERT INTO stemmen (stemvraag_id, stemoptie_id, kiezer_sleutel, naam, opmerking, datum)
-                           VALUES (?, ?, ?, ?, ?, ?)""",
+                           VALUES (?, ?, ?, ?, ?, ?)
+                           ON CONFLICT(stemvraag_id, kiezer_sleutel) DO UPDATE SET
+                               stemoptie_id = excluded.stemoptie_id,
+                               naam = excluded.naam,
+                               opmerking = excluded.opmerking,
+                               afgekeurd = 0,
+                               datum = excluded.datum""",
                         (stemvraag_id, optie_id, kiezer_sleutel, ingevulde_naam, opmerking, now_str()),
                     )
                     db.commit()
