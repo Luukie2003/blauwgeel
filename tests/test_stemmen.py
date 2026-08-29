@@ -376,7 +376,7 @@ def test_publiek_overzicht_toont_open_stemmingen(ingelogde_client, db):
     assert f"/stem/{stemvraag_id}".encode() in resp.data
 
 
-def test_publiek_overzicht_verbergt_gesloten_en_verlopen_stemmingen(ingelogde_client, db):
+def test_publiek_overzicht_toont_ook_gesloten_en_verlopen_stemmingen(ingelogde_client, db):
     open_id = _maak_stemvraag(ingelogde_client, titel="Open stemming")
     gesloten_id = _maak_stemvraag(ingelogde_client, titel="Gesloten stemming")
     verlopen_id = _maak_stemvraag(ingelogde_client, titel="Verlopen stemming")
@@ -388,9 +388,43 @@ def test_publiek_overzicht_verbergt_gesloten_en_verlopen_stemmingen(ingelogde_cl
 
     resp = ingelogde_client.get("/stem")
     assert b"Open stemming" in resp.data
-    assert b"Gesloten stemming" not in resp.data
-    assert b"Verlopen stemming" not in resp.data
+    assert b"Gesloten stemming" in resp.data
+    assert b"Verlopen stemming" in resp.data
+    assert resp.data.count(b"Gesloten") >= 2  # badge bij de 2 niet-open stemmingen
     assert open_id  # sanity, id werd gebruikt
+
+
+def test_publiek_overzicht_toont_scores_bij_gesloten_stemming_met_toon_uitslag(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(
+        ingelogde_client, titel="Gesloten met scores", opties=("Fust A", "Fust B"), extra={"toon_uitslag": "1"}
+    )
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
+    ).fetchone()
+    _stem(ingelogde_client, stemvraag_id, optie["id"], naam="Iemand")
+    ingelogde_client.post(
+        f"/stemmen/{stemvraag_id}/sluiten", data={"csrf_token": _csrf(ingelogde_client)}
+    )
+
+    resp = ingelogde_client.get("/stem")
+    assert b"Gesloten met scores" in resp.data
+    assert b"Fust A" in resp.data
+    assert b"100%" in resp.data
+
+
+def test_publiek_overzicht_verbergt_scores_bij_gesloten_stemming_zonder_toon_uitslag(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client, titel="Gesloten zonder scores", opties=("Fust A", "Fust B"))
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
+    ).fetchone()
+    _stem(ingelogde_client, stemvraag_id, optie["id"], naam="Iemand")
+    ingelogde_client.post(
+        f"/stemmen/{stemvraag_id}/sluiten", data={"csrf_token": _csrf(ingelogde_client)}
+    )
+
+    resp = ingelogde_client.get("/stem")
+    assert b"Gesloten zonder scores" in resp.data
+    assert b"Fust A" not in resp.data
 
 
 def test_publiek_overzicht_zonder_login_bereikbaar(client, db):

@@ -56,6 +56,46 @@
         .stemming-link:hover { border-color: var(--geel); background: #fffbea; }
         .stemming-link:active { transform: scale(0.98); }
         .stemming-link .pijl { float: right; color: var(--geel-donker); }
+        .stemming-kaart-gesloten {
+            display: block;
+            text-align: left;
+            width: 100%;
+            background: #f4f6fb;
+            border: 2px solid #e3e7f2;
+            border-radius: 14px;
+            padding: 0.9rem 1.1rem;
+            text-decoration: none;
+            margin-bottom: 0.7rem;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+        .stemming-kaart-gesloten:hover { border-color: var(--geel); background: #fffbea; }
+        .gesloten-titel {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: var(--blauw-donker);
+            margin-bottom: 0.6rem;
+        }
+        .badge-gesloten {
+            flex-shrink: 0;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: var(--tekst-zacht);
+            background: #e5e7eb;
+            padding: 0.2rem 0.5rem;
+            border-radius: 999px;
+        }
+        .mini-uitslag-regel { margin-bottom: 0.5rem; }
+        .mini-uitslag-regel:last-child { margin-bottom: 0; }
+        .mini-uitslag-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; color: var(--blauw-donker); margin-bottom: 0.2rem; }
+        .mini-uitslag-label .mini-aantal { color: var(--tekst-zacht); font-weight: 400; }
+        .mini-balk-achtergrond { background: #eef0f6; border-radius: 6px; height: 0.5rem; overflow: hidden; }
+        .mini-balk { background: linear-gradient(90deg, var(--geel-donker), var(--geel)); height: 100%; border-radius: 6px; }
         .leeg { color: var(--tekst-zacht); font-size: 0.95rem; }
         .leeg .emoji { font-size: 2.2rem; display: block; margin-bottom: 0.5rem; }
         .voetnoot { color: var(--tekst-zacht); font-size: 0.75rem; margin-top: 1.4rem; opacity: 0.8; }
@@ -68,13 +108,36 @@
         <h1>Stemmen</h1>
 
         {% if stemmingen %}
-        {% for v in stemmingen %}
-        <a class="stemming-link" href="{{ url_for('stem_pagina', stemvraag_id=v.id) }}">
-            <span class="pijl">&rarr;</span>{{ v.titel }}
+        {% for s in stemmingen %}
+        {% if s.open %}
+        <a class="stemming-link" href="{{ url_for('stem_pagina', stemvraag_id=s.vraag.id) }}">
+            <span class="pijl">&rarr;</span>{{ s.vraag.titel }}
         </a>
+        {% else %}
+        <a class="stemming-kaart-gesloten" href="{{ url_for('stem_pagina', stemvraag_id=s.vraag.id) }}">
+            <div class="gesloten-titel">
+                <span>{{ s.vraag.titel }}</span>
+                <span class="badge-gesloten">Gesloten</span>
+            </div>
+            {% if s.vraag.toon_uitslag %}
+            {% for o in s.opties %}
+            {% set percentage = (o.aantal / s.totaal_stemmers * 100) if s.totaal_stemmers else 0 %}
+            <div class="mini-uitslag-regel">
+                <div class="mini-uitslag-label">
+                    <span>{{ o.tekst }}</span>
+                    <span class="mini-aantal">{{ '%.0f'|format(percentage) }}%</span>
+                </div>
+                <div class="mini-balk-achtergrond">
+                    <div class="mini-balk" style="width: {{ percentage }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </a>
+        {% endif %}
         {% endfor %}
         {% else %}
-        <p class="leeg"><span class="emoji">🗳️</span>Op dit moment zijn er geen open stemmingen. Kom later nog eens terug!</p>
+        <p class="leeg"><span class="emoji">🗳️</span>Er zijn nog geen stemmingen.</p>
         {% endif %}
 
         <p class="voetnoot">Kantine Beheer &middot; s.v. Blauw-Geel 1915</p>

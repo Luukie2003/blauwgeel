@@ -3470,12 +3470,23 @@ def register_routes(app):
     @app.route("/stem")
     def stem_overzicht_publiek():
         db = get_db()
-        open_stemmingen = [
-            v
-            for v in db.execute("SELECT * FROM stemvragen ORDER BY aangemaakt_op DESC").fetchall()
-            if stemming_is_open(v)
-        ]
-        return render_template("stem_overzicht_publiek.html", stemmingen=open_stemmingen)
+        stemmingen = []
+        for v in db.execute("SELECT * FROM stemvragen ORDER BY aangemaakt_op DESC").fetchall():
+            opties = db.execute(
+                """SELECT so.*,
+                          (SELECT COUNT(*) FROM stemmen s WHERE s.stemoptie_id = so.id AND s.afgekeurd = 0) AS aantal
+                   FROM stemopties so WHERE so.stemvraag_id = ? ORDER BY so.volgorde""",
+                (v["id"],),
+            ).fetchall()
+            stemmingen.append(
+                {
+                    "vraag": v,
+                    "open": stemming_is_open(v),
+                    "opties": opties,
+                    "totaal_stemmers": tel_stemmers(db, v["id"]),
+                }
+            )
+        return render_template("stem_overzicht_publiek.html", stemmingen=stemmingen)
 
     @app.route("/stem/<int:stemvraag_id>", methods=["GET", "POST"])
     def stem_pagina(stemvraag_id):
