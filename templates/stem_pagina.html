@@ -89,6 +89,11 @@
         }
         .optie-knop:hover { border-color: var(--geel); background: #fffbea; }
         .optie-knop:active { transform: scale(0.98); }
+        .optie-knop.geselecteerd { border-color: var(--geel-donker); background: #fffbea; }
+        .optie-knop.uitgeschakeld { opacity: 0.5; cursor: not-allowed; }
+        .meerkeuze-checkbox { width: 1.15rem; height: 1.15rem; flex-shrink: 0; accent-color: var(--geel-donker); }
+        .keuze-instructie { text-align: left; font-size: 0.85rem; font-weight: 600; color: var(--blauw-donker); margin: 0 0 0.7rem; }
+        .keuze-instructie span { display: block; font-weight: 400; color: var(--tekst-zacht); margin-top: 0.15rem; }
         .optie-thumb, .uitslag-thumb {
             width: 2.6rem;
             height: 2.6rem;
@@ -142,7 +147,7 @@
         {% endif %}
         {% if stemvraag.toon_uitslag %}
         {% for o in opties %}
-        {% set percentage = (o.aantal / totaal_stemmen * 100) if totaal_stemmen else 0 %}
+        {% set percentage = (o.aantal / totaal_stemmers * 100) if totaal_stemmers else 0 %}
         <div class="uitslag-regel">
             <div class="uitslag-label">
                 <span style="display:flex; align-items:center">
@@ -174,6 +179,22 @@
                 <textarea id="opmerking" name="opmerking" rows="2" placeholder="Eventuele toelichting"></textarea>
             </div>
             {% endif %}
+            {% if stemvraag.aantal_keuzes > 1 %}
+            <p class="keuze-instructie">
+                Kies tot maximaal {{ stemvraag.aantal_keuzes }} opties
+                <span id="keuze-teller">(0/{{ stemvraag.aantal_keuzes }} gekozen)</span>
+            </p>
+            {% for o in opties %}
+            <label class="optie-knop">
+                <input type="checkbox" name="optie_id" value="{{ o.id }}" class="meerkeuze-checkbox">
+                {% if o.afbeelding %}
+                <img class="optie-thumb" src="{{ url_for('static', filename='stem_afbeeldingen/' + o.afbeelding) }}" alt="">
+                {% endif %}
+                {{ o.tekst }}
+            </label>
+            {% endfor %}
+            <button type="submit" class="stem-knop">Stem</button>
+            {% else %}
             {% for o in opties %}
             <button type="submit" name="optie_id" value="{{ o.id }}" class="optie-knop">
                 {% if o.afbeelding %}
@@ -182,6 +203,7 @@
                 {{ o.tekst }}
             </button>
             {% endfor %}
+            {% endif %}
         </form>
         <script>
             (function () {
@@ -195,6 +217,25 @@
                 form.addEventListener('submit', function () {
                     try { localStorage.setItem('stem_naam', naamVeld.value.trim()); } catch (e) {}
                 });
+            })();
+            (function () {
+                var checkboxen = Array.prototype.slice.call(document.querySelectorAll('.meerkeuze-checkbox'));
+                if (checkboxen.length === 0) return;
+                var teller = document.getElementById('keuze-teller');
+                var maximum = {{ stemvraag.aantal_keuzes }};
+                var bijwerken = function () {
+                    var aantal = checkboxen.filter(function (c) { return c.checked; }).length;
+                    if (teller) teller.textContent = '(' + aantal + '/' + maximum + ' gekozen)';
+                    checkboxen.forEach(function (c) {
+                        var label = c.closest('.optie-knop');
+                        label.classList.toggle('geselecteerd', c.checked);
+                        var uitgeschakeld = !c.checked && aantal >= maximum;
+                        c.disabled = uitgeschakeld;
+                        label.classList.toggle('uitgeschakeld', uitgeschakeld);
+                    });
+                };
+                checkboxen.forEach(function (c) { c.addEventListener('change', bijwerken); });
+                bijwerken();
             })();
         </script>
         {% endif %}

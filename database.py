@@ -98,6 +98,7 @@ KOLOM_MIGRATIES = [
     ("stemvragen", "toon_uitslag", "INTEGER NOT NULL DEFAULT 1"),
     ("stemvragen", "opmerking_toegestaan", "INTEGER NOT NULL DEFAULT 0"),
     ("stemmen", "opmerking", "TEXT"),
+    ("stemvragen", "aantal_keuzes", "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 
@@ -166,6 +167,42 @@ def _migreer_kassa_afgesloten(db):
     db.execute("UPDATE kassa_tellingen SET afgesloten = 1")
 
 
+def _migreer_stemmen_meerdere_keuzes(db):
+    """De UNIQUE-constraint op stemmen stond oorspronkelijk op
+    (stemvraag_id, kiezer_sleutel): goed voor precies 1 keuze per stemmer.
+    Met stemvragen.aantal_keuzes kan een stemmer nu meerdere opties
+    tegelijk aanvinken, dus moet stemoptie_id in de constraint mee -- anders
+    blokkeert de 2e keuze van dezelfde stemmer zichzelf. SQLite kent geen
+    ALTER TABLE voor constraints, dus de tabel wordt eenmalig herbouwd."""
+    ddl = db.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'stemmen'"
+    ).fetchone()
+    if ddl is None or "kiezer_sleutel, stemoptie_id" in ddl["sql"]:
+        return
+    db.execute("ALTER TABLE stemmen RENAME TO stemmen_oud")
+    db.execute(
+        """CREATE TABLE stemmen (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            stemvraag_id INTEGER NOT NULL REFERENCES stemvragen(id) ON DELETE CASCADE,
+            stemoptie_id INTEGER NOT NULL REFERENCES stemopties(id) ON DELETE CASCADE,
+            kiezer_sleutel TEXT NOT NULL,
+            naam TEXT,
+            opmerking TEXT,
+            afgekeurd INTEGER NOT NULL DEFAULT 0,
+            datum TEXT NOT NULL,
+            UNIQUE(stemvraag_id, kiezer_sleutel, stemoptie_id)
+        )"""
+    )
+    db.execute(
+        """INSERT INTO stemmen
+               (id, stemvraag_id, stemoptie_id, kiezer_sleutel, naam, opmerking, afgekeurd, datum)
+           SELECT id, stemvraag_id, stemoptie_id, kiezer_sleutel, naam, opmerking, afgekeurd, datum
+           FROM stemmen_oud"""
+    )
+    db.execute("DROP TABLE stemmen_oud")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_stemmen_vraag ON stemmen(stemvraag_id)")
+
+
 # Databasepaden waarvoor het schema al is toegepast in dit proces -- zie
 # get_db() hieronder.
 _SCHEMA_TOEGEPAST_VOOR = set()
@@ -193,6 +230,7 @@ def get_db():
             with open(SCHEMA_PATH) as f:
                 g.db.executescript(f.read())
             _migreer_kolommen(g.db)
+            _migreer_stemmen_meerdere_keuzes(g.db)
             _migreer_categorieen(g.db)
             _migreer_telling_verkoopprijs(g.db)
             _migreer_kassa_afgesloten(g.db)

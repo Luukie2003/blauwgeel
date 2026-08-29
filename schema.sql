@@ -226,7 +226,8 @@ CREATE TABLE IF NOT EXISTS stemvragen (
     actief INTEGER NOT NULL DEFAULT 1,
     sluit_op TEXT,
     toon_uitslag INTEGER NOT NULL DEFAULT 1,
-    opmerking_toegestaan INTEGER NOT NULL DEFAULT 0
+    opmerking_toegestaan INTEGER NOT NULL DEFAULT 0,
+    aantal_keuzes INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS stemopties (
@@ -246,7 +247,7 @@ CREATE TABLE IF NOT EXISTS stemmen (
     opmerking TEXT,
     afgekeurd INTEGER NOT NULL DEFAULT 0,
     datum TEXT NOT NULL,
-    UNIQUE(stemvraag_id, kiezer_sleutel)
+    UNIQUE(stemvraag_id, kiezer_sleutel, stemoptie_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_stemopties_vraag ON stemopties(stemvraag_id);

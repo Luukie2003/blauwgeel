@@ -44,9 +44,12 @@
 <div class="kaart-grid">
     <div class="kaart">
         <h2>Uitslag</h2>
-        <p class="tekst-zacht" style="margin-top:-0.4rem">{{ totaal_stemmen }} stem{{ '' if totaal_stemmen == 1 else 'men' }} tot nu toe.</p>
+        <p class="tekst-zacht" style="margin-top:-0.4rem">
+            {{ totaal_stemmen }} stem{{ '' if totaal_stemmen == 1 else 'men' }} tot nu toe
+            {%- if stemvraag.aantal_keuzes > 1 %} van {{ totaal_stemmers }} stemmer{{ '' if totaal_stemmers == 1 else 's' }}{% endif %}.
+        </p>
         {% for o in opties %}
-        {% set percentage = (o.aantal / totaal_stemmen * 100) if totaal_stemmen else 0 %}
+        {% set percentage = (o.aantal / totaal_stemmers * 100) if totaal_stemmers else 0 %}
         <div class="stemresultaat-regel">
             <div class="stemresultaat-label">
                 <span style="display:flex; align-items:center; gap:0.5rem">
@@ -87,6 +90,11 @@
         <h2>Instellingen</h2>
         <form method="post" action="{{ url_for('stemvraag_instellingen_bijwerken', stemvraag_id=stemvraag.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="veld">
+                <label for="aantal_keuzes">Aantal keuzes per stemmer</label>
+                <input type="number" id="aantal_keuzes" name="aantal_keuzes"
+                       value="{{ stemvraag.aantal_keuzes }}" min="1" max="{{ max_stemopties }}" style="max-width:8rem">
+            </div>
             <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.6rem">
                 <input type="checkbox" name="toon_uitslag" style="width:auto" {{ 'checked' if stemvraag.toon_uitslag }}>
                 Tussenstand tonen aan stemmers (na hun stem)

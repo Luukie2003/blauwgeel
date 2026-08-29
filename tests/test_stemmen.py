@@ -466,6 +466,92 @@ def test_instellingen_kunnen_achteraf_gewijzigd_worden(ingelogde_client, db):
     assert vraag["opmerking_toegestaan"] == 0
 
 
+def test_aantal_keuzes_standaard_1(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    vraag = db.execute("SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)).fetchone()
+    assert vraag["aantal_keuzes"] == 1
+
+
+def test_aantal_keuzes_kan_worden_ingesteld_bij_aanmaken(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client, extra={"aantal_keuzes": "2"})
+    vraag = db.execute("SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)).fetchone()
+    assert vraag["aantal_keuzes"] == 2
+
+
+def test_meerdere_keuzes_kunnen_gestemd_worden(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client, extra={"aantal_keuzes": "2"})
+    opties = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde", (stemvraag_id,)
+    ).fetchall()
+    resp = _stem(ingelogde_client, stemvraag_id, [opties[0]["id"], opties[1]["id"]])
+    assert b"Bedankt voor je stem" in resp.data
+    stemmen = db.execute("SELECT * FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)).fetchall()
+    assert len(stemmen) == 2
+    assert {s["stemoptie_id"] for s in stemmen} == {opties[0]["id"], opties[1]["id"]}
+
+
+def test_minder_dan_maximum_keuzes_mag_ook(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client, extra={"aantal_keuzes": "3"})
+    opties = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde", (stemvraag_id,)
+    ).fetchall()
+    resp = _stem(ingelogde_client, stemvraag_id, [opties[0]["id"]])
+    assert b"Bedankt voor je stem" in resp.data
+    aantal = db.execute(
+        "SELECT COUNT(*) AS n FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)
+    ).fetchone()["n"]
+    assert aantal == 1
+
+
+def test_meer_dan_maximum_keuzes_wordt_geweigerd(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client, extra={"aantal_keuzes": "2"})
+    opties = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde", (stemvraag_id,)
+    ).fetchall()
+    resp = _stem(ingelogde_client, stemvraag_id, [o["id"] for o in opties])  # 3 opties, max is 2
+    assert b"Kies maximaal 2 opties" in resp.data
+    aantal = db.execute(
+        "SELECT COUNT(*) AS n FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)
+    ).fetchone()["n"]
+    assert aantal == 0
+
+
+def test_dubbel_stemmen_geweerd_bij_meerdere_keuzes(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client, extra={"aantal_keuzes": "2"})
+    opties = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde", (stemvraag_id,)
+    ).fetchall()
+    _stem(ingelogde_client, stemvraag_id, [opties[0]["id"], opties[1]["id"]])
+    resp = _stem(ingelogde_client, stemvraag_id, [opties[2]["id"]])
+    assert b"al gestemd" in resp.data
+    aantal = db.execute(
+        "SELECT COUNT(*) AS n FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)
+    ).fetchone()["n"]
+    assert aantal == 2
+
+
+def test_percentage_gaat_uit_van_aantal_stemmers_niet_aantal_keuzes(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client, extra={"aantal_keuzes": "2", "toon_uitslag": "1"})
+    opties = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde", (stemvraag_id,)
+    ).fetchall()
+    _stem(ingelogde_client, stemvraag_id, [opties[0]["id"], opties[1]["id"]], naam="Een Stemmer")
+    detail = ingelogde_client.get(f"/stemmen/{stemvraag_id}")
+    # 1 stemmer koos 2 opties -> elke gekozen optie moet 100% zijn, niet 50%.
+    assert detail.data.count(b"(100%)") == 2
+
+
+def test_aantal_keuzes_kan_achteraf_gewijzigd_worden(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    resp = ingelogde_client.post(
+        f"/stemmen/{stemvraag_id}/instellingen",
+        data={"csrf_token": _csrf(ingelogde_client), "aantal_keuzes": "3"},
+    )
+    assert resp.status_code == 302
+    vraag = db.execute("SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)).fetchone()
+    assert vraag["aantal_keuzes"] == 3
+
+
 def test_goedkeuren_telt_weer_mee(ingelogde_client, db):
     stemvraag_id = _maak_stemvraag(ingelogde_client)
     optie = db.execute(

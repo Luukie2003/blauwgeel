@@ -1076,6 +1076,16 @@ def stemming_is_open(stemvraag):
     return True
 
 
+def tel_stemmers(db, stemvraag_id):
+    """Aantal unieke stemmers (niet het aantal uitgebrachte keuzes) -- bij
+    stemvragen met aantal_keuzes > 1 brengt 1 stemmer meerdere stemmen uit,
+    dus is dit de juiste noemer voor percentages in de uitslag."""
+    return db.execute(
+        "SELECT COUNT(DISTINCT kiezer_sleutel) AS n FROM stemmen WHERE stemvraag_id = ? AND afgekeurd = 0",
+        (stemvraag_id,),
+    ).fetchone()["n"]
+
+
 def register_routes(app):
     # ---------- Inloggen / accounts ----------
 
@@ -3292,6 +3302,8 @@ def register_routes(app):
             sluit_op = f"{sluit_op_datum} 23:59" if sluit_op_datum else None
             toon_uitslag = 1 if request.form.get("toon_uitslag") else 0
             opmerking_toegestaan = 1 if request.form.get("opmerking_toegestaan") else 0
+            aantal_keuzes = request.form.get("aantal_keuzes", type=int) or 1
+            aantal_keuzes = max(1, min(aantal_keuzes, MAX_STEMOPTIES))
             regels = []
             for i in range(1, MAX_STEMOPTIES + 1):
                 tekst = request.form.get(f"optie{i}", "").strip()
@@ -3308,11 +3320,11 @@ def register_routes(app):
             cur = db.execute(
                 """INSERT INTO stemvragen
                        (titel, omschrijving, aangemaakt_op, aangemaakt_door, sluit_op,
-                        toon_uitslag, opmerking_toegestaan)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                        toon_uitslag, opmerking_toegestaan, aantal_keuzes)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     titel, omschrijving or None, now_str(), session.get("gebruiker_naam"), sluit_op,
-                    toon_uitslag, opmerking_toegestaan,
+                    toon_uitslag, opmerking_toegestaan, aantal_keuzes,
                 ),
             )
             stemvraag_id = cur.lastrowid
@@ -3342,6 +3354,7 @@ def register_routes(app):
             (stemvraag_id,),
         ).fetchall()
         totaal_stemmen = sum(o["aantal"] for o in opties)
+        totaal_stemmers = tel_stemmers(db, stemvraag_id)
         stemmen = db.execute(
             """SELECT s.*, so.tekst AS optie_tekst
                FROM stemmen s JOIN stemopties so ON so.id = s.stemoptie_id
@@ -3354,9 +3367,11 @@ def register_routes(app):
             stemvraag=stemvraag,
             opties=opties,
             totaal_stemmen=totaal_stemmen,
+            totaal_stemmers=totaal_stemmers,
             stemmen=stemmen,
             stem_url=stem_url,
             qr_svg=qr.qr_svg(stem_url),
+            max_stemopties=MAX_STEMOPTIES,
         )
 
     @app.route("/stemmen/<int:stemvraag_id>/poster.pdf")
@@ -3431,9 +3446,12 @@ def register_routes(app):
         db = get_db()
         toon_uitslag = 1 if request.form.get("toon_uitslag") else 0
         opmerking_toegestaan = 1 if request.form.get("opmerking_toegestaan") else 0
+        aantal_keuzes = request.form.get("aantal_keuzes", type=int) or 1
+        aantal_keuzes = max(1, min(aantal_keuzes, MAX_STEMOPTIES))
         db.execute(
-            "UPDATE stemvragen SET toon_uitslag = ?, opmerking_toegestaan = ? WHERE id = ?",
-            (toon_uitslag, opmerking_toegestaan, stemvraag_id),
+            """UPDATE stemvragen SET toon_uitslag = ?, opmerking_toegestaan = ?, aantal_keuzes = ?
+               WHERE id = ?""",
+            (toon_uitslag, opmerking_toegestaan, aantal_keuzes, stemvraag_id),
         )
         db.commit()
         flash("Instellingen bijgewerkt.", "success")
@@ -3505,28 +3523,44 @@ def register_routes(app):
                 foutmelding = "Je hebt al gestemd, bedankt!"
                 al_gestemd = True
             else:
-                optie_id = request.form.get("optie_id", type=int)
-                optie = db.execute(
-                    "SELECT * FROM stemopties WHERE id = ? AND stemvraag_id = ?",
-                    (optie_id, stemvraag_id),
-                ).fetchone()
-                if optie is None:
-                    foutmelding = "Kies eerst een van de opties."
+                aantal_keuzes = stemvraag["aantal_keuzes"] or 1
+                if aantal_keuzes > 1:
+                    gekozen_ids = list(dict.fromkeys(request.form.getlist("optie_id", type=int)))
+                else:
+                    enkele_id = request.form.get("optie_id", type=int)
+                    gekozen_ids = [enkele_id] if enkele_id else []
+                geldige_ids = {
+                    row["id"]
+                    for row in db.execute(
+                        "SELECT id FROM stemopties WHERE stemvraag_id = ?", (stemvraag_id,)
+                    ).fetchall()
+                }
+                gekozen_ids = [i for i in gekozen_ids if i in geldige_ids]
+
+                if not gekozen_ids:
+                    foutmelding = "Kies eerst een van de opties." if aantal_keuzes == 1 else "Kies minstens 1 optie."
+                elif len(gekozen_ids) > aantal_keuzes:
+                    foutmelding = f"Kies maximaal {aantal_keuzes} opties."
                 else:
                     opmerking = None
                     if stemvraag["opmerking_toegestaan"]:
                         opmerking = request.form.get("opmerking", "").strip() or None
                     db.execute(
-                        """INSERT INTO stemmen (stemvraag_id, stemoptie_id, kiezer_sleutel, naam, opmerking, datum)
-                           VALUES (?, ?, ?, ?, ?, ?)
-                           ON CONFLICT(stemvraag_id, kiezer_sleutel) DO UPDATE SET
-                               stemoptie_id = excluded.stemoptie_id,
-                               naam = excluded.naam,
-                               opmerking = excluded.opmerking,
-                               afgekeurd = 0,
-                               datum = excluded.datum""",
-                        (stemvraag_id, optie_id, kiezer_sleutel, ingevulde_naam, opmerking, now_str()),
+                        "DELETE FROM stemmen WHERE stemvraag_id = ? AND kiezer_sleutel = ? "
+                        "AND stemoptie_id NOT IN ({})".format(",".join("?" * len(gekozen_ids))),
+                        (stemvraag_id, kiezer_sleutel, *gekozen_ids),
                     )
+                    for optie_id in gekozen_ids:
+                        db.execute(
+                            """INSERT INTO stemmen (stemvraag_id, stemoptie_id, kiezer_sleutel, naam, opmerking, datum)
+                               VALUES (?, ?, ?, ?, ?, ?)
+                               ON CONFLICT(stemvraag_id, kiezer_sleutel, stemoptie_id) DO UPDATE SET
+                                   naam = excluded.naam,
+                                   opmerking = excluded.opmerking,
+                                   afgekeurd = 0,
+                                   datum = excluded.datum""",
+                            (stemvraag_id, optie_id, kiezer_sleutel, ingevulde_naam, opmerking, now_str()),
+                        )
                     db.commit()
                     al_gestemd = True
 
@@ -3537,12 +3571,14 @@ def register_routes(app):
             (stemvraag_id,),
         ).fetchall()
         totaal_stemmen = sum(o["aantal"] for o in opties)
+        totaal_stemmers = tel_stemmers(db, stemvraag_id)
 
         pagina = render_template(
             "stem_pagina.html",
             stemvraag=stemvraag,
             opties=opties,
             totaal_stemmen=totaal_stemmen,
+            totaal_stemmers=totaal_stemmers,
             al_gestemd=al_gestemd,
             foutmelding=foutmelding,
             ingevulde_naam=ingevulde_naam,
