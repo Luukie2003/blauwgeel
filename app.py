@@ -3289,6 +3289,8 @@ def register_routes(app):
             omschrijving = request.form.get("omschrijving", "").strip()
             sluit_op_datum = request.form.get("sluit_op", "").strip()
             sluit_op = f"{sluit_op_datum} 23:59" if sluit_op_datum else None
+            toon_uitslag = 1 if request.form.get("toon_uitslag") else 0
+            opmerking_toegestaan = 1 if request.form.get("opmerking_toegestaan") else 0
             regels = []
             for i in range(1, 6):
                 tekst = request.form.get(f"optie{i}", "").strip()
@@ -3303,9 +3305,14 @@ def register_routes(app):
                 flash("Vul minstens 2 keuzes in.", "error")
                 return redirect(url_for("stemvraag_nieuw"))
             cur = db.execute(
-                """INSERT INTO stemvragen (titel, omschrijving, aangemaakt_op, aangemaakt_door, sluit_op)
-                   VALUES (?, ?, ?, ?, ?)""",
-                (titel, omschrijving or None, now_str(), session.get("gebruiker_naam"), sluit_op),
+                """INSERT INTO stemvragen
+                       (titel, omschrijving, aangemaakt_op, aangemaakt_door, sluit_op,
+                        toon_uitslag, opmerking_toegestaan)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    titel, omschrijving or None, now_str(), session.get("gebruiker_naam"), sluit_op,
+                    toon_uitslag, opmerking_toegestaan,
+                ),
             )
             stemvraag_id = cur.lastrowid
             for volgorde, (tekst, afbeelding) in enumerate(regels):
@@ -3418,6 +3425,19 @@ def register_routes(app):
         flash("Einddatum bijgewerkt." if sluit_op else "Einddatum verwijderd.", "success")
         return redirect(url_for("stemvraag_detail", stemvraag_id=stemvraag_id))
 
+    @app.route("/stemmen/<int:stemvraag_id>/instellingen", methods=["POST"])
+    def stemvraag_instellingen_bijwerken(stemvraag_id):
+        db = get_db()
+        toon_uitslag = 1 if request.form.get("toon_uitslag") else 0
+        opmerking_toegestaan = 1 if request.form.get("opmerking_toegestaan") else 0
+        db.execute(
+            "UPDATE stemvragen SET toon_uitslag = ?, opmerking_toegestaan = ? WHERE id = ?",
+            (toon_uitslag, opmerking_toegestaan, stemvraag_id),
+        )
+        db.commit()
+        flash("Instellingen bijgewerkt.", "success")
+        return redirect(url_for("stemvraag_detail", stemvraag_id=stemvraag_id))
+
     @app.route("/stemmen/<int:stemvraag_id>/verwijderen", methods=["POST"])
     def stemvraag_verwijderen(stemvraag_id):
         db = get_db()
@@ -3492,10 +3512,13 @@ def register_routes(app):
                 if optie is None:
                     foutmelding = "Kies eerst een van de opties."
                 else:
+                    opmerking = None
+                    if stemvraag["opmerking_toegestaan"]:
+                        opmerking = request.form.get("opmerking", "").strip() or None
                     db.execute(
-                        """INSERT INTO stemmen (stemvraag_id, stemoptie_id, kiezer_sleutel, naam, datum)
-                           VALUES (?, ?, ?, ?, ?)""",
-                        (stemvraag_id, optie_id, kiezer_sleutel, ingevulde_naam, now_str()),
+                        """INSERT INTO stemmen (stemvraag_id, stemoptie_id, kiezer_sleutel, naam, opmerking, datum)
+                           VALUES (?, ?, ?, ?, ?, ?)""",
+                        (stemvraag_id, optie_id, kiezer_sleutel, ingevulde_naam, opmerking, now_str()),
                     )
                     db.commit()
                     al_gestemd = True

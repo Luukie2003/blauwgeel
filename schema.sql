@@ -224,7 +224,9 @@ CREATE TABLE IF NOT EXISTS stemvragen (
     aangemaakt_op TEXT NOT NULL,
     aangemaakt_door TEXT,
     actief INTEGER NOT NULL DEFAULT 1,
-    sluit_op TEXT
+    sluit_op TEXT,
+    toon_uitslag INTEGER NOT NULL DEFAULT 1,
+    opmerking_toegestaan INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS stemopties (
@@ -241,6 +243,7 @@ CREATE TABLE IF NOT EXISTS stemmen (
     stemoptie_id INTEGER NOT NULL REFERENCES stemopties(id) ON DELETE CASCADE,
     kiezer_sleutel TEXT NOT NULL,
     naam TEXT,
+    opmerking TEXT,
     afgekeurd INTEGER NOT NULL DEFAULT 0,
     datum TEXT NOT NULL,
     UNIQUE(stemvraag_id, kiezer_sleutel)

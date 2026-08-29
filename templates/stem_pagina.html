@@ -60,15 +60,16 @@
             color: var(--blauw-donker);
             margin-bottom: 0.3rem;
         }
-        .naam-veld input {
+        .naam-veld input, .naam-veld textarea {
             width: 100%;
             border: 2px solid #e3e7f2;
             border-radius: 12px;
             padding: 0.75rem 0.9rem;
             font-size: 1rem;
             font-family: inherit;
+            resize: vertical;
         }
-        .naam-veld input:focus { outline: none; border-color: var(--geel-donker); }
+        .naam-veld input:focus, .naam-veld textarea:focus { outline: none; border-color: var(--geel-donker); }
         .optie-knop {
             display: flex;
             align-items: center;
@@ -139,6 +140,7 @@
         {% else %}
         <p class="omschrijving">Deze stemming is gesloten.</p>
         {% endif %}
+        {% if stemvraag.toon_uitslag %}
         {% for o in opties %}
         {% set percentage = (o.aantal / totaal_stemmen * 100) if totaal_stemmen else 0 %}
         <div class="uitslag-regel">
@@ -157,6 +159,7 @@
         </div>
         {% endfor %}
         <p class="totaal">{{ totaal_stemmen }} stem{{ '' if totaal_stemmen == 1 else 'men' }} tot nu toe</p>
+        {% endif %}
         {% else %}
         <form method="post" id="stem-formulier">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -165,6 +168,12 @@
                 <input type="text" id="naam" name="naam" required autocomplete="name"
                        value="{{ ingevulde_naam }}" placeholder="Voor- en achternaam">
             </div>
+            {% if stemvraag.opmerking_toegestaan %}
+            <div class="naam-veld">
+                <label for="opmerking">Opmerking (optioneel)</label>
+                <textarea id="opmerking" name="opmerking" rows="2" placeholder="Eventuele toelichting"></textarea>
+            </div>
+            {% endif %}
             {% for o in opties %}
             <button type="submit" name="optie_id" value="{{ o.id }}" class="optie-knop">
                 {% if o.afbeelding %}

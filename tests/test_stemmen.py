@@ -5,21 +5,23 @@ from conftest import stel_csrf_token_in as _csrf
 from app import STEM_AFBEELDINGEN_MAP, stemming_is_open
 
 
-def _maak_stemvraag(client, titel="Welk fust voor het weizen?", opties=("Fust A", "Fust B", "Fust C")):
+def _maak_stemvraag(client, titel="Welk fust voor het weizen?", opties=("Fust A", "Fust B", "Fust C"), extra=None):
     data = {"csrf_token": _csrf(client), "titel": titel}
     for i, tekst in enumerate(opties, start=1):
         data[f"optie{i}"] = tekst
+    if extra:
+        data.update(extra)
     resp = client.post("/stemmen/nieuw", data=data, follow_redirects=False)
     assert resp.status_code == 302
     return int(resp.headers["Location"].rsplit("/", 1)[-1])
 
 
-def _stem(client, stemvraag_id, optie_id, naam="Jan Jansen"):
+def _stem(client, stemvraag_id, optie_id, naam="Jan Jansen", opmerking=None):
     client.get(f"/stem/{stemvraag_id}")  # zorgt voor het stem_kiezer-cookie
-    return client.post(
-        f"/stem/{stemvraag_id}",
-        data={"csrf_token": _csrf(client), "optie_id": optie_id, "naam": naam},
-    )
+    data = {"csrf_token": _csrf(client), "optie_id": optie_id, "naam": naam}
+    if opmerking is not None:
+        data["opmerking"] = opmerking
+    return client.post(f"/stem/{stemvraag_id}", data=data)
 
 
 def test_stemvraag_aanmaken(ingelogde_client, db):
@@ -348,6 +350,74 @@ def test_publiek_overzicht_verbergt_gesloten_en_verlopen_stemmingen(ingelogde_cl
 def test_publiek_overzicht_zonder_login_bereikbaar(client, db):
     resp = client.get("/stem")
     assert resp.status_code == 200
+
+
+def test_uitslag_wordt_verborgen_als_toon_uitslag_uit_staat(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)  # geen toon_uitslag meegegeven -> uit
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
+    ).fetchone()
+    resp = _stem(ingelogde_client, stemvraag_id, optie["id"])
+    assert b"Bedankt voor je stem" in resp.data
+    assert b"stem tot nu toe" not in resp.data and b"stemmen tot nu toe" not in resp.data
+
+
+def test_uitslag_wordt_getoond_als_toon_uitslag_aan_staat(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client, extra={"toon_uitslag": "1"})
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
+    ).fetchone()
+    resp = _stem(ingelogde_client, stemvraag_id, optie["id"])
+    assert b"Bedankt voor je stem" in resp.data
+    assert b"stem tot nu toe" in resp.data or b"stemmen tot nu toe" in resp.data
+
+
+def test_opmerkingveld_niet_getoond_zonder_opmerking_toegestaan(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    resp = ingelogde_client.get(f"/stem/{stemvraag_id}")
+    assert b'name="opmerking"' not in resp.data
+
+
+def test_opmerking_wordt_opgeslagen_als_toegestaan(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client, extra={"opmerking_toegestaan": "1"})
+    resp = ingelogde_client.get(f"/stem/{stemvraag_id}")
+    assert b'name="opmerking"' in resp.data
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
+    ).fetchone()
+    _stem(ingelogde_client, stemvraag_id, optie["id"], opmerking="Liever kleinere flesjes")
+    stem = db.execute("SELECT * FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)).fetchone()
+    assert stem["opmerking"] == "Liever kleinere flesjes"
+
+
+def test_opmerking_wordt_genegeerd_zonder_opmerking_toegestaan(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
+    ).fetchone()
+    _stem(ingelogde_client, stemvraag_id, optie["id"], opmerking="Dit zou niet opgeslagen moeten worden")
+    stem = db.execute("SELECT * FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)).fetchone()
+    assert stem["opmerking"] is None
+
+
+def test_instellingen_kunnen_achteraf_gewijzigd_worden(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    resp = ingelogde_client.post(
+        f"/stemmen/{stemvraag_id}/instellingen",
+        data={"csrf_token": _csrf(ingelogde_client), "toon_uitslag": "1", "opmerking_toegestaan": "1"},
+    )
+    assert resp.status_code == 302
+    vraag = db.execute("SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)).fetchone()
+    assert vraag["toon_uitslag"] == 1
+    assert vraag["opmerking_toegestaan"] == 1
+
+    ingelogde_client.post(
+        f"/stemmen/{stemvraag_id}/instellingen",
+        data={"csrf_token": _csrf(ingelogde_client)},
+    )
+    vraag = db.execute("SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)).fetchone()
+    assert vraag["toon_uitslag"] == 0
+    assert vraag["opmerking_toegestaan"] == 0
 
 
 def test_goedkeuren_telt_weer_mee(ingelogde_client, db):

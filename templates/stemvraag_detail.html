@@ -82,6 +82,22 @@
             <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
         </form>
     </div>
+
+    <div class="kaart">
+        <h2>Instellingen</h2>
+        <form method="post" action="{{ url_for('stemvraag_instellingen_bijwerken', stemvraag_id=stemvraag.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.6rem">
+                <input type="checkbox" name="toon_uitslag" style="width:auto" {{ 'checked' if stemvraag.toon_uitslag }}>
+                Tussenstand tonen aan stemmers (na hun stem)
+            </label>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.8rem">
+                <input type="checkbox" name="opmerking_toegestaan" style="width:auto" {{ 'checked' if stemvraag.opmerking_toegestaan }}>
+                Opmerkingveld tonen bij het stemmen
+            </label>
+            <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
+        </form>
+    </div>
 </div>
 
 <div class="kaart">
@@ -93,13 +109,14 @@
     <div class="tabel-wrap">
         <table>
             <thead>
-                <tr><th>Naam</th><th>Keuze</th><th>Datum</th><th></th><th></th></tr>
+                <tr><th>Naam</th><th>Keuze</th><th>Opmerking</th><th>Datum</th><th></th><th></th></tr>
             </thead>
             <tbody>
                 {% for s in stemmen %}
                 <tr class="{{ 'rij-waarschuwing' if s.afgekeurd }}">
                     <td>{{ s.naam or 'Onbekend' }}</td>
                     <td>{{ s.optie_tekst }}</td>
+                    <td>{{ s.opmerking or '' }}</td>
                     <td>{{ s.datum|datum_nl }}</td>
                     <td>
                         {% if s.afgekeurd %}<span class="badge badge-laag">Afgekeurd</span>{% endif %}

@@ -95,6 +95,9 @@ KOLOM_MIGRATIES = [
     ("stemmen", "naam", "TEXT"),
     ("stemmen", "afgekeurd", "INTEGER NOT NULL DEFAULT 0"),
     ("stemvragen", "sluit_op", "TEXT"),
+    ("stemvragen", "toon_uitslag", "INTEGER NOT NULL DEFAULT 1"),
+    ("stemvragen", "opmerking_toegestaan", "INTEGER NOT NULL DEFAULT 0"),
+    ("stemmen", "opmerking", "TEXT"),
 ]
 
 
