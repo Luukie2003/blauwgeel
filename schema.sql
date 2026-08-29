@@ -223,7 +223,8 @@ CREATE TABLE IF NOT EXISTS stemvragen (
     omschrijving TEXT,
     aangemaakt_op TEXT NOT NULL,
     aangemaakt_door TEXT,
-    actief INTEGER NOT NULL DEFAULT 1
+    actief INTEGER NOT NULL DEFAULT 1,
+    sluit_op TEXT
 );
 
 CREATE TABLE IF NOT EXISTS stemopties (

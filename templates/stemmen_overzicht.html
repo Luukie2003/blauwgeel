@@ -19,7 +19,8 @@
             <tr>
                 <td>{{ r.vraag.titel }}</td>
                 <td>
-                    {% if r.vraag.actief %}<span class="badge badge-ok">Open</span>
+                    {% if stemming_is_open(r.vraag) %}<span class="badge badge-ok">Open</span>
+                    {% elif r.vraag.actief %}<span class="badge badge-neutraal">Verlopen</span>
                     {% else %}<span class="badge badge-neutraal">Gesloten</span>{% endif %}
                 </td>
                 <td>{{ r.vraag.aangemaakt_op|datum_nl }}{% if r.vraag.aangemaakt_door %} door {{ r.vraag.aangemaakt_door }}{% endif %}</td>

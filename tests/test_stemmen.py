@@ -2,7 +2,7 @@ import io
 
 from conftest import stel_csrf_token_in as _csrf
 
-from app import STEM_AFBEELDINGEN_MAP
+from app import STEM_AFBEELDINGEN_MAP, stemming_is_open
 
 
 def _maak_stemvraag(client, titel="Welk fust voor het weizen?", opties=("Fust A", "Fust B", "Fust C")):
@@ -245,6 +245,79 @@ def test_afbeelding_bij_optie_wordt_opgeslagen(ingelogde_client, db):
     afbeelding_pad = STEM_AFBEELDINGEN_MAP / optie["afbeelding"]
     assert afbeelding_pad.exists()
     afbeelding_pad.unlink()  # niet laten rondslingeren na de test
+
+
+def test_sluit_op_kan_worden_meegegeven_bij_aanmaken(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/stemmen/nieuw",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "titel": "Met einddatum",
+            "optie1": "Fust A",
+            "optie2": "Fust B",
+            "sluit_op": "2099-01-01",
+        },
+    )
+    stemvraag_id = int(resp.headers["Location"].rsplit("/", 1)[-1])
+    vraag = db.execute("SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)).fetchone()
+    assert vraag["sluit_op"] == "2099-01-01 23:59"
+
+
+def test_einddatum_kan_worden_ingesteld_op_bestaande_stemming(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    resp = ingelogde_client.post(
+        f"/stemmen/{stemvraag_id}/einddatum",
+        data={"csrf_token": _csrf(ingelogde_client), "sluit_op": "2099-06-15"},
+    )
+    assert resp.status_code == 302
+    vraag = db.execute("SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)).fetchone()
+    assert vraag["sluit_op"] == "2099-06-15 23:59"
+
+
+def test_einddatum_kan_weer_verwijderd_worden(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    ingelogde_client.post(
+        f"/stemmen/{stemvraag_id}/einddatum",
+        data={"csrf_token": _csrf(ingelogde_client), "sluit_op": "2099-06-15"},
+    )
+    ingelogde_client.post(
+        f"/stemmen/{stemvraag_id}/einddatum",
+        data={"csrf_token": _csrf(ingelogde_client), "sluit_op": ""},
+    )
+    vraag = db.execute("SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)).fetchone()
+    assert vraag["sluit_op"] is None
+
+
+def test_stemming_is_open_houdt_rekening_met_einddatum(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    vraag = db.execute("SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)).fetchone()
+    assert stemming_is_open(vraag) is True
+
+    db.execute("UPDATE stemvragen SET sluit_op = ? WHERE id = ?", ("2000-01-01 23:59", stemvraag_id))
+    db.commit()
+    vraag = db.execute("SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)).fetchone()
+    assert stemming_is_open(vraag) is False
+
+    db.execute("UPDATE stemvragen SET sluit_op = ? WHERE id = ?", ("2099-01-01 23:59", stemvraag_id))
+    db.commit()
+    vraag = db.execute("SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)).fetchone()
+    assert stemming_is_open(vraag) is True
+
+
+def test_verlopen_stemming_accepteert_geen_nieuwe_stem(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client)
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
+    ).fetchone()
+    db.execute("UPDATE stemvragen SET sluit_op = ? WHERE id = ?", ("2000-01-01 23:59", stemvraag_id))
+    db.commit()
+
+    resp = _stem(ingelogde_client, stemvraag_id, optie["id"])
+    assert b"is gesloten" in resp.data
+    aantal = db.execute(
+        "SELECT COUNT(*) AS n FROM stemmen WHERE stemvraag_id = ?", (stemvraag_id,)
+    ).fetchone()["n"]
+    assert aantal == 0
 
 
 def test_goedkeuren_telt_weer_mee(ingelogde_client, db):

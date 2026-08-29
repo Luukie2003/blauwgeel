@@ -341,6 +341,7 @@ def create_app(database_path=None):
     app.jinja_env.filters["besteleenheid_naam"] = besteleenheid_naam
     app.jinja_env.filters["naar_besteleenheden"] = naar_besteleenheden
     app.jinja_env.filters["met_tags"] = met_tags_filter
+    app.jinja_env.globals["stemming_is_open"] = stemming_is_open
 
     @app.before_request
     def csrf_beschermen():
@@ -1059,6 +1060,18 @@ def met_tags_filter(tekst):
         return f'<span class="tag-mention">@{escape(match.group(1))}</span>'
 
     return Markup(TAG_PATROON.sub(vervang, escaped))
+
+
+def stemming_is_open(stemvraag):
+    """Een stemming is open als hij niet handmatig gesloten is EN de
+    (optionele) einddatum nog niet is verstreken. sluit_op wordt bewaard
+    als einde van die dag ("YYYY-MM-DD 23:59"), dus een gewone
+    stringvergelijking met now_str() volstaat."""
+    if not stemvraag["actief"]:
+        return False
+    if stemvraag["sluit_op"] and stemvraag["sluit_op"] < now_str():
+        return False
+    return True
 
 
 def register_routes(app):
@@ -3273,6 +3286,8 @@ def register_routes(app):
         if request.method == "POST":
             titel = request.form.get("titel", "").strip()
             omschrijving = request.form.get("omschrijving", "").strip()
+            sluit_op_datum = request.form.get("sluit_op", "").strip()
+            sluit_op = f"{sluit_op_datum} 23:59" if sluit_op_datum else None
             regels = []
             for i in range(1, 6):
                 tekst = request.form.get(f"optie{i}", "").strip()
@@ -3287,9 +3302,9 @@ def register_routes(app):
                 flash("Vul minstens 2 keuzes in.", "error")
                 return redirect(url_for("stemvraag_nieuw"))
             cur = db.execute(
-                """INSERT INTO stemvragen (titel, omschrijving, aangemaakt_op, aangemaakt_door)
-                   VALUES (?, ?, ?, ?)""",
-                (titel, omschrijving or None, now_str(), session.get("gebruiker_naam")),
+                """INSERT INTO stemvragen (titel, omschrijving, aangemaakt_op, aangemaakt_door, sluit_op)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (titel, omschrijving or None, now_str(), session.get("gebruiker_naam"), sluit_op),
             )
             stemvraag_id = cur.lastrowid
             for volgorde, (tekst, afbeelding) in enumerate(regels):
@@ -3392,6 +3407,16 @@ def register_routes(app):
         flash("Stemming heropend.", "success")
         return redirect(url_for("stemvraag_detail", stemvraag_id=stemvraag_id))
 
+    @app.route("/stemmen/<int:stemvraag_id>/einddatum", methods=["POST"])
+    def stemvraag_einddatum_instellen(stemvraag_id):
+        db = get_db()
+        sluit_op_datum = request.form.get("sluit_op", "").strip()
+        sluit_op = f"{sluit_op_datum} 23:59" if sluit_op_datum else None
+        db.execute("UPDATE stemvragen SET sluit_op = ? WHERE id = ?", (sluit_op, stemvraag_id))
+        db.commit()
+        flash("Einddatum bijgewerkt." if sluit_op else "Einddatum verwijderd.", "success")
+        return redirect(url_for("stemvraag_detail", stemvraag_id=stemvraag_id))
+
     @app.route("/stemmen/<int:stemvraag_id>/verwijderen", methods=["POST"])
     def stemvraag_verwijderen(stemvraag_id):
         db = get_db()
@@ -3440,7 +3465,7 @@ def register_routes(app):
         foutmelding = None
         if request.method == "POST":
             ingevulde_naam = request.form.get("naam", "").strip()
-            if not stemvraag["actief"]:
+            if not stemming_is_open(stemvraag):
                 foutmelding = "Deze stemming is gesloten."
             elif not ingevulde_naam:
                 foutmelding = "Vul je naam in."

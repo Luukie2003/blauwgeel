@@ -5,11 +5,13 @@
     <div>
         <h1 style="margin-bottom:0.2rem">
             {{ stemvraag.titel }}
-            {% if stemvraag.actief %}<span class="badge badge-ok">Open</span>
+            {% if stemming_is_open(stemvraag) %}<span class="badge badge-ok">Open</span>
+            {% elif stemvraag.actief %}<span class="badge badge-neutraal">Verlopen</span>
             {% else %}<span class="badge badge-neutraal">Gesloten</span>{% endif %}
         </h1>
         <p class="subtitel" style="margin:0">
             {{ stemvraag.aangemaakt_op|datum_nl }}{% if stemvraag.aangemaakt_door %} door {{ stemvraag.aangemaakt_door }}{% endif %}
+            {% if stemvraag.sluit_op %}&nbsp;&middot;&nbsp; sluit op {{ stemvraag.sluit_op|datum_nl }}{% endif %}
             &nbsp;&middot;&nbsp; <a href="{{ url_for('stemmen_overzicht') }}">&larr; Alle stemmingen</a>
         </p>
     </div>
@@ -70,6 +72,15 @@
         <p style="word-break:break-all; font-size:0.8rem">
             <a href="{{ stem_url }}" target="_blank" rel="noopener">{{ stem_url }}</a>
         </p>
+        <form method="post" action="{{ url_for('stemvraag_einddatum_instellen', stemvraag_id=stemvraag.id) }}"
+              style="text-align:left; margin-top:1rem; border-top:1px solid #e3e7f2; padding-top:1rem">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="veld">
+                <label for="sluit_op">Einddatum</label>
+                <input type="date" id="sluit_op" name="sluit_op" value="{{ stemvraag.sluit_op[:10] if stemvraag.sluit_op else '' }}">
+            </div>
+            <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
+        </form>
     </div>
 </div>
 

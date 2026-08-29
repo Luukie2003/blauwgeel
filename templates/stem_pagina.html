@@ -132,7 +132,7 @@
         <div class="melding melding-fout">{{ foutmelding }}</div>
         {% endif %}
 
-        {% if al_gestemd or not stemvraag.actief %}
+        {% if al_gestemd or not stemming_is_open(stemvraag) %}
         <div class="bedankt">{{ '🎉' if al_gestemd else '🔒' }}</div>
         {% if al_gestemd %}
         <div class="melding melding-ok">Bedankt voor je stem!</div>
