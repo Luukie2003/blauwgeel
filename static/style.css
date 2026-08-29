@@ -577,6 +577,7 @@ form.inline { display: inline; }
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
 }
+.formgrid[hidden] { display: none; }
 
 .veld { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.9rem; }
 .veld label { font-size: 0.78rem; font-weight: 700; color: var(--tekst-zacht); }

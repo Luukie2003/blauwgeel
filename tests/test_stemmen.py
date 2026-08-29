@@ -53,6 +53,27 @@ def test_lege_opties_worden_genegeerd(ingelogde_client, db):
     assert aantal == 2
 
 
+def test_tien_opties_kunnen_worden_aangemaakt(ingelogde_client, db):
+    opties = tuple(f"Optie {i}" for i in range(1, 11))
+    stemvraag_id = _maak_stemvraag(ingelogde_client, opties=opties)
+    rijen = db.execute(
+        "SELECT tekst FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde", (stemvraag_id,)
+    ).fetchall()
+    assert [r["tekst"] for r in rijen] == list(opties)
+
+
+def test_elfde_optie_wordt_genegeerd(ingelogde_client, db):
+    data = {"csrf_token": _csrf(ingelogde_client), "titel": "Test elf opties"}
+    for i in range(1, 12):
+        data[f"optie{i}"] = f"Optie {i}"
+    resp = ingelogde_client.post("/stemmen/nieuw", data=data, follow_redirects=False)
+    stemvraag_id = int(resp.headers["Location"].rsplit("/", 1)[-1])
+    aantal = db.execute(
+        "SELECT COUNT(*) AS n FROM stemopties WHERE stemvraag_id = ?", (stemvraag_id,)
+    ).fetchone()["n"]
+    assert aantal == 10
+
+
 def test_publieke_pagina_bereikbaar_zonder_extra_login(ingelogde_client, db):
     """De publieke stempagina staat in OPEN_ENDPOINTS -- geen redirect naar
     /login, ongeacht of de bezoeker al ingelogd is."""

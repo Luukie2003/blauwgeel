@@ -163,6 +163,7 @@ STEM_COOKIE = "stem_kiezer"
 
 STEM_AFBEELDINGEN_MAP = BASE_DIR / "static" / "stem_afbeeldingen"
 TOEGESTANE_AFBEELDING_EXTENSIES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+MAX_STEMOPTIES = 10
 
 
 def sla_stemoptie_afbeelding_op(bestand):
@@ -3292,7 +3293,7 @@ def register_routes(app):
             toon_uitslag = 1 if request.form.get("toon_uitslag") else 0
             opmerking_toegestaan = 1 if request.form.get("opmerking_toegestaan") else 0
             regels = []
-            for i in range(1, 6):
+            for i in range(1, MAX_STEMOPTIES + 1):
                 tekst = request.form.get(f"optie{i}", "").strip()
                 if not tekst:
                     continue
@@ -3323,7 +3324,7 @@ def register_routes(app):
             db.commit()
             flash("Stemming aangemaakt.", "success")
             return redirect(url_for("stemvraag_detail", stemvraag_id=stemvraag_id))
-        return render_template("stemvraag_form.html")
+        return render_template("stemvraag_form.html", max_stemopties=MAX_STEMOPTIES)
 
     @app.route("/stemmen/<int:stemvraag_id>")
     def stemvraag_detail(stemvraag_id):
