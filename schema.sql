@@ -214,3 +214,33 @@ CREATE INDEX IF NOT EXISTS idx_bestelregels_bestelling ON bestelregels(bestellin
 CREATE INDEX IF NOT EXISTS idx_telling_regels_telling ON telling_regels(telling_id);
 CREATE INDEX IF NOT EXISTS idx_kassa_tellingen_datum ON kassa_tellingen(datum);
 CREATE INDEX IF NOT EXISTS idx_kassa_mutaties_datum ON kassa_mutaties(datum);
+
+-- ---------- Stemmen ----------
+
+CREATE TABLE IF NOT EXISTS stemvragen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    titel TEXT NOT NULL,
+    omschrijving TEXT,
+    aangemaakt_op TEXT NOT NULL,
+    aangemaakt_door TEXT,
+    actief INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS stemopties (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stemvraag_id INTEGER NOT NULL REFERENCES stemvragen(id) ON DELETE CASCADE,
+    tekst TEXT NOT NULL,
+    volgorde INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS stemmen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stemvraag_id INTEGER NOT NULL REFERENCES stemvragen(id) ON DELETE CASCADE,
+    stemoptie_id INTEGER NOT NULL REFERENCES stemopties(id) ON DELETE CASCADE,
+    kiezer_sleutel TEXT NOT NULL,
+    datum TEXT NOT NULL,
+    UNIQUE(stemvraag_id, kiezer_sleutel)
+);
+
+CREATE INDEX IF NOT EXISTS idx_stemopties_vraag ON stemopties(stemvraag_id);
+CREATE INDEX IF NOT EXISTS idx_stemmen_vraag ON stemmen(stemvraag_id);

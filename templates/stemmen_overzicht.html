@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titel %}Stemmen{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Laat de club meedenken: bijvoorbeeld welk fust voor het weizen, of welk seizoensbiertje.
+    </p>
+    <a href="{{ url_for('stemvraag_nieuw') }}" class="btn btn-geel">Nieuwe stemming</a>
+</div>
+
+{% if stemvragen %}
+<div class="tabel-wrap">
+    <table>
+        <thead>
+            <tr><th>Titel</th><th>Status</th><th>Aangemaakt</th><th>Stemmen</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for r in stemvragen %}
+            <tr>
+                <td>{{ r.vraag.titel }}</td>
+                <td>
+                    {% if r.vraag.actief %}<span class="badge badge-ok">Open</span>
+                    {% else %}<span class="badge badge-neutraal">Gesloten</span>{% endif %}
+                </td>
+                <td>{{ r.vraag.aangemaakt_op|datum_nl }}{% if r.vraag.aangemaakt_door %} door {{ r.vraag.aangemaakt_door }}{% endif %}</td>
+                <td>{{ r.aantal_stemmen }}</td>
+                <td><a href="{{ url_for('stemvraag_detail', stemvraag_id=r.vraag.id) }}" class="btn btn-rand btn-klein">Bekijken</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="leeg">Nog geen stemmingen. Maak er eentje aan om te beginnen.</p>
+{% endif %}
+{% endblock %}

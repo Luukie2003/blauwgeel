@@ -1125,3 +1125,53 @@ footer {
     color: var(--tekst-zacht);
     padding: 0.2rem 0.4rem;
 }
+
+/* ---------- Stemmen ---------- */
+
+.kaart-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 1.1rem;
+    align-items: start;
+}
+
+@media (max-width: 720px) {
+    .kaart-grid { grid-template-columns: 1fr; }
+}
+
+.stemresultaat-regel {
+    margin-bottom: 0.9rem;
+}
+
+.stemresultaat-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    margin-bottom: 0.25rem;
+}
+
+.stemresultaat-balk-achtergrond {
+    background: var(--grid-alt);
+    border-radius: 6px;
+    height: 0.65rem;
+    overflow: hidden;
+}
+
+.stemresultaat-balk {
+    background: var(--blauw);
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.3s ease;
+}
+
+.stem-qr {
+    display: flex;
+    justify-content: center;
+    margin: 0.6rem 0;
+}
+
+.stem-qr svg {
+    width: 12rem;
+    height: 12rem;
+}

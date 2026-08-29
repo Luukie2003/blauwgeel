@@ -56,6 +56,13 @@
             </div>
         </div>
         <div class="menu-item">
+            <button type="button" class="menu-trigger">Stemmen!</button>
+            <div class="menu-dropdown">
+                <a href="{{ url_for('stemmen_overzicht') }}">Overzicht</a>
+                <a href="{{ url_for('stemvraag_nieuw') }}">Nieuwe stemming</a>
+            </div>
+        </div>
+        <div class="menu-item">
             <button type="button" class="menu-trigger">Accounts</button>
             <div class="menu-dropdown">
                 <span class="menu-label">Ingelogd als {{ huidige_gebruiker }} ({{ huidige_gebruiker_rol }})</span>

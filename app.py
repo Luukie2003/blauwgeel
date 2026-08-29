@@ -21,6 +21,7 @@ from markupsafe import Markup, escape
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import agenda
+import qr
 import backup as backup_module
 import mail
 import weer
@@ -141,7 +142,22 @@ WIJZIGINGEN = [
     },
 ]
 
-OPEN_ENDPOINTS = {"login", "static", "favicon_ico", "wachtwoord_vergeten", "wachtwoord_instellen"}
+OPEN_ENDPOINTS = {
+    "login",
+    "static",
+    "favicon_ico",
+    "wachtwoord_vergeten",
+    "wachtwoord_instellen",
+    # De publieke stempagina heeft geen account nodig -- bezoekers scannen
+    # 'm via een QR-code, ze loggen nergens in.
+    "stem_pagina",
+}
+
+# Naam van het los cookie waarmee een anonieme stemmer wordt herkend (om
+# dubbel stemmen op dezelfde stemvraag tegen te gaan). Bewust geen gebruik
+# van de Flask-sessie zelf: die wordt bij inloggen geleegd, en stemmers zijn
+# meestal niet eens ingelogd.
+STEM_COOKIE = "stem_kiezer"
 
 # Brute-force-bescherming op het inlogscherm: na dit aantal mislukte
 # pogingen voor dezelfde gebruikersnaam wordt die naam tijdelijk geblokkeerd,
@@ -3213,6 +3229,174 @@ def register_routes(app):
         db.commit()
         flash("Mededeling als banner bovenaan de site gezet.", "success")
         return redirect(url_for("bijzonderheden"))
+
+    # ---------- Stemmen ----------
+
+    @app.route("/stemmen")
+    def stemmen_overzicht():
+        db = get_db()
+        stemvragen = []
+        for v in db.execute(
+            "SELECT * FROM stemvragen ORDER BY actief DESC, id DESC"
+        ).fetchall():
+            aantal = db.execute(
+                "SELECT COUNT(*) AS n FROM stemmen WHERE stemvraag_id = ?", (v["id"],)
+            ).fetchone()["n"]
+            stemvragen.append({"vraag": v, "aantal_stemmen": aantal})
+        return render_template("stemmen_overzicht.html", stemvragen=stemvragen)
+
+    @app.route("/stemmen/nieuw", methods=["GET", "POST"])
+    def stemvraag_nieuw():
+        db = get_db()
+        if request.method == "POST":
+            titel = request.form.get("titel", "").strip()
+            omschrijving = request.form.get("omschrijving", "").strip()
+            opties = [o.strip() for o in request.form.getlist("optie") if o.strip()]
+            if not titel:
+                flash("Vul een titel/vraag in.", "error")
+                return redirect(url_for("stemvraag_nieuw"))
+            if len(opties) < 2:
+                flash("Vul minstens 2 keuzes in.", "error")
+                return redirect(url_for("stemvraag_nieuw"))
+            cur = db.execute(
+                """INSERT INTO stemvragen (titel, omschrijving, aangemaakt_op, aangemaakt_door)
+                   VALUES (?, ?, ?, ?)""",
+                (titel, omschrijving or None, now_str(), session.get("gebruiker_naam")),
+            )
+            stemvraag_id = cur.lastrowid
+            for volgorde, tekst in enumerate(opties):
+                db.execute(
+                    "INSERT INTO stemopties (stemvraag_id, tekst, volgorde) VALUES (?, ?, ?)",
+                    (stemvraag_id, tekst, volgorde),
+                )
+            db.commit()
+            flash("Stemming aangemaakt.", "success")
+            return redirect(url_for("stemvraag_detail", stemvraag_id=stemvraag_id))
+        return render_template("stemvraag_form.html")
+
+    @app.route("/stemmen/<int:stemvraag_id>")
+    def stemvraag_detail(stemvraag_id):
+        db = get_db()
+        stemvraag = db.execute(
+            "SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)
+        ).fetchone()
+        if stemvraag is None:
+            flash("Stemming niet gevonden.", "error")
+            return redirect(url_for("stemmen_overzicht"))
+        opties = db.execute(
+            """SELECT so.*, (SELECT COUNT(*) FROM stemmen s WHERE s.stemoptie_id = so.id) AS aantal
+               FROM stemopties so WHERE so.stemvraag_id = ? ORDER BY so.volgorde""",
+            (stemvraag_id,),
+        ).fetchall()
+        totaal_stemmen = sum(o["aantal"] for o in opties)
+        stem_url = url_for("stem_pagina", stemvraag_id=stemvraag_id, _external=True)
+        return render_template(
+            "stemvraag_detail.html",
+            stemvraag=stemvraag,
+            opties=opties,
+            totaal_stemmen=totaal_stemmen,
+            stem_url=stem_url,
+            qr_svg=qr.qr_svg(stem_url),
+        )
+
+    @app.route("/stemmen/<int:stemvraag_id>/sluiten", methods=["POST"])
+    def stemvraag_sluiten(stemvraag_id):
+        db = get_db()
+        db.execute("UPDATE stemvragen SET actief = 0 WHERE id = ?", (stemvraag_id,))
+        db.commit()
+        flash("Stemming gesloten voor nieuwe stemmen.", "success")
+        return redirect(url_for("stemvraag_detail", stemvraag_id=stemvraag_id))
+
+    @app.route("/stemmen/<int:stemvraag_id>/heropenen", methods=["POST"])
+    def stemvraag_heropenen(stemvraag_id):
+        db = get_db()
+        db.execute("UPDATE stemvragen SET actief = 1 WHERE id = ?", (stemvraag_id,))
+        db.commit()
+        flash("Stemming heropend.", "success")
+        return redirect(url_for("stemvraag_detail", stemvraag_id=stemvraag_id))
+
+    @app.route("/stemmen/<int:stemvraag_id>/verwijderen", methods=["POST"])
+    def stemvraag_verwijderen(stemvraag_id):
+        db = get_db()
+        db.execute("DELETE FROM stemvragen WHERE id = ?", (stemvraag_id,))
+        db.commit()
+        flash("Stemming verwijderd.", "success")
+        return redirect(url_for("stemmen_overzicht"))
+
+    # ---------- Publieke stempagina (geen account nodig) ----------
+
+    @app.route("/stem/<int:stemvraag_id>", methods=["GET", "POST"])
+    def stem_pagina(stemvraag_id):
+        db = get_db()
+        stemvraag = db.execute(
+            "SELECT * FROM stemvragen WHERE id = ?", (stemvraag_id,)
+        ).fetchone()
+        if stemvraag is None:
+            return render_template("stem_niet_gevonden.html"), 404
+
+        kiezer_sleutel = request.cookies.get(STEM_COOKIE)
+        nieuwe_cookie = None
+        if not kiezer_sleutel:
+            kiezer_sleutel = secrets.token_hex(16)
+            nieuwe_cookie = kiezer_sleutel
+
+        al_gestemd = (
+            db.execute(
+                "SELECT 1 FROM stemmen WHERE stemvraag_id = ? AND kiezer_sleutel = ?",
+                (stemvraag_id, kiezer_sleutel),
+            ).fetchone()
+            is not None
+        )
+
+        foutmelding = None
+        if request.method == "POST":
+            if not stemvraag["actief"]:
+                foutmelding = "Deze stemming is gesloten."
+            elif al_gestemd:
+                foutmelding = "Je hebt al gestemd, bedankt!"
+            else:
+                optie_id = request.form.get("optie_id", type=int)
+                optie = db.execute(
+                    "SELECT * FROM stemopties WHERE id = ? AND stemvraag_id = ?",
+                    (optie_id, stemvraag_id),
+                ).fetchone()
+                if optie is None:
+                    foutmelding = "Kies eerst een van de opties."
+                else:
+                    db.execute(
+                        """INSERT INTO stemmen (stemvraag_id, stemoptie_id, kiezer_sleutel, datum)
+                           VALUES (?, ?, ?, ?)""",
+                        (stemvraag_id, optie_id, kiezer_sleutel, now_str()),
+                    )
+                    db.commit()
+                    al_gestemd = True
+
+        opties = db.execute(
+            """SELECT so.*, (SELECT COUNT(*) FROM stemmen s WHERE s.stemoptie_id = so.id) AS aantal
+               FROM stemopties so WHERE so.stemvraag_id = ? ORDER BY so.volgorde""",
+            (stemvraag_id,),
+        ).fetchall()
+        totaal_stemmen = sum(o["aantal"] for o in opties)
+
+        pagina = render_template(
+            "stem_pagina.html",
+            stemvraag=stemvraag,
+            opties=opties,
+            totaal_stemmen=totaal_stemmen,
+            al_gestemd=al_gestemd,
+            foutmelding=foutmelding,
+        )
+        respons = Response(pagina)
+        if nieuwe_cookie:
+            respons.set_cookie(
+                STEM_COOKIE,
+                nieuwe_cookie,
+                max_age=60 * 60 * 24 * 365,
+                httponly=True,
+                secure=app.config.get("SESSION_COOKIE_SECURE", True),
+                samesite="Lax",
+            )
+        return respons
 
     # ---------- Kassa ----------
 

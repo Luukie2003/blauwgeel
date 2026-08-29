@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ stemvraag.titel }} · Stemmen · s.v. Blauw-Geel 1915</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <meta name="theme-color" content="#1e3a8a">
+    <style>
+        :root {
+            --blauw: #1e3a8a;
+            --blauw-donker: #0f1f4d;
+            --geel: #fcd42f;
+            --geel-donker: #e0ba17;
+            --tekst-zacht: #6b7280;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Calibri, sans-serif;
+            background: linear-gradient(160deg, var(--blauw) 0%, var(--blauw-donker) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .stemkaart {
+            background: #fff;
+            border-radius: 22px;
+            padding: 2rem 1.75rem 2.25rem;
+            max-width: 26rem;
+            width: 100%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+            text-align: center;
+        }
+        .stemkaart img.logo { width: 4.5rem; height: auto; margin-bottom: 0.9rem; }
+        .stemkaart .club { color: var(--tekst-zacht); font-size: 0.8rem; letter-spacing: 0.03em; text-transform: uppercase; font-weight: 700; margin: 0 0 0.4rem; }
+        .stemkaart h1 { font-size: 1.4rem; color: var(--blauw-donker); margin: 0 0 0.4rem; line-height: 1.3; }
+        .stemkaart .omschrijving { color: var(--tekst-zacht); font-size: 0.92rem; margin: 0 0 1.4rem; }
+        .melding {
+            border-radius: 12px;
+            padding: 0.7rem 0.9rem;
+            font-size: 0.88rem;
+            margin-bottom: 1.2rem;
+        }
+        .melding-fout { background: #fbe4e4; color: #a91c1c; }
+        .melding-ok { background: #e3f4e8; color: #146c34; }
+        form { margin: 0; }
+        .optie-knop {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: #f4f6fb;
+            border: 2px solid #e3e7f2;
+            border-radius: 14px;
+            padding: 0.95rem 1.1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--blauw-donker);
+            margin-bottom: 0.7rem;
+            cursor: pointer;
+            transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+        }
+        .optie-knop:hover { border-color: var(--geel); background: #fffbea; }
+        .optie-knop:active { transform: scale(0.98); }
+        .stem-knop {
+            width: 100%;
+            background: var(--geel);
+            color: var(--blauw-donker);
+            border: none;
+            border-radius: 14px;
+            padding: 0.9rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 0.4rem;
+        }
+        .stem-knop:hover { background: var(--geel-donker); }
+        .uitslag-regel { margin-bottom: 1rem; text-align: left; }
+        .uitslag-label { display: flex; justify-content: space-between; font-size: 0.92rem; font-weight: 600; color: var(--blauw-donker); margin-bottom: 0.3rem; }
+        .uitslag-label span.aantal { color: var(--tekst-zacht); font-weight: 400; }
+        .uitslag-balk-achtergrond { background: #eef0f6; border-radius: 8px; height: 0.85rem; overflow: hidden; }
+        .uitslag-balk { background: linear-gradient(90deg, var(--geel-donker), var(--geel)); height: 100%; border-radius: 8px; transition: width 0.6s ease; }
+        .bedankt { font-size: 2.2rem; margin-bottom: 0.3rem; }
+        .totaal { color: var(--tekst-zacht); font-size: 0.82rem; margin-top: 1.2rem; }
+        .voetnoot { color: var(--tekst-zacht); font-size: 0.75rem; margin-top: 1.4rem; opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="stemkaart">
+        <img class="logo" src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915">
+        <p class="club">s.v. Blauw-Geel 1915</p>
+        <h1>{{ stemvraag.titel }}</h1>
+        {% if stemvraag.omschrijving %}
+        <p class="omschrijving">{{ stemvraag.omschrijving }}</p>
+        {% endif %}
+
+        {% if foutmelding %}
+        <div class="melding melding-fout">{{ foutmelding }}</div>
+        {% endif %}
+
+        {% if al_gestemd or not stemvraag.actief %}
+        <div class="bedankt">{{ '🎉' if al_gestemd else '🔒' }}</div>
+        {% if al_gestemd %}
+        <div class="melding melding-ok">Bedankt voor je stem!</div>
+        {% else %}
+        <p class="omschrijving">Deze stemming is gesloten.</p>
+        {% endif %}
+        {% for o in opties %}
+        {% set percentage = (o.aantal / totaal_stemmen * 100) if totaal_stemmen else 0 %}
+        <div class="uitslag-regel">
+            <div class="uitslag-label">
+                <span>{{ o.tekst }}</span>
+                <span class="aantal">{{ o.aantal }} &middot; {{ '%.0f'|format(percentage) }}%</span>
+            </div>
+            <div class="uitslag-balk-achtergrond">
+                <div class="uitslag-balk" style="width: {{ percentage }}%"></div>
+            </div>
+        </div>
+        {% endfor %}
+        <p class="totaal">{{ totaal_stemmen }} stem{{ '' if totaal_stemmen == 1 else 'men' }} tot nu toe</p>
+        {% else %}
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% for o in opties %}
+            <button type="submit" name="optie_id" value="{{ o.id }}" class="optie-knop">{{ o.tekst }}</button>
+            {% endfor %}
+        </form>
+        {% endif %}
+
+        <p class="voetnoot">Kantine Beheer &middot; s.v. Blauw-Geel 1915</p>
+    </div>
+</body>
+</html>

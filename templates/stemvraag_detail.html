@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block titel %}Stemming: {{ stemvraag.titel }}{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <div>
+        <h1 style="margin-bottom:0.2rem">
+            {{ stemvraag.titel }}
+            {% if stemvraag.actief %}<span class="badge badge-ok">Open</span>
+            {% else %}<span class="badge badge-neutraal">Gesloten</span>{% endif %}
+        </h1>
+        <p class="subtitel" style="margin:0">
+            {{ stemvraag.aangemaakt_op|datum_nl }}{% if stemvraag.aangemaakt_door %} door {{ stemvraag.aangemaakt_door }}{% endif %}
+            &nbsp;&middot;&nbsp; <a href="{{ url_for('stemmen_overzicht') }}">&larr; Alle stemmingen</a>
+        </p>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:0.5rem">
+        {% if stemvraag.actief %}
+        <form method="post" action="{{ url_for('stemvraag_sluiten', stemvraag_id=stemvraag.id) }}"
+              onsubmit="return confirm('Stemming sluiten voor nieuwe stemmen?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-rand">Sluiten</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ url_for('stemvraag_heropenen', stemvraag_id=stemvraag.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-rand">Heropenen</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('stemvraag_verwijderen', stemvraag_id=stemvraag.id) }}"
+              onsubmit="return confirm('Deze stemming en alle stemmen verwijderen?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-gevaar">Verwijderen</button>
+        </form>
+    </div>
+</div>
+
+{% if stemvraag.omschrijving %}
+<p class="tekst-zacht">{{ stemvraag.omschrijving }}</p>
+{% endif %}
+
+<div class="kaart-grid">
+    <div class="kaart">
+        <h2>Uitslag</h2>
+        <p class="tekst-zacht" style="margin-top:-0.4rem">{{ totaal_stemmen }} stem{{ '' if totaal_stemmen == 1 else 'men' }} tot nu toe.</p>
+        {% for o in opties %}
+        {% set percentage = (o.aantal / totaal_stemmen * 100) if totaal_stemmen else 0 %}
+        <div class="stemresultaat-regel">
+            <div class="stemresultaat-label">
+                <span>{{ o.tekst }}</span>
+                <span class="tekst-zacht">{{ o.aantal }} ({{ '%.0f'|format(percentage) }}%)</span>
+            </div>
+            <div class="stemresultaat-balk-achtergrond">
+                <div class="stemresultaat-balk" style="width: {{ percentage }}%"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="kaart" style="text-align:center; max-width:320px">
+        <h2>QR-code</h2>
+        <p class="tekst-zacht" style="margin-top:-0.4rem">Print of toon 'm, dan kan iedereen scannen en stemmen.</p>
+        <div class="stem-qr">{{ qr_svg|safe }}</div>
+        <p style="word-break:break-all; font-size:0.8rem">
+            <a href="{{ stem_url }}" target="_blank" rel="noopener">{{ stem_url }}</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

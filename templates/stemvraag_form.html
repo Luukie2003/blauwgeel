@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block titel %}Nieuwe stemming{% endblock %}
+{% block inhoud %}
+<h1>Nieuwe stemming</h1>
+<p class="subtitel"><a href="{{ url_for('stemmen_overzicht') }}">&larr; Terug naar stemmen</a></p>
+
+<div class="kaart" style="max-width:640px">
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="titel">Vraag</label>
+            <input type="text" id="titel" name="titel" required
+                   placeholder="Bijv. 'Welk fust willen jullie voor het weizen bier?'">
+        </div>
+        <div class="veld">
+            <label for="omschrijving">Toelichting (optioneel)</label>
+            <textarea id="omschrijving" name="omschrijving" rows="2"
+                      placeholder="Extra uitleg voor wie stemt"></textarea>
+        </div>
+        <fieldset class="groupbox">
+            <legend>Keuzes</legend>
+            <p class="tekst-zacht" style="margin-top:0">Minstens 2, lege velden worden genegeerd.</p>
+            <div class="veld">
+                <label for="optie1">Keuze 1</label>
+                <input type="text" id="optie1" name="optie" required placeholder="Bijv. Fust A">
+            </div>
+            <div class="veld">
+                <label for="optie2">Keuze 2</label>
+                <input type="text" id="optie2" name="optie" required placeholder="Bijv. Fust B">
+            </div>
+            <div class="veld">
+                <label for="optie3">Keuze 3 (optioneel)</label>
+                <input type="text" id="optie3" name="optie" placeholder="Bijv. Fust C">
+            </div>
+            <div class="veld">
+                <label for="optie4">Keuze 4 (optioneel)</label>
+                <input type="text" id="optie4" name="optie">
+            </div>
+            <div class="veld">
+                <label for="optie5">Keuze 5 (optioneel)</label>
+                <input type="text" id="optie5" name="optie">
+            </div>
+        </fieldset>
+        <button type="submit" class="btn btn-geel">Stemming aanmaken</button>
+    </form>
+</div>
+{% endblock %}
