@@ -119,7 +119,6 @@
                 <span>{{ s.vraag.titel }}</span>
                 <span class="badge-gesloten">Gesloten</span>
             </div>
-            {% if s.vraag.toon_uitslag %}
             {% for o in s.opties %}
             {% set percentage = (o.aantal / s.totaal_stemmers * 100) if s.totaal_stemmers else 0 %}
             <div class="mini-uitslag-regel">
@@ -132,7 +131,6 @@
                 </div>
             </div>
             {% endfor %}
-            {% endif %}
         </a>
         {% endif %}
         {% endfor %}

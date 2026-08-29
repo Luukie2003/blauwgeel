@@ -412,8 +412,13 @@ def test_publiek_overzicht_toont_scores_bij_gesloten_stemming_met_toon_uitslag(i
     assert b"100%" in resp.data
 
 
-def test_publiek_overzicht_verbergt_scores_bij_gesloten_stemming_zonder_toon_uitslag(ingelogde_client, db):
-    stemvraag_id = _maak_stemvraag(ingelogde_client, titel="Gesloten zonder scores", opties=("Fust A", "Fust B"))
+def test_publiek_overzicht_toont_scores_bij_gesloten_stemming_ondanks_uitgeschakelde_toon_uitslag(
+    ingelogde_client, db
+):
+    """toon_uitslag verbergt de tussenstand alleen zolang een stemming nog
+    open is (om stemmers onderling niet te beinvloeden). Eenmaal gesloten
+    mag iedereen de einduitslag altijd zien, ongeacht deze instelling."""
+    stemvraag_id = _maak_stemvraag(ingelogde_client, titel="Gesloten toch scores", opties=("Fust A", "Fust B"))
     optie = db.execute(
         "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde LIMIT 1", (stemvraag_id,)
     ).fetchone()
@@ -423,8 +428,12 @@ def test_publiek_overzicht_verbergt_scores_bij_gesloten_stemming_zonder_toon_uit
     )
 
     resp = ingelogde_client.get("/stem")
-    assert b"Gesloten zonder scores" in resp.data
-    assert b"Fust A" not in resp.data
+    assert b"Gesloten toch scores" in resp.data
+    assert b"Fust A" in resp.data
+
+    detail = ingelogde_client.get(f"/stem/{stemvraag_id}")
+    assert b"Fust A" in detail.data
+    assert b"100%" in detail.data
 
 
 def test_publiek_overzicht_zonder_login_bereikbaar(client, db):

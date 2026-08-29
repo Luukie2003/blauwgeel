@@ -158,7 +158,7 @@
         {% else %}
         <p class="omschrijving">Deze stemming is gesloten.</p>
         {% endif %}
-        {% if stemvraag.toon_uitslag %}
+        {% if stemvraag.toon_uitslag or not stemming_is_open(stemvraag) %}
         {% for o in opties %}
         {% set percentage = (o.aantal / totaal_stemmers * 100) if totaal_stemmers else 0 %}
         <div class="uitslag-regel">
