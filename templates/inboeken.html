@@ -7,21 +7,21 @@
 
 <div class="kaart">
     {% if is_bewerken %}
-    <p class="tekst-zacht">Deze bestelling is al ingeboekt. Pas de ontvangen aantallen aan — de voorraad wordt automatisch gecorrigeerd op basis van het verschil.</p>
+    <p class="tekst-zacht">Deze bestelling is al ingeboekt. Pas aan wat nodig is — de voorraad wordt automatisch gecorrigeerd op basis van het verschil.</p>
     {% else %}
-    <p class="tekst-zacht">Vul in hoeveel er daadwerkelijk is binnengekomen per product. Dit wordt bijgeteld bij de voorraad.</p>
+    <p class="tekst-zacht">Vink aan wat er is binnengekomen. Staat een vinkje uit, dan wordt die regel als manco gemarkeerd en niet ingeboekt.</p>
     {% endif %}
-    <form method="post">
+    <form method="post" id="inboeken-formulier">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="tabel-wrap">
-            <table>
+            <table id="inboeken-tabel">
                 <thead>
-                    <tr><th>Product</th><th>Besteld</th><th>Ontvangen</th></tr>
+                    <tr><th>Product</th><th>Besteld</th><th>Binnen</th><th>Aantal ontvangen</th></tr>
                 </thead>
                 <tbody>
                     {% for r in regels %}
                     {% set besteld_eenh = r.aantal_besteld|naar_besteleenheden(r) %}
-                    {% set ontvangen_eenh = r.aantal_ontvangen|naar_besteleenheden(r) if r.aantal_ontvangen is not none else besteld_eenh %}
+                    {% set ontvangen_eenh = r.aantal_ontvangen|naar_besteleenheden(r) if (r.aantal_ontvangen is not none and r.aantal_ontvangen > 0) else besteld_eenh %}
                     <tr>
                         <td>{{ r.product_naam }}</td>
                         <td>
@@ -31,14 +31,35 @@
                             {% endif %}
                         </td>
                         <td>
-                            <input type="number" name="ontvangen_{{ r.id }}" min="0" style="width:6rem"
-                                   value="{{ ontvangen_eenh }}"> {{ r|besteleenheid_naam }}
+                            <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400; cursor:pointer">
+                                <input type="checkbox" class="binnen-vinkje" name="binnen_{{ r.id }}" style="width:auto"
+                                       {{ 'checked' if not r.manco else '' }}>
+                                Binnen
+                            </label>
+                        </td>
+                        <td>
+                            <input type="number" name="ontvangen_{{ r.id }}" min="0" class="ontvangen-veld" style="width:6rem"
+                                   value="{{ ontvangen_eenh }}" {{ 'disabled' if r.manco else '' }}> {{ r|besteleenheid_naam }}
+                            <span class="badge badge-laag manco-badge" {{ '' if r.manco else 'hidden' }}>Manco</span>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        {% if beschikbare_producten %}
+        <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.8rem">
+            <select id="nieuw-product-select">
+                <option value="">+ Product toevoegen dat meekwam...</option>
+                {% for p in beschikbare_producten %}
+                <option value="{{ p.id }}" data-naam="{{ p.naam }}" data-eenheid="{{ p|besteleenheid_naam }}">{{ p.naam }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" id="product-toevoegen-knop" class="btn btn-rand btn-klein">Toevoegen</button>
+        </div>
+        {% endif %}
+
         <div class="veld" style="max-width:300px; margin-top:1rem">
             <label>Geboekt door</label>
             <p class="veld-waarde">{{ huidige_gebruiker }}</p>
@@ -59,4 +80,49 @@
         </form>
     </div>
 </div>
+
+<script>
+(function () {
+    var tabel = document.getElementById('inboeken-tabel');
+    if (!tabel) return;
+
+    function koppelVinkje(rij) {
+        var vinkje = rij.querySelector('.binnen-vinkje');
+        var veld = rij.querySelector('.ontvangen-veld');
+        var badge = rij.querySelector('.manco-badge');
+        if (!vinkje || !veld) return;
+        var laatsteWaarde = veld.value;
+        vinkje.addEventListener('change', function () {
+            veld.disabled = !vinkje.checked;
+            if (badge) badge.hidden = vinkje.checked;
+            if (vinkje.checked) {
+                if (veld.value === '0' || veld.value === '') veld.value = laatsteWaarde || veld.defaultValue;
+            } else {
+                laatsteWaarde = veld.value;
+            }
+        });
+    }
+    Array.prototype.slice.call(tabel.querySelectorAll('tbody tr')).forEach(koppelVinkje);
+
+    var select = document.getElementById('nieuw-product-select');
+    var knop = document.getElementById('product-toevoegen-knop');
+    if (knop && select) {
+        knop.addEventListener('click', function () {
+            var optie = select.options[select.selectedIndex];
+            if (!optie || !optie.value) return;
+            var rij = document.createElement('tr');
+            rij.innerHTML =
+                '<td>' + optie.dataset.naam +
+                ' <span class="tekst-zacht" style="font-size:0.72rem">(extra, niet besteld)</span>' +
+                '<input type="hidden" name="nieuw_product_id" value="' + optie.value + '"></td>' +
+                '<td class="tekst-zacht">&mdash;</td>' +
+                '<td class="tekst-zacht">meegekomen</td>' +
+                '<td><input type="number" name="nieuw_aantal" min="0" value="1" style="width:6rem"> ' + optie.dataset.eenheid + '</td>';
+            tabel.querySelector('tbody').appendChild(rij);
+            optie.remove();
+            select.value = '';
+        });
+    }
+})();
+</script>
 {% endblock %}

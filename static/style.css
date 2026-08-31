@@ -513,6 +513,8 @@ tbody tr.rij-waarschuwing td { background: var(--rood-bg); }
     border: 1px solid transparent;
 }
 
+.badge[hidden] { display: none; }
+
 .badge-laag { background: var(--rood-bg); color: var(--rood); border-color: #e6b3b3; }
 .badge-ok { background: var(--groen-bg); color: var(--groen); border-color: #a9d8b8; }
 .badge-in { background: var(--groen-bg); color: var(--groen); border-color: #a9d8b8; }

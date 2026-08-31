@@ -3127,21 +3127,29 @@ def register_routes(app):
             naam = session.get("gebruiker_naam")
             gebruiker_id = session.get("gebruiker_id")
             was_al_ontvangen = bestelling["status"] == "ontvangen"
+            aantal_manco = 0
 
             for regel in regels:
-                aantal_str = request.form.get(f"ontvangen_{regel['id']}", "0")
-                try:
-                    aantal_besteleenheden = max(0, int(aantal_str))
-                except ValueError:
-                    aantal_besteleenheden = 0
-                aantal_ontvangen = naar_voorraadeenheden(aantal_besteleenheden, regel)
+                binnen = bool(request.form.get(f"binnen_{regel['id']}"))
+                if binnen:
+                    aantal_str = request.form.get(f"ontvangen_{regel['id']}", "0")
+                    try:
+                        aantal_besteleenheden = max(0, int(aantal_str))
+                    except ValueError:
+                        aantal_besteleenheden = 0
+                    aantal_ontvangen = naar_voorraadeenheden(aantal_besteleenheden, regel)
+                    manco = 0
+                else:
+                    aantal_ontvangen = 0
+                    manco = 1
+                    aantal_manco += 1
 
                 vorige_ontvangen = regel["aantal_ontvangen"] or 0
                 delta = aantal_ontvangen - vorige_ontvangen
 
                 db.execute(
-                    "UPDATE bestelregels SET aantal_ontvangen = ? WHERE id = ?",
-                    (aantal_ontvangen, regel["id"]),
+                    "UPDATE bestelregels SET aantal_ontvangen = ?, manco = ? WHERE id = ?",
+                    (aantal_ontvangen, manco, regel["id"]),
                 )
                 if delta != 0:
                     db.execute(
@@ -3173,20 +3181,83 @@ def register_routes(app):
                         ),
                     )
 
+            # Producten die niet oorspronkelijk besteld waren, maar wel met
+            # deze levering zijn meegekomen (bijv. de leverancier stuurde
+            # spontaan iets extra's mee, of iets vergeten te bestellen).
+            nieuwe_product_ids = request.form.getlist("nieuw_product_id", type=int)
+            nieuwe_aantallen = request.form.getlist("nieuw_aantal")
+            bestaande_product_ids = {r["product_id"] for r in regels}
+            al_toegevoegd = set()
+            aantal_extra = 0
+            for product_id, waarde in zip(nieuwe_product_ids, nieuwe_aantallen):
+                if product_id in bestaande_product_ids or product_id in al_toegevoegd:
+                    continue
+                al_toegevoegd.add(product_id)
+                try:
+                    aantal_besteleenheden = max(0, int(waarde))
+                except ValueError:
+                    aantal_besteleenheden = 0
+                if aantal_besteleenheden <= 0:
+                    continue
+                product = db.execute(
+                    "SELECT * FROM producten WHERE id = ?", (product_id,)
+                ).fetchone()
+                if product is None:
+                    continue
+                aantal_ontvangen = naar_voorraadeenheden(aantal_besteleenheden, product)
+
+                db.execute(
+                    """INSERT INTO bestelregels
+                       (bestelling_id, product_id, aantal_besteld, aantal_ontvangen, manco)
+                       VALUES (?, ?, 0, ?, 0)""",
+                    (bestelling_id, product_id, aantal_ontvangen),
+                )
+                db.execute(
+                    "UPDATE producten SET voorraad = voorraad + ? WHERE id = ?",
+                    (aantal_ontvangen, product_id),
+                )
+                db.execute(
+                    """INSERT INTO mutaties
+                       (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, bestelling_id)
+                       VALUES (?, 'in', ?, ?, ?, ?, ?, ?)""",
+                    (
+                        product_id,
+                        aantal_ontvangen,
+                        now_str(),
+                        naam,
+                        gebruiker_id,
+                        "Extra meegekomen bij bestelling (niet oorspronkelijk besteld)",
+                        bestelling_id,
+                    ),
+                )
+                aantal_extra += 1
+
+            melding_extra = f", {aantal_extra} extra product(en) toegevoegd" if aantal_extra else ""
+            melding_manco = f", {aantal_manco} product(en) manco" if aantal_manco else ""
             if was_al_ontvangen:
                 db.commit()
-                flash("Bestelling aangepast en voorraad bijgewerkt.", "success")
+                flash(f"Bestelling aangepast en voorraad bijgewerkt{melding_extra}{melding_manco}.", "success")
             else:
                 db.execute(
                     "UPDATE bestellingen SET status = 'ontvangen', ontvangen_op = ? WHERE id = ?",
                     (now_str(), bestelling_id),
                 )
                 db.commit()
-                flash("Bestelling ingeboekt en voorraad bijgewerkt.", "success")
+                flash(f"Bestelling ingeboekt en voorraad bijgewerkt{melding_extra}{melding_manco}.", "success")
             return redirect(url_for("bestellijst"))
 
+        beschikbare_producten = db.execute(
+            """SELECT * FROM producten WHERE actief = 1
+               AND id NOT IN (SELECT product_id FROM bestelregels WHERE bestelling_id = ?)
+               ORDER BY categorie, naam""",
+            (bestelling_id,),
+        ).fetchall()
+
         return render_template(
-            "inboeken.html", bestelling=bestelling, regels=regels
+            "inboeken.html",
+            bestelling=bestelling,
+            regels=regels,
+            beschikbare_producten=beschikbare_producten,
         )
 
     @app.route("/bestellingen/<int:bestelling_id>/verwijderen", methods=["POST"])

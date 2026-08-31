@@ -94,7 +94,11 @@ def test_bestelling_handmatig_klaarzetten_raakt_voorraad_niet_tot_inboeken(ingel
 
     ingelogde_client.post(
         f"/bestellingen/{bestelling['id']}/inboeken",
-        data={"csrf_token": _csrf(ingelogde_client), f"ontvangen_{regel['id']}": "3"},
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            f"binnen_{regel['id']}": "on",
+            f"ontvangen_{regel['id']}": "3",
+        },
     )
     bijgewerkt = db.execute(
         "SELECT * FROM producten WHERE id = ?", (product["id"],)

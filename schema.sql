@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS bestelregels (
     bestelling_id INTEGER NOT NULL REFERENCES bestellingen(id) ON DELETE CASCADE,
     product_id INTEGER NOT NULL REFERENCES producten(id),
     aantal_besteld INTEGER NOT NULL,
-    aantal_ontvangen INTEGER
+    aantal_ontvangen INTEGER,
+    manco INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS gebruikers (
