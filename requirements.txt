@@ -1,4 +1,4 @@
 Flask>=3.0
 fpdf2>=2.8
-qrcode>=8.0
+qrcode>=8.2
 pypng>=0.20220715.0
