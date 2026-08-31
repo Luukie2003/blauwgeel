@@ -180,6 +180,19 @@ def sla_stemoptie_afbeelding_op(bestand):
     bestand.save(STEM_AFBEELDINGEN_MAP / bestandsnaam)
     return bestandsnaam
 
+
+def bewaar_bier(db, naam, afbeelding):
+    """Bewaart een stemoptie-naam + foto in de bieren-bibliotheek zodat hij
+    bij een volgende stemming hergebruikt kan worden. Bestond de naam al, dan
+    wordt alleen de foto bijgewerkt (en enkel als er een nieuwe is)."""
+    if not naam or not afbeelding:
+        return
+    db.execute(
+        """INSERT INTO bieren (naam, afbeelding, aangemaakt_op) VALUES (?, ?, ?)
+           ON CONFLICT(naam) DO UPDATE SET afbeelding = excluded.afbeelding""",
+        (naam, afbeelding, now_str()),
+    )
+
 # Brute-force-bescherming op het inlogscherm: na dit aantal mislukte
 # pogingen voor dezelfde gebruikersnaam wordt die naam tijdelijk geblokkeerd,
 # ongeacht of het wachtwoord daarna wel klopt.
@@ -3310,6 +3323,14 @@ def register_routes(app):
                 if not tekst:
                     continue
                 afbeelding = sla_stemoptie_afbeelding_op(request.files.get(f"afbeelding{i}"))
+                if not afbeelding:
+                    # Geen nieuwe upload: hergebruik de foto als deze naam al
+                    # in de bieren-bibliotheek staat.
+                    bekend = db.execute(
+                        "SELECT afbeelding FROM bieren WHERE naam = ?", (tekst,)
+                    ).fetchone()
+                    if bekend:
+                        afbeelding = bekend["afbeelding"]
                 regels.append((tekst, afbeelding))
             if not titel:
                 flash("Vul een titel/vraag in.", "error")
@@ -3333,10 +3354,12 @@ def register_routes(app):
                     "INSERT INTO stemopties (stemvraag_id, tekst, volgorde, afbeelding) VALUES (?, ?, ?, ?)",
                     (stemvraag_id, tekst, volgorde, afbeelding),
                 )
+                bewaar_bier(db, tekst, afbeelding)
             db.commit()
             flash("Stemming aangemaakt.", "success")
             return redirect(url_for("stemvraag_detail", stemvraag_id=stemvraag_id))
-        return render_template("stemvraag_form.html", max_stemopties=MAX_STEMOPTIES)
+        bieren = db.execute("SELECT * FROM bieren ORDER BY naam COLLATE NOCASE").fetchall()
+        return render_template("stemvraag_form.html", max_stemopties=MAX_STEMOPTIES, bieren=bieren)
 
     @app.route("/stemmen/<int:stemvraag_id>")
     def stemvraag_detail(stemvraag_id):
@@ -3464,6 +3487,20 @@ def register_routes(app):
         db.commit()
         flash("Stemming verwijderd.", "success")
         return redirect(url_for("stemmen_overzicht"))
+
+    @app.route("/stemmen/bieren")
+    def bieren_lijst():
+        db = get_db()
+        bieren = db.execute("SELECT * FROM bieren ORDER BY naam COLLATE NOCASE").fetchall()
+        return render_template("bieren_lijst.html", bieren=bieren)
+
+    @app.route("/stemmen/bieren/<int:bier_id>/verwijderen", methods=["POST"])
+    def bier_verwijderen(bier_id):
+        db = get_db()
+        db.execute("DELETE FROM bieren WHERE id = ?", (bier_id,))
+        db.commit()
+        flash("Verwijderd uit de bibliotheek.", "success")
+        return redirect(url_for("bieren_lijst"))
 
     # ---------- Publieke stempagina (geen account nodig) ----------
 

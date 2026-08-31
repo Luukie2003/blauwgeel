@@ -2,7 +2,10 @@
 {% block titel %}Nieuwe stemming{% endblock %}
 {% block inhoud %}
 <h1>Nieuwe stemming</h1>
-<p class="subtitel"><a href="{{ url_for('stemmen_overzicht') }}">&larr; Terug naar stemmen</a></p>
+<p class="subtitel">
+    <a href="{{ url_for('stemmen_overzicht') }}">&larr; Terug naar stemmen</a>
+    &nbsp;&middot;&nbsp; <a href="{{ url_for('bieren_lijst') }}">Bierbibliotheek</a>
+</p>
 
 <div class="kaart" style="max-width:640px">
     <form method="post" enctype="multipart/form-data">
@@ -42,17 +45,25 @@
             <p class="tekst-zacht" style="margin-top:0">
                 Minstens 2, lege velden worden genegeerd. Een afbeelding per keuze is optioneel.
                 Maximaal {{ max_stemopties }} keuzes.
+                {% if bieren %}Typ een naam uit de <a href="{{ url_for('bieren_lijst') }}" target="_blank">bierbibliotheek</a>
+                (zie suggesties) om de bijbehorende foto automatisch te hergebruiken.{% endif %}
             </p>
+            {% if bieren %}
+            <datalist id="bieren-namen">
+                {% for b in bieren %}<option value="{{ b.naam }}">{% endfor %}
+            </datalist>
+            {% endif %}
             {% set eerst_zichtbaar = 5 %}
             {% for i in range(1, max_stemopties + 1) %}
             <div class="formgrid keuze-rij" style="margin-bottom:0.6rem"{{ ' hidden' if i > eerst_zichtbaar }}>
                 <div class="veld">
                     <label for="optie{{ i }}">Keuze {{ i }}{{ '' if i <= 2 else ' (optioneel)' }}</label>
                     <input type="text" id="optie{{ i }}" name="optie{{ i }}" {{ 'required' if i <= 2 }}
+                           list="{{ 'bieren-namen' if bieren else '' }}"
                            placeholder="{{ ('Bijv. Fust ' ~ 'ABC'[i-1]) if i <= 3 else '' }}">
                 </div>
                 <div class="veld">
-                    <label for="afbeelding{{ i }}">Afbeelding (optioneel)</label>
+                    <label for="afbeelding{{ i }}">Afbeelding (optioneel, leeg = hergebruik foto bij bekende naam)</label>
                     <input type="file" id="afbeelding{{ i }}" name="afbeelding{{ i }}" accept="image/*">
                 </div>
             </div>

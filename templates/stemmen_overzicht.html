@@ -5,7 +5,10 @@
     <p class="subtitel" style="margin:0">
         Laat de club meedenken: bijvoorbeeld welk fust voor het weizen, of welk seizoensbiertje.
     </p>
-    <a href="{{ url_for('stemvraag_nieuw') }}" class="btn btn-geel">Nieuwe stemming</a>
+    <div style="display:flex; gap:0.5rem">
+        <a href="{{ url_for('bieren_lijst') }}" class="btn btn-rand">Bierbibliotheek</a>
+        <a href="{{ url_for('stemvraag_nieuw') }}" class="btn btn-geel">Nieuwe stemming</a>
+    </div>
 </div>
 
 {% if stemvragen %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block titel %}Bierbibliotheek{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <div>
+        <h1 style="margin-bottom:0.2rem">Bierbibliotheek</h1>
+        <p class="subtitel" style="margin:0">
+            Naam + foto van eerder gebruikte stemopties. Vul bij een nieuwe stemming dezelfde naam
+            in en de foto wordt automatisch hergebruikt &mdash; geen nieuwe upload nodig.
+        </p>
+    </div>
+    <a href="{{ url_for('stemmen_overzicht') }}" class="btn btn-rand">&larr; Alle stemmingen</a>
+</div>
+
+{% if bieren %}
+<div class="tabel-wrap">
+    <table>
+        <thead>
+            <tr><th></th><th>Naam</th><th>Toegevoegd</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for b in bieren %}
+            <tr>
+                <td>
+                    {% if b.afbeelding %}
+                    <img src="{{ url_for('static', filename='stem_afbeeldingen/' + b.afbeelding) }}"
+                         alt="" class="stemresultaat-thumb">
+                    {% endif %}
+                </td>
+                <td>{{ b.naam }}</td>
+                <td>{{ b.aangemaakt_op|datum_nl }}</td>
+                <td>
+                    <form method="post" action="{{ url_for('bier_verwijderen', bier_id=b.id) }}"
+                          onsubmit="return confirm('Dit biertje uit de bibliotheek verwijderen?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-tekstlink">Verwijderen</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="leeg">Nog geen biertjes opgeslagen. Ze worden automatisch toegevoegd zodra je een stemoptie met foto aanmaakt.</p>
+{% endif %}
+{% endblock %}

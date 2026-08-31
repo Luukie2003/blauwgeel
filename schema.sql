@@ -252,3 +252,14 @@ CREATE TABLE IF NOT EXISTS stemmen (
 
 CREATE INDEX IF NOT EXISTS idx_stemopties_vraag ON stemopties(stemvraag_id);
 CREATE INDEX IF NOT EXISTS idx_stemmen_vraag ON stemmen(stemvraag_id);
+
+-- Bibliotheek van eerder gebruikte stemopties (bijv. biertjes met foto), zodat
+-- ze bij een volgende stemming hergebruikt kunnen worden zonder opnieuw te
+-- moeten uploaden.
+CREATE TABLE IF NOT EXISTS bieren (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    naam TEXT NOT NULL COLLATE NOCASE,
+    afbeelding TEXT,
+    aangemaakt_op TEXT NOT NULL,
+    UNIQUE(naam)
+);

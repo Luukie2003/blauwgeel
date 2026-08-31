@@ -203,6 +203,25 @@ def _migreer_stemmen_meerdere_keuzes(db):
     db.execute("CREATE INDEX IF NOT EXISTS idx_stemmen_vraag ON stemmen(stemvraag_id)")
 
 
+def _migreer_bieren_backfill(db):
+    """De bieren-bibliotheek is nieuw: vul 'm eenmalig met de stemopties die
+    al een foto hadden (uit stemmingen die al bestonden voordat deze
+    bibliotheek er was), zodat dat werk niet verloren gaat."""
+    aantal = db.execute("SELECT COUNT(*) AS n FROM bieren").fetchone()["n"]
+    if aantal > 0:
+        return
+    regels = db.execute(
+        """SELECT tekst, afbeelding FROM stemopties
+           WHERE afbeelding IS NOT NULL AND afbeelding != ''
+           ORDER BY id"""
+    ).fetchall()
+    for regel in regels:
+        db.execute(
+            "INSERT OR IGNORE INTO bieren (naam, afbeelding, aangemaakt_op) VALUES (?, ?, ?)",
+            (regel["tekst"], regel["afbeelding"], datetime.now().strftime("%Y-%m-%d %H:%M")),
+        )
+
+
 # Databasepaden waarvoor het schema al is toegepast in dit proces -- zie
 # get_db() hieronder.
 _SCHEMA_TOEGEPAST_VOOR = set()
@@ -234,6 +253,7 @@ def get_db():
             _migreer_categorieen(g.db)
             _migreer_telling_verkoopprijs(g.db)
             _migreer_kassa_afgesloten(g.db)
+            _migreer_bieren_backfill(g.db)
             g.db.commit()
             _SCHEMA_TOEGEPAST_VOOR.add(db_pad)
     return g.db

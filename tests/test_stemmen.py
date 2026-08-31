@@ -4,6 +4,12 @@ from conftest import stel_csrf_token_in as _csrf
 
 from app import STEM_AFBEELDINGEN_MAP, stemming_is_open
 
+_KLEINE_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00"
+    b"\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0"
+    b"\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
 
 def _maak_stemvraag(client, titel="Welk fust voor het weizen?", opties=("Fust A", "Fust B", "Fust C"), extra=None):
     data = {"csrf_token": _csrf(client), "titel": titel}
@@ -610,3 +616,98 @@ def test_goedkeuren_telt_weer_mee(ingelogde_client, db):
     )
     stem = db.execute("SELECT * FROM stemmen WHERE id = ?", (stem["id"],)).fetchone()
     assert stem["afgekeurd"] == 0
+
+
+def test_bier_met_foto_wordt_opgeslagen_in_bibliotheek(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/stemmen/nieuw",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "titel": "Seizoensbier",
+            "optie1": "Weihenstephaner",
+            "optie2": "Fust B",
+            "afbeelding1": (io.BytesIO(_KLEINE_PNG), "weihen.png"),
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+    bier = db.execute("SELECT * FROM bieren WHERE naam = 'Weihenstephaner'").fetchone()
+    assert bier is not None
+    assert bier["afbeelding"] is not None
+    (STEM_AFBEELDINGEN_MAP / bier["afbeelding"]).unlink()
+
+
+def test_optie_zonder_foto_maar_bekende_naam_hergebruikt_bibliotheekfoto(ingelogde_client, db):
+    _maak_stemvraag(
+        ingelogde_client,
+        titel="Eerste stemming",
+        opties=("Weihenstephaner", "Fust B"),
+        extra={"afbeelding1": (io.BytesIO(_KLEINE_PNG), "weihen.png")},
+    )
+    bier = db.execute("SELECT * FROM bieren WHERE naam = 'Weihenstephaner'").fetchone()
+    bekende_afbeelding = bier["afbeelding"]
+
+    tweede_id = _maak_stemvraag(
+        ingelogde_client, titel="Tweede stemming", opties=("Weihenstephaner", "Fust C")
+    )
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? AND tekst = 'Weihenstephaner'", (tweede_id,)
+    ).fetchone()
+    assert optie["afbeelding"] == bekende_afbeelding
+    (STEM_AFBEELDINGEN_MAP / bekende_afbeelding).unlink()
+
+
+def test_naam_matching_voor_hergebruik_is_niet_hoofdlettergevoelig(ingelogde_client, db):
+    _maak_stemvraag(
+        ingelogde_client,
+        titel="Eerste stemming",
+        opties=("Weihenstephaner", "Fust B"),
+        extra={"afbeelding1": (io.BytesIO(_KLEINE_PNG), "weihen.png")},
+    )
+    bier = db.execute("SELECT * FROM bieren WHERE naam = 'Weihenstephaner'").fetchone()
+
+    tweede_id = _maak_stemvraag(
+        ingelogde_client, titel="Tweede stemming", opties=("weihenstephaner", "Fust C")
+    )
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? AND tekst = 'weihenstephaner'", (tweede_id,)
+    ).fetchone()
+    assert optie["afbeelding"] == bier["afbeelding"]
+    (STEM_AFBEELDINGEN_MAP / bier["afbeelding"]).unlink()
+
+
+def test_optie_zonder_foto_en_onbekende_naam_blijft_zonder_foto(ingelogde_client, db):
+    stemvraag_id = _maak_stemvraag(ingelogde_client, opties=("Onbekend Biertje", "Fust B"))
+    optie = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? AND tekst = 'Onbekend Biertje'", (stemvraag_id,)
+    ).fetchone()
+    assert optie["afbeelding"] is None
+
+
+def test_bieren_lijst_toont_opgeslagen_bieren(ingelogde_client, db):
+    _maak_stemvraag(
+        ingelogde_client,
+        opties=("Weihenstephaner", "Fust B"),
+        extra={"afbeelding1": (io.BytesIO(_KLEINE_PNG), "weihen.png")},
+    )
+    bier = db.execute("SELECT * FROM bieren WHERE naam = 'Weihenstephaner'").fetchone()
+
+    resp = ingelogde_client.get("/stemmen/bieren")
+    assert b"Weihenstephaner" in resp.data
+    (STEM_AFBEELDINGEN_MAP / bier["afbeelding"]).unlink()
+
+
+def test_bier_verwijderen_uit_bibliotheek(ingelogde_client, db):
+    _maak_stemvraag(
+        ingelogde_client,
+        opties=("Weihenstephaner", "Fust B"),
+        extra={"afbeelding1": (io.BytesIO(_KLEINE_PNG), "weihen.png")},
+    )
+    bier = db.execute("SELECT * FROM bieren WHERE naam = 'Weihenstephaner'").fetchone()
+    (STEM_AFBEELDINGEN_MAP / bier["afbeelding"]).unlink()
+
+    resp = ingelogde_client.post(
+        f"/stemmen/bieren/{bier['id']}/verwijderen", data={"csrf_token": _csrf(ingelogde_client)}
+    )
+    assert resp.status_code == 302
+    assert db.execute("SELECT * FROM bieren WHERE id = ?", (bier["id"],)).fetchone() is None
