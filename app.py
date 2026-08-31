@@ -3116,7 +3116,7 @@ def register_routes(app):
             return redirect(url_for("bestellijst"))
 
         regels = db.execute(
-            """SELECT br.*, p.naam AS product_naam, p.eenheid,
+            """SELECT br.*, p.naam AS product_naam, p.eenheid, p.afbeelding,
                       p.besteleenheid, p.besteleenheid_factor
                FROM bestelregels br JOIN producten p ON p.id = br.product_id
                WHERE br.bestelling_id = ?""",

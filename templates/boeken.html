@@ -25,12 +25,15 @@
             <div class="formgrid">
                 <div class="veld">
                     <label for="product_id">Product</label>
-                    <select id="product_id" name="product_id" required>
-                        <option value="" disabled selected>Kies een product</option>
-                        {% for p in producten %}
-                        <option value="{{ p.id }}">{{ p.naam }} ({{ p.voorraad }} {{ p.eenheid }} op voorraad)</option>
-                        {% endfor %}
-                    </select>
+                    <div style="display:flex; align-items:center; gap:0.6rem">
+                        <img id="product-voorbeeld" class="product-thumb-preview" alt="" hidden>
+                        <select id="product_id" name="product_id" required style="flex:1">
+                            <option value="" disabled selected>Kies een product</option>
+                            {% for p in producten %}
+                            <option value="{{ p.id }}" data-afbeelding="{{ p.afbeelding or '' }}">{{ p.naam }} ({{ p.voorraad }} {{ p.eenheid }} op voorraad)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
                 <div class="veld">
                     <label for="aantal">Aantal</label>
@@ -76,4 +79,22 @@
     <p class="leeg">Nog geen boekingen.</p>
     {% endif %}
 </div>
+
+<script>
+(function () {
+    var select = document.getElementById('product_id');
+    var voorbeeld = document.getElementById('product-voorbeeld');
+    if (!select || !voorbeeld) return;
+    select.addEventListener('change', function () {
+        var optie = select.options[select.selectedIndex];
+        var afbeelding = optie ? optie.dataset.afbeelding : '';
+        if (afbeelding) {
+            voorbeeld.src = '/static/product_afbeeldingen/' + afbeelding;
+            voorbeeld.hidden = false;
+        } else {
+            voorbeeld.hidden = true;
+        }
+    });
+})();
+</script>
 {% endblock %}

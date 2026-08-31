@@ -37,6 +37,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th></th>
                             <th>Product</th>
                             <th>Categorie</th>
                             <th>Geregistreerde voorraad</th>
@@ -46,6 +47,11 @@
                     <tbody>
                         {% for p in producten %}
                         <tr>
+                            <td>
+                                {% if p.afbeelding %}
+                                <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
+                                {% endif %}
+                            </td>
                             <td>{{ p.naam }}</td>
                             <td>{{ p.categorie }}</td>
                             <td>{{ p.voorraad }} {{ p.eenheid }}</td>

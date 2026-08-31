@@ -52,7 +52,7 @@
         <div class="tabel-wrap">
             <table>
                 <thead>
-                    <tr><th></th><th>Product</th><th>Voorraad</th><th>Minimum</th><th>Aantal bestellen</th></tr>
+                    <tr><th></th><th></th><th>Product</th><th>Voorraad</th><th>Minimum</th><th>Aantal bestellen</th></tr>
                 </thead>
                 <tbody>
                     {% for p in suggesties %}
@@ -60,6 +60,11 @@
                     {% set besteleenheden = tekort|naar_besteleenheden(p) %}
                     <tr>
                         <td><input type="checkbox" name="product_id" value="{{ p.id }}" checked></td>
+                        <td>
+                            {% if p.afbeelding %}
+                            <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
+                            {% endif %}
+                        </td>
                         <td>{{ p.naam }}</td>
                         <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
                         <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>

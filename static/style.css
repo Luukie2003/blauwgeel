@@ -1205,3 +1205,13 @@ footer {
     border-radius: 8px;
     border: 1px solid var(--rand-licht);
 }
+
+.product-thumb-groot {
+    width: 7rem;
+    height: 7rem;
+    object-fit: cover;
+    border-radius: 14px;
+    border: 1px solid var(--rand-licht);
+    margin: 0 auto 0.6rem;
+    display: block;
+}

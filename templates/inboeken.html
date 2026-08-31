@@ -16,13 +16,18 @@
         <div class="tabel-wrap">
             <table id="inboeken-tabel">
                 <thead>
-                    <tr><th>Product</th><th>Besteld</th><th>Binnen</th><th>Aantal ontvangen</th></tr>
+                    <tr><th></th><th>Product</th><th>Besteld</th><th>Binnen</th><th>Aantal ontvangen</th></tr>
                 </thead>
                 <tbody>
                     {% for r in regels %}
                     {% set besteld_eenh = r.aantal_besteld|naar_besteleenheden(r) %}
                     {% set ontvangen_eenh = r.aantal_ontvangen|naar_besteleenheden(r) if (r.aantal_ontvangen is not none and r.aantal_ontvangen > 0) else besteld_eenh %}
                     <tr>
+                        <td>
+                            {% if r.afbeelding %}
+                            <img src="{{ url_for('static', filename='product_afbeeldingen/' + r.afbeelding) }}" alt="" class="product-thumb">
+                            {% endif %}
+                        </td>
                         <td>{{ r.product_naam }}</td>
                         <td>
                             {{ besteld_eenh }} {{ r|besteleenheid_naam }}
@@ -53,7 +58,8 @@
             <select id="nieuw-product-select">
                 <option value="">+ Product toevoegen dat meekwam...</option>
                 {% for p in beschikbare_producten %}
-                <option value="{{ p.id }}" data-naam="{{ p.naam }}" data-eenheid="{{ p|besteleenheid_naam }}">{{ p.naam }}</option>
+                <option value="{{ p.id }}" data-naam="{{ p.naam }}" data-eenheid="{{ p|besteleenheid_naam }}"
+                        data-afbeelding="{{ p.afbeelding or '' }}">{{ p.naam }}</option>
                 {% endfor %}
             </select>
             <button type="button" id="product-toevoegen-knop" class="btn btn-rand btn-klein">Toevoegen</button>
@@ -111,13 +117,52 @@
             var optie = select.options[select.selectedIndex];
             if (!optie || !optie.value) return;
             var rij = document.createElement('tr');
-            rij.innerHTML =
-                '<td>' + optie.dataset.naam +
-                ' <span class="tekst-zacht" style="font-size:0.72rem">(extra, niet besteld)</span>' +
-                '<input type="hidden" name="nieuw_product_id" value="' + optie.value + '"></td>' +
-                '<td class="tekst-zacht">&mdash;</td>' +
-                '<td class="tekst-zacht">meegekomen</td>' +
-                '<td><input type="number" name="nieuw_aantal" min="0" value="1" style="width:6rem"> ' + optie.dataset.eenheid + '</td>';
+
+            var thumbTd = document.createElement('td');
+            if (optie.dataset.afbeelding) {
+                var img = document.createElement('img');
+                img.src = '/static/product_afbeeldingen/' + optie.dataset.afbeelding;
+                img.alt = '';
+                img.className = 'product-thumb';
+                thumbTd.appendChild(img);
+            }
+
+            var naamTd = document.createElement('td');
+            naamTd.appendChild(document.createTextNode(optie.dataset.naam + ' '));
+            var extraSpan = document.createElement('span');
+            extraSpan.className = 'tekst-zacht';
+            extraSpan.style.fontSize = '0.72rem';
+            extraSpan.textContent = '(extra, niet besteld)';
+            naamTd.appendChild(extraSpan);
+            var verborgenInput = document.createElement('input');
+            verborgenInput.type = 'hidden';
+            verborgenInput.name = 'nieuw_product_id';
+            verborgenInput.value = optie.value;
+            naamTd.appendChild(verborgenInput);
+
+            var bestedTd = document.createElement('td');
+            bestedTd.className = 'tekst-zacht';
+            bestedTd.textContent = '—';
+
+            var binnenTd = document.createElement('td');
+            binnenTd.className = 'tekst-zacht';
+            binnenTd.textContent = 'meegekomen';
+
+            var aantalTd = document.createElement('td');
+            var aantalInput = document.createElement('input');
+            aantalInput.type = 'number';
+            aantalInput.name = 'nieuw_aantal';
+            aantalInput.min = '0';
+            aantalInput.value = '1';
+            aantalInput.style.width = '6rem';
+            aantalTd.appendChild(aantalInput);
+            aantalTd.appendChild(document.createTextNode(' ' + optie.dataset.eenheid));
+
+            rij.appendChild(thumbTd);
+            rij.appendChild(naamTd);
+            rij.appendChild(bestedTd);
+            rij.appendChild(binnenTd);
+            rij.appendChild(aantalTd);
             tabel.querySelector('tbody').appendChild(rij);
             optie.remove();
             select.value = '';

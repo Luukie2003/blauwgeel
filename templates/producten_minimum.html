@@ -19,6 +19,7 @@
             <table id="producten-tabel">
                 <thead>
                     <tr>
+                        <th></th>
                         <th>Product</th>
                         <th>Categorie</th>
                         <th>Huidige voorraad</th>
@@ -28,6 +29,11 @@
                 <tbody>
                     {% for p in producten %}
                     <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie)|lower }}">
+                        <td>
+                            {% if p.afbeelding %}
+                            <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
+                            {% endif %}
+                        </td>
                         <td>{{ p.naam }}{% if not p.actief %} <span class="badge badge-neutraal">Inactief</span>{% endif %}</td>
                         <td>{{ p.categorie }}</td>
                         <td>

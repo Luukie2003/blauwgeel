@@ -14,6 +14,9 @@
     <span class="badge {{ 'badge-in' if fase == 'bar' else 'badge-uit' }} loop-fase-badge">
         {{ 'Bar tellen' if fase == 'bar' else 'Voorraadhok tellen' }}
     </span>
+    {% if product.afbeelding %}
+    <img src="{{ url_for('static', filename='product_afbeeldingen/' + product.afbeelding) }}" alt="" class="product-thumb-groot">
+    {% endif %}
     <div class="loop-categorie">{{ product.categorie }}</div>
     <h1 class="loop-product">{{ product.naam }}</h1>
     <p class="tekst-zacht">Geregistreerde voorraad: {{ product.voorraad }} {{ product.eenheid }}</p>
