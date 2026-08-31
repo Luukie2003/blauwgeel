@@ -233,7 +233,8 @@ def voorraadoverzicht_pdf(gegevens):
             ("Aandeel", 30, "R"),
         ]
     )
-    for i, c in enumerate(gegevens["categorie_lijst"]):
+    i = 0
+    for c in gegevens["categorie_lijst"]:
         pdf.data_rij(
             [
                 (_kort(pdf, c["naam"], 70), 70, "L"),
@@ -243,6 +244,18 @@ def voorraadoverzicht_pdf(gegevens):
             ],
             zebra=i % 2 == 1,
         )
+        i += 1
+        for s in c["subcategorieen"]:
+            pdf.data_rij(
+                [
+                    (_kort(pdf, f"   {s['naam']}", 70), 70, "L"),
+                    (s["aantal"], 30, "R"),
+                    (_euro(s["waarde"]), 40, "R"),
+                    (f"{s['percentage']:.1f}%", 30, "R"),
+                ],
+                zebra=i % 2 == 1,
+            )
+            i += 1
 
     pdf.sectie("Top 10 producten op voorraadwaarde")
     pdf.kop_rij(

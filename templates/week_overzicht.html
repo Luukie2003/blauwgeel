@@ -70,7 +70,10 @@
                 {% for p in overzicht.onder_minimum %}
                 <tr>
                     <td>{{ p.naam }}</td>
-                    <td>{{ p.categorie }}</td>
+                    <td>
+                        {{ p.categorie }}
+                        {% if p.subcategorie %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.subcategorie }}</div>{% endif %}
+                    </td>
                     <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
                     <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
                 </tr>
@@ -146,7 +149,10 @@
                 {% for p in overzicht.zonder_prijs %}
                 <tr>
                     <td>{{ p.naam }}</td>
-                    <td>{{ p.categorie }}</td>
+                    <td>
+                        {{ p.categorie }}
+                        {% if p.subcategorie %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.subcategorie }}</div>{% endif %}
+                    </td>
                     <td>
                         {% if p.inkoopprijs == 0 %}<span class="badge badge-uit">€ 0.00 ontbreekt</span>
                         {% else %}€ {{ '%.2f'|format(p.inkoopprijs) }}{% endif %}

@@ -1784,9 +1784,33 @@ def register_routes(app):
 
         per_categorie = {}
         for p in producten:
-            c = per_categorie.setdefault(p["categorie"], {"aantal": 0, "waarde": 0.0})
+            c = per_categorie.setdefault(p["categorie"], {"aantal": 0, "waarde": 0.0, "subcats": {}})
             c["aantal"] += 1
             c["waarde"] += p["voorraad"] * p["verkoopprijs"]
+            sub = c["subcats"].setdefault(p["subcategorie"], {"aantal": 0, "waarde": 0.0})
+            sub["aantal"] += 1
+            sub["waarde"] += p["voorraad"] * p["verkoopprijs"]
+
+        def _subcategorie_lijst(info):
+            # Alleen tonen als er binnen deze categorie echt subcategorieën in
+            # gebruik zijn -- anders levert elke categorie een nietszeggende
+            # "Overig 100%"-regel op.
+            if not any(naam is not None for naam in info["subcats"]):
+                return []
+            return sorted(
+                [
+                    {
+                        "naam": naam or "Overig",
+                        "aantal": sub_info["aantal"],
+                        "waarde": sub_info["waarde"],
+                        "percentage": (sub_info["waarde"] / info["waarde"] * 100) if info["waarde"] else 0,
+                    }
+                    for naam, sub_info in info["subcats"].items()
+                ],
+                key=lambda x: x["waarde"],
+                reverse=True,
+            )
+
         categorie_lijst = sorted(
             [
                 {
@@ -1794,6 +1818,7 @@ def register_routes(app):
                     "aantal": info["aantal"],
                     "waarde": info["waarde"],
                     "percentage": (info["waarde"] / totale_waarde * 100) if totale_waarde else 0,
+                    "subcategorieen": _subcategorie_lijst(info),
                 }
                 for naam, info in per_categorie.items()
             ],

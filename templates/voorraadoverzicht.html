@@ -49,6 +49,14 @@
                         </div>
                     </td>
                 </tr>
+                {% for s in c.subcategorieen %}
+                <tr class="tekst-zacht" style="font-size:0.85rem">
+                    <td style="padding-left:1.6rem">{{ s.naam }}</td>
+                    <td>{{ s.aantal }}</td>
+                    <td>{{ "€ %.2f"|format(s.waarde) }}</td>
+                    <td>{{ "%.1f"|format(s.percentage) }}% van {{ c.naam }}</td>
+                </tr>
+                {% endfor %}
                 {% endfor %}
             </tbody>
         </table>
