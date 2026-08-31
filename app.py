@@ -246,6 +246,24 @@ NAV_ITEMS = [
         "label": "Bijzonderheden",
     },
     {
+        "groep": "Algemeen",
+        "endpoints": ["week_overzicht"],
+        "url_endpoint": "week_overzicht",
+        "label": "Weekoverzicht",
+    },
+    {
+        "groep": "Algemeen",
+        "endpoints": ["wedstrijden_overzicht"],
+        "url_endpoint": "wedstrijden_overzicht",
+        "label": "Wedstrijden",
+    },
+    {
+        "groep": "Algemeen",
+        "endpoints": ["verkooprapport", "verkooprapport_pdf_route", "verkooprapport_csv_route"],
+        "url_endpoint": "verkooprapport",
+        "label": "Verkooprapport",
+    },
+    {
         "groep": "Voorraad",
         "endpoints": ["voorraadoverzicht"],
         "url_endpoint": "voorraadoverzicht",
@@ -324,7 +342,39 @@ NAV_ITEMS = [
         "url_endpoint": "kassa_mutatie_nieuw",
         "label": "Afdracht / toevoeging",
     },
+    {
+        "groep": "Stemmen",
+        "endpoints": [
+            "stemmen_overzicht",
+            "stemvraag_nieuw",
+            "stemvraag_detail",
+            "stemvraag_poster_pdf",
+            "stemvraag_sluiten",
+            "stemvraag_heropenen",
+            "stemvraag_verwijderen",
+            "stemvraag_einddatum_instellen",
+            "stemvraag_instellingen_bijwerken",
+            "stem_goedkeuren",
+            "stem_afkeuren",
+        ],
+        "url_endpoint": "stemmen_overzicht",
+        "label": "Overzicht",
+    },
+    {
+        "groep": "Stemmen",
+        "endpoints": ["bieren_lijst", "bier_verwijderen"],
+        "url_endpoint": "bieren_lijst",
+        "label": "Bierbibliotheek",
+    },
 ]
+
+# Groepen komen in deze volgorde in de zijbalk te staan (Python dicts noch
+# SQL-resultaten garanderen een stabiele groepsvolgorde als items ooit worden
+# herschikt, dus NAV_ITEMS wordt bij het opbouwen van de zijbalk hierop
+# gesorteerd). Nieuwe groepen (bijv. een toekomstige "Keuken") hoeven hier
+# alleen aan toegevoegd te worden om vanzelf een eigen sectie te krijgen.
+NAV_GROEP_VOLGORDE = ["Algemeen", "Voorraad", "Kassa", "Keuken", "Stemmen"]
+NAV_ITEMS.sort(key=lambda item: NAV_GROEP_VOLGORDE.index(item["groep"]))
 
 
 def get_secret_key():

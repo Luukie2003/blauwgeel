@@ -21,7 +21,28 @@
             <span>BG 1915 - Kantine Beheer{% if actieve_nav %} <em style="margin-left:1.2rem">{{ actieve_nav.label }}</em>{% endif %}</span>
         </a>
         {% if huidige_gebruiker %}
-        <span class="titelbalk-welkom">Welkom, {{ huidige_gebruiker }}</span>
+        <div class="menu-item">
+            <button type="button" class="menu-trigger titelbalk-account-trigger">
+                Welkom, {{ huidige_gebruiker }} <span class="menu-trigger-pijl">&#9662;</span>
+            </button>
+            <div class="menu-dropdown menu-dropdown-rechts">
+                <span class="menu-label">Ingelogd als {{ huidige_gebruiker }} ({{ huidige_gebruiker_rol }})</span>
+                <div class="menu-scheiding"></div>
+                <a href="{{ url_for('account_wachtwoord') }}">Wachtwoord wijzigen</a>
+                <a href="{{ url_for('account_voorkeuren') }}">Mijn voorkeuren</a>
+                {% if huidige_gebruiker_rol == 'beheerder' %}
+                <div class="menu-scheiding"></div>
+                <a href="{{ url_for('accounts_lijst') }}">Accounts beheren</a>
+                <a href="{{ url_for('club_instellingen') }}">Club instellingen</a>
+                <a href="{{ url_for('backups_lijst') }}">Back-ups</a>
+                <a href="{{ url_for('instellingen_pagina') }}">Instellingen</a>
+                {% endif %}
+                <div class="menu-scheiding"></div>
+                <a href="{{ url_for('help_pagina') }}">Help &middot; Over deze app</a>
+                <div class="menu-scheiding"></div>
+                <a href="{{ url_for('logout') }}">Uitloggen</a>
+            </div>
+        </div>
         {% endif %}
     </div>
     {% if site_banner_tekst %}
@@ -30,62 +51,6 @@
         <button type="button" class="site-banner-sluiten" id="site-banner-sluiten" aria-label="Melding sluiten">&times;</button>
     </div>
     {% endif %}
-    <div class="app-menubalk">
-        <div class="menu-item">
-            <button type="button" class="menu-trigger">Bestand</button>
-            <div class="menu-dropdown">
-                <a href="{{ url_for('bestellijst_pdf_route') }}">Bestellijst downloaden (PDF)</a>
-                <a href="{{ url_for('verkooprapport') }}">Verkooprapport per periode (PDF)</a>
-                {% if huidige_gebruiker_rol == 'beheerder' %}
-                <div class="menu-scheiding"></div>
-                <a href="{{ url_for('backups_lijst') }}">Back-ups</a>
-                <a href="{{ url_for('instellingen_pagina') }}">Instellingen</a>
-                {% endif %}
-                <div class="menu-scheiding"></div>
-                <a href="{{ url_for('logout') }}">Uitloggen</a>
-            </div>
-        </div>
-        <div class="menu-item">
-            <button type="button" class="menu-trigger">Beeld</button>
-            <div class="menu-dropdown">
-                <a href="{{ url_for('dashboard') }}">Overzicht</a>
-                <a href="{{ url_for('producten_lijst') }}">Producten</a>
-                <a href="{{ url_for('geschiedenis') }}">Mutatieoverzicht</a>
-                <a href="{{ url_for('week_overzicht') }}">Weekoverzicht</a>
-                <a href="{{ url_for('wedstrijden_overzicht') }}">Wedstrijden</a>
-            </div>
-        </div>
-        <div class="menu-item">
-            <button type="button" class="menu-trigger">Stemmen!</button>
-            <div class="menu-dropdown">
-                <a href="{{ url_for('stemmen_overzicht') }}">Overzicht</a>
-                <a href="{{ url_for('stemvraag_nieuw') }}">Nieuwe stemming</a>
-                <a href="{{ url_for('bieren_lijst') }}">Bierbibliotheek</a>
-            </div>
-        </div>
-        <div class="menu-item">
-            <button type="button" class="menu-trigger">Accounts</button>
-            <div class="menu-dropdown">
-                <span class="menu-label">Ingelogd als {{ huidige_gebruiker }} ({{ huidige_gebruiker_rol }})</span>
-                <div class="menu-scheiding"></div>
-                <a href="{{ url_for('account_wachtwoord') }}">Wachtwoord wijzigen</a>
-                <a href="{{ url_for('account_voorkeuren') }}">Mijn voorkeuren</a>
-                {% if huidige_gebruiker_rol == 'beheerder' %}
-                <a href="{{ url_for('accounts_lijst') }}">Accounts beheren</a>
-                <div class="menu-scheiding"></div>
-                <a href="{{ url_for('club_instellingen') }}">Club instellingen</a>
-                {% endif %}
-                <div class="menu-scheiding"></div>
-                <a href="{{ url_for('logout') }}">Uitloggen</a>
-            </div>
-        </div>
-        <div class="menu-item">
-            <button type="button" class="menu-trigger">Help</button>
-            <div class="menu-dropdown">
-                <a href="{{ url_for('help_pagina') }}">Over deze app</a>
-            </div>
-        </div>
-    </div>
     <script>
         document.addEventListener("click", function (e) {
             var trigger = e.target.closest(".menu-trigger");

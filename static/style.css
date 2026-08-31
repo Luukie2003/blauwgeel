@@ -71,11 +71,20 @@ a:hover { text-decoration: underline; }
     width: auto;
 }
 
-.titelbalk-welkom {
+.titelbalk-account-trigger {
     font-weight: 400;
     font-size: 0.8rem;
     color: #d8def0;
     white-space: nowrap;
+}
+
+.titelbalk-account-trigger:hover,
+.menu-item.open .titelbalk-account-trigger {
+    color: var(--tekst);
+}
+
+.menu-trigger-pijl {
+    font-size: 0.7em;
 }
 
 .site-banner {
@@ -103,18 +112,6 @@ a:hover { text-decoration: underline; }
 }
 
 .site-banner-sluiten:hover { opacity: 0.65; }
-
-.app-menubalk {
-    background: var(--paneel);
-    border-bottom: 1px solid var(--rand);
-    padding: 0.3rem 0.6rem;
-    display: flex;
-    gap: 0.15rem;
-    font-size: 0.82rem;
-    color: var(--tekst-zacht);
-    position: relative;
-    z-index: 20;
-}
 
 .menu-item {
     position: relative;
@@ -157,6 +154,11 @@ a:hover { text-decoration: underline; }
 
 .menu-item.open .menu-dropdown {
     display: block;
+}
+
+.menu-dropdown-rechts {
+    left: auto;
+    right: 0;
 }
 
 .menu-dropdown a,
