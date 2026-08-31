@@ -606,6 +606,18 @@ def naar_voorraadeenheden(aantal_besteleenheden, product):
     return max(0, aantal_besteleenheden) * besteleenheid_factor(product)
 
 
+def bewaar_subcategorie(db, categorie, subcategorie):
+    """Registreert een nieuwe subcategorie automatisch zodra hij bij een
+    product wordt ingevuld, zodat hij meteen ook bij andere producten te
+    kiezen is -- zonder eerst naar Categorieën beheren te hoeven."""
+    if not categorie or not subcategorie:
+        return
+    db.execute(
+        "INSERT OR IGNORE INTO subcategorieen (categorie, naam) VALUES (?, ?)",
+        (categorie, subcategorie),
+    )
+
+
 def bereken_trend(omzet_per_week, huidige_jaar, huidige_week):
     """Voortschrijdend gemiddelde + trendrichting op basis van volledig
     afgesloten weken (de lopende week telt niet mee, die is nog niet klaar).
@@ -1933,6 +1945,9 @@ def register_routes(app):
         db = get_db()
         if request.method == "POST":
             afbeelding = sla_afbeelding_op(request.files.get("afbeelding"), PRODUCT_AFBEELDINGEN_MAP)
+            categorie = request.form["categorie"].strip() or "Overig"
+            subcategorie = request.form.get("subcategorie", "").strip() or None
+            bewaar_subcategorie(db, categorie, subcategorie)
             db.execute(
                 """INSERT INTO producten
                    (artikelcode, naam, categorie, subcategorie, eenheid, voorraad, min_voorraad,
@@ -1942,8 +1957,8 @@ def register_routes(app):
                 (
                     request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
-                    request.form["categorie"].strip() or "Overig",
-                    request.form.get("subcategorie", "").strip() or None,
+                    categorie,
+                    subcategorie,
                     request.form["eenheid"].strip() or "stuks",
                     int(request.form["voorraad"] or 0),
                     int(request.form["min_voorraad"] or 0),
@@ -1963,9 +1978,12 @@ def register_routes(app):
         categorieen = db.execute(
             "SELECT naam FROM categorieen ORDER BY naam"
         ).fetchall()
-        subcategorieen = db.execute(
-            "SELECT categorie, naam FROM subcategorieen ORDER BY categorie, naam"
-        ).fetchall()
+        subcategorieen = [
+            dict(r)
+            for r in db.execute(
+                "SELECT categorie, naam FROM subcategorieen ORDER BY categorie, naam"
+            ).fetchall()
+        ]
         return render_template(
             "product_form.html",
             product=None,
@@ -2008,6 +2026,9 @@ def register_routes(app):
                         (product_id, veld, oude_prijs, nieuwe_prijs, datum, naam, gebruiker_id),
                     )
 
+            categorie = request.form["categorie"].strip() or "Overig"
+            subcategorie = request.form.get("subcategorie", "").strip() or None
+            bewaar_subcategorie(db, categorie, subcategorie)
             db.execute(
                 """UPDATE producten
                    SET artikelcode = ?, naam = ?, categorie = ?, subcategorie = ?, eenheid = ?,
@@ -2018,8 +2039,8 @@ def register_routes(app):
                 (
                     request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
-                    request.form["categorie"].strip() or "Overig",
-                    request.form.get("subcategorie", "").strip() or None,
+                    categorie,
+                    subcategorie,
                     request.form["eenheid"].strip() or "stuks",
                     int(request.form["voorraad"] or 0),
                     int(request.form["min_voorraad"] or 0),
@@ -2040,9 +2061,12 @@ def register_routes(app):
         categorieen = db.execute(
             "SELECT naam FROM categorieen ORDER BY naam"
         ).fetchall()
-        subcategorieen = db.execute(
-            "SELECT categorie, naam FROM subcategorieen ORDER BY categorie, naam"
-        ).fetchall()
+        subcategorieen = [
+            dict(r)
+            for r in db.execute(
+                "SELECT categorie, naam FROM subcategorieen ORDER BY categorie, naam"
+            ).fetchall()
+        ]
         prijs_geschiedenis = db.execute(
             """SELECT * FROM prijs_geschiedenis WHERE product_id = ?
                ORDER BY datum DESC, id DESC""",

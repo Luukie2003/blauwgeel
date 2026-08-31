@@ -52,14 +52,11 @@
                 </div>
                 <div class="veld">
                     <label for="subcategorie">Subcategorie</label>
-                    <select id="subcategorie" name="subcategorie">
-                        {% set huidige_subcategorie = product.subcategorie if product and product.subcategorie else '' %}
-                        <option value="">Geen subcategorie</option>
-                        {% for s in subcategorieen %}
-                        <option value="{{ s.naam }}" data-categorie="{{ s.categorie }}" {{ 'selected' if s.naam == huidige_subcategorie and s.categorie == huidige_categorie else '' }}>{{ s.naam }}</option>
-                        {% endfor %}
-                    </select>
-                    <span class="tekst-zacht">Optioneel, alleen subcategorieën van de gekozen categorie worden getoond.</span>
+                    <input type="text" id="subcategorie" name="subcategorie" list="subcategorie-opties"
+                           autocomplete="off" placeholder="Optioneel"
+                           value="{{ product.subcategorie if product and product.subcategorie else '' }}">
+                    <datalist id="subcategorie-opties"></datalist>
+                    <span class="tekst-zacht">Optioneel. Kies een bestaande, of typ een nieuwe naam om 'm meteen aan te maken.</span>
                 </div>
                 <div class="veld">
                     <label for="eenheid">Eenheid</label>
@@ -157,24 +154,24 @@
 (function () {
     var catVeld = document.getElementById('categorie');
     var subVeld = document.getElementById('subcategorie');
-    if (!catVeld || !subVeld) return;
-    var alleOpties = Array.prototype.slice.call(subVeld.options);
+    var datalist = document.getElementById('subcategorie-opties');
+    if (!catVeld || !subVeld || !datalist) return;
+    var alleSubcategorieen = {{ subcategorieen|tojson }};
 
-    function filterSub() {
+    function vulSubcategorieOpties() {
         var categorie = catVeld.value;
-        var huidige = subVeld.value;
-        var nogGeldig = false;
-        alleOpties.forEach(function (optie) {
-            if (!optie.value) { optie.style.display = ''; return; }
-            var toon = optie.dataset.categorie === categorie;
-            optie.style.display = toon ? '' : 'none';
-            if (toon && optie.value === huidige) nogGeldig = true;
-        });
-        if (!nogGeldig) subVeld.value = '';
+        datalist.innerHTML = '';
+        alleSubcategorieen
+            .filter(function (s) { return s.categorie === categorie; })
+            .forEach(function (s) {
+                var optie = document.createElement('option');
+                optie.value = s.naam;
+                datalist.appendChild(optie);
+            });
     }
 
-    catVeld.addEventListener('change', filterSub);
-    filterSub();
+    catVeld.addEventListener('change', vulSubcategorieOpties);
+    vulSubcategorieOpties();
 })();
 </script>
 {% endblock %}
