@@ -173,10 +173,13 @@ def periode_verkoop_pdf(van_tekst, tot_tekst, regels):
         omzet = r["omzet"]
         totaal_omzet += omzet
         gem_prijs = omzet / r["verkocht"] if r["verkocht"] else 0
+        categorie_tekst = r["categorie"]
+        if r["subcategorie"]:
+            categorie_tekst = f"{categorie_tekst} / {r['subcategorie']}"
         pdf.data_rij(
             [
                 (_kort(pdf, r["product_naam"], 50), 50, "L"),
-                (_kort(pdf, r["categorie"], 32), 32, "L"),
+                (_kort(pdf, categorie_tekst, 32), 32, "L"),
                 (f"{r['verkocht']} {r['eenheid']}", 26, "R"),
                 (_euro(gem_prijs), 32, "R"),
                 (_euro(omzet), 30, "R"),

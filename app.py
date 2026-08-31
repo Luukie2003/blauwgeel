@@ -694,7 +694,7 @@ def bereken_omzet_trend_periode(db, van, tot):
         telling_ids = [t["id"] for t in tellingen]
         placeholders = ",".join("?" for _ in telling_ids)
         top_verkopers = db.execute(
-            f"""SELECT p.naam AS product_naam, p.eenheid,
+            f"""SELECT p.naam AS product_naam, p.eenheid, p.categorie, p.subcategorie,
                        SUM(tr.verkocht) AS verkocht,
                        SUM(tr.verkocht * tr.verkoopprijs) AS omzet
                 FROM telling_regels tr
@@ -2979,7 +2979,7 @@ def register_routes(app):
         # de huidige prijs van het product -- een periode kan meerdere
         # tellingen omvatten waartussen de prijs kan zijn gewijzigd.
         regels = db.execute(
-            """SELECT p.naam AS product_naam, p.categorie, p.eenheid,
+            """SELECT p.naam AS product_naam, p.categorie, p.subcategorie, p.eenheid,
                       SUM(tr.verkocht) AS verkocht, SUM(tr.correctie) AS correctie,
                       SUM(tr.verkocht * tr.verkoopprijs) AS omzet
                FROM telling_regels tr
@@ -3009,7 +3009,7 @@ def register_routes(app):
 
         db = get_db()
         regels = db.execute(
-            """SELECT p.naam AS product_naam, p.categorie, p.eenheid,
+            """SELECT p.naam AS product_naam, p.categorie, p.subcategorie, p.eenheid,
                       SUM(tr.verkocht) AS verkocht, SUM(tr.correctie) AS correctie,
                       SUM(tr.verkocht * tr.verkoopprijs) AS omzet
                FROM telling_regels tr
@@ -3024,6 +3024,7 @@ def register_routes(app):
             (
                 r["product_naam"],
                 r["categorie"],
+                r["subcategorie"] or "",
                 r["verkocht"],
                 r["eenheid"],
                 f"{r['omzet']:.2f}".replace(".", ","),
@@ -3033,7 +3034,7 @@ def register_routes(app):
         ]
         return csv_response(
             f"verkooprapport-{van}-tot-{tot}.csv",
-            ["Product", "Categorie", "Verkocht", "Eenheid", "Omzet"],
+            ["Product", "Categorie", "Subcategorie", "Verkocht", "Eenheid", "Omzet"],
             rijen,
         )
 

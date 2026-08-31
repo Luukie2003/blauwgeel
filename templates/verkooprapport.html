@@ -51,12 +51,16 @@
     <div class="tabel-wrap">
         <table>
             <thead>
-                <tr><th>Product</th><th>Verkocht</th><th>Omzet</th></tr>
+                <tr><th>Product</th><th>Categorie</th><th>Verkocht</th><th>Omzet</th></tr>
             </thead>
             <tbody>
                 {% for tv in omzet_trend.top_verkopers %}
                 <tr>
                     <td>{{ tv.product_naam }}</td>
+                    <td>
+                        {{ tv.categorie }}
+                        {% if tv.subcategorie %}<div class="tekst-zacht" style="font-size:0.72rem">{{ tv.subcategorie }}</div>{% endif %}
+                    </td>
                     <td>{{ tv.verkocht }} {{ tv.eenheid }}</td>
                     <td>€ {{ '%.2f'|format(tv.omzet) }}</td>
                 </tr>
