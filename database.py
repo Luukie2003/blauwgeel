@@ -99,6 +99,7 @@ KOLOM_MIGRATIES = [
     ("stemvragen", "opmerking_toegestaan", "INTEGER NOT NULL DEFAULT 0"),
     ("stemmen", "opmerking", "TEXT"),
     ("stemvragen", "aantal_keuzes", "INTEGER NOT NULL DEFAULT 1"),
+    ("producten", "afbeelding", "TEXT"),
 ]
 
 

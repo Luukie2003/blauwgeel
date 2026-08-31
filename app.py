@@ -162,23 +162,28 @@ OPEN_ENDPOINTS = {
 STEM_COOKIE = "stem_kiezer"
 
 STEM_AFBEELDINGEN_MAP = BASE_DIR / "static" / "stem_afbeeldingen"
+PRODUCT_AFBEELDINGEN_MAP = BASE_DIR / "static" / "product_afbeeldingen"
 TOEGESTANE_AFBEELDING_EXTENSIES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 MAX_STEMOPTIES = 10
 
 
-def sla_stemoptie_afbeelding_op(bestand):
-    """Slaat een geuploade afbeelding voor een stemoptie veilig op (een
-    willekeurige bestandsnaam, alleen bekende afbeeldingsextensies) en geeft
-    de bestandsnaam terug. None als er niets bruikbaars is geupload."""
+def sla_afbeelding_op(bestand, doelmap):
+    """Slaat een geuploade afbeelding veilig op in doelmap (een willekeurige
+    bestandsnaam, alleen bekende afbeeldingsextensies) en geeft de
+    bestandsnaam terug. None als er niets bruikbaars is geupload."""
     if not bestand or not bestand.filename:
         return None
     extensie = Path(bestand.filename).suffix.lower()
     if extensie not in TOEGESTANE_AFBEELDING_EXTENSIES:
         return None
-    STEM_AFBEELDINGEN_MAP.mkdir(parents=True, exist_ok=True)
+    doelmap.mkdir(parents=True, exist_ok=True)
     bestandsnaam = f"{secrets.token_hex(16)}{extensie}"
-    bestand.save(STEM_AFBEELDINGEN_MAP / bestandsnaam)
+    bestand.save(doelmap / bestandsnaam)
     return bestandsnaam
+
+
+def sla_stemoptie_afbeelding_op(bestand):
+    return sla_afbeelding_op(bestand, STEM_AFBEELDINGEN_MAP)
 
 
 def bewaar_bier(db, naam, afbeelding):
@@ -1927,12 +1932,13 @@ def register_routes(app):
     def product_nieuw():
         db = get_db()
         if request.method == "POST":
+            afbeelding = sla_afbeelding_op(request.files.get("afbeelding"), PRODUCT_AFBEELDINGEN_MAP)
             db.execute(
                 """INSERT INTO producten
                    (artikelcode, naam, categorie, subcategorie, eenheid, voorraad, min_voorraad,
                     bestel_hoeveelheid, verkoopprijs, inkoopprijs, actief, besteleenheid,
-                    besteleenheid_factor, opmerking)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    besteleenheid_factor, opmerking, afbeelding)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
@@ -1948,6 +1954,7 @@ def register_routes(app):
                     request.form.get("besteleenheid", "").strip() or None,
                     int(request.form.get("besteleenheid_factor") or 1),
                     request.form.get("opmerking", "").strip(),
+                    afbeelding,
                 ),
             )
             db.commit()
@@ -1979,6 +1986,13 @@ def register_routes(app):
         if request.method == "POST":
             nieuwe_verkoopprijs = float(request.form["verkoopprijs"] or 0)
             nieuwe_inkoopprijs = float(request.form.get("inkoopprijs") or 0)
+            nieuwe_afbeelding = sla_afbeelding_op(request.files.get("afbeelding"), PRODUCT_AFBEELDINGEN_MAP)
+            if nieuwe_afbeelding:
+                afbeelding = nieuwe_afbeelding
+            elif request.form.get("afbeelding_verwijderen"):
+                afbeelding = None
+            else:
+                afbeelding = product["afbeelding"]
             datum = now_str()
             naam = session.get("gebruiker_naam")
             gebruiker_id = session.get("gebruiker_id")
@@ -1999,7 +2013,7 @@ def register_routes(app):
                    SET artikelcode = ?, naam = ?, categorie = ?, subcategorie = ?, eenheid = ?,
                        voorraad = ?, min_voorraad = ?, bestel_hoeveelheid = ?, verkoopprijs = ?,
                        inkoopprijs = ?, actief = ?, besteleenheid = ?, besteleenheid_factor = ?,
-                       opmerking = ?
+                       opmerking = ?, afbeelding = ?
                    WHERE id = ?""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
@@ -2016,6 +2030,7 @@ def register_routes(app):
                     request.form.get("besteleenheid", "").strip() or None,
                     int(request.form.get("besteleenheid_factor") or 1),
                     request.form.get("opmerking", "").strip(),
+                    afbeelding,
                     product_id,
                 ),
             )

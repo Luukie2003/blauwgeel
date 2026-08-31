@@ -5,11 +5,25 @@
 <p class="subtitel"><a href="{{ url_for('producten_lijst') }}">&larr; Terug naar producten</a></p>
 
 <div class="kaart">
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <fieldset class="groupbox">
             <legend>Productgegevens</legend>
             <div class="formgrid">
+                <div class="veld">
+                    <label for="afbeelding">Afbeelding</label>
+                    {% if product and product.afbeelding %}
+                    <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.4rem">
+                        <img src="{{ url_for('static', filename='product_afbeeldingen/' + product.afbeelding) }}"
+                             alt="" class="product-thumb-preview">
+                        <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400; cursor:pointer">
+                            <input type="checkbox" name="afbeelding_verwijderen" style="width:auto">
+                            Verwijderen
+                        </label>
+                    </div>
+                    {% endif %}
+                    <input type="file" id="afbeelding" name="afbeelding" accept="image/*">
+                </div>
                 <div class="veld">
                     <label for="artikelcode">Artikelcode</label>
                     <input type="text" id="artikelcode" name="artikelcode" placeholder="Bijv. COCA"

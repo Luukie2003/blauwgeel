@@ -35,13 +35,18 @@
         <table id="producten-tabel">
             <thead>
                 <tr>
-                    <th>Code</th><th>Naam</th><th>Status</th><th>Categorie</th><th>Subcategorie</th><th>Voorraad</th><th>Minimum</th>
+                    <th></th><th>Code</th><th>Naam</th><th>Status</th><th>Categorie</th><th>Subcategorie</th><th>Voorraad</th><th>Minimum</th>
                     <th>Bestel­hoeveelheid</th><th>Inkoop</th><th>Verkoop</th><th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for p in producten %}
                 <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie ~ ' ' ~ (p.subcategorie or ''))|lower }}" data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}">
+                    <td>
+                        {% if p.afbeelding %}
+                        <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
+                        {% endif %}
+                    </td>
                     <td>{{ p.artikelcode or '—' }}</td>
                     <td>{{ p.naam }}</td>
                     <td>
