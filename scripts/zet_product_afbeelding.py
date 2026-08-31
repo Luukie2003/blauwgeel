@@ -10,7 +10,9 @@ producten.afbeelding. Geen onderdeel van de applicatie zelf.
 """
 import secrets
 import sqlite3
+import subprocess
 import sys
+import tempfile
 import urllib.request
 from io import BytesIO
 from pathlib import Path
@@ -45,18 +47,28 @@ def main():
         sys.exit(1)
 
     formaat = (img.format or "JPEG").lower()
-    # webp altijd naar jpeg converteren (verliest transparantie, maar is
-    # overal gegarandeerd te tonen); de extensie wordt PAS na deze keuze
-    # bepaald zodat bestandsnaam en werkelijk opgeslagen formaat altijd matchen.
-    if formaat == "webp":
-        formaat = "jpeg"
-        img = img.convert("RGB")
-
-    extensie = {"jpeg": ".jpg", "png": ".png", "gif": ".gif"}.get(formaat, ".jpg")
+    extensie = {"jpeg": ".jpg", "png": ".png", "webp": ".png", "gif": ".gif"}.get(formaat, ".jpg")
     DOELMAP.mkdir(parents=True, exist_ok=True)
     bestandsnaam = f"{secrets.token_hex(16)}{extensie}"
-    if formaat == "jpeg" and (img.format or "").lower() != "jpeg":
-        img.save(DOELMAP / bestandsnaam, "JPEG", quality=90)
+
+    if formaat == "webp":
+        # NIET via Pillow's webp-decoder naar PNG/JPEG converteren: die
+        # decodeert deze AH-bestanden zelf zonder fout, maar het resultaat
+        # toont in echte browsers zichtbare horizontale banden/strepen
+        # (een libwebp-decodebug in deze Pillow-installatie, geen
+        # netwerk/git-transportfout -- geverifieerd door de ruwe .webp-bytes
+        # rechtstreeks in Chrome te bekijken: die zijn perfect schoon).
+        # macOS' eigen `sips` decodeert dezelfde bytes wel correct.
+        with tempfile.NamedTemporaryFile(suffix=".webp", delete=False) as tmp:
+            tmp.write(data)
+            tmp_pad = Path(tmp.name)
+        try:
+            subprocess.run(
+                ["sips", "-s", "format", "png", str(tmp_pad), "--out", str(DOELMAP / bestandsnaam)],
+                check=True, capture_output=True,
+            )
+        finally:
+            tmp_pad.unlink(missing_ok=True)
     else:
         (DOELMAP / bestandsnaam).write_bytes(data)
 
