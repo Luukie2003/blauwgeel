@@ -105,10 +105,11 @@
       {% if overzicht.zonder_prijs %}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;">
         {% for p in overzicht.zonder_prijs %}
+        {% set verkoopprijs_mist = p.verkoopprijs == 0 and p.categorie not in overzicht.niet_verplicht_categorieen %}
         <tr>
           <td style="padding:5px 0; border-bottom:1px solid #f0f0f0;">{{ p.naam }}</td>
           <td align="right" style="padding:5px 0; border-bottom:1px solid #f0f0f0; color:#a6590a;">
-            {% if p.inkoopprijs == 0 %}geen inkoopprijs{% endif %}{% if p.inkoopprijs == 0 and p.verkoopprijs == 0 %}, {% endif %}{% if p.verkoopprijs == 0 %}geen verkoopprijs{% endif %}
+            {% if p.inkoopprijs == 0 %}geen inkoopprijs{% endif %}{% if p.inkoopprijs == 0 and verkoopprijs_mist %}, {% endif %}{% if verkoopprijs_mist %}geen verkoopprijs{% endif %}
           </td>
         </tr>
         {% endfor %}

@@ -216,6 +216,7 @@ BEHEERDER_ENDPOINTS = {
     "account_email_wijzigen",
     "categorieen_lijst",
     "categorie_verwijderen",
+    "categorie_verkoopprijs_verplicht_wisselen",
     "subcategorie_nieuw",
     "subcategorie_verwijderen",
     "backups_lijst",
@@ -618,6 +619,19 @@ def bewaar_subcategorie(db, categorie, subcategorie):
     )
 
 
+def categorienamen_zonder_verkoopprijsplicht(db):
+    """Categorieën waarvoor een verkoopprijs niet verplicht is (bijv.
+    fusten -- die worden nooit als geheel verkocht, alleen per glas
+    getapt). Producten hierin mogen op € 0,00 staan zonder dat dit als
+    ontbrekende prijs wordt gemeld."""
+    return {
+        r["naam"]
+        for r in db.execute(
+            "SELECT naam FROM categorieen WHERE verkoopprijs_verplicht = 0"
+        ).fetchall()
+    }
+
+
 def bereken_trend(omzet_per_week, huidige_jaar, huidige_week):
     """Voortschrijdend gemiddelde + trendrichting op basis van volledig
     afgesloten weken (de lopende week telt niet mee, die is nog niet klaar).
@@ -764,11 +778,16 @@ def bereken_week_overzicht(db, vandaag=None):
         (f"{week_van.isoformat()} 00:00", f"{week_tot.isoformat()} 23:59"),
     ).fetchall()
 
-    zonder_prijs = db.execute(
-        """SELECT * FROM producten
-           WHERE actief = 1 AND (verkoopprijs = 0 OR inkoopprijs = 0)
-           ORDER BY categorie, naam"""
-    ).fetchall()
+    niet_verplicht_categorieen = categorienamen_zonder_verkoopprijsplicht(db)
+    zonder_prijs = [
+        p
+        for p in db.execute(
+            """SELECT * FROM producten
+               WHERE actief = 1 AND (verkoopprijs = 0 OR inkoopprijs = 0)
+               ORDER BY categorie, naam"""
+        ).fetchall()
+        if p["inkoopprijs"] == 0 or p["categorie"] not in niet_verplicht_categorieen
+    ]
 
     return {
         "week_van": week_van,
@@ -781,6 +800,7 @@ def bereken_week_overzicht(db, vandaag=None):
         "open_bestellingen": open_bestellingen,
         "nieuwe_mededelingen": nieuwe_mededelingen,
         "zonder_prijs": zonder_prijs,
+        "niet_verplicht_categorieen": niet_verplicht_categorieen,
     }
 
 
@@ -1751,11 +1771,15 @@ def register_routes(app):
         """Verzamelt alle cijfers voor het voorraadoverzicht -- gebruikt door
         zowel de webpagina als de PDF, zodat ze altijd hetzelfde tonen."""
         producten = db.execute("SELECT * FROM producten ORDER BY categorie, naam").fetchall()
+        niet_verplicht = categorienamen_zonder_verkoopprijsplicht(db)
 
         totale_waarde = sum(p["voorraad"] * p["verkoopprijs"] for p in producten)
         zonder_voorraad = [p for p in producten if p["actief"] and p["voorraad"] == 0]
         onder_minimum = [p for p in producten if p["actief"] and p["voorraad"] < p["min_voorraad"]]
-        zonder_prijs = [p for p in producten if p["actief"] and p["verkoopprijs"] == 0]
+        zonder_prijs = [
+            p for p in producten
+            if p["actief"] and p["verkoopprijs"] == 0 and p["categorie"] not in niet_verplicht
+        ]
         inactief_met_voorraad = [p for p in producten if not p["actief"] and p["voorraad"] > 0]
 
         per_categorie = {}
@@ -1877,6 +1901,7 @@ def register_routes(app):
             producten=producten,
             categorieen=categorieen,
             subcategorieen=subcategorieen,
+            niet_verplicht_categorieen=categorienamen_zonder_verkoopprijsplicht(db),
         )
 
     @app.route("/producten/minimumvoorraad", methods=["GET", "POST"])
@@ -2206,6 +2231,23 @@ def register_routes(app):
         db.execute("DELETE FROM subcategorieen WHERE categorie = ?", (categorie["naam"],))
         db.commit()
         flash(f"Categorie '{categorie['naam']}' verwijderd.", "success")
+        return redirect(url_for("categorieen_lijst"))
+
+    @app.route("/categorieen/<int:categorie_id>/verkoopprijs-verplicht", methods=["POST"])
+    def categorie_verkoopprijs_verplicht_wisselen(categorie_id):
+        db = get_db()
+        categorie = db.execute(
+            "SELECT * FROM categorieen WHERE id = ?", (categorie_id,)
+        ).fetchone()
+        if categorie is None:
+            flash("Categorie niet gevonden.", "error")
+            return redirect(url_for("categorieen_lijst"))
+        nieuwe_status = 0 if categorie["verkoopprijs_verplicht"] else 1
+        db.execute(
+            "UPDATE categorieen SET verkoopprijs_verplicht = ? WHERE id = ?",
+            (nieuwe_status, categorie_id),
+        )
+        db.commit()
         return redirect(url_for("categorieen_lijst"))
 
     @app.route("/subcategorieen/nieuw", methods=["POST"])

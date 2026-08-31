@@ -84,7 +84,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if p.actief and p.verkoopprijs == 0 %}
+                        {% if p.actief and p.verkoopprijs == 0 and p.categorie not in niet_verplicht_categorieen %}
                         <span class="badge badge-laag" title="Nog geen verkoopprijs ingevuld">€ 0.00 ontbreekt</span>
                         {% else %}
                         {{ "€ %.2f"|format(p.verkoopprijs) }}

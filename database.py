@@ -101,6 +101,7 @@ KOLOM_MIGRATIES = [
     ("stemvragen", "aantal_keuzes", "INTEGER NOT NULL DEFAULT 1"),
     ("producten", "afbeelding", "TEXT"),
     ("bestelregels", "manco", "INTEGER NOT NULL DEFAULT 0"),
+    ("categorieen", "verkoopprijs_verplicht", "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 

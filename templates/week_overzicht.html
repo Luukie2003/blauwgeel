@@ -152,7 +152,7 @@
                         {% else %}€ {{ '%.2f'|format(p.inkoopprijs) }}{% endif %}
                     </td>
                     <td>
-                        {% if p.verkoopprijs == 0 %}<span class="badge badge-laag">€ 0.00 ontbreekt</span>
+                        {% if p.verkoopprijs == 0 and p.categorie not in overzicht.niet_verplicht_categorieen %}<span class="badge badge-laag">€ 0.00 ontbreekt</span>
                         {% else %}€ {{ '%.2f'|format(p.verkoopprijs) }}{% endif %}
                     </td>
                 </tr>

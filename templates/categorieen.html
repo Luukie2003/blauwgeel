@@ -36,6 +36,18 @@
             </button>
         </form>
     </div>
+    <form method="post" action="{{ url_for('categorie_verkoopprijs_verplicht_wisselen', categorie_id=c.id) }}"
+          class="inline" style="margin-bottom:0.75rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="schuif" title="Verkoopprijs verplicht bij producten in deze categorie">
+            <input type="checkbox" {{ 'checked' if c.verkoopprijs_verplicht else '' }} onchange="this.form.submit()">
+            <span class="schuif-balk"></span>
+        </label>
+        <span class="tekst-zacht" style="font-size:0.85rem; vertical-align:middle">
+            Verkoopprijs verplicht
+            <span title="Zet uit voor categorieën die nooit als geheel verkocht worden, zoals fusten -- dan wordt € 0,00 hier niet als ontbrekende prijs gemeld.">ⓘ</span>
+        </span>
+    </form>
 
     {% if subs %}
     <div class="tabel-wrap">
