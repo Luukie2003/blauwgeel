@@ -35,8 +35,8 @@
         <table id="producten-tabel">
             <thead>
                 <tr>
-                    <th></th><th>Code</th><th>Naam</th><th>Status</th><th>Categorie</th><th>Subcategorie</th><th>Voorraad</th><th>Minimum</th>
-                    <th>Bestel­hoeveelheid</th><th>Inkoop</th><th>Verkoop</th><th></th>
+                    <th></th><th>Product</th><th>Status</th><th>Categorie</th><th>Voorraad</th>
+                    <th>Inkoop</th><th>Verkoop</th><th></th>
                 </tr>
             </thead>
             <tbody>
@@ -47,8 +47,10 @@
                         <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
                         {% endif %}
                     </td>
-                    <td>{{ p.artikelcode or '—' }}</td>
-                    <td>{{ p.naam }}</td>
+                    <td>
+                        {{ p.naam }}{% if not p.actief %} <span class="badge badge-neutraal">Inactief</span>{% endif %}
+                        {% if p.artikelcode %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.artikelcode }}</div>{% endif %}
+                    </td>
                     <td>
                         {% if huidige_gebruiker_rol == 'beheerder' %}
                         <form method="post" action="{{ url_for('product_actief_wisselen', product_id=p.id) }}" class="inline">
@@ -62,17 +64,18 @@
                         {% if p.actief %}<span class="badge badge-ok">Actief</span>{% else %}<span class="badge badge-neutraal">Inactief</span>{% endif %}
                         {% endif %}
                     </td>
-                    <td>{{ p.categorie }}</td>
-                    <td>{{ p.subcategorie or '—' }}</td>
+                    <td>
+                        {{ p.categorie }}
+                        {% if p.subcategorie %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.subcategorie }}</div>{% endif %}
+                    </td>
                     <td>
                         {% if p.voorraad < p.min_voorraad %}
                         <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
                         {% else %}
                         <span class="badge badge-ok">{{ p.voorraad }} {{ p.eenheid }}</span>
                         {% endif %}
+                        <div class="tekst-zacht" style="font-size:0.72rem">min. {{ p.min_voorraad }} {{ p.eenheid }}</div>
                     </td>
-                    <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
-                    <td>{{ p.bestel_hoeveelheid }} {{ p.eenheid }}</td>
                     <td>
                         {% if p.actief and p.inkoopprijs == 0 %}
                         <span class="badge badge-uit" title="Nog geen inkoopprijs ingevuld">€ 0.00 ontbreekt</span>
