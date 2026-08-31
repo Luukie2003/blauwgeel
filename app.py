@@ -1852,7 +1852,7 @@ def register_routes(app):
     def producten_lijst():
         db = get_db()
         producten = db.execute(
-            "SELECT * FROM producten ORDER BY categorie, subcategorie, naam"
+            "SELECT * FROM producten ORDER BY actief DESC, categorie, subcategorie, naam"
         ).fetchall()
         categorieen = db.execute(
             "SELECT naam FROM categorieen ORDER BY naam"
@@ -1893,7 +1893,7 @@ def register_routes(app):
             return redirect(url_for("producten_minimumvoorraad"))
 
         producten = db.execute(
-            "SELECT * FROM producten ORDER BY categorie, naam"
+            "SELECT * FROM producten ORDER BY actief DESC, categorie, naam"
         ).fetchall()
         return render_template("producten_minimum.html", producten=producten)
 
@@ -1924,7 +1924,7 @@ def register_routes(app):
             return redirect(url_for("producten_besteleenheid"))
 
         producten = db.execute(
-            "SELECT * FROM producten ORDER BY categorie, naam"
+            "SELECT * FROM producten ORDER BY actief DESC, categorie, naam"
         ).fetchall()
         return render_template("producten_besteleenheid.html", producten=producten)
 
