@@ -19,7 +19,7 @@
         <a href="{{ url_for('stemvraag_poster_pdf', stemvraag_id=stemvraag.id) }}" class="btn btn-rand">Poster (A4 PDF)</a>
         {% if stemvraag.actief %}
         <form method="post" action="{{ url_for('stemvraag_sluiten', stemvraag_id=stemvraag.id) }}"
-              onsubmit="return confirm('Stemming sluiten voor nieuwe stemmen?');">
+              onsubmit="return bevestigEnVerstuur(this, 'Stemming sluiten voor nieuwe stemmen?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-rand">Sluiten</button>
         </form>
@@ -30,7 +30,7 @@
         </form>
         {% endif %}
         <form method="post" action="{{ url_for('stemvraag_verwijderen', stemvraag_id=stemvraag.id) }}"
-              onsubmit="return confirm('Deze stemming en alle stemmen verwijderen?');">
+              onsubmit="return bevestigEnVerstuur(this, 'Deze stemming en alle stemmen verwijderen?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-gevaar">Verwijderen</button>
         </form>
@@ -121,27 +121,26 @@
             </thead>
             <tbody>
                 {% for s in stemmen %}
-                <tr class="{{ 'rij-waarschuwing' if s.afgekeurd }}">
+                <tr class="js-stem-rij {{ 'rij-waarschuwing' if s.afgekeurd }}">
                     <td>{{ s.naam or 'Onbekend' }}</td>
                     <td>{{ s.optie_tekst }}</td>
                     <td>{{ s.opmerking or '' }}</td>
                     <td>{{ s.datum|datum_nl }}</td>
                     <td>
-                        {% if s.afgekeurd %}<span class="badge badge-laag">Afgekeurd</span>{% endif %}
+                        <span class="badge badge-laag js-stem-badge" {{ '' if s.afgekeurd else 'hidden' }}>Afgekeurd</span>
                     </td>
                     <td>
-                        {% if s.afgekeurd %}
-                        <form method="post" action="{{ url_for('stem_goedkeuren', stem_id=s.id) }}">
+                        <form method="post" action="{{ url_for('stem_goedkeuren', stem_id=s.id) }}"
+                              class="js-ajax-form js-stem-goedkeuren" {{ '' if s.afgekeurd else 'hidden' }}>
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn-tekstlink">Goedkeuren</button>
                         </form>
-                        {% else %}
                         <form method="post" action="{{ url_for('stem_afkeuren', stem_id=s.id) }}"
-                              onsubmit="return confirm('Deze stem afkeuren? Telt dan niet meer mee in de uitslag.');">
+                              class="js-ajax-form js-stem-afkeuren" data-bevestig="Deze stem afkeuren? Telt dan niet meer mee in de uitslag."
+                              {{ 'hidden' if s.afgekeurd else '' }}>
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn-tekstlink">Afkeuren</button>
                         </form>
-                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -152,4 +151,19 @@
     <p class="leeg">Nog geen stemmen.</p>
     {% endif %}
 </div>
+
+<script>
+    // Werkt een stemmen-rij direct bij na goedkeuren/afkeuren (badge, rij-
+    // kleur, welke van de 2 knoppen zichtbaar is), zonder dat de hele
+    // pagina herlaadt en je je scrollpositie kwijtraakt in een lange lijst.
+    document.addEventListener("ajax-form:success", function (e) {
+        var rij = e.target.closest(".js-stem-rij");
+        if (!rij) return;
+        var afgekeurd = !!e.detail.afgekeurd;
+        rij.classList.toggle("rij-waarschuwing", afgekeurd);
+        rij.querySelector(".js-stem-badge").hidden = !afgekeurd;
+        rij.querySelector(".js-stem-goedkeuren").hidden = !afgekeurd;
+        rij.querySelector(".js-stem-afkeuren").hidden = afgekeurd;
+    });
+</script>
 {% endblock %}

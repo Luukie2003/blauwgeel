@@ -1131,6 +1131,61 @@ footer {
     padding: 0.2rem 0.4rem;
 }
 
+.modal-venster-bevestig {
+    max-width: 400px;
+}
+
+.modal-venster-bevestig p {
+    white-space: pre-line;
+    margin: 0 0 1.2rem;
+    color: var(--tekst);
+    line-height: 1.5;
+}
+
+.modal-knoppen {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+}
+
+/* ---------- Toast-meldingen ---------- */
+
+.toast-stapel {
+    position: fixed;
+    bottom: 1.2rem;
+    right: 1.2rem;
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    max-width: min(90vw, 340px);
+}
+
+.toast {
+    background: var(--tekst);
+    color: #fff;
+    padding: 0.65rem 1rem;
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    font-size: 0.86rem;
+    line-height: 1.4;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.toast.zichtbaar {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .toast {
+        transition: none;
+    }
+}
+
 /* ---------- Stemmen ---------- */
 
 .kaart-grid {

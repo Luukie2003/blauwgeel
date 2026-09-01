@@ -25,7 +25,7 @@
             <div class="tabel-acties">
                 <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-geel btn-klein">Inboeken</a>
                 <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
-                      onsubmit="return confirm('Bestelling #{{ b.id }} verwijderen?');">
+                      onsubmit="return bevestigEnVerstuur(this, 'Bestelling #{{ b.id }} verwijderen?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                 </form>
@@ -134,7 +134,7 @@
             <div class="tabel-acties">
                 <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
                 <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
-                      onsubmit="return confirm('Bestelling #{{ b.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan.');">
+                      onsubmit="return bevestigEnVerstuur(this, 'Bestelling #{{ b.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan.');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                 </form>

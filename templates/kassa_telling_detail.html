@@ -23,7 +23,7 @@
         {% if not telling.afgesloten %}
         <a href="{{ url_for('kassa_telling_bewerken', telling_id=telling.id) }}" class="btn btn-rand">Bewerken</a>
         <form method="post" action="{{ url_for('kassa_telling_goedkeuren', telling_id=telling.id) }}"
-              onsubmit="return confirm('Kassatelling #{{ telling.id }} goedkeuren? Hierna kan hij niet meer aangepast worden.');"
+              onsubmit="return bevestigEnVerstuur(this, 'Kassatelling #{{ telling.id }} goedkeuren? Hierna kan hij niet meer aangepast worden.');"
               style="display:flex; flex-wrap:wrap; gap:0.4rem; align-items:center; max-width:100%">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="text" name="goedkeuring_opmerking" placeholder="Opmerking bij goedkeuring (optioneel)"
@@ -32,7 +32,7 @@
         </form>
         {% elif (kassa_stand.stand - telling.geteld_bedrag)|abs < 0.001 %}
         <form method="post" action="{{ url_for('kassa_telling_heropenen', telling_id=telling.id) }}"
-              onsubmit="return confirm('Kassatelling #{{ telling.id }} heropenen? Daarna kan hij weer aangepast worden.');">
+              onsubmit="return bevestigEnVerstuur(this, 'Kassatelling #{{ telling.id }} heropenen? Daarna kan hij weer aangepast worden.');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-rand">Heropenen</button>
         </form>

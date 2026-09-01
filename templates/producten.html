@@ -53,10 +53,10 @@
                     </td>
                     <td>
                         {% if huidige_gebruiker_rol == 'beheerder' %}
-                        <form method="post" action="{{ url_for('product_actief_wisselen', product_id=p.id) }}" class="inline">
+                        <form method="post" action="{{ url_for('product_actief_wisselen', product_id=p.id) }}" class="inline js-ajax-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <label class="schuif" title="{{ 'Actief, klik om uit te zetten' if p.actief else 'Inactief, klik om aan te zetten' }}">
-                                <input type="checkbox" {{ 'checked' if p.actief else '' }} onchange="this.form.submit()">
+                                <input type="checkbox" {{ 'checked' if p.actief else '' }} onchange="this.form.requestSubmit()">
                                 <span class="schuif-balk"></span>
                             </label>
                         </form>
@@ -94,7 +94,7 @@
                         {% if huidige_gebruiker_rol == 'beheerder' %}
                         <a href="{{ url_for('product_bewerken', product_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
                         <form method="post" action="{{ url_for('product_verwijderen', product_id=p.id) }}"
-                              onsubmit="return confirm('Product \'{{ p.naam }}\' verwijderen? Dit verwijdert ook de boekingsgeschiedenis.');">
+                              onsubmit="return bevestigEnVerstuur(this, 'Product \'{{ p.naam }}\' verwijderen? Dit verwijdert ook de boekingsgeschiedenis.');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                         </form>

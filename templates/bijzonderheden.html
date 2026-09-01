@@ -39,12 +39,12 @@
             </span>
             <div style="display:flex; flex-wrap:wrap; gap:0.6rem">
                 {% if m.afgehandeld %}
-                <form method="post" action="{{ url_for('mededeling_heropenen', mededeling_id=m.id) }}">
+                <form method="post" action="{{ url_for('mededeling_heropenen', mededeling_id=m.id) }}" class="js-ajax-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn-tekstlink">Heropenen</button>
                 </form>
                 {% else %}
-                <form method="post" action="{{ url_for('mededeling_afhandelen', mededeling_id=m.id) }}">
+                <form method="post" action="{{ url_for('mededeling_afhandelen', mededeling_id=m.id) }}" class="js-ajax-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn-tekstlink">Afgehandeld</button>
                 </form>
@@ -56,7 +56,7 @@
                 {% endif %}
                 {% endif %}
                 <form method="post" action="{{ url_for('mededeling_verwijderen', mededeling_id=m.id) }}"
-                      onsubmit="return confirm('Deze mededeling verwijderen?');">
+                      onsubmit="return bevestigEnVerstuur(this, 'Deze mededeling verwijderen?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn-tekstlink">Verwijderen</button>
                 </form>

@@ -45,7 +45,7 @@
                             </button>
                         </form>
                         <form method="post" action="{{ url_for('account_verwijderen', gebruiker_id=g.id) }}"
-                              onsubmit="return confirm('Account \'{{ g.naam }}\' verwijderen?');">
+                              onsubmit="return bevestigEnVerstuur(this, 'Account \'{{ g.naam }}\' verwijderen?');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                         </form>

@@ -10,6 +10,7 @@ from flask import (
     Flask,
     Response,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -586,6 +587,14 @@ def vind_gebruiker_bij_token(db, token):
     if verloopt < datetime.now():
         return None
     return gebruiker
+
+
+def is_ajax_verzoek():
+    """Detecteert of dit verzoek via de JS-laag (fetch, zie base.html) is
+    verstuurd i.p.v. een gewone formulier-submit -- zulke routes geven dan
+    JSON terug in plaats van een redirect, zodat de pagina niet hoeft te
+    herladen voor een simpele statuswijziging."""
+    return request.headers.get("X-Requested-With") == "fetch"
 
 
 def veilig_redirect_pad(pad, fallback):
@@ -2217,6 +2226,8 @@ def register_routes(app):
             "SELECT * FROM producten WHERE id = ?", (product_id,)
         ).fetchone()
         if product is None:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Product niet gevonden."}), 404
             flash("Product niet gevonden.", "error")
             return redirect(url_for("producten_lijst"))
         nieuwe_status = 0 if product["actief"] else 1
@@ -2224,6 +2235,13 @@ def register_routes(app):
             "UPDATE producten SET actief = ? WHERE id = ?", (nieuwe_status, product_id)
         )
         db.commit()
+        if is_ajax_verzoek():
+            melding = (
+                f"'{product['naam']}' is actief. Komt bij de volgende paginalaad weer bovenaan te staan."
+                if nieuwe_status
+                else f"'{product['naam']}' is inactief. Zakt bij de volgende paginalaad naar onderen."
+            )
+            return jsonify({"ok": True, "actief": nieuwe_status, "melding": melding})
         return redirect(url_for("producten_lijst"))
 
     @app.route("/categorieen", methods=["GET", "POST"])
@@ -2295,6 +2313,8 @@ def register_routes(app):
             "SELECT * FROM categorieen WHERE id = ?", (categorie_id,)
         ).fetchone()
         if categorie is None:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Categorie niet gevonden."}), 404
             flash("Categorie niet gevonden.", "error")
             return redirect(url_for("categorieen_lijst"))
         nieuwe_status = 0 if categorie["verkoopprijs_verplicht"] else 1
@@ -2303,6 +2323,13 @@ def register_routes(app):
             (nieuwe_status, categorie_id),
         )
         db.commit()
+        if is_ajax_verzoek():
+            melding = (
+                "Verkoopprijs weer verplicht."
+                if nieuwe_status
+                else "Verkoopprijs niet meer verplicht voor deze categorie."
+            )
+            return jsonify({"ok": True, "verkoopprijs_verplicht": nieuwe_status, "melding": melding})
         return redirect(url_for("categorieen_lijst"))
 
     @app.route("/subcategorieen/nieuw", methods=["POST"])
@@ -3506,6 +3533,14 @@ def register_routes(app):
             (session.get("gebruiker_naam"), now_str(), mededeling_id),
         )
         db.commit()
+        if is_ajax_verzoek():
+            return jsonify(
+                {
+                    "ok": True,
+                    "afgehandeld": 1,
+                    "melding": "Afgehandeld. Zakt bij de volgende paginalaad naar onderen.",
+                }
+            )
         return redirect(url_for("bijzonderheden"))
 
     @app.route("/bijzonderheden/<int:mededeling_id>/heropenen", methods=["POST"])
@@ -3518,6 +3553,14 @@ def register_routes(app):
             (mededeling_id,),
         )
         db.commit()
+        if is_ajax_verzoek():
+            return jsonify(
+                {
+                    "ok": True,
+                    "afgehandeld": 0,
+                    "melding": "Heropend. Komt bij de volgende paginalaad weer bovenaan te staan.",
+                }
+            )
         return redirect(url_for("bijzonderheden"))
 
     @app.route("/bijzonderheden/<int:mededeling_id>/pin-als-banner", methods=["POST"])
@@ -3665,10 +3708,20 @@ def register_routes(app):
         db = get_db()
         stem = db.execute("SELECT * FROM stemmen WHERE id = ?", (stem_id,)).fetchone()
         if stem is None:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Stem niet gevonden."}), 404
             flash("Stem niet gevonden.", "error")
             return redirect(url_for("stemmen_overzicht"))
         db.execute("UPDATE stemmen SET afgekeurd = 1 WHERE id = ?", (stem_id,))
         db.commit()
+        if is_ajax_verzoek():
+            return jsonify(
+                {
+                    "ok": True,
+                    "afgekeurd": 1,
+                    "melding": "Stem afgekeurd. Uitslag hierboven ververst bij de volgende paginalaad.",
+                }
+            )
         flash("Stem afgekeurd, telt niet meer mee in de uitslag.", "success")
         return redirect(url_for("stemvraag_detail", stemvraag_id=stem["stemvraag_id"]))
 
@@ -3677,10 +3730,20 @@ def register_routes(app):
         db = get_db()
         stem = db.execute("SELECT * FROM stemmen WHERE id = ?", (stem_id,)).fetchone()
         if stem is None:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Stem niet gevonden."}), 404
             flash("Stem niet gevonden.", "error")
             return redirect(url_for("stemmen_overzicht"))
         db.execute("UPDATE stemmen SET afgekeurd = 0 WHERE id = ?", (stem_id,))
         db.commit()
+        if is_ajax_verzoek():
+            return jsonify(
+                {
+                    "ok": True,
+                    "afgekeurd": 0,
+                    "melding": "Stem telt weer mee. Uitslag hierboven ververst bij de volgende paginalaad.",
+                }
+            )
         flash("Stem telt weer mee.", "success")
         return redirect(url_for("stemvraag_detail", stemvraag_id=stem["stemvraag_id"]))
 

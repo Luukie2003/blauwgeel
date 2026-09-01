@@ -39,7 +39,7 @@
                     <td class="tekst-zacht" style="word-break:break-all">{{ feed.url }}</td>
                     <td class="tabel-acties">
                         <form method="post" action="{{ url_for('club_agenda_verwijderen', feed_id=feed.id) }}"
-                              onsubmit="return confirm('Deze agenda-link verwijderen?');">
+                              onsubmit="return bevestigEnVerstuur(this, 'Deze agenda-link verwijderen?');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                         </form>

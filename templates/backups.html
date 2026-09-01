@@ -29,7 +29,7 @@
                     <td class="tabel-acties">
                         <a href="{{ url_for('backup_download', bestandsnaam=b.naam) }}" class="btn btn-rand btn-klein">Downloaden</a>
                         <form method="post" action="{{ url_for('backup_herstellen', bestandsnaam=b.naam) }}"
-                              onsubmit="return confirm('Weet je zeker dat je de database wilt terugzetten naar de back-up van {{ b.datum }}?\n\nDe huidige gegevens worden overschreven (er wordt wel automatisch eerst een veiligheidskopie van de huidige staat gemaakt).');">
+                              onsubmit="return bevestigEnVerstuur(this, 'Weet je zeker dat je de database wilt terugzetten naar de back-up van {{ b.datum }}?\n\nDe huidige gegevens worden overschreven (er wordt wel automatisch eerst een veiligheidskopie van de huidige staat gemaakt).');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-gevaar btn-klein">Herstellen</button>
                         </form>

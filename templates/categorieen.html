@@ -28,7 +28,7 @@
     <div class="actiebalk" style="margin-bottom:0.5rem">
         <h3 style="margin:0">{{ c.naam }} <span class="tekst-zacht">({{ c.aantal_producten }} product{{ 'en' if c.aantal_producten != 1 else '' }})</span></h3>
         <form method="post" action="{{ url_for('categorie_verwijderen', categorie_id=c.id) }}"
-              onsubmit="return confirm('Categorie \'{{ c.naam }}\' verwijderen? Dit verwijdert ook de bijbehorende subcategorieën.');">
+              onsubmit="return bevestigEnVerstuur(this, 'Categorie \'{{ c.naam }}\' verwijderen? Dit verwijdert ook de bijbehorende subcategorieën.');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-gevaar btn-klein"
                     {{ 'disabled title="Nog in gebruik bij producten"' if c.aantal_producten > 0 else '' }}>
@@ -37,10 +37,10 @@
         </form>
     </div>
     <form method="post" action="{{ url_for('categorie_verkoopprijs_verplicht_wisselen', categorie_id=c.id) }}"
-          class="inline" style="margin-bottom:0.75rem">
+          class="inline js-ajax-form" style="margin-bottom:0.75rem">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label class="schuif" title="Verkoopprijs verplicht bij producten in deze categorie">
-            <input type="checkbox" {{ 'checked' if c.verkoopprijs_verplicht else '' }} onchange="this.form.submit()">
+            <input type="checkbox" {{ 'checked' if c.verkoopprijs_verplicht else '' }} onchange="this.form.requestSubmit()">
             <span class="schuif-balk"></span>
         </label>
         <span class="tekst-zacht" style="font-size:0.85rem; vertical-align:middle">
@@ -62,7 +62,7 @@
                     <td>{{ s.aantal_producten }}</td>
                     <td>
                         <form method="post" action="{{ url_for('subcategorie_verwijderen', subcategorie_id=s.id) }}"
-                              onsubmit="return confirm('Subcategorie \'{{ s.naam }}\' verwijderen?');">
+                              onsubmit="return bevestigEnVerstuur(this, 'Subcategorie \'{{ s.naam }}\' verwijderen?');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-gevaar btn-klein"
                                     {{ 'disabled title="Nog in gebruik bij producten"' if s.aantal_producten > 0 else '' }}>
