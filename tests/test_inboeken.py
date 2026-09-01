@@ -149,3 +149,96 @@ def test_bestellijst_mengt_geen_regels_tussen_verschillende_bestellingen(ingelog
     assert product_b["naam"] not in kaart_a
     assert product_b["naam"] in kaart_b
     assert product_a["naam"] not in kaart_b
+
+
+def test_bestelling_bewerken_vervangt_aantal(ingelogde_client, db):
+    product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    factor = product["besteleenheid_factor"] or 1
+    _maak_bestelling(ingelogde_client, product["id"], 2)
+    bestelling = db.execute("SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1").fetchone()
+
+    resp = ingelogde_client.post(
+        f"/bestellingen/{bestelling['id']}/bewerken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "referentie": "Aangepaste referentie",
+            f"aantal_{product['id']}": "5",
+        },
+    )
+    assert resp.status_code == 302
+
+    regels = db.execute(
+        "SELECT * FROM bestelregels WHERE bestelling_id = ?", (bestelling["id"],)
+    ).fetchall()
+    assert len(regels) == 1
+    assert regels[0]["aantal_besteld"] == 5 * factor
+
+    bestelling_na = db.execute(
+        "SELECT * FROM bestellingen WHERE id = ?", (bestelling["id"],)
+    ).fetchone()
+    assert bestelling_na["referentie"] == "Aangepaste referentie"
+
+
+def test_bestelling_bewerken_kan_product_wisselen(ingelogde_client, db):
+    producten = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 2").fetchall()
+    product_a, product_b = producten[0], producten[1]
+    _maak_bestelling(ingelogde_client, product_a["id"], 2)
+    bestelling = db.execute("SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1").fetchone()
+
+    resp = ingelogde_client.post(
+        f"/bestellingen/{bestelling['id']}/bewerken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "referentie": "",
+            f"aantal_{product_a['id']}": "",  # weggehaald
+            f"aantal_{product_b['id']}": "3",  # toegevoegd
+        },
+    )
+    assert resp.status_code == 302
+
+    regels = db.execute(
+        "SELECT * FROM bestelregels WHERE bestelling_id = ?", (bestelling["id"],)
+    ).fetchall()
+    product_ids = {r["product_id"] for r in regels}
+    assert product_ids == {product_b["id"]}
+
+
+def test_bestelling_bewerken_op_ontvangen_bestelling_wordt_geweigerd(ingelogde_client, db):
+    product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    _maak_bestelling(ingelogde_client, product["id"], 2)
+    bestelling = db.execute("SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1").fetchone()
+    regel = db.execute(
+        "SELECT * FROM bestelregels WHERE bestelling_id = ?", (bestelling["id"],)
+    ).fetchone()
+    ingelogde_client.post(
+        f"/bestellingen/{bestelling['id']}/inboeken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            f"binnen_{regel['id']}": "on",
+            f"ontvangen_{regel['id']}": "2",
+        },
+    )
+
+    resp = ingelogde_client.post(
+        f"/bestellingen/{bestelling['id']}/bewerken",
+        data={"csrf_token": _csrf(ingelogde_client), f"aantal_{product['id']}": "9"},
+    )
+    assert resp.status_code == 302
+
+    regel_na = db.execute(
+        "SELECT * FROM bestelregels WHERE id = ?", (regel["id"],)
+    ).fetchone()
+    assert regel_na["aantal_besteld"] == regel["aantal_besteld"]  # ongewijzigd
+
+
+def test_bestelling_bewerken_pagina_toont_huidig_aantal(ingelogde_client, db):
+    product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    _maak_bestelling(ingelogde_client, product["id"], 4)
+    bestelling = db.execute("SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1").fetchone()
+
+    resp = ingelogde_client.get(f"/bestellingen/{bestelling['id']}/bewerken")
+    assert resp.status_code == 200
+    body = resp.data.decode()
+    veld_start = body.index(f'name="aantal_{product["id"]}"')
+    veld_html = body[veld_start : veld_start + 200]
+    assert 'value="4"' in veld_html

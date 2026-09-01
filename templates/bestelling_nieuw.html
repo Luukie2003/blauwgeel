@@ -1,21 +1,27 @@
 {% extends "base.html" %}
-{% block titel %}Bestelling klaarzetten{% endblock %}
+{% block titel %}{{ 'Bestelling #%d bewerken'|format(bestelling.id) if bestelling else 'Bestelling klaarzetten' }}{% endblock %}
 {% block inhoud %}
 <div class="actiebalk">
     <p class="subtitel" style="margin:0">
+        {% if bestelling %}
+        Pas de aantallen of de referentie aan en sla op -- de bestelling blijft
+        gewoon 'besteld' totdat je 'm inboekt bij binnenkomst.
+        {% else %}
         Al ergens besteld (telefonisch, via een website) of een factuur op zak?
         Zet 'm hier klaar met de aantallen die je hebt besteld. De voorraad
         wordt pas bijgewerkt zodra je 'm straks inboekt bij binnenkomst.
+        {% endif %}
         <a href="{{ url_for('bestellijst') }}">&larr; Terug naar de bestellijst</a>
     </p>
 </div>
 
 <div class="kaart">
-    <form method="post">
+    <form method="post" action="{{ url_for('bestelling_bewerken', bestelling_id=bestelling.id) if bestelling else url_for('bestelling_nieuw') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="veld" style="max-width:360px; margin-bottom:1rem">
             <label for="referentie">Leverancier / factuurnummer (optioneel)</label>
-            <input type="text" id="referentie" name="referentie" placeholder="Bijv. Robertus factuur 12345">
+            <input type="text" id="referentie" name="referentie" placeholder="Bijv. Robertus factuur 12345"
+                   value="{{ bestelling.referentie or '' if bestelling else '' }}">
         </div>
         <fieldset class="groupbox">
             <legend>Bestelde producten</legend>
@@ -49,7 +55,8 @@
                             <td>{{ p.voorraad }} {{ p.eenheid }}</td>
                             <td>
                                 <input type="number" name="aantal_{{ p.id }}" min="0" style="width:6rem"
-                                       placeholder="overslaan"> {{ p|besteleenheid_naam }}
+                                       placeholder="overslaan"
+                                       value="{{ huidige_aantallen.get(p.id, '') if huidige_aantallen else '' }}"> {{ p|besteleenheid_naam }}
                                 {% if p.besteleenheid_factor > 1 %}
                                 <div class="tekst-zacht" style="font-size:0.72rem">1 {{ p|besteleenheid_naam }} = {{ p.besteleenheid_factor }} {{ p.eenheid }}</div>
                                 {% endif %}
@@ -64,7 +71,7 @@
             <label>Besteld door</label>
             <p class="veld-waarde">{{ huidige_gebruiker }}</p>
         </div>
-        <button type="submit" class="btn btn-geel">Bestelling klaarzetten</button>
+        <button type="submit" class="btn btn-geel">{{ 'Wijzigingen opslaan' if bestelling else 'Bestelling klaarzetten' }}</button>
     </form>
 </div>
 
@@ -90,6 +97,14 @@
 
     zoekVeld.addEventListener('input', filter);
     filter();
+
+    // Voorkomt dat Enter in een aantal-veld het hele formulier per ongeluk
+    // verstuurt voordat alle andere aantallen zijn ingevuld.
+    document.getElementById('bestelling-tabel').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+            e.preventDefault();
+        }
+    });
 })();
 </script>
 {% endblock %}

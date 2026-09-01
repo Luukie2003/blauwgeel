@@ -3423,6 +3423,88 @@ def register_routes(app):
         ).fetchall()
         return render_template("bestelling_nieuw.html", producten=producten)
 
+    @app.route("/bestellingen/<int:bestelling_id>/bewerken", methods=["GET", "POST"])
+    def bestelling_bewerken(bestelling_id):
+        """Past een al klaargezette bestelling aan -- bijv. na een verkeerde
+        klik of gewijzigde aantallen -- zolang hij nog niet is ingeboekt.
+        Vervangt de bestelregels net als bij het aanmaken, i.p.v. losse
+        regels bij te werken, dat blijft zo het simpelst en het meest
+        voorspelbaar."""
+        db = get_db()
+        bestelling = db.execute(
+            "SELECT * FROM bestellingen WHERE id = ?", (bestelling_id,)
+        ).fetchone()
+        if bestelling is None:
+            flash("Bestelling niet gevonden.", "error")
+            return redirect(url_for("bestellijst"))
+        if bestelling["status"] != "besteld":
+            flash("Deze bestelling is al ingeboekt en kan niet meer bewerkt worden.", "error")
+            return redirect(url_for("bestellijst"))
+
+        # Ook inactieve producten meenemen als ze al op deze bestelling
+        # stonden -- anders verdwijnt die regel stilletjes bij het opslaan.
+        producten = db.execute(
+            """SELECT * FROM producten
+               WHERE actief = 1 OR id IN (SELECT product_id FROM bestelregels WHERE bestelling_id = ?)
+               ORDER BY categorie, naam""",
+            (bestelling_id,),
+        ).fetchall()
+
+        if request.method == "POST":
+            referentie = request.form.get("referentie", "").strip()
+            regels = []
+            for p in producten:
+                waarde = request.form.get(f"aantal_{p['id']}", "").strip()
+                if waarde == "":
+                    continue
+                try:
+                    aantal_besteleenheden = int(waarde)
+                except ValueError:
+                    continue
+                if aantal_besteleenheden <= 0:
+                    continue
+                aantal = naar_voorraadeenheden(aantal_besteleenheden, p)
+                if aantal > 0:
+                    regels.append((p["id"], aantal))
+
+            if not regels:
+                flash("Geen aantallen ingevuld: er is niets aangepast.", "error")
+                return redirect(url_for("bestelling_bewerken", bestelling_id=bestelling_id))
+
+            db.execute("DELETE FROM bestelregels WHERE bestelling_id = ?", (bestelling_id,))
+            for product_id, aantal in regels:
+                db.execute(
+                    """INSERT INTO bestelregels (bestelling_id, product_id, aantal_besteld)
+                       VALUES (?, ?, ?)""",
+                    (bestelling_id, product_id, aantal),
+                )
+            db.execute(
+                "UPDATE bestellingen SET referentie = ? WHERE id = ?",
+                (referentie or None, bestelling_id),
+            )
+            db.commit()
+            flash(f"Bestelling #{bestelling_id} bijgewerkt met {len(regels)} product(en).", "success")
+            return redirect(url_for("bestellijst"))
+
+        huidige_regels = db.execute(
+            "SELECT product_id, aantal_besteld FROM bestelregels WHERE bestelling_id = ?",
+            (bestelling_id,),
+        ).fetchall()
+        producten_bij_id = {p["id"]: p for p in producten}
+        huidige_aantallen = {}
+        for regel in huidige_regels:
+            product = producten_bij_id.get(regel["product_id"])
+            if product is None:
+                continue
+            huidige_aantallen[regel["product_id"]] = naar_besteleenheden(regel["aantal_besteld"], product)
+
+        return render_template(
+            "bestelling_nieuw.html",
+            producten=producten,
+            bestelling=bestelling,
+            huidige_aantallen=huidige_aantallen,
+        )
+
     @app.route("/bestellingen/<int:bestelling_id>/inboeken", methods=["GET", "POST"])
     def bestelling_inboeken(bestelling_id):
         db = get_db()

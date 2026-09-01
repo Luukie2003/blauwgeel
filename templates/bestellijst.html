@@ -24,6 +24,7 @@
             </div>
             <div class="tabel-acties">
                 <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-geel btn-klein">Inboeken</a>
+                <a href="{{ url_for('bestelling_bewerken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
                 <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
                       onsubmit="return bevestigEnVerstuur(this, 'Bestelling #{{ b.id }} verwijderen?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
