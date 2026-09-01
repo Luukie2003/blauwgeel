@@ -132,7 +132,19 @@
             }
 
             var naamTd = document.createElement('td');
-            naamTd.textContent = optie.dataset.naam;
+            naamTd.appendChild(document.createTextNode(optie.dataset.naam + ' '));
+            var verwijderKnop = document.createElement('button');
+            verwijderKnop.type = 'button';
+            verwijderKnop.className = 'btn-tekstlink';
+            verwijderKnop.style.fontSize = '0.78rem';
+            verwijderKnop.textContent = 'Verwijderen';
+            verwijderKnop.addEventListener('click', function () {
+                rij.remove();
+                optie.selected = false;
+                select.insertBefore(optie, select.options[1] || null);
+                select.value = '';
+            });
+            naamTd.appendChild(verwijderKnop);
 
             var voorraadTd = document.createElement('td');
             voorraadTd.textContent = optie.dataset.voorraad;
