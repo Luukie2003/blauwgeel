@@ -588,6 +588,16 @@ def vind_gebruiker_bij_token(db, token):
     return gebruiker
 
 
+def veilig_redirect_pad(pad, fallback):
+    """Voorkomt een open redirect via de 'next'-parameter na het inloggen:
+    alleen een pad op de eigen site wordt geaccepteerd. //evil.nl en
+    /\\evil.nl worden door sommige browsers als protocol-relatieve URL naar
+    een externe site geïnterpreteerd, dus die worden expliciet geweigerd."""
+    if not pad or not pad.startswith("/") or pad.startswith("//") or pad.startswith("/\\"):
+        return fallback
+    return pad
+
+
 def besteleenheid_naam(product):
     return product["besteleenheid"] or product["eenheid"]
 
@@ -744,6 +754,26 @@ def bestel_suggesties(db):
         ).fetchall()
         if p["id"] not in product_ids_in_open_bestelling
     ]
+
+
+def regels_per_bestelling(db, bestelling_ids):
+    """Haalt de bestelregels voor meerdere bestellingen in één query op,
+    gegroepeerd per bestelling_id -- voorkomt een aparte query per
+    bestelling in een loop (bestellijst() toont dit al snel voor tien-tallen
+    bestellingen tegelijk)."""
+    if not bestelling_ids:
+        return {}
+    placeholders = ",".join("?" * len(bestelling_ids))
+    per_bestelling = {}
+    for regel in db.execute(
+        f"""SELECT br.*, p.naam AS product_naam, p.eenheid,
+                   p.besteleenheid, p.besteleenheid_factor
+            FROM bestelregels br JOIN producten p ON p.id = br.product_id
+            WHERE br.bestelling_id IN ({placeholders})""",
+        bestelling_ids,
+    ).fetchall():
+        per_bestelling.setdefault(regel["bestelling_id"], []).append(regel)
+    return per_bestelling
 
 
 def bereken_week_overzicht(db, vandaag=None):
@@ -1234,7 +1264,7 @@ def register_routes(app):
                     (now_str(), gebruiker["id"]),
                 )
                 db.commit()
-                volgende = request.args.get("next") or url_for("dashboard")
+                volgende = veilig_redirect_pad(request.args.get("next"), url_for("dashboard"))
                 return redirect(volgende)
 
             nieuw_aantal = mislukte_pogingen + 1
@@ -3049,31 +3079,19 @@ def register_routes(app):
         open_bestellingen = db.execute(
             "SELECT * FROM bestellingen WHERE status = 'besteld' ORDER BY id DESC"
         ).fetchall()
-        open_bestellingen_met_regels = []
-        for b in open_bestellingen:
-            regels = db.execute(
-                """SELECT br.*, p.naam AS product_naam, p.eenheid,
-                          p.besteleenheid, p.besteleenheid_factor
-                   FROM bestelregels br JOIN producten p ON p.id = br.product_id
-                   WHERE br.bestelling_id = ?""",
-                (b["id"],),
-            ).fetchall()
-            open_bestellingen_met_regels.append((b, regels))
-
         recent_ontvangen = db.execute(
             """SELECT * FROM bestellingen WHERE status = 'ontvangen'
                ORDER BY id DESC LIMIT 5"""
         ).fetchall()
-        recent_ontvangen_met_regels = []
-        for b in recent_ontvangen:
-            regels = db.execute(
-                """SELECT br.*, p.naam AS product_naam, p.eenheid,
-                          p.besteleenheid, p.besteleenheid_factor
-                   FROM bestelregels br JOIN producten p ON p.id = br.product_id
-                   WHERE br.bestelling_id = ?""",
-                (b["id"],),
-            ).fetchall()
-            recent_ontvangen_met_regels.append((b, regels))
+        regels_per_id = regels_per_bestelling(
+            db, [b["id"] for b in open_bestellingen] + [b["id"] for b in recent_ontvangen]
+        )
+        open_bestellingen_met_regels = [
+            (b, regels_per_id.get(b["id"], [])) for b in open_bestellingen
+        ]
+        recent_ontvangen_met_regels = [
+            (b, regels_per_id.get(b["id"], [])) for b in recent_ontvangen
+        ]
 
         return render_template(
             "bestellijst.html",
@@ -3735,22 +3753,47 @@ def register_routes(app):
     @app.route("/stem")
     def stem_overzicht_publiek():
         db = get_db()
-        stemmingen = []
-        for v in db.execute("SELECT * FROM stemvragen ORDER BY aangemaakt_op DESC").fetchall():
-            opties = db.execute(
-                """SELECT so.*,
-                          (SELECT COUNT(*) FROM stemmen s WHERE s.stemoptie_id = so.id AND s.afgekeurd = 0) AS aantal
-                   FROM stemopties so WHERE so.stemvraag_id = ? ORDER BY so.volgorde""",
-                (v["id"],),
-            ).fetchall()
-            stemmingen.append(
-                {
-                    "vraag": v,
-                    "open": stemming_is_open(v),
-                    "opties": opties,
-                    "totaal_stemmers": tel_stemmers(db, v["id"]),
-                }
-            )
+        stemvragen = db.execute(
+            "SELECT * FROM stemvragen ORDER BY aangemaakt_op DESC"
+        ).fetchall()
+        stemvraag_ids = [v["id"] for v in stemvragen]
+
+        # Eén query voor de opties + één voor de stemmersaantallen, i.p.v.
+        # twee aparte queries per stemvraag -- deze pagina is publiek (geen
+        # login nodig, bereikbaar via de QR-code) en groeit met elke
+        # stemming die de club ooit organiseert.
+        opties_per_vraag = {}
+        stemmers_per_vraag = {}
+        if stemvraag_ids:
+            placeholders = ",".join("?" * len(stemvraag_ids))
+            for regel in db.execute(
+                f"""SELECT so.*,
+                           (SELECT COUNT(*) FROM stemmen s WHERE s.stemoptie_id = so.id AND s.afgekeurd = 0) AS aantal
+                    FROM stemopties so
+                    WHERE so.stemvraag_id IN ({placeholders})
+                    ORDER BY so.volgorde""",
+                stemvraag_ids,
+            ).fetchall():
+                opties_per_vraag.setdefault(regel["stemvraag_id"], []).append(regel)
+
+            for regel in db.execute(
+                f"""SELECT stemvraag_id, COUNT(DISTINCT kiezer_sleutel) AS n
+                    FROM stemmen
+                    WHERE afgekeurd = 0 AND stemvraag_id IN ({placeholders})
+                    GROUP BY stemvraag_id""",
+                stemvraag_ids,
+            ).fetchall():
+                stemmers_per_vraag[regel["stemvraag_id"]] = regel["n"]
+
+        stemmingen = [
+            {
+                "vraag": v,
+                "open": stemming_is_open(v),
+                "opties": opties_per_vraag.get(v["id"], []),
+                "totaal_stemmers": stemmers_per_vraag.get(v["id"], 0),
+            }
+            for v in stemvragen
+        ]
         return render_template("stem_overzicht_publiek.html", stemmingen=stemmingen)
 
     @app.route("/stem/<int:stemvraag_id>", methods=["GET", "POST"])
@@ -4119,11 +4162,14 @@ def register_routes(app):
         db = get_db()
         kassa_stand = bereken_kassa_stand(db)
 
+        # Zelfde begrenzing als het gewone mutatie-overzicht (geschiedenis()):
+        # zonder LIMIT blijft dit onbeperkt meegroeien met elke kassatelling
+        # en elke afdracht/toevoeging ooit geboekt.
         tellingen = db.execute(
-            "SELECT * FROM kassa_tellingen ORDER BY datum DESC, id DESC"
+            "SELECT * FROM kassa_tellingen ORDER BY datum DESC, id DESC LIMIT 200"
         ).fetchall()
         mutaties = db.execute(
-            "SELECT * FROM kassa_mutaties ORDER BY datum DESC, id DESC"
+            "SELECT * FROM kassa_mutaties ORDER BY datum DESC, id DESC LIMIT 200"
         ).fetchall()
 
         tijdlijn = [{"soort": "telling", "datum": t["datum"], "item": t} for t in tellingen]

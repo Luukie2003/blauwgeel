@@ -1,3 +1,5 @@
+import re
+
 from app import bereken_kassa_stand
 from conftest import stel_csrf_token_in as _csrf
 
@@ -216,3 +218,22 @@ class TestKassaZelfGoedkeuren:
         resp = ingelogde_client.get(f"/kassa/tellingen/{telling_id}")
         assert "goedkeurder".encode() in resp.data
         assert "Coupures dubbel gecheckt".encode() in resp.data
+
+
+def test_kassa_geschiedenis_begrenst_lange_lijst(ingelogde_client, db):
+    """Regressietest voor de LIMIT op kassa_geschiedenis(): zonder begrenzing
+    groeit de tijdlijn onbeperkt mee met elke kassatelling ooit."""
+    for i in range(205):
+        db.execute(
+            "INSERT INTO kassa_tellingen (datum, geteld_bedrag, afgesloten) VALUES (?, 0, 1)",
+            (f"2020-01-{(i % 28) + 1:02d} 12:{i % 60:02d}",),
+        )
+    db.commit()
+    laatste_telling = db.execute(
+        "SELECT id FROM kassa_tellingen ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+
+    resp = ingelogde_client.get("/kassa/geschiedenis")
+    gevonden_ids = set(re.findall(r"/kassa/tellingen/(\d+)\"", resp.data.decode()))
+    assert len(gevonden_ids) <= 200
+    assert str(laatste_telling["id"]) in gevonden_ids

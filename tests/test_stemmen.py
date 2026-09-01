@@ -447,6 +447,42 @@ def test_publiek_overzicht_zonder_login_bereikbaar(client, db):
     assert resp.status_code == 200
 
 
+def test_publiek_overzicht_mengt_geen_opties_of_scores_tussen_stemmingen(ingelogde_client, db):
+    """Regressietest voor de query-batching in stem_overzicht_publiek(): bij
+    meerdere gesloten stemmingen tegelijk moet elke stemming zijn eigen
+    opties en percentages tonen, niet die van een andere stemming."""
+    eerste_id = _maak_stemvraag(ingelogde_client, titel="Bier peiling", opties=("Pils", "Weizen"))
+    eerste_opties = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde", (eerste_id,)
+    ).fetchall()
+    _stem(ingelogde_client, eerste_id, eerste_opties[0]["id"], naam="Stemmer Een")
+
+    tweede_id = _maak_stemvraag(ingelogde_client, titel="Snack peiling", opties=("Bitterbal", "Kaassoufflé"))
+    tweede_opties = db.execute(
+        "SELECT * FROM stemopties WHERE stemvraag_id = ? ORDER BY volgorde", (tweede_id,)
+    ).fetchall()
+    _stem(ingelogde_client, tweede_id, tweede_opties[1]["id"], naam="Stemmer Twee")
+
+    for vraag_id in (eerste_id, tweede_id):
+        ingelogde_client.post(
+            f"/stemmen/{vraag_id}/sluiten", data={"csrf_token": _csrf(ingelogde_client)}
+        )
+
+    body = ingelogde_client.get("/stem").data.decode()
+    bier_start = body.index("Bier peiling")
+    snack_start = body.index("Snack peiling")
+    bier_kaart = body[bier_start:snack_start] if bier_start < snack_start else body[bier_start:]
+    snack_kaart = body[snack_start:bier_start] if snack_start < bier_start else body[snack_start:]
+
+    assert "Pils" in bier_kaart and "Weizen" in bier_kaart
+    assert "Bitterbal" not in bier_kaart and "Kaassoufflé" not in bier_kaart
+    assert "100%" in bier_kaart  # 1 stem, allemaal op Pils
+
+    assert "Bitterbal" in snack_kaart and "Kaassoufflé" in snack_kaart
+    assert "Pils" not in snack_kaart and "Weizen" not in snack_kaart
+    assert "100%" in snack_kaart  # 1 stem, op Kaassoufflé
+
+
 def test_uitslag_wordt_verborgen_als_toon_uitslag_uit_staat(ingelogde_client, db):
     stemvraag_id = _maak_stemvraag(ingelogde_client)  # geen toon_uitslag meegegeven -> uit
     optie = db.execute(

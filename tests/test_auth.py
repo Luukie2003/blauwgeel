@@ -78,3 +78,39 @@ def test_csrf_mismatch_stuurt_terug_naar_verwijzende_pagina(ingelogde_client):
     )
     assert resp.status_code == 302
     assert resp.headers["Location"] == "http://localhost/bijzonderheden"
+
+
+def test_next_naar_extern_domein_wordt_genegeerd(client, csrf):
+    resp = client.post(
+        "/login?next=https://kwaadaardig.voorbeeld/phish",
+        data={"naam": "admin", "wachtwoord": "kantine123", "csrf_token": csrf},
+    )
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/"
+
+
+def test_next_protocol_relatief_wordt_genegeerd(client, csrf):
+    resp = client.post(
+        "/login?next=//kwaadaardig.voorbeeld",
+        data={"naam": "admin", "wachtwoord": "kantine123", "csrf_token": csrf},
+    )
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/"
+
+
+def test_next_backslash_variant_wordt_genegeerd(client, csrf):
+    resp = client.post(
+        "/login?next=/\\kwaadaardig.voorbeeld",
+        data={"naam": "admin", "wachtwoord": "kantine123", "csrf_token": csrf},
+    )
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/"
+
+
+def test_next_naar_geldig_intern_pad_werkt_nog(client, csrf):
+    resp = client.post(
+        "/login?next=/producten",
+        data={"naam": "admin", "wachtwoord": "kantine123", "csrf_token": csrf},
+    )
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/producten"

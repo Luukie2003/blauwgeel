@@ -122,3 +122,30 @@ def test_inboeken_pagina_toont_alleen_niet_bestelde_producten_als_toevoegoptie(i
     select_html = body.split('id="nieuw-product-select"')[1].split("</select>")[0]
     # Het reeds bestelde product hoort niet nogmaals in de "extra toevoegen"-select te staan.
     assert besteld_product["naam"] not in select_html
+
+
+def test_bestellijst_mengt_geen_regels_tussen_verschillende_bestellingen(ingelogde_client, db):
+    """Regressietest voor de query-batching in bestellijst(): bij meerdere
+    open bestellingen tegelijk moet elke bestelling zijn eigen productregels
+    tonen, niet die van een andere bestelling."""
+    producten = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 2").fetchall()
+    product_a, product_b = producten[0], producten[1]
+
+    _maak_bestelling(ingelogde_client, product_a["id"], 2)
+    bestelling_a = db.execute("SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1").fetchone()
+    _maak_bestelling(ingelogde_client, product_b["id"], 4)
+    bestelling_b = db.execute("SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1").fetchone()
+
+    body = ingelogde_client.get("/bestellijst").data.decode()
+    # <strong>-tag i.p.v. platte tekst zoeken, want "Bestelling #N" komt ook
+    # voor in de (opgestapelde) flash-meldingen van de twee aanmaak-POSTs.
+    kop_a = f"<strong>Bestelling #{bestelling_a['id']}</strong>"
+    kop_b = f"<strong>Bestelling #{bestelling_b['id']}</strong>"
+    start_a, start_b = body.index(kop_a), body.index(kop_b)
+    kaart_a = body[start_a:start_b] if start_a < start_b else body[start_a:]
+    kaart_b = body[start_b:start_a] if start_b < start_a else body[start_b:]
+
+    assert product_a["naam"] in kaart_a
+    assert product_b["naam"] not in kaart_a
+    assert product_b["naam"] in kaart_b
+    assert product_a["naam"] not in kaart_b
