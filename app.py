@@ -3284,6 +3284,27 @@ def register_routes(app):
 
         suggesties = bestel_suggesties(db)
 
+        # Producten die je zelf kunt toevoegen aan de "voorgesteld"-bestelling
+        # (bijv. iets dat nog niet krap is, maar toch meebesteld moet worden).
+        # Producten die al voorgesteld zijn of al op een openstaande bestelling
+        # staan, hoeven hier niet nogmaals in de keuzelijst.
+        suggestie_ids = {p["id"] for p in suggesties}
+        product_ids_in_open_bestelling = {
+            row["product_id"]
+            for row in db.execute(
+                """SELECT br.product_id FROM bestelregels br
+                   JOIN bestellingen b ON b.id = br.bestelling_id
+                   WHERE b.status = 'besteld'"""
+            ).fetchall()
+        }
+        overige_producten = [
+            p
+            for p in db.execute(
+                "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
+            ).fetchall()
+            if p["id"] not in suggestie_ids and p["id"] not in product_ids_in_open_bestelling
+        ]
+
         open_bestellingen = db.execute(
             "SELECT * FROM bestellingen WHERE status = 'besteld' ORDER BY id DESC"
         ).fetchall()
@@ -3304,6 +3325,7 @@ def register_routes(app):
         return render_template(
             "bestellijst.html",
             suggesties=suggesties,
+            overige_producten=overige_producten,
             voorspelde_tekorten=bereken_voorspelde_tekorten(db),
             open_bestellingen=open_bestellingen_met_regels,
             recent_ontvangen=recent_ontvangen_met_regels,

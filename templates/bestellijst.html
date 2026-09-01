@@ -47,11 +47,11 @@
 
 <div class="kaart">
     <h2>Voorgesteld om te bestellen</h2>
-    {% if suggesties %}
+    {% if suggesties or overige_producten %}
     <form method="post" action="{{ url_for('bestelling_aanmaken') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="tabel-wrap">
-            <table>
+            <table id="suggesties-tabel">
                 <thead>
                     <tr><th></th><th></th><th>Product</th><th>Voorraad</th><th>Minimum</th><th>Aantal bestellen</th></tr>
                 </thead>
@@ -66,7 +66,7 @@
                             <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
                             {% endif %}
                         </td>
-                        <td>{{ p.naam }}</td>
+                        <td>{{ p.naam }} <span class="badge badge-neutraal">Voorgesteld</span></td>
                         <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
                         <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
                         <td>
@@ -82,12 +82,93 @@
                 </tbody>
             </table>
         </div>
+        {% if overige_producten %}
+        <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.8rem">
+            <select id="extra-product-select">
+                <option value="">+ Ander product toevoegen...</option>
+                {% for p in overige_producten %}
+                <option value="{{ p.id }}" data-naam="{{ p.naam }}" data-afbeelding="{{ p.afbeelding or '' }}"
+                        data-voorraad="{{ p.voorraad }} {{ p.eenheid }}" data-minimum="{{ p.min_voorraad }} {{ p.eenheid }}"
+                        data-besteleenheid="{{ p|besteleenheid_naam }}" data-factor="{{ p.besteleenheid_factor }}"
+                        data-eenheid="{{ p.eenheid }}">{{ p.naam }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" id="extra-product-toevoegen-knop" class="btn btn-rand btn-klein">Toevoegen</button>
+        </div>
+        {% endif %}
         <div class="veld" style="max-width:300px; margin-top:1rem">
             <label>Besteld door</label>
             <p class="veld-waarde">{{ huidige_gebruiker }}</p>
         </div>
         <button type="submit" class="btn btn-geel">Bestelling aanmaken</button>
     </form>
+    <script>
+    (function () {
+        var tabel = document.getElementById('suggesties-tabel');
+        var select = document.getElementById('extra-product-select');
+        var knop = document.getElementById('extra-product-toevoegen-knop');
+        if (!tabel || !select || !knop) return;
+
+        knop.addEventListener('click', function () {
+            var optie = select.options[select.selectedIndex];
+            if (!optie || !optie.value) return;
+            var rij = document.createElement('tr');
+
+            var vinkjeTd = document.createElement('td');
+            var vinkje = document.createElement('input');
+            vinkje.type = 'checkbox';
+            vinkje.name = 'product_id';
+            vinkje.value = optie.value;
+            vinkje.checked = true;
+            vinkjeTd.appendChild(vinkje);
+
+            var thumbTd = document.createElement('td');
+            if (optie.dataset.afbeelding) {
+                var img = document.createElement('img');
+                img.src = '/static/product_afbeeldingen/' + optie.dataset.afbeelding;
+                img.alt = '';
+                img.className = 'product-thumb';
+                thumbTd.appendChild(img);
+            }
+
+            var naamTd = document.createElement('td');
+            naamTd.textContent = optie.dataset.naam;
+
+            var voorraadTd = document.createElement('td');
+            voorraadTd.textContent = optie.dataset.voorraad;
+
+            var minimumTd = document.createElement('td');
+            minimumTd.textContent = optie.dataset.minimum;
+
+            var aantalTd = document.createElement('td');
+            var aantalInput = document.createElement('input');
+            aantalInput.type = 'number';
+            aantalInput.name = 'aantal_' + optie.value;
+            aantalInput.min = '0';
+            aantalInput.value = '1';
+            aantalInput.style.width = '6rem';
+            aantalTd.appendChild(aantalInput);
+            aantalTd.appendChild(document.createTextNode(' ' + optie.dataset.besteleenheid));
+            if (parseInt(optie.dataset.factor, 10) > 1) {
+                var hint = document.createElement('div');
+                hint.className = 'tekst-zacht';
+                hint.style.fontSize = '0.72rem';
+                hint.textContent = '= ' + optie.dataset.factor + ' ' + optie.dataset.eenheid;
+                aantalTd.appendChild(hint);
+            }
+
+            rij.appendChild(vinkjeTd);
+            rij.appendChild(thumbTd);
+            rij.appendChild(naamTd);
+            rij.appendChild(voorraadTd);
+            rij.appendChild(minimumTd);
+            rij.appendChild(aantalTd);
+            tabel.querySelector('tbody').appendChild(rij);
+            optie.remove();
+            select.value = '';
+        });
+    })();
+    </script>
     {% else %}
     <p class="leeg">Niets nodig — alle voorraad zit boven het minimum.</p>
     {% endif %}

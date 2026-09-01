@@ -242,3 +242,60 @@ def test_bestelling_bewerken_pagina_toont_huidig_aantal(ingelogde_client, db):
     veld_start = body.index(f'name="aantal_{product["id"]}"')
     veld_html = body[veld_start : veld_start + 200]
     assert 'value="4"' in veld_html
+
+
+def _maak_testproduct(db, naam, voorraad, min_voorraad):
+    db.execute(
+        """INSERT INTO producten (naam, categorie, eenheid, voorraad, min_voorraad, besteleenheid_factor, actief)
+           VALUES (?, 'Test', 'Stuks', ?, ?, 1, 1)""",
+        (naam, voorraad, min_voorraad),
+    )
+    db.commit()
+    return db.execute("SELECT * FROM producten WHERE naam = ?", (naam,)).fetchone()
+
+
+def test_bestellijst_toont_voorgesteld_label_alleen_bij_krappe_producten(ingelogde_client, db):
+    _maak_testproduct(db, "Laag Testproduct", voorraad=1, min_voorraad=10)
+    _maak_testproduct(db, "Normaal Testproduct", voorraad=50, min_voorraad=10)
+
+    body = ingelogde_client.get("/bestellijst").data.decode()
+
+    laag_start = body.index("Laag Testproduct")
+    assert "Voorgesteld" in body[laag_start : laag_start + 150]
+
+    # Niet-krap product hoort wel in de "zelf toevoegen"-keuzelijst te staan...
+    assert 'data-naam="Normaal Testproduct"' in body
+    # ...maar nergens met het "Voorgesteld"-label.
+    normaal_start = body.index("Normaal Testproduct")
+    assert "Voorgesteld" not in body[normaal_start : normaal_start + 150]
+
+
+def test_overige_producten_sluit_al_openstaand_besteld_product_uit(ingelogde_client, db):
+    product = _maak_testproduct(db, "Al Besteld Testproduct", voorraad=50, min_voorraad=10)
+    _maak_bestelling(ingelogde_client, product["id"], 1)
+
+    body = ingelogde_client.get("/bestellijst").data.decode()
+    assert 'data-naam="Al Besteld Testproduct"' not in body
+
+
+def test_bestelling_aanmaken_mixt_voorgesteld_en_zelf_toegevoegd_product(ingelogde_client, db):
+    laag = _maak_testproduct(db, "Laag Testproduct 2", voorraad=1, min_voorraad=10)
+    zelf = _maak_testproduct(db, "Zelf Toegevoegd Testproduct", voorraad=50, min_voorraad=10)
+
+    resp = ingelogde_client.post(
+        "/bestellijst/aanmaken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "product_id": [str(laag["id"]), str(zelf["id"])],
+            f"aantal_{laag['id']}": "3",
+            f"aantal_{zelf['id']}": "2",
+        },
+    )
+    assert resp.status_code == 302
+
+    bestelling = db.execute("SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1").fetchone()
+    regels = db.execute(
+        "SELECT * FROM bestelregels WHERE bestelling_id = ?", (bestelling["id"],)
+    ).fetchall()
+    product_ids = {r["product_id"] for r in regels}
+    assert product_ids == {laag["id"], zelf["id"]}
