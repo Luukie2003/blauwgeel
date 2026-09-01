@@ -271,12 +271,6 @@ NAV_ITEMS = [
         "label": "Verkooprapport",
     },
     {
-        "groep": "Algemeen",
-        "endpoints": ["fusten_overzicht"],
-        "url_endpoint": "fusten_overzicht",
-        "label": "Fusten",
-    },
-    {
         "groep": "Voorraad",
         "endpoints": ["voorraadoverzicht"],
         "url_endpoint": "voorraadoverzicht",
@@ -329,6 +323,12 @@ NAV_ITEMS = [
         "endpoints": ["bestellijst", "bestelling_aanmaken", "bestelling_nieuw", "bestelling_inboeken"],
         "url_endpoint": "bestellijst",
         "label": "Bestellijst",
+    },
+    {
+        "groep": "Voorraad",
+        "endpoints": ["fusten_overzicht"],
+        "url_endpoint": "fusten_overzicht",
+        "label": "Fusten",
     },
     {
         "groep": "Kassa",
