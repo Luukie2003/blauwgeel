@@ -1006,6 +1006,27 @@ footer {
     font-size: 0.95rem;
 }
 
+.loop-offline-melding {
+    background: var(--rood-bg);
+    color: var(--rood);
+    border: 1px solid #e6b3b3;
+    border-radius: var(--radius);
+    padding: 0.8rem 1rem;
+    margin-bottom: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+}
+
+.loop-offline-melding[hidden] {
+    display: none;
+}
+
+.loop-offline-melding p {
+    margin: 0;
+}
+
 .loop-knoppen {
     display: flex;
     gap: 0.6rem;

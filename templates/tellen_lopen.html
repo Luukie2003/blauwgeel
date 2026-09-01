@@ -24,22 +24,28 @@
     <p class="tekst-zacht">Bar geteld: {{ bar_waarde_hint if bar_waarde_hint else '—' }} {{ product.eenheid }}</p>
     {% endif %}
 
-    <form method="post" id="loop-formulier">
+    <form method="post" id="loop-formulier" data-product-id="{{ product.id }}" data-fase="{{ fase }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="number" name="geteld" id="loop-invoer" inputmode="numeric" min="0"
                class="loop-invoer" placeholder="Aantal {{ product.eenheid }}"
                value="{{ huidige_waarde }}" autofocus>
 
         <div class="loop-snelknoppen">
-            <button type="button" class="btn btn-rand loop-snelknop" onclick="loopAanpassen(0, true)">0</button>
+            <button type="button" class="btn btn-rand loop-snelknop" onclick="loopNulEnVolgende()">0</button>
             <button type="button" class="btn btn-rand loop-snelknop" onclick="loopAanpassen(-1)">−1</button>
             <button type="button" class="btn btn-rand loop-snelknop" onclick="loopAanpassen(1)">+1</button>
+            <button type="button" class="btn btn-rand loop-snelknop" onclick="loopAanpassen(2)">+2</button>
             {% if product.besteleenheid_factor and product.besteleenheid_factor > 1 %}
             <button type="button" class="btn btn-rand loop-snelknop loop-snelknop-breed"
                     onclick="loopAanpassen({{ product.besteleenheid_factor }})">
                 +1 {{ product|besteleenheid_naam }} ({{ product.besteleenheid_factor }})
             </button>
             {% endif %}
+        </div>
+
+        <div id="loop-offline-melding" class="loop-offline-melding" hidden>
+            <p>Geen verbinding. Je ingevoerde aantal is niet kwijt &mdash; probeer het opnieuw zodra je weer bereik hebt.</p>
+            <button type="button" class="btn btn-rand btn-klein" onclick="loopStapVersturen()">Probeer opnieuw</button>
         </div>
 
         <div class="loop-knoppen">
@@ -72,6 +78,118 @@ function loopAanpassen(delta, isReset) {
     if (isNaN(huidig)) huidig = 0;
     veld.value = isReset ? 0 : Math.max(0, huidig + delta);
     veld.focus();
+    loopBackupBewaren();
 }
+
+function loopNulEnVolgende() {
+    var veld = document.getElementById('loop-invoer');
+    veld.value = 0;
+    var form = document.getElementById('loop-formulier');
+    form.requestSubmit(form.querySelector('button[name="actie"][value="volgende"]'));
+}
+
+// ---------- Lokale back-up van het getypte aantal ----------
+// Puur een extra vangnet: als iemand het opgeeft na de "geen verbinding"-
+// melding en de pagina sluit voordat een stap is gelukt, staat het laatst
+// getypte aantal er bij een volgend bezoek aan ditzelfde product weer.
+var LOOP_BACKUP_SLEUTEL = 'kantine-loop-backup';
+
+function loopBackupBewaren() {
+    var form = document.getElementById('loop-formulier');
+    var veld = document.getElementById('loop-invoer');
+    if (!form || !veld) return;
+    try {
+        localStorage.setItem(LOOP_BACKUP_SLEUTEL, JSON.stringify({
+            productId: form.dataset.productId,
+            fase: form.dataset.fase,
+            waarde: veld.value
+        }));
+    } catch (e) { /* privénavigatie o.i.d. -- back-up is optioneel */ }
+}
+
+function loopBackupHerstellen() {
+    var form = document.getElementById('loop-formulier');
+    var veld = document.getElementById('loop-invoer');
+    if (!form || !veld || veld.value !== '') return;
+    try {
+        var opgeslagen = JSON.parse(localStorage.getItem(LOOP_BACKUP_SLEUTEL) || 'null');
+        if (opgeslagen && opgeslagen.productId === form.dataset.productId && opgeslagen.fase === form.dataset.fase) {
+            veld.value = opgeslagen.waarde;
+        }
+    } catch (e) { /* corrupte back-up negeren */ }
+}
+
+// ---------- Een stap versturen via fetch i.p.v. een gewone paginaherlaad ----------
+// Bij een wegvallende verbinding (bijv. slecht bereik in het voorraadhok)
+// gooit fetch een fout i.p.v. de hele pagina te vervangen door een kale
+// browserfoutmelding -- zo blijft het net getypte aantal gewoon staan en
+// kan de teller het opnieuw proberen zodra er weer bereik is. Bij succes
+// wordt alleen de inhoud ververst (niet de hele pagina), want de fetch heeft
+// het nieuwe scherm al in huis.
+var loopLaatsteFormData = null;
+var loopVersturenBezig = false;
+var loopNieuweUrl = null;
+
+function loopStapVersturen() {
+    if (!loopLaatsteFormData || loopVersturenBezig) return;
+    loopVersturenBezig = true;
+    var melding = document.getElementById('loop-offline-melding');
+    if (melding) melding.hidden = true;
+
+    fetch(window.location.pathname, { method: 'POST', body: loopLaatsteFormData })
+        .then(function (resp) {
+            if (!resp.ok) throw new Error('serverfout');
+            loopNieuweUrl = resp.url;
+            return resp.text();
+        })
+        .then(function (html) {
+            localStorage.removeItem(LOOP_BACKUP_SLEUTEL);
+            var nieuwDoc = new DOMParser().parseFromString(html, 'text/html');
+            var nieuweInhoud = nieuwDoc.querySelector('.venster-inhoud');
+            var huidigeInhoud = document.querySelector('.venster-inhoud');
+            if (nieuweInhoud && huidigeInhoud) {
+                huidigeInhoud.innerHTML = nieuweInhoud.innerHTML;
+                document.title = nieuwDoc.title;
+                // Adresbalk meenemen naar het nieuwe scherm, zodat een
+                // handmatige paginaherlaad (of gedeelde link) niet per
+                // ongeluk weer bij de tellijst uitkomt terwijl je al op het
+                // controlescherm staat.
+                if (loopNieuweUrl && loopNieuweUrl !== window.location.href) {
+                    window.history.replaceState(null, '', loopNieuweUrl);
+                }
+                window.scrollTo(0, 0);
+                loopBackupHerstellen();
+                var nieuwVeld = document.getElementById('loop-invoer');
+                if (nieuwVeld) nieuwVeld.focus();
+            } else {
+                window.location.reload();
+            }
+        })
+        .catch(function () {
+            var m = document.getElementById('loop-offline-melding');
+            if (m) m.hidden = false;
+        })
+        .finally(function () {
+            loopVersturenBezig = false;
+        });
+}
+
+document.addEventListener('submit', function (e) {
+    var form = e.target.closest('#loop-formulier');
+    if (!form) return;
+    e.preventDefault();
+    var data = new FormData(form);
+    if (e.submitter && e.submitter.name) {
+        data.set(e.submitter.name, e.submitter.value);
+    }
+    loopLaatsteFormData = data;
+    loopStapVersturen();
+});
+
+document.addEventListener('input', function (e) {
+    if (e.target && e.target.id === 'loop-invoer') loopBackupBewaren();
+});
+
+loopBackupHerstellen();
 </script>
 {% endblock %}
