@@ -102,6 +102,8 @@ KOLOM_MIGRATIES = [
     ("producten", "afbeelding", "TEXT"),
     ("bestelregels", "manco", "INTEGER NOT NULL DEFAULT 0"),
     ("categorieen", "verkoopprijs_verplicht", "INTEGER NOT NULL DEFAULT 1"),
+    ("producten", "glazen_per_fust", "INTEGER NOT NULL DEFAULT 0"),
+    ("producten", "prijs_per_glas", "REAL NOT NULL DEFAULT 0"),
 ]
 
 

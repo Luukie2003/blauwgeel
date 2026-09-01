@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block titel %}Fusten{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Waarschijnlijke verkoop per fust, afgeleid uit de voorraadtellingen. Fusten
+    worden per glas getapt, dus dit is een schatting op basis van glazen per
+    fust &mdash; geen exacte tapregistratie.
+</p>
+
+{% if not fust_producten %}
+<div class="kaart">
+    <p class="leeg">
+        Nog geen enkel product ingesteld als fust. Vul bij een product
+        <a href="{{ url_for('producten_lijst') }}">"Glazen per fust"</a> in om
+        'm hier te laten meetellen.
+    </p>
+</div>
+{% else %}
+<div class="kaart">
+    <h2>Ingestelde fusten</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Product</th><th>Voorraad</th><th>Glazen per fust</th><th>Prijs per glas</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for p in fust_producten %}
+                <tr>
+                    <td>{{ p.naam }}</td>
+                    <td>{{ p.voorraad }} {{ p.eenheid }}</td>
+                    <td>{{ p.glazen_per_fust }}</td>
+                    <td>€ {{ '%.2f'|format(p.prijs_per_glas) }}</td>
+                    <td><a href="{{ url_for('product_bewerken', product_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="statgrid">
+    <div class="stat">
+        <div class="getal">{{ fust_verkopen.totaal_fusten }}</div>
+        <div class="label">Fusten leeg (laatste {{ fust_verkopen.gebeurtenissen|length }} tellingen)</div>
+    </div>
+    <div class="stat">
+        <div class="getal">{{ fust_verkopen.totaal_glazen }}</div>
+        <div class="label">Waarschijnlijk aantal glazen</div>
+    </div>
+    <div class="stat">
+        <div class="getal">€ {{ '%.2f'|format(fust_verkopen.totaal_bedrag) }}</div>
+        <div class="label">Waarschijnlijke omzet</div>
+    </div>
+</div>
+
+<div class="kaart">
+    <h2>Waarschijnlijke verkopen</h2>
+    {% if fust_verkopen.gebeurtenissen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum (telling)</th><th>Fust</th><th>Aantal leeg</th><th>Glazen (schatting)</th><th>Bedrag (schatting)</th></tr>
+            </thead>
+            <tbody>
+                {% for g in fust_verkopen.gebeurtenissen %}
+                <tr>
+                    <td>{{ g.datum|datum_nl }}</td>
+                    <td>{{ g.product_naam }}</td>
+                    <td>{{ g.aantal_fusten }}</td>
+                    <td>{{ g.glazen }}</td>
+                    <td>€ {{ '%.2f'|format(g.bedrag) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen fust leeg geteld sinds dit is ingesteld.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

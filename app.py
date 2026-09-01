@@ -271,6 +271,12 @@ NAV_ITEMS = [
         "label": "Verkooprapport",
     },
     {
+        "groep": "Algemeen",
+        "endpoints": ["fusten_overzicht"],
+        "url_endpoint": "fusten_overzicht",
+        "label": "Fusten",
+    },
+    {
         "groep": "Voorraad",
         "endpoints": ["voorraadoverzicht"],
         "url_endpoint": "voorraadoverzicht",
@@ -769,6 +775,53 @@ def bereken_omzet_trend_periode(db, van, tot):
         "balken": balken,
         "top_verkopers": top_verkopers,
         "totale_omzet": totale_omzet,
+    }
+
+
+def bereken_fust_verkopen(db, limiet=100):
+    """Waarschijnlijke verkopen per fust, afgeleid uit de gewone
+    voorraadtellingen: als een fust-product (glazen_per_fust > 0) minder
+    wordt geteld dan de vorige keer, telt dat als lege fust(en). Aantal
+    glazen en bedrag zijn een schatting op basis van glazen_per_fust en
+    prijs_per_glas -- er is geen registratie per getapt glas, dus 'wanneer'
+    is hier net zo precies als de tellingen zelf."""
+    regels = db.execute(
+        """SELECT t.datum, p.naam AS product_naam, tr.verkocht,
+                  p.glazen_per_fust, p.prijs_per_glas
+           FROM telling_regels tr
+           JOIN tellingen t ON t.id = tr.telling_id
+           JOIN producten p ON p.id = tr.product_id
+           WHERE p.glazen_per_fust > 0 AND tr.verkocht > 0
+           ORDER BY t.datum DESC, t.id DESC
+           LIMIT ?""",
+        (limiet,),
+    ).fetchall()
+
+    gebeurtenissen = []
+    totaal_fusten = 0
+    totaal_glazen = 0
+    totaal_bedrag = 0.0
+    for r in regels:
+        glazen = r["verkocht"] * r["glazen_per_fust"]
+        bedrag = glazen * r["prijs_per_glas"]
+        gebeurtenissen.append(
+            {
+                "datum": r["datum"],
+                "product_naam": r["product_naam"],
+                "aantal_fusten": r["verkocht"],
+                "glazen": glazen,
+                "bedrag": bedrag,
+            }
+        )
+        totaal_fusten += r["verkocht"]
+        totaal_glazen += glazen
+        totaal_bedrag += bedrag
+
+    return {
+        "gebeurtenissen": gebeurtenissen,
+        "totaal_fusten": totaal_fusten,
+        "totaal_glazen": totaal_glazen,
+        "totaal_bedrag": totaal_bedrag,
     }
 
 
@@ -2132,8 +2185,8 @@ def register_routes(app):
                 """INSERT INTO producten
                    (artikelcode, naam, categorie, subcategorie, eenheid, voorraad, min_voorraad,
                     bestel_hoeveelheid, verkoopprijs, inkoopprijs, actief, besteleenheid,
-                    besteleenheid_factor, opmerking, afbeelding)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    besteleenheid_factor, opmerking, afbeelding, glazen_per_fust, prijs_per_glas)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
@@ -2150,6 +2203,8 @@ def register_routes(app):
                     int(request.form.get("besteleenheid_factor") or 1),
                     request.form.get("opmerking", "").strip(),
                     afbeelding,
+                    int(request.form.get("glazen_per_fust") or 0),
+                    float(request.form.get("prijs_per_glas") or 0),
                 ),
             )
             db.commit()
@@ -2214,7 +2269,7 @@ def register_routes(app):
                    SET artikelcode = ?, naam = ?, categorie = ?, subcategorie = ?, eenheid = ?,
                        voorraad = ?, min_voorraad = ?, bestel_hoeveelheid = ?, verkoopprijs = ?,
                        inkoopprijs = ?, actief = ?, besteleenheid = ?, besteleenheid_factor = ?,
-                       opmerking = ?, afbeelding = ?
+                       opmerking = ?, afbeelding = ?, glazen_per_fust = ?, prijs_per_glas = ?
                    WHERE id = ?""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
@@ -2232,6 +2287,8 @@ def register_routes(app):
                     int(request.form.get("besteleenheid_factor") or 1),
                     request.form.get("opmerking", "").strip(),
                     afbeelding,
+                    int(request.form.get("glazen_per_fust") or 0),
+                    float(request.form.get("prijs_per_glas") or 0),
                     product_id,
                 ),
             )
@@ -3118,6 +3175,17 @@ def register_routes(app):
         omzet_trend = bereken_omzet_trend_periode(db, van, tot)
         return render_template(
             "verkooprapport.html", van=van, tot=tot, omzet_trend=omzet_trend
+        )
+
+    @app.route("/fusten")
+    def fusten_overzicht():
+        db = get_db()
+        fust_producten = db.execute(
+            "SELECT * FROM producten WHERE glazen_per_fust > 0 ORDER BY categorie, naam"
+        ).fetchall()
+        fust_verkopen = bereken_fust_verkopen(db)
+        return render_template(
+            "fusten.html", fust_producten=fust_producten, fust_verkopen=fust_verkopen
         )
 
     @app.route("/week-overzicht")
