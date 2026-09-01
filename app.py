@@ -729,14 +729,41 @@ def bereken_omzet_trend_periode(db, van, tot):
     max_omzet = max((t["omzet"] for t in tellingen), default=0)
     totale_omzet = sum(t["omzet"] for t in tellingen)
 
-    balken = [
-        {
-            "datum_kort": datetime.strptime(t["datum"], "%Y-%m-%d %H:%M").strftime("%d-%m"),
-            "omzet": t["omzet"],
-            "hoogte_pct": (t["omzet"] / max_omzet * 100) if max_omzet else 0,
-        }
-        for t in tellingen
+    # Thuiswedstrijden per telling-periode: elke balk vertegenwoordigt de
+    # periode sinds de vorige telling (of 'van' voor de eerste balk in dit
+    # overzicht -- een kleine benadering als de echte vorige telling buiten
+    # de gekozen periode viel). Geeft een indicatie of een piek in omzet
+    # samenvalt met een wedstrijd.
+    wedstrijd_datums = [
+        w["datum"]
+        for w in db.execute(
+            "SELECT datum FROM wedstrijden WHERE thuis = 1 AND datum >= ? AND datum <= ? ORDER BY datum",
+            (van, tot),
+        ).fetchall()
     ]
+
+    balken = []
+    vorige_datum = van
+    eerste_balk = True
+    for t in tellingen:
+        periode_eind = t["datum"][:10]
+        if eerste_balk:
+            # Inclusief 'van' zelf: dat is de gekozen startdatum van de
+            # periode, geen eerdere telling waarvan een wedstrijd al is
+            # meegeteld.
+            aantal_wedstrijden = sum(1 for d in wedstrijd_datums if vorige_datum <= d <= periode_eind)
+            eerste_balk = False
+        else:
+            aantal_wedstrijden = sum(1 for d in wedstrijd_datums if vorige_datum < d <= periode_eind)
+        balken.append(
+            {
+                "datum_kort": datetime.strptime(t["datum"], "%Y-%m-%d %H:%M").strftime("%d-%m"),
+                "omzet": t["omzet"],
+                "hoogte_pct": (t["omzet"] / max_omzet * 100) if max_omzet else 0,
+                "thuiswedstrijden": aantal_wedstrijden,
+            }
+        )
+        vorige_datum = periode_eind
 
     return {
         "balken": balken,
@@ -892,6 +919,70 @@ def bereken_kassa_stand(db):
         "stand": round(rij["kassa_stand"] if rij else 0.0, 2),
         "laatste_telling": laatste_telling,
     }
+
+
+def bereken_kassa_verschil_trend(db, limiet=20):
+    """Verschil (te kort/te veel) van de laatste afgesloten kassatellingen,
+    voor de trendgrafiek op de kassa-geschiedenis-pagina. Signaleert ook als
+    het handmatig ingetypte PayPal-bedrag (contante_omzet) sterk afwijkt van
+    de omzet die in diezelfde periode uit de voorraadtellingen volgt -- kan
+    op een tikfout wijzen, of op een gemiste voorraadtelling. Alleen
+    afgesloten tellingen: een nog open (concept) telling heeft geen
+    definitief verschil."""
+    ruw = db.execute(
+        """SELECT id, datum, naam, contante_omzet, verschil FROM kassa_tellingen
+           WHERE afgesloten = 1 ORDER BY datum DESC, id DESC LIMIT ?""",
+        (limiet + 1,),
+    ).fetchall()
+    ruw = list(reversed(ruw))
+    if not ruw:
+        return {"balken": [], "max_verschil": 0}
+
+    # Eén extra telling opgehaald (als die er is) puur om als startpunt van
+    # de eerste getoonde periode te dienen -- anders zou de oudste balk hier
+    # geen betrouwbare vergelijkingsomzet kunnen krijgen.
+    heeft_context = len(ruw) > limiet
+    tellingen = ruw[1:] if heeft_context else ruw
+
+    voorraad_omzet = db.execute(
+        """SELECT t.datum, COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0) AS omzet
+           FROM tellingen t LEFT JOIN telling_regels tr ON tr.telling_id = t.id
+           WHERE t.datum > ? AND t.datum <= ?
+           GROUP BY t.id""",
+        (ruw[0]["datum"], tellingen[-1]["datum"]),
+    ).fetchall()
+
+    balken = []
+    vorige_datum = ruw[0]["datum"] if heeft_context else None
+    for kt in tellingen:
+        verkoop_omzet = None
+        if vorige_datum is not None:
+            verkoop_omzet = sum(
+                r["omzet"] for r in voorraad_omzet if vorige_datum < r["datum"] <= kt["datum"]
+            )
+        afwijkend = (
+            verkoop_omzet is not None
+            and verkoop_omzet > 0
+            and abs(kt["contante_omzet"] - verkoop_omzet) > max(verkoop_omzet * 0.15, 25)
+        )
+        balken.append(
+            {
+                "id": kt["id"],
+                "datum_kort": datetime.strptime(kt["datum"], "%Y-%m-%d %H:%M").strftime("%d-%m"),
+                "verschil": kt["verschil"],
+                "naam": kt["naam"],
+                "contante_omzet": kt["contante_omzet"],
+                "verkoop_omzet": verkoop_omzet,
+                "afwijkend": afwijkend,
+            }
+        )
+        vorige_datum = kt["datum"]
+
+    max_verschil = max((abs(b["verschil"]) for b in balken), default=0)
+    for balk in balken:
+        balk["hoogte_pct"] = (abs(balk["verschil"]) / max_verschil * 100) if max_verschil else 0
+
+    return {"balken": balken, "max_verschil": max_verschil}
 
 
 def kassa_telling_is_zelf_goedgekeurd(telling):
@@ -2534,6 +2625,25 @@ def register_routes(app):
 
     # ---------- Voorraad tellen ----------
 
+    def signaleer_afwijkende_telling(db, product_id, voorraad_voor, geteld, limiet=8):
+        """Vergelijkt de mutatie (verkocht + correctie) van een nieuwe telling
+        met het gemiddelde van de laatste tellingen van dit product, om een
+        tikfout te kunnen signaleren voordat de telling wordt opgeslagen.
+        Retourneert None als er te weinig geschiedenis is om iets zinnigs
+        over te zeggen."""
+        vorige = db.execute(
+            """SELECT verkocht, correctie FROM telling_regels
+               WHERE product_id = ? ORDER BY telling_id DESC LIMIT ?""",
+            (product_id, limiet),
+        ).fetchall()
+        if len(vorige) < 3:
+            return None
+        gemiddelde = sum(r["verkocht"] + r["correctie"] for r in vorige) / len(vorige)
+        mutatie_nu = abs(geteld - voorraad_voor)
+        if mutatie_nu <= max(gemiddelde * 3, 6):
+            return None
+        return {"gemiddelde": gemiddelde, "mutatie_nu": mutatie_nu}
+
     def verwerk_telling(db, waarden, naam, opmerking, datum, gebruiker_id=None):
         """waarden: dict {product_id: geteld_aantal}. Maakt een telling aan,
         berekent per product het verschil met de huidige voorraad, en werkt
@@ -2825,6 +2935,9 @@ def register_routes(app):
                     "bar": bar_waarden.get(product_id_str, "") or "0",
                     "hok": hok_waarden.get(product_id_str, "") or "0",
                     "totaal": totaal,
+                    "afwijking": signaleer_afwijkende_telling(
+                        db, product["id"], product["voorraad"], totaal
+                    ),
                 }
             )
         regels.sort(key=lambda r: (r["product"]["categorie"], r["product"]["naam"]))
@@ -4224,6 +4337,7 @@ def register_routes(app):
     def kassa_geschiedenis():
         db = get_db()
         kassa_stand = bereken_kassa_stand(db)
+        verschil_trend = bereken_kassa_verschil_trend(db)
 
         # Zelfde begrenzing als het gewone mutatie-overzicht (geschiedenis()):
         # zonder LIMIT blijft dit onbeperkt meegroeien met elke kassatelling
@@ -4240,7 +4354,10 @@ def register_routes(app):
         tijdlijn.sort(key=lambda r: r["datum"], reverse=True)
 
         return render_template(
-            "kassa_geschiedenis.html", kassa_stand=kassa_stand, tijdlijn=tijdlijn
+            "kassa_geschiedenis.html",
+            kassa_stand=kassa_stand,
+            verschil_trend=verschil_trend,
+            tijdlijn=tijdlijn
         )
 
     @app.route("/kassa/mutatie/nieuw", methods=["GET", "POST"])

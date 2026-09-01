@@ -7,8 +7,9 @@
 </p>
 
 <div class="kaart">
-    <form method="post">
+    <form method="post" id="loop-controleren-formulier">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="actie" id="loop-controleren-actie" value="bevestigen">
         <div class="tabel-wrap">
             <table>
                 <thead>
@@ -17,17 +18,26 @@
                         <th>Bar</th>
                         <th>Voorraadhok</th>
                         <th>Totaal</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for r in regels %}
-                    <tr>
+                    <tr class="{{ 'rij-waarschuwing' if r.afwijking }}">
                         <td>{{ r.product.naam }}</td>
                         <td class="tekst-zacht">{{ r.bar }} {{ r.product.eenheid }}</td>
                         <td class="tekst-zacht">{{ r.hok }} {{ r.product.eenheid }}</td>
                         <td>
                             <input type="number" name="totaal_{{ r.product.id }}" min="0" style="width:6rem"
                                    value="{{ r.totaal }}"> {{ r.product.eenheid }}
+                        </td>
+                        <td>
+                            {% if r.afwijking %}
+                            <span class="badge badge-laag"
+                                  title="Normaal gemiddeld ~{{ '%.0f'|format(r.afwijking.gemiddelde) }} {{ r.product.eenheid }} verschil per telling, nu {{ r.afwijking.mutatie_nu }}. Typefout?">
+                                ⚠ Controleer
+                            </span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -36,11 +46,14 @@
         </div>
 
         <div class="loop-knoppen" style="margin-top:1.1rem">
-            <button type="submit" name="actie" value="annuleren" class="btn btn-gevaar loop-btn-klein"
-                    onclick="return confirm('Looplijst afbreken? Er wordt dan niets opgeslagen.');">
+            <button type="button" class="btn btn-gevaar loop-btn-klein"
+                    onclick="toonBevestiging('Looplijst afbreken? Er wordt dan niets opgeslagen.', function () {
+                        document.getElementById('loop-controleren-actie').value = 'annuleren';
+                        document.getElementById('loop-controleren-formulier').submit();
+                    });">
                 Annuleren
             </button>
-            <button type="submit" name="actie" value="bevestigen" class="btn btn-geel loop-btn-groot">
+            <button type="submit" class="btn btn-geel loop-btn-groot">
                 Bevestigen en opslaan
             </button>
         </div>

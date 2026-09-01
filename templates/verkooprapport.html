@@ -43,6 +43,11 @@
             <span class="omzet-bar-waarde">€{{ '%.0f'|format(balk.omzet) }}</span>
             <div class="omzet-bar" style="height: {{ balk.hoogte_pct }}%" title="€ {{ '%.2f'|format(balk.omzet) }}"></div>
             <span class="omzet-bar-label">{{ balk.datum_kort }}</span>
+            {% if balk.thuiswedstrijden %}
+            <span class="omzet-bar-wedstrijden" title="{{ balk.thuiswedstrijden }} thuiswedstrijd{{ '' if balk.thuiswedstrijden == 1 else 'en' }} in deze periode">
+                🏠{{ '×%d'|format(balk.thuiswedstrijden) if balk.thuiswedstrijden > 1 else '' }}
+            </span>
+            {% endif %}
         </div>
         {% endfor %}
     </div>

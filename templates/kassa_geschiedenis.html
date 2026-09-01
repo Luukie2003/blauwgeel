@@ -21,6 +21,31 @@
     </div>
 </div>
 
+{% if verschil_trend.balken %}
+<div class="kaart">
+    <h2>Verschil per telling</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Alleen afgesloten tellingen. Rood is een tekort, groen een overschot.</p>
+    <div class="omzet-trend-grafiek">
+        {% for balk in verschil_trend.balken %}
+        <div class="omzet-bar-kolom">
+            <span class="omzet-bar-waarde">{{ '+' if balk.verschil > 0 else '' }}€{{ '%.0f'|format(balk.verschil) }}</span>
+            <a href="{{ url_for('kassa_telling_detail', telling_id=balk.id) }}"
+               class="omzet-bar {{ 'omzet-bar-tekort' if balk.verschil < 0 else ('omzet-bar-overschot' if balk.verschil > 0 else '') }}"
+               style="height: {{ balk.hoogte_pct }}%; display:block"
+               title="{{ balk.naam or 'Onbekend' }}: {{ '+' if balk.verschil > 0 else '' }}€ {{ '%.2f'|format(balk.verschil) }}"></a>
+            <span class="omzet-bar-label">{{ balk.datum_kort }}</span>
+            {% if balk.afwijkend %}
+            <span class="omzet-bar-wedstrijden"
+                  title="Ingetypte omzet (PayPal): € {{ '%.2f'|format(balk.contante_omzet) }}. Omzet volgens voorraadtellingen in dezelfde periode: € {{ '%.2f'|format(balk.verkoop_omzet) }}. Klopt dit bedrag?">
+                ⚠ wijkt af
+            </span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <div class="kaart">
     {% if tijdlijn %}
     <div class="tabel-wrap">

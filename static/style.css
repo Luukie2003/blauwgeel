@@ -463,6 +463,15 @@ fieldset.groupbox legend {
     white-space: nowrap;
 }
 
+.omzet-bar-wedstrijden {
+    font-size: 0.68rem;
+    margin-top: 0.15rem;
+    white-space: nowrap;
+}
+
+.omzet-bar-tekort { background: var(--rood); }
+.omzet-bar-overschot { background: var(--groen); }
+
 .omzet-delta {
     font-weight: 700;
 }
