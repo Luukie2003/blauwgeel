@@ -1,0 +1,76 @@
+{% extends basis_template %}
+{% block titel %}{{ product.naam }}{% endblock %}
+{% block inhoud %}
+<p class="subtitel"><a href="javascript:history.back()">&larr; Terug</a></p>
+
+<div class="kaart product-detail-kop">
+    {% if product.afbeelding %}
+    <img src="{{ url_for('static', filename='product_afbeeldingen/' + product.afbeelding) }}" alt="" class="product-thumb-groot">
+    {% endif %}
+    <h1>{{ product.naam }}</h1>
+    <p class="tekst-zacht" style="margin:0.1rem 0 0.7rem">
+        {{ product.categorie }}{% if product.subcategorie %} &middot; {{ product.subcategorie }}{% endif %}
+        {% if product.artikelcode %} &middot; {{ product.artikelcode }}{% endif %}
+    </p>
+    {% if product.voorraad < product.min_voorraad %}
+    <span class="badge badge-laag product-detail-voorraad">{{ product.voorraad }} {{ product.eenheid }} op voorraad</span>
+    {% else %}
+    <span class="badge badge-ok product-detail-voorraad">{{ product.voorraad }} {{ product.eenheid }} op voorraad</span>
+    {% endif %}
+    <p class="tekst-zacht" style="margin:0.4rem 0 0">minimum: {{ product.min_voorraad }} {{ product.eenheid }}</p>
+    {% if huidige_gebruiker_rol == 'beheerder' %}
+    <p style="margin-top:0.7rem"><a href="{{ url_for('product_bewerken', product_id=product.id) }}">Product bewerken &rarr;</a></p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Boeken</h2>
+    <form method="post" action="{{ url_for('boeken') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="product_id" value="{{ product.id }}">
+        <input type="hidden" name="terug_naar_product" value="{{ product.id }}">
+        <div class="toggle-type">
+            <label><input type="radio" name="type" value="in" checked><span>In (levering / aanvulling)</span></label>
+            <label><input type="radio" name="type" value="uit"><span>Uit (verkocht / verbruikt)</span></label>
+        </div>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="aantal">Aantal ({{ product.eenheid }})</label>
+                <input type="number" id="aantal" name="aantal" min="1" required autofocus>
+            </div>
+            <div class="veld">
+                <label>Geboekt door</label>
+                <p class="veld-waarde">{{ huidige_gebruiker }}</p>
+            </div>
+        </div>
+        <div class="veld">
+            <label for="opmerking">Opmerking (optioneel)</label>
+            <input type="text" id="opmerking" name="opmerking" placeholder="Bijv. kapotte krat, telling gecorrigeerd, ...">
+        </div>
+        <button type="submit" class="btn btn-geel">Boeken</button>
+    </form>
+</div>
+
+<div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">Laatste boekingen</h2>
+        <a href="{{ url_for('geschiedenis', product_id=product.id) }}" style="font-size:0.82rem">Volledige geschiedenis &rarr;</a>
+    </div>
+    {% if mutaties %}
+    <ul class="mutatie-lijst">
+        {% for m in mutaties %}
+        <li>
+            <div class="mutatie-lijst-regel">
+                <span class="badge badge-{{ m.type }}">{{ 'in' if m.type == 'in' else 'uit' }}</span>
+                <strong>{{ m.aantal }} {{ product.eenheid }}</strong>
+                <span class="tekst-zacht">{{ m.datum|datum_nl }}{% if m.naam %} &middot; {{ m.naam }}{% endif %}</span>
+            </div>
+            {% if m.opmerking %}<div class="tekst-zacht mutatie-lijst-opmerking">{{ m.opmerking }}</div>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="leeg">Nog geen boekingen voor dit product.</p>
+    {% endif %}
+</div>
+{% endblock %}

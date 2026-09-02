@@ -1301,6 +1301,56 @@ footer {
     display: block;
 }
 
+/* ---------- Productpagina (foto, voorraad, snel boeken, geschiedenis) ---------- */
+
+.product-detail-kop {
+    text-align: center;
+}
+
+.product-detail-kop h1 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.product-detail-voorraad {
+    font-size: 0.95rem;
+    padding: 0.35rem 0.7rem;
+}
+
+.mutatie-lijst {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.mutatie-lijst li {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--rand-licht);
+}
+
+.mutatie-lijst li:last-child {
+    border-bottom: none;
+}
+
+.mutatie-lijst-regel {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.mutatie-lijst-opmerking {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.mutatie-lijst-waarschuwing {
+    background: var(--rood-bg);
+    margin: 0 -1.1rem;
+    padding-left: 1.1rem;
+    padding-right: 1.1rem;
+}
+
 /* ---------- PDA-modus: compacte vloer-weergave op de telefoon ---------- */
 /* Zelfde kleuren/lettertype als de rest van de site, maar zonder de
    zijbalk-navigatie en met grotere knoppen/velden -- zie base_pda.html. */
@@ -1312,6 +1362,12 @@ footer {
     background: var(--kaart);
 }
 
+.pda-kop-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
 .pda-kop {
     background: #1c2b4a;
     color: #f0f2f6;
@@ -1321,9 +1377,83 @@ footer {
     justify-content: space-between;
     gap: 0.6rem;
     border-bottom: 3px solid var(--geel);
-    position: sticky;
-    top: 0;
-    z-index: 50;
+}
+
+.pda-zoek {
+    position: relative;
+    background: var(--paneel);
+    border-bottom: 1px solid var(--rand);
+    padding: 0.5rem 0.7rem;
+}
+
+.pda-zoek input[type="search"] {
+    width: 100%;
+    min-height: 2.5rem;
+    font-size: 0.95rem;
+    padding: 0.5rem 0.7rem;
+}
+
+.pda-zoek-resultaten {
+    position: absolute;
+    left: 0.7rem;
+    right: 0.7rem;
+    top: calc(100% - 0.1rem);
+    background: var(--kaart);
+    border: 1px solid var(--rand);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+    max-height: 60vh;
+    overflow-y: auto;
+    z-index: 60;
+}
+
+.pda-zoek-resultaat {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.7rem;
+    color: var(--tekst);
+    border-bottom: 1px solid var(--rand-licht);
+}
+
+.pda-zoek-resultaat:last-child {
+    border-bottom: none;
+}
+
+.pda-zoek-resultaat:hover,
+.pda-zoek-resultaat:active {
+    background: var(--paneel);
+    text-decoration: none;
+}
+
+.pda-zoek-resultaat img {
+    width: 2.2rem;
+    height: 2.2rem;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--rand-licht);
+    flex-shrink: 0;
+}
+
+.pda-zoek-resultaat-tekst {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.pda-zoek-resultaat-tekst strong {
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pda-zoek-leeg {
+    padding: 0.7rem;
+    color: var(--tekst-zacht);
+    font-size: 0.85rem;
 }
 
 .pda-kop-titel {
@@ -1353,9 +1483,6 @@ footer {
     background: var(--paneel);
     border-bottom: 1px solid var(--rand);
     -webkit-overflow-scrolling: touch;
-    position: sticky;
-    top: 46px;
-    z-index: 49;
 }
 
 .pda-nav a {
@@ -1384,7 +1511,7 @@ footer {
     border-radius: 0;
     background: var(--achtergrond);
     padding: 1rem;
-    min-height: calc(100vh - 94px);
+    min-height: 60vh;
 }
 
 .pda-inhoud .btn {
@@ -1402,6 +1529,72 @@ footer {
 .pda-inhoud textarea {
     min-height: 2.6rem;
     font-size: 1rem;
+}
+
+/* Compacte kaart i.p.v. een tabelrij -- gebruikt voor lijsten met een
+   vinkje/invoerveld per product (bestellijst-suggesties, inboeken). */
+.pda-kaartje {
+    background: var(--paneel);
+    border: 1px solid var(--rand);
+    border-radius: var(--radius);
+    padding: 0.7rem 0.8rem;
+    margin-bottom: 0.7rem;
+}
+
+.pda-kaartje-vink {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pda-kaartje-vink input[type="checkbox"] {
+    width: 1.3rem;
+    height: 1.3rem;
+    min-height: 0;
+    flex-shrink: 0;
+}
+
+.pda-kaartje-naam {
+    flex: 1;
+}
+
+.pda-kaartje-info {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin: 0.4rem 0 0 1.9rem;
+}
+
+.pda-kaartje-veld {
+    margin: 0.6rem 0 0;
+}
+
+.pda-kaartje--manco {
+    background: var(--rood-bg);
+    border-color: #e3a9a9;
+}
+
+.pda-binnen-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+    padding: 0.55rem 0.7rem;
+    background: var(--groen-bg);
+    border: 1px solid #a9d8b8;
+    border-radius: var(--radius);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pda-binnen-toggle input[type="checkbox"] {
+    width: 1.3rem;
+    height: 1.3rem;
+    min-height: 0;
+    flex-shrink: 0;
 }
 
 .pda-menu {

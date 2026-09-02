@@ -160,13 +160,19 @@ def test_desktop_modus_toont_gewoon_de_volledige_tellen_pagina(ingelogde_client)
     assert "Eerdere tellingen en omzet" in body
 
 
-def test_pda_modus_verbergt_voorgesteld_om_te_bestellen(ingelogde_client):
+def test_pda_modus_toont_voorgesteld_om_te_bestellen_als_kaarten(ingelogde_client):
+    """De handterminal mag de bestel-suggesties niet meer verbergen (was
+    vroeger zo), maar toont ze als aanraakvriendelijke kaarten i.p.v. de
+    brede tabel die de volledige site gebruikt."""
     ingelogde_client.get("/weergave/pda")
     resp = ingelogde_client.get("/bestellijst")
     body = resp.data.decode()
     assert "Openstaande bestellingen" in body
-    assert "Voorgesteld om te bestellen" not in body
-    assert "Al besteld? Factuur klaarzetten" not in body
+    assert "Voorgesteld om te bestellen" in body
+    assert "Al besteld? Factuur klaarzetten" in body
+    assert "Bestellijst (PDF)" not in body
+    assert 'id="suggesties-kaarten"' in body
+    assert 'id="suggesties-tabel"' not in body
 
 
 def test_desktop_modus_toont_wel_voorgesteld_om_te_bestellen(ingelogde_client):
@@ -174,6 +180,8 @@ def test_desktop_modus_toont_wel_voorgesteld_om_te_bestellen(ingelogde_client):
     resp = ingelogde_client.get("/bestellijst")
     body = resp.data.decode()
     assert "Voorgesteld om te bestellen" in body
+    assert 'id="suggesties-tabel"' in body
+    assert 'id="suggesties-kaarten"' not in body
 
 
 def test_pda_start_bevat_alle_zes_secties(ingelogde_client):

@@ -15,6 +15,20 @@
     </form>
 
     {% if mutaties %}
+    {% if pda_modus %}
+    <ul class="mutatie-lijst">
+        {% for m in mutaties %}
+        <li class="{{ 'mutatie-lijst-waarschuwing' if m.opmerking and m.opmerking.startswith('Correctie') }}">
+            <div class="mutatie-lijst-regel">
+                <span class="badge badge-{{ m.type }}">{{ 'in' if m.type == 'in' else 'uit' }}</span>
+                <strong><a href="{{ url_for('product_detail', product_id=m.product_id) }}">{{ m.product_naam }}</a></strong>
+                <span class="tekst-zacht">{{ m.aantal }} {{ m.eenheid }}</span>
+            </div>
+            <div class="tekst-zacht mutatie-lijst-opmerking">{{ m.datum|datum_nl }}{% if m.naam %} &middot; {{ m.naam }}{% endif %}{% if m.opmerking %} &middot; {{ m.opmerking }}{% endif %}</div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
     <div class="tabel-wrap">
         <table>
             <thead>
@@ -34,6 +48,7 @@
             </tbody>
         </table>
     </div>
+    {% endif %}
     {% else %}
     <p class="leeg">Geen boekingen gevonden.</p>
     {% endif %}

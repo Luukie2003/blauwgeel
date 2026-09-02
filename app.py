@@ -2500,6 +2500,43 @@ def register_routes(app):
             return jsonify({"ok": True, "actief": nieuwe_status, "melding": melding})
         return redirect(url_for("producten_lijst"))
 
+    @app.route("/producten/zoeken")
+    def product_zoeken():
+        """Live zoeken op productnaam/artikelcode voor de zoekbalk boven in
+        de handterminal-weergave -- geeft JSON terug, geen pagina."""
+        db = get_db()
+        term = request.args.get("q", "").strip()
+        if len(term) < 2:
+            return jsonify({"resultaten": []})
+        patroon = f"%{term}%"
+        rijen = db.execute(
+            """SELECT id, naam, categorie, voorraad, min_voorraad, eenheid, afbeelding
+               FROM producten
+               WHERE actief = 1 AND (naam LIKE ? OR artikelcode LIKE ?)
+               ORDER BY (naam NOT LIKE ?), naam
+               LIMIT 15""",
+            (patroon, patroon, f"{term}%"),
+        ).fetchall()
+        return jsonify({"resultaten": [dict(p) for p in rijen]})
+
+    @app.route("/producten/<int:product_id>")
+    def product_detail(product_id):
+        db = get_db()
+        product = db.execute(
+            "SELECT * FROM producten WHERE id = ?", (product_id,)
+        ).fetchone()
+        if product is None:
+            flash("Product niet gevonden.", "error")
+            return redirect(url_for("producten_lijst"))
+        mutaties = db.execute(
+            """SELECT * FROM mutaties WHERE product_id = ?
+               ORDER BY id DESC LIMIT 10""",
+            (product_id,),
+        ).fetchall()
+        return render_template(
+            "product_detail.html", product=product, mutaties=mutaties
+        )
+
     @app.route("/categorieen", methods=["GET", "POST"])
     def categorieen_lijst():
         db = get_db()
@@ -2648,6 +2685,12 @@ def register_routes(app):
             naam = session.get("gebruiker_naam")
             gebruiker_id = session.get("gebruiker_id")
             opmerking = request.form.get("opmerking", "").strip()
+            terug_naar_product = request.form.get("terug_naar_product", type=int)
+            volgende = (
+                url_for("product_detail", product_id=terug_naar_product)
+                if terug_naar_product
+                else url_for("boeken")
+            )
 
             product = db.execute(
                 "SELECT * FROM producten WHERE id = ?", (product_id,)
@@ -2655,7 +2698,7 @@ def register_routes(app):
 
             if product is None or aantal <= 0:
                 flash("Ongeldige boeking.", "error")
-                return redirect(url_for("boeken"))
+                return redirect(volgende)
 
             delta = aantal if mtype == "in" else -aantal
             nieuwe_voorraad = product["voorraad"] + delta
@@ -2680,7 +2723,7 @@ def register_routes(app):
             else:
                 werkwoord = "bijgeboekt bij" if mtype == "in" else "afgeboekt van"
                 flash(f"{aantal} {werkwoord} '{product['naam']}'.", "success")
-            return redirect(url_for("boeken"))
+            return redirect(volgende)
 
         producten = db.execute(
             "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"

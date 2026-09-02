@@ -3,14 +3,12 @@
 {% block inhoud %}
 <div class="actiebalk">
     <p class="subtitel" style="margin:0">Bestel wat nodig is, of boek in wat er binnenkomt.</p>
-    {% if not pda_modus %}
     <div style="display:flex; gap:0.5rem">
-        {% if suggesties %}
+        {% if suggesties and not pda_modus %}
         <a href="{{ url_for('bestellijst_pdf_route') }}" class="btn btn-rand">Bestellijst (PDF)</a>
         {% endif %}
         <a href="{{ url_for('bestelling_nieuw') }}" class="btn btn-rand">Al besteld? Factuur klaarzetten</a>
     </div>
-    {% endif %}
 </div>
 
 <div class="kaart">
@@ -47,12 +45,131 @@
     {% endif %}
 </div>
 
-{% if not pda_modus %}
 <div class="kaart">
     <h2>Voorgesteld om te bestellen</h2>
     {% if suggesties or overige_producten %}
     <form method="post" action="{{ url_for('bestelling_aanmaken') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if pda_modus %}
+        <div id="suggesties-kaarten">
+            {% for p in suggesties %}
+            {% set tekort = p.bestel_hoeveelheid if p.bestel_hoeveelheid > 0 else (p.min_voorraad - p.voorraad) %}
+            {% set besteleenheden = tekort|naar_besteleenheden(p) %}
+            <div class="pda-kaartje">
+                <label class="pda-kaartje-vink">
+                    <input type="checkbox" name="product_id" value="{{ p.id }}" checked>
+                    {% if p.afbeelding %}
+                    <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
+                    {% endif %}
+                    <span class="pda-kaartje-naam">{{ p.naam }} <span class="badge badge-neutraal">Voorgesteld</span></span>
+                </label>
+                <div class="pda-kaartje-info">
+                    <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
+                    <span class="tekst-zacht">min. {{ p.min_voorraad }} {{ p.eenheid }}</span>
+                </div>
+                <div class="veld pda-kaartje-veld">
+                    <label>Aantal bestellen ({{ p|besteleenheid_naam }})</label>
+                    <input type="number" name="aantal_{{ p.id }}" min="0" value="{{ besteleenheden }}">
+                    {% if p.besteleenheid_factor > 1 %}
+                    <span class="tekst-zacht" style="font-size:0.72rem">= {{ besteleenheden * p.besteleenheid_factor }} {{ p.eenheid }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if overige_producten %}
+        <div class="veld">
+            <label for="extra-product-select">+ Ander product toevoegen</label>
+            <div style="display:flex; gap:0.5rem; align-items:center">
+                <select id="extra-product-select" style="flex:1">
+                    <option value="">Kies een product...</option>
+                    {% for p in overige_producten %}
+                    <option value="{{ p.id }}" data-naam="{{ p.naam }}" data-afbeelding="{{ p.afbeelding or '' }}"
+                            data-voorraad="{{ p.voorraad }} {{ p.eenheid }}" data-minimum="{{ p.min_voorraad }} {{ p.eenheid }}"
+                            data-besteleenheid="{{ p|besteleenheid_naam }}" data-factor="{{ p.besteleenheid_factor }}"
+                            data-eenheid="{{ p.eenheid }}">{{ p.naam }}</option>
+                    {% endfor %}
+                </select>
+                <button type="button" id="extra-product-toevoegen-knop" class="btn btn-rand btn-klein">Toevoegen</button>
+            </div>
+        </div>
+        {% endif %}
+        <script>
+        (function () {
+            var lijst = document.getElementById('suggesties-kaarten');
+            var select = document.getElementById('extra-product-select');
+            var knop = document.getElementById('extra-product-toevoegen-knop');
+            if (!lijst || !select || !knop) return;
+
+            knop.addEventListener('click', function () {
+                var optie = select.options[select.selectedIndex];
+                if (!optie || !optie.value) return;
+
+                var kaart = document.createElement('div');
+                kaart.className = 'pda-kaartje';
+
+                var vinkLabel = document.createElement('label');
+                vinkLabel.className = 'pda-kaartje-vink';
+                var vinkje = document.createElement('input');
+                vinkje.type = 'checkbox';
+                vinkje.name = 'product_id';
+                vinkje.value = optie.value;
+                vinkje.checked = true;
+                vinkLabel.appendChild(vinkje);
+                if (optie.dataset.afbeelding) {
+                    var img = document.createElement('img');
+                    img.src = '/static/product_afbeeldingen/' + optie.dataset.afbeelding;
+                    img.alt = '';
+                    img.className = 'product-thumb';
+                    vinkLabel.appendChild(img);
+                }
+                var naamSpan = document.createElement('span');
+                naamSpan.className = 'pda-kaartje-naam';
+                naamSpan.textContent = optie.dataset.naam;
+                vinkLabel.appendChild(naamSpan);
+                kaart.appendChild(vinkLabel);
+
+                var infoDiv = document.createElement('div');
+                infoDiv.className = 'pda-kaartje-info';
+                var voorraadSpan = document.createElement('span');
+                voorraadSpan.className = 'tekst-zacht';
+                voorraadSpan.textContent = optie.dataset.voorraad + ' (min. ' + optie.dataset.minimum + ')';
+                infoDiv.appendChild(voorraadSpan);
+                kaart.appendChild(infoDiv);
+
+                var veldDiv = document.createElement('div');
+                veldDiv.className = 'veld pda-kaartje-veld';
+                var label = document.createElement('label');
+                label.textContent = 'Aantal bestellen (' + optie.dataset.besteleenheid + ')';
+                veldDiv.appendChild(label);
+                var aantalInput = document.createElement('input');
+                aantalInput.type = 'number';
+                aantalInput.name = 'aantal_' + optie.value;
+                aantalInput.min = '0';
+                aantalInput.value = '1';
+                veldDiv.appendChild(aantalInput);
+                kaart.appendChild(veldDiv);
+
+                var verwijderKnop = document.createElement('button');
+                verwijderKnop.type = 'button';
+                verwijderKnop.className = 'btn btn-rand btn-klein';
+                verwijderKnop.style.marginTop = '0.6rem';
+                verwijderKnop.textContent = 'Verwijderen';
+                verwijderKnop.addEventListener('click', function () {
+                    kaart.remove();
+                    optie.selected = false;
+                    select.insertBefore(optie, select.options[1] || null);
+                    select.value = '';
+                });
+                kaart.appendChild(verwijderKnop);
+
+                lijst.appendChild(kaart);
+                optie.remove();
+                select.value = '';
+            });
+        })();
+        </script>
+        {% else %}
         <div class="tabel-wrap">
             <table id="suggesties-tabel">
                 <thead>
@@ -99,91 +216,92 @@
             <button type="button" id="extra-product-toevoegen-knop" class="btn btn-rand btn-klein">Toevoegen</button>
         </div>
         {% endif %}
+        <script>
+        (function () {
+            var tabel = document.getElementById('suggesties-tabel');
+            var select = document.getElementById('extra-product-select');
+            var knop = document.getElementById('extra-product-toevoegen-knop');
+            if (!tabel || !select || !knop) return;
+
+            knop.addEventListener('click', function () {
+                var optie = select.options[select.selectedIndex];
+                if (!optie || !optie.value) return;
+                var rij = document.createElement('tr');
+
+                var vinkjeTd = document.createElement('td');
+                var vinkje = document.createElement('input');
+                vinkje.type = 'checkbox';
+                vinkje.name = 'product_id';
+                vinkje.value = optie.value;
+                vinkje.checked = true;
+                vinkjeTd.appendChild(vinkje);
+
+                var thumbTd = document.createElement('td');
+                if (optie.dataset.afbeelding) {
+                    var img = document.createElement('img');
+                    img.src = '/static/product_afbeeldingen/' + optie.dataset.afbeelding;
+                    img.alt = '';
+                    img.className = 'product-thumb';
+                    thumbTd.appendChild(img);
+                }
+
+                var naamTd = document.createElement('td');
+                naamTd.appendChild(document.createTextNode(optie.dataset.naam + ' '));
+                var verwijderKnop = document.createElement('button');
+                verwijderKnop.type = 'button';
+                verwijderKnop.className = 'btn-tekstlink';
+                verwijderKnop.style.fontSize = '0.78rem';
+                verwijderKnop.textContent = 'Verwijderen';
+                verwijderKnop.addEventListener('click', function () {
+                    rij.remove();
+                    optie.selected = false;
+                    select.insertBefore(optie, select.options[1] || null);
+                    select.value = '';
+                });
+                naamTd.appendChild(verwijderKnop);
+
+                var voorraadTd = document.createElement('td');
+                voorraadTd.textContent = optie.dataset.voorraad;
+
+                var minimumTd = document.createElement('td');
+                minimumTd.textContent = optie.dataset.minimum;
+
+                var aantalTd = document.createElement('td');
+                var aantalInput = document.createElement('input');
+                aantalInput.type = 'number';
+                aantalInput.name = 'aantal_' + optie.value;
+                aantalInput.min = '0';
+                aantalInput.value = '1';
+                aantalInput.style.width = '6rem';
+                aantalTd.appendChild(aantalInput);
+                aantalTd.appendChild(document.createTextNode(' ' + optie.dataset.besteleenheid));
+                if (parseInt(optie.dataset.factor, 10) > 1) {
+                    var hint = document.createElement('div');
+                    hint.className = 'tekst-zacht';
+                    hint.style.fontSize = '0.72rem';
+                    hint.textContent = '= ' + optie.dataset.factor + ' ' + optie.dataset.eenheid;
+                    aantalTd.appendChild(hint);
+                }
+
+                rij.appendChild(vinkjeTd);
+                rij.appendChild(thumbTd);
+                rij.appendChild(naamTd);
+                rij.appendChild(voorraadTd);
+                rij.appendChild(minimumTd);
+                rij.appendChild(aantalTd);
+                tabel.querySelector('tbody').appendChild(rij);
+                optie.remove();
+                select.value = '';
+            });
+        })();
+        </script>
+        {% endif %}
         <div class="veld" style="max-width:300px; margin-top:1rem">
             <label>Besteld door</label>
             <p class="veld-waarde">{{ huidige_gebruiker }}</p>
         </div>
         <button type="submit" class="btn btn-geel">Bestelling aanmaken</button>
     </form>
-    <script>
-    (function () {
-        var tabel = document.getElementById('suggesties-tabel');
-        var select = document.getElementById('extra-product-select');
-        var knop = document.getElementById('extra-product-toevoegen-knop');
-        if (!tabel || !select || !knop) return;
-
-        knop.addEventListener('click', function () {
-            var optie = select.options[select.selectedIndex];
-            if (!optie || !optie.value) return;
-            var rij = document.createElement('tr');
-
-            var vinkjeTd = document.createElement('td');
-            var vinkje = document.createElement('input');
-            vinkje.type = 'checkbox';
-            vinkje.name = 'product_id';
-            vinkje.value = optie.value;
-            vinkje.checked = true;
-            vinkjeTd.appendChild(vinkje);
-
-            var thumbTd = document.createElement('td');
-            if (optie.dataset.afbeelding) {
-                var img = document.createElement('img');
-                img.src = '/static/product_afbeeldingen/' + optie.dataset.afbeelding;
-                img.alt = '';
-                img.className = 'product-thumb';
-                thumbTd.appendChild(img);
-            }
-
-            var naamTd = document.createElement('td');
-            naamTd.appendChild(document.createTextNode(optie.dataset.naam + ' '));
-            var verwijderKnop = document.createElement('button');
-            verwijderKnop.type = 'button';
-            verwijderKnop.className = 'btn-tekstlink';
-            verwijderKnop.style.fontSize = '0.78rem';
-            verwijderKnop.textContent = 'Verwijderen';
-            verwijderKnop.addEventListener('click', function () {
-                rij.remove();
-                optie.selected = false;
-                select.insertBefore(optie, select.options[1] || null);
-                select.value = '';
-            });
-            naamTd.appendChild(verwijderKnop);
-
-            var voorraadTd = document.createElement('td');
-            voorraadTd.textContent = optie.dataset.voorraad;
-
-            var minimumTd = document.createElement('td');
-            minimumTd.textContent = optie.dataset.minimum;
-
-            var aantalTd = document.createElement('td');
-            var aantalInput = document.createElement('input');
-            aantalInput.type = 'number';
-            aantalInput.name = 'aantal_' + optie.value;
-            aantalInput.min = '0';
-            aantalInput.value = '1';
-            aantalInput.style.width = '6rem';
-            aantalTd.appendChild(aantalInput);
-            aantalTd.appendChild(document.createTextNode(' ' + optie.dataset.besteleenheid));
-            if (parseInt(optie.dataset.factor, 10) > 1) {
-                var hint = document.createElement('div');
-                hint.className = 'tekst-zacht';
-                hint.style.fontSize = '0.72rem';
-                hint.textContent = '= ' + optie.dataset.factor + ' ' + optie.dataset.eenheid;
-                aantalTd.appendChild(hint);
-            }
-
-            rij.appendChild(vinkjeTd);
-            rij.appendChild(thumbTd);
-            rij.appendChild(naamTd);
-            rij.appendChild(voorraadTd);
-            rij.appendChild(minimumTd);
-            rij.appendChild(aantalTd);
-            tabel.querySelector('tbody').appendChild(rij);
-            optie.remove();
-            select.value = '';
-        });
-    })();
-    </script>
     {% else %}
     <p class="leeg">Niets nodig — alle voorraad zit boven het minimum.</p>
     {% endif %}
@@ -198,6 +316,21 @@
         krap kan worden vóór het weekend. Een eerste, grove inschatting,
         wordt betrouwbaarder naarmate er meer tellingen bijkomen.
     </p>
+    {% if pda_modus %}
+    <ul class="mutatie-lijst">
+        {% for r in voorspelde_tekorten %}
+        <li>
+            <div class="mutatie-lijst-regel">
+                <strong>{{ r.product.naam }}</strong>
+                <span class="badge badge-laag">{{ r.verwacht_tekort }} {{ r.product.eenheid }} tekort</span>
+            </div>
+            <div class="tekst-zacht mutatie-lijst-opmerking">
+                {{ r.product.voorraad }} {{ r.product.eenheid }} op voorraad — verwacht verbruik {{ r.verwacht_verbruik }} {{ r.product.eenheid }}
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
     <div class="tabel-wrap">
         <table>
             <thead>
@@ -215,8 +348,8 @@
             </tbody>
         </table>
     </div>
+    {% endif %}
 </div>
-{% endif %}
 {% endif %}
 
 {% if recent_ontvangen %}

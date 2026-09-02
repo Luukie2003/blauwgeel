@@ -13,6 +13,51 @@
     {% endif %}
     <form method="post" id="inboeken-formulier">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if pda_modus %}
+        <div id="inboeken-kaarten">
+            {% for r in regels %}
+            {% set besteld_eenh = r.aantal_besteld|naar_besteleenheden(r) %}
+            {% set ontvangen_eenh = r.aantal_ontvangen|naar_besteleenheden(r) if (r.aantal_ontvangen is not none and r.aantal_ontvangen > 0) else besteld_eenh %}
+            <div class="pda-kaartje pda-regel-kaartje{{ ' pda-kaartje--manco' if r.manco else '' }}">
+                <div class="pda-kaartje-vink" style="cursor:default">
+                    {% if r.afbeelding %}
+                    <img src="{{ url_for('static', filename='product_afbeeldingen/' + r.afbeelding) }}" alt="" class="product-thumb">
+                    {% endif %}
+                    <span class="pda-kaartje-naam">{{ r.product_naam }}</span>
+                    <span class="badge badge-laag manco-badge" {{ '' if r.manco else 'hidden' }}>Manco</span>
+                </div>
+                <div class="pda-kaartje-info">
+                    <span class="tekst-zacht">Besteld: {{ besteld_eenh }} {{ r|besteleenheid_naam }}{% if r.besteleenheid_factor > 1 %} (= {{ r.aantal_besteld }} {{ r.eenheid }}){% endif %}</span>
+                </div>
+                <label class="pda-binnen-toggle">
+                    <input type="checkbox" class="binnen-vinkje" name="binnen_{{ r.id }}"
+                           {{ 'checked' if not r.manco else '' }}>
+                    <span>Binnengekomen</span>
+                </label>
+                <div class="veld pda-kaartje-veld">
+                    <label>Aantal ontvangen ({{ r|besteleenheid_naam }})</label>
+                    <input type="number" name="ontvangen_{{ r.id }}" min="0" class="ontvangen-veld"
+                           value="{{ ontvangen_eenh }}" {{ 'disabled' if r.manco else '' }}>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if beschikbare_producten %}
+        <div class="veld">
+            <label for="nieuw-product-select">+ Product toevoegen dat meekwam</label>
+            <div style="display:flex; gap:0.5rem; align-items:center">
+                <select id="nieuw-product-select" style="flex:1">
+                    <option value="">Kies een product...</option>
+                    {% for p in beschikbare_producten %}
+                    <option value="{{ p.id }}" data-naam="{{ p.naam }}" data-eenheid="{{ p|besteleenheid_naam }}"
+                            data-afbeelding="{{ p.afbeelding or '' }}">{{ p.naam }}</option>
+                    {% endfor %}
+                </select>
+                <button type="button" id="product-toevoegen-knop" class="btn btn-rand btn-klein">Toevoegen</button>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
         <div class="tabel-wrap">
             <table id="inboeken-tabel">
                 <thead>
@@ -52,7 +97,6 @@
                 </tbody>
             </table>
         </div>
-
         {% if beschikbare_producten %}
         <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.8rem">
             <select id="nieuw-product-select">
@@ -64,6 +108,7 @@
             </select>
             <button type="button" id="product-toevoegen-knop" class="btn btn-rand btn-klein">Toevoegen</button>
         </div>
+        {% endif %}
         {% endif %}
 
         <div class="veld" style="max-width:300px; margin-top:1rem">
@@ -89,9 +134,6 @@
 
 <script>
 (function () {
-    var tabel = document.getElementById('inboeken-tabel');
-    if (!tabel) return;
-
     function koppelVinkje(rij) {
         var vinkje = rij.querySelector('.binnen-vinkje');
         var veld = rij.querySelector('.ontvangen-veld');
@@ -101,6 +143,7 @@
         vinkje.addEventListener('change', function () {
             veld.disabled = !vinkje.checked;
             if (badge) badge.hidden = vinkje.checked;
+            rij.classList.toggle('pda-kaartje--manco', !vinkje.checked);
             if (vinkje.checked) {
                 if (veld.value === '0' || veld.value === '') veld.value = laatsteWaarde || veld.defaultValue;
             } else {
@@ -108,62 +151,117 @@
             }
         });
     }
-    Array.prototype.slice.call(tabel.querySelectorAll('tbody tr')).forEach(koppelVinkje);
+    Array.prototype.slice.call(
+        document.querySelectorAll('#inboeken-tabel tbody tr, #inboeken-kaarten .pda-kaartje')
+    ).forEach(koppelVinkje);
 
     var select = document.getElementById('nieuw-product-select');
     var knop = document.getElementById('product-toevoegen-knop');
+    var kaartenLijst = document.getElementById('inboeken-kaarten');
+    var tabel = document.getElementById('inboeken-tabel');
     if (knop && select) {
         knop.addEventListener('click', function () {
             var optie = select.options[select.selectedIndex];
             if (!optie || !optie.value) return;
-            var rij = document.createElement('tr');
 
-            var thumbTd = document.createElement('td');
-            if (optie.dataset.afbeelding) {
-                var img = document.createElement('img');
-                img.src = '/static/product_afbeeldingen/' + optie.dataset.afbeelding;
-                img.alt = '';
-                img.className = 'product-thumb';
-                thumbTd.appendChild(img);
+            if (kaartenLijst) {
+                var kaart = document.createElement('div');
+                kaart.className = 'pda-kaartje pda-regel-kaartje';
+
+                var kop = document.createElement('div');
+                kop.className = 'pda-kaartje-vink';
+                kop.style.cursor = 'default';
+                if (optie.dataset.afbeelding) {
+                    var img = document.createElement('img');
+                    img.src = '/static/product_afbeeldingen/' + optie.dataset.afbeelding;
+                    img.alt = '';
+                    img.className = 'product-thumb';
+                    kop.appendChild(img);
+                }
+                var naamSpan = document.createElement('span');
+                naamSpan.className = 'pda-kaartje-naam';
+                naamSpan.textContent = optie.dataset.naam;
+                kop.appendChild(naamSpan);
+                kaart.appendChild(kop);
+
+                var infoDiv = document.createElement('div');
+                infoDiv.className = 'pda-kaartje-info';
+                var infoSpan = document.createElement('span');
+                infoSpan.className = 'tekst-zacht';
+                infoSpan.textContent = 'extra, niet besteld';
+                infoDiv.appendChild(infoSpan);
+                kaart.appendChild(infoDiv);
+
+                var verborgenInput = document.createElement('input');
+                verborgenInput.type = 'hidden';
+                verborgenInput.name = 'nieuw_product_id';
+                verborgenInput.value = optie.value;
+                kaart.appendChild(verborgenInput);
+
+                var veldDiv = document.createElement('div');
+                veldDiv.className = 'veld pda-kaartje-veld';
+                var label = document.createElement('label');
+                label.textContent = 'Aantal (' + optie.dataset.eenheid + ')';
+                veldDiv.appendChild(label);
+                var aantalInput = document.createElement('input');
+                aantalInput.type = 'number';
+                aantalInput.name = 'nieuw_aantal';
+                aantalInput.min = '0';
+                aantalInput.value = '1';
+                veldDiv.appendChild(aantalInput);
+                kaart.appendChild(veldDiv);
+
+                kaartenLijst.appendChild(kaart);
+            } else if (tabel) {
+                var rij = document.createElement('tr');
+
+                var thumbTd = document.createElement('td');
+                if (optie.dataset.afbeelding) {
+                    var img2 = document.createElement('img');
+                    img2.src = '/static/product_afbeeldingen/' + optie.dataset.afbeelding;
+                    img2.alt = '';
+                    img2.className = 'product-thumb';
+                    thumbTd.appendChild(img2);
+                }
+
+                var naamTd = document.createElement('td');
+                naamTd.appendChild(document.createTextNode(optie.dataset.naam + ' '));
+                var extraSpan = document.createElement('span');
+                extraSpan.className = 'tekst-zacht';
+                extraSpan.style.fontSize = '0.72rem';
+                extraSpan.textContent = '(extra, niet besteld)';
+                naamTd.appendChild(extraSpan);
+                var verborgenInput2 = document.createElement('input');
+                verborgenInput2.type = 'hidden';
+                verborgenInput2.name = 'nieuw_product_id';
+                verborgenInput2.value = optie.value;
+                naamTd.appendChild(verborgenInput2);
+
+                var bestedTd = document.createElement('td');
+                bestedTd.className = 'tekst-zacht';
+                bestedTd.textContent = '—';
+
+                var binnenTd = document.createElement('td');
+                binnenTd.className = 'tekst-zacht';
+                binnenTd.textContent = 'meegekomen';
+
+                var aantalTd = document.createElement('td');
+                var aantalInput2 = document.createElement('input');
+                aantalInput2.type = 'number';
+                aantalInput2.name = 'nieuw_aantal';
+                aantalInput2.min = '0';
+                aantalInput2.value = '1';
+                aantalInput2.style.width = '6rem';
+                aantalTd.appendChild(aantalInput2);
+                aantalTd.appendChild(document.createTextNode(' ' + optie.dataset.eenheid));
+
+                rij.appendChild(thumbTd);
+                rij.appendChild(naamTd);
+                rij.appendChild(bestedTd);
+                rij.appendChild(binnenTd);
+                rij.appendChild(aantalTd);
+                tabel.querySelector('tbody').appendChild(rij);
             }
-
-            var naamTd = document.createElement('td');
-            naamTd.appendChild(document.createTextNode(optie.dataset.naam + ' '));
-            var extraSpan = document.createElement('span');
-            extraSpan.className = 'tekst-zacht';
-            extraSpan.style.fontSize = '0.72rem';
-            extraSpan.textContent = '(extra, niet besteld)';
-            naamTd.appendChild(extraSpan);
-            var verborgenInput = document.createElement('input');
-            verborgenInput.type = 'hidden';
-            verborgenInput.name = 'nieuw_product_id';
-            verborgenInput.value = optie.value;
-            naamTd.appendChild(verborgenInput);
-
-            var bestedTd = document.createElement('td');
-            bestedTd.className = 'tekst-zacht';
-            bestedTd.textContent = '—';
-
-            var binnenTd = document.createElement('td');
-            binnenTd.className = 'tekst-zacht';
-            binnenTd.textContent = 'meegekomen';
-
-            var aantalTd = document.createElement('td');
-            var aantalInput = document.createElement('input');
-            aantalInput.type = 'number';
-            aantalInput.name = 'nieuw_aantal';
-            aantalInput.min = '0';
-            aantalInput.value = '1';
-            aantalInput.style.width = '6rem';
-            aantalTd.appendChild(aantalInput);
-            aantalTd.appendChild(document.createTextNode(' ' + optie.dataset.eenheid));
-
-            rij.appendChild(thumbTd);
-            rij.appendChild(naamTd);
-            rij.appendChild(bestedTd);
-            rij.appendChild(binnenTd);
-            rij.appendChild(aantalTd);
-            tabel.querySelector('tbody').appendChild(rij);
             optie.remove();
             select.value = '';
         });
