@@ -1,0 +1,156 @@
+<script>
+    document.addEventListener("click", function (e) {
+        var trigger = e.target.closest(".menu-trigger");
+        document.querySelectorAll(".menu-item.open").forEach(function (item) {
+            if (!trigger || item !== trigger.closest(".menu-item")) {
+                item.classList.remove("open");
+            }
+        });
+        if (trigger) {
+            trigger.closest(".menu-item").classList.toggle("open");
+        }
+    });
+
+    document.addEventListener("click", function (e) {
+        if (e.target.closest("#zijbalk-toggle")) {
+            document.getElementById("app-zijbalk").classList.toggle("open");
+        }
+    });
+
+    function modalOpenen(id) {
+        document.getElementById(id).classList.add("open");
+    }
+    function modalSluiten(id) {
+        document.getElementById(id).classList.remove("open");
+    }
+    document.addEventListener("click", function (e) {
+        if (e.target.classList.contains("modal-overlay")) {
+            e.target.classList.remove("open");
+        }
+    });
+
+    // ---------- Bevestigen via pop-up i.p.v. de kale browser-confirm() ----------
+    function toonBevestiging(bericht, callback) {
+        var overlay = document.getElementById("bevestig-modal");
+        if (!overlay) {
+            overlay = document.createElement("div");
+            overlay.id = "bevestig-modal";
+            overlay.className = "modal-overlay";
+            overlay.innerHTML =
+                '<div class="modal-venster modal-venster-bevestig">' +
+                '<p id="bevestig-modal-tekst"></p>' +
+                '<div class="modal-knoppen">' +
+                '<button type="button" class="btn btn-rand" data-actie="annuleren">Annuleren</button>' +
+                '<button type="button" class="btn btn-gevaar" data-actie="bevestigen">Bevestigen</button>' +
+                "</div></div>";
+            document.body.appendChild(overlay);
+        }
+        overlay.querySelector("#bevestig-modal-tekst").textContent = bericht;
+        var sluiten = function () {
+            overlay.classList.remove("open");
+        };
+        overlay.querySelector('[data-actie="annuleren"]').onclick = sluiten;
+        overlay.querySelector('[data-actie="bevestigen"]').onclick = function () {
+            sluiten();
+            callback();
+        };
+        overlay.classList.add("open");
+    }
+
+    // Vervangt onsubmit="return confirm(...)": zelfde bevestig-stap, maar
+    // met de pop-up van de site i.p.v. de lelijke kale browserdialoog.
+    // De submit zelf blijft daarna een gewone paginaherlaad.
+    function bevestigEnVerstuur(form, bericht) {
+        toonBevestiging(bericht, function () {
+            form.submit();
+        });
+        return false;
+    }
+
+    // ---------- Kleine meldingen (toast) rechtsonder ----------
+    function toonToast(tekst) {
+        var stapel = document.getElementById("toast-stapel");
+        if (!stapel) {
+            stapel = document.createElement("div");
+            stapel.id = "toast-stapel";
+            stapel.className = "toast-stapel";
+            document.body.appendChild(stapel);
+        }
+        var toast = document.createElement("div");
+        toast.className = "toast";
+        toast.textContent = tekst;
+        stapel.appendChild(toast);
+        requestAnimationFrame(function () {
+            toast.classList.add("zichtbaar");
+        });
+        setTimeout(function () {
+            toast.classList.remove("zichtbaar");
+            setTimeout(function () {
+                toast.remove();
+            }, 200);
+        }, 3200);
+    }
+
+    // ---------- Formulieren die geen volledige paginaherlaad meer nodig hebben ----------
+    // Een form met class "js-ajax-form" wordt via fetch() verstuurd i.p.v.
+    // een gewone submit; de route herkent dit (zie is_ajax_verzoek() in
+    // app.py) en geeft JSON terug in plaats van een redirect. Heeft de
+    // form ook data-bevestig, dan verschijnt eerst de bevestigings-pop-up.
+    // Lukt het fetch-verzoek niet (netwerkfout, oude sessie, geen JS-
+    // ondersteunde route), dan valt het terug op een gewone submit, zodat
+    // de actie hoe dan ook gewoon lukt.
+    document.addEventListener("submit", function (e) {
+        var form = e.target.closest(".js-ajax-form");
+        if (!form) return;
+        e.preventDefault();
+        var versturen = function () {
+            fetch(form.action, {
+                method: "POST",
+                headers: { "X-Requested-With": "fetch" },
+                body: new FormData(form),
+            })
+                .then(function (resp) {
+                    if (!resp.ok) throw new Error("serverfout");
+                    return resp.json();
+                })
+                .then(function (data) {
+                    if (!data.ok) throw new Error(data.fout || "mislukt");
+                    form.dispatchEvent(
+                        new CustomEvent("ajax-form:success", { detail: data, bubbles: true })
+                    );
+                })
+                .catch(function () {
+                    form.submit();
+                });
+        };
+        if (form.dataset.bevestig) {
+            toonBevestiging(form.dataset.bevestig, versturen);
+        } else {
+            versturen();
+        }
+    });
+
+    // Standaardgedrag bij succes: gewoon een toast tonen. Pagina's met
+    // eigen opmaak (bijv. de stemmenlijst) luisteren zelf ook naar
+    // "ajax-form:success" om daarnaast nog iets in de DOM bij te werken.
+    document.addEventListener("ajax-form:success", function (e) {
+        if (e.detail && e.detail.melding) {
+            toonToast(e.detail.melding);
+        }
+    });
+
+    (function () {
+        var banner = document.getElementById("site-banner");
+        if (!banner) return;
+        var tekst = banner.dataset.bannerTekst;
+        if (localStorage.getItem("banner-weggeklikt") === tekst) {
+            banner.style.display = "none";
+            return;
+        }
+        var sluiten = document.getElementById("site-banner-sluiten");
+        sluiten.addEventListener("click", function () {
+            localStorage.setItem("banner-weggeklikt", tekst);
+            banner.style.display = "none";
+        });
+    })();
+</script>

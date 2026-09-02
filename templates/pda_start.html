@@ -1,0 +1,30 @@
+{% extends "base_pda.html" %}
+{% block titel %}Start{% endblock %}
+{% block inhoud %}
+<div class="pda-menu">
+    <a href="{{ url_for('tellen') }}" class="pda-menu-knop">
+        <span class="pda-menu-label">Tellen</span>
+        <span class="pda-menu-uitleg">Voorraad tellen, bar en hok</span>
+    </a>
+    <a href="{{ url_for('boeken') }}" class="pda-menu-knop">
+        <span class="pda-menu-label">Boeken</span>
+        <span class="pda-menu-uitleg">Product in of uit boeken</span>
+    </a>
+    <a href="{{ url_for('bijzonderheden') }}" class="pda-menu-knop">
+        <span class="pda-menu-label">Prikbord</span>
+        <span class="pda-menu-uitleg">Bijzonderheden lezen &amp; plaatsen</span>
+    </a>
+    <a href="{{ url_for('kassa_tellen') }}" class="pda-menu-knop">
+        <span class="pda-menu-label">Kassa</span>
+        <span class="pda-menu-uitleg">Kassa tellen</span>
+    </a>
+    <a href="{{ url_for('bestellijst') }}" class="pda-menu-knop">
+        <span class="pda-menu-label">Bestellijst</span>
+        <span class="pda-menu-uitleg">Levering inboeken</span>
+    </a>
+    <a href="{{ url_for('geschiedenis') }}" class="pda-menu-knop">
+        <span class="pda-menu-label">Geschiedenis</span>
+        <span class="pda-menu-uitleg">Laatste boekingen bekijken</span>
+    </a>
+</div>
+{% endblock %}

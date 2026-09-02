@@ -1,0 +1,147 @@
+"""Regressietests voor de PDA-modus (compacte vloer-weergave op de
+telefoon): de automatische herkenning op basis van de User-Agent, het
+weergave-cookie dat daarna wint, de handmatige omschakelknoppen, en de
+inhoud die per pagina wordt in-/uitgeschakeld."""
+
+from conftest import stel_csrf_token_in as _csrf
+
+TELEFOON_UA = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 "
+    "(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+)
+DESKTOP_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+)
+
+
+def _cookies_bevatten(resp, tekst):
+    return any(tekst in c for c in resp.headers.getlist("Set-Cookie"))
+
+
+def _inloggen_met_useragent(client, user_agent):
+    """Zoals de ingelogde_client-fixture, maar met een zelfgekozen
+    User-Agent op de allereerste request -- nodig om het 'eerste bezoek
+    op dit toestel'-gedrag te testen, want dat wordt anders al bepaald
+    door de (niet-telefoon) User-Agent van de inlog-POST zelf."""
+    token = _csrf(client)
+    resp = client.post(
+        "/login",
+        data={"naam": "admin", "wachtwoord": "kantine123", "csrf_token": token},
+        headers={"User-Agent": user_agent},
+    )
+    assert resp.status_code == 302, "seed-login voor tests is mislukt"
+    return resp
+
+
+def test_telefoon_useragent_krijgt_pda_start_op_eerste_bezoek(client):
+    resp = _inloggen_met_useragent(client, TELEFOON_UA)
+    assert _cookies_bevatten(resp, "weergave=pda")
+
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert b"pda-menu" in resp.data
+
+
+def test_desktop_useragent_krijgt_gewoon_dashboard_op_eerste_bezoek(client):
+    resp = _inloggen_met_useragent(client, DESKTOP_UA)
+    assert _cookies_bevatten(resp, "weergave=desktop")
+
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert b"pda-menu" not in resp.data
+
+
+def test_cookie_wint_van_useragent_zodra_gezet(client):
+    _inloggen_met_useragent(client, DESKTOP_UA)
+    resp = client.get("/", headers={"User-Agent": TELEFOON_UA})
+    assert b"pda-menu" not in resp.data
+
+
+def test_weergave_pda_knop_zet_cookie_en_toont_pda_daarna(ingelogde_client):
+    resp = ingelogde_client.get("/weergave/pda")
+    assert resp.status_code == 302
+    assert _cookies_bevatten(resp, "weergave=pda")
+
+    resp = ingelogde_client.get("/", headers={"User-Agent": DESKTOP_UA})
+    assert b"pda-menu" in resp.data
+
+
+def test_weergave_desktop_knop_zet_cookie_en_toont_desktop_daarna(ingelogde_client):
+    ingelogde_client.get("/weergave/pda")
+    resp = ingelogde_client.get("/weergave/desktop")
+    assert resp.status_code == 302
+    assert _cookies_bevatten(resp, "weergave=desktop")
+
+    resp = ingelogde_client.get("/", headers={"User-Agent": TELEFOON_UA})
+    assert b"pda-menu" not in resp.data
+
+
+def test_pda_modus_toont_compacte_shell_op_tellen(ingelogde_client):
+    ingelogde_client.get("/weergave/pda")
+    resp = ingelogde_client.get("/tellen")
+    body = resp.data.decode()
+    assert "pda-nav" in body
+    assert 'class="app-zijbalk"' not in body
+    assert "Looplijst starten" in body
+    # De grote losse-productenlijst hoort in PDA-modus niet te verschijnen.
+    assert "Eerdere tellingen en omzet" not in body
+
+
+def test_desktop_modus_toont_gewoon_de_volledige_tellen_pagina(ingelogde_client):
+    ingelogde_client.get("/weergave/desktop")
+    resp = ingelogde_client.get("/tellen")
+    body = resp.data.decode()
+    assert 'class="app-zijbalk"' in body
+    assert "Eerdere tellingen en omzet" in body
+
+
+def test_pda_modus_verbergt_voorgesteld_om_te_bestellen(ingelogde_client):
+    ingelogde_client.get("/weergave/pda")
+    resp = ingelogde_client.get("/bestellijst")
+    body = resp.data.decode()
+    assert "Openstaande bestellingen" in body
+    assert "Voorgesteld om te bestellen" not in body
+    assert "Al besteld? Factuur klaarzetten" not in body
+
+
+def test_desktop_modus_toont_wel_voorgesteld_om_te_bestellen(ingelogde_client):
+    ingelogde_client.get("/weergave/desktop")
+    resp = ingelogde_client.get("/bestellijst")
+    body = resp.data.decode()
+    assert "Voorgesteld om te bestellen" in body
+
+
+def test_pda_start_bevat_alle_zes_secties(ingelogde_client):
+    ingelogde_client.get("/weergave/pda")
+    resp = ingelogde_client.get("/")
+    body = resp.data.decode()
+    for label in ["Tellen", "Boeken", "Prikbord", "Kassa", "Bestellijst", "Geschiedenis"]:
+        assert label in body
+
+
+def test_pda_shell_bevat_link_naar_volledige_site(ingelogde_client):
+    ingelogde_client.get("/weergave/pda")
+    resp = ingelogde_client.get("/")
+    assert b"/weergave/desktop" in resp.data
+
+
+def test_pda_nav_markeert_actieve_sectie(ingelogde_client):
+    ingelogde_client.get("/weergave/pda")
+    resp = ingelogde_client.get("/bijzonderheden")
+    body = resp.data.decode()
+    prikbord_start = body.index(">Prikbord<")
+    prikbord_link_start = body.rfind("<a ", 0, prikbord_start)
+    assert "actief" in body[prikbord_link_start:prikbord_start]
+
+
+def test_kassa_telling_detail_werkt_ook_in_pda_modus(ingelogde_client, db):
+    ingelogde_client.get("/weergave/pda")
+    data = {"csrf_token": _csrf(ingelogde_client), "contante_omzet": "0"}
+    data.update({k: "0" for k in [
+        "aantal_50", "aantal_20", "aantal_10", "aantal_5", "aantal_2",
+        "aantal_1", "aantal_050", "aantal_020", "aantal_010", "aantal_005",
+    ]})
+    resp = ingelogde_client.post("/kassa/tellen", data=data, follow_redirects=True)
+    assert resp.status_code == 200
+    assert "pda-nav" in resp.data.decode()

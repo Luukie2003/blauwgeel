@@ -1300,3 +1300,143 @@ footer {
     margin: 0 auto 0.6rem;
     display: block;
 }
+
+/* ---------- PDA-modus: compacte vloer-weergave op de telefoon ---------- */
+/* Zelfde kleuren/lettertype als de rest van de site, maar zonder de
+   zijbalk-navigatie en met grotere knoppen/velden -- zie base_pda.html. */
+
+.pda-body {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--kaart);
+}
+
+.pda-kop {
+    background: #1c2b4a;
+    color: #f0f2f6;
+    padding: 0.7rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    border-bottom: 3px solid var(--geel);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.pda-kop-titel {
+    color: inherit;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.pda-kop-titel:hover {
+    text-decoration: none;
+}
+
+.pda-kop-acties {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.pda-kop-acties a:not(.btn) {
+    color: #d8def0;
+    font-size: 0.82rem;
+}
+
+.pda-nav {
+    display: flex;
+    overflow-x: auto;
+    background: var(--paneel);
+    border-bottom: 1px solid var(--rand);
+    -webkit-overflow-scrolling: touch;
+    position: sticky;
+    top: 46px;
+    z-index: 49;
+}
+
+.pda-nav a {
+    flex: 1 0 auto;
+    text-align: center;
+    padding: 0.6rem 0.9rem;
+    color: var(--tekst);
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+}
+
+.pda-nav a:hover {
+    text-decoration: none;
+}
+
+.pda-nav a.actief {
+    border-bottom-color: var(--accent);
+    color: var(--blauw);
+    background: var(--kaart);
+}
+
+.pda-inhoud {
+    border: none;
+    border-radius: 0;
+    background: var(--achtergrond);
+    padding: 1rem;
+    min-height: calc(100vh - 94px);
+}
+
+.pda-inhoud .btn {
+    padding: 0.65rem 1.2rem;
+    font-size: 0.92rem;
+}
+
+.pda-inhoud input[type="text"],
+.pda-inhoud input[type="number"],
+.pda-inhoud input[type="password"],
+.pda-inhoud input[type="email"],
+.pda-inhoud input[type="date"],
+.pda-inhoud input[type="datetime-local"],
+.pda-inhoud select,
+.pda-inhoud textarea {
+    min-height: 2.6rem;
+    font-size: 1rem;
+}
+
+.pda-menu {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+}
+
+.pda-menu-knop {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.15rem;
+    background: var(--kaart);
+    border: 1px solid var(--rand);
+    border-left: 5px solid var(--geel);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.2rem;
+    color: var(--tekst);
+    min-height: 3.6rem;
+}
+
+.pda-menu-knop:hover,
+.pda-menu-knop:active {
+    background: var(--paneel);
+    text-decoration: none;
+}
+
+.pda-menu-label {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--blauw-donker);
+}
+
+.pda-menu-uitleg {
+    font-size: 0.82rem;
+    color: var(--tekst-zacht);
+}

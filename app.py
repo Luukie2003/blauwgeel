@@ -10,6 +10,7 @@ from flask import (
     Flask,
     Response,
     flash,
+    g,
     jsonify,
     redirect,
     render_template,
@@ -389,6 +390,27 @@ NAV_ITEMS = [
 NAV_GROEP_VOLGORDE = ["Algemeen", "Voorraad", "Kassa", "Keuken", "Stemmen"]
 NAV_ITEMS.sort(key=lambda item: NAV_GROEP_VOLGORDE.index(item["groep"]))
 
+# De PDA-modus (zie WEERGAVE_TELEFOON_PATROON hieronder) toont alleen deze
+# handvol pagina's -- puur vloerwerk, geen beheer/rapportages. Bewust een
+# losse, kortere lijst i.p.v. een subset-vlag op NAV_ITEMS: die twee navigaties
+# verschillen te veel (geen groepen, kortere labels) om hetzelfde datamodel
+# te delen.
+PDA_NAV_ITEMS = [
+    {"url_endpoint": "tellen", "pda_label": "Tellen"},
+    {"url_endpoint": "boeken", "pda_label": "Boeken"},
+    {"url_endpoint": "bijzonderheden", "pda_label": "Prikbord"},
+    {"url_endpoint": "kassa_tellen", "pda_label": "Kassa"},
+    {"url_endpoint": "bestellijst", "pda_label": "Bestellijst"},
+    {"url_endpoint": "geschiedenis", "pda_label": "Geschiedenis"},
+]
+
+# Simpele herkenning van een telefoonscherm voor de allereerste keer dat
+# iemand op een toestel inlogt (daarna wint altijd het weergave-cookie,
+# ongeacht dit patroon -- zie bepaal_weergave_modus()). Tablets (iPad,
+# Android zonder "Mobile" in de UA) vallen bewust buiten de boot: die
+# stellen we in als desktop, met de PDA-knop als opt-in.
+WEERGAVE_TELEFOON_PATROON = re.compile(r"iPhone|iPod|Android.+Mobile", re.IGNORECASE)
+
 
 def get_secret_key():
     if SECRET_KEY_PATH.exists():
@@ -465,6 +487,10 @@ def create_app(database_path=None):
             return redirect(url_for("dashboard"))
         return None
 
+    @app.before_request
+    def zet_weergave_modus():
+        g.weergave_modus = bepaal_weergave_modus()
+
     @app.context_processor
     def inject_nav():
         actieve_nav = next(
@@ -477,14 +503,18 @@ def create_app(database_path=None):
                 "SELECT banner_tekst FROM instellingen WHERE id = 1"
             ).fetchone()
             banner_tekst = rij["banner_tekst"] if rij else None
+        pda_modus = g.get("weergave_modus") == "pda"
         return {
             "nav_items": NAV_ITEMS,
+            "pda_nav_items": PDA_NAV_ITEMS,
             "actieve_nav": actieve_nav,
             "huidige_gebruiker": session.get("gebruiker_naam"),
             "huidige_gebruiker_rol": session.get("gebruiker_rol"),
             "css_versie": int((BASE_DIR / "static" / "style.css").stat().st_mtime),
             "site_banner_tekst": banner_tekst,
             "csrf_token": csrf_token,
+            "pda_modus": pda_modus,
+            "basis_template": "base_pda.html" if pda_modus else "base.html",
         }
 
     @app.route("/favicon.ico")
@@ -511,6 +541,18 @@ def create_app(database_path=None):
             # inlogpagina met een inmiddels verlopen csrf-token laat zien --
             # dat gaf af en toe een "Bad Request" bij het inloggen.
             response.headers["Cache-Control"] = "no-store"
+        if "weergave" not in request.cookies:
+            # Allereerste bezoek op dit toestel: de op de User-Agent
+            # gebaseerde gok (zie bepaal_weergave_modus()) meteen vastzetten
+            # in een cookie, zodat 'ie vanaf nu "onthouden" is -- ook al is
+            # er nooit bewust op de PDA/desktop-knop geklikt.
+            response.set_cookie(
+                "weergave",
+                g.get("weergave_modus", "desktop"),
+                max_age=60 * 60 * 24 * 365,
+                samesite="Lax",
+                secure=app.config.get("SESSION_COOKIE_SECURE", True),
+            )
         return response
 
     @app.errorhandler(404)
@@ -1369,6 +1411,19 @@ def tel_stemmers(db, stemvraag_id):
     ).fetchone()["n"]
 
 
+def bepaal_weergave_modus():
+    """'pda' of 'desktop'. Het weergave-cookie (per toestel/browser, geen
+    accountinstelling) wint altijd zodra het gezet is -- ook als iemand
+    'm handmatig heeft omgezet. Pas als het cookie nog volledig ontbreekt
+    (allereerste bezoek op dit toestel) wordt er op basis van de
+    User-Agent geraden, en zet beveiligingsheaders() dat resultaat meteen
+    vast in een cookie zodat het daarna 'onthouden' blijft."""
+    cookie_waarde = request.cookies.get("weergave")
+    if cookie_waarde in ("pda", "desktop"):
+        return cookie_waarde
+    return "pda" if WEERGAVE_TELEFOON_PATROON.search(request.headers.get("User-Agent", "")) else "desktop"
+
+
 def register_routes(app):
     # ---------- Inloggen / accounts ----------
 
@@ -1458,6 +1513,28 @@ def register_routes(app):
         session.clear()
         flash("Je bent uitgelogd.", "success")
         return redirect(url_for("login"))
+
+    def _zet_weergave_cookie_en_ga_terug(modus):
+        """Onthoudt de gekozen weergave op dit toestel/browser (geen
+        accountinstelling, dus geldt niet mee op een ander toestel) en
+        stuurt terug naar waar de knop werd geklikt."""
+        respons = redirect(request.referrer or url_for("dashboard"))
+        respons.set_cookie(
+            "weergave",
+            modus,
+            max_age=60 * 60 * 24 * 365,
+            samesite="Lax",
+            secure=app.config.get("SESSION_COOKIE_SECURE", True),
+        )
+        return respons
+
+    @app.route("/weergave/pda")
+    def weergave_pda():
+        return _zet_weergave_cookie_en_ga_terug("pda")
+
+    @app.route("/weergave/desktop")
+    def weergave_desktop():
+        return _zet_weergave_cookie_en_ga_terug("desktop")
 
     @app.route("/wachtwoord-vergeten", methods=["GET", "POST"])
     def wachtwoord_vergeten():
@@ -1922,6 +1999,12 @@ def register_routes(app):
 
     @app.route("/")
     def dashboard():
+        if g.get("weergave_modus") == "pda":
+            # Geen van de zware dashboard-cijfers is relevant voor de
+            # PDA-modus (puur een menu naar de vloerpagina's), dus die
+            # queries hoeven hier niet te draaien.
+            return render_template("pda_start.html")
+
         db = get_db()
         producten = db.execute(
             "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"

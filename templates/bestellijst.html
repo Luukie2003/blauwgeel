@@ -1,14 +1,16 @@
-{% extends "base.html" %}
+{% extends basis_template %}
 {% block titel %}Bestellijst{% endblock %}
 {% block inhoud %}
 <div class="actiebalk">
     <p class="subtitel" style="margin:0">Bestel wat nodig is, of boek in wat er binnenkomt.</p>
+    {% if not pda_modus %}
     <div style="display:flex; gap:0.5rem">
         {% if suggesties %}
         <a href="{{ url_for('bestellijst_pdf_route') }}" class="btn btn-rand">Bestellijst (PDF)</a>
         {% endif %}
         <a href="{{ url_for('bestelling_nieuw') }}" class="btn btn-rand">Al besteld? Factuur klaarzetten</a>
     </div>
+    {% endif %}
 </div>
 
 <div class="kaart">
@@ -45,6 +47,7 @@
     {% endif %}
 </div>
 
+{% if not pda_modus %}
 <div class="kaart">
     <h2>Voorgesteld om te bestellen</h2>
     {% if suggesties or overige_producten %}
@@ -213,6 +216,7 @@
         </table>
     </div>
 </div>
+{% endif %}
 {% endif %}
 
 {% if recent_ontvangen %}

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends basis_template %}
 {% set is_bewerken = bestelling.status == 'ontvangen' %}
 {% block titel %}Bestelling {{ 'aanpassen' if is_bewerken else 'inboeken' }}{% endblock %}
 {% block inhoud %}
