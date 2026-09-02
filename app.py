@@ -4384,6 +4384,75 @@ def register_routes(app):
         flash("Kassatelling heropend. Je kunt 'm weer aanpassen.", "success")
         return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
 
+    @app.route("/kassa/tellingen/<int:telling_id>/omzet-corrigeren", methods=["POST"])
+    def kassa_telling_omzet_corrigeren(telling_id):
+        """Corrigeert alleen de contante omzet (bijv. geld dat per ongeluk als
+        contant i.p.v. pin is aangeslagen) op een al goedgekeurde telling --
+        ook als er sindsdien allang andere kassa-acties zijn geweest. Dat kan
+        hier wel veilig, anders dan bij heropenen: de kassastand wordt bij
+        goedkeuren altijd gelijkgezet aan het fysiek getelde bedrag, nooit aan
+        dit cijfer, dus deze correctie raakt de kassastand of andere
+        tellingen niet -- alleen het verwachte bedrag en verschil van déze
+        telling worden opnieuw berekend."""
+        db = get_db()
+        telling = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
+        ).fetchone()
+        if telling is None:
+            flash("Kassatelling niet gevonden.", "error")
+            return redirect(url_for("kassa_geschiedenis"))
+        if not telling["afgesloten"]:
+            flash(
+                "Deze kassatelling staat nog open als concept -- gebruik "
+                "'Bewerken' om de contante omzet aan te passen.",
+                "error",
+            )
+            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+        try:
+            nieuwe_omzet = round(
+                float(request.form.get("contante_omzet", "0").replace(",", ".")), 2
+            )
+        except ValueError:
+            flash("Ongeldig bedrag.", "error")
+            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+        if abs(nieuwe_omzet - telling["contante_omzet"]) < 0.001:
+            flash("Geen wijziging: dit is al de ingevulde contante omzet.", "error")
+            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+        stand_voor_deze_telling = round(telling["verwacht_bedrag"] - telling["contante_omzet"], 2)
+        nieuw_verwacht_bedrag = round(stand_voor_deze_telling + nieuwe_omzet, 2)
+        nieuw_verschil = round(telling["geteld_bedrag"] - nieuw_verwacht_bedrag, 2)
+        opmerking = request.form.get("correctie_opmerking", "").strip()
+
+        db.execute(
+            """UPDATE kassa_tellingen
+               SET contante_omzet = ?, verwacht_bedrag = ?, verschil = ?,
+                   contante_omzet_voor_correctie = ?, contante_omzet_gecorrigeerd_door_id = ?,
+                   contante_omzet_gecorrigeerd_door = ?, contante_omzet_gecorrigeerd_op = ?,
+                   contante_omzet_correctie_opmerking = ?
+               WHERE id = ?""",
+            (
+                nieuwe_omzet,
+                nieuw_verwacht_bedrag,
+                nieuw_verschil,
+                telling["contante_omzet"],
+                session.get("gebruiker_id"),
+                session.get("gebruiker_naam"),
+                now_str(),
+                opmerking or None,
+                telling_id,
+            ),
+        )
+        db.commit()
+        flash(
+            f"Contante omzet gecorrigeerd van € {telling['contante_omzet']:.2f} naar "
+            f"€ {nieuwe_omzet:.2f}. De kassastand en andere tellingen zijn niet aangepast.",
+            "success",
+        )
+        return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
     @app.route("/kassa/tellingen/<int:telling_id>/bewerken", methods=["GET", "POST"])
     def kassa_telling_bewerken(telling_id):
         db = get_db()

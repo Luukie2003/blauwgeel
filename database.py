@@ -104,6 +104,11 @@ KOLOM_MIGRATIES = [
     ("categorieen", "verkoopprijs_verplicht", "INTEGER NOT NULL DEFAULT 1"),
     ("producten", "glazen_per_fust", "INTEGER NOT NULL DEFAULT 0"),
     ("producten", "prijs_per_glas", "REAL NOT NULL DEFAULT 0"),
+    ("kassa_tellingen", "contante_omzet_voor_correctie", "REAL"),
+    ("kassa_tellingen", "contante_omzet_gecorrigeerd_door_id", "INTEGER REFERENCES gebruikers(id)"),
+    ("kassa_tellingen", "contante_omzet_gecorrigeerd_door", "TEXT"),
+    ("kassa_tellingen", "contante_omzet_gecorrigeerd_op", "TEXT"),
+    ("kassa_tellingen", "contante_omzet_correctie_opmerking", "TEXT"),
 ]
 
 

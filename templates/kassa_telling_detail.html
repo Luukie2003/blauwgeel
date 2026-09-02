@@ -102,4 +102,40 @@
     <p class="tekst-zacht" style="margin-top:0.3rem">Opmerking (goedkeurder): {{ telling.goedkeuring_opmerking }}</p>
     {% endif %}
 </div>
+
+{% if telling.afgesloten %}
+<div class="kaart">
+    <h2>Contante omzet corrigeren</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Bijv. als er geld per ongeluk als contant is aangeslagen terwijl het pin
+        was. Past alleen het verwachte bedrag en verschil van déze telling aan
+        &mdash; de kassastand en andere tellingen blijven ongemoeid, want die zijn
+        gebaseerd op het fysiek getelde bedrag, niet op dit cijfer. Kan ook nog
+        als er sindsdien allang weer nieuwe tellingen zijn geweest.
+    </p>
+    <form method="post" action="{{ url_for('kassa_telling_omzet_corrigeren', telling_id=telling.id) }}"
+          onsubmit="return bevestigEnVerstuur(this, 'Contante omzet van kassatelling #{{ telling.id }} corrigeren?');"
+          style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:flex-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld" style="max-width:180px; margin-bottom:0">
+            <label for="contante_omzet_correctie">Juiste contante omzet</label>
+            <input type="number" step="0.01" id="contante_omzet_correctie" name="contante_omzet"
+                   value="{{ '%.2f'|format(telling.contante_omzet) }}">
+        </div>
+        <div class="veld" style="flex:1 1 14rem; min-width:0; margin-bottom:0">
+            <label for="correctie_opmerking">Reden (optioneel)</label>
+            <input type="text" id="correctie_opmerking" name="correctie_opmerking"
+                   placeholder="Bijv. pinbetaling per ongeluk als contant aangeslagen">
+        </div>
+        <button type="submit" class="btn btn-rand">Corrigeren</button>
+    </form>
+    {% if telling.contante_omzet_gecorrigeerd_op %}
+    <p class="tekst-zacht" style="margin-top:0.8rem">
+        Laatst gecorrigeerd door {{ telling.contante_omzet_gecorrigeerd_door or 'onbekend' }}
+        op {{ telling.contante_omzet_gecorrigeerd_op|datum_nl }}
+        (was € {{ '%.2f'|format(telling.contante_omzet_voor_correctie) }}){% if telling.contante_omzet_correctie_opmerking %}: {{ telling.contante_omzet_correctie_opmerking }}{% endif %}
+    </p>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}

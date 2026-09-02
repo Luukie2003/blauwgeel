@@ -220,6 +220,119 @@ class TestKassaZelfGoedkeuren:
         assert "Coupures dubbel gecheckt".encode() in resp.data
 
 
+class TestKassaOmzetCorrigeren:
+    def test_corrigeert_verwacht_bedrag_en_verschil_zonder_kassa_stand_te_raken(self, ingelogde_client, db):
+        # 50 euro geteld, 10 euro contante omzet opgegeven -> verwacht 10,
+        # dus 40 euro overschot.
+        telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1, contante_omzet="10")
+        _keur_goed_als_ander(ingelogde_client, db, telling_id)
+        assert _stand(db) == 50.0
+
+        resp = ingelogde_client.post(
+            f"/kassa/tellingen/{telling_id}/omzet-corrigeren",
+            data={
+                "csrf_token": _csrf(ingelogde_client),
+                "contante_omzet": "25",
+                "correctie_opmerking": "Pin per ongeluk als contant aangeslagen",
+            },
+        )
+        assert resp.status_code == 302
+
+        telling = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
+        ).fetchone()
+        assert telling["contante_omzet"] == 25.0
+        assert telling["verwacht_bedrag"] == 25.0  # stand-voor-telling was 0
+        assert telling["verschil"] == 25.0  # 50 geteld - 25 verwacht
+        assert telling["contante_omzet_voor_correctie"] == 10.0
+        assert telling["contante_omzet_gecorrigeerd_door"] == "goedkeurder"
+        assert telling["contante_omzet_correctie_opmerking"] == "Pin per ongeluk als contant aangeslagen"
+        # De kassastand blijft het fysiek getelde bedrag, ongeacht de correctie.
+        assert _stand(db) == 50.0
+
+    def test_raakt_latere_tellingen_en_kassa_stand_niet_ook_niet_na_veel_latere_acties(self, ingelogde_client, db):
+        telling_a = _maak_concept_telling(ingelogde_client, bedrag_50=1, contante_omzet="10")
+        _keur_goed_als_ander(ingelogde_client, db, telling_a)
+        assert _stand(db) == 50.0
+
+        # Daarna nog van alles: een toevoeging, en een tweede, latere telling.
+        token = _csrf(ingelogde_client)
+        ingelogde_client.post(
+            "/kassa/mutatie/nieuw",
+            data={"csrf_token": token, "type": "toevoeging", "bedrag": "5", "ontvanger": "", "opmerking": ""},
+        )
+        telling_b = _maak_concept_telling(ingelogde_client, bedrag_50=2, contante_omzet="20")  # 100 geteld
+        _keur_goed_als_ander(ingelogde_client, db, telling_b)
+        telling_b_voor = dict(
+            db.execute("SELECT * FROM kassa_tellingen WHERE id = ?", (telling_b,)).fetchone()
+        )
+        assert _stand(db) == 100.0
+
+        # Nu telling_a corrigeren -- moet lukken ondanks alles wat daarna gebeurde.
+        resp = ingelogde_client.post(
+            f"/kassa/tellingen/{telling_a}/omzet-corrigeren",
+            data={"csrf_token": token, "contante_omzet": "25"},
+        )
+        assert resp.status_code == 302
+
+        telling_b_na = dict(
+            db.execute("SELECT * FROM kassa_tellingen WHERE id = ?", (telling_b,)).fetchone()
+        )
+        assert telling_b_na == telling_b_voor  # volstrekt ongewijzigd
+        assert _stand(db) == 100.0  # kassastand blijft ongemoeid
+
+        telling_a_na = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_a,)
+        ).fetchone()
+        assert telling_a_na["contante_omzet"] == 25.0
+
+    def test_corrigeren_van_nog_open_telling_wordt_geweigerd(self, ingelogde_client, db):
+        telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1, contante_omzet="10")
+        resp = ingelogde_client.post(
+            f"/kassa/tellingen/{telling_id}/omzet-corrigeren",
+            data={"csrf_token": _csrf(ingelogde_client), "contante_omzet": "25"},
+            follow_redirects=True,
+        )
+        assert "gebruik".encode() in resp.data.lower() or "Bewerken".encode() in resp.data
+        telling = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
+        ).fetchone()
+        assert telling["contante_omzet"] == 10.0  # ongewijzigd
+
+    def test_corrigeren_zonder_wijziging_wordt_geweigerd(self, ingelogde_client, db):
+        telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1, contante_omzet="10")
+        _keur_goed_als_ander(ingelogde_client, db, telling_id)
+
+        resp = ingelogde_client.post(
+            f"/kassa/tellingen/{telling_id}/omzet-corrigeren",
+            data={"csrf_token": _csrf(ingelogde_client), "contante_omzet": "10"},
+            follow_redirects=True,
+        )
+        assert "Geen wijziging".encode() in resp.data
+        telling = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
+        ).fetchone()
+        assert telling["contante_omzet_gecorrigeerd_op"] is None  # geen audit-trail voor een no-op
+
+    def test_correctie_audit_trail_wordt_getoond(self, ingelogde_client, db):
+        telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1, contante_omzet="10")
+        _keur_goed_als_ander(ingelogde_client, db, telling_id)
+        ingelogde_client.post(
+            f"/kassa/tellingen/{telling_id}/omzet-corrigeren",
+            data={
+                "csrf_token": _csrf(ingelogde_client),
+                "contante_omzet": "25",
+                "correctie_opmerking": "Pin per ongeluk als contant aangeslagen",
+            },
+        )
+
+        resp = ingelogde_client.get(f"/kassa/tellingen/{telling_id}")
+        body = resp.data.decode()
+        assert "goedkeurder" in body
+        assert "€ 10.00" in body  # het oude bedrag
+        assert "Pin per ongeluk als contant aangeslagen" in body
+
+
 def test_kassa_geschiedenis_begrenst_lange_lijst(ingelogde_client, db):
     """Regressietest voor de LIMIT op kassa_geschiedenis(): zonder begrenzing
     groeit de tijdlijn onbeperkt mee met elke kassatelling ooit."""
