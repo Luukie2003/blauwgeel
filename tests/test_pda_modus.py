@@ -43,6 +43,30 @@ def test_telefoon_useragent_krijgt_pda_start_op_eerste_bezoek(client):
     assert b"pda-menu" in resp.data
 
 
+def test_niet_ingelogd_bezoek_op_telefoon_zet_pda_al_vast_voor_het_inloggen(client):
+    """Regressietest: het allereerste verzoek van een nog niet ingelogde
+    telefoon is meestal een GET op een beveiligde pagina (bijv. '/'), die
+    vereis_login() meteen ombuigt naar /login -- dat gebeurt vóór de eigen
+    view draait. Als zet_weergave_modus() dan nog niet is geweest, zet die
+    ombuiging het cookie stiekem op 'desktop' vast (de fallback), en wint
+    dat cookie daarna altijd van de User-Agent, ook na het echte inloggen.
+    Moet dus al bij déze allereerste, nog niet ingelogde omleiding kloppen."""
+    resp = client.get("/", headers={"User-Agent": TELEFOON_UA})
+    assert resp.status_code == 302
+    assert resp.headers["Location"].startswith("/login")
+    assert _cookies_bevatten(resp, "weergave=pda")
+
+    token = _csrf(client)
+    resp = client.post(
+        "/login",
+        data={"naam": "admin", "wachtwoord": "kantine123", "csrf_token": token},
+    )
+    assert resp.status_code == 302
+
+    resp = client.get("/")
+    assert b"pda-menu" in resp.data
+
+
 def test_desktop_useragent_krijgt_gewoon_dashboard_op_eerste_bezoek(client):
     resp = _inloggen_met_useragent(client, DESKTOP_UA)
     assert _cookies_bevatten(resp, "weergave=desktop")

@@ -444,6 +444,16 @@ def create_app(database_path=None):
     app.jinja_env.globals["stemming_is_open"] = stemming_is_open
 
     @app.before_request
+    def zet_weergave_modus():
+        """Moet als allereerste before_request draaien, vóór alles wat een
+        request kan afkappen met een redirect (met name vereis_login()
+        hieronder) -- anders krijgt een nog niet ingelogde telefoon nooit de
+        kans om herkend te worden: de omleiding naar /login zou dan al
+        (verkeerd) 'desktop' vastzetten in het cookie voordat deze functie
+        ooit draait, en dat cookie wint daarna altijd van de User-Agent."""
+        g.weergave_modus = bepaal_weergave_modus()
+
+    @app.before_request
     def csrf_beschermen():
         """Simpele CSRF-bescherming zonder externe library: elk formulier op
         de site bevat een verborgen csrf_token-veld (zie de context_processor
@@ -486,10 +496,6 @@ def create_app(database_path=None):
             flash("Deze pagina is alleen voor beheerders.", "error")
             return redirect(url_for("dashboard"))
         return None
-
-    @app.before_request
-    def zet_weergave_modus():
-        g.weergave_modus = bepaal_weergave_modus()
 
     @app.context_processor
     def inject_nav():
