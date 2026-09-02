@@ -34,6 +34,46 @@ def _inloggen_met_useragent(client, user_agent):
     return resp
 
 
+def test_aanmelden_in_handterminal_weergave_forceert_pda_ongeacht_useragent(client):
+    """De aparte knop op de inlogpagina moet PDA-modus afdwingen, ook op een
+    duidelijk niet-telefoon User-Agent -- handig op een gedeeld toestel of
+    als de automatische herkenning een keer misgokt."""
+    token = _csrf(client)
+    resp = client.post(
+        "/login",
+        data={
+            "naam": "admin",
+            "wachtwoord": "kantine123",
+            "csrf_token": token,
+            "weergave_keuze": "pda",
+        },
+        headers={"User-Agent": DESKTOP_UA},
+    )
+    assert resp.status_code == 302
+    assert _cookies_bevatten(resp, "weergave=pda")
+
+    resp = client.get("/", headers={"User-Agent": DESKTOP_UA})
+    assert b"pda-menu" in resp.data
+
+
+def test_gewoon_aanmelden_dwingt_geen_pda_af(client):
+    """De normale 'Aanmelden'-knop (weergave_keuze=auto) mag de gewone
+    herkenning niet overschrijven."""
+    token = _csrf(client)
+    resp = client.post(
+        "/login",
+        data={
+            "naam": "admin",
+            "wachtwoord": "kantine123",
+            "csrf_token": token,
+            "weergave_keuze": "auto",
+        },
+        headers={"User-Agent": DESKTOP_UA},
+    )
+    assert resp.status_code == 302
+    assert _cookies_bevatten(resp, "weergave=desktop")
+
+
 def test_telefoon_useragent_krijgt_pda_start_op_eerste_bezoek(client):
     resp = _inloggen_met_useragent(client, TELEFOON_UA)
     assert _cookies_bevatten(resp, "weergave=pda")

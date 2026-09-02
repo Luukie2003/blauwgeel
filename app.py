@@ -547,11 +547,17 @@ def create_app(database_path=None):
             # inlogpagina met een inmiddels verlopen csrf-token laat zien --
             # dat gaf af en toe een "Bad Request" bij het inloggen.
             response.headers["Cache-Control"] = "no-store"
-        if "weergave" not in request.cookies:
+        weergave_al_gezet_door_view = any(
+            c.startswith("weergave=") for c in response.headers.getlist("Set-Cookie")
+        )
+        if "weergave" not in request.cookies and not weergave_al_gezet_door_view:
             # Allereerste bezoek op dit toestel: de op de User-Agent
             # gebaseerde gok (zie bepaal_weergave_modus()) meteen vastzetten
             # in een cookie, zodat 'ie vanaf nu "onthouden" is -- ook al is
-            # er nooit bewust op de PDA/desktop-knop geklikt.
+            # er nooit bewust op de PDA/desktop-knop geklikt. (Als de route
+            # zelf al expliciet een weergave-cookie heeft gezet -- zoals de
+            # "Aanmelden in handterminal-weergave"-knop -- laten we die keuze
+            # ongemoeid in plaats van 'm hier stiekem te overschrijven.)
             response.set_cookie(
                 "weergave",
                 g.get("weergave_modus", "desktop"),
@@ -1479,7 +1485,20 @@ def register_routes(app):
                 )
                 db.commit()
                 volgende = veilig_redirect_pad(request.args.get("next"), url_for("dashboard"))
-                return redirect(volgende)
+                respons = redirect(volgende)
+                if request.form.get("weergave_keuze") == "pda":
+                    # Expliciete keuze op de inlogpagina zelf -- wint van de
+                    # automatische herkenning en van een eventueel al gezet
+                    # cookie (bijv. handig op een gedeeld toestel of als de
+                    # automatische herkenning een keer misgokt).
+                    respons.set_cookie(
+                        "weergave",
+                        "pda",
+                        max_age=60 * 60 * 24 * 365,
+                        samesite="Lax",
+                        secure=app.config.get("SESSION_COOKIE_SECURE", True),
+                    )
+                return respons
 
             nieuw_aantal = mislukte_pogingen + 1
             nieuwe_blokkade = None
