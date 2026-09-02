@@ -4453,6 +4453,100 @@ def register_routes(app):
         )
         return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
 
+    @app.route("/kassa/tellingen/<int:telling_id>/telling-corrigeren", methods=["GET", "POST"])
+    def kassa_telling_coupures_corrigeren(telling_id):
+        """Corrigeert het fysiek getelde bedrag (de coupure-aantallen) op een
+        al goedgekeurde telling -- bijv. een miswelging die pas veel later
+        opvalt. Anders dan de contante-omzet-correctie kan dit wél de
+        kassastand raken (die wordt bij goedkeuren gelijkgezet aan precies
+        dit bedrag), dus die wordt alleen meegenomen als deze telling nog
+        steeds de meest recente stand-bepalende gebeurtenis is -- exact
+        dezelfde voorwaarde als bij heropenen. Is dat niet meer zo (er is
+        alweer een latere telling geweest die zelf een eigen, onafhankelijke
+        fysieke telling was), dan wordt alleen déze telling zelf gecorrigeerd
+        en blijft de kassastand -- terecht -- ongemoeid."""
+        db = get_db()
+        telling = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
+        ).fetchone()
+        if telling is None:
+            flash("Kassatelling niet gevonden.", "error")
+            return redirect(url_for("kassa_geschiedenis"))
+        if not telling["afgesloten"]:
+            flash(
+                "Deze kassatelling staat nog open als concept -- gebruik "
+                "'Bewerken' om de aantallen aan te passen.",
+                "error",
+            )
+            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+        if request.method == "POST":
+            aantallen, nieuw_geteld_bedrag = bereken_kassa_coupure_bedrag(request.form)
+            if abs(nieuw_geteld_bedrag - telling["geteld_bedrag"]) < 0.001:
+                flash("Geen wijziging: dit is al het getelde bedrag.", "error")
+                return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+            oud_geteld_bedrag = telling["geteld_bedrag"]
+            nieuw_verschil = round(nieuw_geteld_bedrag - telling["verwacht_bedrag"], 2)
+            opmerking = request.form.get("correctie_opmerking", "").strip()
+
+            db.execute(
+                """UPDATE kassa_tellingen
+                   SET aantal_50 = ?, aantal_20 = ?, aantal_10 = ?, aantal_5 = ?,
+                       aantal_2 = ?, aantal_1 = ?, aantal_050 = ?, aantal_020 = ?,
+                       aantal_010 = ?, aantal_005 = ?, geteld_bedrag = ?, verschil = ?,
+                       geteld_bedrag_voor_correctie = ?, geteld_bedrag_gecorrigeerd_door_id = ?,
+                       geteld_bedrag_gecorrigeerd_door = ?, geteld_bedrag_gecorrigeerd_op = ?,
+                       geteld_bedrag_correctie_opmerking = ?
+                   WHERE id = ?""",
+                (
+                    aantallen["aantal_50"],
+                    aantallen["aantal_20"],
+                    aantallen["aantal_10"],
+                    aantallen["aantal_5"],
+                    aantallen["aantal_2"],
+                    aantallen["aantal_1"],
+                    aantallen["aantal_050"],
+                    aantallen["aantal_020"],
+                    aantallen["aantal_010"],
+                    aantallen["aantal_005"],
+                    nieuw_geteld_bedrag,
+                    nieuw_verschil,
+                    oud_geteld_bedrag,
+                    session.get("gebruiker_id"),
+                    session.get("gebruiker_naam"),
+                    now_str(),
+                    opmerking or None,
+                    telling_id,
+                ),
+            )
+
+            kassa_stand = bereken_kassa_stand(db)
+            kassa_stand_aangepast = abs(kassa_stand["stand"] - oud_geteld_bedrag) < 0.001
+            if kassa_stand_aangepast:
+                db.execute(
+                    "UPDATE instellingen SET kassa_stand = ? WHERE id = 1",
+                    (nieuw_geteld_bedrag,),
+                )
+            db.commit()
+
+            melding = (
+                f"Getelde bedrag gecorrigeerd van € {oud_geteld_bedrag:.2f} naar "
+                f"€ {nieuw_geteld_bedrag:.2f}."
+            )
+            melding += (
+                " De kassastand is meteen aangepast."
+                if kassa_stand_aangepast
+                else " De kassastand is niet aangepast, want er is inmiddels al een "
+                "latere kassa-actie geweest die zijn eigen stand heeft vastgesteld."
+            )
+            flash(melding, "success")
+            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+        return render_template(
+            "kassa_telling_coupures_corrigeren.html", telling=telling, coupures=KASSA_COUPURES
+        )
+
     @app.route("/kassa/tellingen/<int:telling_id>/bewerken", methods=["GET", "POST"])
     def kassa_telling_bewerken(telling_id):
         db = get_db()
@@ -4645,6 +4739,82 @@ def register_routes(app):
 
         kassa_stand = bereken_kassa_stand(db)
         return render_template("kassa_mutatie_nieuw.html", kassa_stand=kassa_stand)
+
+    @app.route("/kassa/mutaties/<int:mutatie_id>/corrigeren", methods=["POST"])
+    def kassa_mutatie_corrigeren(mutatie_id):
+        """Corrigeert het bedrag van een al geboekte afdracht/toevoeging,
+        bijv. een tikfout. In tegenstelling tot de tellingen-correcties werkt
+        een mutatie via een lopend saldo (elke mutatie telt rechtstreeks bij
+        de kassastand op of af), dus een foutief bedrag telt gewoon mee
+        totdat een latere afgesloten telling de stand weer op een eigen,
+        onafhankelijke fysieke telling zet. Daarom wordt de kassastand hier
+        alleen aangepast als sindsdien nog geen enkele telling is afgesloten
+        -- staat de fout al 'achter' zo'n telling, dan is 'ie al vanzelf
+        verdwenen uit de lopende stand en zou corrigeren die juist weer fout
+        maken."""
+        db = get_db()
+        mutatie = db.execute(
+            "SELECT * FROM kassa_mutaties WHERE id = ?", (mutatie_id,)
+        ).fetchone()
+        if mutatie is None:
+            flash("Kassamutatie niet gevonden.", "error")
+            return redirect(url_for("kassa_geschiedenis"))
+
+        try:
+            nieuw_bedrag = round(
+                float(request.form.get("bedrag", "0").replace(",", ".")), 2
+            )
+        except ValueError:
+            flash("Ongeldig bedrag.", "error")
+            return redirect(url_for("kassa_geschiedenis"))
+        if nieuw_bedrag <= 0:
+            flash("Vul een bedrag groter dan 0 in.", "error")
+            return redirect(url_for("kassa_geschiedenis"))
+        if abs(nieuw_bedrag - mutatie["bedrag"]) < 0.001:
+            flash("Geen wijziging: dit is al het ingevulde bedrag.", "error")
+            return redirect(url_for("kassa_geschiedenis"))
+
+        oud_bedrag = mutatie["bedrag"]
+        db.execute(
+            """UPDATE kassa_mutaties
+               SET bedrag = ?, bedrag_voor_correctie = ?, gecorrigeerd_door_id = ?,
+                   gecorrigeerd_door = ?, gecorrigeerd_op = ?
+               WHERE id = ?""",
+            (
+                nieuw_bedrag,
+                oud_bedrag,
+                session.get("gebruiker_id"),
+                session.get("gebruiker_naam"),
+                now_str(),
+                mutatie_id,
+            ),
+        )
+
+        latere_telling = db.execute(
+            "SELECT COUNT(*) AS n FROM kassa_tellingen WHERE afgesloten = 1 AND datum > ?",
+            (mutatie["datum"],),
+        ).fetchone()["n"]
+        kassa_stand_aangepast = latere_telling == 0
+        if kassa_stand_aangepast:
+            delta = nieuw_bedrag - oud_bedrag
+            if mutatie["type"] == "afdracht":
+                delta = -delta
+            db.execute(
+                "UPDATE instellingen SET kassa_stand = kassa_stand + ? WHERE id = 1",
+                (delta,),
+            )
+        db.commit()
+
+        werkwoord = "Afdracht" if mutatie["type"] == "afdracht" else "Toevoeging"
+        melding = f"{werkwoord} gecorrigeerd van € {oud_bedrag:.2f} naar € {nieuw_bedrag:.2f}."
+        melding += (
+            " De kassastand is meteen aangepast."
+            if kassa_stand_aangepast
+            else " De kassastand is niet aangepast, want er is inmiddels al een "
+            "latere telling afgesloten die zijn eigen stand heeft vastgesteld."
+        )
+        flash(melding, "success")
+        return redirect(url_for("kassa_geschiedenis"))
 
 
 app = create_app()

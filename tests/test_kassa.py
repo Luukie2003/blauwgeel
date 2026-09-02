@@ -333,6 +333,217 @@ class TestKassaOmzetCorrigeren:
         assert "Pin per ongeluk als contant aangeslagen" in body
 
 
+def _coupure_data(csrf, **overrides):
+    data = {"csrf_token": csrf}
+    data.update({k: "0" for k in KOLOMMEN})
+    data.update(overrides)
+    return data
+
+
+class TestKassaCoupuresCorrigeren:
+    def test_corrigeert_geteld_bedrag_en_past_kassa_stand_aan_als_meest_recent(self, ingelogde_client, db):
+        telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1, contante_omzet="10")  # 50 geteld
+        _keur_goed_als_ander(ingelogde_client, db, telling_id)
+        assert _stand(db) == 50.0
+
+        resp = ingelogde_client.post(
+            f"/kassa/tellingen/{telling_id}/telling-corrigeren",
+            data=_coupure_data(
+                _csrf(ingelogde_client), aantal_50="2",
+                correctie_opmerking="Een briefje over het hoofd gezien",
+            ),
+        )
+        assert resp.status_code == 302
+
+        telling = db.execute("SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)).fetchone()
+        assert telling["geteld_bedrag"] == 100.0
+        assert telling["verwacht_bedrag"] == 10.0  # ongewijzigd
+        assert telling["verschil"] == 90.0
+        assert telling["geteld_bedrag_voor_correctie"] == 50.0
+        assert telling["geteld_bedrag_gecorrigeerd_door"] == "goedkeurder"
+        assert telling["geteld_bedrag_correctie_opmerking"] == "Een briefje over het hoofd gezien"
+        assert _stand(db) == 100.0  # meegenomen: dit was de meest recente stand-bepaler
+
+    def test_corrigeren_raakt_kassa_stand_niet_als_er_al_een_latere_telling_is(self, ingelogde_client, db):
+        telling_a = _maak_concept_telling(ingelogde_client, bedrag_50=1, contante_omzet="10")  # 50 geteld
+        _keur_goed_als_ander(ingelogde_client, db, telling_a)
+        assert _stand(db) == 50.0
+
+        telling_b = _maak_concept_telling(ingelogde_client, bedrag_50=2, contante_omzet="20")  # 100 geteld
+        _keur_goed_als_ander(ingelogde_client, db, telling_b)
+        assert _stand(db) == 100.0
+
+        resp = ingelogde_client.post(
+            f"/kassa/tellingen/{telling_a}/telling-corrigeren",
+            data=_coupure_data(_csrf(ingelogde_client), aantal_50="3"),  # 150 i.p.v. 50
+        )
+        assert resp.status_code == 302
+
+        telling_a_na = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_a,)
+        ).fetchone()
+        assert telling_a_na["geteld_bedrag"] == 150.0  # zelf wel gecorrigeerd
+        assert _stand(db) == 100.0  # kassastand blijft op telling_b's eigen telling
+
+    def test_corrigeren_van_open_telling_wordt_geweigerd(self, ingelogde_client, db):
+        telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1)
+        resp = ingelogde_client.post(
+            f"/kassa/tellingen/{telling_id}/telling-corrigeren",
+            data=_coupure_data(_csrf(ingelogde_client), aantal_50="2"),
+            follow_redirects=True,
+        )
+        assert "Bewerken".encode() in resp.data
+        telling = db.execute(
+            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
+        ).fetchone()
+        assert telling["geteld_bedrag"] == 50.0  # ongewijzigd
+
+    def test_corrigeren_zonder_wijziging_wordt_geweigerd(self, ingelogde_client, db):
+        telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1)
+        _keur_goed_als_ander(ingelogde_client, db, telling_id)
+        resp = ingelogde_client.post(
+            f"/kassa/tellingen/{telling_id}/telling-corrigeren",
+            data=_coupure_data(_csrf(ingelogde_client), aantal_50="1"),
+            follow_redirects=True,
+        )
+        assert "Geen wijziging".encode() in resp.data
+
+    def test_correctie_pagina_en_audit_trail(self, ingelogde_client, db):
+        telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1)
+        _keur_goed_als_ander(ingelogde_client, db, telling_id)
+
+        resp = ingelogde_client.get(f"/kassa/tellingen/{telling_id}/telling-corrigeren")
+        assert resp.status_code == 200
+        body = resp.data.decode()
+        veld_start = body.index('id="aantal_50"')
+        assert 'value="1"' in body[veld_start : veld_start + 150]
+
+        ingelogde_client.post(
+            f"/kassa/tellingen/{telling_id}/telling-corrigeren",
+            data=_coupure_data(_csrf(ingelogde_client), aantal_50="2", correctie_opmerking="Test reden"),
+        )
+        resp = ingelogde_client.get(f"/kassa/tellingen/{telling_id}")
+        body = resp.data.decode()
+        assert "goedkeurder" in body
+        assert "€ 50.00" in body  # oude bedrag
+        assert "Test reden" in body
+
+
+class TestKassaMutatieCorrigeren:
+    def test_afdracht_corrigeren_past_kassa_stand_aan_als_meest_recente_actie(self, ingelogde_client, db):
+        token = _csrf(ingelogde_client)
+        ingelogde_client.post(
+            "/kassa/mutatie/nieuw",
+            data={"csrf_token": token, "type": "afdracht", "bedrag": "10", "ontvanger": "penningmeester", "opmerking": ""},
+        )
+        mutatie = db.execute("SELECT * FROM kassa_mutaties ORDER BY id DESC LIMIT 1").fetchone()
+        assert _stand(db) == -10.0
+
+        resp = ingelogde_client.post(
+            f"/kassa/mutaties/{mutatie['id']}/corrigeren",
+            data={"csrf_token": token, "bedrag": "15"},
+        )
+        assert resp.status_code == 302
+        assert _stand(db) == -15.0
+
+        mutatie_na = db.execute("SELECT * FROM kassa_mutaties WHERE id = ?", (mutatie["id"],)).fetchone()
+        assert mutatie_na["bedrag"] == 15.0
+        assert mutatie_na["bedrag_voor_correctie"] == 10.0
+        assert mutatie_na["gecorrigeerd_door"] == "admin"
+
+    def test_toevoeging_corrigeren_past_kassa_stand_aan(self, ingelogde_client, db):
+        token = _csrf(ingelogde_client)
+        ingelogde_client.post(
+            "/kassa/mutatie/nieuw",
+            data={"csrf_token": token, "type": "toevoeging", "bedrag": "10", "ontvanger": "", "opmerking": ""},
+        )
+        mutatie = db.execute("SELECT * FROM kassa_mutaties ORDER BY id DESC LIMIT 1").fetchone()
+        assert _stand(db) == 10.0
+
+        ingelogde_client.post(
+            f"/kassa/mutaties/{mutatie['id']}/corrigeren",
+            data={"csrf_token": token, "bedrag": "25"},
+        )
+        assert _stand(db) == 25.0
+
+    def test_corrigeren_raakt_kassa_stand_niet_als_er_al_een_latere_telling_is(self, ingelogde_client, db):
+        token = _csrf(ingelogde_client)
+        ingelogde_client.post(
+            "/kassa/mutatie/nieuw",
+            data={"csrf_token": token, "type": "afdracht", "bedrag": "10", "ontvanger": "", "opmerking": ""},
+        )
+        mutatie = db.execute("SELECT * FROM kassa_mutaties ORDER BY id DESC LIMIT 1").fetchone()
+        # Datum kunstmatig terugzetten zodat de telling hierna gegarandeerd
+        # als 'later' geldt, ongeacht hoe snel de test zelf draait (deze
+        # datumvelden hebben geen secondeprecisie).
+        db.execute("UPDATE kassa_mutaties SET datum = '2020-01-01 10:00' WHERE id = ?", (mutatie["id"],))
+        db.commit()
+        assert _stand(db) == -10.0
+
+        telling_id = _maak_concept_telling(ingelogde_client, bedrag_50=1)  # 50 geteld
+        _keur_goed_als_ander(ingelogde_client, db, telling_id)
+        assert _stand(db) == 50.0
+
+        resp = ingelogde_client.post(
+            f"/kassa/mutaties/{mutatie['id']}/corrigeren",
+            data={"csrf_token": _csrf(ingelogde_client), "bedrag": "25"},
+        )
+        assert resp.status_code == 302
+        assert _stand(db) == 50.0  # ongewijzigd
+
+        mutatie_na = db.execute("SELECT * FROM kassa_mutaties WHERE id = ?", (mutatie["id"],)).fetchone()
+        assert mutatie_na["bedrag"] == 25.0  # zelf wel gecorrigeerd
+
+    def test_ongeldig_bedrag_wordt_geweigerd(self, ingelogde_client, db):
+        token = _csrf(ingelogde_client)
+        ingelogde_client.post(
+            "/kassa/mutatie/nieuw",
+            data={"csrf_token": token, "type": "afdracht", "bedrag": "10", "ontvanger": "", "opmerking": ""},
+        )
+        mutatie = db.execute("SELECT * FROM kassa_mutaties ORDER BY id DESC LIMIT 1").fetchone()
+
+        resp = ingelogde_client.post(
+            f"/kassa/mutaties/{mutatie['id']}/corrigeren",
+            data={"csrf_token": _csrf(ingelogde_client), "bedrag": "0"},
+            follow_redirects=True,
+        )
+        assert "groter dan 0".encode() in resp.data
+        mutatie_na = db.execute("SELECT * FROM kassa_mutaties WHERE id = ?", (mutatie["id"],)).fetchone()
+        assert mutatie_na["bedrag"] == 10.0
+
+    def test_zonder_wijziging_wordt_geweigerd(self, ingelogde_client, db):
+        token = _csrf(ingelogde_client)
+        ingelogde_client.post(
+            "/kassa/mutatie/nieuw",
+            data={"csrf_token": token, "type": "afdracht", "bedrag": "10", "ontvanger": "", "opmerking": ""},
+        )
+        mutatie = db.execute("SELECT * FROM kassa_mutaties ORDER BY id DESC LIMIT 1").fetchone()
+
+        resp = ingelogde_client.post(
+            f"/kassa/mutaties/{mutatie['id']}/corrigeren",
+            data={"csrf_token": _csrf(ingelogde_client), "bedrag": "10"},
+            follow_redirects=True,
+        )
+        assert "Geen wijziging".encode() in resp.data
+
+    def test_correctie_wordt_getoond_in_geschiedenis(self, ingelogde_client, db):
+        token = _csrf(ingelogde_client)
+        ingelogde_client.post(
+            "/kassa/mutatie/nieuw",
+            data={"csrf_token": token, "type": "afdracht", "bedrag": "10", "ontvanger": "", "opmerking": ""},
+        )
+        mutatie = db.execute("SELECT * FROM kassa_mutaties ORDER BY id DESC LIMIT 1").fetchone()
+        ingelogde_client.post(
+            f"/kassa/mutaties/{mutatie['id']}/corrigeren",
+            data={"csrf_token": _csrf(ingelogde_client), "bedrag": "15"},
+        )
+
+        resp = ingelogde_client.get("/kassa/geschiedenis")
+        body = resp.data.decode()
+        assert "gecorrigeerd door admin" in body
+        assert "€ 10.00" in body
+
+
 def test_kassa_geschiedenis_begrenst_lange_lijst(ingelogde_client, db):
     """Regressietest voor de LIMIT op kassa_geschiedenis(): zonder begrenzing
     groeit de tijdlijn onbeperkt mee met elke kassatelling ooit."""

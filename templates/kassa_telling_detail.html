@@ -137,5 +137,24 @@
     </p>
     {% endif %}
 </div>
+
+<div class="kaart">
+    <h2>Getelde bedrag corrigeren</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Voor een miswelging in de coupures die pas achteraf opvalt. Werkt ook
+        als er sindsdien allang weer nieuwe kassa-acties zijn geweest &mdash;
+        de kassastand wordt dan alleen aangepast als deze telling nog steeds
+        de meest recente is die de stand heeft bepaald, anders blijft die
+        terecht ongemoeid (hij is dan al op een latere, eigen telling gebaseerd).
+    </p>
+    <a href="{{ url_for('kassa_telling_coupures_corrigeren', telling_id=telling.id) }}" class="btn btn-rand">Coupures corrigeren</a>
+    {% if telling.geteld_bedrag_gecorrigeerd_op %}
+    <p class="tekst-zacht" style="margin-top:0.8rem">
+        Laatst gecorrigeerd door {{ telling.geteld_bedrag_gecorrigeerd_door or 'onbekend' }}
+        op {{ telling.geteld_bedrag_gecorrigeerd_op|datum_nl }}
+        (was € {{ '%.2f'|format(telling.geteld_bedrag_voor_correctie) }}){% if telling.geteld_bedrag_correctie_opmerking %}: {{ telling.geteld_bedrag_correctie_opmerking }}{% endif %}
+    </p>
+    {% endif %}
+</div>
 {% endif %}
 {% endblock %}

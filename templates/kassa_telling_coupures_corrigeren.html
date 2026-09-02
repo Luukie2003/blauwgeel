@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block titel %}Kassatelling #{{ telling.id }} corrigeren{% endblock %}
+{% block inhoud %}
+<h1>Kassatelling #{{ telling.id }}: getelde bedrag corrigeren</h1>
+<p class="subtitel">
+    Voor een miswelging die pas achteraf opvalt. Het verwachte bedrag van
+    déze telling verandert niet mee &mdash; alleen het getelde bedrag en het
+    verschil.
+    <a href="{{ url_for('kassa_telling_detail', telling_id=telling.id) }}">&larr; Terug naar de telling</a>
+</p>
+
+<div class="kaart">
+    <form method="post" id="kassa-correctie-form"
+          onsubmit="return bevestigEnVerstuur(this, 'Getelde bedrag van kassatelling #{{ telling.id }} corrigeren?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <fieldset class="groupbox">
+            <legend>Geteld in de kassa</legend>
+            <div class="formgrid">
+                {% for kolom, waarde, label in coupures %}
+                <div class="veld">
+                    <label for="{{ kolom }}">{{ label }}</label>
+                    <input type="number" inputmode="numeric" min="0" id="{{ kolom }}" name="{{ kolom }}"
+                           class="kassa-coupure" data-waarde="{{ waarde }}" value="{{ telling[kolom] }}">
+                </div>
+                {% endfor %}
+            </div>
+            <div class="veld">
+                <label for="correctie_opmerking">Reden (optioneel)</label>
+                <input type="text" id="correctie_opmerking" name="correctie_opmerking"
+                       placeholder="Bijv. coupure over het hoofd gezien bij het tellen">
+            </div>
+        </fieldset>
+
+        <div class="statgrid" style="margin-bottom:1.1rem">
+            <div class="stat">
+                <div class="getal" id="uitkomst-geteld">€ {{ '%.2f'|format(telling.geteld_bedrag) }}</div>
+                <div class="label">Nieuw geteld bedrag</div>
+            </div>
+            <div class="stat">
+                <div class="getal">€ {{ '%.2f'|format(telling.verwacht_bedrag) }}</div>
+                <div class="label">Verwacht bedrag (ongewijzigd)</div>
+            </div>
+            <div class="stat" id="uitkomst-verschil-stat">
+                <div class="getal" id="uitkomst-verschil">€ {{ '%.2f'|format(telling.verschil) }}</div>
+                <div class="label">Nieuw verschil</div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-geel">Corrigeren</button>
+    </form>
+</div>
+
+<script>
+(function () {
+    var verwacht = {{ telling.verwacht_bedrag }};
+    var coupureVelden = Array.prototype.slice.call(document.querySelectorAll('.kassa-coupure'));
+    var uitkomstGeteld = document.getElementById('uitkomst-geteld');
+    var uitkomstVerschil = document.getElementById('uitkomst-verschil');
+    var uitkomstVerschilStat = document.getElementById('uitkomst-verschil-stat');
+
+    function euro(bedrag) {
+        return '€ ' + bedrag.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    function herbereken() {
+        var geteld = 0;
+        coupureVelden.forEach(function (veld) {
+            var aantal = parseInt(veld.value, 10) || 0;
+            geteld += aantal * parseFloat(veld.dataset.waarde);
+        });
+        var verschil = geteld - verwacht;
+
+        uitkomstGeteld.textContent = euro(geteld);
+        uitkomstVerschil.textContent = (verschil > 0 ? '+' : '') + euro(verschil);
+        uitkomstVerschilStat.classList.remove('waarschuwing');
+        if (Math.abs(verschil) > 0.001) {
+            uitkomstVerschilStat.classList.add('waarschuwing');
+        }
+    }
+
+    coupureVelden.forEach(function (veld) { veld.addEventListener('input', herbereken); });
+    herbereken();
+})();
+</script>
+{% endblock %}

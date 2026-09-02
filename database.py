@@ -109,6 +109,16 @@ KOLOM_MIGRATIES = [
     ("kassa_tellingen", "contante_omzet_gecorrigeerd_door", "TEXT"),
     ("kassa_tellingen", "contante_omzet_gecorrigeerd_op", "TEXT"),
     ("kassa_tellingen", "contante_omzet_correctie_opmerking", "TEXT"),
+    ("kassa_tellingen", "geteld_bedrag_voor_correctie", "REAL"),
+    ("kassa_tellingen", "geteld_bedrag_gecorrigeerd_door_id", "INTEGER REFERENCES gebruikers(id)"),
+    ("kassa_tellingen", "geteld_bedrag_gecorrigeerd_door", "TEXT"),
+    ("kassa_tellingen", "geteld_bedrag_gecorrigeerd_op", "TEXT"),
+    ("kassa_tellingen", "geteld_bedrag_correctie_opmerking", "TEXT"),
+    ("kassa_mutaties", "bedrag_voor_correctie", "REAL"),
+    ("kassa_mutaties", "gecorrigeerd_door_id", "INTEGER REFERENCES gebruikers(id)"),
+    ("kassa_mutaties", "gecorrigeerd_door", "TEXT"),
+    ("kassa_mutaties", "gecorrigeerd_op", "TEXT"),
+    ("kassa_mutaties", "correctie_opmerking", "TEXT"),
 ]
 
 
