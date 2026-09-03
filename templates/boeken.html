@@ -3,6 +3,7 @@
 {% block inhoud %}
 <p class="subtitel">Levering binnengekomen? Boek 'in'. Verkocht of verbruikt? Boek 'uit'.</p>
 
+{% if not pda_modus %}
 <div class="kaart" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap">
     <div>
         <strong>Factuur of levering met meerdere producten?</strong>
@@ -12,6 +13,7 @@
     </div>
     <a href="{{ url_for('levering_inboeken') }}" class="btn btn-rand">Levering inboeken</a>
 </div>
+{% endif %}
 
 <div class="kaart">
     <form method="post">

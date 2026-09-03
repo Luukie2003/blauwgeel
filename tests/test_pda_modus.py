@@ -148,19 +148,18 @@ def test_desktop_modus_toont_gewoon_de_volledige_tellen_pagina(ingelogde_client)
     assert "Eerdere tellingen en omzet" in body
 
 
-def test_pda_modus_toont_voorgesteld_om_te_bestellen_als_kaarten(ingelogde_client):
-    """De handterminal mag de bestel-suggesties niet meer verbergen (was
-    vroeger zo), maar toont ze als aanraakvriendelijke kaarten i.p.v. de
-    brede tabel die de volledige site gebruikt."""
+def test_pda_modus_verbergt_bestelling_aanmaken(ingelogde_client):
+    """Bestellingen aanmaken/klaarzetten gebeurt altijd op desktop -- de
+    handterminal mag alleen een al klaarstaande bestelling kunnen inboeken,
+    controleren en manco melden."""
     ingelogde_client.get("/weergave/pda")
     resp = ingelogde_client.get("/bestellijst")
     body = resp.data.decode()
     assert "Openstaande bestellingen" in body
-    assert "Voorgesteld om te bestellen" in body
-    assert "Al besteld? Factuur klaarzetten" in body
+    assert "Voorgesteld om te bestellen" not in body
+    assert "Voorspelde tekorten" not in body
+    assert "Al besteld? Factuur klaarzetten" not in body
     assert "Bestellijst (PDF)" not in body
-    assert 'id="suggesties-kaarten"' in body
-    assert 'id="suggesties-tabel"' not in body
 
 
 def test_desktop_modus_toont_wel_voorgesteld_om_te_bestellen(ingelogde_client):
@@ -168,8 +167,8 @@ def test_desktop_modus_toont_wel_voorgesteld_om_te_bestellen(ingelogde_client):
     resp = ingelogde_client.get("/bestellijst")
     body = resp.data.decode()
     assert "Voorgesteld om te bestellen" in body
+    assert "Al besteld? Factuur klaarzetten" in body
     assert 'id="suggesties-tabel"' in body
-    assert 'id="suggesties-kaarten"' not in body
 
 
 def test_pda_start_bevat_alle_zes_secties(ingelogde_client):
@@ -243,13 +242,15 @@ def test_desktop_tellen_lopen_controleren_toont_tabel(ingelogde_client, db):
     assert 'id="loop-controleren-kaarten"' not in body
 
 
-def test_pda_bestelling_nieuw_toont_kaarten_en_pda_schil(ingelogde_client):
+def test_bestelling_nieuw_blijft_altijd_desktop_ongeacht_weergave(ingelogde_client):
+    """Een nieuwe bestelling klaarzetten gebeurt altijd op desktop, ook als
+    het toestel toevallig in handterminal-weergave staat."""
     ingelogde_client.get("/weergave/pda")
     resp = ingelogde_client.get("/bestellijst/nieuw")
     body = resp.data.decode()
-    assert 'id="bestelling-kaarten"' in body
-    assert 'id="bestelling-tabel"' not in body
-    assert "pda-kop-menuknop" in body
+    assert 'id="bestelling-tabel"' in body
+    assert 'class="app-zijbalk"' in body
+    assert "pda-kop-menuknop" not in body
 
 
 def test_desktop_bestelling_nieuw_toont_tabel(ingelogde_client):
@@ -257,7 +258,6 @@ def test_desktop_bestelling_nieuw_toont_tabel(ingelogde_client):
     resp = ingelogde_client.get("/bestellijst/nieuw")
     body = resp.data.decode()
     assert 'id="bestelling-tabel"' in body
-    assert 'id="bestelling-kaarten"' not in body
     assert 'class="app-zijbalk"' in body
 
 
@@ -307,3 +307,19 @@ def test_desktop_product_bewerken_toont_gewone_schil(ingelogde_client, db):
     resp = ingelogde_client.get(f"/producten/{product['id']}/bewerken")
     body = resp.data.decode()
     assert 'class="app-zijbalk"' in body
+
+
+def test_pda_modus_verbergt_levering_inboeken_knop(ingelogde_client):
+    """Een hele levering/factuur met meerdere producten inboeken gebeurt
+    altijd op desktop."""
+    ingelogde_client.get("/weergave/pda")
+    resp = ingelogde_client.get("/boeken")
+    body = resp.data.decode()
+    assert "Levering inboeken" not in body
+
+
+def test_desktop_modus_toont_levering_inboeken_knop(ingelogde_client):
+    ingelogde_client.get("/weergave/desktop")
+    resp = ingelogde_client.get("/boeken")
+    body = resp.data.decode()
+    assert "Levering inboeken" in body
