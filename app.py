@@ -510,10 +510,19 @@ def create_app(database_path=None):
             ).fetchone()
             banner_tekst = rij["banner_tekst"] if rij else None
         pda_modus = g.get("weergave_modus") == "pda"
+        pda_actieve_item = next(
+            (
+                item
+                for item in PDA_NAV_ITEMS
+                if actieve_nav and item["url_endpoint"] == actieve_nav["url_endpoint"]
+            ),
+            None,
+        )
         return {
             "nav_items": NAV_ITEMS,
             "pda_nav_items": PDA_NAV_ITEMS,
             "actieve_nav": actieve_nav,
+            "pda_actieve_label": pda_actieve_item["pda_label"] if pda_actieve_item else None,
             "huidige_gebruiker": session.get("gebruiker_naam"),
             "huidige_gebruiker_rol": session.get("gebruiker_rol"),
             "css_versie": int((BASE_DIR / "static" / "style.css").stat().st_mtime),

@@ -145,7 +145,8 @@ def test_pda_modus_toont_compacte_shell_op_tellen(ingelogde_client):
     ingelogde_client.get("/weergave/pda")
     resp = ingelogde_client.get("/tellen")
     body = resp.data.decode()
-    assert "pda-nav" in body
+    assert "pda-kop-menuknop" in body
+    assert 'class="pda-kop-titel">Tellen<' in body
     assert 'class="app-zijbalk"' not in body
     assert "Looplijst starten" in body
     # De grote losse-productenlijst hoort in PDA-modus niet te verschijnen.
@@ -198,13 +199,21 @@ def test_pda_shell_bevat_link_naar_volledige_site(ingelogde_client):
     assert b"/weergave/desktop" in resp.data
 
 
-def test_pda_nav_markeert_actieve_sectie(ingelogde_client):
+def test_pda_kop_toont_actieve_sectie_als_titel(ingelogde_client):
+    """Zonder de vaste navigatiebalk (geeft ruimte terug op een klein
+    scherm) is de koptitel de enige aanwijzing welke sectie je open hebt
+    staan -- moet dus meeveranderen per pagina."""
     ingelogde_client.get("/weergave/pda")
     resp = ingelogde_client.get("/bijzonderheden")
     body = resp.data.decode()
-    prikbord_start = body.index(">Prikbord<")
-    prikbord_link_start = body.rfind("<a ", 0, prikbord_start)
-    assert "actief" in body[prikbord_link_start:prikbord_start]
+    assert 'class="pda-kop-titel">Prikbord<' in body
+
+
+def test_pda_kop_toont_merknaam_op_startscherm(ingelogde_client):
+    ingelogde_client.get("/weergave/pda")
+    resp = ingelogde_client.get("/")
+    body = resp.data.decode()
+    assert 'class="pda-kop-titel">BG 1915<' in body
 
 
 def test_kassa_telling_detail_werkt_ook_in_pda_modus(ingelogde_client, db):
@@ -216,4 +225,4 @@ def test_kassa_telling_detail_werkt_ook_in_pda_modus(ingelogde_client, db):
     ]})
     resp = ingelogde_client.post("/kassa/tellen", data=data, follow_redirects=True)
     assert resp.status_code == 200
-    assert "pda-nav" in resp.data.decode()
+    assert "pda-kop-menuknop" in resp.data.decode()

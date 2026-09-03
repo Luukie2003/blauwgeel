@@ -17,7 +17,11 @@
 <body class="pda-body">
     <div class="pda-kop-wrap">
         <header class="pda-kop">
-            <a href="{{ url_for('dashboard') }}" class="pda-kop-titel">BG 1915</a>
+            <a href="{{ url_for('dashboard') }}" class="pda-kop-menuknop" aria-label="Naar het menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <span>Menu</span>
+            </a>
+            <span class="pda-kop-titel">{{ pda_actieve_label or 'BG 1915' }}</span>
             <div class="pda-kop-acties">
                 <a href="{{ url_for('logout') }}">Uitloggen</a>
                 <a href="{{ url_for('weergave_desktop') }}" class="btn btn-rand btn-klein">Volledige site</a>
@@ -27,12 +31,6 @@
             <input type="search" id="pda-zoek-invoer" placeholder="Zoek een product..." autocomplete="off" aria-label="Zoek een product">
             <div id="pda-zoek-resultaten" class="pda-zoek-resultaten" hidden></div>
         </div>
-        <nav class="pda-nav">
-            {% for item in pda_nav_items %}
-            <a href="{{ url_for(item.url_endpoint) }}"
-               class="{{ 'actief' if actieve_nav and actieve_nav.url_endpoint == item.url_endpoint else '' }}">{{ item.pda_label }}</a>
-            {% endfor %}
-        </nav>
     </div>
     {% if site_banner_tekst %}
     <div class="site-banner" id="site-banner" data-banner-tekst="{{ site_banner_tekst }}">

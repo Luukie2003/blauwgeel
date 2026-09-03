@@ -1456,54 +1456,46 @@ footer {
     font-size: 0.85rem;
 }
 
+.pda-kop-menuknop {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: inherit;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.pda-kop-menuknop:hover {
+    text-decoration: none;
+}
+
+.pda-kop-menuknop svg {
+    width: 1.3rem;
+    height: 1.3rem;
+}
+
 .pda-kop-titel {
+    flex: 1;
+    text-align: center;
     color: inherit;
     font-weight: 700;
     font-size: 1.05rem;
-}
-
-.pda-kop-titel:hover {
-    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .pda-kop-acties {
     display: flex;
     align-items: center;
     gap: 0.9rem;
+    flex-shrink: 0;
 }
 
 .pda-kop-acties a:not(.btn) {
     color: #d8def0;
     font-size: 0.82rem;
-}
-
-.pda-nav {
-    display: flex;
-    overflow-x: auto;
-    background: var(--paneel);
-    border-bottom: 1px solid var(--rand);
-    -webkit-overflow-scrolling: touch;
-}
-
-.pda-nav a {
-    flex: 1 0 auto;
-    text-align: center;
-    padding: 0.6rem 0.9rem;
-    color: var(--tekst);
-    font-size: 0.8rem;
-    font-weight: 600;
-    border-bottom: 3px solid transparent;
-    white-space: nowrap;
-}
-
-.pda-nav a:hover {
-    text-decoration: none;
-}
-
-.pda-nav a.actief {
-    border-bottom-color: var(--accent);
-    color: var(--blauw);
-    background: var(--kaart);
 }
 
 .pda-inhoud {
