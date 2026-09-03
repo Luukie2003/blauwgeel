@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends basis_template %}
 {% block titel %}Kassa geschiedenis{% endblock %}
 {% block inhoud %}
 <div class="actiebalk">
@@ -21,7 +21,7 @@
     </div>
 </div>
 
-{% if verschil_trend.balken %}
+{% if verschil_trend.balken and not pda_modus %}
 <div class="kaart">
     <h2>Verschil per telling</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">Alleen afgesloten tellingen. Rood is een tekort, groen een overschot.</p>
@@ -48,6 +48,62 @@
 
 <div class="kaart">
     {% if tijdlijn %}
+    {% if pda_modus %}
+    <div id="kassa-tijdlijn-kaarten">
+        {% for regel in tijdlijn %}
+        {% set item = regel.item %}
+        <div class="pda-kaartje">
+            <div class="pda-kaartje-vink" style="cursor:default">
+                {% if regel.soort == 'telling' %}
+                    {% if not item.afgesloten %}
+                    <span class="badge badge-neutraal">Telling &mdash; nog open (concept)</span>
+                    {% else %}
+                    <span class="badge {{ 'badge-ok' if item.verschil == 0 else 'badge-laag' }}">
+                        Telling &mdash; {{ 'klopt' if item.verschil == 0 else ('+€ %.2f overschot'|format(item.verschil) if item.verschil > 0 else '€ %.2f tekort'|format(-item.verschil)) }}
+                    </span>
+                    {% endif %}
+                {% elif regel.soort == 'afdracht' %}
+                <span class="badge badge-uit">Afdracht{% if item.ontvanger %} aan {{ item.ontvanger }}{% endif %}</span>
+                {% else %}
+                <span class="badge badge-in">Toevoeging</span>
+                {% endif %}
+            </div>
+            <div class="pda-kaartje-info" style="flex-direction:column; align-items:flex-start; gap:0.2rem; margin-left:0">
+                <span class="tekst-zacht">{{ regel.datum|datum_nl }} &middot; {{ item.naam or '—' }}</span>
+                <strong>
+                    {% if regel.soort == 'telling' %}
+                    € {{ '%.2f'|format(item.geteld_bedrag) }}
+                    {% elif regel.soort == 'afdracht' %}
+                    &minus; € {{ '%.2f'|format(item.bedrag) }}
+                    {% else %}
+                    + € {{ '%.2f'|format(item.bedrag) }}
+                    {% endif %}
+                </strong>
+                {% if item.opmerking %}<span class="tekst-zacht">{{ item.opmerking }}</span>{% endif %}
+                {% if regel.soort != 'telling' and item.gecorrigeerd_op %}
+                <span class="tekst-zacht" style="font-size:0.72rem">gecorrigeerd door {{ item.gecorrigeerd_door or 'onbekend' }} (was € {{ '%.2f'|format(item.bedrag_voor_correctie) }})</span>
+                {% endif %}
+            </div>
+            <div class="pda-kaartje-veld" style="display:flex; gap:0.5rem; flex-wrap:wrap">
+                {% if regel.soort == 'telling' %}
+                <a href="{{ url_for('kassa_telling_detail', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bekijken</a>
+                {% if not item.afgesloten %}
+                <a href="{{ url_for('kassa_telling_bewerken', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                {% endif %}
+                {% else %}
+                <form method="post" action="{{ url_for('kassa_mutatie_corrigeren', mutatie_id=item.id) }}"
+                      onsubmit="return bevestigEnVerstuur(this, '{{ 'Afdracht' if regel.soort == 'afdracht' else 'Toevoeging' }} corrigeren?');"
+                      style="display:flex; gap:0.4rem; align-items:center">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="number" step="0.01" min="0.01" name="bedrag" value="{{ '%.2f'|format(item.bedrag) }}" style="width:6rem">
+                    <button type="submit" class="btn btn-rand btn-klein">Corrigeren</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
     <div class="tabel-wrap">
         <table>
             <thead>
@@ -110,6 +166,7 @@
             </tbody>
         </table>
     </div>
+    {% endif %}
     {% else %}
     <p class="leeg">Nog geen kassatellingen of -mutaties.</p>
     {% endif %}

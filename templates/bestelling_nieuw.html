@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends basis_template %}
 {% block titel %}{{ 'Bestelling #%d bewerken'|format(bestelling.id) if bestelling else 'Bestelling klaarzetten' }}{% endblock %}
 {% block inhoud %}
 <div class="actiebalk">
@@ -29,6 +29,31 @@
                 <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">
                 <span id="filter-aantal" class="tekst-zacht"></span>
             </div>
+            {% if pda_modus %}
+            <div id="bestelling-kaarten">
+                {% for p in producten %}
+                <div class="pda-kaartje" data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or ''))|lower }}">
+                    <div class="pda-kaartje-vink" style="cursor:default">
+                        {% if p.afbeelding %}
+                        <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
+                        {% endif %}
+                        <span class="pda-kaartje-naam">{{ p.naam }}</span>
+                    </div>
+                    <div class="pda-kaartje-info">
+                        <span class="tekst-zacht">{{ p.voorraad }} {{ p.eenheid }} op voorraad &middot; {{ p.categorie }}</span>
+                    </div>
+                    <div class="veld pda-kaartje-veld">
+                        <label>Aantal besteld ({{ p|besteleenheid_naam }})</label>
+                        <input type="number" name="aantal_{{ p.id }}" min="0" placeholder="overslaan"
+                               value="{{ huidige_aantallen.get(p.id, '') if huidige_aantallen else '' }}">
+                        {% if p.besteleenheid_factor > 1 %}
+                        <span class="tekst-zacht" style="font-size:0.72rem">1 {{ p|besteleenheid_naam }} = {{ p.besteleenheid_factor }} {{ p.eenheid }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
             <div class="tabel-wrap">
                 <table id="bestelling-tabel">
                     <thead>
@@ -66,6 +91,7 @@
                     </tbody>
                 </table>
             </div>
+            {% endif %}
         </fieldset>
         <div class="veld" style="max-width:300px; margin-top:1rem">
             <label>Besteld door</label>
@@ -81,7 +107,7 @@
     var aantalLabel = document.getElementById('filter-aantal');
     if (!zoekVeld) return;
     var rijen = Array.prototype.slice.call(
-        document.querySelectorAll('#bestelling-tabel tbody tr')
+        document.querySelectorAll('#bestelling-tabel tbody tr, #bestelling-kaarten > [data-zoek]')
     );
 
     function filter() {
@@ -100,11 +126,14 @@
 
     // Voorkomt dat Enter in een aantal-veld het hele formulier per ongeluk
     // verstuurt voordat alle andere aantallen zijn ingevuld.
-    document.getElementById('bestelling-tabel').addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
-            e.preventDefault();
-        }
-    });
+    var container = document.getElementById('bestelling-tabel') || document.getElementById('bestelling-kaarten');
+    if (container) {
+        container.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
+            }
+        });
+    }
 })();
 </script>
 {% endblock %}

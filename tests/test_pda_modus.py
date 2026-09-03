@@ -213,3 +213,97 @@ def test_kassa_telling_detail_werkt_ook_in_pda_modus(ingelogde_client, db):
     resp = ingelogde_client.post("/kassa/tellen", data=data, follow_redirects=True)
     assert resp.status_code == 200
     assert "pda-kop-menuknop" in resp.data.decode()
+
+
+def test_pda_tellen_lopen_controleren_toont_kaarten(ingelogde_client, db):
+    product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    with ingelogde_client.session_transaction() as sess:
+        sess["loop_review"] = {str(product["id"]): 5}
+        sess["loop_bar"] = {str(product["id"]): "3"}
+        sess["loop_hok"] = {str(product["id"]): "2"}
+
+    ingelogde_client.get("/weergave/pda")
+    resp = ingelogde_client.get("/tellen/lopen/controleren")
+    body = resp.data.decode()
+    assert 'id="loop-controleren-kaarten"' in body
+    assert "<table>" not in body
+
+
+def test_desktop_tellen_lopen_controleren_toont_tabel(ingelogde_client, db):
+    product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    with ingelogde_client.session_transaction() as sess:
+        sess["loop_review"] = {str(product["id"]): 5}
+        sess["loop_bar"] = {str(product["id"]): "3"}
+        sess["loop_hok"] = {str(product["id"]): "2"}
+
+    ingelogde_client.get("/weergave/desktop")
+    resp = ingelogde_client.get("/tellen/lopen/controleren")
+    body = resp.data.decode()
+    assert "<table>" in body
+    assert 'id="loop-controleren-kaarten"' not in body
+
+
+def test_pda_bestelling_nieuw_toont_kaarten_en_pda_schil(ingelogde_client):
+    ingelogde_client.get("/weergave/pda")
+    resp = ingelogde_client.get("/bestellijst/nieuw")
+    body = resp.data.decode()
+    assert 'id="bestelling-kaarten"' in body
+    assert 'id="bestelling-tabel"' not in body
+    assert "pda-kop-menuknop" in body
+
+
+def test_desktop_bestelling_nieuw_toont_tabel(ingelogde_client):
+    ingelogde_client.get("/weergave/desktop")
+    resp = ingelogde_client.get("/bestellijst/nieuw")
+    body = resp.data.decode()
+    assert 'id="bestelling-tabel"' in body
+    assert 'id="bestelling-kaarten"' not in body
+    assert 'class="app-zijbalk"' in body
+
+
+def test_pda_kassa_geschiedenis_toont_kaarten_en_verbergt_grafiek(ingelogde_client, db):
+    db.execute(
+        "INSERT INTO kassa_mutaties (type, bedrag, datum, naam, opmerking) "
+        "VALUES ('afdracht', 50.0, '2026-01-01 10:00', 'admin', 'test')"
+    )
+    db.commit()
+
+    ingelogde_client.get("/weergave/pda")
+    resp = ingelogde_client.get("/kassa/geschiedenis")
+    body = resp.data.decode()
+    assert 'id="kassa-tijdlijn-kaarten"' in body
+    assert "<table>" not in body
+    assert "omzet-trend-grafiek" not in body
+    assert "pda-kop-menuknop" in body
+
+
+def test_desktop_kassa_geschiedenis_toont_tabel(ingelogde_client, db):
+    db.execute(
+        "INSERT INTO kassa_mutaties (type, bedrag, datum, naam, opmerking) "
+        "VALUES ('toevoeging', 25.0, '2026-01-01 10:00', 'admin', 'test')"
+    )
+    db.commit()
+
+    ingelogde_client.get("/weergave/desktop")
+    resp = ingelogde_client.get("/kassa/geschiedenis")
+    body = resp.data.decode()
+    assert "<table>" in body
+    assert 'id="kassa-tijdlijn-kaarten"' not in body
+    assert 'class="app-zijbalk"' in body
+
+
+def test_pda_product_bewerken_blijft_in_handterminal_schil(ingelogde_client, db):
+    product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    ingelogde_client.get("/weergave/pda")
+    resp = ingelogde_client.get(f"/producten/{product['id']}/bewerken")
+    body = resp.data.decode()
+    assert "pda-kop-menuknop" in body
+    assert 'class="app-zijbalk"' not in body
+
+
+def test_desktop_product_bewerken_toont_gewone_schil(ingelogde_client, db):
+    product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    ingelogde_client.get("/weergave/desktop")
+    resp = ingelogde_client.get(f"/producten/{product['id']}/bewerken")
+    body = resp.data.decode()
+    assert 'class="app-zijbalk"' in body
