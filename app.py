@@ -610,6 +610,17 @@ def now_datetime_local():
     return datetime.now().strftime("%Y-%m-%dT%H:%M")
 
 
+def dagdeel_groet():
+    """'Goedemorgen'/'Goedemiddag'/'Goedenavond' op basis van het huidige
+    tijdstip, voor de begroeting op het handterminal-startscherm."""
+    uur = datetime.now().hour
+    if uur < 12:
+        return "Goedemorgen"
+    if uur < 18:
+        return "Goedemiddag"
+    return "Goedenavond"
+
+
 def csrf_token():
     """Geeft het CSRF-token voor de huidige sessie terug, en maakt er een aan
     als die nog niet bestaat. Wordt zowel gebruikt om het verborgen
@@ -2028,7 +2039,7 @@ def register_routes(app):
             # Geen van de zware dashboard-cijfers is relevant voor de
             # PDA-modus (puur een menu naar de vloerpagina's), dus die
             # queries hoeven hier niet te draaien.
-            return render_template("pda_start.html")
+            return render_template("pda_start.html", groet=dagdeel_groet())
 
         db = get_db()
         producten = db.execute(
