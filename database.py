@@ -10,6 +10,17 @@ SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 STANDAARD_GEBRUIKER = "admin"
 STANDAARD_WACHTWOORD = "kantine123"
 
+# Expliciet gekozen i.p.v. werkzeug's eigen standaard: die is "scrypt" sinds
+# werkzeug 2.3, wat hashlib.scrypt vereist -- niet overal beschikbaar
+# (bijv. deze lokale ontwikkelomgeving mist het, afhankelijk van de
+# OpenSSL/LibreSSL-build van Python). pbkdf2_hmac zit altijd in de
+# standaardbibliotheek. Het aantal iteraties is ook bewust lager dan
+# werkzeug's eigen pbkdf2-standaard (600.000): dat duurde op de hosting van
+# deze site ruim 0,6s per inlogpoging. 200.000 is nog steeds een serieuze
+# drempel voor offline brute-force, en ruim voldoende voor dit interne
+# kantine-beheersysteem (geen betaalgegevens, geen hoogwaardig doelwit).
+WACHTWOORD_HASH_METHODE = "pbkdf2:sha256:200000"
+
 SEED_PRODUCTEN = [
     # (artikelcode, naam, categorie, eenheid, voorraad, min_voorraad, bestel_hoeveelheid, verkoopprijs, actief)
     ("KAN", "Grote kan", "Bier", "Pitcher", 0, 0, 0, 12.00, 1),
@@ -316,7 +327,7 @@ def init_db(app):
                 "INSERT INTO gebruikers (naam, wachtwoord_hash, aangemaakt_op) VALUES (?, ?, ?)",
                 (
                     STANDAARD_GEBRUIKER,
-                    generate_password_hash(STANDAARD_WACHTWOORD, method="pbkdf2:sha256"),
+                    generate_password_hash(STANDAARD_WACHTWOORD, method=WACHTWOORD_HASH_METHODE),
                     datetime.now().strftime("%Y-%m-%d %H:%M"),
                 ),
             )

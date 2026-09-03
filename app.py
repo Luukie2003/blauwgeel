@@ -27,7 +27,7 @@ import qr
 import backup as backup_module
 import mail
 import weer
-from database import get_db, init_db, register_db
+from database import WACHTWOORD_HASH_METHODE, get_db, init_db, register_db
 from pdf import (
     bestellijst_pdf,
     kassa_pdf,
@@ -1496,6 +1496,21 @@ def register_routes(app):
                 "SELECT * FROM gebruikers WHERE naam = ?", (naam,)
             ).fetchone()
             if gebruiker and check_password_hash(gebruiker["wachtwoord_hash"], wachtwoord):
+                if not gebruiker["wachtwoord_hash"].startswith(WACHTWOORD_HASH_METHODE + "$"):
+                    # Hash met een ouder/trager aantal iteraties (werkzeug's
+                    # eigen pbkdf2-standaard duurde hier ruim 0,6s per
+                    # inlogpoging) -- nu we het wachtwoord toch al hebben
+                    # geverifieerd, stilzwijgend vervangen door de huidige,
+                    # snellere instelling. Elke gebruiker krijgt dit
+                    # automatisch bij de eerstvolgende geslaagde login,
+                    # zonder daar iets van te merken.
+                    db.execute(
+                        "UPDATE gebruikers SET wachtwoord_hash = ? WHERE id = ?",
+                        (
+                            generate_password_hash(wachtwoord, method=WACHTWOORD_HASH_METHODE),
+                            gebruiker["id"],
+                        ),
+                    )
                 db.execute("DELETE FROM login_pogingen WHERE naam = ?", (naam,))
                 session.clear()
                 session["gebruiker_id"] = gebruiker["id"]
@@ -1625,7 +1640,7 @@ def register_routes(app):
                     """UPDATE gebruikers
                        SET wachtwoord_hash = ?, reset_token_hash = NULL, reset_token_verloopt = NULL
                        WHERE id = ?""",
-                    (generate_password_hash(nieuw, method="pbkdf2:sha256"), gebruiker["id"]),
+                    (generate_password_hash(nieuw, method=WACHTWOORD_HASH_METHODE), gebruiker["id"]),
                 )
                 db.execute(
                     "UPDATE gebruikers SET laatste_login = ? WHERE id = ?",
@@ -1669,7 +1684,7 @@ def register_routes(app):
             flash(f"Er bestaat al een account met de naam '{naam}'.", "error")
         else:
             onbruikbaar_wachtwoord = generate_password_hash(
-                secrets.token_hex(16), method="pbkdf2:sha256"
+                secrets.token_hex(16), method=WACHTWOORD_HASH_METHODE
             )
             cursor = db.execute(
                 """INSERT INTO gebruikers (naam, email, wachtwoord_hash, rol, aangemaakt_op)
@@ -1785,7 +1800,7 @@ def register_routes(app):
             else:
                 db.execute(
                     "UPDATE gebruikers SET wachtwoord_hash = ? WHERE id = ?",
-                    (generate_password_hash(nieuw, method="pbkdf2:sha256"), gebruiker["id"]),
+                    (generate_password_hash(nieuw, method=WACHTWOORD_HASH_METHODE), gebruiker["id"]),
                 )
                 db.commit()
                 flash("Wachtwoord gewijzigd.", "success")

@@ -1,3 +1,9 @@
+from werkzeug.security import generate_password_hash
+
+from conftest import stel_csrf_token_in as _csrf
+from database import WACHTWOORD_HASH_METHODE
+
+
 def test_post_zonder_csrf_token_stuurt_terug_met_melding(client):
     """Sinds de fix voor het "af en toe Bad Request bij inloggen"-probleem
     (een verouderd token na terug-knop/cache) krijgt de gebruiker geen kale
@@ -114,3 +120,48 @@ def test_next_naar_geldig_intern_pad_werkt_nog(client, csrf):
     )
     assert resp.status_code == 302
     assert resp.headers["Location"] == "/producten"
+
+
+def test_oude_pbkdf2_hash_wordt_stilzwijgend_vervangen_bij_inloggen(client, csrf, db):
+    """Een pbkdf2-hash (de oude standaardmethode) duurde op de hosting van
+    deze site ruim 0,6s om te verifiëren -- de huidige werkzeug-standaard
+    (scrypt) is veel sneller. Nieuwe wachtwoorden gebruiken die standaard
+    al, maar bestaande gebruikers moeten hun trage hash automatisch
+    vervangen krijgen zodra ze een keer succesvol inloggen, zonder dat ze
+    daar iets van merken (geen nieuw wachtwoord nodig)."""
+    db.execute(
+        "INSERT INTO gebruikers (naam, wachtwoord_hash, rol, aangemaakt_op) "
+        "VALUES ('_oude_hash_gebruiker', ?, 'vrijwilliger', '2020-01-01 10:00')",
+        (generate_password_hash("wachtwoord123", method="pbkdf2:sha256"),),
+    )
+    db.commit()
+
+    resp = client.post(
+        "/login",
+        data={
+            "naam": "_oude_hash_gebruiker",
+            "wachtwoord": "wachtwoord123",
+            "csrf_token": csrf,
+        },
+    )
+    assert resp.status_code == 302
+
+    rij = db.execute(
+        "SELECT wachtwoord_hash FROM gebruikers WHERE naam = '_oude_hash_gebruiker'"
+    ).fetchone()
+    assert rij["wachtwoord_hash"].startswith(WACHTWOORD_HASH_METHODE + "$")
+
+    # En het wachtwoord moet daarna gewoon nog blijven werken.
+    with client.session_transaction() as sess:
+        sess.clear()
+    token2 = _csrf(client)
+    resp2 = client.post(
+        "/login",
+        data={
+            "naam": "_oude_hash_gebruiker",
+            "wachtwoord": "wachtwoord123",
+            "csrf_token": token2,
+        },
+    )
+    assert resp2.status_code == 302
+    assert resp2.headers["Location"] == "/"
