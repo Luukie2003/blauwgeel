@@ -27,7 +27,7 @@ import qr
 import backup as backup_module
 import mail
 import weer
-from database import get_db, init_db, register_db, sluit_gecachte_verbinding
+from database import get_db, init_db, register_db
 from pdf import (
     bestellijst_pdf,
     kassa_pdf,
@@ -1966,10 +1966,6 @@ def register_routes(app):
         backup_module.maak_backup_met_naam(veiligheidskopie_naam)
 
         if backup_module.herstel_backup(bestandsnaam):
-            # De herstelde inhoud is buiten de hergebruikte connectie om
-            # weggeschreven (zie sluit_gecachte_verbinding) -- zonder dit
-            # zou dit workerproces de oude staat blijven zien.
-            sluit_gecachte_verbinding(app.config["DATABASE"])
             flash(
                 f"Database hersteld vanaf '{bestandsnaam}'. De staat van vlak "
                 f"hiervoor is bewaard als '{veiligheidskopie_naam}', voor het "
