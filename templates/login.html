@@ -44,12 +44,7 @@
                         <label for="wachtwoord">Wachtwoord</label>
                         <input type="password" id="wachtwoord" name="wachtwoord" autocomplete="current-password" required>
                     </div>
-                    <button type="submit" name="weergave_keuze" value="auto" class="btn btn-geel login-btn">Aanmelden</button>
-                    <p style="text-align:center; margin:0.7rem 0 0">
-                        <button type="submit" name="weergave_keuze" value="pda" class="btn btn-rand btn-klein">
-                            Aanmelden in handterminal-weergave
-                        </button>
-                    </p>
+                    <button type="submit" class="btn btn-geel login-btn">Aanmelden</button>
                 </form>
                 <p class="subtitel" style="text-align:center; margin-top:1rem">
                     <a href="{{ url_for('wachtwoord_vergeten') }}">Wachtwoord vergeten?</a>

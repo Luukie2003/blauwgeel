@@ -1,0 +1,12 @@
+{% if toon_welkom_popup %}
+<div class="modal-overlay open" id="welkom-modal">
+    <div class="modal-venster modal-venster-welkom">
+        <p class="modal-welkom-groet">{{ welkom_groet }}, {{ huidige_gebruiker }}!</p>
+        <p class="tekst-zacht modal-welkom-vraag">Welke weergave wil je gebruiken?</p>
+        <div class="modal-welkom-knoppen">
+            <a href="{{ url_for('weergave_desktop') }}" class="btn btn-geel">Desktop versie</a>
+            <a href="{{ url_for('weergave_pda') }}" class="btn btn-rand">Handterminal versie</a>
+        </div>
+    </div>
+</div>
+{% endif %}

@@ -1178,6 +1178,33 @@ footer {
     gap: 0.6rem;
 }
 
+.modal-venster-welkom {
+    max-width: 380px;
+    text-align: center;
+}
+
+.modal-welkom-groet {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--blauw-donker);
+    margin: 0 0 0.3rem;
+}
+
+.modal-welkom-vraag {
+    margin: 0 0 1.2rem;
+}
+
+.modal-welkom-knoppen {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.modal-welkom-knoppen .btn {
+    width: 100%;
+    text-align: center;
+}
+
 /* ---------- Toast-meldingen ---------- */
 
 .toast-stapel {

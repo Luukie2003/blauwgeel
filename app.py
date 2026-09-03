@@ -530,6 +530,8 @@ def create_app(database_path=None):
             "csrf_token": csrf_token,
             "pda_modus": pda_modus,
             "basis_template": "base_pda.html" if pda_modus else "base.html",
+            "toon_welkom_popup": session.pop("toon_welkom_popup", False),
+            "welkom_groet": dagdeel_groet(),
         }
 
     @app.route("/favicon.ico")
@@ -1499,26 +1501,17 @@ def register_routes(app):
                 session["gebruiker_id"] = gebruiker["id"]
                 session["gebruiker_naam"] = gebruiker["naam"]
                 session["gebruiker_rol"] = gebruiker["rol"]
+                # Eenmalig vlaggetje (net als flash()) -- inject_nav() haalt
+                # 'm er weer af zodra de eerste pagina na het inloggen is
+                # gerenderd, zodat de welkom-pop-up maar 1x verschijnt.
+                session["toon_welkom_popup"] = True
                 db.execute(
                     "UPDATE gebruikers SET laatste_login = ? WHERE id = ?",
                     (now_str(), gebruiker["id"]),
                 )
                 db.commit()
                 volgende = veilig_redirect_pad(request.args.get("next"), url_for("dashboard"))
-                respons = redirect(volgende)
-                if request.form.get("weergave_keuze") == "pda":
-                    # Expliciete keuze op de inlogpagina zelf -- wint van de
-                    # automatische herkenning en van een eventueel al gezet
-                    # cookie (bijv. handig op een gedeeld toestel of als de
-                    # automatische herkenning een keer misgokt).
-                    respons.set_cookie(
-                        "weergave",
-                        "pda",
-                        max_age=60 * 60 * 24 * 365,
-                        samesite="Lax",
-                        secure=app.config.get("SESSION_COOKIE_SECURE", True),
-                    )
-                return respons
+                return redirect(volgende)
 
             nieuw_aantal = mislukte_pogingen + 1
             nieuwe_blokkade = None
