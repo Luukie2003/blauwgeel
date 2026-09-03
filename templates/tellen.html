@@ -1,21 +1,34 @@
 {% extends basis_template %}
 {% block titel %}Voorraad tellen{% endblock %}
 {% block inhoud %}
+{% if pda_modus %}
+<p class="subtitel">Tel de bar en het voorraadhok, product voor product.</p>
+{% else %}
 <p class="subtitel">
     Vul het werkelijk getelde aantal in per product. Het verschil met de geregistreerde
     voorraad wordt automatisch verwerkt als verkoop (minder geteld) of correctie (meer geteld).
     Laat een veld leeg om dat product over te slaan.
 </p>
+{% endif %}
 
 <div class="kaart loop-aankondiging">
     <div>
         <strong>Onderweg tellen met je telefoon?</strong>
         <p class="tekst-zacht" style="margin:0.2rem 0 0">
+            {% if pda_modus %}
+            Eerst de bar, dan het voorraadhok — de app telt ze aan het eind samen op.
+            {% else %}
             Loop eerst product voor product de bar langs, daarna dezelfde lijst nog een keer
             voor het voorraadhok — aan het eind telt de app beide plekken bij elkaar op.
+            {% endif %}
         </p>
     </div>
-    <a href="{{ url_for('tellen_lopen_starten') }}" class="btn btn-geel">Looplijst starten</a>
+    <a href="{{ url_for('tellen_lopen_starten') }}" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
+        {% if pda_modus %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg>
+        {% endif %}
+        Looplijst starten
+    </a>
 </div>
 
 {% if not pda_modus %}

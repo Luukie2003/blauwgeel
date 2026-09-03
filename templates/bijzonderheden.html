@@ -1,10 +1,14 @@
 {% extends basis_template %}
 {% block titel %}Bijzonderheden{% endblock %}
 {% block inhoud %}
+{% if pda_modus %}
+<p class="subtitel">Bijzonderheden voor de volgende persoon.</p>
+{% else %}
 <p class="subtitel">
     Het prikbord voor de kantine: bijzonderheden, opmerkingen of dingen die
     de volgende persoon moet weten. Iedereen kan hier iets op zetten.
 </p>
+{% endif %}
 
 <div class="kaart">
     <form method="post">
@@ -18,7 +22,12 @@
             <input type="checkbox" id="urgent" name="urgent" style="width:auto">
             Urgent (bijv. een storing), valt op tussen de andere mededelingen
         </label>
-        <button type="submit" class="btn btn-geel">Plaatsen</button>
+        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
+            {% if pda_modus %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            {% endif %}
+            Plaatsen
+        </button>
     </form>
 </div>
 

@@ -4,8 +4,14 @@
         <p class="modal-welkom-groet">{{ welkom_groet }}, {{ huidige_gebruiker }}!</p>
         <p class="tekst-zacht modal-welkom-vraag">Welke weergave wil je gebruiken?</p>
         <div class="modal-welkom-knoppen">
-            <a href="{{ url_for('weergave_desktop') }}" class="btn btn-geel">Desktop versie</a>
-            <a href="{{ url_for('weergave_pda') }}" class="btn btn-rand">Handterminal versie</a>
+            <a href="{{ url_for('weergave_desktop') }}" class="btn btn-geel btn-icoon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+                Desktop versie
+            </a>
+            <a href="{{ url_for('weergave_pda') }}" class="btn btn-rand btn-icoon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>
+                Handterminal versie
+            </a>
         </div>
     </div>
 </div>

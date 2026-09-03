@@ -27,12 +27,21 @@
                 <span class="tekst-zacht">— aangemaakt {{ b.aangemaakt_op|datum_nl }}{% if b.besteld_door %} door {{ b.besteld_door }}{% endif %}</span>
             </div>
             <div class="tabel-acties">
-                <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-geel btn-klein">Inboeken</a>
-                <a href="{{ url_for('bestelling_bewerken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-geel btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
+                    {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{% endif %}
+                    Inboeken
+                </a>
+                <a href="{{ url_for('bestelling_bewerken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
+                    {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>{% endif %}
+                    Bewerken
+                </a>
                 <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
                       onsubmit="return bevestigEnVerstuur(this, 'Bestelling #{{ b.id }} verwijderen?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                    <button type="submit" class="btn btn-gevaar btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
+                        {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>{% endif %}
+                        Verwijderen
+                    </button>
                 </form>
             </div>
         </div>
@@ -232,11 +241,17 @@
                 <span class="tekst-zacht">— ontvangen {{ b.ontvangen_op|datum_nl }}</span>
             </div>
             <div class="tabel-acties">
-                <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
+                    {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>{% endif %}
+                    Bewerken
+                </a>
                 <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
                       onsubmit="return bevestigEnVerstuur(this, 'Bestelling #{{ b.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan.');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                    <button type="submit" class="btn btn-gevaar btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
+                        {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>{% endif %}
+                        Verwijderen
+                    </button>
                 </form>
             </div>
         </div>

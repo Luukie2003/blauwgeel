@@ -1,7 +1,11 @@
 {% extends basis_template %}
 {% block titel %}In/uit boeken{% endblock %}
 {% block inhoud %}
+{% if pda_modus %}
+<p class="subtitel">Kies 'in' of 'uit', het product en het aantal.</p>
+{% else %}
 <p class="subtitel">Levering binnengekomen? Boek 'in'. Verkocht of verbruikt? Boek 'uit'.</p>
+{% endif %}
 
 {% if not pda_modus %}
 <div class="kaart" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap">
@@ -51,7 +55,12 @@
                 <input type="text" id="opmerking" name="opmerking" placeholder="Bijv. kapotte krat, telling gecorrigeerd, ...">
             </div>
         </fieldset>
-        <button type="submit" class="btn btn-geel">Boeken</button>
+        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
+            {% if pda_modus %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            {% endif %}
+            Boeken
+        </button>
     </form>
 </div>
 

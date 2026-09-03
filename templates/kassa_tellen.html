@@ -1,11 +1,15 @@
 {% extends basis_template %}
 {% block titel %}Kassa tellen{% endblock %}
 {% block inhoud %}
+{% if pda_modus %}
+<p class="subtitel">Tel per coupure en vul de contante omzet (PayPal) in.</p>
+{% else %}
 <h1>Kassa tellen</h1>
 <p class="subtitel">
     Tel de kassa per coupure. Vul ook de contante omzet in sinds de vorige telling
     (zie PayPal &mdash; contant, niet pin) zodat het systeem weet wat er verwacht wordt.
 </p>
+{% endif %}
 
 <div class="statgrid">
     <div class="stat">
@@ -64,7 +68,12 @@
             </div>
         </div>
 
-        <button type="submit" class="btn btn-geel">Telling opslaan</button>
+        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
+            {% if pda_modus %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            {% endif %}
+            Telling opslaan
+        </button>
     </form>
 </div>
 

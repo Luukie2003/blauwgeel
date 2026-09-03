@@ -47,7 +47,12 @@
             <label for="opmerking">Opmerking (optioneel)</label>
             <input type="text" id="opmerking" name="opmerking" placeholder="Bijv. kapotte krat, telling gecorrigeerd, ...">
         </div>
-        <button type="submit" class="btn btn-geel">Boeken</button>
+        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
+            {% if pda_modus %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            {% endif %}
+            Boeken
+        </button>
     </form>
 </div>
 

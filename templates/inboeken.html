@@ -7,9 +7,17 @@
 
 <div class="kaart">
     {% if is_bewerken %}
+    {% if pda_modus %}
+    <p class="tekst-zacht">Al ingeboekt — pas aan wat nodig is.</p>
+    {% else %}
     <p class="tekst-zacht">Deze bestelling is al ingeboekt. Pas aan wat nodig is — de voorraad wordt automatisch gecorrigeerd op basis van het verschil.</p>
+    {% endif %}
+    {% else %}
+    {% if pda_modus %}
+    <p class="tekst-zacht">Uitgevinkt = manco.</p>
     {% else %}
     <p class="tekst-zacht">Vink aan wat er is binnengekomen. Staat een vinkje uit, dan wordt die regel als manco gemarkeerd en niet ingeboekt.</p>
+    {% endif %}
     {% endif %}
     <form method="post" id="inboeken-formulier">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -45,7 +53,7 @@
         {% if beschikbare_producten %}
         <div class="veld">
             <label for="nieuw-product-select">+ Product toevoegen dat meekwam</label>
-            <div style="display:flex; gap:0.5rem; align-items:center">
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap">
                 <select id="nieuw-product-select" style="flex:1">
                     <option value="">Kies een product...</option>
                     {% for p in beschikbare_producten %}
@@ -53,7 +61,10 @@
                             data-afbeelding="{{ p.afbeelding or '' }}">{{ p.naam }}</option>
                     {% endfor %}
                 </select>
-                <button type="button" id="product-toevoegen-knop" class="btn btn-rand btn-klein">Toevoegen</button>
+                <button type="button" id="product-toevoegen-knop" class="btn btn-rand btn-klein btn-icoon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                    Toevoegen
+                </button>
             </div>
         </div>
         {% endif %}
@@ -115,7 +126,10 @@
             <label>Geboekt door</label>
             <p class="veld-waarde">{{ huidige_gebruiker }}</p>
         </div>
-        <button type="submit" class="btn btn-geel">
+        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
+            {% if pda_modus %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            {% endif %}
             {{ 'Aanpassing opslaan' if is_bewerken else 'Inboeken en voorraad bijwerken' }}
         </button>
     </form>
@@ -123,11 +137,16 @@
 
 <div class="kaart">
     <div class="actiebalk">
-        <span class="tekst-zacht">Bestelling volledig verwijderen? Dit maakt ook de voorraadwijziging ervan ongedaan.</span>
+        <span class="tekst-zacht">
+            {% if pda_modus %}Bestelling helemaal verwijderen?{% else %}Bestelling volledig verwijderen? Dit maakt ook de voorraadwijziging ervan ongedaan.{% endif %}
+        </span>
         <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=bestelling.id) }}"
               onsubmit="return bevestigEnVerstuur(this, 'Bestelling #{{ bestelling.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan en kan niet ongedaan worden gemaakt.');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-gevaar btn-klein">Bestelling verwijderen</button>
+            <button type="submit" class="btn btn-gevaar btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
+                {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>{% endif %}
+                Bestelling verwijderen
+            </button>
         </form>
     </div>
 </div>

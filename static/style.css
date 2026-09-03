@@ -558,6 +558,26 @@ tbody tr.rij-waarschuwing td { background: var(--rood-bg); }
     font-size: 0.76rem;
 }
 
+/* Icoon + tekst in dezelfde knop -- vooral voor de handterminal, zodat
+   knoppen wat meer als in een native app aanvoelen. */
+.btn-icoon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+}
+
+.btn-icoon svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+}
+
+.btn-icoon.btn-klein svg {
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
 .btn-rand {
     background: #ffffff;
     color: var(--tekst);
@@ -1127,6 +1147,7 @@ footer {
     align-items: flex-start;
     justify-content: center;
     padding: 4vh 1rem;
+    padding: 4dvh 1rem;
     overflow-y: auto;
 }
 
@@ -1385,7 +1406,14 @@ footer {
 .pda-body {
     max-width: 480px;
     margin: 0 auto;
+    /* dvh i.p.v. (of naast) vh: op mobiel Safari blijft een in vh berekende
+       hoogte na een rotatie soms op de OUDE waarde hangen (leeg gat onderin,
+       of juist afgeknipte inhoud) totdat er handmatig gescrold wordt --
+       dvh volgt de werkelijke zichtbare viewport wel meteen correct.
+       Browsers die dvh niet kennen negeren die regel en houden gewoon de
+       vh-waarde erboven aan. */
     min-height: 100vh;
+    min-height: 100dvh;
     background: var(--kaart);
 }
 
@@ -1430,6 +1458,7 @@ footer {
     border-radius: var(--radius);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
     max-height: 60vh;
+    max-height: 60dvh;
     overflow-y: auto;
     z-index: 60;
 }
@@ -1531,6 +1560,7 @@ footer {
     background: var(--achtergrond);
     padding: 1rem;
     min-height: 60vh;
+    min-height: 60dvh;
 }
 
 .pda-inhoud .btn {
