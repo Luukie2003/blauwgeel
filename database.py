@@ -246,17 +246,32 @@ def _migreer_bieren_backfill(db):
 # get_db() hieronder.
 _SCHEMA_TOEGEPAST_VOOR = set()
 
+# Eén hergebruikte sqlite3-connectie per databasepad, in plaats van een
+# nieuwe per request. Elke request een eigen connectie laten openen en
+# weer sluiten betekent dat sqlite (in WAL-modus) bij het sluiten -- als
+# laatst overgebleven connectie -- steeds een checkpoint uitvoert en het
+# -wal-bestand opruimt, en de eerstvolgende request dat bestand weer
+# helemaal opnieuw moet opbouwen. Op trage schijf-I/O (zoals gedeelde
+# hosting) kost die opbouw/afbraak zelf al tientallen tot honderden ms
+# PER REQUEST, ongeacht hoe klein de eigenlijke query is -- dat maakte de
+# hele site merkbaar traag. Hergebruiken is hier veilig omdat elke
+# uWSGI-worker maar 1 request tegelijk afhandelt (prefork, geen threads
+# per request).
+_VERBINDINGEN = {}
+
 
 def get_db():
-    if "db" not in g:
-        db_pad = current_app.config["DATABASE"]
-        g.db = sqlite3.connect(db_pad)
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA foreign_keys = ON")
+    db_pad = current_app.config["DATABASE"]
+    if db_pad not in _VERBINDINGEN:
+        verbinding = sqlite3.connect(db_pad, check_same_thread=False)
+        verbinding.row_factory = sqlite3.Row
+        verbinding.execute("PRAGMA foreign_keys = ON")
         # WAL i.p.v. de standaard journal-mode: lezers blokkeren schrijvers
         # niet meer (en andersom minder snel), belangrijk omdat meerdere
         # vrijwilligers tegelijk kunnen boeken/tellen.
-        g.db.execute("PRAGMA journal_mode = WAL")
+        verbinding.execute("PRAGMA journal_mode = WAL")
+        _VERBINDINGEN[db_pad] = verbinding
+
         # Schema + migraties toepassen is zelfhelend (CREATE ... IF NOT
         # EXISTS) en hoeft dus maar 1x per proces, niet op elke request --
         # het db-pad wordt hierboven al bijgehouden zodat een volgende
@@ -267,22 +282,40 @@ def get_db():
         # weer vanzelf.
         if db_pad not in _SCHEMA_TOEGEPAST_VOOR:
             with open(SCHEMA_PATH) as f:
-                g.db.executescript(f.read())
-            _migreer_kolommen(g.db)
-            _migreer_stemmen_meerdere_keuzes(g.db)
-            _migreer_categorieen(g.db)
-            _migreer_telling_verkoopprijs(g.db)
-            _migreer_kassa_afgesloten(g.db)
-            _migreer_bieren_backfill(g.db)
-            g.db.commit()
+                verbinding.executescript(f.read())
+            _migreer_kolommen(verbinding)
+            _migreer_stemmen_meerdere_keuzes(verbinding)
+            _migreer_categorieen(verbinding)
+            _migreer_telling_verkoopprijs(verbinding)
+            _migreer_kassa_afgesloten(verbinding)
+            _migreer_bieren_backfill(verbinding)
+            verbinding.commit()
             _SCHEMA_TOEGEPAST_VOOR.add(db_pad)
+    g.db = _VERBINDINGEN[db_pad]
     return g.db
 
 
 def close_db(e=None):
+    """Sluit de verbinding NIET -- die blijft leven voor de volgende
+    request in dit workerproces (zie _VERBINDINGEN hierboven). Rolt alleen
+    een eventuele nog openstaande transactie terug, zodat een crash
+    halverwege een request niets ongecommit achterlaat op een connectie
+    die zo weer voor de volgende request gebruikt wordt."""
     db = g.pop("db", None)
     if db is not None:
-        db.close()
+        db.rollback()
+
+
+def sluit_gecachte_verbinding(db_pad):
+    """Forceert een verse connectie bij de eerstvolgende get_db()-aanroep
+    in dit workerproces. Nodig na het herstellen van een back-up: dat
+    schrijft buiten deze cache om (via sqlite3.Connection.backup() op een
+    eigen, tijdelijke connectie, zie backup.py) direct in het live
+    databasebestand, dus de al openstaande, hergebruikte connectie zou
+    anders de oude inhoud blijven zien."""
+    verbinding = _VERBINDINGEN.pop(db_pad, None)
+    if verbinding is not None:
+        verbinding.close()
 
 
 def init_db(app):
