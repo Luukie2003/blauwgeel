@@ -3314,6 +3314,115 @@ def register_routes(app):
             besteladvies=besteladvies,
         )
 
+    @app.route("/tellingen/regels/<int:regel_id>/corrigeren", methods=["POST"])
+    def telling_regel_corrigeren(regel_id):
+        """Corrigeert het geteld aantal (en dus verkocht/correctie) van 1
+        productregel binnen een eerder afgeronde telling -- bijv. omdat er
+        iets over het hoofd is gezien bij het tellen (een krat die nog in de
+        koelkast stond). Raakt bewust nooit de actuele voorraad: die had je
+        al apart via boeken in/uit rechtgezet. Dit corrigeert alleen het
+        historische verkocht/correctie-cijfer (en daarmee de omzetcijfers)
+        van deze ene telling."""
+        db = get_db()
+        regel = db.execute(
+            """SELECT tr.*, p.naam AS product_naam, p.eenheid, t.datum AS telling_datum
+               FROM telling_regels tr
+               JOIN producten p ON p.id = tr.product_id
+               JOIN tellingen t ON t.id = tr.telling_id
+               WHERE tr.id = ?""",
+            (regel_id,),
+        ).fetchone()
+        if regel is None:
+            flash("Tellingregel niet gevonden.", "error")
+            return redirect(url_for("tellen"))
+
+        try:
+            nieuw_geteld = int(request.form.get("geteld_aantal", ""))
+        except (TypeError, ValueError):
+            flash("Vul een geldig aantal in.", "error")
+            return redirect(url_for("telling_detail", telling_id=regel["telling_id"]))
+        if nieuw_geteld < 0:
+            flash("Aantal kan niet negatief zijn.", "error")
+            return redirect(url_for("telling_detail", telling_id=regel["telling_id"]))
+
+        opmerking = request.form.get("correctie_opmerking", "").strip()
+        naam = session.get("gebruiker_naam")
+        gebruiker_id = session.get("gebruiker_id")
+
+        verschil = nieuw_geteld - regel["voorraad_voor"]
+        nieuw_verkocht = max(0, -verschil)
+        nieuw_correctie = max(0, verschil)
+
+        db.execute(
+            """UPDATE telling_regels
+               SET geteld_aantal_voor_correctie = ?,
+                   gecorrigeerd_door_id = ?,
+                   gecorrigeerd_door = ?,
+                   gecorrigeerd_op = ?,
+                   correctie_opmerking = ?,
+                   geteld_aantal = ?,
+                   verkocht = ?,
+                   correctie = ?
+               WHERE id = ?""",
+            (
+                regel["geteld_aantal"],
+                gebruiker_id,
+                naam,
+                now_str(),
+                opmerking,
+                nieuw_geteld,
+                nieuw_verkocht,
+                nieuw_correctie,
+                regel_id,
+            ),
+        )
+
+        # De mutatie die destijds voor dit product bij deze telling is
+        # aangemaakt moet meeveranderen, anders blijft de geschiedenis het
+        # oude (foute) verkocht/correctie-cijfer tonen.
+        db.execute(
+            "DELETE FROM mutaties WHERE telling_id = ? AND product_id = ?",
+            (regel["telling_id"], regel["product_id"]),
+        )
+        if nieuw_verkocht > 0:
+            db.execute(
+                """INSERT INTO mutaties
+                   (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, telling_id)
+                   VALUES (?, 'uit', ?, ?, ?, ?, ?, ?)""",
+                (
+                    regel["product_id"],
+                    nieuw_verkocht,
+                    regel["telling_datum"],
+                    naam,
+                    gebruiker_id,
+                    f"Verkocht (telling #{regel['telling_id']}, gecorrigeerd)",
+                    regel["telling_id"],
+                ),
+            )
+        elif nieuw_correctie > 0:
+            db.execute(
+                """INSERT INTO mutaties
+                   (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, telling_id)
+                   VALUES (?, 'in', ?, ?, ?, ?, ?, ?)""",
+                (
+                    regel["product_id"],
+                    nieuw_correctie,
+                    regel["telling_datum"],
+                    naam,
+                    gebruiker_id,
+                    f"Correctie (telling #{regel['telling_id']}, gecorrigeerd)",
+                    regel["telling_id"],
+                ),
+            )
+        db.commit()
+
+        flash(
+            f"Telling voor '{regel['product_naam']}' gecorrigeerd: {regel['geteld_aantal']} → "
+            f"{nieuw_geteld} {regel['eenheid']} geteld.",
+            "success",
+        )
+        return redirect(url_for("telling_detail", telling_id=regel["telling_id"]))
+
     @app.route("/tellingen/<int:telling_id>/pdf")
     def telling_pdf(telling_id):
         db = get_db()

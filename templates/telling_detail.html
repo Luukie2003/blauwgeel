@@ -24,6 +24,7 @@
                     <th>Verkocht</th>
                     <th>Correctie</th>
                     <th>Omzet</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -43,13 +44,43 @@
                         {% else %}—{% endif %}
                     </td>
                     <td>{{ "€ %.2f"|format(r.verkocht * r.verkoopprijs) }}</td>
+                    <td>
+                        <button type="button" class="btn-tekstlink telling-corrigeren-knop"
+                                data-doel="telling-regel-corrigeren-{{ r.id }}" style="font-size:0.78rem">Corrigeren</button>
+                    </td>
+                </tr>
+                <tr id="telling-regel-corrigeren-{{ r.id }}" class="telling-regel-corrigeren-rij" hidden>
+                    <td colspan="7">
+                        <form method="post" action="{{ url_for('telling_regel_corrigeren', regel_id=r.id) }}"
+                              onsubmit="return bevestigEnVerstuur(this, 'Telling voor \'{{ r.product_naam }}\' corrigeren? Dit past het verkocht/correctie-cijfer (en de omzet) van deze telling aan -- niet de actuele voorraad.');"
+                              style="display:flex; gap:0.8rem; align-items:flex-end; flex-wrap:wrap; margin:0.4rem 0">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="veld" style="margin:0">
+                                <label for="geteld-{{ r.id }}">Werkelijk geteld aantal ({{ r.eenheid }})</label>
+                                <input type="number" id="geteld-{{ r.id }}" name="geteld_aantal" min="0"
+                                       value="{{ r.geteld_aantal }}" style="width:8rem" required>
+                            </div>
+                            <div class="veld" style="margin:0; flex:1; min-width:220px">
+                                <label for="reden-{{ r.id }}">Reden (optioneel)</label>
+                                <input type="text" id="reden-{{ r.id }}" name="correctie_opmerking"
+                                       placeholder="Bijv. krat over het hoofd gezien in de koelkast">
+                            </div>
+                            <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
+                        </form>
+                        {% if r.geteld_aantal_voor_correctie is not none %}
+                        <p class="tekst-zacht" style="font-size:0.78rem; margin:0 0 0.5rem">
+                            Laatst gecorrigeerd door {{ r.gecorrigeerd_door or 'onbekend' }} op {{ r.gecorrigeerd_op|datum_nl }}
+                            (was {{ r.geteld_aantal_voor_correctie }} {{ r.eenheid }} geteld){% if r.correctie_opmerking %}: {{ r.correctie_opmerking }}{% endif %}
+                        </p>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
                 <tr>
                     <td colspan="5" style="text-align:right"><strong>Totaal omzet</strong></td>
-                    <td><strong>{{ "€ %.2f"|format(totaal_omzet) }}</strong></td>
+                    <td colspan="2"><strong>{{ "€ %.2f"|format(totaal_omzet) }}</strong></td>
                 </tr>
             </tfoot>
         </table>
@@ -74,4 +105,13 @@
     </ul>
 </div>
 {% endif %}
+
+<script>
+document.addEventListener('click', function (e) {
+    var knop = e.target.closest('.telling-corrigeren-knop');
+    if (!knop) return;
+    var rij = document.getElementById(knop.dataset.doel);
+    if (rij) rij.hidden = !rij.hidden;
+});
+</script>
 {% endblock %}

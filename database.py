@@ -130,6 +130,11 @@ KOLOM_MIGRATIES = [
     ("kassa_mutaties", "gecorrigeerd_door", "TEXT"),
     ("kassa_mutaties", "gecorrigeerd_op", "TEXT"),
     ("kassa_mutaties", "correctie_opmerking", "TEXT"),
+    ("telling_regels", "geteld_aantal_voor_correctie", "INTEGER"),
+    ("telling_regels", "gecorrigeerd_door_id", "INTEGER REFERENCES gebruikers(id)"),
+    ("telling_regels", "gecorrigeerd_door", "TEXT"),
+    ("telling_regels", "gecorrigeerd_op", "TEXT"),
+    ("telling_regels", "correctie_opmerking", "TEXT"),
 ]
 
 
