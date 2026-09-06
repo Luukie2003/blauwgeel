@@ -278,6 +278,49 @@ def test_overige_producten_sluit_al_openstaand_besteld_product_uit(ingelogde_cli
     assert 'data-naam="Al Besteld Testproduct"' not in body
 
 
+def test_verse_bestelling_toont_alles_ongevinkt_als_manco(ingelogde_client, db):
+    """Een net aangemaakte (nog niet ingeboekte) bestelling moet in het
+    inboekscherm met alle regels op manco/ongevinkt starten -- pas als je
+    'm actief aanvinkt telt een regel als binnengekomen."""
+    product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    _maak_bestelling(ingelogde_client, product["id"], 3)
+    bestelling = db.execute("SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1").fetchone()
+    regel = db.execute(
+        "SELECT * FROM bestelregels WHERE bestelling_id = ?", (bestelling["id"],)
+    ).fetchone()
+
+    body = ingelogde_client.get(f"/bestellingen/{bestelling['id']}/inboeken").data.decode()
+    veld_start = body.index(f'name="binnen_{regel["id"]}"')
+    veld_html = body[veld_start : veld_start + 120]
+    assert "checked" not in veld_html
+
+
+def test_bewerken_van_ingeboekte_bestelling_toont_echte_status(ingelogde_client, db):
+    """Bij het aanpassen van een al ingeboekte bestelling moet de daadwerkelijk
+    vastgelegde status getoond worden (dus niet opnieuw alles op manco)."""
+    product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    _maak_bestelling(ingelogde_client, product["id"], 3)
+    bestelling = db.execute("SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1").fetchone()
+    regel = db.execute(
+        "SELECT * FROM bestelregels WHERE bestelling_id = ?", (bestelling["id"],)
+    ).fetchone()
+
+    # Correct ingeboekt: wel aangevinkt als binnen.
+    ingelogde_client.post(
+        f"/bestellingen/{bestelling['id']}/inboeken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            f"binnen_{regel['id']}": "on",
+            f"ontvangen_{regel['id']}": "3",
+        },
+    )
+
+    body = ingelogde_client.get(f"/bestellingen/{bestelling['id']}/inboeken").data.decode()
+    veld_start = body.index(f'name="binnen_{regel["id"]}"')
+    veld_html = body[veld_start : veld_start + 120]
+    assert "checked" in veld_html
+
+
 def test_bestelling_aanmaken_mixt_voorgesteld_en_zelf_toegevoegd_product(ingelogde_client, db):
     laag = _maak_testproduct(db, "Laag Testproduct 2", voorraad=1, min_voorraad=10)
     zelf = _maak_testproduct(db, "Zelf Toegevoegd Testproduct", voorraad=50, min_voorraad=10)

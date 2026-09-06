@@ -107,6 +107,18 @@ CREATE TABLE IF NOT EXISTS mededelingen (
     afgehandeld_op TEXT
 );
 
+-- Losse inkopen buiten de vaste voorraad om (bijv. schoonmaakspullen),
+-- niet gekoppeld aan een product uit de producten-tabel.
+CREATE TABLE IF NOT EXISTS boodschappen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tekst TEXT NOT NULL,
+    aangemaakt_door TEXT,
+    aangemaakt_op TEXT NOT NULL,
+    afgevinkt INTEGER NOT NULL DEFAULT 0,
+    afgevinkt_door TEXT,
+    afgevinkt_op TEXT
+);
+
 CREATE TABLE IF NOT EXISTS mededeling_opmerkingen (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     mededeling_id INTEGER NOT NULL REFERENCES mededelingen(id) ON DELETE CASCADE,

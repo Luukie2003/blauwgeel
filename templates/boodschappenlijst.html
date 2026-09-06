@@ -1,0 +1,65 @@
+{% extends basis_template %}
+{% block titel %}Boodschappenlijst{% endblock %}
+{% block inhoud %}
+<p class="subtitel">Dingen die ingekocht moeten worden, los van de vaste voorraad (bijv. schoonmaakspullen, kantoorbenodigdheden).</p>
+
+<div class="kaart">
+    <form method="post" action="{{ url_for('boodschappenlijst') }}" style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld" style="flex:1; min-width:200px; margin:0">
+            <label for="tekst">Wat is er nodig?</label>
+            <input type="text" id="tekst" name="tekst" placeholder="Bijv. vuilniszakken, schoonmaakmiddel..." required>
+        </div>
+        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
+            {% if pda_modus %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            {% endif %}
+            Toevoegen
+        </button>
+    </form>
+</div>
+
+<div class="kaart">
+    <h2>Nog te kopen{% if open_items %} ({{ open_items|length }}){% endif %}</h2>
+    {% if open_items %}
+    <ul class="boodschappen-lijst">
+        {% for item in open_items %}
+        <li class="boodschappen-item">
+            <form method="post" action="{{ url_for('boodschap_afvinken', item_id=item.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="boodschappen-vinkknop" aria-label="Afvinken als gekocht"></button>
+            </form>
+            <span class="boodschappen-tekst">{{ item.tekst }}</span>
+            <span class="tekst-zacht boodschappen-meta">{{ item.aangemaakt_door or 'onbekend' }} &middot; {{ item.aangemaakt_op|datum_nl }}</span>
+            <form method="post" action="{{ url_for('boodschap_verwijderen', item_id=item.id) }}"
+                  data-boodschap="{{ item.tekst }}"
+                  onsubmit="return bevestigEnVerstuur(this, '\'' + this.dataset.boodschap + '\' verwijderen van de lijst?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-tekstlink" style="font-size:0.75rem">Verwijderen</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="leeg">Niets op de lijst — goed bezig!</p>
+    {% endif %}
+</div>
+
+{% if afgevinkt_items %}
+<div class="kaart">
+    <h2>Recent gekocht</h2>
+    <ul class="boodschappen-lijst">
+        {% for item in afgevinkt_items %}
+        <li class="boodschappen-item boodschappen-item-afgevinkt">
+            <form method="post" action="{{ url_for('boodschap_afvinken', item_id=item.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="boodschappen-vinkknop boodschappen-vinkknop-actief" aria-label="Terugzetten naar de lijst"></button>
+            </form>
+            <span class="boodschappen-tekst">{{ item.tekst }}</span>
+            <span class="tekst-zacht boodschappen-meta">{{ item.afgevinkt_door or 'onbekend' }} &middot; {{ item.afgevinkt_op|datum_nl }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% endblock %}

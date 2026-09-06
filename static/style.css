@@ -819,6 +819,67 @@ input:focus, select:focus, textarea:focus {
     padding: 0.35rem 0.5rem;
 }
 
+/* ---------- Boodschappenlijst ---------- */
+
+.boodschappen-lijst {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.boodschappen-item {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--rand-licht);
+}
+
+.boodschappen-item:last-child {
+    border-bottom: none;
+}
+
+.boodschappen-item form {
+    margin: 0;
+}
+
+.boodschappen-vinkknop {
+    flex: 0 0 auto;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 50%;
+    border: 2px solid var(--rand);
+    background: var(--kaart);
+    cursor: pointer;
+    padding: 0;
+}
+
+.boodschappen-vinkknop:hover {
+    border-color: var(--groen);
+}
+
+.boodschappen-vinkknop-actief {
+    border-color: var(--groen);
+    background: var(--groen);
+}
+
+.boodschappen-tekst {
+    flex: 1 1 auto;
+    min-width: 0;
+    word-break: break-word;
+}
+
+.boodschappen-item-afgevinkt .boodschappen-tekst {
+    text-decoration: line-through;
+    color: var(--tekst-zacht);
+}
+
+.boodschappen-meta {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
 .tag-mention {
     background: rgba(252, 212, 47, 0.35);
     color: var(--blauw-donker);

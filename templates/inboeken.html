@@ -14,9 +14,9 @@
     {% endif %}
     {% else %}
     {% if pda_modus %}
-    <p class="tekst-zacht">Uitgevinkt = manco.</p>
+    <p class="tekst-zacht">Alles begint als manco — vink aan wat je fysiek binnen ziet komen.</p>
     {% else %}
-    <p class="tekst-zacht">Vink aan wat er is binnengekomen. Staat een vinkje uit, dan wordt die regel als manco gemarkeerd en niet ingeboekt.</p>
+    <p class="tekst-zacht">Alles staat aanvankelijk op manco. Vink een regel pas aan zodra je 'm fysiek hebt gecontroleerd en binnen zag komen.</p>
     {% endif %}
     {% endif %}
     <form method="post" id="inboeken-formulier">
@@ -26,26 +26,27 @@
             {% for r in regels %}
             {% set besteld_eenh = r.aantal_besteld|naar_besteleenheden(r) %}
             {% set ontvangen_eenh = r.aantal_ontvangen|naar_besteleenheden(r) if (r.aantal_ontvangen is not none and r.aantal_ontvangen > 0) else besteld_eenh %}
-            <div class="pda-kaartje pda-regel-kaartje{{ ' pda-kaartje--manco' if r.manco else '' }}">
+            {% set start_binnen = is_bewerken and not r.manco %}
+            <div class="pda-kaartje pda-regel-kaartje{{ '' if start_binnen else ' pda-kaartje--manco' }}">
                 <div class="pda-kaartje-vink" style="cursor:default">
                     {% if r.afbeelding %}
                     <img src="{{ url_for('static', filename='product_afbeeldingen/' + r.afbeelding) }}" alt="" class="product-thumb">
                     {% endif %}
                     <span class="pda-kaartje-naam">{{ r.product_naam }}</span>
-                    <span class="badge badge-laag manco-badge" {{ '' if r.manco else 'hidden' }}>Manco</span>
+                    <span class="badge badge-laag manco-badge" {{ 'hidden' if start_binnen else '' }}>Manco</span>
                 </div>
                 <div class="pda-kaartje-info">
                     <span class="tekst-zacht">Besteld: {{ besteld_eenh }} {{ r|besteleenheid_naam }}{% if r.besteleenheid_factor > 1 %} (= {{ r.aantal_besteld }} {{ r.eenheid }}){% endif %}</span>
                 </div>
                 <label class="pda-binnen-toggle">
                     <input type="checkbox" class="binnen-vinkje" name="binnen_{{ r.id }}"
-                           {{ 'checked' if not r.manco else '' }}>
+                           {{ 'checked' if start_binnen else '' }}>
                     <span>Binnengekomen</span>
                 </label>
                 <div class="veld pda-kaartje-veld">
                     <label>Aantal ontvangen ({{ r|besteleenheid_naam }})</label>
                     <input type="number" name="ontvangen_{{ r.id }}" min="0" class="ontvangen-veld"
-                           value="{{ ontvangen_eenh }}" {{ 'disabled' if r.manco else '' }}>
+                           value="{{ ontvangen_eenh }}" {{ '' if start_binnen else 'disabled' }}>
                 </div>
             </div>
             {% endfor %}
@@ -78,6 +79,7 @@
                     {% for r in regels %}
                     {% set besteld_eenh = r.aantal_besteld|naar_besteleenheden(r) %}
                     {% set ontvangen_eenh = r.aantal_ontvangen|naar_besteleenheden(r) if (r.aantal_ontvangen is not none and r.aantal_ontvangen > 0) else besteld_eenh %}
+                    {% set start_binnen = is_bewerken and not r.manco %}
                     <tr>
                         <td>
                             {% if r.afbeelding %}
@@ -94,14 +96,14 @@
                         <td>
                             <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400; cursor:pointer">
                                 <input type="checkbox" class="binnen-vinkje" name="binnen_{{ r.id }}" style="width:auto"
-                                       {{ 'checked' if not r.manco else '' }}>
+                                       {{ 'checked' if start_binnen else '' }}>
                                 Binnen
                             </label>
                         </td>
                         <td>
                             <input type="number" name="ontvangen_{{ r.id }}" min="0" class="ontvangen-veld" style="width:6rem"
-                                   value="{{ ontvangen_eenh }}" {{ 'disabled' if r.manco else '' }}> {{ r|besteleenheid_naam }}
-                            <span class="badge badge-laag manco-badge" {{ '' if r.manco else 'hidden' }}>Manco</span>
+                                   value="{{ ontvangen_eenh }}" {{ '' if start_binnen else 'disabled' }}> {{ r|besteleenheid_naam }}
+                            <span class="badge badge-laag manco-badge" {{ 'hidden' if start_binnen else '' }}>Manco</span>
                         </td>
                     </tr>
                     {% endfor %}
