@@ -135,6 +135,7 @@ KOLOM_MIGRATIES = [
     ("telling_regels", "gecorrigeerd_door", "TEXT"),
     ("telling_regels", "gecorrigeerd_op", "TEXT"),
     ("telling_regels", "correctie_opmerking", "TEXT"),
+    ("instellingen", "frituurvet_interval_dagen", "INTEGER NOT NULL DEFAULT 14"),
 ]
 
 

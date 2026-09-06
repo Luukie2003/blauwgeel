@@ -119,6 +119,15 @@ CREATE TABLE IF NOT EXISTS boodschappen (
     afgevinkt_op TEXT
 );
 
+-- Log van frituurvet-vervangingen, voor de herinnering op het dashboard.
+CREATE TABLE IF NOT EXISTS frituurvet_vervangingen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    datum TEXT NOT NULL,
+    naam TEXT,
+    gebruiker_id INTEGER REFERENCES gebruikers(id),
+    opmerking TEXT
+);
+
 CREATE TABLE IF NOT EXISTS mededeling_opmerkingen (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     mededeling_id INTEGER NOT NULL REFERENCES mededelingen(id) ON DELETE CASCADE,

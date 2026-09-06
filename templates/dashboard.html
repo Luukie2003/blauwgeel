@@ -50,6 +50,26 @@
             <p class="statuskaart-opmerking">{{ bestelling_status.tekst }}</p>
         </div>
     </div>
+    <div class="statuskaart {{ 'statuskaart-goed' if frituurvet_status.ok else 'statuskaart-slecht' }}">
+        <div class="statuskaart-titel">Frituurvet</div>
+        <div class="statuskaart-body">
+            {% if frituurvet_status.laatste %}
+            <div class="statuskaart-vak">
+                {{ 'Vervangen' if frituurvet_status.ok else 'Te laat' }}<br>
+                op {{ frituurvet_status.laatste.datum|datum_nl }}
+            </div>
+            <p class="statuskaart-opmerking">door {{ frituurvet_status.laatste.naam or '—' }}</p>
+            {% else %}
+            <div class="statuskaart-vak">Nog nooit vervangen</div>
+            {% endif %}
+            <p class="statuskaart-opmerking">Elke {{ frituurvet_status.interval }} dagen</p>
+            <form method="post" action="{{ url_for('frituurvet_vervangen') }}"
+                  onsubmit="return bevestigEnVerstuur(this, 'Frituurvet vandaag vervangen?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-rand btn-klein">Vet vervangen</button>
+            </form>
+        </div>
+    </div>
 </div>
 
 <div class="statgrid">

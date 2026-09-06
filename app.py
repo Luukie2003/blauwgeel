@@ -51,8 +51,16 @@ TAG_PATROON = re.compile(r"@([A-Za-z0-9_.\-]+)")
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.5.0"
+HUIDIGE_VERSIE = "1.6.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.6.0",
+        "datum": "6 september 2026",
+        "punten": [
+            "Keuken toegevoegd als categorie, voor frituursnacks, gehaktballen e.d. -- werkt met dezelfde voorraad, bestellijst en tellijsten als de rest",
+            "Herinnering op het dashboard voor het vervangen van het frituurvet, met instelbare termijn (Instellingen)",
+        ],
+    },
     {
         "versie": "1.5.0",
         "datum": "6 september 2026",
@@ -1397,6 +1405,28 @@ def bereken_bestelling_status(db):
     return {"status": status, "tekst": tekst, "laatste_bestelling": laatste_ontvangen}
 
 
+def bereken_frituurvet_status(db):
+    """Status van het statusblokje 'Frituurvet': groen zolang de laatste
+    vervanging binnen het ingestelde aantal dagen (instellingen tabel,
+    standaard 14) valt, rood daarboven of als er nog nooit een vervanging
+    is gelogd."""
+    interval = db.execute(
+        "SELECT frituurvet_interval_dagen FROM instellingen WHERE id = 1"
+    ).fetchone()["frituurvet_interval_dagen"]
+    laatste = db.execute(
+        "SELECT * FROM frituurvet_vervangingen ORDER BY datum DESC, id DESC LIMIT 1"
+    ).fetchone()
+    if laatste is None:
+        return {"laatste": None, "dagen_geleden": None, "interval": interval, "ok": False}
+    dagen_geleden = (datetime.now() - datetime.strptime(laatste["datum"], "%Y-%m-%d %H:%M")).days
+    return {
+        "laatste": laatste,
+        "dagen_geleden": dagen_geleden,
+        "interval": interval,
+        "ok": dagen_geleden <= interval,
+    }
+
+
 def vind_getagde_gebruikers(db, tekst):
     """Zoekt @naam-vermeldingen in tekst en matcht ze tegen bestaande
     gebruikersnamen (hoofdletterongevoelig). Geeft de bijbehorende
@@ -1864,21 +1894,28 @@ def register_routes(app):
         if request.method == "POST":
             notificatie_email = request.form.get("notificatie_email", "").strip()
             banner_tekst = request.form.get("banner_tekst", "").strip()
+            try:
+                frituurvet_interval_dagen = max(1, int(request.form.get("frituurvet_interval_dagen", "14")))
+            except ValueError:
+                frituurvet_interval_dagen = 14
             db.execute(
-                "UPDATE instellingen SET notificatie_email = ?, banner_tekst = ? WHERE id = 1",
-                (notificatie_email or None, banner_tekst or None),
+                """UPDATE instellingen
+                   SET notificatie_email = ?, banner_tekst = ?, frituurvet_interval_dagen = ?
+                   WHERE id = 1""",
+                (notificatie_email or None, banner_tekst or None, frituurvet_interval_dagen),
             )
             db.commit()
             flash("Instellingen opgeslagen.", "success")
             return redirect(url_for("instellingen_pagina"))
 
         rij = db.execute(
-            "SELECT notificatie_email, banner_tekst FROM instellingen WHERE id = 1"
+            "SELECT notificatie_email, banner_tekst, frituurvet_interval_dagen FROM instellingen WHERE id = 1"
         ).fetchone()
         return render_template(
             "instellingen.html",
             notificatie_email=rij["notificatie_email"] if rij else None,
             banner_tekst=rij["banner_tekst"] if rij else None,
+            frituurvet_interval_dagen=rij["frituurvet_interval_dagen"] if rij else 14,
         )
 
     # ---------- Club instellingen (teamagenda's) ----------
@@ -2104,7 +2141,19 @@ def register_routes(app):
             laatste_telling_status=bereken_laatste_telling_status(db),
             kassa_telling_status=bereken_kassa_telling_status(db),
             bestelling_status=bereken_bestelling_status(db),
+            frituurvet_status=bereken_frituurvet_status(db),
         )
+
+    @app.route("/frituurvet/vervangen", methods=["POST"])
+    def frituurvet_vervangen():
+        db = get_db()
+        db.execute(
+            "INSERT INTO frituurvet_vervangingen (datum, naam, gebruiker_id) VALUES (?, ?, ?)",
+            (now_str(), session.get("gebruiker_naam"), session.get("gebruiker_id")),
+        )
+        db.commit()
+        flash("Frituurvet-vervanging geregistreerd.", "success")
+        return redirect(url_for("dashboard"))
 
     def bereken_voorraadoverzicht(db):
         """Verzamelt alle cijfers voor het voorraadoverzicht -- gebruikt door
