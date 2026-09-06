@@ -36,9 +36,9 @@
                 <div class="veld">
                     <label for="categorie">Categorie</label>
                     <select id="categorie" name="categorie" required>
-                        {% set huidige_categorie = product.categorie if product else '' %}
+                        {% set huidige_categorie = product.categorie if product else (voorgestelde_categorie or '') %}
                         {% set categorie_namen = categorieen|map(attribute='naam')|list %}
-                        {% if not product %}
+                        {% if not product and not huidige_categorie %}
                         <option value="" disabled selected>Kies een categorie</option>
                         {% endif %}
                         {% if huidige_categorie and huidige_categorie not in categorie_namen %}

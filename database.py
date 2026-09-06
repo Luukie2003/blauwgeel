@@ -189,6 +189,17 @@ def _migreer_categorieen(db):
         db.execute("INSERT OR IGNORE INTO categorieen (naam) VALUES (?)", (naam,))
 
 
+def _migreer_keuken_categorie(db):
+    """Keuken is een eigen navigatie-onderdeel geworden (voorraad +
+    instellingen), dus die categorie moet altijd bestaan -- anders is
+    'm/producten/nieuw?categorie=Keuken' vanuit /keuken kapot voor een
+    verse installatie. Idempotent (OR IGNORE), dus dit doet niets meer
+    zodra de categorie er eenmaal staat."""
+    db.execute("INSERT OR IGNORE INTO categorieen (naam, verkoopprijs_verplicht) VALUES ('Keuken', 1)")
+    db.execute("INSERT OR IGNORE INTO subcategorieen (categorie, naam) VALUES ('Keuken', 'Frituursnacks')")
+    db.execute("INSERT OR IGNORE INTO subcategorieen (categorie, naam) VALUES ('Keuken', 'Gehaktballen')")
+
+
 def _migreer_kassa_afgesloten(db):
     """De kolom afgesloten is nieuw: kassa-tellingen werden voorheen meteen
     definitief verwerkt (direct verrekend in instellingen.kassa_stand).
@@ -299,6 +310,7 @@ def get_db():
             _migreer_kolommen(g.db)
             _migreer_stemmen_meerdere_keuzes(g.db)
             _migreer_categorieen(g.db)
+            _migreer_keuken_categorie(g.db)
             _migreer_telling_verkoopprijs(g.db)
             _migreer_kassa_afgesloten(g.db)
             _migreer_bieren_backfill(g.db)

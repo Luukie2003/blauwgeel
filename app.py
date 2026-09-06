@@ -51,8 +51,16 @@ TAG_PATROON = re.compile(r"@([A-Za-z0-9_.\-]+)")
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.6.0"
+HUIDIGE_VERSIE = "1.7.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.7.0",
+        "datum": "6 september 2026",
+        "punten": [
+            "Keuken heeft nu een eigen plek in het menu: voorraad en frituurvet-instellingen bij elkaar",
+            "'+ Nieuw Keuken-product' zet de categorie meteen goed bij het aanmaken",
+        ],
+    },
     {
         "versie": "1.6.0",
         "datum": "6 september 2026",
@@ -382,6 +390,18 @@ NAV_ITEMS = [
         "endpoints": ["kassa_mutatie_nieuw"],
         "url_endpoint": "kassa_mutatie_nieuw",
         "label": "Afdracht / toevoeging",
+    },
+    {
+        "groep": "Keuken",
+        "endpoints": ["keuken_voorraad"],
+        "url_endpoint": "keuken_voorraad",
+        "label": "Voorraad",
+    },
+    {
+        "groep": "Keuken",
+        "endpoints": ["keuken_instellingen"],
+        "url_endpoint": "keuken_instellingen",
+        "label": "Instellingen",
     },
     {
         "groep": "Stemmen",
@@ -1894,28 +1914,21 @@ def register_routes(app):
         if request.method == "POST":
             notificatie_email = request.form.get("notificatie_email", "").strip()
             banner_tekst = request.form.get("banner_tekst", "").strip()
-            try:
-                frituurvet_interval_dagen = max(1, int(request.form.get("frituurvet_interval_dagen", "14")))
-            except ValueError:
-                frituurvet_interval_dagen = 14
             db.execute(
-                """UPDATE instellingen
-                   SET notificatie_email = ?, banner_tekst = ?, frituurvet_interval_dagen = ?
-                   WHERE id = 1""",
-                (notificatie_email or None, banner_tekst or None, frituurvet_interval_dagen),
+                "UPDATE instellingen SET notificatie_email = ?, banner_tekst = ? WHERE id = 1",
+                (notificatie_email or None, banner_tekst or None),
             )
             db.commit()
             flash("Instellingen opgeslagen.", "success")
             return redirect(url_for("instellingen_pagina"))
 
         rij = db.execute(
-            "SELECT notificatie_email, banner_tekst, frituurvet_interval_dagen FROM instellingen WHERE id = 1"
+            "SELECT notificatie_email, banner_tekst FROM instellingen WHERE id = 1"
         ).fetchone()
         return render_template(
             "instellingen.html",
             notificatie_email=rij["notificatie_email"] if rij else None,
             banner_tekst=rij["banner_tekst"] if rij else None,
-            frituurvet_interval_dagen=rij["frituurvet_interval_dagen"] if rij else 14,
         )
 
     # ---------- Club instellingen (teamagenda's) ----------
@@ -2429,6 +2442,7 @@ def register_routes(app):
             product=None,
             categorieen=categorieen,
             subcategorieen=subcategorieen,
+            voorgestelde_categorie=request.args.get("categorie", "").strip(),
         )
 
     @app.route("/producten/<int:product_id>/bewerken", methods=["GET", "POST"])
@@ -3543,6 +3557,43 @@ def register_routes(app):
         fust_verkopen = bereken_fust_verkopen(db)
         return render_template(
             "fusten.html", fust_producten=fust_producten, fust_verkopen=fust_verkopen
+        )
+
+    @app.route("/keuken")
+    def keuken_voorraad():
+        db = get_db()
+        producten = db.execute(
+            "SELECT * FROM producten WHERE categorie = 'Keuken' ORDER BY actief DESC, subcategorie, naam"
+        ).fetchall()
+        return render_template("keuken_voorraad.html", producten=producten)
+
+    @app.route("/keuken/instellingen", methods=["GET", "POST"])
+    def keuken_instellingen():
+        db = get_db()
+        if request.method == "POST":
+            try:
+                interval = max(1, int(request.form.get("frituurvet_interval_dagen", "14")))
+            except ValueError:
+                interval = 14
+            db.execute(
+                "UPDATE instellingen SET frituurvet_interval_dagen = ? WHERE id = 1",
+                (interval,),
+            )
+            db.commit()
+            flash("Keuken-instellingen opgeslagen.", "success")
+            return redirect(url_for("keuken_instellingen"))
+
+        interval = db.execute(
+            "SELECT frituurvet_interval_dagen FROM instellingen WHERE id = 1"
+        ).fetchone()["frituurvet_interval_dagen"]
+        vervangingen = db.execute(
+            "SELECT * FROM frituurvet_vervangingen ORDER BY datum DESC, id DESC LIMIT 20"
+        ).fetchall()
+        return render_template(
+            "keuken_instellingen.html",
+            frituurvet_interval_dagen=interval,
+            frituurvet_status=bereken_frituurvet_status(db),
+            vervangingen=vervangingen,
         )
 
     @app.route("/week-overzicht")

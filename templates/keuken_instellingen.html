@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block titel %}Keuken instellingen{% endblock %}
+{% block inhoud %}
+<p class="subtitel">Instellingen en herinnering voor het frituurvet.</p>
+
+<div class="statgrid" style="max-width:320px">
+    <div class="statuskaart {{ 'statuskaart-goed' if frituurvet_status.ok else 'statuskaart-slecht' }}">
+        <div class="statuskaart-titel">Frituurvet</div>
+        <div class="statuskaart-body">
+            {% if frituurvet_status.laatste %}
+            <div class="statuskaart-vak">
+                {{ 'Vervangen' if frituurvet_status.ok else 'Te laat' }}<br>
+                op {{ frituurvet_status.laatste.datum|datum_nl }}
+            </div>
+            <p class="statuskaart-opmerking">door {{ frituurvet_status.laatste.naam or '—' }}</p>
+            {% else %}
+            <div class="statuskaart-vak">Nog nooit vervangen</div>
+            {% endif %}
+            <p class="statuskaart-opmerking">Elke {{ frituurvet_status.interval }} dagen</p>
+            <form method="post" action="{{ url_for('frituurvet_vervangen') }}"
+                  onsubmit="return bevestigEnVerstuur(this, 'Frituurvet vandaag vervangen?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-rand btn-klein">Vet vervangen</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="kaart">
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <fieldset class="groupbox">
+            <legend>Herinnering</legend>
+            <p class="tekst-zacht" style="margin-top:0">
+                Bepaalt wanneer het statusblokje hierboven (en op het dashboard) op rood springt.
+            </p>
+            <div class="veld" style="max-width:200px">
+                <label for="frituurvet_interval_dagen">Frituurvet vervangen elke ... dagen</label>
+                <input type="number" id="frituurvet_interval_dagen" name="frituurvet_interval_dagen" min="1"
+                       value="{{ frituurvet_interval_dagen }}">
+            </div>
+        </fieldset>
+        <button type="submit" class="btn btn-geel">Opslaan</button>
+    </form>
+</div>
+
+<div class="kaart">
+    <h2>Laatste vervangingen</h2>
+    {% if vervangingen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Door</th></tr>
+            </thead>
+            <tbody>
+                {% for v in vervangingen %}
+                <tr>
+                    <td>{{ v.datum|datum_nl }}</td>
+                    <td>{{ v.naam or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen vervanging geregistreerd.</p>
+    {% endif %}
+</div>
+{% endblock %}

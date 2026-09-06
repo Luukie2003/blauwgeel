@@ -67,9 +67,9 @@ def test_dashboard_toont_frituurvet_statuskaart(ingelogde_client):
     assert "Frituurvet" in body
 
 
-def test_instellingen_interval_bijwerken(ingelogde_client, db):
+def test_keuken_instellingen_interval_bijwerken(ingelogde_client, db):
     resp = ingelogde_client.post(
-        "/instellingen",
+        "/keuken/instellingen",
         data={"csrf_token": _csrf(ingelogde_client), "frituurvet_interval_dagen": "21"},
     )
     assert resp.status_code == 302
@@ -78,3 +78,32 @@ def test_instellingen_interval_bijwerken(ingelogde_client, db):
         "SELECT frituurvet_interval_dagen FROM instellingen WHERE id = 1"
     ).fetchone()["frituurvet_interval_dagen"]
     assert waarde == 21
+
+
+def test_keuken_instellingen_toont_historie(ingelogde_client, db):
+    db.execute(
+        "INSERT INTO frituurvet_vervangingen (datum, naam) VALUES ('2026-09-01 10:00', 'Luuk')"
+    )
+    db.commit()
+
+    body = ingelogde_client.get("/keuken/instellingen").data.decode()
+    assert "Luuk" in body
+
+
+def test_keuken_voorraad_toont_alleen_keuken_producten(ingelogde_client, db):
+    ander_product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    db.execute(
+        """INSERT INTO producten (naam, categorie, eenheid, voorraad, min_voorraad, actief)
+           VALUES ('Test Frikandel', 'Keuken', 'Stuks', 10, 5, 1)"""
+    )
+    db.commit()
+
+    body = ingelogde_client.get("/keuken").data.decode()
+    assert "Test Frikandel" in body
+    assert ander_product["naam"] not in body
+
+
+def test_keuken_nieuw_product_knop_selecteert_keuken_categorie(ingelogde_client):
+    body = ingelogde_client.get("/producten/nieuw?categorie=Keuken").data.decode()
+    optie_start = body.index('value="Keuken"')
+    assert "selected" in body[optie_start : optie_start + 40]
