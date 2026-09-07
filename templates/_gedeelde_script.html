@@ -17,6 +17,59 @@
         }
     });
 
+    // ---------- Inklapbare zijbalk-groepen ----------
+    // De groep met de actieve pagina staat altijd open; voor de andere
+    // groepen onthouden we de voorkeur van de gebruiker (welke hij/zij zelf
+    // heeft opengeklikt) via localStorage, zelfde patroon als de
+    // banner-dismiss hieronder. Standaard (nog niets aangeklikt) staat een
+    // groep dicht -- dat is wat de zijbalk in één oogopslag overzichtelijk
+    // houdt.
+    (function () {
+        var groepen = document.querySelectorAll(".zijbalk-groep");
+        if (!groepen.length) return;
+
+        var opslagSleutel = "zijbalk-open-groepen";
+        var openGroepen;
+        try {
+            openGroepen = JSON.parse(localStorage.getItem(opslagSleutel) || "[]");
+        } catch (e) {
+            openGroepen = [];
+        }
+
+        groepen.forEach(function (groep) {
+            var heeftActieveLink = !!groep.querySelector("a.actief");
+            var moetOpen = heeftActieveLink || openGroepen.indexOf(groep.dataset.groep) !== -1;
+            groep.classList.toggle("dicht", !moetOpen);
+        });
+
+        document.addEventListener("click", function (e) {
+            var knop = e.target.closest(".zijbalk-groepkop");
+            if (!knop) return;
+            var groep = knop.closest(".zijbalk-groep");
+            var nuDicht = groep.classList.toggle("dicht");
+
+            var lijst;
+            try {
+                lijst = JSON.parse(localStorage.getItem(opslagSleutel) || "[]");
+            } catch (e2) {
+                lijst = [];
+            }
+            var index = lijst.indexOf(groep.dataset.groep);
+            if (nuDicht && index !== -1) {
+                lijst.splice(index, 1);
+            } else if (!nuDicht && index === -1) {
+                lijst.push(groep.dataset.groep);
+            }
+            try {
+                localStorage.setItem(opslagSleutel, JSON.stringify(lijst));
+            } catch (e3) {
+                // localStorage kan geblokkeerd zijn (bijv. privénavigatie) --
+                // de knop blijft dan gewoon werken, alleen zonder onthouden
+                // voorkeur.
+            }
+        });
+    })();
+
     function modalOpenen(id) {
         document.getElementById(id).classList.add("open");
     }

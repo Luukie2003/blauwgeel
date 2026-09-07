@@ -213,18 +213,39 @@ a:hover { text-decoration: underline; }
 }
 
 .zijbalk-groepkop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
     padding: 0.55rem 0.9rem 0.2rem;
+    font: inherit;
     font-size: 0.66rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--tekst-zacht);
+    background: none;
+    border: none;
+    cursor: pointer;
 }
 
-.zijbalk-groepkop:not(:first-child) {
+.zijbalk-groep:not(:first-child) .zijbalk-groepkop {
     margin-top: 0.35rem;
     padding-top: 0.55rem;
     border-top: 1px solid var(--rand-licht);
+}
+
+.zijbalk-groep-pijl {
+    font-size: 0.6rem;
+    transition: transform 0.15s ease;
+}
+
+.zijbalk-groep.dicht .zijbalk-groep-pijl {
+    transform: rotate(-90deg);
+}
+
+.zijbalk-groep.dicht ul {
+    display: none;
 }
 
 .app-zijbalk ul {
@@ -1184,7 +1205,7 @@ footer {
         padding: 0.3rem 0;
         border-top: 1px solid var(--rand);
     }
-    .app-zijbalk.open ul { display: flex; }
+    .app-zijbalk.open .zijbalk-groep:not(.dicht) ul { display: flex; }
     .app-zijbalk li + li { border-top: 1px solid var(--rand-licht); }
     .app-zijbalk a {
         padding: 0.75rem 1rem;

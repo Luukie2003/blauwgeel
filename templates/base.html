@@ -61,19 +61,29 @@
                 <span class="zijbalk-toggle-pijl">&#9662;</span>
             </button>
             <div class="zijbalk-kop">Navigatie</div>
-            <ul>
-                {% set ns = namespace(vorige_groep=None) %}
-                {% for item in nav_items %}
-                {% if item.groep != ns.vorige_groep %}
-                <li class="zijbalk-groepkop">{{ item.groep }}</li>
-                {% set ns.vorige_groep = item.groep %}
-                {% endif %}
-                <li>
-                    <a href="{{ url_for(item.url_endpoint) }}"
-                       class="{{ 'actief' if item == actieve_nav else '' }}">{{ item.label }}</a>
-                </li>
-                {% endfor %}
-            </ul>
+            {% set ns = namespace(vorige_groep=None, eerste=True) %}
+            {% for item in nav_items %}
+            {% if item.groep != ns.vorige_groep %}
+            {% if not ns.eerste %}
+                </ul>
+            </div>
+            {% endif %}
+            {% set ns.eerste = False %}
+            {% set ns.vorige_groep = item.groep %}
+            <div class="zijbalk-groep" data-groep="{{ item.groep }}">
+                <button type="button" class="zijbalk-groepkop">
+                    <span>{{ item.groep }}</span>
+                    <span class="zijbalk-groep-pijl">&#9662;</span>
+                </button>
+                <ul>
+            {% endif %}
+                    <li>
+                        <a href="{{ url_for(item.url_endpoint) }}"
+                           class="{{ 'actief' if item == actieve_nav else '' }}">{{ item.label }}</a>
+                    </li>
+            {% endfor %}
+                </ul>
+            </div>
         </nav>
         <main>
             {% if actieve_nav %}
