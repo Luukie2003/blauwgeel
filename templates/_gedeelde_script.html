@@ -24,7 +24,13 @@
     // banner-dismiss hieronder. Standaard (nog niets aangeklikt) staat een
     // groep dicht -- dat is wat de zijbalk in één oogopslag overzichtelijk
     // houdt.
-    (function () {
+    //
+    // Dit script staat vóór de zijbalk in de HTML (zie base.html), dus de
+    // groepen bestaan nog niet op het moment dat dit <script> geparsed
+    // wordt -- vandaar dat alles hieronder tot na DOMContentLoaded wacht
+    // (net als de click-delegatie op #zijbalk-toggle hierboven, die om
+    // dezelfde reden pas bij het klikken zelf naar #app-zijbalk zoekt).
+    document.addEventListener("DOMContentLoaded", function () {
         var groepen = document.querySelectorAll(".zijbalk-groep");
         if (!groepen.length) return;
 
@@ -68,7 +74,7 @@
                 // voorkeur.
             }
         });
-    })();
+    });
 
     function modalOpenen(id) {
         document.getElementById(id).classList.add("open");

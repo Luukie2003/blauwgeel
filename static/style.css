@@ -1199,6 +1199,8 @@ footer {
     .app-zijbalk { width: 100%; min-height: auto; border-right: none; border-bottom: 1px solid var(--rand); }
     .zijbalk-toggle { display: flex; }
     .zijbalk-kop { display: none; }
+    .zijbalk-groep { display: none; }
+    .app-zijbalk.open .zijbalk-groep { display: block; }
     .app-zijbalk ul {
         display: none;
         flex-direction: column;
