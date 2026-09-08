@@ -100,9 +100,20 @@ def register_routes(app):
         # deze pagina. Al gesorteerd op categorie/naam via de query hierboven.
         actieve_producten = [p for p in producten if p["actief"]]
 
+        # Voor het filterbare/sorteerbare "hoofdstuk" onderaan: alle
+        # categorieën/subcategorieën die daadwerkelijk in gebruik zijn (niet
+        # de volledige categorieen-tabel, die kan ook nooit-gebruikte namen
+        # bevatten) -- dat wordt daar de vinkjeslijst.
+        alle_categorieen_lijst = sorted({p["categorie"] for p in producten})
+        alle_subcategorieen_lijst = sorted({p["subcategorie"] for p in producten if p["subcategorie"]})
+        heeft_producten_zonder_subcategorie = any(p["subcategorie"] is None for p in producten)
+
         return {
             "producten": producten,
             "actieve_producten": actieve_producten,
+            "alle_categorieen_lijst": alle_categorieen_lijst,
+            "alle_subcategorieen_lijst": alle_subcategorieen_lijst,
+            "heeft_producten_zonder_subcategorie": heeft_producten_zonder_subcategorie,
             "totale_waarde": totale_waarde,
             "aantal_producten": len(producten),
             "aantal_categorieen": len(per_categorie),

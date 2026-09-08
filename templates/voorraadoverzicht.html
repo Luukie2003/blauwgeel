@@ -231,4 +231,164 @@
         {% endif %}
     </div>
 </div>
+
+<div class="kaart">
+    <h2>Volledige productenlijst</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Filter en sorteer door het hele assortiment heen (ook inactieve producten).
+    </p>
+    {% if producten %}
+    <div style="display:flex; gap:2.2rem; flex-wrap:wrap; margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid var(--rand-licht)">
+        <div>
+            <div style="font-weight:700; font-size:0.8rem; margin-bottom:0.4rem">Status</div>
+            <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer; margin-bottom:0.2rem">
+                <input type="checkbox" class="vpl-status" value="actief" style="width:auto" checked> Actief
+            </label>
+            <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer">
+                <input type="checkbox" class="vpl-status" value="inactief" style="width:auto" checked> Inactief
+            </label>
+        </div>
+        <div style="max-width:220px">
+            <div style="font-weight:700; font-size:0.8rem; margin-bottom:0.4rem">
+                Categorie
+                <a href="#" class="vpl-alles" data-groep="vpl-categorie" data-actie="alles" style="font-weight:400; font-size:0.75rem; margin-left:0.4rem">alles</a>
+                <a href="#" class="vpl-alles" data-groep="vpl-categorie" data-actie="geen" style="font-weight:400; font-size:0.75rem; margin-left:0.3rem">geen</a>
+            </div>
+            {% for c in alle_categorieen_lijst %}
+            <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer; margin-bottom:0.2rem">
+                <input type="checkbox" class="vpl-categorie" value="{{ c }}" style="width:auto" checked> {{ c }}
+            </label>
+            {% endfor %}
+        </div>
+        <div style="max-width:220px">
+            <div style="font-weight:700; font-size:0.8rem; margin-bottom:0.4rem">
+                Subcategorie
+                <a href="#" class="vpl-alles" data-groep="vpl-subcategorie" data-actie="alles" style="font-weight:400; font-size:0.75rem; margin-left:0.4rem">alles</a>
+                <a href="#" class="vpl-alles" data-groep="vpl-subcategorie" data-actie="geen" style="font-weight:400; font-size:0.75rem; margin-left:0.3rem">geen</a>
+            </div>
+            {% if heeft_producten_zonder_subcategorie %}
+            <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer; margin-bottom:0.2rem">
+                <input type="checkbox" class="vpl-subcategorie" value="" style="width:auto" checked> Geen subcategorie
+            </label>
+            {% endif %}
+            {% for s in alle_subcategorieen_lijst %}
+            <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer; margin-bottom:0.2rem">
+                <input type="checkbox" class="vpl-subcategorie" value="{{ s }}" style="width:auto" checked> {{ s }}
+            </label>
+            {% endfor %}
+        </div>
+        <div>
+            <div style="font-weight:700; font-size:0.8rem; margin-bottom:0.4rem">Sorteren op</div>
+            <select id="vpl-sorteren">
+                <option value="standaard">Categorie (standaard)</option>
+                <option value="naam-az">Naam (A-Z)</option>
+                <option value="naam-za">Naam (Z-A)</option>
+                <option value="voorraad-hoog">Voorraad (hoog naar laag)</option>
+                <option value="voorraad-laag">Voorraad (laag naar hoog)</option>
+            </select>
+        </div>
+    </div>
+
+    <span id="vpl-aantal" class="tekst-zacht" style="display:block; margin-bottom:0.6rem"></span>
+    <div class="tabel-wrap">
+        <table id="vpl-tabel">
+            <thead>
+                <tr><th>Product</th><th>Categorie</th><th>Subcategorie</th><th>Status</th><th>Voorraad</th><th>Minimum</th></tr>
+            </thead>
+            <tbody>
+                {% for p in producten %}
+                <tr data-volgorde="{{ loop.index }}" data-status="{{ 'actief' if p.actief else 'inactief' }}"
+                    data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}"
+                    data-naam="{{ p.naam|lower }}" data-voorraad="{{ p.voorraad }}">
+                    <td>
+                        {{ p.naam }}
+                        {% if p.artikelcode %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.artikelcode }}</div>{% endif %}
+                    </td>
+                    <td>{{ p.categorie }}</td>
+                    <td>{{ p.subcategorie or '—' }}</td>
+                    <td>
+                        {% if p.actief %}<span class="badge badge-ok">Actief</span>{% else %}<span class="badge badge-neutraal">Inactief</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if p.voorraad < p.min_voorraad %}
+                        <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
+                        {% else %}
+                        <span class="badge badge-ok">{{ p.voorraad }} {{ p.eenheid }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="leeg" id="vpl-leeg" style="display:none">Geen producten gevonden voor deze filters.</p>
+    {% else %}
+    <p class="leeg">Nog geen producten.</p>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    var tabel = document.getElementById('vpl-tabel');
+    if (!tabel) return;
+    var tbody = tabel.querySelector('tbody');
+    var rijen = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+    var statusVakjes = document.querySelectorAll('.vpl-status');
+    var categorieVakjes = document.querySelectorAll('.vpl-categorie');
+    var subcategorieVakjes = document.querySelectorAll('.vpl-subcategorie');
+    var sorteerSelect = document.getElementById('vpl-sorteren');
+    var aantalLabel = document.getElementById('vpl-aantal');
+    var leegMelding = document.getElementById('vpl-leeg');
+
+    function geselecteerdeWaarden(vakjes) {
+        return Array.prototype.filter.call(vakjes, function (v) { return v.checked; })
+            .map(function (v) { return v.value; });
+    }
+
+    function bijwerken() {
+        var statussen = geselecteerdeWaarden(statusVakjes);
+        var categorieen = geselecteerdeWaarden(categorieVakjes);
+        var subcategorieen = geselecteerdeWaarden(subcategorieVakjes);
+        var zichtbaar = 0;
+
+        rijen.forEach(function (rij) {
+            var toon = statussen.indexOf(rij.dataset.status) !== -1 &&
+                categorieen.indexOf(rij.dataset.categorie) !== -1 &&
+                subcategorieen.indexOf(rij.dataset.subcategorie) !== -1;
+            rij.style.display = toon ? '' : 'none';
+            if (toon) zichtbaar++;
+        });
+
+        var sortering = sorteerSelect.value;
+        var gesorteerd = rijen.slice().sort(function (a, b) {
+            if (sortering === 'naam-az') return a.dataset.naam.localeCompare(b.dataset.naam);
+            if (sortering === 'naam-za') return b.dataset.naam.localeCompare(a.dataset.naam);
+            if (sortering === 'voorraad-hoog') return b.dataset.voorraad - a.dataset.voorraad;
+            if (sortering === 'voorraad-laag') return a.dataset.voorraad - b.dataset.voorraad;
+            return a.dataset.volgorde - b.dataset.volgorde;
+        });
+        gesorteerd.forEach(function (rij) { tbody.appendChild(rij); });
+
+        aantalLabel.textContent = zichtbaar + ' van ' + rijen.length + ' producten';
+        leegMelding.style.display = zichtbaar === 0 ? '' : 'none';
+    }
+
+    Array.prototype.forEach.call(statusVakjes, function (v) { v.addEventListener('change', bijwerken); });
+    Array.prototype.forEach.call(categorieVakjes, function (v) { v.addEventListener('change', bijwerken); });
+    Array.prototype.forEach.call(subcategorieVakjes, function (v) { v.addEventListener('change', bijwerken); });
+    sorteerSelect.addEventListener('change', bijwerken);
+
+    document.querySelectorAll('.vpl-alles').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            var alles = link.dataset.actie === 'alles';
+            document.querySelectorAll('.' + link.dataset.groep).forEach(function (v) { v.checked = alles; });
+            bijwerken();
+        });
+    });
+
+    bijwerken();
+})();
+</script>
 {% endblock %}
