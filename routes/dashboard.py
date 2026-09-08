@@ -42,7 +42,7 @@ WIJZIGINGEN = [
         "datum": "8 september 2026",
         "punten": [
             "Rechten per account nu instelbaar per sectie (Voorraad/Kassa/Keuken/Stemmen) i.p.v. alleen beheerder/vrijwilliger",
-            "Schaplabels printen (A4, om te knippen) met logo, minimumvoorraad en een QR-code naar de productpagina -- per product of in bulk vanaf Producten",
+            "Schaplabels printen (A4, om te knippen) met logo, minimumvoorraad en een QR-code naar de productpagina — per product of in bulk vanaf Producten",
             "QR-code op een schaplabel scannen (handterminal) opent direct dat product, ook met de camera-app van je telefoon zelf",
             "Boeken werkt nu door bij een wegvallende verbinding: de boeking wordt lokaal bewaard en alsnog verstuurd zodra er weer bereik is",
             "Looplijst tellen probeert het na een mislukte stap nu vanzelf opnieuw zodra de verbinding terugkomt",
@@ -60,7 +60,7 @@ WIJZIGINGEN = [
         "versie": "1.6.0",
         "datum": "6 september 2026",
         "punten": [
-            "Keuken toegevoegd als categorie, voor frituursnacks, gehaktballen e.d. -- werkt met dezelfde voorraad, bestellijst en tellijsten als de rest",
+            "Keuken toegevoegd als categorie, voor frituursnacks, gehaktballen e.d. — werkt met dezelfde voorraad, bestellijst en tellijsten als de rest",
             "Herinnering op het dashboard voor het vervangen van het frituurvet, met instelbare termijn (Instellingen)",
         ],
     },

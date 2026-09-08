@@ -153,7 +153,7 @@ def register_routes(app):
             return redirect(url_for("kassa_geschiedenis"))
         if not telling["afgesloten"]:
             flash(
-                "Deze kassatelling staat nog open als concept -- gebruik "
+                "Deze kassatelling staat nog open als concept — gebruik "
                 "'Bewerken' om de contante omzet aan te passen.",
                 "error",
             )
@@ -224,7 +224,7 @@ def register_routes(app):
             return redirect(url_for("kassa_geschiedenis"))
         if not telling["afgesloten"]:
             flash(
-                "Deze kassatelling staat nog open als concept -- gebruik "
+                "Deze kassatelling staat nog open als concept — gebruik "
                 "'Bewerken' om de aantallen aan te passen.",
                 "error",
             )

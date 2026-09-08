@@ -52,7 +52,7 @@
                 <tr id="telling-regel-corrigeren-{{ r.id }}" class="telling-regel-corrigeren-rij" hidden>
                     <td colspan="7">
                         <form method="post" action="{{ url_for('telling_regel_corrigeren', regel_id=r.id) }}"
-                              onsubmit="return bevestigEnVerstuur(this, 'Telling voor \'{{ r.product_naam }}\' corrigeren? Dit past het verkocht/correctie-cijfer (en de omzet) van deze telling aan -- niet de actuele voorraad.');"
+                              onsubmit="return bevestigEnVerstuur(this, 'Telling voor \'{{ r.product_naam }}\' corrigeren? Dit past het verkocht/correctie-cijfer (en de omzet) van deze telling aan — niet de actuele voorraad.');"
                               style="display:flex; gap:0.8rem; align-items:flex-end; flex-wrap:wrap; margin:0.4rem 0">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="veld" style="margin:0">
