@@ -29,6 +29,91 @@
 </div>
 
 <div class="kaart">
+    <div class="actiebalk" style="margin-bottom:0.6rem">
+        <h2 style="margin:0">Alle actieve producten</h2>
+        <a href="{{ url_for('producten_lijst') }}" style="font-size:0.85rem">Beheren op de Producten-pagina &rarr;</a>
+    </div>
+    {% if actieve_producten %}
+    <div class="filterbalk">
+        <input type="text" id="voorraadoverzicht-zoek" placeholder="Zoek op naam of artikelcode...">
+        <span id="voorraadoverzicht-aantal" class="tekst-zacht"></span>
+    </div>
+    <div id="voorraadoverzicht-groepen">
+        {% for categorie, producten_in_categorie in actieve_producten|groupby('categorie') %}
+        <details class="categorie-groep" open data-categorie-groep="{{ categorie }}">
+            <summary class="categorie-groep-kop">
+                <span>{{ categorie }}</span>
+                <span class="tekst-zacht categorie-groep-aantal">{{ producten_in_categorie|length }}</span>
+            </summary>
+            <div class="tabel-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Product</th><th>Subcategorie</th><th>Voorraad</th><th>Minimum</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for p in producten_in_categorie %}
+                        <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or ''))|lower }}">
+                            <td>
+                                {{ p.naam }}
+                                {% if p.artikelcode %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.artikelcode }}</div>{% endif %}
+                            </td>
+                            <td>{{ p.subcategorie or '—' }}</td>
+                            <td>
+                                {% if p.voorraad < p.min_voorraad %}
+                                <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
+                                {% else %}
+                                <span class="badge badge-ok">{{ p.voorraad }} {{ p.eenheid }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </details>
+        {% endfor %}
+    </div>
+    <p class="leeg" id="voorraadoverzicht-leeg" style="display:none">Geen producten gevonden voor dit filter.</p>
+    {% else %}
+    <p class="leeg">Nog geen actieve producten.</p>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    var zoekVeld = document.getElementById('voorraadoverzicht-zoek');
+    if (!zoekVeld) return;
+    var rijen = Array.prototype.slice.call(document.querySelectorAll('#voorraadoverzicht-groepen tbody tr'));
+    var groepen = Array.prototype.slice.call(document.querySelectorAll('#voorraadoverzicht-groepen .categorie-groep'));
+    var aantalLabel = document.getElementById('voorraadoverzicht-aantal');
+    var leegMelding = document.getElementById('voorraadoverzicht-leeg');
+
+    function filter() {
+        var zoek = zoekVeld.value.trim().toLowerCase();
+        var zichtbaar = 0;
+        rijen.forEach(function (rij) {
+            var toon = !zoek || rij.dataset.zoek.indexOf(zoek) !== -1;
+            rij.style.display = toon ? '' : 'none';
+            if (toon) zichtbaar++;
+        });
+        groepen.forEach(function (groep) {
+            var heeftZichtbare = Array.prototype.some.call(
+                groep.querySelectorAll('tbody tr'),
+                function (rij) { return rij.style.display !== 'none'; }
+            );
+            groep.style.display = heeftZichtbare ? '' : 'none';
+        });
+        aantalLabel.textContent = zichtbaar + ' van ' + rijen.length + ' actieve producten';
+        leegMelding.style.display = zichtbaar === 0 ? '' : 'none';
+    }
+
+    zoekVeld.addEventListener('input', filter);
+    filter();
+})();
+</script>
+
+<div class="kaart">
     <h2>Voorraadwaarde per categorie</h2>
     {% if categorie_lijst %}
     <div class="tabel-wrap">

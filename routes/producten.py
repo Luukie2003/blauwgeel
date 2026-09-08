@@ -94,8 +94,15 @@ def register_routes(app):
             key=lambda x: x["laatste_datum"],
         )[:5]
 
+        # Gewone, volledige lijst van alle actieve producten -- de rest van
+        # deze functie levert alleen samenvattingen/aggregaten, maar "wat heb
+        # ik nu allemaal actief op voorraad" is de meest gestelde vraag op
+        # deze pagina. Al gesorteerd op categorie/naam via de query hierboven.
+        actieve_producten = [p for p in producten if p["actief"]]
+
         return {
             "producten": producten,
+            "actieve_producten": actieve_producten,
             "totale_waarde": totale_waarde,
             "aantal_producten": len(producten),
             "aantal_categorieen": len(per_categorie),
