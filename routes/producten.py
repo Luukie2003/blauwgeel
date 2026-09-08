@@ -503,15 +503,19 @@ def register_routes(app):
         """Zet een productrij om in wat schaplabels_pdf nodig heeft: de
         gewone velden plus een kant-en-klare QR (PNG-bytes) die naar de
         productpagina linkt -- scanbaar met elke telefooncamera, niet
-        alleen vanuit de handterminal-weergave zelf."""
+        alleen vanuit de handterminal-weergave zelf -- en het pad naar de
+        productfoto, dezelfde die ook op de site wordt getoond."""
         url = url_for("product_detail", product_id=product["id"], _external=True)
+        foto_pad = PRODUCT_AFBEELDINGEN_MAP / product["afbeelding"] if product["afbeelding"] else None
         return {
             "naam": product["naam"],
             "categorie": product["categorie"],
             "subcategorie": product["subcategorie"],
+            "artikelcode": product["artikelcode"],
             "min_voorraad": product["min_voorraad"],
             "eenheid": product["eenheid"],
             "qr_png": qr.qr_png_bytes(url),
+            "foto_pad": foto_pad if foto_pad and foto_pad.exists() else None,
         }
 
     @app.route("/producten/<int:product_id>/label.pdf")
