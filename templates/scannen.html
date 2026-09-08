@@ -12,6 +12,7 @@
             Scannen in de app wordt niet ondersteund in deze browser. Gebruik in plaats
             daarvan de camera-app van je telefoon: die herkent de QR-code op het
             schaplabel net zo goed en opent de productpagina vanzelf.
+            Ook zonder account te scannen werkt zo prima.
         </p>
     </div>
 </div>
@@ -47,7 +48,7 @@
     function isEigenProductlink(tekst) {
         try {
             var url = new URL(tekst, window.location.origin);
-            return url.origin === window.location.origin && /^\/producten\/\d+$/.test(url.pathname);
+            return url.origin === window.location.origin && /^\/scan\/\d+$/.test(url.pathname);
         } catch (e) {
             return false;
         }
@@ -57,7 +58,7 @@
         if (!bezig) return;
         detector.detect(video).then(function (codes) {
             if (codes.length && isEigenProductlink(codes[0].rawValue)) {
-                statusEl.textContent = 'Gevonden! Product wordt geopend...';
+                statusEl.textContent = 'Gevonden! Wordt geopend...';
                 var doel = codes[0].rawValue;
                 stoppen();
                 window.location.href = doel;

@@ -24,8 +24,19 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.8.0"
+HUIDIGE_VERSIE = "1.9.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.9.0",
+        "datum": "8 september 2026",
+        "punten": [
+            "Producten-pagina getoond per categorie, inklapbaar, i.p.v. één lange tabel",
+            "Per product instelbaar: automatisch op inactief zodra de voorraad op 0 komt",
+            "Verbruiksvoorwerpen (bijv. bakjes): eigen lijst zonder voorraad, alleen voor schaplabels en om op de bestellijst te zetten",
+            "QR-code op een schaplabel scannen opent nu een keuzescherm: naar de productpagina, of (zonder account) melden voor de bestellijst",
+            "Bestellijst toont nu ook wat bezoekers zo hebben gemeld, met een teller en een 'afhandelen'-knop",
+        ],
+    },
     {
         "versie": "1.8.0",
         "datum": "8 september 2026",

@@ -228,6 +228,63 @@
     </div>
 </div>
 {% endif %}
+
+{% if meldingen.producten or meldingen.teksten %}
+<div class="kaart">
+    <h2>Gemeld</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Producten die bezoekers (zonder account) via een gescande schaplabel-QR hebben
+        gemeld, en verbruiksvoorwerpen die handmatig op de bestellijst zijn gezet.
+    </p>
+    {% if meldingen.producten %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Product</th><th>Aantal keer gemeld</th><th>Laatst gemeld</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for m in meldingen.producten %}
+                <tr>
+                    <td><a href="{{ url_for('product_detail', product_id=m.product.id) }}">{{ m.product.naam }}</a></td>
+                    <td><span class="badge badge-laag">{{ m.aantal }}x gemeld</span></td>
+                    <td>{{ m.laatste_melding|datum_nl }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('bestellijst_melding_product_afhandelen', product_id=m.product.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-rand btn-klein">Afhandelen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% if meldingen.teksten %}
+    <div class="tabel-wrap" style="margin-top:{{ '1rem' if meldingen.producten else '0' }}">
+        <table>
+            <thead>
+                <tr><th>Melding</th><th>Wanneer</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for t in meldingen.teksten %}
+                <tr>
+                    <td>{{ t.tekst }} <span class="tekst-zacht">(verbruiksvoorwerp)</span></td>
+                    <td>{{ t.aangemaakt_op|datum_nl }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('bestellijst_melding_afhandelen', melding_id=t.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-rand btn-klein">Afhandelen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 {% endif %}
 
 {% if recent_ontvangen %}

@@ -3,7 +3,14 @@ from datetime import datetime, timedelta
 from flask import Response, flash, redirect, render_template, request, session, url_for
 
 from database import get_db
-from helpers import bereken_trend, bestel_suggesties, format_datum, now_datetime_local, now_str
+from helpers import (
+    bereken_trend,
+    bestel_suggesties,
+    format_datum,
+    now_datetime_local,
+    now_str,
+    verwerk_auto_inactief,
+)
 from pdf import periode_verkoop_pdf, verkoop_pdf
 
 
@@ -70,6 +77,9 @@ def register_routes(app):
             db.execute(
                 "UPDATE producten SET voorraad = ? WHERE id = ?", (geteld, product_id)
             )
+            gedeactiveerd = verwerk_auto_inactief(db, product_id, geteld)
+            if gedeactiveerd:
+                flash(f"'{gedeactiveerd}' is automatisch op inactief gezet (voorraad op 0).", "warning")
             if verkocht > 0:
                 db.execute(
                     """INSERT INTO mutaties

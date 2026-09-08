@@ -206,6 +206,28 @@ def veilig_redirect_pad(pad, fallback):
     return pad
 
 
+def verwerk_auto_inactief(db, product_id, nieuwe_voorraad):
+    """Zet een product automatisch op inactief zodra de voorraad op 0 (of
+    lager) komt -- maar alleen als de eigenaar dat voor dit product heeft
+    aangevinkt (kolom auto_inactief_bij_nul) en het nu nog actief staat.
+    Wordt aangeroepen vanaf elke plek die producten.voorraad bijwerkt
+    (boeken, leveringen, tellen, bestelling in-/terugboeken, handmatig
+    bewerken) zodat het gedrag overal hetzelfde is.
+
+    Geeft de productnaam terug als het product hierdoor is gedeactiveerd
+    (handig voor een flash-melding), anders None."""
+    if nieuwe_voorraad > 0:
+        return None
+    product = db.execute(
+        "SELECT naam, actief, auto_inactief_bij_nul FROM producten WHERE id = ?",
+        (product_id,),
+    ).fetchone()
+    if not product or not product["auto_inactief_bij_nul"] or not product["actief"]:
+        return None
+    db.execute("UPDATE producten SET actief = 0 WHERE id = ?", (product_id,))
+    return product["naam"]
+
+
 def besteleenheid_naam(product):
     return product["besteleenheid"] or product["eenheid"]
 
@@ -764,6 +786,40 @@ def bereken_voorspelde_tekorten(db, dagen_vooruit=7):
             )
     resultaat.sort(key=lambda x: x["verwacht_tekort"], reverse=True)
     return resultaat
+
+
+def bereken_bestellijst_meldingen(db):
+    """Onafgehandelde meldingen voor de bestellijst die niet uit de gewone
+    voorraadberekening komen: bezoekers die zonder account de QR-code van
+    een product scanden en op 'Melden voor bestellijst' drukten (per
+    product gegroepeerd, met een teller en het laatste tijdstip), en losse
+    tekstmeldingen voor verbruiksvoorwerpen die een beheerder handmatig op
+    de bestellijst heeft gezet. Zie bestellijst_meldingen in schema.sql."""
+    product_rijen = db.execute(
+        """SELECT product_id, COUNT(*) AS aantal, MAX(aangemaakt_op) AS laatste_melding
+           FROM bestellijst_meldingen
+           WHERE afgehandeld = 0 AND product_id IS NOT NULL
+           GROUP BY product_id
+           ORDER BY laatste_melding DESC"""
+    ).fetchall()
+    producten_gemeld = []
+    for r in product_rijen:
+        product = db.execute(
+            "SELECT * FROM producten WHERE id = ?", (r["product_id"],)
+        ).fetchone()
+        if product is None:
+            continue
+        producten_gemeld.append(
+            {"product": product, "aantal": r["aantal"], "laatste_melding": r["laatste_melding"]}
+        )
+
+    tekst_meldingen = db.execute(
+        """SELECT * FROM bestellijst_meldingen
+           WHERE afgehandeld = 0 AND product_id IS NULL
+           ORDER BY aangemaakt_op DESC"""
+    ).fetchall()
+
+    return {"producten": producten_gemeld, "teksten": tekst_meldingen}
 
 
 def bereken_laatste_telling_status(db):

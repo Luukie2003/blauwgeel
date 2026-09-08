@@ -1021,6 +1021,43 @@ input:focus, select:focus, textarea:focus {
 
 .tabel-wrap { overflow-x: auto; }
 
+.categorie-groep {
+    border-top: 1px solid var(--rand-licht);
+}
+
+.categorie-groep:first-of-type {
+    border-top: none;
+}
+
+.categorie-groep-kop {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 0.2rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    list-style: none;
+}
+
+.categorie-groep-kop::-webkit-details-marker { display: none; }
+
+.categorie-groep-kop::before {
+    content: "▸";
+    display: inline-block;
+    color: var(--tekst-zacht);
+    font-size: 0.75rem;
+    transition: transform 0.15s ease;
+}
+
+.categorie-groep[open] > .categorie-groep-kop::before {
+    transform: rotate(90deg);
+}
+
+.categorie-groep-aantal {
+    font-weight: 400;
+}
+
 .tekst-zacht { color: var(--tekst-zacht); font-size: 0.82rem; }
 
 footer {

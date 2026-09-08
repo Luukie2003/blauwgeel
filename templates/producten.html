@@ -30,83 +30,96 @@
             <option value="{{ s.naam }}" data-categorie="{{ s.categorie }}">{{ s.naam }}</option>
             {% endfor %}
         </select>
+        <label style="display:flex; align-items:center; gap:0.35rem; font-weight:400; cursor:pointer; white-space:nowrap">
+            <input type="checkbox" id="label-select-alles" style="width:auto">
+            Alles selecteren
+        </label>
         <span id="filter-aantal" class="tekst-zacht"></span>
     </div>
-    <div class="tabel-wrap">
-        <table id="producten-tabel">
-            <thead>
-                <tr>
-                    <th><input type="checkbox" id="label-select-alles" title="Alles (de zichtbare rijen) selecteren" style="width:auto"></th>
-                    <th></th><th>Product</th><th>Status</th><th>Categorie</th><th>Voorraad</th>
-                    <th>Inkoop</th><th>Verkoop</th><th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in producten %}
-                <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie ~ ' ' ~ (p.subcategorie or ''))|lower }}" data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}">
-                    <td><input type="checkbox" class="label-select-rij" value="{{ p.id }}" style="width:auto"></td>
-                    <td>
-                        {% if p.afbeelding %}
-                        <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
-                        {% endif %}
-                    </td>
-                    <td>
-                        {{ p.naam }}{% if not p.actief %} <span class="badge badge-neutraal">Inactief</span>{% endif %}
-                        {% if p.artikelcode %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.artikelcode }}</div>{% endif %}
-                    </td>
-                    <td>
-                        {% if huidige_gebruiker_rol == 'beheerder' %}
-                        <form method="post" action="{{ url_for('product_actief_wisselen', product_id=p.id) }}" class="inline js-ajax-form">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <label class="schuif" title="{{ 'Actief, klik om uit te zetten' if p.actief else 'Inactief, klik om aan te zetten' }}">
-                                <input type="checkbox" {{ 'checked' if p.actief else '' }} onchange="this.form.requestSubmit()">
-                                <span class="schuif-balk"></span>
-                            </label>
-                        </form>
-                        {% else %}
-                        {% if p.actief %}<span class="badge badge-ok">Actief</span>{% else %}<span class="badge badge-neutraal">Inactief</span>{% endif %}
-                        {% endif %}
-                    </td>
-                    <td>
-                        {{ p.categorie }}
-                        {% if p.subcategorie %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.subcategorie }}</div>{% endif %}
-                    </td>
-                    <td>
-                        {% if p.voorraad < p.min_voorraad %}
-                        <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
-                        {% else %}
-                        <span class="badge badge-ok">{{ p.voorraad }} {{ p.eenheid }}</span>
-                        {% endif %}
-                        <div class="tekst-zacht" style="font-size:0.72rem">min. {{ p.min_voorraad }} {{ p.eenheid }}</div>
-                    </td>
-                    <td>
-                        {% if p.actief and p.inkoopprijs == 0 %}
-                        <span class="badge badge-uit" title="Nog geen inkoopprijs ingevuld">€ 0.00 ontbreekt</span>
-                        {% else %}
-                        {{ "€ %.2f"|format(p.inkoopprijs) }} <span class="tekst-zacht">/ {{ p|besteleenheid_naam }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if p.actief and p.verkoopprijs == 0 and p.categorie not in niet_verplicht_categorieen %}
-                        <span class="badge badge-laag" title="Nog geen verkoopprijs ingevuld">€ 0.00 ontbreekt</span>
-                        {% else %}
-                        {{ "€ %.2f"|format(p.verkoopprijs) }}
-                        {% endif %}
-                    </td>
-                    <td class="tabel-acties">
-                        {% if huidige_gebruiker_rol == 'beheerder' %}
-                        <a href="{{ url_for('product_bewerken', product_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
-                        <form method="post" action="{{ url_for('product_verwijderen', product_id=p.id) }}"
-                              onsubmit="return bevestigEnVerstuur(this, 'Product \'{{ p.naam }}\' verwijderen? Dit verwijdert ook de boekingsgeschiedenis.');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div id="producten-groepen">
+        {% for categorie, producten_in_categorie in producten|groupby('categorie') %}
+        <details class="categorie-groep" open data-categorie-groep="{{ categorie }}">
+            <summary class="categorie-groep-kop">
+                <span>{{ categorie }}</span>
+                <span class="tekst-zacht categorie-groep-aantal">{{ producten_in_categorie|length }}</span>
+            </summary>
+            <div class="tabel-wrap">
+                <table class="producten-tabel">
+                    <thead>
+                        <tr>
+                            <th></th><th></th><th>Product</th><th>Status</th><th>Categorie</th><th>Voorraad</th>
+                            <th>Inkoop</th><th>Verkoop</th><th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in producten_in_categorie %}
+                        <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie ~ ' ' ~ (p.subcategorie or ''))|lower }}" data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}">
+                            <td><input type="checkbox" class="label-select-rij" value="{{ p.id }}" style="width:auto"></td>
+                            <td>
+                                {% if p.afbeelding %}
+                                <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ p.naam }}{% if not p.actief %} <span class="badge badge-neutraal">Inactief</span>{% endif %}
+                                {% if p.artikelcode %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.artikelcode }}</div>{% endif %}
+                            </td>
+                            <td>
+                                {% if huidige_gebruiker_rol == 'beheerder' %}
+                                <form method="post" action="{{ url_for('product_actief_wisselen', product_id=p.id) }}" class="inline js-ajax-form">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <label class="schuif" title="{{ 'Actief, klik om uit te zetten' if p.actief else 'Inactief, klik om aan te zetten' }}">
+                                        <input type="checkbox" {{ 'checked' if p.actief else '' }} onchange="this.form.requestSubmit()">
+                                        <span class="schuif-balk"></span>
+                                    </label>
+                                </form>
+                                {% else %}
+                                {% if p.actief %}<span class="badge badge-ok">Actief</span>{% else %}<span class="badge badge-neutraal">Inactief</span>{% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ p.categorie }}
+                                {% if p.subcategorie %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.subcategorie }}</div>{% endif %}
+                            </td>
+                            <td>
+                                {% if p.voorraad < p.min_voorraad %}
+                                <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
+                                {% else %}
+                                <span class="badge badge-ok">{{ p.voorraad }} {{ p.eenheid }}</span>
+                                {% endif %}
+                                <div class="tekst-zacht" style="font-size:0.72rem">min. {{ p.min_voorraad }} {{ p.eenheid }}</div>
+                            </td>
+                            <td>
+                                {% if p.actief and p.inkoopprijs == 0 %}
+                                <span class="badge badge-uit" title="Nog geen inkoopprijs ingevuld">€ 0.00 ontbreekt</span>
+                                {% else %}
+                                {{ "€ %.2f"|format(p.inkoopprijs) }} <span class="tekst-zacht">/ {{ p|besteleenheid_naam }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if p.actief and p.verkoopprijs == 0 and p.categorie not in niet_verplicht_categorieen %}
+                                <span class="badge badge-laag" title="Nog geen verkoopprijs ingevuld">€ 0.00 ontbreekt</span>
+                                {% else %}
+                                {{ "€ %.2f"|format(p.verkoopprijs) }}
+                                {% endif %}
+                            </td>
+                            <td class="tabel-acties">
+                                {% if huidige_gebruiker_rol == 'beheerder' %}
+                                <a href="{{ url_for('product_bewerken', product_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                                <form method="post" action="{{ url_for('product_verwijderen', product_id=p.id) }}"
+                                      onsubmit="return bevestigEnVerstuur(this, 'Product \'{{ p.naam }}\' verwijderen? Dit verwijdert ook de boekingsgeschiedenis.');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </details>
+        {% endfor %}
     </div>
     <p class="leeg" id="filter-leeg" style="display:none">Geen producten gevonden voor dit filter.</p>
     {% else %}
@@ -123,7 +136,10 @@
     var leegMelding = document.getElementById('filter-leeg');
     if (!zoekVeld) return;
     var rijen = Array.prototype.slice.call(
-        document.querySelectorAll('#producten-tabel tbody tr')
+        document.querySelectorAll('#producten-groepen tbody tr')
+    );
+    var groepen = Array.prototype.slice.call(
+        document.querySelectorAll('.categorie-groep')
     );
     var alleSubOpties = Array.prototype.slice.call(subVeld.options);
 
@@ -155,6 +171,17 @@
         });
         aantalLabel.textContent = zichtbaar + ' van ' + rijen.length + ' producten';
         leegMelding.style.display = zichtbaar === 0 ? '' : 'none';
+
+        // Een categoriegroep zonder overgebleven zichtbare rijen (bijv. na
+        // zoeken/filteren) helemaal verbergen, i.p.v. een lege, openstaande
+        // sectie te tonen.
+        groepen.forEach(function (groep) {
+            var heeftZichtbare = Array.prototype.some.call(
+                groep.querySelectorAll('tbody tr'),
+                function (rij) { return rij.style.display !== 'none'; }
+            );
+            groep.style.display = heeftZichtbare ? '' : 'none';
+        });
     }
 
     zoekVeld.addEventListener('input', filter);

@@ -121,6 +121,11 @@
                        {{ 'checked' if not product or product.actief }}>
                 Actief (staat op bestellijst, tellen en in/uit boeken)
             </label>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-top:0.5rem">
+                <input type="checkbox" id="auto_inactief_bij_nul" name="auto_inactief_bij_nul" style="width:auto"
+                       {{ 'checked' if product and product.auto_inactief_bij_nul }}>
+                Automatisch op inactief zetten zodra de voorraad op 0 komt
+            </label>
         </fieldset>
         <fieldset class="groupbox">
             <legend>Fust verkoop (optioneel)</legend>

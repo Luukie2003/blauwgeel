@@ -13,7 +13,12 @@ Gebouwd met Python (Flask) en SQLite — geen Node.js nodig.
 - **Overzicht** — status in één oogopslag: aantal producten, wat onder het
   minimum zit, openstaande bestellingen, recente boekingen.
 - **Producten** — assortiment beheren: naam, categorie, eenheid, huidige
-  voorraad, minimumvoorraad, standaard bestelhoeveelheid.
+  voorraad, minimumvoorraad, standaard bestelhoeveelheid. Weergegeven per
+  (inklapbare) categorie. Optioneel per product: automatisch op inactief
+  zodra de voorraad op 0 komt.
+- **Verbruiksvoorwerpen** — losse lijst voor dingen zonder eigen voorraad
+  (bijv. bakjes): alleen een naam om een schaplabel voor te printen en
+  desgewenst als tekstmelding op de bestellijst te zetten.
 - **In/uit boeken** — voorraad bijwerken bij levering of verkoop/verbruik,
   met naam van de boeker en optionele opmerking. Alles wordt gelogd.
 - **Bestellijst** — automatisch gegenereerde lijst van producten onder het
@@ -31,9 +36,13 @@ Gebouwd met Python (Flask) en SQLite — geen Node.js nodig.
   in te stellen bij welke secties (Voorraad, Kassa, Keuken, Stemmen) iemand
   mag; beheerders hebben altijd overal toegang.
 - **Schaplabels & scannen** — printbare schaplabels (A4, om te knippen) met
-  logo, minimumvoorraad en een QR-code naar de productpagina, per product of
-  in bulk. Die QR-code is met elke telefooncamera te scannen, en de
-  handterminal-weergave heeft ook een ingebouwde scanner (Scannen-knop).
+  logo, foto, minimumvoorraad en een QR-code, per product of in bulk. Die
+  QR-code is met elke telefooncamera te scannen (ook zonder account) en
+  opent een keuzescherm: naar de productpagina, of direct melden voor de
+  bestellijst. De handterminal-weergave heeft ook een ingebouwde scanner.
+  De bestellijst toont zulke meldingen (en handmatige meldingen vanuit
+  Verbruiksvoorwerpen) in een aparte sectie, met een teller en een
+  afhandelen-knop.
 - **Offline-bestendig boeken en tellen** — een boeking die niet weg kan door
   slecht bereik wordt lokaal bewaard en alsnog verstuurd zodra er weer
   verbinding is; de looplijst probeert een mislukte stap vanzelf opnieuw

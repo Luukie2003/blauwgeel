@@ -142,6 +142,7 @@ KOLOM_MIGRATIES = [
     # herstart na de update ineens uit gooien. Een beheerder kan het daarna
     # per account versmallen via Accounts.
     ("gebruikers", "secties", "TEXT NOT NULL DEFAULT 'voorraad,kassa,keuken,stemmen'"),
+    ("producten", "auto_inactief_bij_nul", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

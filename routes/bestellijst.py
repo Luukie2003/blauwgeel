@@ -2,12 +2,14 @@ from flask import Response, flash, redirect, render_template, request, session, 
 
 from database import get_db
 from helpers import (
+    bereken_bestellijst_meldingen,
     bereken_voorspelde_tekorten,
     bestel_suggesties,
     naar_besteleenheden,
     naar_voorraadeenheden,
     now_str,
     regels_per_bestelling,
+    verwerk_auto_inactief,
 )
 from pdf import bestellijst_pdf
 
@@ -63,6 +65,7 @@ def register_routes(app):
             suggesties=suggesties,
             overige_producten=overige_producten,
             voorspelde_tekorten=bereken_voorspelde_tekorten(db),
+            meldingen=bereken_bestellijst_meldingen(db),
             open_bestellingen=open_bestellingen_met_regels,
             recent_ontvangen=recent_ontvangen_met_regels,
         )
@@ -275,7 +278,7 @@ def register_routes(app):
 
         regels = db.execute(
             """SELECT br.*, p.naam AS product_naam, p.eenheid, p.afbeelding,
-                      p.besteleenheid, p.besteleenheid_factor
+                      p.besteleenheid, p.besteleenheid_factor, p.voorraad AS product_voorraad
                FROM bestelregels br JOIN producten p ON p.id = br.product_id
                WHERE br.bestelling_id = ?""",
             (bestelling_id,),
@@ -286,6 +289,7 @@ def register_routes(app):
             gebruiker_id = session.get("gebruiker_id")
             was_al_ontvangen = bestelling["status"] == "ontvangen"
             aantal_manco = 0
+            gedeactiveerde_namen = []
 
             for regel in regels:
                 binnen = bool(request.form.get(f"binnen_{regel['id']}"))
@@ -314,6 +318,11 @@ def register_routes(app):
                         "UPDATE producten SET voorraad = voorraad + ? WHERE id = ?",
                         (delta, regel["product_id"]),
                     )
+                    gedeactiveerd = verwerk_auto_inactief(
+                        db, regel["product_id"], regel["product_voorraad"] + delta
+                    )
+                    if gedeactiveerd:
+                        gedeactiveerde_namen.append(gedeactiveerd)
 
                 # Mutatie voor deze regel opnieuw opbouwen, zodat de geschiedenis
                 # ook na een correctie het actuele ontvangen aantal weerspiegelt.
@@ -374,6 +383,9 @@ def register_routes(app):
                     "UPDATE producten SET voorraad = voorraad + ? WHERE id = ?",
                     (aantal_ontvangen, product_id),
                 )
+                gedeactiveerd = verwerk_auto_inactief(db, product_id, product["voorraad"] + aantal_ontvangen)
+                if gedeactiveerd:
+                    gedeactiveerde_namen.append(gedeactiveerd)
                 db.execute(
                     """INSERT INTO mutaties
                        (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, bestelling_id)
@@ -402,6 +414,8 @@ def register_routes(app):
                 )
                 db.commit()
                 flash(f"Bestelling ingeboekt en voorraad bijgewerkt{melding_extra}{melding_manco}.", "success")
+            for naam_gedeactiveerd in gedeactiveerde_namen:
+                flash(f"'{naam_gedeactiveerd}' is automatisch op inactief gezet (voorraad op 0).", "warning")
             return redirect(url_for("bestellijst"))
 
         beschikbare_producten = db.execute(
@@ -429,8 +443,12 @@ def register_routes(app):
             return redirect(url_for("bestellijst"))
 
         regels = db.execute(
-            "SELECT * FROM bestelregels WHERE bestelling_id = ?", (bestelling_id,)
+            """SELECT br.*, p.voorraad AS product_voorraad
+               FROM bestelregels br JOIN producten p ON p.id = br.product_id
+               WHERE br.bestelling_id = ?""",
+            (bestelling_id,),
         ).fetchall()
+        gedeactiveerde_namen = []
         for regel in regels:
             ontvangen = regel["aantal_ontvangen"] or 0
             if ontvangen > 0:
@@ -438,9 +456,46 @@ def register_routes(app):
                     "UPDATE producten SET voorraad = voorraad - ? WHERE id = ?",
                     (ontvangen, regel["product_id"]),
                 )
+                gedeactiveerd = verwerk_auto_inactief(
+                    db, regel["product_id"], regel["product_voorraad"] - ontvangen
+                )
+                if gedeactiveerd:
+                    gedeactiveerde_namen.append(gedeactiveerd)
 
         db.execute("DELETE FROM mutaties WHERE bestelling_id = ?", (bestelling_id,))
         db.execute("DELETE FROM bestellingen WHERE id = ?", (bestelling_id,))
         db.commit()
         flash(f"Bestelling #{bestelling_id} verwijderd.", "success")
+        for naam_gedeactiveerd in gedeactiveerde_namen:
+            flash(f"'{naam_gedeactiveerd}' is automatisch op inactief gezet (voorraad op 0).", "warning")
+        return redirect(url_for("bestellijst"))
+
+    # ---------- Meldingen (QR-scans van bezoekers, verbruiksvoorwerpen) ----------
+
+    @app.route("/bestellijst/meldingen/product/<int:product_id>/afhandelen", methods=["POST"])
+    def bestellijst_melding_product_afhandelen(product_id):
+        """Handelt in één keer alle openstaande QR-scan-meldingen voor dit
+        product af (er kunnen er meerdere zijn -- 'x keer gemeld')."""
+        db = get_db()
+        db.execute(
+            """UPDATE bestellijst_meldingen
+               SET afgehandeld = 1, afgehandeld_door = ?, afgehandeld_op = ?
+               WHERE product_id = ? AND afgehandeld = 0""",
+            (session.get("gebruiker_naam"), now_str(), product_id),
+        )
+        db.commit()
+        flash("Melding(en) afgehandeld.", "success")
+        return redirect(url_for("bestellijst"))
+
+    @app.route("/bestellijst/meldingen/<int:melding_id>/afhandelen", methods=["POST"])
+    def bestellijst_melding_afhandelen(melding_id):
+        db = get_db()
+        db.execute(
+            """UPDATE bestellijst_meldingen
+               SET afgehandeld = 1, afgehandeld_door = ?, afgehandeld_op = ?
+               WHERE id = ?""",
+            (session.get("gebruiker_naam"), now_str(), melding_id),
+        )
+        db.commit()
+        flash("Melding afgehandeld.", "success")
         return redirect(url_for("bestellijst"))

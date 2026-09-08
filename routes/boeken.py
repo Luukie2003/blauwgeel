@@ -2,7 +2,14 @@ from flask import flash, redirect, render_template, request, session, url_for
 
 import mail
 from database import get_db
-from helpers import besteleenheid_naam, format_datum, naar_voorraadeenheden, now_datetime_local, now_str
+from helpers import (
+    besteleenheid_naam,
+    format_datum,
+    naar_voorraadeenheden,
+    now_datetime_local,
+    now_str,
+    verwerk_auto_inactief,
+)
 
 
 def register_routes(app):
@@ -43,6 +50,7 @@ def register_routes(app):
                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (product_id, mtype, aantal, now_str(), naam, gebruiker_id, opmerking),
             )
+            gedeactiveerd = verwerk_auto_inactief(db, product_id, nieuwe_voorraad)
             db.commit()
 
             if nieuwe_voorraad < 0:
@@ -54,6 +62,8 @@ def register_routes(app):
             else:
                 werkwoord = "bijgeboekt bij" if mtype == "in" else "afgeboekt van"
                 flash(f"{aantal} {werkwoord} '{product['naam']}'.", "success")
+            if gedeactiveerd:
+                flash(f"'{gedeactiveerd}' is automatisch op inactief gezet (voorraad op 0).", "warning")
             return redirect(volgende)
 
         producten = db.execute(
@@ -106,6 +116,7 @@ def register_routes(app):
                        VALUES (?, 'in', ?, ?, ?, ?, ?)""",
                     (p["id"], aantal, datum, naam, gebruiker_id, opmerking),
                 )
+                verwerk_auto_inactief(db, p["id"], p["voorraad"] + aantal)
                 geboekte_regels.append((p, aantal, aantal_besteleenheden))
 
             if not geboekte_regels:

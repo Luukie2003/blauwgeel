@@ -48,6 +48,12 @@ OPEN_ENDPOINTS = {
     # 'm via een QR-code of stemmen.kantineblauwgeel.nl, ze loggen nergens in.
     "stem_pagina",
     "stem_overzicht_publiek",
+    # Waar de QR-code op een schaplabel naartoe wijst: iedereen mag zonder
+    # account een product melden voor de bestellijst. "Naar productpagina"
+    # op die landingspagina vraagt daarna alsnog om in te loggen, want
+    # product_detail zelf staat niet in deze lijst.
+    "scan_landing",
+    "scan_melden",
 }
 
 # Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers
@@ -121,11 +127,18 @@ SECTIE_ENDPOINTS = {
         "bestelling_bewerken",
         "bestelling_inboeken",
         "bestelling_verwijderen",
+        "bestellijst_melding_product_afhandelen",
+        "bestellijst_melding_afhandelen",
         "fusten_overzicht",
         "boodschappenlijst",
         "boodschap_afvinken",
         "boodschap_verwijderen",
         "scannen",
+        "verbruiksvoorwerpen_lijst",
+        "verbruiksvoorwerp_verwijderen",
+        "verbruiksvoorwerp_bestellijst_melden",
+        "verbruiksvoorwerp_label_pdf",
+        "verbruiksvoorwerpen_labels_pdf",
     },
     "kassa": {
         "kassa_tellen",
@@ -267,6 +280,12 @@ NAV_ITEMS = [
         "endpoints": ["boodschappenlijst"],
         "url_endpoint": "boodschappenlijst",
         "label": "Boodschappenlijst",
+    },
+    {
+        "groep": "Voorraad",
+        "endpoints": ["verbruiksvoorwerpen_lijst"],
+        "url_endpoint": "verbruiksvoorwerpen_lijst",
+        "label": "Verbruiksvoorwerpen",
     },
     {
         "groep": "Kassa",
@@ -588,6 +607,7 @@ def create_app(database_path=None):
         producten,
         stemmen,
         tellen,
+        verbruiksvoorwerpen,
     )
 
     accounts.register_routes(app)
@@ -603,6 +623,7 @@ def create_app(database_path=None):
     producten.register_routes(app)
     stemmen.register_routes(app)
     tellen.register_routes(app)
+    verbruiksvoorwerpen.register_routes(app)
     return app
 
 

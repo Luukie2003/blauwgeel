@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.naam if product else 'Product niet gevonden' }} · Kantine Beheer</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <meta name="theme-color" content="#1c2b4a">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .scan-grote-knop {
+            display: block;
+            width: 100%;
+            padding: 1.1rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            text-align: center;
+            border-radius: var(--radius);
+            box-sizing: border-box;
+        }
+        .scan-grote-knop + .scan-grote-knop { margin-top: 0.7rem; }
+    </style>
+</head>
+<body>
+    <div style="max-width:420px; margin:8vh auto 0; padding:0 1rem">
+        <div style="text-align:center; margin-bottom:1rem">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="" style="width:56px">
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flashes" style="margin-bottom:1rem">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        {% if product %}
+        <div class="kaart" style="text-align:center">
+            {% if product.afbeelding %}
+            <img src="{{ url_for('static', filename='product_afbeeldingen/' + product.afbeelding) }}" alt=""
+                 style="max-width:140px; max-height:140px; margin-bottom:0.8rem">
+            {% endif %}
+            <h1 style="margin:0 0 0.2rem">{{ product.naam }}</h1>
+            <p class="tekst-zacht" style="margin:0 0 1.3rem">
+                {{ product.categorie }}{% if product.subcategorie %} &middot; {{ product.subcategorie }}{% endif %}
+            </p>
+
+            <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-geel scan-grote-knop">
+                Naar productpagina
+            </a>
+            <form method="post" action="{{ url_for('scan_melden', product_id=product.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-rand scan-grote-knop">
+                    Melden voor bestellijst
+                </button>
+            </form>
+            <p class="tekst-zacht" style="margin-top:1rem; margin-bottom:0">
+                Geen account nodig -- een beheerder ziet je melding bij de bestellijst.
+            </p>
+        </div>
+        {% else %}
+        <div class="kaart" style="text-align:center">
+            <h1 style="margin-top:0">Product niet gevonden</h1>
+            <p class="tekst-zacht">Dit schaplabel hoort niet (meer) bij een bestaand product.</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

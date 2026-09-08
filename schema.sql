@@ -287,3 +287,31 @@ CREATE TABLE IF NOT EXISTS bieren (
     aangemaakt_op TEXT NOT NULL,
     UNIQUE(naam)
 );
+
+-- Verbruiksvoorwerpen: dingen als bakjes/servetten die wel een schaplabel
+-- nodig hebben, maar geen echte voorraadproducten zijn (geen voorraad, geen
+-- bestellijst-regel) -- puur om te kunnen printen en om ze desgewenst als
+-- losse tekstmelding op de bestellijst te zetten (zie bestellijst_meldingen).
+CREATE TABLE IF NOT EXISTS verbruiksvoorwerpen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    naam TEXT NOT NULL,
+    categorie TEXT,
+    aangemaakt_op TEXT NOT NULL
+);
+
+-- Meldingen voor de bestellijst die niet uit de gewone voorraadberekening
+-- komen: een bezoeker die zonder account de QR-code van een product scant
+-- en op "Melden voor bestellijst" drukt (product_id gezet, bron 'qr_scan'),
+-- of een verbruiksvoorwerp dat een beheerder handmatig op de bestellijst
+-- zet (product_id leeg, tekst gezet, bron 'verbruiksvoorwerp'). Blijft
+-- staan tot een beheerder 'm afhandelt (zelfde patroon als mededelingen).
+CREATE TABLE IF NOT EXISTS bestellijst_meldingen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER REFERENCES producten(id) ON DELETE CASCADE,
+    tekst TEXT,
+    bron TEXT NOT NULL DEFAULT 'qr_scan',
+    aangemaakt_op TEXT NOT NULL,
+    afgehandeld INTEGER NOT NULL DEFAULT 0,
+    afgehandeld_door TEXT,
+    afgehandeld_op TEXT
+);

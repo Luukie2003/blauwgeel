@@ -540,27 +540,34 @@ LABEL_GAP = 2.4
 def schaplabels_pdf(producten):
     """Printbare schaplabels: A4 in horizontale stroken (6 per vel), bedoeld
     om na het printen los te knippen en aan het schap te hangen. Elk label
-    toont het logo, naam + categorie + artikelcode + minimumvoorraad, een
-    productfoto (indien aanwezig) en een QR-code die naar de productpagina
-    linkt -- met elke telefooncamera te scannen, ook zonder de app open te
-    hebben (zie routes/producten.py, dat 'm samen met de qr-bytes en het
-    foto-pad aanlevert -- dit bestand kent qr.py bewust niet, net als
-    stemming_poster_pdf hierboven al met de stem-QR doet).
+    toont het logo, naam + categorie + (indien bekend) artikelcode en
+    minimumvoorraad, een productfoto (indien aanwezig) en een QR-code die
+    naar de productpagina linkt -- met elke telefooncamera te scannen, ook
+    zonder de app open te hebben (zie routes/producten.py, dat 'm samen met
+    de qr-bytes en het foto-pad aanlevert -- dit bestand kent qr.py bewust
+    niet, net als stemming_poster_pdf hierboven al met de stem-QR doet).
 
-    producten: lijst van dicts met naam, categorie, subcategorie,
-    artikelcode, min_voorraad, eenheid, qr_png (kant-en-klare PNG-bytes) en
-    foto_pad (pad naar de productfoto, of None als er geen foto is)."""
+    producten: lijst van dicts met naam, categorie en verder allemaal
+    optionele velden (ontbrekend of None wordt gewoon overgeslagen):
+    subcategorie, artikelcode, min_voorraad, eenheid, qr_png (kant-en-klare
+    PNG-bytes) en foto_pad. Zonder qr_png (bijv. een verbruiksvoorwerp
+    zonder eigen productpagina om naartoe te scannen) vervalt ook de
+    foto-kolom en krijgt de tekst de volle breedte van het label."""
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(False)
 
-    tekst_x = LABEL_MARGE_LINKS + 34
     qr_grootte = 32
     foto_grootte = 32
+    tekst_x = LABEL_MARGE_LINKS + 34
     qr_x = LABEL_MARGE_LINKS + LABEL_BREEDTE - qr_grootte - 2
     foto_x = qr_x - foto_grootte - 4
-    tekst_breedte = foto_x - tekst_x - 4
+    tekst_breedte_met_qr = foto_x - tekst_x - 4
+    tekst_breedte_zonder_qr = LABEL_MARGE_LINKS + LABEL_BREEDTE - 4 - tekst_x
 
     for i, product in enumerate(producten):
+        heeft_qr = bool(product.get("qr_png"))
+        tekst_breedte = tekst_breedte_met_qr if heeft_qr else tekst_breedte_zonder_qr
+
         strook_index = i % LABEL_STROKEN_PER_PAGINA
         if strook_index == 0:
             pdf.add_page()
@@ -589,14 +596,14 @@ def schaplabels_pdf(producten):
         pdf.cell(tekst_breedte, 8, _kort(pdf, product["naam"], tekst_breedte), new_x="LMARGIN", new_y="NEXT")
 
         subtekst = product["categorie"]
-        if product["subcategorie"]:
+        if product.get("subcategorie"):
             subtekst += f" · {product['subcategorie']}"
         pdf.set_xy(tekst_x, y0 + 18)
         pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(*KLEUR_GRIJS)
         pdf.cell(tekst_breedte, 5, _kort(pdf, subtekst, tekst_breedte), new_x="LMARGIN", new_y="NEXT")
 
-        if product["artikelcode"]:
+        if product.get("artikelcode"):
             pdf.set_xy(tekst_x, y0 + 24)
             pdf.set_font("Helvetica", "", 8)
             pdf.set_text_color(*KLEUR_GRIJS)
@@ -608,20 +615,24 @@ def schaplabels_pdf(producten):
                 new_y="NEXT",
             )
 
-        pdf.set_xy(tekst_x, y0 + 31)
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.set_text_color(*KLEUR_BLAUW)
-        pdf.cell(
-            tekst_breedte,
-            6,
-            f"Min. voorraad: {product['min_voorraad']} {product['eenheid']}",
-            new_x="LMARGIN",
-            new_y="NEXT",
-        )
+        if product.get("min_voorraad") is not None:
+            pdf.set_xy(tekst_x, y0 + 31)
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.set_text_color(*KLEUR_BLAUW)
+            pdf.cell(
+                tekst_breedte,
+                6,
+                f"Min. voorraad: {product['min_voorraad']} {product.get('eenheid', '')}",
+                new_x="LMARGIN",
+                new_y="NEXT",
+            )
+
+        if not heeft_qr:
+            continue
 
         foto_y = y0 + (LABEL_HOOGTE - foto_grootte) / 2
         foto_getekend = False
-        if product["foto_pad"]:
+        if product.get("foto_pad"):
             try:
                 pdf.image(
                     str(product["foto_pad"]),

@@ -160,8 +160,12 @@ def register_routes(app):
     @app.route("/producten")
     def producten_lijst():
         db = get_db()
+        # Categorie eerst (voor de groepering hieronder in het sjabloon),
+        # daarna actief/subcategorie/naam zoals voorheen -- Jinja's
+        # groupby-filter sorteert stabiel op alleen 'categorie', dus deze
+        # volgorde blijft binnen elke groep behouden.
         producten = db.execute(
-            "SELECT * FROM producten ORDER BY actief DESC, categorie, subcategorie, naam"
+            "SELECT * FROM producten ORDER BY categorie, actief DESC, subcategorie, naam"
         ).fetchall()
         categorieen = db.execute(
             "SELECT naam FROM categorieen ORDER BY naam"
@@ -246,34 +250,47 @@ def register_routes(app):
             categorie = request.form["categorie"].strip() or "Overig"
             subcategorie = request.form.get("subcategorie", "").strip() or None
             bewaar_subcategorie(db, categorie, subcategorie)
+            nieuwe_voorraad = int(request.form["voorraad"] or 0)
+            auto_inactief_bij_nul = 1 if request.form.get("auto_inactief_bij_nul") else 0
+            actief = 1 if request.form.get("actief") else 0
+            gedwongen_inactief = bool(auto_inactief_bij_nul and nieuwe_voorraad <= 0 and actief)
+            if gedwongen_inactief:
+                actief = 0
             db.execute(
                 """INSERT INTO producten
                    (artikelcode, naam, categorie, subcategorie, eenheid, voorraad, min_voorraad,
                     bestel_hoeveelheid, verkoopprijs, inkoopprijs, actief, besteleenheid,
-                    besteleenheid_factor, opmerking, afbeelding, glazen_per_fust, prijs_per_glas)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    besteleenheid_factor, opmerking, afbeelding, glazen_per_fust, prijs_per_glas,
+                    auto_inactief_bij_nul)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
                     categorie,
                     subcategorie,
                     request.form["eenheid"].strip() or "stuks",
-                    int(request.form["voorraad"] or 0),
+                    nieuwe_voorraad,
                     int(request.form["min_voorraad"] or 0),
                     int(request.form["bestel_hoeveelheid"] or 0),
                     float(request.form["verkoopprijs"] or 0),
                     float(request.form.get("inkoopprijs") or 0),
-                    1 if request.form.get("actief") else 0,
+                    actief,
                     request.form.get("besteleenheid", "").strip() or None,
                     int(request.form.get("besteleenheid_factor") or 1),
                     request.form.get("opmerking", "").strip(),
                     afbeelding,
                     int(request.form.get("glazen_per_fust") or 0),
                     float(request.form.get("prijs_per_glas") or 0),
+                    auto_inactief_bij_nul,
                 ),
             )
             db.commit()
             flash(f"Product '{request.form['naam']}' toegevoegd.", "success")
+            if gedwongen_inactief:
+                flash(
+                    f"'{request.form['naam']}' is automatisch op inactief gezet (voorraad op 0).",
+                    "warning",
+                )
             return redirect(url_for("producten_lijst"))
         categorieen = db.execute(
             "SELECT naam FROM categorieen ORDER BY naam"
@@ -330,12 +347,19 @@ def register_routes(app):
             categorie = request.form["categorie"].strip() or "Overig"
             subcategorie = request.form.get("subcategorie", "").strip() or None
             bewaar_subcategorie(db, categorie, subcategorie)
+            nieuwe_voorraad = int(request.form["voorraad"] or 0)
+            auto_inactief_bij_nul = 1 if request.form.get("auto_inactief_bij_nul") else 0
+            actief = 1 if request.form.get("actief") else 0
+            gedwongen_inactief = bool(auto_inactief_bij_nul and nieuwe_voorraad <= 0 and actief)
+            if gedwongen_inactief:
+                actief = 0
             db.execute(
                 """UPDATE producten
                    SET artikelcode = ?, naam = ?, categorie = ?, subcategorie = ?, eenheid = ?,
                        voorraad = ?, min_voorraad = ?, bestel_hoeveelheid = ?, verkoopprijs = ?,
                        inkoopprijs = ?, actief = ?, besteleenheid = ?, besteleenheid_factor = ?,
-                       opmerking = ?, afbeelding = ?, glazen_per_fust = ?, prijs_per_glas = ?
+                       opmerking = ?, afbeelding = ?, glazen_per_fust = ?, prijs_per_glas = ?,
+                       auto_inactief_bij_nul = ?
                    WHERE id = ?""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
@@ -343,23 +367,29 @@ def register_routes(app):
                     categorie,
                     subcategorie,
                     request.form["eenheid"].strip() or "stuks",
-                    int(request.form["voorraad"] or 0),
+                    nieuwe_voorraad,
                     int(request.form["min_voorraad"] or 0),
                     int(request.form["bestel_hoeveelheid"] or 0),
                     nieuwe_verkoopprijs,
                     nieuwe_inkoopprijs,
-                    1 if request.form.get("actief") else 0,
+                    actief,
                     request.form.get("besteleenheid", "").strip() or None,
                     int(request.form.get("besteleenheid_factor") or 1),
                     request.form.get("opmerking", "").strip(),
                     afbeelding,
                     int(request.form.get("glazen_per_fust") or 0),
                     float(request.form.get("prijs_per_glas") or 0),
+                    auto_inactief_bij_nul,
                     product_id,
                 ),
             )
             db.commit()
             flash(f"Product '{request.form['naam']}' bijgewerkt.", "success")
+            if gedwongen_inactief:
+                flash(
+                    f"'{request.form['naam']}' is automatisch op inactief gezet (voorraad op 0).",
+                    "warning",
+                )
             return redirect(url_for("producten_lijst"))
         categorieen = db.execute(
             "SELECT naam FROM categorieen ORDER BY naam"
@@ -462,6 +492,38 @@ def register_routes(app):
     def scannen():
         return render_template("scannen.html")
 
+    @app.route("/scan/<int:product_id>")
+    def scan_landing(product_id):
+        """Waar de QR-code op een schaplabel naartoe wijst -- publiek, geen
+        account nodig (zie OPEN_ENDPOINTS in app.py), met twee grote
+        knoppen: naar de echte productpagina (die alsnog om inloggen vraagt)
+        of direct -- zonder account -- melden voor de bestellijst."""
+        db = get_db()
+        product = db.execute(
+            "SELECT * FROM producten WHERE id = ?", (product_id,)
+        ).fetchone()
+        if product is None:
+            return render_template("scan_landing.html", product=None), 404
+        return render_template("scan_landing.html", product=product)
+
+    @app.route("/scan/<int:product_id>/melden", methods=["POST"])
+    def scan_melden(product_id):
+        db = get_db()
+        product = db.execute(
+            "SELECT id FROM producten WHERE id = ?", (product_id,)
+        ).fetchone()
+        if product is None:
+            flash("Product niet gevonden.", "error")
+            return redirect(url_for("scan_landing", product_id=product_id))
+        db.execute(
+            """INSERT INTO bestellijst_meldingen (product_id, bron, aangemaakt_op)
+               VALUES (?, 'qr_scan', ?)""",
+            (product_id, now_str()),
+        )
+        db.commit()
+        flash("Bedankt! Dit is doorgegeven voor de bestellijst.", "success")
+        return redirect(url_for("scan_landing", product_id=product_id))
+
     @app.route("/producten/zoeken")
     def product_zoeken():
         """Live zoeken op productnaam/artikelcode voor de zoekbalk boven in
@@ -502,10 +564,11 @@ def register_routes(app):
     def _label_gegevens(product):
         """Zet een productrij om in wat schaplabels_pdf nodig heeft: de
         gewone velden plus een kant-en-klare QR (PNG-bytes) die naar de
-        productpagina linkt -- scanbaar met elke telefooncamera, niet
-        alleen vanuit de handterminal-weergave zelf -- en het pad naar de
+        publieke scan-landingspagina linkt (geen account nodig, zie
+        scan_landing) -- scanbaar met elke telefooncamera, niet alleen
+        vanuit de handterminal-weergave zelf -- en het pad naar de
         productfoto, dezelfde die ook op de site wordt getoond."""
-        url = url_for("product_detail", product_id=product["id"], _external=True)
+        url = url_for("scan_landing", product_id=product["id"], _external=True)
         foto_pad = PRODUCT_AFBEELDINGEN_MAP / product["afbeelding"] if product["afbeelding"] else None
         return {
             "naam": product["naam"],
