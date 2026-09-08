@@ -3,14 +3,15 @@
 {% block inhoud %}
 <div class="actiebalk">
     <p class="subtitel" style="margin:0">Beheer het assortiment en de minimumvoorraad.</p>
-    {% if huidige_gebruiker_rol == 'beheerder' %}
-    <div style="display:flex; gap:0.5rem">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+        {% if huidige_gebruiker_rol == 'beheerder' %}
         <a href="{{ url_for('categorieen_lijst') }}" class="btn btn-rand">Categorieën beheren</a>
         <a href="{{ url_for('producten_minimumvoorraad') }}" class="btn btn-rand">Minimumvoorraad instellen</a>
         <a href="{{ url_for('producten_besteleenheid') }}" class="btn btn-rand">Besteleenheid instellen</a>
         <a href="{{ url_for('product_nieuw') }}" class="btn btn-geel">+ Nieuw product</a>
+        {% endif %}
+        <button type="button" id="labels-printen-knop" class="btn btn-rand" disabled>Schaplabels printen</button>
     </div>
-    {% endif %}
 </div>
 
 <div class="kaart">
@@ -35,6 +36,7 @@
         <table id="producten-tabel">
             <thead>
                 <tr>
+                    <th><input type="checkbox" id="label-select-alles" title="Alles (de zichtbare rijen) selecteren" style="width:auto"></th>
                     <th></th><th>Product</th><th>Status</th><th>Categorie</th><th>Voorraad</th>
                     <th>Inkoop</th><th>Verkoop</th><th></th>
                 </tr>
@@ -42,6 +44,7 @@
             <tbody>
                 {% for p in producten %}
                 <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie ~ ' ' ~ (p.subcategorie or ''))|lower }}" data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}">
+                    <td><input type="checkbox" class="label-select-rij" value="{{ p.id }}" style="width:auto"></td>
                     <td>
                         {% if p.afbeelding %}
                         <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
@@ -158,6 +161,35 @@
     catVeld.addEventListener('change', function () { filterSubOpties(); filter(); });
     subVeld.addEventListener('change', filter);
     filter();
+})();
+
+(function () {
+    var alles = document.getElementById('label-select-alles');
+    var knop = document.getElementById('labels-printen-knop');
+    if (!alles || !knop) return;
+    var vakjes = Array.prototype.slice.call(document.querySelectorAll('.label-select-rij'));
+
+    function bijwerken() {
+        var geselecteerd = vakjes.filter(function (v) { return v.checked; });
+        knop.disabled = geselecteerd.length === 0;
+        knop.textContent = geselecteerd.length
+            ? 'Schaplabels printen (' + geselecteerd.length + ')'
+            : 'Schaplabels printen';
+    }
+
+    alles.addEventListener('change', function () {
+        vakjes.forEach(function (v) {
+            // Alleen de op dit moment zichtbare (niet weggefilterde) rijen.
+            if (v.closest('tr').style.display !== 'none') v.checked = alles.checked;
+        });
+        bijwerken();
+    });
+    vakjes.forEach(function (v) { v.addEventListener('change', bijwerken); });
+    knop.addEventListener('click', function () {
+        var ids = vakjes.filter(function (v) { return v.checked; }).map(function (v) { return v.value; });
+        if (!ids.length) return;
+        window.open('/producten/labels.pdf?ids=' + ids.join(','), '_blank');
+    });
 })();
 </script>
 {% endblock %}

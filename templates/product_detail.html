@@ -18,14 +18,17 @@
     <span class="badge badge-ok product-detail-voorraad">{{ product.voorraad }} {{ product.eenheid }} op voorraad</span>
     {% endif %}
     <p class="tekst-zacht" style="margin:0.4rem 0 0">minimum: {{ product.min_voorraad }} {{ product.eenheid }}</p>
-    {% if huidige_gebruiker_rol == 'beheerder' %}
-    <p style="margin-top:0.7rem"><a href="{{ url_for('product_bewerken', product_id=product.id) }}">Product bewerken &rarr;</a></p>
-    {% endif %}
+    <p style="margin-top:0.7rem; display:flex; gap:1rem; flex-wrap:wrap">
+        <a href="{{ url_for('product_label_pdf', product_id=product.id) }}">Schaplabel printen &rarr;</a>
+        {% if huidige_gebruiker_rol == 'beheerder' %}
+        <a href="{{ url_for('product_bewerken', product_id=product.id) }}">Product bewerken &rarr;</a>
+        {% endif %}
+    </p>
 </div>
 
 <div class="kaart">
     <h2>Boeken</h2>
-    <form method="post" action="{{ url_for('boeken') }}">
+    <form method="post" action="{{ url_for('boeken') }}" class="boeking-formulier" data-offline-wachtrij="Boeking">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="product_id" value="{{ product.id }}">
         <input type="hidden" name="terug_naar_product" value="{{ product.id }}">
@@ -78,4 +81,5 @@
     <p class="leeg">Nog geen boekingen voor dit product.</p>
     {% endif %}
 </div>
+{% include "_boeking_formulier_script.html" %}
 {% endblock %}

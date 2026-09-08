@@ -1,0 +1,48 @@
+<script>
+// Boekingsformulieren (hier en op product_detail.html) versturen via fetch
+// i.p.v. een gewone submit, met hetzelfde idee als de looplijst
+// (tellen_lopen.html): lukt het, dan wordt alleen de inhoud ververst (de
+// fetch volgt de redirect vanzelf naar de bijgewerkte pagina, geen aparte
+// paginaherlaad nodig); lukt het niet door een echte netwerkfout, dan gaat
+// de boeking de offline-wachtrij in (zie _gedeelde_script.html) i.p.v. In
+// het luchtledige te verdwijnen -- handig bij wisselend bereik in het
+// voorraadhok.
+document.addEventListener("submit", function (e) {
+    var form = e.target.closest(".boeking-formulier");
+    if (!form) return;
+    e.preventDefault();
+
+    var knop = form.querySelector('button[type="submit"]');
+    if (knop) knop.disabled = true;
+
+    fetch(form.action || window.location.pathname, {
+        method: "POST",
+        body: new FormData(form),
+    })
+        .then(function (resp) {
+            if (!resp.ok) throw new Error("serverfout");
+            return resp.text();
+        })
+        .then(function (html) {
+            var nieuwDoc = new DOMParser().parseFromString(html, "text/html");
+            var nieuweInhoud = nieuwDoc.querySelector(".venster-inhoud");
+            var huidigeInhoud = document.querySelector(".venster-inhoud");
+            if (nieuweInhoud && huidigeInhoud) {
+                huidigeInhoud.innerHTML = nieuweInhoud.innerHTML;
+                window.scrollTo(0, 0);
+            } else {
+                window.location.reload();
+            }
+        })
+        .catch(function (fout) {
+            if (form.dataset.offlineWachtrij && fout instanceof TypeError) {
+                offlineWachtrijToevoegen(form);
+            } else {
+                form.submit();
+            }
+        })
+        .finally(function () {
+            if (knop) knop.disabled = false;
+        });
+});
+</script>

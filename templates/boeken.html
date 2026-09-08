@@ -20,7 +20,7 @@
 {% endif %}
 
 <div class="kaart">
-    <form method="post">
+    <form method="post" class="boeking-formulier" data-offline-wachtrij="Boeking">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="toggle-type">
             <label><input type="radio" name="type" value="in" checked><span>In (levering / aanvulling)</span></label>
@@ -123,4 +123,5 @@
     });
 })();
 </script>
+{% include "_boeking_formulier_script.html" %}
 {% endblock %}

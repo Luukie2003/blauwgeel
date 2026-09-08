@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geen verbinding · Kantine Beheer</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <meta name="theme-color" content="#1c2b4a">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div style="max-width:420px; margin:15vh auto 0; padding:0 1rem; text-align:center">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="" style="width:64px; margin-bottom:1rem">
+        <div class="kaart">
+            <h1 style="margin-top:0">Geen verbinding</h1>
+            <p class="tekst-zacht">
+                Deze pagina kon niet geladen worden omdat er geen internetverbinding is.
+                Zodra je weer bereik hebt, werkt de app gewoon verder -- eerder ingevulde
+                boekingen of tellingen die nog niet zijn verstuurd, staan niet kwijt op
+                dit toestel.
+            </p>
+            <button type="button" class="btn btn-geel" onclick="window.location.reload()">Opnieuw proberen</button>
+        </div>
+    </div>
+</body>
+</html>

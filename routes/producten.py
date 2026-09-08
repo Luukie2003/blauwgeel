@@ -1,5 +1,6 @@
 from flask import Response, flash, jsonify, redirect, render_template, request, session, url_for
 
+import qr
 from database import get_db
 from helpers import (
     PRODUCT_AFBEELDINGEN_MAP,
@@ -10,7 +11,7 @@ from helpers import (
     now_str,
     sla_afbeelding_op,
 )
-from pdf import voorraadoverzicht_pdf
+from pdf import schaplabels_pdf, voorraadoverzicht_pdf
 
 
 def register_routes(app):
@@ -457,6 +458,10 @@ def register_routes(app):
             return jsonify({"ok": True, "actief": nieuwe_status, "melding": melding})
         return redirect(url_for("producten_lijst"))
 
+    @app.route("/scannen")
+    def scannen():
+        return render_template("scannen.html")
+
     @app.route("/producten/zoeken")
     def product_zoeken():
         """Live zoeken op productnaam/artikelcode voor de zoekbalk boven in
@@ -492,6 +497,67 @@ def register_routes(app):
         ).fetchall()
         return render_template(
             "product_detail.html", product=product, mutaties=mutaties
+        )
+
+    def _label_gegevens(product):
+        """Zet een productrij om in wat schaplabels_pdf nodig heeft: de
+        gewone velden plus een kant-en-klare QR (PNG-bytes) die naar de
+        productpagina linkt -- scanbaar met elke telefooncamera, niet
+        alleen vanuit de handterminal-weergave zelf."""
+        url = url_for("product_detail", product_id=product["id"], _external=True)
+        return {
+            "naam": product["naam"],
+            "categorie": product["categorie"],
+            "subcategorie": product["subcategorie"],
+            "min_voorraad": product["min_voorraad"],
+            "eenheid": product["eenheid"],
+            "qr_png": qr.qr_png_bytes(url),
+        }
+
+    @app.route("/producten/<int:product_id>/label.pdf")
+    def product_label_pdf(product_id):
+        db = get_db()
+        product = db.execute(
+            "SELECT * FROM producten WHERE id = ?", (product_id,)
+        ).fetchone()
+        if product is None:
+            flash("Product niet gevonden.", "error")
+            return redirect(url_for("producten_lijst"))
+        pdf_bytes = schaplabels_pdf([_label_gegevens(product)])
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="label-{product["naam"]}.pdf"'},
+        )
+
+    @app.route("/producten/labels.pdf")
+    def producten_labels_pdf():
+        ids = []
+        for deel in request.args.get("ids", "").split(","):
+            deel = deel.strip()
+            if deel.isdigit():
+                ids.append(int(deel))
+        if not ids:
+            flash("Geen producten geselecteerd om labels voor te printen.", "error")
+            return redirect(url_for("producten_lijst"))
+        # Cap tegen een té groot verzoek (bijv. geknoei met de query-string) --
+        # in de praktijk selecteert niemand meer dan een paar tientallen
+        # producten tegelijk.
+        ids = ids[:200]
+        db = get_db()
+        placeholders = ",".join("?" * len(ids))
+        producten = db.execute(
+            f"SELECT * FROM producten WHERE id IN ({placeholders}) ORDER BY categorie, naam",
+            ids,
+        ).fetchall()
+        if not producten:
+            flash("Geen van de geselecteerde producten kon gevonden worden.", "error")
+            return redirect(url_for("producten_lijst"))
+        pdf_bytes = schaplabels_pdf([_label_gegevens(p) for p in producten])
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={"Content-Disposition": 'inline; filename="schaplabels.pdf"'},
         )
 
     @app.route("/categorieen", methods=["GET", "POST"])

@@ -1,0 +1,92 @@
+{% extends basis_template %}
+{% block titel %}Scannen{% endblock %}
+{% block inhoud %}
+<p class="subtitel">Richt de camera op de QR-code op een schaplabel om direct bij dat product uit te komen.</p>
+
+<div class="kaart" style="text-align:center">
+    <video id="scan-video" hidden playsinline autoplay muted style="width:100%; max-width:420px; border-radius:4px; background:#000"></video>
+    <p id="scan-status" class="tekst-zacht" style="margin-top:0.8rem; min-height:1.2em"></p>
+    <button type="button" id="scan-start" class="btn btn-geel">Camera starten</button>
+    <div id="scan-niet-ondersteund" hidden>
+        <p class="tekst-zacht">
+            Scannen in de app wordt niet ondersteund in deze browser. Gebruik in plaats
+            daarvan de camera-app van je telefoon: die herkent de QR-code op het
+            schaplabel net zo goed en opent de productpagina vanzelf.
+        </p>
+    </div>
+</div>
+
+<script>
+(function () {
+    var video = document.getElementById('scan-video');
+    var startKnop = document.getElementById('scan-start');
+    var statusEl = document.getElementById('scan-status');
+    var nietOndersteund = document.getElementById('scan-niet-ondersteund');
+    var stream = null;
+    var bezig = false;
+
+    // BarcodeDetector werkt op dit moment alleen in Chromium-browsers
+    // (o.a. Android Chrome). Overal elders valt dit gewoon terug op de
+    // camera-app van het toestel zelf, die dezelfde QR-code (een gewone
+    // productlink) net zo goed herkent -- geen extra bibliotheek nodig.
+    if (!('BarcodeDetector' in window)) {
+        nietOndersteund.hidden = false;
+        startKnop.hidden = true;
+        return;
+    }
+    var detector = new BarcodeDetector({ formats: ['qr_code'] });
+
+    function stoppen() {
+        bezig = false;
+        if (stream) {
+            stream.getTracks().forEach(function (t) { t.stop(); });
+            stream = null;
+        }
+    }
+
+    function isEigenProductlink(tekst) {
+        try {
+            var url = new URL(tekst, window.location.origin);
+            return url.origin === window.location.origin && /^\/producten\/\d+$/.test(url.pathname);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function scanLoop() {
+        if (!bezig) return;
+        detector.detect(video).then(function (codes) {
+            if (codes.length && isEigenProductlink(codes[0].rawValue)) {
+                statusEl.textContent = 'Gevonden! Product wordt geopend...';
+                var doel = codes[0].rawValue;
+                stoppen();
+                window.location.href = doel;
+                return;
+            }
+            if (bezig) requestAnimationFrame(scanLoop);
+        }).catch(function () {
+            if (bezig) requestAnimationFrame(scanLoop);
+        });
+    }
+
+    startKnop.addEventListener('click', function () {
+        statusEl.textContent = 'Camera wordt geopend...';
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(function (s) {
+                stream = s;
+                video.srcObject = s;
+                video.hidden = false;
+                startKnop.hidden = true;
+                statusEl.textContent = 'Richt de camera op de QR-code op het schaplabel.';
+                bezig = true;
+                scanLoop();
+            })
+            .catch(function () {
+                statusEl.textContent = 'Camera kon niet worden geopend. Heb je toestemming gegeven?';
+            });
+    });
+
+    window.addEventListener('pagehide', stoppen);
+})();
+</script>
+{% endblock %}

@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS gebruikers (
     reset_token_hash TEXT,
     reset_token_verloopt TEXT,
     mail_factuur INTEGER NOT NULL DEFAULT 0,
-    mail_week_overzicht INTEGER NOT NULL DEFAULT 0
+    mail_week_overzicht INTEGER NOT NULL DEFAULT 0,
+    secties TEXT NOT NULL DEFAULT 'voorraad,kassa,keuken,stemmen'
 );
 
 CREATE TABLE IF NOT EXISTS tellingen (

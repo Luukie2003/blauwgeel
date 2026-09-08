@@ -144,6 +144,9 @@ function loopStapVersturen() {
         })
         .then(function (html) {
             localStorage.removeItem(LOOP_BACKUP_SLEUTEL);
+            // Voorkomt dat een 'online'-gebeurtenis hierna deze al gelukte
+            // stap nog een keer verstuurt (zie de listener onderaan).
+            loopLaatsteFormData = null;
             var nieuwDoc = new DOMParser().parseFromString(html, 'text/html');
             var nieuweInhoud = nieuwDoc.querySelector('.venster-inhoud');
             var huidigeInhoud = document.querySelector('.venster-inhoud');
@@ -188,6 +191,14 @@ document.addEventListener('submit', function (e) {
 
 document.addEventListener('input', function (e) {
     if (e.target && e.target.id === 'loop-invoer') loopBackupBewaren();
+});
+
+// Automatisch opnieuw proberen zodra de verbinding terugkomt, i.p.v. te
+// wachten tot iemand zelf op "Probeer opnieuw" drukt -- loopLaatsteFormData
+// staat alleen nog klaar als de vorige poging ook echt mislukt is (zie
+// loopStapVersturen hierboven, die 'm bij succes weer leegmaakt).
+window.addEventListener('online', function () {
+    if (loopLaatsteFormData && !loopVersturenBezig) loopStapVersturen();
 });
 
 loopBackupHerstellen();

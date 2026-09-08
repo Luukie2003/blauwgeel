@@ -10,6 +10,7 @@
 </div>
 
 <div class="pda-menu">
+    {% if sectie_toegang.voorraad %}
     <a href="{{ url_for('tellen') }}" class="pda-menu-knop">
         <span class="pda-menu-icoon-cirkel">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 13l2 2 4-4"/></svg>
@@ -22,17 +23,27 @@
         </span>
         <span class="pda-menu-label">Boeken</span>
     </a>
+    {% endif %}
     <a href="{{ url_for('bijzonderheden') }}" class="pda-menu-knop">
         <span class="pda-menu-icoon-cirkel">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1-5a8 8 0 1 1 17-6z"/></svg>
         </span>
         <span class="pda-menu-label">Prikbord</span>
     </a>
+    {% if sectie_toegang.kassa %}
     <a href="{{ url_for('kassa_tellen') }}" class="pda-menu-knop">
         <span class="pda-menu-icoon-cirkel">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 11h20"/><circle cx="12" cy="15" r="2"/></svg>
         </span>
         <span class="pda-menu-label">Kassa</span>
+    </a>
+    {% endif %}
+    {% if sectie_toegang.voorraad %}
+    <a href="{{ url_for('scannen') }}" class="pda-menu-knop">
+        <span class="pda-menu-icoon-cirkel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2"/><path d="M17 4h2a1 1 0 0 1 1 1v2"/><path d="M20 17v2a1 1 0 0 1-1 1h-2"/><path d="M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+        </span>
+        <span class="pda-menu-label">Scannen</span>
     </a>
     <a href="{{ url_for('bestellijst') }}" class="pda-menu-knop">
         <span class="pda-menu-icoon-cirkel">
@@ -52,6 +63,7 @@
         </span>
         <span class="pda-menu-label">Boodschappen</span>
     </a>
+    {% endif %}
 </div>
 
 <div class="pda-start-footer">

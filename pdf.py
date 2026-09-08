@@ -526,3 +526,88 @@ def stemming_poster_pdf(titel, qr_png_bytes):
     pdf.cell(180, 6, "Kantine Beheer - s.v. Blauw-Geel 1915", align="C")
 
     return bytes(pdf.output())
+
+
+# Schaplabels: A4 in horizontale stroken om na het printen los te knippen.
+LABEL_STROKEN_PER_PAGINA = 6
+LABEL_BREEDTE = 190
+LABEL_HOOGTE = 44
+LABEL_MARGE_LINKS = 10
+LABEL_MARGE_BOVEN = 8
+LABEL_GAP = 2.4
+
+
+def schaplabels_pdf(producten):
+    """Printbare schaplabels: A4 in horizontale stroken (6 per vel), bedoeld
+    om na het printen los te knippen en aan het schap te hangen. Elk label
+    toont het logo, naam + categorie + minimumvoorraad, en een QR-code die
+    naar de productpagina linkt -- met elke telefooncamera te scannen, ook
+    zonder de app open te hebben (zie routes/producten.py, dat 'm samen met
+    de qr-bytes aanlevert -- dit bestand kent qr.py bewust niet, net als
+    stemming_poster_pdf hierboven al met de stem-QR doet).
+
+    producten: lijst van dicts met naam, categorie, subcategorie,
+    min_voorraad, eenheid en qr_png (kant-en-klare PNG-bytes)."""
+    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf.set_auto_page_break(False)
+
+    tekst_x = LABEL_MARGE_LINKS + 34
+    qr_grootte = 36
+    qr_x = LABEL_MARGE_LINKS + LABEL_BREEDTE - qr_grootte - 2
+    tekst_breedte = qr_x - tekst_x - 4
+
+    for i, product in enumerate(producten):
+        strook_index = i % LABEL_STROKEN_PER_PAGINA
+        if strook_index == 0:
+            pdf.add_page()
+        y0 = LABEL_MARGE_BOVEN + strook_index * (LABEL_HOOGTE + LABEL_GAP)
+
+        if strook_index > 0:
+            pdf.set_draw_color(*KLEUR_RAND)
+            pdf.set_dash_pattern(dash=2, gap=1.5)
+            pdf.line(
+                LABEL_MARGE_LINKS,
+                y0 - LABEL_GAP / 2,
+                LABEL_MARGE_LINKS + LABEL_BREEDTE,
+                y0 - LABEL_GAP / 2,
+            )
+            pdf.set_dash_pattern()
+
+        pdf.set_fill_color(*KLEUR_GEEL)
+        pdf.rect(LABEL_MARGE_LINKS, y0, 2.5, LABEL_HOOGTE, style="F")
+
+        if LOGO_PAD.exists():
+            pdf.image(str(LOGO_PAD), x=LABEL_MARGE_LINKS + 6, y=y0 + (LABEL_HOOGTE - 14) / 2, h=14)
+
+        pdf.set_xy(tekst_x, y0 + 6)
+        pdf.set_font("Helvetica", "B", 15)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(tekst_breedte, 7, _kort(pdf, product["naam"], tekst_breedte), new_x="LMARGIN", new_y="NEXT")
+
+        subtekst = product["categorie"]
+        if product["subcategorie"]:
+            subtekst += f" · {product['subcategorie']}"
+        pdf.set_xy(tekst_x, y0 + 17)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*KLEUR_GRIJS)
+        pdf.cell(tekst_breedte, 5, _kort(pdf, subtekst, tekst_breedte), new_x="LMARGIN", new_y="NEXT")
+
+        pdf.set_xy(tekst_x, y0 + 26)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(*KLEUR_BLAUW)
+        pdf.cell(
+            tekst_breedte,
+            6,
+            f"Min. voorraad: {product['min_voorraad']} {product['eenheid']}",
+            new_x="LMARGIN",
+            new_y="NEXT",
+        )
+
+        pdf.image(
+            io.BytesIO(product["qr_png"]),
+            x=qr_x,
+            y=y0 + (LABEL_HOOGTE - qr_grootte) / 2,
+            w=qr_grootte,
+        )
+
+    return bytes(pdf.output())

@@ -167,6 +167,35 @@ def is_ajax_verzoek():
     return request.headers.get("X-Requested-With") == "fetch"
 
 
+
+# Fijnmazige rechten voor vrijwilligers: naast de rol (beheerder/vrijwilliger)
+# heeft elk account een los aan/uit-vinkje per sectie. Beheerders hebben altijd
+# overal toegang, ongeacht wat er in hun secties-kolom staat -- die kolom doet
+# er voor hen simpelweg niet toe. "Algemeen" (dashboard, bijzonderheden e.d.)
+# heeft bewust geen sectie: dat blijft voor iedereen zichtbaar, zoals nu.
+SECTIES = ["voorraad", "kassa", "keuken", "stemmen"]
+SECTIE_LABELS = {
+    "voorraad": "Voorraad",
+    "kassa": "Kassa",
+    "keuken": "Keuken",
+    "stemmen": "Stemmen",
+}
+
+
+def secties_lijst(secties_tekst):
+    """Zet de opgeslagen 'voorraad,kassa'-tekst om in een set van geldige
+    sectiesleutels. Onbekende/verouderde waarden worden genegeerd."""
+    if not secties_tekst:
+        return set()
+    return {s for s in secties_tekst.split(",") if s in SECTIES}
+
+
+def heeft_sectie_toegang(rol, secties_tekst, sectie):
+    if rol == "beheerder":
+        return True
+    return sectie in secties_lijst(secties_tekst)
+
+
 def veilig_redirect_pad(pad, fallback):
     """Voorkomt een open redirect via de 'next'-parameter na het inloggen:
     alleen een pad op de eigen site wordt geaccepteerd. //evil.nl en

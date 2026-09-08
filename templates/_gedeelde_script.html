@@ -150,14 +150,95 @@
         }, 3200);
     }
 
+    // ---------- Offline-wachtrij voor formulieren die dat aanvragen ----------
+    // Formulieren met data-offline-wachtrij="1" (zie boeken.html en
+    // product_detail.html) belanden bij een echte netwerkfout niet in een
+    // kale mislukte paginaherlaad, maar in een wachtrij op dit toestel
+    // (localStorage) die vanzelf leegloopt zodra er weer verbinding is --
+    // fijn voor het boeken van voorraad met wisselend bereik in het
+    // voorraadhok. Alleen bedoeld voor dit soort "vuur en vergeet"-acties,
+    // niet voor elk js-ajax-form: een mislukte beheeractie (bijv. een
+    // product verwijderen) moet je gewoon meteen zien mislukken, niet
+    // straks stilzwijgend alsnog uitgevoerd worden.
+    var OFFLINE_WACHTRIJ_SLEUTEL = "kantine-offline-wachtrij";
+    var offlineWachtrijBezig = false;
+
+    function offlineWachtrijLezen() {
+        try {
+            return JSON.parse(localStorage.getItem(OFFLINE_WACHTRIJ_SLEUTEL) || "[]");
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function offlineWachtrijSchrijven(lijst) {
+        try {
+            localStorage.setItem(OFFLINE_WACHTRIJ_SLEUTEL, JSON.stringify(lijst));
+        } catch (e) {
+            // localStorage kan geblokkeerd zijn (bijv. privénavigatie) --
+            // de actie is dan alsnog uitgevoerd zodra er weer bereik is
+            // vanuit dit tabblad, maar overleeft het sluiten ervan niet.
+        }
+    }
+
+    function offlineWachtrijToevoegen(form) {
+        var data = Array.from(new FormData(form).entries());
+        var lijst = offlineWachtrijLezen();
+        lijst.push({ url: form.action, data: data, ts: Date.now() });
+        offlineWachtrijSchrijven(lijst);
+        toonToast(
+            (form.dataset.offlineWachtrij || "Actie") +
+                " opgeslagen zonder verbinding -- wordt verstuurd zodra je weer bereik hebt."
+        );
+        form.reset();
+    }
+
+    function offlineWachtrijVerwerken() {
+        if (offlineWachtrijBezig) return;
+        var lijst = offlineWachtrijLezen();
+        if (!lijst.length) return;
+        offlineWachtrijBezig = true;
+        var item = lijst[0];
+        // Alleen op resp.ok controleren, bewust geen JSON proberen te lezen:
+        // deze wachtrij bedient zowel gewone formulieren (die uiteindelijk
+        // een HTML-pagina teruggeven na een redirect) als js-ajax-forms (die
+        // JSON teruggeven) -- resp.ok is het enige dat beide gemeen hebben.
+        fetch(item.url, {
+            method: "POST",
+            headers: { "X-Requested-With": "fetch" },
+            body: new URLSearchParams(item.data),
+        })
+            .then(function (resp) {
+                if (!resp.ok) throw new Error("serverfout");
+                var rest = offlineWachtrijLezen();
+                rest.shift();
+                offlineWachtrijSchrijven(rest);
+                toonToast("Eerder opgeslagen actie alsnog verstuurd.");
+            })
+            .catch(function () {
+                // Nog steeds geen verbinding (of alsnog een serverfout) --
+                // laten staan, een volgende 'online'-gebeurtenis of
+                // paginabezoek probeert het opnieuw.
+            })
+            .finally(function () {
+                offlineWachtrijBezig = false;
+                if (offlineWachtrijLezen().length) offlineWachtrijVerwerken();
+            });
+    }
+
+    window.addEventListener("online", offlineWachtrijVerwerken);
+    document.addEventListener("DOMContentLoaded", offlineWachtrijVerwerken);
+
     // ---------- Formulieren die geen volledige paginaherlaad meer nodig hebben ----------
     // Een form met class "js-ajax-form" wordt via fetch() verstuurd i.p.v.
     // een gewone submit; de route herkent dit (zie is_ajax_verzoek() in
     // app.py) en geeft JSON terug in plaats van een redirect. Heeft de
     // form ook data-bevestig, dan verschijnt eerst de bevestigings-pop-up.
-    // Lukt het fetch-verzoek niet (netwerkfout, oude sessie, geen JS-
-    // ondersteunde route), dan valt het terug op een gewone submit, zodat
-    // de actie hoe dan ook gewoon lukt.
+    // Lukt het fetch-verzoek niet, dan onderscheiden we twee gevallen: een
+    // echte netwerkfout (fetch zelf gooit een TypeError) op een form met
+    // data-offline-wachtrij gaat de wachtrij hierboven in; al het andere
+    // (serverfout, oude sessie, geen JS-ondersteunde route) valt terug op
+    // een gewone submit, zodat de actie hoe dan ook gewoon lukt.
     document.addEventListener("submit", function (e) {
         var form = e.target.closest(".js-ajax-form");
         if (!form) return;
@@ -178,7 +259,11 @@
                         new CustomEvent("ajax-form:success", { detail: data, bubbles: true })
                     );
                 })
-                .catch(function () {
+                .catch(function (fout) {
+                    if (form.dataset.offlineWachtrij && fout instanceof TypeError) {
+                        offlineWachtrijToevoegen(form);
+                        return;
+                    }
                     form.submit();
                 });
         };
@@ -197,6 +282,18 @@
             toonToast(e.detail.melding);
         }
     });
+
+    // Cachet alleen de schil (stijl, logo) en toont een nette offline-pagina
+    // i.p.v. de kale foutmelding van de browser bij geen verbinding -- zie
+    // static/sw.js. Bemoeit zich niet met formulieren/boekingen, dat doet
+    // de wachtrij hierboven.
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js").catch(function () {
+            // Kan mislukken zonder verbinding (of op een browser die het
+            // niet ondersteunt) -- de rest van de site werkt dan gewoon
+            // door, alleen zonder de offline-schil.
+        });
+    }
 
     (function () {
         var banner = document.getElementById("site-banner");

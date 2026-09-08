@@ -28,7 +28,14 @@
             </div>
         </header>
         <div class="pda-zoek">
-            <input type="search" id="pda-zoek-invoer" placeholder="Zoek een product..." autocomplete="off" aria-label="Zoek een product">
+            <div class="pda-zoek-rij">
+                <input type="search" id="pda-zoek-invoer" placeholder="Zoek een product..." autocomplete="off" aria-label="Zoek een product">
+                {% if sectie_toegang.voorraad %}
+                <a href="{{ url_for('scannen') }}" class="pda-zoek-scan-knop" aria-label="QR-code scannen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2"/><path d="M17 4h2a1 1 0 0 1 1 1v2"/><path d="M20 17v2a1 1 0 0 1-1 1h-2"/><path d="M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+                </a>
+                {% endif %}
+            </div>
             <div id="pda-zoek-resultaten" class="pda-zoek-resultaten" hidden></div>
         </div>
     </div>

@@ -136,6 +136,12 @@ KOLOM_MIGRATIES = [
     ("telling_regels", "gecorrigeerd_op", "TEXT"),
     ("telling_regels", "correctie_opmerking", "TEXT"),
     ("instellingen", "frituurvet_interval_dagen", "INTEGER NOT NULL DEFAULT 14"),
+    # Default bewust "alles" i.p.v. leeg: bestaande vrijwilligers hadden tot nu
+    # toe altijd volledige toegang tot Kassa/Keuken/Voorraad/Stemmen (er was
+    # geen sectiebeperking), dus deze migratie mag niemand er bij de eerste
+    # herstart na de update ineens uit gooien. Een beheerder kan het daarna
+    # per account versmallen via Accounts.
+    ("gebruikers", "secties", "TEXT NOT NULL DEFAULT 'voorraad,kassa,keuken,stemmen'"),
 ]
 
 

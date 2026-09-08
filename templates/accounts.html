@@ -6,8 +6,8 @@
     Beheer wie kan inloggen op dit systeem, en met welke rechten.
     <strong>Beheerder</strong> heeft overal toegang (accounts, categorieën,
     back-ups, assortiment). <strong>Vrijwilliger</strong> kan de dagelijkse
-    dingen doen (tellen, boeken, bestellijst, bijzonderheden) maar niet het
-    systeem zelf beheren.
+    dingen doen (bijzonderheden altijd), en per account is in te stellen bij
+    welke secties (Voorraad, Kassa, Keuken, Stemmen) diegene mag.
 </p>
 
 <div class="kaart">
@@ -15,7 +15,7 @@
     <div class="tabel-wrap">
         <table>
             <thead>
-                <tr><th>Naam</th><th>E-mailadres</th><th>Rol</th><th>Laatste inlog</th><th>Aangemaakt op</th><th></th></tr>
+                <tr><th>Naam</th><th>E-mailadres</th><th>Rol</th><th>Secties</th><th>Laatste inlog</th><th>Aangemaakt op</th><th></th></tr>
             </thead>
             <tbody>
                 {% for g in gebruikers %}
@@ -33,6 +33,25 @@
                         <span class="badge badge-ok">Beheerder</span>
                         {% else %}
                         <span class="badge badge-neutraal">Vrijwilliger</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if g.rol == 'beheerder' %}
+                        <span class="tekst-zacht">Alles (beheerder)</span>
+                        {% else %}
+                        <form method="post" action="{{ url_for('account_secties_wijzigen', gebruiker_id=g.id) }}"
+                              style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            {% set gebruiker_secties = secties_lijst(g.secties) %}
+                            {% for sectie in alle_secties %}
+                            <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer; white-space:nowrap">
+                                <input type="checkbox" name="secties" value="{{ sectie }}" style="width:auto"
+                                       {{ 'checked' if sectie in gebruiker_secties }}>
+                                {{ sectie_labels[sectie] }}
+                            </label>
+                            {% endfor %}
+                            <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
+                        </form>
                         {% endif %}
                     </td>
                     <td>{{ g.laatste_login|datum_nl if g.laatste_login else 'Nog nooit ingelogd' }}</td>
@@ -86,7 +105,18 @@
                 </select>
             </div>
         </div>
-        <button type="submit" class="btn btn-geel">Account aanmaken</button>
+        <div class="veld" style="margin-top:0.8rem">
+            <label>Secties (alleen relevant voor vrijwilligers, beheerders zien toch alles)</label>
+            <div style="display:flex; flex-wrap:wrap; gap:0.9rem">
+                {% for sectie in alle_secties %}
+                <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer; white-space:nowrap">
+                    <input type="checkbox" name="secties" value="{{ sectie }}" style="width:auto" checked>
+                    {{ sectie_labels[sectie] }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        <button type="submit" class="btn btn-geel" style="margin-top:0.8rem">Account aanmaken</button>
     </form>
 </div>
 {% endblock %}

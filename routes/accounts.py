@@ -5,7 +5,15 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import mail
 from database import WACHTWOORD_HASH_METHODE, get_db
-from helpers import genereer_wachtwoord_token, now_str
+from helpers import SECTIE_LABELS, SECTIES, genereer_wachtwoord_token, now_str
+
+
+def _secties_uit_formulier():
+    """Leest de aangevinkte secties-checkboxes en geeft ze terug als
+    comma-tekst, precies zoals opgeslagen in gebruikers.secties. Onbekende
+    waarden (geknoei met het formulier) worden genegeerd."""
+    gekozen = [s for s in request.form.getlist("secties") if s in SECTIES]
+    return ",".join(gekozen)
 
 
 def register_routes(app):
@@ -13,13 +21,18 @@ def register_routes(app):
     def accounts_lijst():
         db = get_db()
         gebruikers = db.execute(
-            "SELECT id, naam, email, rol, aangemaakt_op, laatste_login FROM gebruikers ORDER BY naam"
+            "SELECT id, naam, email, rol, secties, aangemaakt_op, laatste_login "
+            "FROM gebruikers ORDER BY naam"
         ).fetchall()
         aantal_beheerders = db.execute(
             "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder'"
         ).fetchone()["n"]
         return render_template(
-            "accounts.html", gebruikers=gebruikers, aantal_beheerders=aantal_beheerders
+            "accounts.html",
+            gebruikers=gebruikers,
+            aantal_beheerders=aantal_beheerders,
+            alle_secties=SECTIES,
+            sectie_labels=SECTIE_LABELS,
         )
 
     @app.route("/accounts/nieuw", methods=["POST"])
@@ -29,6 +42,7 @@ def register_routes(app):
         rol = request.form.get("rol", "vrijwilliger")
         if rol not in ("beheerder", "vrijwilliger"):
             rol = "vrijwilliger"
+        secties = _secties_uit_formulier()
         db = get_db()
 
         if not naam or not email:
@@ -40,9 +54,9 @@ def register_routes(app):
                 secrets.token_hex(16), method=WACHTWOORD_HASH_METHODE
             )
             cursor = db.execute(
-                """INSERT INTO gebruikers (naam, email, wachtwoord_hash, rol, aangemaakt_op)
-                   VALUES (?, ?, ?, ?, ?)""",
-                (naam, email, onbruikbaar_wachtwoord, rol, now_str()),
+                """INSERT INTO gebruikers (naam, email, wachtwoord_hash, rol, secties, aangemaakt_op)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (naam, email, onbruikbaar_wachtwoord, rol, secties, now_str()),
             )
             db.commit()
             token = genereer_wachtwoord_token(db, cursor.lastrowid, geldig_uren=72)
@@ -105,6 +119,22 @@ def register_routes(app):
         db.execute("UPDATE gebruikers SET rol = ? WHERE id = ?", (nieuwe_rol, gebruiker_id))
         db.commit()
         flash(f"'{gebruiker['naam']}' is nu {nieuwe_rol}.", "success")
+        return redirect(url_for("accounts_lijst"))
+
+    @app.route("/accounts/<int:gebruiker_id>/secties", methods=["POST"])
+    def account_secties_wijzigen(gebruiker_id):
+        db = get_db()
+        gebruiker = db.execute(
+            "SELECT * FROM gebruikers WHERE id = ?", (gebruiker_id,)
+        ).fetchone()
+        if gebruiker is None:
+            flash("Account niet gevonden.", "error")
+            return redirect(url_for("accounts_lijst"))
+
+        secties = _secties_uit_formulier()
+        db.execute("UPDATE gebruikers SET secties = ? WHERE id = ?", (secties, gebruiker_id))
+        db.commit()
+        flash(f"Rechten van '{gebruiker['naam']}' bijgewerkt.", "success")
         return redirect(url_for("accounts_lijst"))
 
     @app.route("/accounts/<int:gebruiker_id>/verwijderen", methods=["POST"])

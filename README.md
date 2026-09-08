@@ -27,6 +27,17 @@ Gebouwd met Python (Flask) en SQLite — geen Node.js nodig.
   verkocht, meer geteld = correctie. Elke telling sluit een periode af en
   genereert een verkooprapport (PDF) met aantallen en omzet per product.
 - **Geschiedenis** — volledig log van alle boekingen, filterbaar per product.
+- **Rechten per sectie** — naast de rol beheerder/vrijwilliger is per account
+  in te stellen bij welke secties (Voorraad, Kassa, Keuken, Stemmen) iemand
+  mag; beheerders hebben altijd overal toegang.
+- **Schaplabels & scannen** — printbare schaplabels (A4, om te knippen) met
+  logo, minimumvoorraad en een QR-code naar de productpagina, per product of
+  in bulk. Die QR-code is met elke telefooncamera te scannen, en de
+  handterminal-weergave heeft ook een ingebouwde scanner (Scannen-knop).
+- **Offline-bestendig boeken en tellen** — een boeking die niet weg kan door
+  slecht bereik wordt lokaal bewaard en alsnog verstuurd zodra er weer
+  verbinding is; de looplijst probeert een mislukte stap vanzelf opnieuw
+  zodra het bereik terugkomt.
 
 ## Lokaal draaien
 

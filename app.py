@@ -24,9 +24,12 @@ from helpers import (
     csrf_token,
     dagdeel_groet,
     format_datum,
+    SECTIES,
+    heeft_sectie_toegang,
     met_tags_filter,
     naar_besteleenheden,
     naar_voorraadeenheden,
+    secties_lijst,
     stemming_is_open,
 )
 
@@ -37,6 +40,8 @@ OPEN_ENDPOINTS = {
     "login",
     "static",
     "favicon_ico",
+    "service_worker",
+    "offline_pagina",
     "wachtwoord_vergeten",
     "wachtwoord_instellen",
     # De publieke stempagina's hebben geen account nodig, bezoekers scannen
@@ -54,6 +59,7 @@ BEHEERDER_ENDPOINTS = {
     "account_nieuw",
     "account_verwijderen",
     "account_rol_wijzigen",
+    "account_secties_wijzigen",
     "account_email_wijzigen",
     "categorieen_lijst",
     "categorie_verwijderen",
@@ -78,6 +84,92 @@ BEHEERDER_ENDPOINTS = {
     "club_agenda_controleren",
     "mededeling_pinnen_als_banner",
 }
+
+# Fijnmazige rechten bovenop BEHEERDER_ENDPOINTS: elk account (ook
+# vrijwilligers) heeft per sectie een los aan/uit-vinkje (zie Accounts).
+# Beheerders omzeilen deze check altijd (zie vereis_login hieronder) -- dit
+# is puur om te bepalen welke secties een vrijwilliger wél/niet mag. Routes
+# die al in BEHEERDER_ENDPOINTS staan (bijv. product_nieuw) hoeven hier niet
+# ook nog in: die blijven sowieso beheerder-only, ongeacht secties.
+SECTIE_ENDPOINTS = {
+    "voorraad": {
+        "voorraadoverzicht",
+        "voorraadoverzicht_pdf_route",
+        "voorraadoverzicht_csv_route",
+        "producten_lijst",
+        "product_zoeken",
+        "product_detail",
+        "product_snel_toevoegen",
+        "product_label_pdf",
+        "producten_labels_pdf",
+        "boeken",
+        "levering_inboeken",
+        "geschiedenis",
+        "tellen",
+        "tellen_lopen_starten",
+        "tellen_lopen",
+        "tellen_lopen_controleren",
+        "tellingen_overzicht",
+        "tellingen_gecombineerd_pdf",
+        "telling_detail",
+        "telling_regel_corrigeren",
+        "telling_pdf",
+        "bestellijst",
+        "bestellijst_pdf_route",
+        "bestelling_aanmaken",
+        "bestelling_nieuw",
+        "bestelling_bewerken",
+        "bestelling_inboeken",
+        "bestelling_verwijderen",
+        "fusten_overzicht",
+        "boodschappenlijst",
+        "boodschap_afvinken",
+        "boodschap_verwijderen",
+        "scannen",
+    },
+    "kassa": {
+        "kassa_tellen",
+        "kassa_telling_detail",
+        "kassa_telling_heropenen",
+        "kassa_telling_omzet_corrigeren",
+        "kassa_telling_coupures_corrigeren",
+        "kassa_telling_bewerken",
+        "kassa_telling_goedkeuren",
+        "kassa_telling_pdf",
+        "kassa_geschiedenis",
+        "kassa_mutatie_nieuw",
+        "kassa_mutatie_corrigeren",
+    },
+    "keuken": {
+        "frituurvet_vervangen",
+        "keuken_voorraad",
+        "keuken_instellingen",
+    },
+    "stemmen": {
+        "stemmen_overzicht",
+        "stemvraag_nieuw",
+        "stemvraag_detail",
+        "stemvraag_poster_pdf",
+        "stem_afkeuren",
+        "stem_goedkeuren",
+        "stemvraag_sluiten",
+        "stemvraag_heropenen",
+        "stemvraag_einddatum_instellen",
+        "stemvraag_instellingen_bijwerken",
+        "stemvraag_verwijderen",
+        "bieren_lijst",
+        "bier_verwijderen",
+    },
+}
+# Omgekeerde opzoektabel: endpoint -> vereiste sectie, 1x opgebouwd bij het
+# starten van het proces i.p.v. bij elk verzoek opnieuw over te zoeken.
+ENDPOINT_SECTIE = {
+    endpoint: sectie for sectie, endpoints in SECTIE_ENDPOINTS.items() for endpoint in endpoints
+}
+# Voor het filteren van de zijbalk: welke navigatiegroep hoort bij welke
+# sectie. "Algemeen" staat hier bewust niet in -- dat blijft voor iedereen
+# zichtbaar.
+NAV_GROEP_SECTIE = {"Voorraad": "voorraad", "Kassa": "kassa", "Keuken": "keuken", "Stemmen": "stemmen"}
 
 NAV_ITEMS = [
     {
@@ -293,6 +385,7 @@ def create_app(database_path=None):
     app.jinja_env.filters["naar_besteleenheden"] = naar_besteleenheden
     app.jinja_env.filters["met_tags"] = met_tags_filter
     app.jinja_env.globals["stemming_is_open"] = stemming_is_open
+    app.jinja_env.globals["secties_lijst"] = secties_lijst
 
     @app.before_request
     def zet_weergave_modus():
@@ -331,25 +424,48 @@ def create_app(database_path=None):
             return None
         if "gebruiker_id" not in session:
             return redirect(url_for("login", next=request.path))
-        if "gebruiker_rol" not in session:
-            # Sessie is aangemaakt voor rollen bestonden (of anderszins
-            # verouderd) -- rol alsnog ophalen zodat je niet handmatig
-            # hoeft uit/in te loggen na een update.
+        if "gebruiker_rol" not in session or "gebruiker_secties" not in session:
+            # Sessie is aangemaakt voor rollen/secties bestonden (of
+            # anderszins verouderd) -- alsnog ophalen zodat je niet
+            # handmatig hoeft uit/in te loggen na een update.
             db = get_db()
             gebruiker = db.execute(
-                "SELECT rol FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)
+                "SELECT rol, secties FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)
             ).fetchone()
             if gebruiker is None:
                 session.clear()
                 return redirect(url_for("login", next=request.path))
             session["gebruiker_rol"] = gebruiker["rol"]
+            session["gebruiker_secties"] = gebruiker["secties"]
         if request.endpoint in BEHEERDER_ENDPOINTS and session.get("gebruiker_rol") != "beheerder":
             flash("Deze pagina is alleen voor beheerders.", "error")
+            return redirect(url_for("dashboard"))
+        vereiste_sectie = ENDPOINT_SECTIE.get(request.endpoint)
+        if vereiste_sectie and not heeft_sectie_toegang(
+            session.get("gebruiker_rol"), session.get("gebruiker_secties"), vereiste_sectie
+        ):
+            flash("Deze pagina is niet beschikbaar voor jouw account.", "error")
             return redirect(url_for("dashboard"))
         return None
 
     @app.context_processor
     def inject_nav():
+        gebruiker_rol = session.get("gebruiker_rol")
+        gebruiker_secties = session.get("gebruiker_secties")
+        zichtbare_nav_items = [
+            item
+            for item in NAV_ITEMS
+            if item["groep"] not in NAV_GROEP_SECTIE
+            or heeft_sectie_toegang(gebruiker_rol, gebruiker_secties, NAV_GROEP_SECTIE[item["groep"]])
+        ]
+        zichtbare_pda_items = [
+            item
+            for item in PDA_NAV_ITEMS
+            if item["url_endpoint"] not in ENDPOINT_SECTIE
+            or heeft_sectie_toegang(
+                gebruiker_rol, gebruiker_secties, ENDPOINT_SECTIE[item["url_endpoint"]]
+            )
+        ]
         actieve_nav = next(
             (item for item in NAV_ITEMS if request.endpoint in item["endpoints"]),
             None,
@@ -369,9 +485,13 @@ def create_app(database_path=None):
             ),
             None,
         )
+        sectie_toegang = {
+            sectie: heeft_sectie_toegang(gebruiker_rol, gebruiker_secties, sectie) for sectie in SECTIES
+        }
         return {
-            "nav_items": NAV_ITEMS,
-            "pda_nav_items": PDA_NAV_ITEMS,
+            "nav_items": zichtbare_nav_items,
+            "pda_nav_items": zichtbare_pda_items,
+            "sectie_toegang": sectie_toegang,
             "actieve_nav": actieve_nav,
             "pda_actieve_label": pda_actieve_item["pda_label"] if pda_actieve_item else None,
             "huidige_gebruiker": session.get("gebruiker_naam"),
@@ -388,6 +508,23 @@ def create_app(database_path=None):
     @app.route("/favicon.ico")
     def favicon_ico():
         return send_from_directory(app.static_folder, "favicon.ico")
+
+    @app.route("/sw.js")
+    def service_worker():
+        # Moet op het domeinniveau ("/sw.js") staan, niet onder /static/ --
+        # anders beperkt de browser de scope van de service worker tot
+        # /static/, en kan die geen navigaties (paginabezoeken) elders op de
+        # site opvangen. send_from_directory herkent .js zelf al correct als
+        # text/javascript.
+        return send_from_directory(app.static_folder, "sw.js")
+
+    @app.route("/offline")
+    def offline_pagina():
+        """Losstaande, minimale pagina (geen base.html) die de service
+        worker toont als een navigatie mislukt zonder verbinding -- bewust
+        geen sessie-afhankelijke inhoud (ingelogde naam, zijbalk), want die
+        kan op het moment van cachen allang verouderd zijn."""
+        return render_template("offline.html")
 
     @app.after_request
     def beveiligingsheaders(response):
