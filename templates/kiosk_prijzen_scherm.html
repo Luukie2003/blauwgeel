@@ -60,6 +60,19 @@
         .prijs-regel .naam { flex-shrink: 1; }
         .prijs-regel .stippel { flex: 1; border-bottom: 2px dotted rgba(255,255,255,0.25); margin-bottom: 0.35rem; }
         .prijs-regel .bedrag { flex-shrink: 0; font-weight: 700; color: var(--geel); }
+        .prijs-regel--uitverkocht .naam { text-decoration: line-through; opacity: 0.55; }
+        .prijs-regel--uitverkocht .stippel { opacity: 0.3; }
+        .bedrag-uitverkocht {
+            flex-shrink: 0;
+            background: #d81e1e;
+            color: #fff;
+            font-weight: 800;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 0.22rem 0.7rem;
+            border-radius: 999px;
+        }
         .leeg { color: var(--tekst-zacht); font-size: 1.3rem; margin-top: 2rem; }
     </style>
 </head>
@@ -79,10 +92,14 @@
         <div class="categorie-blok">
             <h2>{{ naam }}</h2>
             {% for p in producten %}
-            <div class="prijs-regel">
+            <div class="prijs-regel{{ ' prijs-regel--uitverkocht' if p.kiosk_uitverkocht else '' }}">
                 <span class="naam">{{ p.naam }}</span>
                 <span class="stippel"></span>
+                {% if p.kiosk_uitverkocht %}
+                <span class="bedrag-uitverkocht">Uitverkocht</span>
+                {% else %}
                 <span class="bedrag">&euro; {{ '%.2f'|format(p.verkoopprijs) }}</span>
+                {% endif %}
             </div>
             {% endfor %}
         </div>

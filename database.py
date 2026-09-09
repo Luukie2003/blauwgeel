@@ -144,6 +144,11 @@ KOLOM_MIGRATIES = [
     ("gebruikers", "secties", "TEXT NOT NULL DEFAULT 'voorraad,kassa,keuken,stemmen'"),
     ("producten", "auto_inactief_bij_nul", "INTEGER NOT NULL DEFAULT 0"),
     ("producten", "toon_op_kiosk", "INTEGER NOT NULL DEFAULT 0"),
+    # Puur voor het prijzenscherm -- een snelle "even geen voorraad meer"
+    # markering, los van de echte voorraad/actief-status (zie
+    # kiosk_product_uitverkocht_wisselen). Staat de knop weer uit zodra er
+    # bijvoorbeeld een nieuw fust is aangesloten.
+    ("producten", "kiosk_uitverkocht", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

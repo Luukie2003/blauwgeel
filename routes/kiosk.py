@@ -167,6 +167,36 @@ def register_routes(app):
             return jsonify({"ok": True, "toon_op_kiosk": nieuwe_status, "melding": melding})
         return redirect(url_for("kiosk_prijzen_instellingen"))
 
+    @app.route("/kiosk/prijzen/product/<int:product_id>/uitverkocht", methods=["POST"])
+    def kiosk_product_uitverkocht_wisselen(product_id):
+        """Losse UITVERKOCHT-knop per product (PDA-weergave van de Kiosk-
+        pagina) -- puur een snelle markering voor het prijzenscherm, raakt
+        de echte voorraad of actief-status niet aan."""
+        db = get_db()
+        product = db.execute(
+            "SELECT * FROM producten WHERE id = ?", (product_id,)
+        ).fetchone()
+        if product is None:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Product niet gevonden."}), 404
+            flash("Product niet gevonden.", "error")
+            return redirect(url_for("kiosk_prijzen_instellingen"))
+        nieuwe_status = 0 if product["kiosk_uitverkocht"] else 1
+        db.execute(
+            "UPDATE producten SET kiosk_uitverkocht = ? WHERE id = ?", (nieuwe_status, product_id)
+        )
+        db.commit()
+        if is_ajax_verzoek():
+            melding = (
+                f"'{product['naam']}' staat als uitverkocht op het prijzenscherm."
+                if nieuwe_status
+                else f"'{product['naam']}' is weer beschikbaar op het prijzenscherm."
+            )
+            return jsonify(
+                {"ok": True, "kiosk_uitverkocht": nieuwe_status, "melding": melding}
+            )
+        return redirect(url_for("kiosk_prijzen_instellingen"))
+
     def _prijzen_categorieen(db):
         producten = db.execute(
             """SELECT * FROM producten
@@ -184,7 +214,10 @@ def register_routes(app):
         # onnodige herlaadbeurt.
         return _versie(
             [
-                (naam, [(p["id"], p["naam"], p["verkoopprijs"]) for p in lijst])
+                (
+                    naam,
+                    [(p["id"], p["naam"], p["verkoopprijs"], p["kiosk_uitverkocht"]) for p in lijst],
+                )
                 for naam, lijst in categorieen
             ]
         )

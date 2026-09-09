@@ -103,6 +103,7 @@ BEHEERDER_ENDPOINTS = {
     "kiosk_hub",
     "kiosk_prijzen_instellingen",
     "kiosk_product_toon_wisselen",
+    "kiosk_product_uitverkocht_wisselen",
     "kiosk_sponsoren_leden",
     "kiosk_sponsor_nieuw",
     "kiosk_sponsor_bewerken",

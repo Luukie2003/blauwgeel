@@ -19,15 +19,23 @@
     {% if pda_modus %}
     <div class="pda-producten-kaarten">
         {% for p in producten %}
-        <div class="pda-kaartje filter-rij" data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie)|lower }}">
-            <form method="post" action="{{ url_for('kiosk_product_toon_wisselen', product_id=p.id) }}" class="js-ajax-form pda-kaartje-vink">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <label class="schuif" title="{{ 'Staat op het prijzenscherm, tik om te verbergen' if p.toon_op_kiosk else 'Staat niet op het prijzenscherm, tik om te tonen' }}">
-                    <input type="checkbox" {{ 'checked' if p.toon_op_kiosk else '' }} onchange="this.form.requestSubmit()">
-                    <span class="schuif-balk"></span>
-                </label>
-                <span class="pda-kaartje-naam">{{ p.naam }}</span>
-            </form>
+        <div class="pda-kaartje filter-rij{{ ' pda-kaartje--uitverkocht' if p.kiosk_uitverkocht else '' }}" data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie)|lower }}">
+            <div class="pda-product-kop">
+                <form method="post" action="{{ url_for('kiosk_product_toon_wisselen', product_id=p.id) }}" class="js-ajax-form pda-kaartje-vink">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label class="schuif" title="{{ 'Staat op het prijzenscherm, tik om te verbergen' if p.toon_op_kiosk else 'Staat niet op het prijzenscherm, tik om te tonen' }}">
+                        <input type="checkbox" {{ 'checked' if p.toon_op_kiosk else '' }} onchange="this.form.requestSubmit()">
+                        <span class="schuif-balk"></span>
+                    </label>
+                    <span class="pda-kaartje-naam">{{ p.naam }}</span>
+                </form>
+                <form method="post" action="{{ url_for('kiosk_product_uitverkocht_wisselen', product_id=p.id) }}" class="js-ajax-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-klein btn-uitverkocht{{ ' actief' if p.kiosk_uitverkocht else '' }}">
+                        Uitverkocht
+                    </button>
+                </form>
+            </div>
             <div class="pda-kaartje-info">
                 <span class="tekst-zacht">{{ p.categorie }} &middot; &euro; {{ '%.2f'|format(p.verkoopprijs) }}</span>
             </div>

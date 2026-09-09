@@ -1770,6 +1770,34 @@ footer {
     border-color: #e3a9a9;
 }
 
+/* Kiosk-instellingen (PDA): het schuifje + naam links, de UITVERKOCHT-knop
+   rechts op dezelfde regel. */
+.pda-product-kop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.btn-uitverkocht {
+    flex-shrink: 0;
+    background: #ffffff;
+    color: var(--rood);
+    border: 1px solid #cf9c9c;
+}
+.btn-uitverkocht:hover { background: var(--rood-bg); }
+.btn-uitverkocht.actief {
+    background: var(--rood);
+    color: #ffffff;
+    border-color: var(--rood);
+}
+.btn-uitverkocht.actief:hover { background: #841515; }
+
+.pda-kaartje--uitverkocht {
+    background: var(--rood-bg);
+    border-color: #e3a9a9;
+}
+
 .pda-binnen-toggle {
     display: flex;
     align-items: center;

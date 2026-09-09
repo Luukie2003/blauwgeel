@@ -130,6 +130,89 @@ def test_kiosk_tegel_op_pda_start_alleen_voor_beheerder(client, db):
     assert b"Kiosk" not in resp.data
 
 
+def test_product_uitverkocht_wisselen_via_ajax(ingelogde_client, db):
+    """De UITVERKOCHT-knop op de Kiosk-pagina in de PDA-weergave."""
+    product_id = _voeg_product_toe(db, "Op Is Op", toon_op_kiosk=1)
+
+    resp = ingelogde_client.post(
+        f"/kiosk/prijzen/product/{product_id}/uitverkocht",
+        data={"csrf_token": _csrf(ingelogde_client)},
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["kiosk_uitverkocht"] == 1
+    assert "uitverkocht" in data["melding"]
+
+    rij = db.execute(
+        "SELECT kiosk_uitverkocht FROM producten WHERE id = ?", (product_id,)
+    ).fetchone()
+    assert rij["kiosk_uitverkocht"] == 1
+
+    # Nog een keer tikken maakt 'm weer beschikbaar.
+    resp2 = ingelogde_client.post(
+        f"/kiosk/prijzen/product/{product_id}/uitverkocht",
+        data={"csrf_token": _csrf(ingelogde_client)},
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert resp2.get_json()["kiosk_uitverkocht"] == 0
+
+
+def test_product_uitverkocht_wisselen_vereist_beheerder(client, db):
+    _maak_vrijwilliger(db, "vrijwilliger_uitverkocht", "voorraad")
+    _login(client, "vrijwilliger_uitverkocht")
+    product_id = _voeg_product_toe(db, "Vrijwilliger Mag Niet Uitverkopen", toon_op_kiosk=1)
+
+    resp = client.post(
+        f"/kiosk/prijzen/product/{product_id}/uitverkocht",
+        data={"csrf_token": _csrf(client)},
+    )
+    assert resp.status_code == 302
+    rij = db.execute(
+        "SELECT kiosk_uitverkocht FROM producten WHERE id = ?", (product_id,)
+    ).fetchone()
+    assert rij["kiosk_uitverkocht"] == 0
+
+
+def test_prijzenscherm_toont_uitverkocht_duidelijk(client, db):
+    product_id = _voeg_product_toe(db, "Bijna Op", toon_op_kiosk=1)
+    db.execute("UPDATE producten SET kiosk_uitverkocht = 1 WHERE id = ?", (product_id,))
+    db.commit()
+
+    resp = client.get("/kiosk/prijzen")
+
+    assert resp.status_code == 200
+    assert b"Bijna Op" in resp.data
+    assert b"Uitverkocht" in resp.data
+    assert b"prijs-regel--uitverkocht" in resp.data
+
+
+def test_prijzenscherm_versie_verandert_bij_uitverkocht_wisselen(ingelogde_client, db):
+    product_id = _voeg_product_toe(db, "Versie Product", toon_op_kiosk=1)
+
+    versie_voor = ingelogde_client.get("/kiosk/prijzen/versie").get_json()["versie"]
+    ingelogde_client.post(
+        f"/kiosk/prijzen/product/{product_id}/uitverkocht",
+        data={"csrf_token": _csrf(ingelogde_client)},
+        headers={"X-Requested-With": "fetch"},
+    )
+    versie_na = ingelogde_client.get("/kiosk/prijzen/versie").get_json()["versie"]
+
+    assert versie_voor != versie_na
+
+
+def test_kiosk_pda_pagina_toont_uitverkocht_knop(ingelogde_client, db):
+    _voeg_product_toe(db, "Kaartje Met Knop", toon_op_kiosk=1)
+    ingelogde_client.get("/weergave/pda")
+
+    resp = ingelogde_client.get("/kiosk/prijzen/instellingen")
+
+    assert resp.status_code == 200
+    assert b"Uitverkocht" in resp.data
+    assert b"btn-uitverkocht" in resp.data
+
+
 # ---------- Onderdeel 2: Sponsoren/leden beheren ----------
 
 
