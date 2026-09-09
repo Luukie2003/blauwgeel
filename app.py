@@ -387,9 +387,9 @@ NAV_ITEMS.sort(key=lambda item: NAV_GROEP_VOLGORDE.index(item["groep"]))
 PDA_NAV_ITEMS = [
     {"url_endpoint": "tellen", "pda_label": "Tellen"},
     {"url_endpoint": "boeken", "pda_label": "Boeken"},
-    {"url_endpoint": "producten_lijst", "pda_label": "Producten"},
     {"url_endpoint": "bijzonderheden", "pda_label": "Prikbord"},
     {"url_endpoint": "kassa_tellen", "pda_label": "Kassa"},
+    {"url_endpoint": "kiosk_prijzen_instellingen", "pda_label": "Kiosk"},
     {"url_endpoint": "bestellijst", "pda_label": "Bestellijst"},
     {"url_endpoint": "geschiedenis", "pda_label": "Geschiedenis"},
     {"url_endpoint": "boodschappenlijst", "pda_label": "Boodschappen"},

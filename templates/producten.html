@@ -1,7 +1,6 @@
-{% extends basis_template %}
+{% extends "base.html" %}
 {% block titel %}Producten{% endblock %}
 {% block inhoud %}
-{% if not pda_modus %}
 <div class="actiebalk">
     <p class="subtitel" style="margin:0">Beheer het assortiment en de minimumvoorraad.</p>
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
@@ -14,15 +13,11 @@
         <button type="button" id="labels-printen-knop" class="btn btn-rand" disabled>Schaplabels printen</button>
     </div>
 </div>
-{% elif huidige_gebruiker_rol == 'beheerder' %}
-<p class="subtitel">Zet producten met 1 tik aan/uit, of op/van het prijzenscherm.</p>
-{% endif %}
 
 <div class="kaart">
     {% if producten %}
     <div class="filterbalk">
         <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">
-        {% if not pda_modus %}
         <select id="filter-categorie">
             <option value="">Alle categorieën</option>
             {% for c in categorieen %}
@@ -39,7 +34,6 @@
             <input type="checkbox" id="label-select-alles" style="width:auto">
             Alles selecteren
         </label>
-        {% endif %}
         <span id="filter-aantal" class="tekst-zacht"></span>
     </div>
     <div id="producten-groepen">
@@ -49,44 +43,6 @@
                 <span>{{ categorie }}</span>
                 <span class="tekst-zacht categorie-groep-aantal">{{ producten_in_categorie|length }}</span>
             </summary>
-            {% if pda_modus %}
-            <div class="pda-producten-kaarten">
-                {% for p in producten_in_categorie %}
-                <div class="pda-kaartje filter-rij"
-                     data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or ''))|lower }}">
-                    <div class="pda-kaartje-vink" style="cursor:default">
-                        {% if p.afbeelding %}
-                        <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
-                        {% endif %}
-                        <span class="pda-kaartje-naam">{{ p.naam }}</span>
-                    </div>
-                    <div class="pda-product-schuiven">
-                        {% if huidige_gebruiker_rol == 'beheerder' %}
-                        <form method="post" action="{{ url_for('product_actief_wisselen', product_id=p.id) }}" class="js-ajax-form pda-product-schuif-form">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <label class="schuif" title="{{ 'Actief, tik om uit te zetten' if p.actief else 'Inactief, tik om aan te zetten' }}">
-                                <input type="checkbox" {{ 'checked' if p.actief else '' }} onchange="this.form.requestSubmit()">
-                                <span class="schuif-balk"></span>
-                            </label>
-                            <span>Actief</span>
-                        </form>
-                        <form method="post" action="{{ url_for('kiosk_product_toon_wisselen', product_id=p.id) }}" class="js-ajax-form pda-product-schuif-form">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <label class="schuif" title="{{ 'Staat op het prijzenscherm, tik om te verbergen' if p.toon_op_kiosk else 'Staat niet op het prijzenscherm, tik om te tonen' }}">
-                                <input type="checkbox" {{ 'checked' if p.toon_op_kiosk else '' }} onchange="this.form.requestSubmit()">
-                                <span class="schuif-balk"></span>
-                            </label>
-                            <span>Prijzenscherm</span>
-                        </form>
-                        {% else %}
-                        {% if p.actief %}<span class="badge badge-ok">Actief</span>{% else %}<span class="badge badge-neutraal">Inactief</span>{% endif %}
-                        {% if p.toon_op_kiosk %}<span class="badge badge-ok">Op prijzenscherm</span>{% endif %}
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
             <div class="tabel-wrap">
                 <table class="producten-tabel">
                     <thead>
@@ -97,7 +53,7 @@
                     </thead>
                     <tbody>
                         {% for p in producten_in_categorie %}
-                        <tr class="filter-rij" data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie ~ ' ' ~ (p.subcategorie or ''))|lower }}" data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}">
+                        <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie ~ ' ' ~ (p.subcategorie or ''))|lower }}" data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}">
                             <td><input type="checkbox" class="label-select-rij" value="{{ p.id }}" style="width:auto"></td>
                             <td>
                                 {% if p.afbeelding %}
@@ -162,7 +118,6 @@
                     </tbody>
                 </table>
             </div>
-            {% endif %}
         </details>
         {% endfor %}
     </div>
@@ -180,19 +135,15 @@
     var aantalLabel = document.getElementById('filter-aantal');
     var leegMelding = document.getElementById('filter-leeg');
     if (!zoekVeld) return;
-    // .filter-rij zit zowel op de desktop-tabelrijen als op de PDA-kaartjes
-    // -- zo werkt deze ene filterfunctie voor allebei de weergaven.
     var rijen = Array.prototype.slice.call(
-        document.querySelectorAll('.filter-rij')
+        document.querySelectorAll('#producten-groepen tbody tr')
     );
     var groepen = Array.prototype.slice.call(
         document.querySelectorAll('.categorie-groep')
     );
-    // De categorie/subcategorie-selects staan alleen in de desktop-weergave.
-    var alleSubOpties = subVeld ? Array.prototype.slice.call(subVeld.options) : [];
+    var alleSubOpties = Array.prototype.slice.call(subVeld.options);
 
     function filterSubOpties() {
-        if (!catVeld || !subVeld) return;
         var categorie = catVeld.value;
         var huidige = subVeld.value;
         var nogGeldig = false;
@@ -207,8 +158,8 @@
 
     function filter() {
         var zoek = zoekVeld.value.trim().toLowerCase();
-        var categorie = catVeld ? catVeld.value : '';
-        var subcategorie = subVeld ? subVeld.value : '';
+        var categorie = catVeld.value;
+        var subcategorie = subVeld.value;
         var zichtbaar = 0;
         rijen.forEach(function (rij) {
             var matchZoek = !zoek || rij.dataset.zoek.indexOf(zoek) !== -1;
@@ -226,7 +177,7 @@
         // sectie te tonen.
         groepen.forEach(function (groep) {
             var heeftZichtbare = Array.prototype.some.call(
-                groep.querySelectorAll('.filter-rij'),
+                groep.querySelectorAll('tbody tr'),
                 function (rij) { return rij.style.display !== 'none'; }
             );
             groep.style.display = heeftZichtbare ? '' : 'none';
@@ -234,8 +185,8 @@
     }
 
     zoekVeld.addEventListener('input', filter);
-    if (catVeld) catVeld.addEventListener('change', function () { filterSubOpties(); filter(); });
-    if (subVeld) subVeld.addEventListener('change', filter);
+    catVeld.addEventListener('change', function () { filterSubOpties(); filter(); });
+    subVeld.addEventListener('change', filter);
     filter();
 })();
 

@@ -67,6 +67,69 @@ def test_prijzenscherm_instellingen_bulk_toggle_werkt(ingelogde_client, db):
     assert b"Nieuw Op Kiosk" in scherm.data
 
 
+def test_product_toon_op_kiosk_wisselen_via_ajax(ingelogde_client, db):
+    """Het losse schuifje op de Kiosk-pagina in de PDA-weergave -- 1 tik,
+    direct opgeslagen, geen 'Alles opslaan' nodig."""
+    product_id = _voeg_product_toe(db, "Los Te Wisselen", toon_op_kiosk=0)
+
+    resp = ingelogde_client.post(
+        f"/kiosk/prijzen/product/{product_id}/toon",
+        data={"csrf_token": _csrf(ingelogde_client)},
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["toon_op_kiosk"] == 1
+    assert "staat nu op het prijzenscherm" in data["melding"]
+
+    rij = db.execute("SELECT toon_op_kiosk FROM producten WHERE id = ?", (product_id,)).fetchone()
+    assert rij["toon_op_kiosk"] == 1
+
+    # Nog een keer tikken zet 'm weer uit.
+    resp2 = ingelogde_client.post(
+        f"/kiosk/prijzen/product/{product_id}/toon",
+        data={"csrf_token": _csrf(ingelogde_client)},
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert resp2.get_json()["toon_op_kiosk"] == 0
+
+
+def test_product_toon_op_kiosk_wisselen_vereist_beheerder(client, db):
+    _maak_vrijwilliger(db, "vrijwilliger_kiosk", "voorraad")
+    _login(client, "vrijwilliger_kiosk")
+    product_id = _voeg_product_toe(db, "Vrijwilliger Mag Niet", toon_op_kiosk=0)
+
+    resp = client.post(
+        f"/kiosk/prijzen/product/{product_id}/toon",
+        data={"csrf_token": _csrf(client)},
+    )
+    assert resp.status_code == 302
+    rij = db.execute("SELECT toon_op_kiosk FROM producten WHERE id = ?", (product_id,)).fetchone()
+    assert rij["toon_op_kiosk"] == 0
+
+
+def test_kiosk_pagina_toont_kaartjes_in_pda_weergave(ingelogde_client, db):
+    _voeg_product_toe(db, "PDA Kaartje Product", toon_op_kiosk=1)
+    ingelogde_client.get("/weergave/pda")
+
+    resp = ingelogde_client.get("/kiosk/prijzen/instellingen")
+
+    assert resp.status_code == 200
+    assert b"pda-kaartje" in resp.data
+    assert b"PDA Kaartje Product" in resp.data
+    assert b"Alles opslaan" not in resp.data
+
+
+def test_kiosk_tegel_op_pda_start_alleen_voor_beheerder(client, db):
+    _maak_vrijwilliger(db, "vrijwilliger_start", "voorraad")
+    _login(client, "vrijwilliger_start")
+    client.get("/weergave/pda")
+
+    resp = client.get("/")
+    assert b"Kiosk" not in resp.data
+
+
 # ---------- Onderdeel 2: Sponsoren/leden beheren ----------
 
 

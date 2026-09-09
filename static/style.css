@@ -1770,24 +1770,6 @@ footer {
     border-color: #e3a9a9;
 }
 
-/* Twee losse aan/uit-schuifjes per productkaartje (zie producten.html in de
-   PDA-weergave: actief + wel/niet op het prijzenscherm). */
-.pda-product-schuiven {
-    display: flex;
-    align-items: center;
-    gap: 1.2rem;
-    flex-wrap: wrap;
-    margin: 0.5rem 0 0 1.9rem;
-}
-
-.pda-product-schuif-form {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-    color: var(--tekst-zacht);
-}
-
 .pda-binnen-toggle {
     display: flex;
     align-items: center;
