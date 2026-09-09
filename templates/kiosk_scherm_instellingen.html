@@ -50,6 +50,15 @@
                            value="{{ instellingen.club_van_20_namen_per_slide }}">
                     <span class="tekst-zacht">Bij veel leden wordt de lijst automatisch over meerdere slides verdeeld.</span>
                 </div>
+                <div class="veld">
+                    <label for="club_van_20_looptijd_maanden">Standaard looptijd nieuw lid (maanden)</label>
+                    <input type="number" id="club_van_20_looptijd_maanden" name="club_van_20_looptijd_maanden" min="1"
+                           value="{{ instellingen.club_van_20_looptijd_maanden }}">
+                    <span class="tekst-zacht">
+                        Een nieuw lid krijgt automatisch vandaag als startdatum en deze looptijd als einddatum
+                        (bij <a href="{{ url_for('kiosk_sponsoren_leden') }}">Sponsoren &amp; leden</a>).
+                    </span>
+                </div>
             </div>
         </fieldset>
 

@@ -71,6 +71,24 @@
         .slide-sponsor.sjabloon-titel_ondertitel_banner h2 { font-size: 3.4rem; color: var(--geel); margin: 0 0 0.7rem; }
         .slide-sponsor.sjabloon-titel_ondertitel_banner p { font-size: 1.7rem; color: var(--tekst-zacht); margin: 0; }
 
+        /* Mededeling: zelfde grote-tekst-opzet als hierboven, maar met een
+           duidelijk label zodat het nooit voor een betaalde sponsor
+           aangezien wordt -- oranje accent i.p.v. het geel van sponsors. */
+        .slide-sponsor.sjabloon-mededeling_groot { background: rgba(232, 137, 12, 0.12); }
+        .mededeling-label {
+            background: #e8890c;
+            color: #fff;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.5rem 1.6rem;
+            border-radius: 999px;
+            font-size: 1.15rem;
+            margin-bottom: 0.8rem;
+        }
+        .slide-sponsor.sjabloon-mededeling_groot h2 { font-size: 4rem; color: #fff; margin: 0; }
+        .slide-sponsor.sjabloon-mededeling_groot p { font-size: 2rem; max-width: 55rem; margin: 0; color: var(--tekst-zacht); }
+
         /* Club van 20 */
         .slide-club_van_20 h2 { font-size: 2.8rem; color: var(--geel); margin: 0 0 1.8rem; }
         .namen-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.9rem 1.5rem; max-width: 72rem; }
@@ -115,6 +133,10 @@
                         {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
                         {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
                     </div>
+                {% elif slide.sjabloon == 'mededeling_groot' %}
+                    <div class="mededeling-label">Mededeling</div>
+                    {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
+                    {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
                 {% else %}
                     {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
                     {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}

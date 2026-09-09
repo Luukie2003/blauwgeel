@@ -1,5 +1,6 @@
 import hashlib
 import sqlite3
+from datetime import date
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
 
@@ -9,11 +10,21 @@ from helpers import (
     KIOSK_AFBEELDINGEN_MAP,
     KIOSK_SPONSOR_SJABLONEN,
     KIOSK_SPONSOR_SJABLOON_SLEUTELS,
+    KIOSK_SPONSOR_SJABLOON_VOORBEELDEN,
     bereken_komende_thuiswedstrijden,
+    format_datum_kort,
     is_ajax_verzoek,
     now_str,
     sla_afbeelding_op,
+    voeg_maanden_toe,
 )
+
+# De 3 mogelijke statussen voor een Club van 20-lid (zie
+# kiosk_lid_status_wisselen) -- "niet_betaald" is bewust geen aparte
+# aan/uit-vlag naast actief/inactief, maar een derde status: een lid dat nog
+# niet betaald heeft, staat vanzelf niet meer als "actief" te boek totdat een
+# beheerder 'm terugzet.
+KIOSK_LID_STATUSSEN = {"actief", "inactief", "niet_betaald"}
 
 
 def register_routes(app):
@@ -71,8 +82,11 @@ def register_routes(app):
                 blokken.append((instellingen["sponsoren_volgorde"], slides))
 
         if instellingen["toon_club_van_20"]:
+            # Alleen actieve (en betaalde) leden op het scherm -- inactief
+            # of nog niet betaald blijft puur intern zichtbaar bij
+            # Sponsoren & leden, zie kiosk_lid_status_wisselen.
             leden = db.execute(
-                "SELECT naam FROM club_van_20_leden ORDER BY naam COLLATE NOCASE"
+                "SELECT naam FROM club_van_20_leden WHERE status = 'actief' ORDER BY naam COLLATE NOCASE"
             ).fetchall()
             namen = [r["naam"] for r in leden]
             per_slide = max(1, instellingen["club_van_20_namen_per_slide"])
@@ -300,7 +314,10 @@ def register_routes(app):
             flash("Sponsor toegevoegd.", "success")
             return redirect(url_for("kiosk_sponsoren_leden"))
         return render_template(
-            "kiosk_sponsor_form.html", sponsor=None, sjablonen=KIOSK_SPONSOR_SJABLONEN
+            "kiosk_sponsor_form.html",
+            sponsor=None,
+            sjablonen=KIOSK_SPONSOR_SJABLONEN,
+            sjabloon_voorbeelden=KIOSK_SPONSOR_SJABLOON_VOORBEELDEN,
         )
 
     @app.route("/kiosk/sponsoren-leden/sponsoren/<int:sponsor_id>/bewerken", methods=["GET", "POST"])
@@ -344,7 +361,10 @@ def register_routes(app):
             flash("Sponsor bijgewerkt.", "success")
             return redirect(url_for("kiosk_sponsoren_leden"))
         return render_template(
-            "kiosk_sponsor_form.html", sponsor=sponsor, sjablonen=KIOSK_SPONSOR_SJABLONEN
+            "kiosk_sponsor_form.html",
+            sponsor=sponsor,
+            sjablonen=KIOSK_SPONSOR_SJABLONEN,
+            sjabloon_voorbeelden=KIOSK_SPONSOR_SJABLOON_VOORBEELDEN,
         )
 
     @app.route("/kiosk/sponsoren-leden/sponsoren/<int:sponsor_id>/verwijderen", methods=["POST"])
@@ -362,12 +382,53 @@ def register_routes(app):
             flash("Vul een naam in.", "error")
         else:
             db = get_db()
+            # Startdatum is altijd vandaag, de einddatum volgt automatisch
+            # uit de ingestelde standaard looptijd (zie Kantine scherm
+            # instellen) -- een beheerder hoeft dit dus nooit zelf uit te
+            # rekenen.
+            start = date.today().isoformat()
+            looptijd = _scherm_instellingen(db)["club_van_20_looptijd_maanden"]
+            eind = voeg_maanden_toe(start, looptijd)
             db.execute(
-                "INSERT INTO club_van_20_leden (naam, aangemaakt_op) VALUES (?, ?)",
-                (naam, now_str()),
+                """INSERT INTO club_van_20_leden
+                   (naam, status, startdatum, einddatum, aangemaakt_op)
+                   VALUES (?, 'actief', ?, ?, ?)""",
+                (naam, start, eind, now_str()),
             )
             db.commit()
-            flash(f"'{naam}' toegevoegd aan de Club van 20.", "success")
+            flash(
+                f"'{naam}' toegevoegd aan de Club van 20 (t/m {format_datum_kort(eind)}).",
+                "success",
+            )
+        return redirect(url_for("kiosk_sponsoren_leden"))
+
+    @app.route("/kiosk/sponsoren-leden/leden/<int:lid_id>/status", methods=["POST"])
+    def kiosk_lid_status_wisselen(lid_id):
+        db = get_db()
+        lid = db.execute(
+            "SELECT * FROM club_van_20_leden WHERE id = ?", (lid_id,)
+        ).fetchone()
+        if lid is None:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Lid niet gevonden."}), 404
+            flash("Lid niet gevonden.", "error")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+        status = request.form.get("status", "").strip()
+        if status not in KIOSK_LID_STATUSSEN:
+            status = "actief"
+        db.execute(
+            "UPDATE club_van_20_leden SET status = ? WHERE id = ?", (status, lid_id)
+        )
+        db.commit()
+        if is_ajax_verzoek():
+            labels = {"actief": "Actief", "inactief": "Inactief", "niet_betaald": "Niet betaald"}
+            return jsonify(
+                {
+                    "ok": True,
+                    "status": status,
+                    "melding": f"'{lid['naam']}' staat nu op '{labels[status]}'.",
+                }
+            )
         return redirect(url_for("kiosk_sponsoren_leden"))
 
     @app.route("/kiosk/sponsoren-leden/leden/<int:lid_id>/verwijderen", methods=["POST"])
@@ -396,6 +457,7 @@ def register_routes(app):
                    SET toon_sponsoren = ?, sponsoren_volgorde = ?,
                        toon_club_van_20 = ?, club_van_20_volgorde = ?,
                        club_van_20_titel = ?, club_van_20_namen_per_slide = ?,
+                       club_van_20_looptijd_maanden = ?,
                        toon_wedstrijden = ?, wedstrijden_volgorde = ?
                    WHERE id = 1""",
                 (
@@ -405,6 +467,7 @@ def register_routes(app):
                     _getal("club_van_20_volgorde", 2),
                     request.form.get("club_van_20_titel", "").strip() or "Club van 20",
                     max(1, _getal("club_van_20_namen_per_slide", 40)),
+                    max(1, _getal("club_van_20_looptijd_maanden", 12)),
                     1 if request.form.get("toon_wedstrijden") else 0,
                     _getal("wedstrijden_volgorde", 3),
                 ),

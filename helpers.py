@@ -3,6 +3,7 @@
 Mag zelf nooit iets uit app.py of routes/ importeren -- alleen andersom --
 zodat er geen cirkelvuil kan ontstaan (zelfde patroon als database.py)."""
 
+import calendar
 import csv
 import hashlib
 import io
@@ -33,14 +34,41 @@ TOEGESTANE_AFBEELDING_EXTENSIES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 
 # De vaste layout-sjablonen voor een sponsor-slide op het kantine scherm --
 # zie routes/kiosk.py (_bouw_slides) en templates/kiosk_scherm.html voor de
-# bijbehorende CSS per sjabloon.
+# bijbehorende CSS per sjabloon. "mededeling_groot" is bewust geen sponsor-
+# layout maar een interne aankondiging (bijv. "kantinedienst gezocht") --
+# krijgt daarom een duidelijk MEDEDELING-label op het scherm zelf, zodat
+# niemand denkt dat het om een betaalde sponsor gaat.
 KIOSK_SPONSOR_SJABLONEN = [
     ("afbeelding_volledig", "Afbeelding volledig scherm"),
     ("afbeelding_titel_tekst", "Afbeelding met titel en tekst"),
     ("titel_tekst_groot", "Alleen titel en tekst (geen afbeelding)"),
     ("titel_ondertitel_banner", "Compacte banner (titel + ondertitel)"),
+    ("mededeling_groot", "Mededeling (met label, geen afbeelding)"),
 ]
 KIOSK_SPONSOR_SJABLOON_SLEUTELS = {sleutel for sleutel, _ in KIOSK_SPONSOR_SJABLONEN}
+
+# Voorbeeldtekst per sjabloon (titel, tekst) -- puur als placeholder in het
+# formulier (zie kiosk_sponsor_form.html), om te laten zien wat voor inhoud
+# bij die layout past. Vult niets automatisch in.
+KIOSK_SPONSOR_SJABLOON_VOORBEELDEN = {
+    "afbeelding_volledig": ("Bijv. 'Bakkerij Jansen'", ""),
+    "afbeelding_titel_tekst": (
+        "Bijv. 'Slagerij De Vries'",
+        "Bijv. 'Voor al uw vleeswaren -- vraag naar de weekaanbieding!'",
+    ),
+    "titel_tekst_groot": (
+        "Bijv. 'Welkom bij s.v. Blauw-Geel 1915!'",
+        "Bijv. 'Geniet van de wedstrijd en een lekker drankje aan de bar.'",
+    ),
+    "titel_ondertitel_banner": (
+        "Bijv. 'Happy hour'",
+        "Bijv. 'Elke vrijdag 17:00-18:00 alle drank 1 euro korting'",
+    ),
+    "mededeling_groot": (
+        "Bijv. 'Kantinedienst gezocht!'",
+        "Bijv. 'Meld je aan bij de bar of via het secretariaat.'",
+    ),
+}
 
 # (kolomnaam, waarde in euro's, weergavenaam) -- geen 1- en 2-centstukken,
 # die worden bij contant afrekenen in Nederland toch afgerond op 5 cent.
@@ -111,6 +139,28 @@ def format_datum(value):
         return ""
     dt = datetime.strptime(value, "%Y-%m-%d %H:%M")
     return dt.strftime("%d-%m-%Y %H:%M")
+
+
+def format_datum_kort(value):
+    """Zet een kale ISO-datum (YYYY-MM-DD, geen tijdstip) om naar
+    dd-mm-jjjj -- voor de looptijd van een Club van 20-lidmaatschap."""
+    if not value:
+        return ""
+    jaar, maand, dag = value.split("-")
+    return f"{dag}-{maand}-{jaar}"
+
+
+def voeg_maanden_toe(datum_iso, aantal_maanden):
+    """Telt kalendermaanden op bij een ISO-datum (YYYY-MM-DD), met
+    dagklem aan het einde van de doelmaand (31 jan + 1 maand = 28/29 feb,
+    niet 3 maart) -- gebruikt voor de automatische einddatum van een Club
+    van 20-lidmaatschap (startdatum + de ingestelde standaard looptijd)."""
+    jaar, maand, dag = (int(deel) for deel in datum_iso.split("-"))
+    totaal_maanden = maand - 1 + aantal_maanden
+    nieuw_jaar = jaar + totaal_maanden // 12
+    nieuwe_maand = totaal_maanden % 12 + 1
+    laatste_dag = calendar.monthrange(nieuw_jaar, nieuwe_maand)[1]
+    return date(nieuw_jaar, nieuwe_maand, min(dag, laatste_dag)).isoformat()
 
 
 def now_str():

@@ -56,7 +56,7 @@
     {% endif %}
 </div>
 
-<div class="kaart" style="max-width:560px">
+<div class="kaart" style="max-width:760px">
     <h2>Club van 20 &mdash; leden</h2>
     <form method="post" action="{{ url_for('kiosk_lid_nieuw') }}" class="formgrid">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -72,11 +72,25 @@
     {% if leden %}
     <div class="tabel-wrap">
         <table>
-            <thead><tr><th>Naam</th><th></th></tr></thead>
+            <thead><tr><th>Naam</th><th>Status</th><th>Looptijd</th><th></th></tr></thead>
             <tbody>
                 {% for lid in leden %}
                 <tr>
-                    <td>{{ lid.naam }}</td>
+                    <td class="lid-naam">{{ lid.naam }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('kiosk_lid_status_wisselen', lid_id=lid.id) }}" class="inline js-ajax-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <select name="status" class="lid-status-select lid-status-{{ lid.status }}"
+                                    onchange="this.className = 'lid-status-select lid-status-' + this.value; this.form.requestSubmit();">
+                                <option value="actief" {{ 'selected' if lid.status == 'actief' }}>Actief</option>
+                                <option value="inactief" {{ 'selected' if lid.status == 'inactief' }}>Inactief</option>
+                                <option value="niet_betaald" {{ 'selected' if lid.status == 'niet_betaald' }}>Niet betaald</option>
+                            </select>
+                        </form>
+                    </td>
+                    <td class="tekst-zacht" style="white-space:nowrap">
+                        {{ lid.startdatum|datum_kort }} t/m {{ lid.einddatum|datum_kort }}
+                    </td>
                     <td class="tabel-acties">
                         <form method="post" action="{{ url_for('kiosk_lid_verwijderen', lid_id=lid.id) }}"
                               onsubmit="return bevestigEnVerstuur(this, '\'{{ lid.naam }}\' verwijderen uit de Club van 20?');">

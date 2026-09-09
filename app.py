@@ -24,6 +24,7 @@ from helpers import (
     csrf_token,
     dagdeel_groet,
     format_datum,
+    format_datum_kort,
     SECTIES,
     heeft_sectie_toegang,
     met_tags_filter,
@@ -109,6 +110,7 @@ BEHEERDER_ENDPOINTS = {
     "kiosk_sponsor_bewerken",
     "kiosk_sponsor_verwijderen",
     "kiosk_lid_nieuw",
+    "kiosk_lid_status_wisselen",
     "kiosk_lid_verwijderen",
     "kiosk_scherm_instellingen",
 }
@@ -423,6 +425,7 @@ def create_app(database_path=None):
     init_db(app)
 
     app.jinja_env.filters["datum_nl"] = format_datum
+    app.jinja_env.filters["datum_kort"] = format_datum_kort
     app.jinja_env.filters["besteleenheid_naam"] = besteleenheid_naam
     app.jinja_env.filters["naar_besteleenheden"] = naar_besteleenheden
     app.jinja_env.filters["met_tags"] = met_tags_filter

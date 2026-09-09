@@ -624,6 +624,23 @@ form.inline { display: inline; }
 .tabel-acties .btn { text-align: center; }
 .tabel-acties form { margin: 0; }
 
+/* Club van 20 -- ledenlijst (Sponsoren & leden): namen wat prominenter dan
+   de rest van de tabel, en de statuskleur direct op het select-vakje zelf
+   (zelfde kleuren als de badge-klassen hierboven). */
+.lid-naam { font-size: 1.05rem; font-weight: 700; }
+
+.lid-status-select {
+    border-radius: 999px;
+    padding: 0.3rem 1.6rem 0.3rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid var(--rand-licht);
+}
+.lid-status-select.lid-status-actief { background: var(--groen-bg); color: var(--groen); border-color: #a9d8b8; }
+.lid-status-select.lid-status-inactief { background: #eaeaea; color: var(--tekst-zacht); border-color: var(--rand-licht); }
+.lid-status-select.lid-status-niet_betaald { background: var(--rood-bg); color: var(--rood); border-color: #e6b3b3; }
+
 /* ---------- Forms ---------- */
 
 .formgrid {

@@ -1,9 +1,11 @@
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from flask import current_app, g
 from werkzeug.security import generate_password_hash
+
+from helpers import voeg_maanden_toe
 
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
@@ -149,6 +151,15 @@ KOLOM_MIGRATIES = [
     # kiosk_product_uitverkocht_wisselen). Staat de knop weer uit zodra er
     # bijvoorbeeld een nieuw fust is aangesloten.
     ("producten", "kiosk_uitverkocht", "INTEGER NOT NULL DEFAULT 0"),
+    ("club_van_20_leden", "status", "TEXT NOT NULL DEFAULT 'actief'"),
+    # Losse kolommen i.p.v. alleen een looptijd, zodat een gewijzigde
+    # standaard-looptijd (zie kiosk_scherm_instellingen) nooit met
+    # terugwerkende kracht de einddatum van bestaande leden verschuift --
+    # zie _migreer_club_van_20_datums hieronder voor het eenmalig vullen
+    # van bestaande leden.
+    ("club_van_20_leden", "startdatum", "TEXT"),
+    ("club_van_20_leden", "einddatum", "TEXT"),
+    ("kiosk_scherm_instellingen", "club_van_20_looptijd_maanden", "INTEGER NOT NULL DEFAULT 12"),
 ]
 
 
@@ -283,6 +294,30 @@ def _migreer_bieren_backfill(db):
         )
 
 
+def _migreer_club_van_20_datums(db):
+    """startdatum/einddatum zijn nieuw: vul ze eenmalig voor bestaande leden
+    (van vóór deze functie) met hun aanmaakdatum als startdatum en de op
+    dat moment ingestelde standaard-looptijd, zodat ze niet met een lege
+    looptijd in de lijst komen te staan. Nieuwe leden krijgen hun datums al
+    meteen bij aanmaken (zie kiosk_lid_nieuw), dus die komen hier nooit
+    doorheen."""
+    te_vullen = db.execute(
+        "SELECT id, aangemaakt_op FROM club_van_20_leden WHERE startdatum IS NULL"
+    ).fetchall()
+    if not te_vullen:
+        return
+    looptijd_rij = db.execute(
+        "SELECT club_van_20_looptijd_maanden FROM kiosk_scherm_instellingen WHERE id = 1"
+    ).fetchone()
+    maanden = looptijd_rij["club_van_20_looptijd_maanden"] if looptijd_rij else 12
+    for lid in te_vullen:
+        start = lid["aangemaakt_op"][:10] if lid["aangemaakt_op"] else date.today().isoformat()
+        db.execute(
+            "UPDATE club_van_20_leden SET startdatum = ?, einddatum = ? WHERE id = ?",
+            (start, voeg_maanden_toe(start, maanden), lid["id"]),
+        )
+
+
 # Databasepaden waarvoor het schema al is toegepast in dit proces -- zie
 # get_db() hieronder.
 _SCHEMA_TOEGEPAST_VOOR = set()
@@ -327,6 +362,7 @@ def get_db():
             _migreer_telling_verkoopprijs(g.db)
             _migreer_kassa_afgesloten(g.db)
             _migreer_bieren_backfill(g.db)
+            _migreer_club_van_20_datums(g.db)
             g.db.commit()
             _SCHEMA_TOEGEPAST_VOOR.add(db_pad)
     return g.db

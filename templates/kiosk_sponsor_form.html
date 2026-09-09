@@ -4,6 +4,18 @@
 <h1>{{ 'Sponsor bewerken' if sponsor else 'Nieuwe sponsor' }}</h1>
 <p class="subtitel"><a href="{{ url_for('kiosk_sponsoren_leden') }}">&larr; Terug naar sponsoren &amp; leden</a></p>
 
+<div class="kaart" style="max-width:640px; margin-bottom:1.2rem">
+    <h2 style="margin-top:0">Wat kun je hier laten zien?</h2>
+    <ul style="margin:0; padding-left:1.2rem; line-height:1.7">
+        <li><strong>Sponsoradvertentie</strong> &mdash; een logo/poster van een sponsor, eventueel met een tekstje erbij.</li>
+        <li><strong>Kantine-info</strong> &mdash; openingstijden, happy hour, een nieuwe kaart of actie.</li>
+        <li><strong>Mededeling</strong> &mdash; een interne oproep (bijv. "kantinedienst gezocht") met een duidelijk MEDEDELING-label, zodat 'm niemand voor een betaalde sponsor aanziet.</li>
+    </ul>
+    <p class="tekst-zacht" style="margin-bottom:0">
+        Kies hieronder een sjabloon; de invoervelden tonen dan een voorbeeld van wat erin past.
+    </p>
+</div>
+
 <div class="kaart">
     <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -66,4 +78,23 @@
         <button type="submit" class="btn btn-geel">{{ 'Opslaan' if sponsor else 'Toevoegen' }}</button>
     </form>
 </div>
+
+<script>
+(function () {
+    var sjabloonVeld = document.getElementById('sjabloon');
+    var titelVeld = document.getElementById('titel');
+    var tekstVeld = document.getElementById('tekst');
+    var voorbeelden = {{ sjabloon_voorbeelden|tojson }};
+
+    function bijwerken() {
+        var voorbeeld = voorbeelden[sjabloonVeld.value];
+        if (!voorbeeld) return;
+        titelVeld.placeholder = voorbeeld[0] || '';
+        tekstVeld.placeholder = voorbeeld[1] || '';
+    }
+
+    sjabloonVeld.addEventListener('change', bijwerken);
+    bijwerken();
+})();
+</script>
 {% endblock %}
