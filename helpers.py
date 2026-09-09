@@ -28,7 +28,19 @@ WEERGAVE_TELEFOON_PATROON = re.compile(r"iPhone|iPod|Android.+Mobile", re.IGNORE
 
 STEM_AFBEELDINGEN_MAP = BASE_DIR / "static" / "stem_afbeeldingen"
 PRODUCT_AFBEELDINGEN_MAP = BASE_DIR / "static" / "product_afbeeldingen"
+KIOSK_AFBEELDINGEN_MAP = BASE_DIR / "static" / "kiosk_afbeeldingen"
 TOEGESTANE_AFBEELDING_EXTENSIES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+
+# De vaste layout-sjablonen voor een sponsor-slide op het kantine scherm --
+# zie routes/kiosk.py (_bouw_slides) en templates/kiosk_scherm.html voor de
+# bijbehorende CSS per sjabloon.
+KIOSK_SPONSOR_SJABLONEN = [
+    ("afbeelding_volledig", "Afbeelding volledig scherm"),
+    ("afbeelding_titel_tekst", "Afbeelding met titel en tekst"),
+    ("titel_tekst_groot", "Alleen titel en tekst (geen afbeelding)"),
+    ("titel_ondertitel_banner", "Compacte banner (titel + ondertitel)"),
+]
+KIOSK_SPONSOR_SJABLOON_SLEUTELS = {sleutel for sleutel, _ in KIOSK_SPONSOR_SJABLONEN}
 
 # (kolomnaam, waarde in euro's, weergavenaam) -- geen 1- en 2-centstukken,
 # die worden bij contant afrekenen in Nederland toch afgerond op 5 cent.

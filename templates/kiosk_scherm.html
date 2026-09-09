@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kantine scherm · s.v. Blauw-Geel 1915</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <meta name="theme-color" content="#1e3a8a">
+    <style>
+        :root {
+            --blauw: #1e3a8a;
+            --blauw-donker: #0f1f4d;
+            --geel: #fcd42f;
+            --geel-donker: #e0ba17;
+            --tekst-zacht: #b9c2e0;
+        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Calibri, sans-serif;
+            color: #fff;
+            background: linear-gradient(160deg, var(--blauw) 0%, var(--blauw-donker) 100%);
+            overflow: hidden;
+        }
+        .scherm { position: relative; width: 100vw; height: 100vh; }
+        .slide {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 3.5rem 5rem;
+            opacity: 0;
+            transition: opacity 1s ease;
+            text-align: center;
+        }
+        .slide.actief { opacity: 1; z-index: 1; }
+
+        /* Sponsor: afbeelding vult het scherm, titel als onderschrift */
+        .slide-sponsor.sjabloon-afbeelding_volledig { padding: 0; }
+        .slide-sponsor.sjabloon-afbeelding_volledig .sponsor-afbeelding {
+            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff;
+        }
+        .slide-sponsor.sjabloon-afbeelding_volledig .onderschrift {
+            position: absolute; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 31, 77, 0.85);
+            padding: 1.1rem 2rem;
+            font-size: 1.7rem;
+            font-weight: 700;
+        }
+
+        /* Sponsor: afbeelding naast titel + tekst */
+        .slide-sponsor.sjabloon-afbeelding_titel_tekst { flex-direction: row; gap: 3.5rem; text-align: left; }
+        .slide-sponsor.sjabloon-afbeelding_titel_tekst img { max-width: 45%; max-height: 72vh; object-fit: contain; border-radius: 14px; background: #fff; }
+        .slide-sponsor.sjabloon-afbeelding_titel_tekst .inhoud h2 { font-size: 3.2rem; margin: 0 0 1rem; color: var(--geel); }
+        .slide-sponsor.sjabloon-afbeelding_titel_tekst .inhoud p { font-size: 1.7rem; line-height: 1.4; margin: 0; }
+
+        /* Sponsor: alleen titel + tekst, geen afbeelding */
+        .slide-sponsor.sjabloon-titel_tekst_groot h2 { font-size: 4.2rem; color: var(--geel); margin: 0; }
+        .slide-sponsor.sjabloon-titel_tekst_groot p { font-size: 2.1rem; max-width: 55rem; margin: 0; }
+
+        /* Sponsor: compacte gecentreerde banner */
+        .slide-sponsor.sjabloon-titel_ondertitel_banner .banner {
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid var(--geel);
+            border-radius: 24px;
+            padding: 3rem 4.5rem;
+        }
+        .slide-sponsor.sjabloon-titel_ondertitel_banner h2 { font-size: 3.4rem; color: var(--geel); margin: 0 0 0.7rem; }
+        .slide-sponsor.sjabloon-titel_ondertitel_banner p { font-size: 1.7rem; color: var(--tekst-zacht); margin: 0; }
+
+        /* Club van 20 */
+        .slide-club_van_20 h2 { font-size: 2.8rem; color: var(--geel); margin: 0 0 1.8rem; }
+        .namen-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.9rem 1.5rem; max-width: 72rem; }
+        .naam-chip { background: rgba(255, 255, 255, 0.09); border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 999px; padding: 0.55rem 1.4rem; font-size: 1.35rem; }
+        .pagina-indicator { margin-top: 1.6rem; color: var(--tekst-zacht); font-size: 1.15rem; }
+
+        /* Wedstrijden */
+        .slide-wedstrijden h2 { font-size: 2.8rem; color: var(--geel); margin: 0 0 1.8rem; }
+        .wedstrijden-lijst { width: 100%; max-width: 62rem; }
+        .wedstrijd-dag { display: flex; justify-content: space-between; align-items: baseline; gap: 1.5rem; padding: 1rem 0; border-bottom: 1px solid rgba(255, 255, 255, 0.18); font-size: 1.5rem; text-align: left; }
+        .wedstrijd-dag .datum { font-weight: 700; color: var(--geel); min-width: 9rem; flex-shrink: 0; }
+        .wedstrijd-dag .teams { flex: 1; }
+        .wedstrijd-dag .weer { color: var(--tekst-zacht); font-size: 1.2rem; flex-shrink: 0; }
+
+        .leeg-scherm { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 1.2rem; color: var(--tekst-zacht); text-align: center; }
+        .leeg-scherm img { height: 5rem; width: auto; }
+        .leeg-scherm h1 { color: #fff; font-size: 2.2rem; margin: 0; }
+    </style>
+</head>
+<body>
+    {% if slides %}
+    <div class="scherm">
+        {% for slide in slides %}
+        <section class="slide slide-{{ slide.type }}{% if slide.type == 'sponsor' %} sjabloon-{{ slide.sjabloon }}{% endif %}{% if loop.first %} actief{% endif %}"
+                 data-duur="{{ slide.duur }}">
+            {% if slide.type == 'sponsor' %}
+                {% if slide.sjabloon == 'afbeelding_volledig' %}
+                    {% if slide.afbeelding %}
+                    <img class="sponsor-afbeelding" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.afbeelding) }}" alt="">
+                    {% endif %}
+                    {% if slide.titel %}<div class="onderschrift">{{ slide.titel }}</div>{% endif %}
+                {% elif slide.sjabloon == 'afbeelding_titel_tekst' %}
+                    {% if slide.afbeelding %}
+                    <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.afbeelding) }}" alt="">
+                    {% endif %}
+                    <div class="inhoud">
+                        {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
+                        {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
+                    </div>
+                {% elif slide.sjabloon == 'titel_ondertitel_banner' %}
+                    <div class="banner">
+                        {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
+                        {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
+                    </div>
+                {% else %}
+                    {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
+                    {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
+                {% endif %}
+            {% elif slide.type == 'club_van_20' %}
+                <h2>{{ slide.titel }}</h2>
+                <div class="namen-grid">
+                    {% for naam in slide.namen %}
+                    <span class="naam-chip">{{ naam }}</span>
+                    {% endfor %}
+                </div>
+                {% if slide.pagina %}<div class="pagina-indicator">{{ slide.pagina }}</div>{% endif %}
+            {% elif slide.type == 'wedstrijden' %}
+                <h2>Komende thuiswedstrijden</h2>
+                <div class="wedstrijden-lijst">
+                    {% for dag in slide.dagen %}
+                    <div class="wedstrijd-dag">
+                        <span class="datum">{{ dag.datum_weergave }}</span>
+                        <span class="teams">
+                            {% for w in dag.wedstrijden %}{{ w.omschrijving }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+                        </span>
+                        <span class="weer">
+                            {% if dag.weer %}{{ dag.weer.label }}, {{ '%.0f'|format(dag.weer.max_temp) }}&deg;C{% endif %}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="leeg-scherm">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="">
+        <h1>Kantine scherm</h1>
+        <p>Er is nog niets ingesteld om te tonen. Zet sponsoren, de Club van 20 of wedstrijden aan bij Kantine scherm instellen.</p>
+    </div>
+    {% endif %}
+
+    <script>
+    (function () {
+        var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+        if (slides.length < 2) return;
+        var huidige = 0;
+
+        function toon(index) {
+            slides.forEach(function (s, i) { s.classList.toggle('actief', i === index); });
+        }
+
+        function plan() {
+            var duur = (parseFloat(slides[huidige].dataset.duur) || 8) * 1000;
+            setTimeout(function () {
+                huidige = (huidige + 1) % slides.length;
+                toon(huidige);
+                plan();
+            }, duur);
+        }
+
+        plan();
+    })();
+
+    // Herlaadt de pagina periodiek zodat wijzigingen in sponsoren, de
+    // ledenlijst of de scherminstellingen vanzelf doorkomen op de TV.
+    setTimeout(function () { window.location.reload(); }, 15 * 60 * 1000);
+    </script>
+</body>
+</html>

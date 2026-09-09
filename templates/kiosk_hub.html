@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block titel %}Kantine Kiosk{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    TV-schermen voor in de kantine, te casten via Chromecast. De schermen zelf
+    zijn publieke pagina's (geen account nodig) -- wat erop staat stel je hier in.
+</p>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.1rem">
+    <div class="kaart">
+        <h2>1. Prijzenscherm</h2>
+        <p class="tekst-zacht">Kies welke producten getoond worden op een grote, leesbare prijslijst.</p>
+        <p><a href="{{ url_for('kiosk_prijzen_instellingen') }}" class="btn btn-geel">Producten kiezen</a></p>
+        <p><a href="{{ url_for('kiosk_prijzen_scherm') }}" target="_blank" rel="noopener" class="btn btn-rand">Scherm openen &#8599;</a></p>
+        <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ prijzen_url }}</p>
+        <div class="stem-qr">{{ prijzen_qr_svg|safe }}</div>
+    </div>
+
+    <div class="kaart">
+        <h2>2. Sponsoren/leden beheren</h2>
+        <p class="tekst-zacht">Beheer de sponsor-slides en de Club van 20-ledenlijst voor het kantine scherm.</p>
+        <p><a href="{{ url_for('kiosk_sponsoren_leden') }}" class="btn btn-geel">Sponsoren &amp; leden beheren</a></p>
+    </div>
+
+    <div class="kaart">
+        <h2>3. Kantine scherm</h2>
+        <p class="tekst-zacht">Stel in welke onderdelen in de diashow zitten, in welke volgorde, en hoe Club van 20 wordt weergegeven.</p>
+        <p><a href="{{ url_for('kiosk_scherm_instellingen') }}" class="btn btn-geel">Scherm instellen</a></p>
+        <p><a href="{{ url_for('kiosk_scherm') }}" target="_blank" rel="noopener" class="btn btn-rand">Scherm openen &#8599;</a></p>
+        <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ scherm_url }}</p>
+        <div class="stem-qr">{{ scherm_qr_svg|safe }}</div>
+    </div>
+</div>
+{% endblock %}

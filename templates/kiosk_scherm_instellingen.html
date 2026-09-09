@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block titel %}Kantine scherm instellen{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Kies welke onderdelen in de diashow van het kantine scherm zitten en in welke volgorde.
+    De inhoud zelf (sponsoren, ledenlijst) beheer je bij
+    <a href="{{ url_for('kiosk_sponsoren_leden') }}">Sponsoren &amp; leden</a>.
+    <a href="{{ url_for('kiosk_hub') }}">&larr; Terug naar Kantine Kiosk</a>
+</p>
+
+<div class="kaart" style="max-width:640px">
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <fieldset class="groupbox">
+            <legend>Sponsoren</legend>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.7rem">
+                <input type="checkbox" name="toon_sponsoren" style="width:auto"
+                       {{ 'checked' if instellingen.toon_sponsoren }}>
+                Sponsor-slides tonen
+            </label>
+            <div class="veld">
+                <label for="sponsoren_volgorde">Volgorde</label>
+                <input type="number" id="sponsoren_volgorde" name="sponsoren_volgorde" min="1"
+                       value="{{ instellingen.sponsoren_volgorde }}" style="max-width:8rem">
+            </div>
+        </fieldset>
+
+        <fieldset class="groupbox">
+            <legend>Club van 20</legend>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.7rem">
+                <input type="checkbox" name="toon_club_van_20" style="width:auto"
+                       {{ 'checked' if instellingen.toon_club_van_20 }}>
+                Ledenlijst tonen
+            </label>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="club_van_20_volgorde">Volgorde</label>
+                    <input type="number" id="club_van_20_volgorde" name="club_van_20_volgorde" min="1"
+                           value="{{ instellingen.club_van_20_volgorde }}">
+                </div>
+                <div class="veld">
+                    <label for="club_van_20_titel">Titel boven het blok</label>
+                    <input type="text" id="club_van_20_titel" name="club_van_20_titel"
+                           value="{{ instellingen.club_van_20_titel }}">
+                </div>
+                <div class="veld">
+                    <label for="club_van_20_namen_per_slide">Namen per slide</label>
+                    <input type="number" id="club_van_20_namen_per_slide" name="club_van_20_namen_per_slide" min="1"
+                           value="{{ instellingen.club_van_20_namen_per_slide }}">
+                    <span class="tekst-zacht">Bij veel leden wordt de lijst automatisch over meerdere slides verdeeld.</span>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset class="groupbox">
+            <legend>Wedstrijden</legend>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.7rem">
+                <input type="checkbox" name="toon_wedstrijden" style="width:auto"
+                       {{ 'checked' if instellingen.toon_wedstrijden }}>
+                Komende thuiswedstrijden tonen
+            </label>
+            <div class="veld">
+                <label for="wedstrijden_volgorde">Volgorde</label>
+                <input type="number" id="wedstrijden_volgorde" name="wedstrijden_volgorde" min="1"
+                       value="{{ instellingen.wedstrijden_volgorde }}" style="max-width:8rem">
+            </div>
+            <span class="tekst-zacht">
+                Gebruikt de agenda uit <a href="{{ url_for('club_instellingen') }}">Club instellingen</a>. Staat er niets
+                gepland, dan slaat de diashow dit onderdeel vanzelf over.
+            </span>
+        </fieldset>
+
+        <button type="submit" class="btn btn-geel">Opslaan</button>
+    </form>
+</div>
+{% endblock %}

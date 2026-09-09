@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block titel %}{{ 'Sponsor bewerken' if sponsor else 'Nieuwe sponsor' }}{% endblock %}
+{% block inhoud %}
+<h1>{{ 'Sponsor bewerken' if sponsor else 'Nieuwe sponsor' }}</h1>
+<p class="subtitel"><a href="{{ url_for('kiosk_sponsoren_leden') }}">&larr; Terug naar sponsoren &amp; leden</a></p>
+
+<div class="kaart">
+    <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <fieldset class="groupbox">
+            <legend>Sjabloon</legend>
+            <div class="veld">
+                <label for="sjabloon">Layout</label>
+                <select id="sjabloon" name="sjabloon">
+                    {% for sleutel, label in sjablonen %}
+                    <option value="{{ sleutel }}" {{ 'selected' if sponsor and sponsor.sjabloon == sleutel }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <span class="tekst-zacht">Bepaalt hoe titel, tekst en afbeelding op het kantine scherm worden getoond.</span>
+            </div>
+        </fieldset>
+        <fieldset class="groupbox">
+            <legend>Inhoud</legend>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="titel">Titel</label>
+                    <input type="text" id="titel" name="titel" placeholder="Bijv. sponsornaam"
+                           value="{{ sponsor.titel if sponsor and sponsor.titel else '' }}">
+                </div>
+                <div class="veld">
+                    <label for="weergave_duur_seconden">Weergaveduur (seconden)</label>
+                    <input type="number" id="weergave_duur_seconden" name="weergave_duur_seconden" min="2"
+                           value="{{ sponsor.weergave_duur_seconden if sponsor else 8 }}">
+                </div>
+                <div class="veld">
+                    <label for="volgorde">Volgorde</label>
+                    <input type="number" id="volgorde" name="volgorde"
+                           value="{{ sponsor.volgorde if sponsor else 0 }}">
+                    <span class="tekst-zacht">Lager nummer komt eerder in de diashow.</span>
+                </div>
+            </div>
+            <div class="veld">
+                <label for="tekst">Tekst</label>
+                <textarea id="tekst" name="tekst" rows="2">{{ sponsor.tekst if sponsor and sponsor.tekst else '' }}</textarea>
+            </div>
+            <div class="veld">
+                <label for="afbeelding">Afbeelding</label>
+                {% if sponsor and sponsor.afbeelding %}
+                <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.4rem">
+                    <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + sponsor.afbeelding) }}"
+                         alt="" class="product-thumb-preview">
+                    <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400; cursor:pointer">
+                        <input type="checkbox" name="afbeelding_verwijderen" style="width:auto">
+                        Verwijderen
+                    </label>
+                </div>
+                {% endif %}
+                <input type="file" id="afbeelding" name="afbeelding" accept="image/*">
+            </div>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer">
+                <input type="checkbox" id="actief" name="actief" style="width:auto"
+                       {{ 'checked' if not sponsor or sponsor.actief }}>
+                Actief (staat in de diashow)
+            </label>
+        </fieldset>
+        <button type="submit" class="btn btn-geel">{{ 'Opslaan' if sponsor else 'Toevoegen' }}</button>
+    </form>
+</div>
+{% endblock %}

@@ -54,6 +54,12 @@ OPEN_ENDPOINTS = {
     # product_detail zelf staat niet in deze lijst.
     "scan_landing",
     "scan_melden",
+    # De twee Kantine Kiosk-schermen draaien op een TV via Chromecast --
+    # daar kan niemand op inloggen, dus moeten ze net als de stempagina's
+    # zonder account bereikbaar zijn. Het beheer ervan (wat erop staat) zit
+    # wel achter login, zie BEHEERDER_ENDPOINTS hieronder.
+    "kiosk_prijzen_scherm",
+    "kiosk_scherm",
 }
 
 # Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers
@@ -89,6 +95,15 @@ BEHEERDER_ENDPOINTS = {
     "club_agenda_verversen",
     "club_agenda_controleren",
     "mededeling_pinnen_als_banner",
+    "kiosk_hub",
+    "kiosk_prijzen_instellingen",
+    "kiosk_sponsoren_leden",
+    "kiosk_sponsor_nieuw",
+    "kiosk_sponsor_bewerken",
+    "kiosk_sponsor_verwijderen",
+    "kiosk_lid_nieuw",
+    "kiosk_lid_verwijderen",
+    "kiosk_scherm_instellingen",
 }
 
 # Fijnmazige rechten bovenop BEHEERDER_ENDPOINTS: elk account (ook
@@ -604,6 +619,7 @@ def create_app(database_path=None):
         instellingen,
         kassa,
         keuken,
+        kiosk,
         producten,
         stemmen,
         tellen,
@@ -620,6 +636,7 @@ def create_app(database_path=None):
     instellingen.register_routes(app)
     kassa.register_routes(app)
     keuken.register_routes(app)
+    kiosk.register_routes(app)
     producten.register_routes(app)
     stemmen.register_routes(app)
     tellen.register_routes(app)

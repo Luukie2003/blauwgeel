@@ -315,3 +315,46 @@ CREATE TABLE IF NOT EXISTS bestellijst_meldingen (
     afgehandeld_door TEXT,
     afgehandeld_op TEXT
 );
+
+-- ---------- Kantine Kiosk ----------
+-- Losstaande TV-schermen (Chromecast) zonder login: prijzenscherm (welke
+-- producten getoond worden staat op producten.toon_op_kiosk, zie
+-- KOLOM_MIGRATIES in database.py) en het kantine scherm (diashow van
+-- sponsoren + Club van 20-leden + wedstrijden).
+
+-- Sponsor-/reclame-slides. sjabloon bepaalt de layout op het kantine scherm
+-- (zie de vaste sjabloon-sleutels in routes/kiosk.py).
+CREATE TABLE IF NOT EXISTS kiosk_sponsoren (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sjabloon TEXT NOT NULL DEFAULT 'afbeelding_volledig',
+    titel TEXT,
+    tekst TEXT,
+    afbeelding TEXT,
+    weergave_duur_seconden INTEGER NOT NULL DEFAULT 8,
+    volgorde INTEGER NOT NULL DEFAULT 0,
+    actief INTEGER NOT NULL DEFAULT 1,
+    aangemaakt_op TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_kiosk_sponsoren_volgorde ON kiosk_sponsoren(volgorde);
+
+CREATE TABLE IF NOT EXISTS club_van_20_leden (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    naam TEXT NOT NULL,
+    aangemaakt_op TEXT NOT NULL
+);
+
+-- Instellingen (1 rij) voor hoe het kantine scherm is opgebouwd: welke
+-- blokken meedraaien in de diashow, in welke volgorde, en hoe het Club van
+-- 20-blok wordt weergegeven. Zelfde opzet als de instellingen-tabel hierboven.
+CREATE TABLE IF NOT EXISTS kiosk_scherm_instellingen (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    toon_sponsoren INTEGER NOT NULL DEFAULT 1,
+    sponsoren_volgorde INTEGER NOT NULL DEFAULT 1,
+    toon_club_van_20 INTEGER NOT NULL DEFAULT 1,
+    club_van_20_volgorde INTEGER NOT NULL DEFAULT 2,
+    club_van_20_titel TEXT NOT NULL DEFAULT 'Club van 20',
+    club_van_20_namen_per_slide INTEGER NOT NULL DEFAULT 40,
+    toon_wedstrijden INTEGER NOT NULL DEFAULT 1,
+    wedstrijden_volgorde INTEGER NOT NULL DEFAULT 3
+);
+INSERT OR IGNORE INTO kiosk_scherm_instellingen (id) VALUES (1);
