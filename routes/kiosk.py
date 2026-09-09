@@ -10,6 +10,7 @@ from helpers import (
     KIOSK_SPONSOR_SJABLONEN,
     KIOSK_SPONSOR_SJABLOON_SLEUTELS,
     bereken_komende_thuiswedstrijden,
+    is_ajax_verzoek,
     now_str,
     sla_afbeelding_op,
 )
@@ -136,6 +137,35 @@ def register_routes(app):
             "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
         ).fetchall()
         return render_template("kiosk_prijzen_instellingen.html", producten=producten)
+
+    @app.route("/kiosk/prijzen/product/<int:product_id>/toon", methods=["POST"])
+    def kiosk_product_toon_wisselen(product_id):
+        """Los aan/uit-schuifje per product (zie producten.html in de
+        PDA-weergave) -- hetzelfde toon_op_kiosk-veld als de bulk-checklist
+        hierboven, maar dan met 1 tik i.p.v. eerst aanvinken en dan
+        Opslaan."""
+        db = get_db()
+        product = db.execute(
+            "SELECT * FROM producten WHERE id = ?", (product_id,)
+        ).fetchone()
+        if product is None:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Product niet gevonden."}), 404
+            flash("Product niet gevonden.", "error")
+            return redirect(url_for("producten_lijst"))
+        nieuwe_status = 0 if product["toon_op_kiosk"] else 1
+        db.execute(
+            "UPDATE producten SET toon_op_kiosk = ? WHERE id = ?", (nieuwe_status, product_id)
+        )
+        db.commit()
+        if is_ajax_verzoek():
+            melding = (
+                f"'{product['naam']}' staat nu op het prijzenscherm."
+                if nieuwe_status
+                else f"'{product['naam']}' staat niet meer op het prijzenscherm."
+            )
+            return jsonify({"ok": True, "toon_op_kiosk": nieuwe_status, "melding": melding})
+        return redirect(url_for("producten_lijst"))
 
     def _prijzen_categorieen(db):
         producten = db.execute(

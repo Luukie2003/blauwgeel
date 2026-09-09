@@ -102,6 +102,7 @@ BEHEERDER_ENDPOINTS = {
     "mededeling_pinnen_als_banner",
     "kiosk_hub",
     "kiosk_prijzen_instellingen",
+    "kiosk_product_toon_wisselen",
     "kiosk_sponsoren_leden",
     "kiosk_sponsor_nieuw",
     "kiosk_sponsor_bewerken",
@@ -386,6 +387,7 @@ NAV_ITEMS.sort(key=lambda item: NAV_GROEP_VOLGORDE.index(item["groep"]))
 PDA_NAV_ITEMS = [
     {"url_endpoint": "tellen", "pda_label": "Tellen"},
     {"url_endpoint": "boeken", "pda_label": "Boeken"},
+    {"url_endpoint": "producten_lijst", "pda_label": "Producten"},
     {"url_endpoint": "bijzonderheden", "pda_label": "Prikbord"},
     {"url_endpoint": "kassa_tellen", "pda_label": "Kassa"},
     {"url_endpoint": "bestellijst", "pda_label": "Bestellijst"},
