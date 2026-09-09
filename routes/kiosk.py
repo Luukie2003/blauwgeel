@@ -1,4 +1,7 @@
-from flask import flash, redirect, render_template, request, url_for
+import hashlib
+import sqlite3
+
+from flask import flash, jsonify, redirect, render_template, request, url_for
 
 import qr
 from database import get_db
@@ -13,6 +16,28 @@ from helpers import (
 
 
 def register_routes(app):
+    def _voor_hash(waarde):
+        """sqlite3.Row's eigen __repr__ toont een geheugenadres (verschilt
+        dus bij elke nieuwe query, ook zonder inhoudelijke wijziging) --
+        zet 'm daarom om naar een gewone tuple voor een stabiele repr()."""
+        if isinstance(waarde, sqlite3.Row):
+            return tuple(waarde)
+        if isinstance(waarde, dict):
+            return {k: _voor_hash(v) for k, v in waarde.items()}
+        if isinstance(waarde, (list, tuple)):
+            return [_voor_hash(v) for v in waarde]
+        return waarde
+
+    def _versie(*delen):
+        """Compacte 'vingerafdruk' van wat er nu op een kiosk-scherm te zien
+        zou zijn. De schermen pollen deze via /versie-endpoints en herladen
+        zichzelf zodra 'ie verandert -- zo komt een prijswijziging, een
+        nieuwe sponsor of een aangepaste instelling binnen enkele seconden
+        door op de TV, zonder dat de hele pagina om de zoveel minuten voor
+        niets hoeft te herladen."""
+        ruw = "|".join(repr(_voor_hash(deel)) for deel in delen)
+        return hashlib.md5(ruw.encode()).hexdigest()[:12]
+
     def _scherm_instellingen(db):
         return db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
 
@@ -112,9 +137,7 @@ def register_routes(app):
         ).fetchall()
         return render_template("kiosk_prijzen_instellingen.html", producten=producten)
 
-    @app.route("/kiosk/prijzen")
-    def kiosk_prijzen_scherm():
-        db = get_db()
+    def _prijzen_categorieen(db):
         producten = db.execute(
             """SELECT * FROM producten
                WHERE actief = 1 AND toon_op_kiosk = 1
@@ -123,10 +146,33 @@ def register_routes(app):
         per_categorie = {}
         for p in producten:
             per_categorie.setdefault(p["categorie"], []).append(p)
+        return sorted(per_categorie.items())
+
+    def _prijzen_versie(categorieen):
+        # Alleen de velden die daadwerkelijk op het scherm staan -- zo
+        # triggert bijv. een gewijzigde voorraad (niet zichtbaar hier) geen
+        # onnodige herlaadbeurt.
+        return _versie(
+            [
+                (naam, [(p["id"], p["naam"], p["verkoopprijs"]) for p in lijst])
+                for naam, lijst in categorieen
+            ]
+        )
+
+    @app.route("/kiosk/prijzen")
+    def kiosk_prijzen_scherm():
+        db = get_db()
+        categorieen = _prijzen_categorieen(db)
         return render_template(
             "kiosk_prijzen_scherm.html",
-            categorieen=sorted(per_categorie.items()),
+            categorieen=categorieen,
+            versie=_prijzen_versie(categorieen),
         )
+
+    @app.route("/kiosk/prijzen/versie")
+    def kiosk_prijzen_versie():
+        db = get_db()
+        return jsonify({"versie": _prijzen_versie(_prijzen_categorieen(db))})
 
     # ---------- Onderdeel 2: Sponsoren/leden beheren ----------
 
@@ -311,4 +357,10 @@ def register_routes(app):
     @app.route("/kiosk/scherm")
     def kiosk_scherm():
         db = get_db()
-        return render_template("kiosk_scherm.html", slides=_bouw_slides(db))
+        slides = _bouw_slides(db)
+        return render_template("kiosk_scherm.html", slides=slides, versie=_versie(slides))
+
+    @app.route("/kiosk/scherm/versie")
+    def kiosk_scherm_versie():
+        db = get_db()
+        return jsonify({"versie": _versie(_bouw_slides(db))})

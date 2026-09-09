@@ -3,10 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Ververst zichzelf periodiek, zodat een wijziging in de productkeuze
-         (zie kiosk_prijzen_instellingen) vanzelf doorkomt op de TV zonder dat
-         iemand de Chromecast opnieuw hoeft te verbinden. -->
-    <meta http-equiv="refresh" content="300">
     <title>Prijslijst · s.v. Blauw-Geel 1915</title>
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
     <meta name="theme-color" content="#1e3a8a">
@@ -103,6 +99,25 @@
         }
         werkKlokBij();
         setInterval(werkKlokBij, 15000);
+    </script>
+
+    <script>
+    // Poll elke 10s of de getoonde producten/prijzen nog kloppen, en herlaad
+    // pas zodra er echt iets gewijzigd is (i.p.v. blind om de zoveel minuten
+    // te herladen) -- zo komt een prijswijziging of een aan/uitgevinkt
+    // product binnen enkele seconden door op de TV, zonder een storende
+    // herlaadbeurt als er niets is veranderd.
+    (function () {
+        var huidigeVersie = {{ versie|tojson }};
+        setInterval(function () {
+            fetch('{{ url_for("kiosk_prijzen_versie") }}')
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.versie && data.versie !== huidigeVersie) window.location.reload();
+                })
+                .catch(function () {});
+        }, 10000);
+    })();
     </script>
 </body>
 </html>

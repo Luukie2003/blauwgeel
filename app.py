@@ -60,6 +60,11 @@ OPEN_ENDPOINTS = {
     # wel achter login, zie BEHEERDER_ENDPOINTS hieronder.
     "kiosk_prijzen_scherm",
     "kiosk_scherm",
+    # De schermen pollen deze twee endpoints zelf (zie de <script> in
+    # kiosk_prijzen_scherm.html/kiosk_scherm.html) om te bepalen of ze zichzelf
+    # moeten herladen -- dus ook zonder account bereikbaar.
+    "kiosk_prijzen_versie",
+    "kiosk_scherm_versie",
 }
 
 # Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers

@@ -176,9 +176,21 @@
         plan();
     })();
 
-    // Herlaadt de pagina periodiek zodat wijzigingen in sponsoren, de
-    // ledenlijst of de scherminstellingen vanzelf doorkomen op de TV.
-    setTimeout(function () { window.location.reload(); }, 15 * 60 * 1000);
+    // Poll elke 10s of sponsoren, de ledenlijst, wedstrijden of de
+    // scherminstellingen nog kloppen, en herlaad pas zodra er echt iets
+    // gewijzigd is -- zo komt een aanpassing snel door zonder de diashow
+    // onnodig te onderbreken als er niets veranderd is.
+    (function () {
+        var huidigeVersie = {{ versie|tojson }};
+        setInterval(function () {
+            fetch('{{ url_for("kiosk_scherm_versie") }}')
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.versie && data.versie !== huidigeVersie) window.location.reload();
+                })
+                .catch(function () {});
+        }, 10000);
+    })();
     </script>
 </body>
 </html>
