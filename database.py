@@ -160,6 +160,10 @@ KOLOM_MIGRATIES = [
     ("club_van_20_leden", "startdatum", "TEXT"),
     ("club_van_20_leden", "einddatum", "TEXT"),
     ("kiosk_scherm_instellingen", "club_van_20_looptijd_maanden", "INTEGER NOT NULL DEFAULT 12"),
+    # Voor namen die net wat meer aandacht verdienen op het kantine scherm
+    # (zie kiosk_lid_bewerken) -- los van de sterren, die volgen automatisch
+    # uit de looptijd.
+    ("club_van_20_leden", "extra_groot", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

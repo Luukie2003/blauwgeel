@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block titel %}{{ 'Actie bewerken' if actie else 'Nieuwe actie' }}{% endblock %}
+{% block inhoud %}
+<h1>{{ 'Actie bewerken' if actie else 'Nieuwe actie' }}</h1>
+<p class="subtitel"><a href="{{ url_for('kiosk_acties') }}">&larr; Terug naar acties</a></p>
+
+<div class="kaart" style="max-width:560px">
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="product_id">Product</label>
+            <select id="product_id" name="product_id" required>
+                {% if not actie %}
+                <option value="" disabled selected>Kies een product</option>
+                {% endif %}
+                {% for p in producten %}
+                <option value="{{ p.id }}" {{ 'selected' if actie and actie.product_id == p.id }}>{{ p.naam }} ({{ p.categorie }})</option>
+                {% endfor %}
+            </select>
+            <span class="tekst-zacht">De foto en huidige prijs van dit product worden gebruikt op de pop-up.</span>
+        </div>
+        <div class="veld">
+            <label for="tekst">Actietekst</label>
+            <input type="text" id="tekst" name="tekst" placeholder="Bijv. 'Happy hour: 1 euro korting!'"
+                   value="{{ actie.tekst if actie and actie.tekst else '' }}">
+        </div>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer">
+            <input type="checkbox" id="actief" name="actief" style="width:auto"
+                   {{ 'checked' if not actie or actie.actief }}>
+            Actief (verschijnt af en toe op het prijzenscherm)
+        </label>
+        <button type="submit" class="btn btn-geel" style="margin-top:1rem">{{ 'Opslaan' if actie else 'Toevoegen' }}</button>
+    </form>
+</div>
+{% endblock %}

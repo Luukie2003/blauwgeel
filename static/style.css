@@ -628,6 +628,8 @@ form.inline { display: inline; }
    de rest van de tabel, en de statuskleur direct op het select-vakje zelf
    (zelfde kleuren als de badge-klassen hierboven). */
 .lid-naam { font-size: 1.05rem; font-weight: 700; }
+.lid-naam--extra-groot { font-size: 1.25rem; }
+.lid-sterren { color: var(--geel-donker); margin-right: 0.3rem; letter-spacing: 0.03em; }
 
 .lid-status-select {
     border-radius: 999px;

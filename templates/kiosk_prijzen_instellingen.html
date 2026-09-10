@@ -80,6 +80,35 @@
     {% endif %}
 </div>
 
+{% if pda_modus and acties %}
+<div class="kaart">
+    <h2>Acties</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Zet met 1 tik welke acties af en toe op het prijzenscherm verschijnen. Nieuwe acties maak je op de
+        desktop-versie.
+    </p>
+    <div class="pda-producten-kaarten">
+        {% for a in acties %}
+        <div class="pda-kaartje">
+            <div class="pda-product-kop">
+                <form method="post" action="{{ url_for('kiosk_actie_toon_wisselen', actie_id=a.id) }}" class="js-ajax-form pda-kaartje-vink">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label class="schuif" title="{{ 'Staat aan, tik om uit te zetten' if a.actief else 'Staat uit, tik om aan te zetten' }}">
+                        <input type="checkbox" {{ 'checked' if a.actief else '' }} onchange="this.form.requestSubmit()">
+                        <span class="schuif-balk"></span>
+                    </label>
+                    <span class="pda-kaartje-naam">{{ a.product_naam }}</span>
+                </form>
+            </div>
+            {% if a.tekst %}
+            <div class="pda-kaartje-info"><span class="tekst-zacht">{{ a.tekst }}</span></div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <script>
 (function () {
     var zoekVeld = document.getElementById('filter-zoek');

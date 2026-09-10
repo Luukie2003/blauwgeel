@@ -17,13 +17,19 @@
     </div>
 
     <div class="kaart">
-        <h2>2. Sponsoren/leden beheren</h2>
+        <h2>2. Acties</h2>
+        <p class="tekst-zacht">Een korte, opvallende pop-up met een productfoto die af en toe over het prijzenscherm heen verschijnt.</p>
+        <p><a href="{{ url_for('kiosk_acties') }}" class="btn btn-geel">Acties beheren</a></p>
+    </div>
+
+    <div class="kaart">
+        <h2>3. Sponsoren/leden beheren</h2>
         <p class="tekst-zacht">Beheer de sponsor-slides en de Club van 20-ledenlijst voor het kantine scherm.</p>
         <p><a href="{{ url_for('kiosk_sponsoren_leden') }}" class="btn btn-geel">Sponsoren &amp; leden beheren</a></p>
     </div>
 
     <div class="kaart">
-        <h2>3. Kantine scherm</h2>
+        <h2>4. Kantine scherm</h2>
         <p class="tekst-zacht">Stel in welke onderdelen in de diashow zitten, in welke volgorde, en hoe Club van 20 wordt weergegeven.</p>
         <p><a href="{{ url_for('kiosk_scherm_instellingen') }}" class="btn btn-geel">Scherm instellen</a></p>
         <p><a href="{{ url_for('kiosk_scherm') }}" target="_blank" rel="noopener" class="btn btn-rand">Scherm openen &#8599;</a></p>

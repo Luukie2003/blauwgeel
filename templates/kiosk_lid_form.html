@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block titel %}Lid bewerken{% endblock %}
+{% block inhoud %}
+<h1>Lid bewerken</h1>
+<p class="subtitel"><a href="{{ url_for('kiosk_sponsoren_leden') }}">&larr; Terug naar sponsoren &amp; leden</a></p>
+
+<div class="kaart" style="max-width:480px">
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="naam">Naam</label>
+            <input type="text" id="naam" name="naam" required value="{{ lid.naam }}">
+        </div>
+        <div class="veld">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                <option value="actief" {{ 'selected' if lid.status == 'actief' }}>Actief</option>
+                <option value="inactief" {{ 'selected' if lid.status == 'inactief' }}>Inactief</option>
+                <option value="niet_betaald" {{ 'selected' if lid.status == 'niet_betaald' }}>Niet betaald</option>
+            </select>
+        </div>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="startdatum">Startdatum</label>
+                <input type="date" id="startdatum" name="startdatum" required value="{{ lid.startdatum }}">
+            </div>
+            <div class="veld">
+                <label for="einddatum">Einddatum</label>
+                <input type="date" id="einddatum" name="einddatum" required value="{{ lid.einddatum }}">
+            </div>
+        </div>
+        <p class="tekst-zacht" style="margin-top:-0.4rem">
+            {{ jaren_lid(lid.startdatum) }} volledig{{ 'e' if jaren_lid(lid.startdatum) != 1 }} jaar (= {{ jaren_lid(lid.startdatum) }} ster{{ 'ren' if jaren_lid(lid.startdatum) != 1 }}) op basis van de startdatum.
+        </p>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer">
+            <input type="checkbox" id="extra_groot" name="extra_groot" style="width:auto"
+                   {{ 'checked' if lid.extra_groot }}>
+            Naam extra groot tonen op het kantine scherm
+        </label>
+        <button type="submit" class="btn btn-geel" style="margin-top:1rem">Opslaan</button>
+    </form>
+</div>
+{% endblock %}

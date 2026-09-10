@@ -343,6 +343,18 @@ CREATE TABLE IF NOT EXISTS club_van_20_leden (
     aangemaakt_op TEXT NOT NULL
 );
 
+-- Losse product-acties voor het prijzenscherm (bijv. "happy hour"): een
+-- korte, opvallende pop-up die af en toe over de prijslijst heen verschijnt.
+-- Gebruikt de naam/foto/prijs van het gekoppelde product zelf, geen eigen
+-- afbeelding nodig -- zie routes/kiosk.py (kiosk_prijzen_scherm).
+CREATE TABLE IF NOT EXISTS kiosk_acties (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL REFERENCES producten(id) ON DELETE CASCADE,
+    tekst TEXT,
+    actief INTEGER NOT NULL DEFAULT 1,
+    aangemaakt_op TEXT NOT NULL
+);
+
 -- Instellingen (1 rij) voor hoe het kantine scherm is opgebouwd: welke
 -- blokken meedraaien in de diashow, in welke volgorde, en hoe het Club van
 -- 20-blok wordt weergegeven. Zelfde opzet als de instellingen-tabel hierboven.

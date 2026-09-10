@@ -76,7 +76,12 @@
             <tbody>
                 {% for lid in leden %}
                 <tr>
-                    <td class="lid-naam">{{ lid.naam }}</td>
+                    <td class="lid-naam{{ ' lid-naam--extra-groot' if lid.extra_groot else '' }}">
+                        {% if jaren_lid(lid.startdatum) > 0 %}
+                        <span class="lid-sterren" title="{{ jaren_lid(lid.startdatum) }} jaar lid">{{ '★' * jaren_lid(lid.startdatum) }}</span>
+                        {% endif %}
+                        {{ lid.naam }}
+                    </td>
                     <td>
                         <form method="post" action="{{ url_for('kiosk_lid_status_wisselen', lid_id=lid.id) }}" class="inline js-ajax-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -92,6 +97,7 @@
                         {{ lid.startdatum|datum_kort }} t/m {{ lid.einddatum|datum_kort }}
                     </td>
                     <td class="tabel-acties">
+                        <a href="{{ url_for('kiosk_lid_bewerken', lid_id=lid.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
                         <form method="post" action="{{ url_for('kiosk_lid_verwijderen', lid_id=lid.id) }}"
                               onsubmit="return bevestigEnVerstuur(this, '\'{{ lid.naam }}\' verwijderen uit de Club van 20?');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

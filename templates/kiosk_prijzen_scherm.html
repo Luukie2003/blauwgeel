@@ -74,6 +74,40 @@
             border-radius: 999px;
         }
         .leeg { color: var(--tekst-zacht); font-size: 1.3rem; margin-top: 2rem; }
+
+        /* Grote pop-up: zowel voor de UITVERKOCHT-melding als voor een
+           actie -- zelfde overlay, alleen de klasse/inhoud verschilt. */
+        .kiosk-popup {
+            position: fixed;
+            inset: 0;
+            background: rgba(8, 17, 43, 0.97);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.1rem;
+            text-align: center;
+            padding: 3rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            z-index: 10;
+        }
+        .kiosk-popup.zichtbaar { opacity: 1; }
+        .kiosk-popup img { max-height: 38vh; max-width: 55vw; object-fit: contain; border-radius: 18px; background: #fff; }
+        .kiosk-popup .popup-label {
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.5rem 1.6rem;
+            border-radius: 999px;
+            font-size: 1.2rem;
+        }
+        .kiosk-popup--uitverkocht .popup-label { background: #d81e1e; color: #fff; }
+        .kiosk-popup--actie .popup-label { background: var(--geel); color: var(--blauw-donker); }
+        .kiosk-popup h2 { font-size: 3.4rem; margin: 0; }
+        .kiosk-popup .popup-prijs { font-size: 2.4rem; font-weight: 800; color: var(--geel); }
+        .kiosk-popup p { font-size: 1.7rem; max-width: 50rem; margin: 0; color: var(--tekst-zacht); }
     </style>
 </head>
 <body>
@@ -109,6 +143,8 @@
     <p class="leeg">Er zijn nog geen producten gekozen voor het prijzenscherm.</p>
     {% endif %}
 
+    <div id="kiosk-popup" class="kiosk-popup"></div>
+
     <script>
         function werkKlokBij() {
             var el = document.getElementById('klok');
@@ -119,18 +155,75 @@
     </script>
 
     <script>
-    // Poll elke 10s of de getoonde producten/prijzen nog kloppen, en herlaad
-    // pas zodra er echt iets gewijzigd is (i.p.v. blind om de zoveel minuten
-    // te herladen) -- zo komt een prijswijziging of een aan/uitgevinkt
-    // product binnen enkele seconden door op de TV, zonder een storende
-    // herlaadbeurt als er niets is veranderd.
     (function () {
+        var overlay = document.getElementById('kiosk-popup');
+        var overlayBezig = false;
+
+        function toonPopup(html, klasse, duurMs) {
+            if (!overlay) return;
+            overlayBezig = true;
+            overlay.className = 'kiosk-popup zichtbaar ' + klasse;
+            overlay.innerHTML = html;
+            setTimeout(function () {
+                overlay.classList.remove('zichtbaar');
+                setTimeout(function () { overlayBezig = false; }, 600);
+            }, duurMs);
+        }
+
+        // ---------- Acties: af en toe kort prominent in beeld ----------
+        var acties = {{ acties|tojson }};
+        var actieIndex = 0;
+
+        function toonActie() {
+            if (overlayBezig || !acties.length) return;
+            var actie = acties[actieIndex % acties.length];
+            actieIndex++;
+            var fotoHtml = actie.foto
+                ? '<img src="{{ url_for("static", filename="product_afbeeldingen/") }}' + actie.foto + '" alt="">'
+                : '';
+            toonPopup(
+                '<div class="popup-label">Actie</div>' + fotoHtml +
+                '<h2>' + actie.naam + '</h2>' +
+                '<div class="popup-prijs">€ ' + actie.prijs.toFixed(2).replace('.', ',') + '</div>' +
+                (actie.tekst ? '<p>' + actie.tekst + '</p>' : ''),
+                'kiosk-popup--actie',
+                9000
+            );
+        }
+
+        if (acties.length) {
+            setTimeout(toonActie, 25000);
+            setInterval(toonActie, 3 * 60 * 1000);
+        }
+
+        // ---------- Prijzen/acties bijwerken + grote pop-up bij UITVERKOCHT ----------
+        // Poll elke 10s of de getoonde producten/prijzen/acties nog kloppen,
+        // en herlaad pas zodra er echt iets gewijzigd is (i.p.v. blind om de
+        // zoveel minuten te herladen). Gaat een product er tussentijds NIEUW
+        // uitverkocht bij, dan verschijnt eerst een korte grote melding --
+        // de herlaadbeurt zelf wordt dan even uitgesteld zodat die melding
+        // niet meteen wordt weggeklikt.
         var huidigeVersie = {{ versie|tojson }};
+        var bekendeUitverkocht = {{ uitverkocht_namen|tojson }};
+
         setInterval(function () {
             fetch('{{ url_for("kiosk_prijzen_versie") }}')
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
-                    if (data.versie && data.versie !== huidigeVersie) window.location.reload();
+                    if (!data.versie || data.versie === huidigeVersie) return;
+                    var nieuwUitverkocht = (data.uitverkocht || []).filter(function (naam) {
+                        return bekendeUitverkocht.indexOf(naam) === -1;
+                    });
+                    if (nieuwUitverkocht.length && !overlayBezig) {
+                        toonPopup(
+                            '<div class="popup-label">Uitverkocht</div><h2>' + nieuwUitverkocht.join(', ') + '</h2>',
+                            'kiosk-popup--uitverkocht',
+                            7000
+                        );
+                        setTimeout(function () { window.location.reload(); }, 8000);
+                    } else {
+                        window.location.reload();
+                    }
                 })
                 .catch(function () {});
         }, 10000);

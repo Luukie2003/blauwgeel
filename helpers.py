@@ -163,6 +163,22 @@ def voeg_maanden_toe(datum_iso, aantal_maanden):
     return date(nieuw_jaar, nieuwe_maand, min(dag, laatste_dag)).isoformat()
 
 
+def bereken_jaren_lid(startdatum_iso, vandaag=None):
+    """Aantal volledige jaren sinds startdatum -- 1 ster per jaar bij een
+    Club van 20-lid op het kantine scherm. Telt pas mee zodra de 'verjaardag'
+    van de startdatum dit jaar al geweest is. vandaag is alleen om dit
+    testbaar te maken zonder van de systeemklok afhankelijk te zijn -- in de
+    praktijk altijd date.today()."""
+    if not startdatum_iso:
+        return 0
+    jaar, maand, dag = (int(deel) for deel in startdatum_iso.split("-"))
+    vandaag = vandaag or date.today()
+    jaren = vandaag.year - jaar
+    if (vandaag.month, vandaag.day) < (maand, dag):
+        jaren -= 1
+    return max(0, jaren)
+
+
 def now_str():
     return datetime.now().strftime("%Y-%m-%d %H:%M")
 

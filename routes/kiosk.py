@@ -11,6 +11,7 @@ from helpers import (
     KIOSK_SPONSOR_SJABLONEN,
     KIOSK_SPONSOR_SJABLOON_SLEUTELS,
     KIOSK_SPONSOR_SJABLOON_VOORBEELDEN,
+    bereken_jaren_lid,
     bereken_komende_thuiswedstrijden,
     format_datum_kort,
     is_ajax_verzoek,
@@ -84,11 +85,21 @@ def register_routes(app):
         if instellingen["toon_club_van_20"]:
             # Alleen actieve (en betaalde) leden op het scherm -- inactief
             # of nog niet betaald blijft puur intern zichtbaar bij
-            # Sponsoren & leden, zie kiosk_lid_status_wisselen.
+            # Sponsoren & leden, zie kiosk_lid_status_wisselen. sterren = 1
+            # per volledig jaar sinds de startdatum; extra_groot laat een
+            # naam prominenter tonen (zie kiosk_lid_bewerken).
             leden = db.execute(
-                "SELECT naam FROM club_van_20_leden WHERE status = 'actief' ORDER BY naam COLLATE NOCASE"
+                """SELECT naam, startdatum, extra_groot FROM club_van_20_leden
+                   WHERE status = 'actief' ORDER BY naam COLLATE NOCASE"""
             ).fetchall()
-            namen = [r["naam"] for r in leden]
+            namen = [
+                {
+                    "naam": r["naam"],
+                    "sterren": bereken_jaren_lid(r["startdatum"]),
+                    "extra_groot": bool(r["extra_groot"]),
+                }
+                for r in leden
+            ]
             per_slide = max(1, instellingen["club_van_20_namen_per_slide"])
             groepen = [namen[i : i + per_slide] for i in range(0, len(namen), per_slide)]
             slides = [
@@ -150,7 +161,14 @@ def register_routes(app):
         producten = db.execute(
             "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
         ).fetchall()
-        return render_template("kiosk_prijzen_instellingen.html", producten=producten)
+        acties = db.execute(
+            """SELECT ka.*, p.naam AS product_naam FROM kiosk_acties ka
+               JOIN producten p ON p.id = ka.product_id
+               ORDER BY ka.id"""
+        ).fetchall()
+        return render_template(
+            "kiosk_prijzen_instellingen.html", producten=producten, acties=acties
+        )
 
     @app.route("/kiosk/prijzen/product/<int:product_id>/toon", methods=["POST"])
     def kiosk_product_toon_wisselen(product_id):
@@ -222,10 +240,27 @@ def register_routes(app):
             per_categorie.setdefault(p["categorie"], []).append(p)
         return sorted(per_categorie.items())
 
-    def _prijzen_versie(categorieen):
+    def _acties_actief(db):
+        """Actieve prijs-acties met de gegevens van het gekoppelde product --
+        voor de korte, opvallende pop-up die af en toe over het
+        prijzenscherm heen verschijnt (zie kiosk_prijzen_scherm.html).
+        Gebruikt bewust de foto/prijs van het product zelf, geen losse
+        afbeelding per actie."""
+        return db.execute(
+            """SELECT ka.id, ka.tekst, p.naam AS product_naam, p.verkoopprijs, p.afbeelding
+               FROM kiosk_acties ka JOIN producten p ON p.id = ka.product_id
+               WHERE ka.actief = 1
+               ORDER BY ka.id"""
+        ).fetchall()
+
+    def _uitverkocht_namen(categorieen):
+        return [p["naam"] for _, lijst in categorieen for p in lijst if p["kiosk_uitverkocht"]]
+
+    def _prijzen_versie(categorieen, acties):
         # Alleen de velden die daadwerkelijk op het scherm staan -- zo
         # triggert bijv. een gewijzigde voorraad (niet zichtbaar hier) geen
-        # onnodige herlaadbeurt.
+        # onnodige herlaadbeurt. Acties tellen ook mee, zodat een nieuwe of
+        # aangepaste actie het scherm net als de rest vanzelf bijwerkt.
         return _versie(
             [
                 (
@@ -233,23 +268,165 @@ def register_routes(app):
                     [(p["id"], p["naam"], p["verkoopprijs"], p["kiosk_uitverkocht"]) for p in lijst],
                 )
                 for naam, lijst in categorieen
-            ]
+            ],
+            [(a["id"], a["tekst"], a["product_naam"], a["verkoopprijs"], a["afbeelding"]) for a in acties],
         )
 
     @app.route("/kiosk/prijzen")
     def kiosk_prijzen_scherm():
         db = get_db()
         categorieen = _prijzen_categorieen(db)
+        acties = _acties_actief(db)
+        # Simpele, JSON-vriendelijke vorm voor de pop-up-JS -- alleen wat er
+        # daadwerkelijk getoond wordt, geen hele sqlite3.Row.
+        acties_voor_scherm = [
+            {
+                "naam": a["product_naam"],
+                "prijs": a["verkoopprijs"],
+                "tekst": a["tekst"],
+                "foto": a["afbeelding"],
+            }
+            for a in acties
+        ]
         return render_template(
             "kiosk_prijzen_scherm.html",
             categorieen=categorieen,
-            versie=_prijzen_versie(categorieen),
+            acties=acties_voor_scherm,
+            versie=_prijzen_versie(categorieen, acties),
+            uitverkocht_namen=_uitverkocht_namen(categorieen),
         )
 
     @app.route("/kiosk/prijzen/versie")
     def kiosk_prijzen_versie():
         db = get_db()
-        return jsonify({"versie": _prijzen_versie(_prijzen_categorieen(db))})
+        categorieen = _prijzen_categorieen(db)
+        acties = _acties_actief(db)
+        return jsonify(
+            {
+                "versie": _prijzen_versie(categorieen, acties),
+                "uitverkocht": _uitverkocht_namen(categorieen),
+            }
+        )
+
+    # ---------- Prijs-acties (onderdeel van het prijzenscherm) ----------
+
+    def _actie_producten(db):
+        """Actieve producten om als actie te kunnen kiezen -- de actie
+        gebruikt daarna gewoon de foto/prijs van dat product, dus hier hoeft
+        geen los uploadveld voor te komen."""
+        return db.execute(
+            "SELECT id, naam, categorie FROM producten WHERE actief = 1 ORDER BY categorie, naam"
+        ).fetchall()
+
+    @app.route("/kiosk/prijzen/acties")
+    def kiosk_acties():
+        db = get_db()
+        acties = db.execute(
+            """SELECT ka.*, p.naam AS product_naam, p.afbeelding AS product_afbeelding,
+                      p.verkoopprijs AS product_verkoopprijs
+               FROM kiosk_acties ka JOIN producten p ON p.id = ka.product_id
+               ORDER BY ka.id"""
+        ).fetchall()
+        return render_template("kiosk_acties.html", acties=acties)
+
+    @app.route("/kiosk/prijzen/acties/nieuw", methods=["GET", "POST"])
+    def kiosk_actie_nieuw():
+        db = get_db()
+        if request.method == "POST":
+            try:
+                product_id = int(request.form.get("product_id") or 0)
+            except ValueError:
+                product_id = 0
+            product = db.execute(
+                "SELECT id FROM producten WHERE id = ?", (product_id,)
+            ).fetchone()
+            if product is None:
+                flash("Kies een geldig product.", "error")
+            else:
+                db.execute(
+                    """INSERT INTO kiosk_acties (product_id, tekst, actief, aangemaakt_op)
+                       VALUES (?, ?, ?, ?)""",
+                    (
+                        product_id,
+                        request.form.get("tekst", "").strip() or None,
+                        1 if request.form.get("actief") else 0,
+                        now_str(),
+                    ),
+                )
+                db.commit()
+                flash("Actie toegevoegd.", "success")
+                return redirect(url_for("kiosk_acties"))
+        return render_template("kiosk_actie_form.html", actie=None, producten=_actie_producten(db))
+
+    @app.route("/kiosk/prijzen/acties/<int:actie_id>/bewerken", methods=["GET", "POST"])
+    def kiosk_actie_bewerken(actie_id):
+        db = get_db()
+        actie = db.execute("SELECT * FROM kiosk_acties WHERE id = ?", (actie_id,)).fetchone()
+        if actie is None:
+            flash("Actie niet gevonden.", "error")
+            return redirect(url_for("kiosk_acties"))
+        if request.method == "POST":
+            try:
+                product_id = int(request.form.get("product_id") or 0)
+            except ValueError:
+                product_id = 0
+            product = db.execute(
+                "SELECT id FROM producten WHERE id = ?", (product_id,)
+            ).fetchone()
+            if product is None:
+                flash("Kies een geldig product.", "error")
+            else:
+                db.execute(
+                    "UPDATE kiosk_acties SET product_id = ?, tekst = ?, actief = ? WHERE id = ?",
+                    (
+                        product_id,
+                        request.form.get("tekst", "").strip() or None,
+                        1 if request.form.get("actief") else 0,
+                        actie_id,
+                    ),
+                )
+                db.commit()
+                flash("Actie bijgewerkt.", "success")
+                return redirect(url_for("kiosk_acties"))
+        return render_template(
+            "kiosk_actie_form.html", actie=actie, producten=_actie_producten(db)
+        )
+
+    @app.route("/kiosk/prijzen/acties/<int:actie_id>/verwijderen", methods=["POST"])
+    def kiosk_actie_verwijderen(actie_id):
+        db = get_db()
+        db.execute("DELETE FROM kiosk_acties WHERE id = ?", (actie_id,))
+        db.commit()
+        flash("Actie verwijderd.", "success")
+        return redirect(url_for("kiosk_acties"))
+
+    @app.route("/kiosk/prijzen/acties/<int:actie_id>/toon", methods=["POST"])
+    def kiosk_actie_toon_wisselen(actie_id):
+        """Los aan/uit-knopje per actie -- zelfde 1-tik-patroon als de
+        product-schuifjes hierboven, zie de PDA-weergave van
+        kiosk_prijzen_instellingen.html."""
+        db = get_db()
+        actie = db.execute(
+            """SELECT ka.*, p.naam AS product_naam FROM kiosk_acties ka
+               JOIN producten p ON p.id = ka.product_id WHERE ka.id = ?""",
+            (actie_id,),
+        ).fetchone()
+        if actie is None:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Actie niet gevonden."}), 404
+            flash("Actie niet gevonden.", "error")
+            return redirect(url_for("kiosk_prijzen_instellingen"))
+        nieuwe_status = 0 if actie["actief"] else 1
+        db.execute("UPDATE kiosk_acties SET actief = ? WHERE id = ?", (nieuwe_status, actie_id))
+        db.commit()
+        if is_ajax_verzoek():
+            melding = (
+                f"Actie '{actie['product_naam']}' staat nu aan."
+                if nieuwe_status
+                else f"Actie '{actie['product_naam']}' staat nu uit."
+            )
+            return jsonify({"ok": True, "actief": nieuwe_status, "melding": melding})
+        return redirect(url_for("kiosk_prijzen_instellingen"))
 
     # ---------- Onderdeel 2: Sponsoren/leden beheren ----------
 
@@ -401,6 +578,41 @@ def register_routes(app):
                 "success",
             )
         return redirect(url_for("kiosk_sponsoren_leden"))
+
+    @app.route("/kiosk/sponsoren-leden/leden/<int:lid_id>/bewerken", methods=["GET", "POST"])
+    def kiosk_lid_bewerken(lid_id):
+        db = get_db()
+        lid = db.execute(
+            "SELECT * FROM club_van_20_leden WHERE id = ?", (lid_id,)
+        ).fetchone()
+        if lid is None:
+            flash("Lid niet gevonden.", "error")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+        if request.method == "POST":
+            naam = request.form.get("naam", "").strip()
+            startdatum = request.form.get("startdatum", "").strip()
+            einddatum = request.form.get("einddatum", "").strip()
+            status = request.form.get("status", "").strip()
+            if not naam or not startdatum or not einddatum or status not in KIOSK_LID_STATUSSEN:
+                flash("Vul een naam, status, start- en einddatum in.", "error")
+            else:
+                db.execute(
+                    """UPDATE club_van_20_leden
+                       SET naam = ?, status = ?, startdatum = ?, einddatum = ?, extra_groot = ?
+                       WHERE id = ?""",
+                    (
+                        naam,
+                        status,
+                        startdatum,
+                        einddatum,
+                        1 if request.form.get("extra_groot") else 0,
+                        lid_id,
+                    ),
+                )
+                db.commit()
+                flash(f"'{naam}' bijgewerkt.", "success")
+                return redirect(url_for("kiosk_sponsoren_leden"))
+        return render_template("kiosk_lid_form.html", lid=lid)
 
     @app.route("/kiosk/sponsoren-leden/leden/<int:lid_id>/status", methods=["POST"])
     def kiosk_lid_status_wisselen(lid_id):

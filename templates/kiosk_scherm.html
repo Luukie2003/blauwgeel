@@ -92,7 +92,9 @@
         /* Club van 20 */
         .slide-club_van_20 h2 { font-size: 2.8rem; color: var(--geel); margin: 0 0 1.8rem; }
         .namen-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.9rem 1.5rem; max-width: 72rem; }
-        .naam-chip { background: rgba(255, 255, 255, 0.09); border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 999px; padding: 0.55rem 1.4rem; font-size: 1.35rem; }
+        .naam-chip { background: rgba(255, 255, 255, 0.09); border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 999px; padding: 0.6rem 1.5rem; font-size: 1.55rem; }
+        .naam-chip--groot { font-size: 2.15rem; font-weight: 700; padding: 0.7rem 1.8rem; border-color: var(--geel); background: rgba(252, 212, 47, 0.14); }
+        .naam-sterren { color: var(--geel); letter-spacing: 0.05em; margin-right: 0.2rem; }
         .pagina-indicator { margin-top: 1.6rem; color: var(--tekst-zacht); font-size: 1.15rem; }
 
         /* Wedstrijden */
@@ -144,8 +146,10 @@
             {% elif slide.type == 'club_van_20' %}
                 <h2>{{ slide.titel }}</h2>
                 <div class="namen-grid">
-                    {% for naam in slide.namen %}
-                    <span class="naam-chip">{{ naam }}</span>
+                    {% for lid in slide.namen %}
+                    <span class="naam-chip{{ ' naam-chip--groot' if lid.extra_groot else '' }}">
+                        {% if lid.sterren %}<span class="naam-sterren">{{ '★' * lid.sterren }}</span>{% endif %}{{ lid.naam }}
+                    </span>
                     {% endfor %}
                 </div>
                 {% if slide.pagina %}<div class="pagina-indicator">{{ slide.pagina }}</div>{% endif %}

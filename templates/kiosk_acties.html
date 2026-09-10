@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titel %}Acties{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Een actie is een korte, opvallende pop-up met de foto en prijs van een bestaand product, die af en toe
+    over het prijzenscherm heen verschijnt. Aan/uit zetten kan ook snel vanaf de handterminal, bij
+    <a href="{{ url_for('kiosk_prijzen_instellingen') }}">Kiosk</a>.
+    <a href="{{ url_for('kiosk_hub') }}">&larr; Terug naar Kantine Kiosk</a>
+</p>
+
+<div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">Acties</h2>
+        <a href="{{ url_for('kiosk_actie_nieuw') }}" class="btn btn-geel">Nieuwe actie</a>
+    </div>
+    {% if acties %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th></th><th>Product</th><th>Tekst</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for a in acties %}
+                <tr>
+                    <td>
+                        {% if a.product_afbeelding %}
+                        <img src="{{ url_for('static', filename='product_afbeeldingen/' + a.product_afbeelding) }}" alt="" class="product-thumb">
+                        {% endif %}
+                    </td>
+                    <td>{{ a.product_naam }} <span class="tekst-zacht">&euro; {{ '%.2f'|format(a.product_verkoopprijs) }}</span></td>
+                    <td>{{ a.tekst or '—' }}</td>
+                    <td>
+                        {% if a.actief %}
+                        <span class="badge badge-ok">Aan</span>
+                        {% else %}
+                        <span class="badge badge-neutraal">Uit</span>
+                        {% endif %}
+                    </td>
+                    <td class="tabel-acties">
+                        <a href="{{ url_for('kiosk_actie_bewerken', actie_id=a.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                        <form method="post" action="{{ url_for('kiosk_actie_verwijderen', actie_id=a.id) }}"
+                              onsubmit="return bevestigEnVerstuur(this, 'Actie voor \'{{ a.product_naam }}\' verwijderen?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen acties toegevoegd.</p>
+    {% endif %}
+</div>
+{% endblock %}

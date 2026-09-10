@@ -9,6 +9,7 @@ from helpers import (
     STEM_AFBEELDINGEN_MAP,
     bepaal_weergave_modus,
     bereken_bestelling_status,
+    bereken_jaren_lid,
     bereken_frituurvet_status,
     bereken_kassa_coupure_bedrag,
     bereken_kassa_stand,
@@ -105,11 +106,17 @@ BEHEERDER_ENDPOINTS = {
     "kiosk_prijzen_instellingen",
     "kiosk_product_toon_wisselen",
     "kiosk_product_uitverkocht_wisselen",
+    "kiosk_acties",
+    "kiosk_actie_nieuw",
+    "kiosk_actie_bewerken",
+    "kiosk_actie_verwijderen",
+    "kiosk_actie_toon_wisselen",
     "kiosk_sponsoren_leden",
     "kiosk_sponsor_nieuw",
     "kiosk_sponsor_bewerken",
     "kiosk_sponsor_verwijderen",
     "kiosk_lid_nieuw",
+    "kiosk_lid_bewerken",
     "kiosk_lid_status_wisselen",
     "kiosk_lid_verwijderen",
     "kiosk_scherm_instellingen",
@@ -372,6 +379,40 @@ NAV_ITEMS = [
         "url_endpoint": "bieren_lijst",
         "label": "Bierbibliotheek",
     },
+    {
+        "groep": "Kiosk",
+        "endpoints": ["kiosk_hub"],
+        "url_endpoint": "kiosk_hub",
+        "label": "Overzicht",
+    },
+    {
+        "groep": "Kiosk",
+        "endpoints": [
+            "kiosk_prijzen_instellingen",
+            "kiosk_acties",
+            "kiosk_actie_nieuw",
+            "kiosk_actie_bewerken",
+        ],
+        "url_endpoint": "kiosk_prijzen_instellingen",
+        "label": "Prijzenscherm & acties",
+    },
+    {
+        "groep": "Kiosk",
+        "endpoints": [
+            "kiosk_sponsoren_leden",
+            "kiosk_sponsor_nieuw",
+            "kiosk_sponsor_bewerken",
+            "kiosk_lid_bewerken",
+        ],
+        "url_endpoint": "kiosk_sponsoren_leden",
+        "label": "Sponsoren & leden",
+    },
+    {
+        "groep": "Kiosk",
+        "endpoints": ["kiosk_scherm_instellingen"],
+        "url_endpoint": "kiosk_scherm_instellingen",
+        "label": "Kantine scherm",
+    },
 ]
 
 # Groepen komen in deze volgorde in de zijbalk te staan (Python dicts noch
@@ -379,8 +420,14 @@ NAV_ITEMS = [
 # herschikt, dus NAV_ITEMS wordt bij het opbouwen van de zijbalk hierop
 # gesorteerd). Nieuwe groepen (bijv. een toekomstige "Keuken") hoeven hier
 # alleen aan toegevoegd te worden om vanzelf een eigen sectie te krijgen.
-NAV_GROEP_VOLGORDE = ["Algemeen", "Voorraad", "Kassa", "Keuken", "Stemmen"]
+NAV_GROEP_VOLGORDE = ["Algemeen", "Voorraad", "Kassa", "Keuken", "Stemmen", "Kiosk"]
 NAV_ITEMS.sort(key=lambda item: NAV_GROEP_VOLGORDE.index(item["groep"]))
+
+# Kiosk-beheer is volledig beheerder-only (zie BEHEERDER_ENDPOINTS) --
+# i.t.t. de sectie-gebonden groepen hierboven (die vrijwilligers met de
+# juiste sectie wel mogen zien) toont de zijbalk deze groep daarom nooit aan
+# een vrijwilliger, ook al staat 'ie niet in NAV_GROEP_SECTIE.
+NAV_GROEP_ALLEEN_BEHEERDER = {"Kiosk"}
 
 # De PDA-modus (zie WEERGAVE_TELEFOON_PATROON hieronder) toont alleen deze
 # handvol pagina's -- puur vloerwerk, geen beheer/rapportages. Bewust een
@@ -431,6 +478,7 @@ def create_app(database_path=None):
     app.jinja_env.filters["met_tags"] = met_tags_filter
     app.jinja_env.globals["stemming_is_open"] = stemming_is_open
     app.jinja_env.globals["secties_lijst"] = secties_lijst
+    app.jinja_env.globals["jaren_lid"] = bereken_jaren_lid
 
     @app.before_request
     def zet_weergave_modus():
@@ -500,8 +548,11 @@ def create_app(database_path=None):
         zichtbare_nav_items = [
             item
             for item in NAV_ITEMS
-            if item["groep"] not in NAV_GROEP_SECTIE
-            or heeft_sectie_toegang(gebruiker_rol, gebruiker_secties, NAV_GROEP_SECTIE[item["groep"]])
+            if (
+                item["groep"] not in NAV_GROEP_SECTIE
+                or heeft_sectie_toegang(gebruiker_rol, gebruiker_secties, NAV_GROEP_SECTIE[item["groep"]])
+            )
+            and (item["groep"] not in NAV_GROEP_ALLEEN_BEHEERDER or gebruiker_rol == "beheerder")
         ]
         zichtbare_pda_items = [
             item
