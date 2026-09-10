@@ -211,59 +211,36 @@ ENDPOINT_SECTIE = {
     endpoint: sectie for sectie, endpoints in SECTIE_ENDPOINTS.items() for endpoint in endpoints
 }
 # Voor het filteren van de zijbalk: welke navigatiegroep hoort bij welke
-# sectie. "Algemeen" staat hier bewust niet in -- dat blijft voor iedereen
-# zichtbaar.
-NAV_GROEP_SECTIE = {"Voorraad": "voorraad", "Kassa": "kassa", "Keuken": "keuken", "Stemmen": "stemmen"}
+# sectie. "Start" en "Rapporten" staan hier bewust niet in -- die blijven
+# voor iedereen zichtbaar, net als het vroegere "Algemeen".
+NAV_GROEP_SECTIE = {
+    "Voorraad": "voorraad",
+    "Tellen": "voorraad",
+    "Bestellen": "voorraad",
+    "Assortiment": "voorraad",
+    "Kassa": "kassa",
+    "Keuken": "keuken",
+    "Stemmen": "stemmen",
+}
 
 NAV_ITEMS = [
     {
-        "groep": "Algemeen",
+        "groep": "Start",
         "endpoints": ["dashboard"],
         "url_endpoint": "dashboard",
         "label": "Overzicht",
     },
     {
-        "groep": "Algemeen",
+        "groep": "Start",
         "endpoints": ["bijzonderheden"],
         "url_endpoint": "bijzonderheden",
-        "label": "Bijzonderheden",
-    },
-    {
-        "groep": "Algemeen",
-        "endpoints": ["week_overzicht"],
-        "url_endpoint": "week_overzicht",
-        "label": "Weekoverzicht",
-    },
-    {
-        "groep": "Algemeen",
-        "endpoints": ["wedstrijden_overzicht"],
-        "url_endpoint": "wedstrijden_overzicht",
-        "label": "Wedstrijden",
-    },
-    {
-        "groep": "Algemeen",
-        "endpoints": ["verkooprapport", "verkooprapport_pdf_route", "verkooprapport_csv_route"],
-        "url_endpoint": "verkooprapport",
-        "label": "Verkooprapport",
+        "label": "Prikbord",
     },
     {
         "groep": "Voorraad",
         "endpoints": ["voorraadoverzicht"],
         "url_endpoint": "voorraadoverzicht",
         "label": "Voorraadoverzicht",
-    },
-    {
-        "groep": "Voorraad",
-        "endpoints": [
-            "producten_lijst",
-            "product_nieuw",
-            "product_bewerken",
-            "categorieen_lijst",
-            "producten_minimumvoorraad",
-            "producten_besteleenheid",
-        ],
-        "url_endpoint": "producten_lijst",
-        "label": "Producten",
     },
     {
         "groep": "Voorraad",
@@ -278,7 +255,7 @@ NAV_ITEMS = [
         "label": "Mutatieoverzicht",
     },
     {
-        "groep": "Voorraad",
+        "groep": "Tellen",
         "endpoints": [
             "tellen",
             "tellen_lopen",
@@ -289,31 +266,44 @@ NAV_ITEMS = [
         "label": "Voorraad tellen",
     },
     {
-        "groep": "Voorraad",
+        "groep": "Tellen",
         "endpoints": ["tellingen_overzicht", "telling_detail", "tellingen_gecombineerd_pdf"],
         "url_endpoint": "tellingen_overzicht",
         "label": "Tellingen",
     },
     {
-        "groep": "Voorraad",
+        "groep": "Bestellen",
         "endpoints": ["bestellijst", "bestelling_aanmaken", "bestelling_nieuw", "bestelling_inboeken"],
         "url_endpoint": "bestellijst",
         "label": "Bestellijst",
     },
     {
-        "groep": "Voorraad",
-        "endpoints": ["fusten_overzicht"],
-        "url_endpoint": "fusten_overzicht",
-        "label": "Fusten",
-    },
-    {
-        "groep": "Voorraad",
+        "groep": "Bestellen",
         "endpoints": ["boodschappenlijst"],
         "url_endpoint": "boodschappenlijst",
         "label": "Boodschappenlijst",
     },
     {
-        "groep": "Voorraad",
+        "groep": "Bestellen",
+        "endpoints": ["fusten_overzicht"],
+        "url_endpoint": "fusten_overzicht",
+        "label": "Fusten",
+    },
+    {
+        "groep": "Assortiment",
+        "endpoints": [
+            "producten_lijst",
+            "product_nieuw",
+            "product_bewerken",
+            "categorieen_lijst",
+            "producten_minimumvoorraad",
+            "producten_besteleenheid",
+        ],
+        "url_endpoint": "producten_lijst",
+        "label": "Producten",
+    },
+    {
+        "groep": "Assortiment",
         "endpoints": ["verbruiksvoorwerpen_lijst"],
         "url_endpoint": "verbruiksvoorwerpen_lijst",
         "label": "Verbruiksvoorwerpen",
@@ -356,6 +346,29 @@ NAV_ITEMS = [
         "label": "Instellingen",
     },
     {
+        "groep": "Kantine-tv",
+        "endpoints": ["kiosk_hub"],
+        "url_endpoint": "kiosk_hub",
+        "label": "Overzicht",
+    },
+    {
+        "groep": "Kantine-tv",
+        "endpoints": [
+            "kiosk_prijzen_instellingen",
+            "kiosk_acties",
+            "kiosk_actie_nieuw",
+            "kiosk_actie_bewerken",
+        ],
+        "url_endpoint": "kiosk_prijzen_instellingen",
+        "label": "Prijzenscherm & acties",
+    },
+    {
+        "groep": "Kantine-tv",
+        "endpoints": ["kiosk_scherm_instellingen"],
+        "url_endpoint": "kiosk_scherm_instellingen",
+        "label": "Kantine scherm",
+    },
+    {
         "groep": "Stemmen",
         "endpoints": [
             "stemmen_overzicht",
@@ -380,24 +393,31 @@ NAV_ITEMS = [
         "label": "Bierbibliotheek",
     },
     {
-        "groep": "Kiosk",
-        "endpoints": ["kiosk_hub"],
-        "url_endpoint": "kiosk_hub",
-        "label": "Overzicht",
+        "groep": "Rapporten",
+        "endpoints": ["verkooprapport", "verkooprapport_pdf_route", "verkooprapport_csv_route"],
+        "url_endpoint": "verkooprapport",
+        "label": "Verkooprapport",
     },
     {
-        "groep": "Kiosk",
-        "endpoints": [
-            "kiosk_prijzen_instellingen",
-            "kiosk_acties",
-            "kiosk_actie_nieuw",
-            "kiosk_actie_bewerken",
-        ],
-        "url_endpoint": "kiosk_prijzen_instellingen",
-        "label": "Prijzenscherm & acties",
+        "groep": "Rapporten",
+        "endpoints": ["week_overzicht"],
+        "url_endpoint": "week_overzicht",
+        "label": "Weekoverzicht",
     },
     {
-        "groep": "Kiosk",
+        "groep": "Rapporten",
+        "endpoints": ["wedstrijden_overzicht"],
+        "url_endpoint": "wedstrijden_overzicht",
+        "label": "Wedstrijden",
+    },
+    {
+        "groep": "Club",
+        "endpoints": ["accounts_lijst"],
+        "url_endpoint": "accounts_lijst",
+        "label": "Accounts beheren",
+    },
+    {
+        "groep": "Club",
         "endpoints": [
             "kiosk_sponsoren_leden",
             "kiosk_sponsor_nieuw",
@@ -408,26 +428,51 @@ NAV_ITEMS = [
         "label": "Sponsoren & leden",
     },
     {
-        "groep": "Kiosk",
-        "endpoints": ["kiosk_scherm_instellingen"],
-        "url_endpoint": "kiosk_scherm_instellingen",
-        "label": "Kantine scherm",
+        "groep": "Club",
+        "endpoints": ["club_instellingen"],
+        "url_endpoint": "club_instellingen",
+        "label": "Club instellingen",
+    },
+    {
+        "groep": "Club",
+        "endpoints": ["backups_lijst"],
+        "url_endpoint": "backups_lijst",
+        "label": "Back-ups",
+    },
+    {
+        "groep": "Club",
+        "endpoints": ["instellingen_pagina"],
+        "url_endpoint": "instellingen_pagina",
+        "label": "Instellingen",
     },
 ]
 
 # Groepen komen in deze volgorde in de zijbalk te staan (Python dicts noch
 # SQL-resultaten garanderen een stabiele groepsvolgorde als items ooit worden
 # herschikt, dus NAV_ITEMS wordt bij het opbouwen van de zijbalk hierop
-# gesorteerd). Nieuwe groepen (bijv. een toekomstige "Keuken") hoeven hier
-# alleen aan toegevoegd te worden om vanzelf een eigen sectie te krijgen.
-NAV_GROEP_VOLGORDE = ["Algemeen", "Voorraad", "Kassa", "Keuken", "Stemmen", "Kiosk"]
+# gesorteerd). Nieuwe groepen hoeven hier alleen aan toegevoegd te worden om
+# vanzelf een eigen sectie te krijgen.
+NAV_GROEP_VOLGORDE = [
+    "Start",
+    "Voorraad",
+    "Tellen",
+    "Bestellen",
+    "Assortiment",
+    "Kassa",
+    "Keuken",
+    "Kantine-tv",
+    "Stemmen",
+    "Rapporten",
+    "Club",
+]
 NAV_ITEMS.sort(key=lambda item: NAV_GROEP_VOLGORDE.index(item["groep"]))
 
-# Kiosk-beheer is volledig beheerder-only (zie BEHEERDER_ENDPOINTS) --
-# i.t.t. de sectie-gebonden groepen hierboven (die vrijwilligers met de
-# juiste sectie wel mogen zien) toont de zijbalk deze groep daarom nooit aan
-# een vrijwilliger, ook al staat 'ie niet in NAV_GROEP_SECTIE.
-NAV_GROEP_ALLEEN_BEHEERDER = {"Kiosk"}
+# Kantine-tv- en Club-beheer zijn volledig beheerder-only (zie
+# BEHEERDER_ENDPOINTS) -- i.t.t. de sectie-gebonden groepen hierboven (die
+# vrijwilligers met de juiste sectie wel mogen zien) toont de zijbalk deze
+# twee groepen daarom nooit aan een vrijwilliger, ook al staan ze niet in
+# NAV_GROEP_SECTIE.
+NAV_GROEP_ALLEEN_BEHEERDER = {"Kantine-tv", "Club"}
 
 # De PDA-modus (zie WEERGAVE_TELEFOON_PATROON hieronder) toont alleen deze
 # handvol pagina's -- puur vloerwerk, geen beheer/rapportages. Bewust een

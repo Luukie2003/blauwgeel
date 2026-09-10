@@ -785,7 +785,7 @@ def test_kantine_scherm_toont_lege_staat_als_alles_uit_staat(client, db):
 def test_kiosk_zijbalk_groep_zichtbaar_voor_beheerder(ingelogde_client, db):
     resp = ingelogde_client.get("/")
     assert resp.status_code == 200
-    assert b"Kiosk" in resp.data
+    assert b"Kantine-tv" in resp.data
 
 
 def test_kiosk_zijbalk_groep_verborgen_voor_vrijwilliger(client, db):
@@ -795,7 +795,7 @@ def test_kiosk_zijbalk_groep_verborgen_voor_vrijwilliger(client, db):
     resp = client.get("/")
 
     assert resp.status_code == 200
-    assert b"Kiosk" not in resp.data
+    assert b"Kantine-tv" not in resp.data
 
 
 def test_kiosk_route_blijft_beschermd_ook_al_staat_die_nu_in_de_zijbalk(client, db):
