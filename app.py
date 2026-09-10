@@ -68,6 +68,10 @@ OPEN_ENDPOINTS = {
     # moeten herladen -- dus ook zonder account bereikbaar.
     "kiosk_prijzen_versie",
     "kiosk_scherm_versie",
+    # Het prijzenscherm meldt hiermee zelf dat de livestream is vastgelopen
+    # (zie de video-events in kiosk_prijzen_scherm.html) -- draait op
+    # hetzelfde account-loze scherm, dus moet ook hier bereikbaar zijn.
+    "kiosk_stream_uitschakelen",
 }
 
 # Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers
@@ -106,6 +110,7 @@ BEHEERDER_ENDPOINTS = {
     "mededeling_pinnen_als_banner",
     "kiosk_hub",
     "kiosk_prijzen_instellingen",
+    "kiosk_stream_instellingen_opslaan",
     "kiosk_product_toon_wisselen",
     "kiosk_product_uitverkocht_wisselen",
     "kiosk_acties",
@@ -350,6 +355,7 @@ NAV_ITEMS = [
         "groep": "Kantine-tv",
         "endpoints": [
             "kiosk_prijzen_instellingen",
+            "kiosk_stream_instellingen_opslaan",
             "kiosk_acties",
             "kiosk_actie_nieuw",
             "kiosk_actie_bewerken",

@@ -75,6 +75,13 @@
         }
         .leeg { color: var(--tekst-zacht); font-size: 1.3rem; margin-top: 2rem; }
 
+        /* Livestream i.p.v. de prijslijst -- vult het hele scherm, prijslijst
+           en header blijven verborgen zolang de stream loopt. */
+        #stream-scherm { display: none; position: fixed; inset: 0; background: #000; z-index: 5; }
+        #stream-scherm video { width: 100%; height: 100%; object-fit: contain; }
+        body.stream-actief header, body.stream-actief .prijzen-grid, body.stream-actief .leeg { visibility: hidden; }
+        body.stream-actief #stream-scherm { display: block; }
+
         /* Grote pop-up: zowel voor de UITVERKOCHT-melding als voor een
            actie -- zelfde overlay, alleen de klasse/inhoud verschilt. */
         .kiosk-popup {
@@ -158,6 +165,56 @@
     {% endif %}
 
     <div id="kiosk-popup" class="kiosk-popup"></div>
+
+    <div id="stream-scherm">
+        <video id="stream-video" autoplay playsinline></video>
+    </div>
+
+    <script>
+    (function () {
+        // ---------- Livestream: reactieve fallback op de prijslijst ----------
+        // Geen planning nodig: zodra de stream een fout geeft, stopt, of
+        // vastloopt, springt dit scherm terug naar de prijslijst en meldt
+        // dat ook meteen aan de server (kiosk_stream_uitschakelen), zodat een
+        // vergeten "weer uitzetten" na afloop zichzelf oplost -- ook op
+        // andere schermen die dezelfde instelling ophalen.
+        var streamUrl = {{ stream_url|tojson }};
+        var video = document.getElementById('stream-video');
+        var uitgeschakeld = false;
+
+        function terugNaarPrijslijst() {
+            if (uitgeschakeld) return;
+            uitgeschakeld = true;
+            document.body.classList.remove('stream-actief');
+            fetch('{{ url_for("kiosk_stream_uitschakelen") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'csrf_token=' + encodeURIComponent({{ csrf_token()|tojson }})
+            }).catch(function () {});
+        }
+
+        if (streamUrl) {
+            video.src = streamUrl;
+            document.body.classList.add('stream-actief');
+            video.addEventListener('error', terugNaarPrijslijst);
+            video.addEventListener('ended', terugNaarPrijslijst);
+            // 'stalled' is ook een korte buffer-hik op een prima stream --
+            // pas terugvallen als het na 5s nog steeds niet speelt.
+            var stalledTimer = null;
+            video.addEventListener('stalled', function () {
+                if (stalledTimer) return;
+                stalledTimer = setTimeout(function () {
+                    stalledTimer = null;
+                    if (video.paused || video.readyState < 3) terugNaarPrijslijst();
+                }, 5000);
+            });
+            video.addEventListener('playing', function () {
+                clearTimeout(stalledTimer);
+                stalledTimer = null;
+            });
+        }
+    })();
+    </script>
 
     <script>
         function werkKlokBij() {

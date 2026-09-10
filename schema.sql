@@ -370,3 +370,15 @@ CREATE TABLE IF NOT EXISTS kiosk_scherm_instellingen (
     wedstrijden_volgorde INTEGER NOT NULL DEFAULT 3
 );
 INSERT OR IGNORE INTO kiosk_scherm_instellingen (id) VALUES (1);
+
+-- Livestream op het prijzenscherm (bijv. een thuiswedstrijd). Reactief: het
+-- prijzenscherm zelf valt terug op de prijslijst zodra de stream een fout
+-- geeft, stopt, of vastloopt (zie kiosk_prijzen_scherm.html en
+-- kiosk_stream_uitschakelen in routes/kiosk.py) -- geen planning nodig, en
+-- een vergeten "weer uitzetten" trekt zichzelf recht.
+CREATE TABLE IF NOT EXISTS kiosk_stream (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    stream_url TEXT,
+    actief INTEGER NOT NULL DEFAULT 0
+);
+INSERT OR IGNORE INTO kiosk_stream (id) VALUES (1);

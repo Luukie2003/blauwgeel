@@ -11,6 +11,29 @@
 {% endif %}
 
 <div class="kaart">
+    <h2>Livestream</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Toont een livestream (bijv. een thuiswedstrijd) i.p.v. de prijslijst.
+        Valt vanzelf terug op de prijslijst zodra de stream een fout geeft,
+        stopt, of vastloopt -- je hoeft 'm dus niet per se zelf weer uit te
+        zetten na afloop.
+    </p>
+    <form method="post" action="{{ url_for('kiosk_stream_instellingen_opslaan') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="stream_url">Stream-URL</label>
+            <input type="url" id="stream_url" name="stream_url" placeholder="https://..."
+                   value="{{ stream.stream_url or '' }}">
+        </div>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin:0.6rem 0 1rem">
+            <input type="checkbox" name="actief" style="width:auto" {{ 'checked' if stream.actief }}>
+            Livestream actief (toont op het prijzenscherm i.p.v. de prijslijst)
+        </label>
+        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">Opslaan</button>
+    </form>
+</div>
+
+<div class="kaart">
     {% if producten %}
     <div class="filterbalk">
         <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">

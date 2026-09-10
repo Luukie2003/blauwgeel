@@ -290,6 +290,112 @@ def test_kiosk_pda_pagina_toont_uitverkocht_knop(ingelogde_client, db):
     assert b"btn-uitverkocht" in resp.data
 
 
+# ---------- Livestream (onderdeel van het prijzenscherm) ----------
+
+
+def test_stream_instellingen_opslaan(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/kiosk/prijzen/stream/instellingen",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "stream_url": "https://voorbeeld.nl/wedstrijd.m3u8",
+            "actief": "on",
+        },
+    )
+    assert resp.status_code == 302
+
+    rij = db.execute("SELECT stream_url, actief FROM kiosk_stream WHERE id = 1").fetchone()
+    assert rij["stream_url"] == "https://voorbeeld.nl/wedstrijd.m3u8"
+    assert rij["actief"] == 1
+
+
+def test_stream_instellingen_vereist_beheerder(client, db):
+    _maak_vrijwilliger(db, "vrijwilliger_stream", "voorraad")
+    _login(client, "vrijwilliger_stream")
+
+    resp = client.post(
+        "/kiosk/prijzen/stream/instellingen",
+        data={
+            "csrf_token": _csrf(client),
+            "stream_url": "https://voorbeeld.nl/wedstrijd.m3u8",
+            "actief": "on",
+        },
+    )
+    assert resp.status_code == 302
+    rij = db.execute("SELECT actief FROM kiosk_stream WHERE id = 1").fetchone()
+    assert rij["actief"] == 0
+
+
+def test_prijzenscherm_toont_stream_als_actief(ingelogde_client, db, client):
+    ingelogde_client.post(
+        "/kiosk/prijzen/stream/instellingen",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "stream_url": "https://voorbeeld.nl/wedstrijd.m3u8",
+            "actief": "on",
+        },
+    )
+
+    resp = client.get("/kiosk/prijzen")
+    body = resp.data.decode()
+    assert resp.status_code == 200
+    assert "https://voorbeeld.nl/wedstrijd.m3u8" in body
+    assert "stream-actief" in body
+
+
+def test_prijzenscherm_toont_geen_stream_zonder_actieve_instelling(client, db):
+    resp = client.get("/kiosk/prijzen")
+    body = resp.data.decode()
+    assert resp.status_code == 200
+    assert "var streamUrl = null;" in body
+
+
+def test_prijzenscherm_toont_geen_stream_als_url_wel_gezet_maar_niet_actief(ingelogde_client, db, client):
+    ingelogde_client.post(
+        "/kiosk/prijzen/stream/instellingen",
+        data={"csrf_token": _csrf(ingelogde_client), "stream_url": "https://voorbeeld.nl/wedstrijd.m3u8"},
+    )
+    resp = client.get("/kiosk/prijzen")
+    assert "var streamUrl = null;" in resp.data.decode()
+
+
+def test_stream_uitschakelen_is_publiek_en_zet_actief_uit(client, db):
+    db.execute(
+        "UPDATE kiosk_stream SET stream_url = 'https://voorbeeld.nl/wedstrijd.m3u8', actief = 1 WHERE id = 1"
+    )
+    db.commit()
+
+    # Publiek scherm heeft geen sessie/csrf nodig hier omdat de vereis_login
+    # check (net als bij stemmen) 'm al doorlaat via OPEN_ENDPOINTS -- maar
+    # csrf_beschermen geldt nog wel, dus eerst de pagina laden voor een token.
+    client.get("/kiosk/prijzen")
+    resp = client.post(
+        "/kiosk/prijzen/stream/uitschakelen",
+        data={"csrf_token": _csrf(client)},
+    )
+    assert resp.status_code == 200
+    assert resp.get_json()["ok"] is True
+
+    rij = db.execute("SELECT actief FROM kiosk_stream WHERE id = 1").fetchone()
+    assert rij["actief"] == 0
+
+
+def test_prijzen_versie_verandert_met_stream_status(ingelogde_client, db):
+    versie_voor = ingelogde_client.get("/kiosk/prijzen/versie").get_json()["versie"]
+
+    ingelogde_client.post(
+        "/kiosk/prijzen/stream/instellingen",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "stream_url": "https://voorbeeld.nl/wedstrijd.m3u8",
+            "actief": "on",
+        },
+    )
+    versie_na = ingelogde_client.get("/kiosk/prijzen/versie").get_json()["versie"]
+
+    assert versie_voor != versie_na
+
+
 # ---------- Acties (onderdeel van het prijzenscherm) ----------
 
 
