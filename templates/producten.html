@@ -1,14 +1,21 @@
 {% extends "base.html" %}
-{% block titel %}Producten{% endblock %}
+{% block titel %}{{ categorie_vergrendeld or 'Producten' }}{% endblock %}
 {% block inhoud %}
 <div class="actiebalk">
+    {% if categorie_vergrendeld %}
+    <p class="subtitel" style="margin:0">Voorraad van {{ categorie_vergrendeld|lower }}producten.</p>
+    {% else %}
     <p class="subtitel" style="margin:0">Beheer het assortiment en de minimumvoorraad.</p>
+    {% endif %}
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
         {% if huidige_gebruiker_rol == 'beheerder' %}
+        {% if not categorie_vergrendeld %}
         <a href="{{ url_for('categorieen_lijst') }}" class="btn btn-rand">Categorieën beheren</a>
-        <a href="{{ url_for('producten_minimumvoorraad') }}" class="btn btn-rand">Minimumvoorraad instellen</a>
-        <a href="{{ url_for('producten_besteleenheid') }}" class="btn btn-rand">Besteleenheid instellen</a>
-        <a href="{{ url_for('product_nieuw') }}" class="btn btn-geel">+ Nieuw product</a>
+        <a href="{{ url_for('producten_bulk_bewerken') }}" class="btn btn-rand">Bulk bewerken</a>
+        {% endif %}
+        <a href="{{ url_for('product_nieuw', categorie=categorie_vergrendeld) }}" class="btn btn-geel">
+            + Nieuw {{ (categorie_vergrendeld ~ '-product') if categorie_vergrendeld else 'product' }}
+        </a>
         {% endif %}
         <button type="button" id="labels-printen-knop" class="btn btn-rand" disabled>Schaplabels printen</button>
     </div>
@@ -18,18 +25,22 @@
     {% if producten %}
     <div class="filterbalk">
         <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">
+        {% if not categorie_vergrendeld %}
         <select id="filter-categorie">
             <option value="">Alle categorieën</option>
             {% for c in categorieen %}
             <option value="{{ c.naam }}">{{ c.naam }}</option>
             {% endfor %}
         </select>
+        {% endif %}
+        {% if subcategorieen %}
         <select id="filter-subcategorie">
             <option value="">Alle subcategorieën</option>
             {% for s in subcategorieen %}
             <option value="{{ s.naam }}" data-categorie="{{ s.categorie }}">{{ s.naam }}</option>
             {% endfor %}
         </select>
+        {% endif %}
         <label style="display:flex; align-items:center; gap:0.35rem; font-weight:400; cursor:pointer; white-space:nowrap">
             <input type="checkbox" id="label-select-alles" style="width:auto">
             Alles selecteren
@@ -48,7 +59,8 @@
                     <thead>
                         <tr>
                             <th></th><th></th><th>Product</th><th>Status</th><th>Categorie</th><th>Voorraad</th>
-                            <th>Inkoop</th><th>Verkoop</th><th></th>
+                            {% if not categorie_vergrendeld %}<th>Inkoop</th>{% endif %}
+                            <th>Verkoop</th><th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -89,6 +101,7 @@
                                 {% endif %}
                                 <div class="tekst-zacht" style="font-size:0.72rem">min. {{ p.min_voorraad }} {{ p.eenheid }}</div>
                             </td>
+                            {% if not categorie_vergrendeld %}
                             <td>
                                 {% if p.actief and p.inkoopprijs == 0 %}
                                 <span class="badge badge-uit" title="Nog geen inkoopprijs ingevuld">€ 0.00 ontbreekt</span>
@@ -96,6 +109,7 @@
                                 {{ "€ %.2f"|format(p.inkoopprijs) }} <span class="tekst-zacht">/ {{ p|besteleenheid_naam }}</span>
                                 {% endif %}
                             </td>
+                            {% endif %}
                             <td>
                                 {% if p.actief and p.verkoopprijs == 0 and p.categorie not in niet_verplicht_categorieen %}
                                 <span class="badge badge-laag" title="Nog geen verkoopprijs ingevuld">€ 0.00 ontbreekt</span>
@@ -123,7 +137,13 @@
     </div>
     <p class="leeg" id="filter-leeg" style="display:none">Geen producten gevonden voor dit filter.</p>
     {% else %}
-    <p class="leeg">Nog geen producten toegevoegd.</p>
+    <p class="leeg">
+        {% if categorie_vergrendeld %}
+        Nog geen producten in de categorie {{ categorie_vergrendeld }}. Voeg er een toe met de knop hierboven.
+        {% else %}
+        Nog geen producten toegevoegd.
+        {% endif %}
+    </p>
     {% endif %}
 </div>
 
@@ -141,9 +161,10 @@
     var groepen = Array.prototype.slice.call(
         document.querySelectorAll('.categorie-groep')
     );
-    var alleSubOpties = Array.prototype.slice.call(subVeld.options);
+    var alleSubOpties = subVeld ? Array.prototype.slice.call(subVeld.options) : [];
 
     function filterSubOpties() {
+        if (!catVeld || !subVeld) return;
         var categorie = catVeld.value;
         var huidige = subVeld.value;
         var nogGeldig = false;
@@ -158,8 +179,8 @@
 
     function filter() {
         var zoek = zoekVeld.value.trim().toLowerCase();
-        var categorie = catVeld.value;
-        var subcategorie = subVeld.value;
+        var categorie = catVeld ? catVeld.value : '';
+        var subcategorie = subVeld ? subVeld.value : '';
         var zichtbaar = 0;
         rijen.forEach(function (rij) {
             var matchZoek = !zoek || rij.dataset.zoek.indexOf(zoek) !== -1;
@@ -185,8 +206,8 @@
     }
 
     zoekVeld.addEventListener('input', filter);
-    catVeld.addEventListener('change', function () { filterSubOpties(); filter(); });
-    subVeld.addEventListener('change', filter);
+    if (catVeld) catVeld.addEventListener('change', function () { filterSubOpties(); filter(); });
+    if (subVeld) subVeld.addEventListener('change', filter);
     filter();
 })();
 

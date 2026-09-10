@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% block titel %}Minimumvoorraad instellen{% endblock %}
+{% block titel %}Bulk bewerken{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
-    Alle producten in één overzicht. Pas de minimumvoorraad aan waar nodig en
-    sla in één keer alles op.
+    Alle producten in één overzicht: minimumvoorraad en besteleenheid (bijv.
+    een krat van 24) in één keer aanpassen en opslaan. Laat een veld leeg om
+    dat product niet te wijzigen.
     <a href="{{ url_for('producten_lijst') }}">&larr; Terug naar producten</a>
 </p>
 
@@ -24,6 +25,8 @@
                         <th>Categorie</th>
                         <th>Huidige voorraad</th>
                         <th>Minimumvoorraad</th>
+                        <th>Besteleenheid</th>
+                        <th>Aantal per besteleenheid</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -46,6 +49,14 @@
                         <td>
                             <input type="number" name="min_{{ p.id }}" min="0" style="width:6rem"
                                    value="{{ p.min_voorraad }}"> {{ p.eenheid }}
+                        </td>
+                        <td>
+                            <input type="text" name="eenheid_{{ p.id }}" style="width:8rem"
+                                   placeholder="{{ p.eenheid }}" value="{{ p.besteleenheid or '' }}">
+                        </td>
+                        <td>
+                            <input type="number" name="factor_{{ p.id }}" min="1" style="width:5rem"
+                                   value="{{ p.besteleenheid_factor }}">
                         </td>
                     </tr>
                     {% endfor %}

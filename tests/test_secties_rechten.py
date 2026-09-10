@@ -52,6 +52,22 @@ def test_vrijwilliger_zonder_voorraad_sectie_ziet_geen_boeken_in_zijbalk(client,
     assert b'href="/kassa/tellen"' in resp.data
 
 
+def test_vrijwilliger_met_alleen_keuken_sectie_mag_naar_keuken_maar_niet_producten(client, db):
+    """/keuken hergebruikt de Producten-pagina (zie render_producten_pagina
+    in routes/producten.py), maar moet een eigen sectie-gate houden --
+    anders zou deze vrijwilliger (die geen 'voorraad' heeft) ineens ook het
+    hele assortiment via /producten kunnen zien."""
+    _maak_vrijwilliger(db, "keuken_only", "keuken")
+    _login(client, "keuken_only")
+
+    resp = client.get("/keuken")
+    assert resp.status_code == 200
+
+    resp = client.get("/producten", follow_redirects=True)
+    assert b"niet beschikbaar voor jouw account" in resp.data
+    assert resp.request.path == "/"
+
+
 def test_beheerder_omzeilt_secties_altijd(client, csrf):
     resp = client.post(
         "/login", data={"naam": "admin", "wachtwoord": "kantine123", "csrf_token": csrf}

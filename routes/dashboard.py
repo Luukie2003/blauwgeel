@@ -5,6 +5,7 @@ from flask import Response, flash, g, jsonify, redirect, render_template, reques
 from database import get_db
 from helpers import (
     bereken_bestelling_status,
+    bereken_club_van_20_status,
     bereken_frituurvet_status,
     bereken_kassa_telling_status,
     bereken_komende_thuiswedstrijden,
@@ -276,6 +277,12 @@ def register_routes(app):
             kassa_telling_status=bereken_kassa_telling_status(db),
             bestelling_status=bereken_bestelling_status(db),
             frituurvet_status=bereken_frituurvet_status(db),
+            # Club van 20-beheer is beheerder-only (zie NAV_GROEP_ALLEEN_BEHEERDER
+            # in app.py) -- deze query overslaan voor vrijwilligers die de
+            # tegel toch niet te zien krijgen (zie dashboard.html).
+            club_van_20_status=(
+                bereken_club_van_20_status(db) if session.get("gebruiker_rol") == "beheerder" else None
+            ),
         )
 
     @app.route("/verkooprapport")

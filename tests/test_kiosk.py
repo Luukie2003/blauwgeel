@@ -1,8 +1,10 @@
-from datetime import date
+from datetime import date, timedelta
 
 from conftest import stel_csrf_token_in as _csrf
 from helpers import voeg_maanden_toe
 from test_secties_rechten import _login, _maak_vrijwilliger
+
+from app import bereken_club_van_20_status
 
 
 def _voeg_product_toe(db, naam, categorie="Bier", prijs=2.0, toon_op_kiosk=0, actief=1):
@@ -90,6 +92,39 @@ def test_prijzenscherm_instellingen_bulk_toggle_werkt(ingelogde_client, db):
 
     scherm = ingelogde_client.get("/kiosk/prijzen")
     assert b"Nieuw Op Kiosk" in scherm.data
+
+
+def test_product_formulier_slaat_kiosk_vlaggen_op(ingelogde_client, db):
+    """toon_op_kiosk en kiosk_uitverkocht zijn ook los per product te zetten
+    op het gewone productformulier, naast de bulk-schermen hierboven."""
+    product_id = _voeg_product_toe(db, "Via Formulier", toon_op_kiosk=0)
+    product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+
+    resp = ingelogde_client.post(
+        f"/producten/{product_id}/bewerken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "naam": product["naam"],
+            "categorie": product["categorie"],
+            "eenheid": product["eenheid"],
+            "voorraad": product["voorraad"],
+            "min_voorraad": product["min_voorraad"],
+            "bestel_hoeveelheid": product["bestel_hoeveelheid"],
+            "verkoopprijs": product["verkoopprijs"],
+            "besteleenheid_factor": 1,
+            "actief": "on",
+            "toon_op_kiosk": "on",
+            "kiosk_uitverkocht": "on",
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+
+    bijgewerkt = db.execute(
+        "SELECT toon_op_kiosk, kiosk_uitverkocht FROM producten WHERE id = ?", (product_id,)
+    ).fetchone()
+    assert bijgewerkt["toon_op_kiosk"] == 1
+    assert bijgewerkt["kiosk_uitverkocht"] == 1
 
 
 def test_product_toon_op_kiosk_wisselen_via_ajax(ingelogde_client, db):
@@ -544,6 +579,48 @@ def test_lid_status_wisselen_vereist_beheerder(client, db):
     assert resp.status_code == 302
     rij = db.execute("SELECT status FROM club_van_20_leden WHERE id = ?", (lid_id,)).fetchone()
     assert rij["status"] == "actief"
+
+
+def test_club_van_20_status_telt_alleen_actieve_leden_die_binnenkort_aflopen(db):
+    over_10_dagen = (date.today() + timedelta(days=10)).isoformat()
+    over_1_jaar = (date.today() + timedelta(days=365)).isoformat()
+    _voeg_lid_toe(db, "Loopt Binnenkort Af", status="actief", einddatum=over_10_dagen)
+    _voeg_lid_toe(db, "Loopt Nog Lang Niet Af", status="actief", einddatum=over_1_jaar)
+    _voeg_lid_toe(db, "Al Gestopt (inactief)", status="inactief", einddatum=over_10_dagen)
+    _voeg_lid_toe(db, "Niet Betaald Telt Niet Mee", status="niet_betaald", einddatum=over_10_dagen)
+
+    status = bereken_club_van_20_status(db)
+
+    assert status["aantal"] == 1
+    assert status["leden"][0]["naam"] == "Loopt Binnenkort Af"
+    assert status["ok"] is False
+
+
+def test_club_van_20_status_is_ok_zonder_aflopende_leden(db):
+    over_1_jaar = (date.today() + timedelta(days=365)).isoformat()
+    _voeg_lid_toe(db, "Ruim Op Tijd", status="actief", einddatum=over_1_jaar)
+
+    status = bereken_club_van_20_status(db)
+
+    assert status["aantal"] == 0
+    assert status["ok"] is True
+
+
+def test_dashboard_toont_club_van_20_tegel_alleen_voor_beheerder(client, db):
+    over_10_dagen = (date.today() + timedelta(days=10)).isoformat()
+    _voeg_lid_toe(db, "Bijna Verlopen", status="actief", einddatum=over_10_dagen)
+
+    csrf = _csrf(client)
+    client.post("/login", data={"naam": "admin", "wachtwoord": "kantine123", "csrf_token": csrf})
+    resp = client.get("/")
+    assert b"Club van 20" in resp.data
+    assert b"Bijna Verlopen" in resp.data
+    client.get("/logout")
+
+    _maak_vrijwilliger(db, "vrijwilliger_dashboard", "voorraad")
+    _login(client, "vrijwilliger_dashboard")
+    resp = client.get("/")
+    assert b"Club van 20" not in resp.data
 
 
 def test_kantine_scherm_verbergt_inactieve_leden_maar_toont_niet_betaald(client, db):

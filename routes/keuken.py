@@ -2,6 +2,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 
 from database import get_db
 from helpers import bereken_frituurvet_status, now_str
+from routes.producten import render_producten_pagina
 
 
 def register_routes(app):
@@ -18,11 +19,13 @@ def register_routes(app):
 
     @app.route("/keuken")
     def keuken_voorraad():
-        db = get_db()
-        producten = db.execute(
-            "SELECT * FROM producten WHERE categorie = 'Keuken' ORDER BY actief DESC, subcategorie, naam"
-        ).fetchall()
-        return render_template("keuken_voorraad.html", producten=producten)
+        # Hergebruikt de Producten-pagina, vergrendeld op categorie
+        # 'Keuken' -- dezelfde tabel/acties i.p.v. een eigen bijna-
+        # identiek sjabloon (zie render_producten_pagina in
+        # routes/producten.py). Blijft een eigen route+endpoint, want deze
+        # zit achter sectie 'keuken' i.p.v. 'voorraad': een vrijwilliger met
+        # alleen keuken-rechten mag hier wel komen, maar niet op /producten.
+        return render_producten_pagina(categorie_vergrendeld="Keuken")
 
     @app.route("/keuken/instellingen", methods=["GET", "POST"])
     def keuken_instellingen():

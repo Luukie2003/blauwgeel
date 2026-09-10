@@ -70,6 +70,26 @@
             </form>
         </div>
     </div>
+    {% if club_van_20_status %}
+    <div class="statuskaart {{ 'statuskaart-goed' if club_van_20_status.ok else 'statuskaart-oranje' }}">
+        <div class="statuskaart-titel">Club van 20</div>
+        <div class="statuskaart-body">
+            {% if club_van_20_status.leden %}
+            <div class="statuskaart-vak">
+                {{ club_van_20_status.aantal }} lid{{ '' if club_van_20_status.aantal == 1 else 'en' }} loopt af
+            </div>
+            <p class="statuskaart-opmerking">
+                {% for lid in club_van_20_status.leden[:3] %}{{ lid.naam }}{% if not loop.last %}, {% endif %}{% endfor %}
+                {% if club_van_20_status.aantal > 3 %}e.a.{% endif %}
+                &mdash; binnen 30 dagen
+            </p>
+            {% else %}
+            <div class="statuskaart-vak">Niemand loopt binnenkort af</div>
+            {% endif %}
+            <a href="{{ url_for('kiosk_sponsoren_leden') }}" class="btn btn-rand btn-klein">Naar Sponsoren &amp; leden</a>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <div class="statgrid">

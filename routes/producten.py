@@ -15,6 +15,48 @@ from helpers import (
 from pdf import schaplabels_pdf, voorraadoverzicht_pdf
 
 
+def render_producten_pagina(categorie_vergrendeld=None):
+    """Rendert de Producten-pagina, optioneel vergrendeld op 1 categorie.
+    Gebruikt door zowel /producten als /keuken (zie routes/keuken.py) -- zo
+    delen ze dezelfde tabel/acties i.p.v. een eigen, bijna-identiek
+    sjabloon. Bij een vergrendelde categorie worden ook de
+    categorieen/subcategorieen-lijsten al op de database beperkt, niet pas
+    in het sjabloon -- /keuken zit achter de sectie 'keuken' i.p.v.
+    'voorraad', dus die gebruiker mag ook geen namen van andere categorieën
+    te zien krijgen."""
+    db = get_db()
+    if categorie_vergrendeld:
+        producten = db.execute(
+            "SELECT * FROM producten WHERE categorie = ? ORDER BY actief DESC, subcategorie, naam",
+            (categorie_vergrendeld,),
+        ).fetchall()
+        categorieen = []
+        subcategorieen = db.execute(
+            "SELECT categorie, naam FROM subcategorieen WHERE categorie = ? ORDER BY naam",
+            (categorie_vergrendeld,),
+        ).fetchall()
+    else:
+        # Categorie eerst (voor de groepering hieronder in het sjabloon),
+        # daarna actief/subcategorie/naam zoals voorheen -- Jinja's
+        # groupby-filter sorteert stabiel op alleen 'categorie', dus deze
+        # volgorde blijft binnen elke groep behouden.
+        producten = db.execute(
+            "SELECT * FROM producten ORDER BY categorie, actief DESC, subcategorie, naam"
+        ).fetchall()
+        categorieen = db.execute("SELECT naam FROM categorieen ORDER BY naam").fetchall()
+        subcategorieen = db.execute(
+            "SELECT categorie, naam FROM subcategorieen ORDER BY categorie, naam"
+        ).fetchall()
+    return render_template(
+        "producten.html",
+        producten=producten,
+        categorieen=categorieen,
+        subcategorieen=subcategorieen,
+        niet_verplicht_categorieen=categorienamen_zonder_verkoopprijsplicht(db),
+        categorie_vergrendeld=categorie_vergrendeld,
+    )
+
+
 def register_routes(app):
     def bereken_voorraadoverzicht(db):
         """Verzamelt alle cijfers voor het voorraadoverzicht -- gebruikt door
@@ -185,88 +227,65 @@ def register_routes(app):
 
     @app.route("/producten")
     def producten_lijst():
-        db = get_db()
-        # Categorie eerst (voor de groepering hieronder in het sjabloon),
-        # daarna actief/subcategorie/naam zoals voorheen -- Jinja's
-        # groupby-filter sorteert stabiel op alleen 'categorie', dus deze
-        # volgorde blijft binnen elke groep behouden.
-        producten = db.execute(
-            "SELECT * FROM producten ORDER BY categorie, actief DESC, subcategorie, naam"
-        ).fetchall()
-        categorieen = db.execute(
-            "SELECT naam FROM categorieen ORDER BY naam"
-        ).fetchall()
-        subcategorieen = db.execute(
-            "SELECT categorie, naam FROM subcategorieen ORDER BY categorie, naam"
-        ).fetchall()
-        return render_template(
-            "producten.html",
-            producten=producten,
-            categorieen=categorieen,
-            subcategorieen=subcategorieen,
-            niet_verplicht_categorieen=categorienamen_zonder_verkoopprijsplicht(db),
-        )
+        return render_producten_pagina()
 
-    @app.route("/producten/minimumvoorraad", methods=["GET", "POST"])
-    def producten_minimumvoorraad():
+    @app.route("/producten/bulk-bewerken", methods=["GET", "POST"])
+    def producten_bulk_bewerken():
+        """Minimumvoorraad én besteleenheid in 1 scherm i.p.v. 2 losse
+        bijna-identieke pagina's (zie de omleidingen bij
+        producten_minimumvoorraad/producten_besteleenheid hieronder)."""
         db = get_db()
         if request.method == "POST":
             producten = db.execute("SELECT id FROM producten").fetchall()
             aangepast = 0
             for p in producten:
-                waarde = request.form.get(f"min_{p['id']}", "").strip()
-                if waarde == "":
-                    continue
-                try:
-                    nieuw_minimum = int(waarde)
-                except ValueError:
-                    continue
-                if nieuw_minimum < 0:
-                    continue
-                db.execute(
-                    "UPDATE producten SET min_voorraad = ? WHERE id = ?",
-                    (nieuw_minimum, p["id"]),
-                )
-                aangepast += 1
-            db.commit()
-            flash(f"Minimumvoorraad bijgewerkt voor {aangepast} product(en).", "success")
-            return redirect(url_for("producten_minimumvoorraad"))
+                gewijzigd = False
 
-        producten = db.execute(
-            "SELECT * FROM producten ORDER BY actief DESC, categorie, naam"
-        ).fetchall()
-        return render_template("producten_minimum.html", producten=producten)
+                min_waarde = request.form.get(f"min_{p['id']}", "").strip()
+                if min_waarde != "":
+                    try:
+                        nieuw_minimum = int(min_waarde)
+                    except ValueError:
+                        nieuw_minimum = None
+                    if nieuw_minimum is not None and nieuw_minimum >= 0:
+                        db.execute(
+                            "UPDATE producten SET min_voorraad = ? WHERE id = ?",
+                            (nieuw_minimum, p["id"]),
+                        )
+                        gewijzigd = True
 
-    @app.route("/producten/besteleenheid", methods=["GET", "POST"])
-    def producten_besteleenheid():
-        db = get_db()
-        if request.method == "POST":
-            producten = db.execute("SELECT id FROM producten").fetchall()
-            aangepast = 0
-            for p in producten:
-                eenheid_waarde = request.form.get(f"eenheid_{p['id']}", "").strip()
                 factor_waarde = request.form.get(f"factor_{p['id']}", "").strip()
-                if factor_waarde == "":
-                    continue
-                try:
-                    nieuwe_factor = int(factor_waarde)
-                except ValueError:
-                    continue
-                if nieuwe_factor < 1:
-                    continue
-                db.execute(
-                    "UPDATE producten SET besteleenheid = ?, besteleenheid_factor = ? WHERE id = ?",
-                    (eenheid_waarde or None, nieuwe_factor, p["id"]),
-                )
-                aangepast += 1
+                if factor_waarde != "":
+                    try:
+                        nieuwe_factor = int(factor_waarde)
+                    except ValueError:
+                        nieuwe_factor = None
+                    if nieuwe_factor is not None and nieuwe_factor >= 1:
+                        eenheid_waarde = request.form.get(f"eenheid_{p['id']}", "").strip()
+                        db.execute(
+                            "UPDATE producten SET besteleenheid = ?, besteleenheid_factor = ? WHERE id = ?",
+                            (eenheid_waarde or None, nieuwe_factor, p["id"]),
+                        )
+                        gewijzigd = True
+
+                if gewijzigd:
+                    aangepast += 1
             db.commit()
-            flash(f"Besteleenheid bijgewerkt voor {aangepast} product(en).", "success")
-            return redirect(url_for("producten_besteleenheid"))
+            flash(f"Bulkwijzigingen opgeslagen voor {aangepast} product(en).", "success")
+            return redirect(url_for("producten_bulk_bewerken"))
 
         producten = db.execute(
             "SELECT * FROM producten ORDER BY actief DESC, categorie, naam"
         ).fetchall()
-        return render_template("producten_besteleenheid.html", producten=producten)
+        return render_template("producten_bulk_bewerken.html", producten=producten)
+
+    @app.route("/producten/minimumvoorraad")
+    def producten_minimumvoorraad():
+        return redirect(url_for("producten_bulk_bewerken"))
+
+    @app.route("/producten/besteleenheid")
+    def producten_besteleenheid():
+        return redirect(url_for("producten_bulk_bewerken"))
 
     @app.route("/producten/nieuw", methods=["GET", "POST"])
     def product_nieuw():
@@ -287,8 +306,8 @@ def register_routes(app):
                    (artikelcode, naam, categorie, subcategorie, eenheid, voorraad, min_voorraad,
                     bestel_hoeveelheid, verkoopprijs, inkoopprijs, actief, besteleenheid,
                     besteleenheid_factor, opmerking, afbeelding, glazen_per_fust, prijs_per_glas,
-                    auto_inactief_bij_nul)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    auto_inactief_bij_nul, toon_op_kiosk, kiosk_uitverkocht)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
@@ -308,6 +327,8 @@ def register_routes(app):
                     int(request.form.get("glazen_per_fust") or 0),
                     float(request.form.get("prijs_per_glas") or 0),
                     auto_inactief_bij_nul,
+                    1 if request.form.get("toon_op_kiosk") else 0,
+                    1 if request.form.get("kiosk_uitverkocht") else 0,
                 ),
             )
             db.commit()
@@ -385,7 +406,7 @@ def register_routes(app):
                        voorraad = ?, min_voorraad = ?, bestel_hoeveelheid = ?, verkoopprijs = ?,
                        inkoopprijs = ?, actief = ?, besteleenheid = ?, besteleenheid_factor = ?,
                        opmerking = ?, afbeelding = ?, glazen_per_fust = ?, prijs_per_glas = ?,
-                       auto_inactief_bij_nul = ?
+                       auto_inactief_bij_nul = ?, toon_op_kiosk = ?, kiosk_uitverkocht = ?
                    WHERE id = ?""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
@@ -406,6 +427,8 @@ def register_routes(app):
                     int(request.form.get("glazen_per_fust") or 0),
                     float(request.form.get("prijs_per_glas") or 0),
                     auto_inactief_bij_nul,
+                    1 if request.form.get("toon_op_kiosk") else 0,
+                    1 if request.form.get("kiosk_uitverkocht") else 0,
                     product_id,
                 ),
             )

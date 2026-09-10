@@ -35,16 +35,64 @@ def test_heractiveren_zet_product_terug_bovenaan(ingelogde_client, db):
     _zet_actief(ingelogde_client, db, b["id"], actief=True)
 
 
-def test_inactief_staat_ook_onderaan_bij_minimumvoorraad_en_besteleenheid(ingelogde_client, db):
+def test_inactief_staat_ook_onderaan_bij_bulk_bewerken(ingelogde_client, db):
     actief = db.execute("SELECT id, naam FROM producten WHERE actief = 1 LIMIT 1").fetchone()
     ander = db.execute(
         "SELECT id, naam FROM producten WHERE actief = 1 AND id != ? LIMIT 1", (actief["id"],)
     ).fetchone()
     _zet_actief(ingelogde_client, db, ander["id"], actief=False)
 
-    for url in ("/producten/minimumvoorraad", "/producten/besteleenheid"):
-        resp = ingelogde_client.get(url)
-        body = resp.data.decode()
-        assert body.index(actief["naam"]) < body.index(ander["naam"])
+    resp = ingelogde_client.get("/producten/bulk-bewerken")
+    body = resp.data.decode()
+    assert body.index(actief["naam"]) < body.index(ander["naam"])
 
     _zet_actief(ingelogde_client, db, ander["id"], actief=True)
+
+
+def test_minimumvoorraad_en_besteleenheid_urls_verwijzen_door_naar_bulk_bewerken(ingelogde_client):
+    for url in ("/producten/minimumvoorraad", "/producten/besteleenheid"):
+        resp = ingelogde_client.get(url)
+        assert resp.status_code == 302
+        assert resp.headers["Location"].endswith("/producten/bulk-bewerken")
+
+
+def test_bulk_bewerken_slaat_minimumvoorraad_en_besteleenheid_tegelijk_op(ingelogde_client, db):
+    product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    resp = ingelogde_client.post(
+        "/producten/bulk-bewerken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            f"min_{product['id']}": "7",
+            f"eenheid_{product['id']}": "Krat",
+            f"factor_{product['id']}": "24",
+        },
+    )
+    assert resp.status_code == 302
+
+    bijgewerkt = db.execute(
+        "SELECT min_voorraad, besteleenheid, besteleenheid_factor FROM producten WHERE id = ?",
+        (product["id"],),
+    ).fetchone()
+    assert bijgewerkt["min_voorraad"] == 7
+    assert bijgewerkt["besteleenheid"] == "Krat"
+    assert bijgewerkt["besteleenheid_factor"] == 24
+
+
+def test_bulk_bewerken_laat_leeg_veld_ongemoeid(ingelogde_client, db):
+    product = db.execute(
+        "SELECT * FROM producten WHERE actief = 1 AND besteleenheid_factor = 1 LIMIT 1"
+    ).fetchone()
+    oude_min = product["min_voorraad"]
+    ingelogde_client.post(
+        "/producten/bulk-bewerken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            f"eenheid_{product['id']}": "Krat",
+            f"factor_{product['id']}": "12",
+        },
+    )
+    bijgewerkt = db.execute(
+        "SELECT min_voorraad, besteleenheid_factor FROM producten WHERE id = ?", (product["id"],)
+    ).fetchone()
+    assert bijgewerkt["min_voorraad"] == oude_min
+    assert bijgewerkt["besteleenheid_factor"] == 12

@@ -148,6 +148,24 @@
                 </div>
             </div>
         </fieldset>
+        <fieldset class="groupbox">
+            <legend>Kantine-tv (optioneel)</legend>
+            <p class="tekst-zacht" style="margin-top:-0.3rem">
+                Bepaalt of dit product op het prijzenscherm in de kantine
+                staat. Voor het bulk in-/uitschakelen van veel producten
+                tegelijk, zie <a href="{{ url_for('kiosk_prijzen_instellingen') }}">Prijzenscherm &amp; acties</a>.
+            </p>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer">
+                <input type="checkbox" id="toon_op_kiosk" name="toon_op_kiosk" style="width:auto"
+                       {{ 'checked' if product and product.toon_op_kiosk }}>
+                Tonen op het prijzenscherm
+            </label>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-top:0.5rem">
+                <input type="checkbox" id="kiosk_uitverkocht" name="kiosk_uitverkocht" style="width:auto"
+                       {{ 'checked' if product and product.kiosk_uitverkocht }}>
+                Als uitverkocht markeren op het prijzenscherm
+            </label>
+        </fieldset>
         <button type="submit" class="btn btn-geel">{{ 'Opslaan' if product else 'Toevoegen' }}</button>
     </form>
 </div>

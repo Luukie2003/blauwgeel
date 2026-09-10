@@ -1034,6 +1034,23 @@ def bereken_frituurvet_status(db):
     }
 
 
+def bereken_club_van_20_status(db, dagen_vooruit=30):
+    """Status van het statusblokje 'Club van 20': telt actieve leden wier
+    lidmaatschap binnen 'dagen_vooruit' dagen afloopt (of al verlopen is),
+    als herinnering om te verlengen of op 'niet betaald' te zetten (zie
+    kiosk_lid_status_wisselen in routes/kiosk.py). Groen zolang niemand
+    binnenkort afloopt, oranje zodra er 1 of meer zijn -- net als bij
+    Kassa/Bestelling hierboven is dit 'moet nog gebeuren', geen fout."""
+    grens = (date.today() + timedelta(days=dagen_vooruit)).isoformat()
+    aflopend = db.execute(
+        """SELECT * FROM club_van_20_leden
+           WHERE status = 'actief' AND einddatum IS NOT NULL AND einddatum <= ?
+           ORDER BY einddatum""",
+        (grens,),
+    ).fetchall()
+    return {"leden": aflopend, "aantal": len(aflopend), "ok": len(aflopend) == 0}
+
+
 def vind_getagde_gebruikers(db, tekst):
     """Zoekt @naam-vermeldingen in tekst en matcht ze tegen bestaande
     gebruikersnamen (hoofdletterongevoelig). Geeft de bijbehorende
