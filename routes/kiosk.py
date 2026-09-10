@@ -83,20 +83,22 @@ def register_routes(app):
                 blokken.append((instellingen["sponsoren_volgorde"], slides))
 
         if instellingen["toon_club_van_20"]:
-            # Alleen actieve (en betaalde) leden op het scherm -- inactief
-            # of nog niet betaald blijft puur intern zichtbaar bij
-            # Sponsoren & leden, zie kiosk_lid_status_wisselen. sterren = 1
-            # per volledig jaar sinds de startdatum; extra_groot laat een
-            # naam prominenter tonen (zie kiosk_lid_bewerken).
+            # Inactief (lid dat gestopt is) blijft puur intern zichtbaar bij
+            # Sponsoren & leden. Niet betaald blijft WEL op het scherm staan,
+            # maar dan lichtrood -- juist als zichtbare herinnering om te
+            # betalen, zie kiosk_lid_status_wisselen. sterren = 1 per
+            # volledig jaar sinds de startdatum; extra_groot laat een naam
+            # prominenter tonen (zie kiosk_lid_bewerken).
             leden = db.execute(
-                """SELECT naam, startdatum, extra_groot FROM club_van_20_leden
-                   WHERE status = 'actief' ORDER BY naam COLLATE NOCASE"""
+                """SELECT naam, startdatum, extra_groot, status FROM club_van_20_leden
+                   WHERE status IN ('actief', 'niet_betaald') ORDER BY naam COLLATE NOCASE"""
             ).fetchall()
             namen = [
                 {
                     "naam": r["naam"],
                     "sterren": bereken_jaren_lid(r["startdatum"]),
                     "extra_groot": bool(r["extra_groot"]),
+                    "niet_betaald": r["status"] == "niet_betaald",
                 }
                 for r in leden
             ]

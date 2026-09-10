@@ -94,6 +94,7 @@
         .namen-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.9rem 1.5rem; max-width: 72rem; }
         .naam-chip { background: rgba(255, 255, 255, 0.09); border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 999px; padding: 0.6rem 1.5rem; font-size: 1.55rem; }
         .naam-chip--groot { font-size: 2.15rem; font-weight: 700; padding: 0.7rem 1.8rem; border-color: var(--geel); background: rgba(252, 212, 47, 0.14); }
+        .naam-chip--niet-betaald { border-color: #e05a5a; background: rgba(224, 90, 90, 0.16); color: #ffb8b8; }
         .naam-sterren { color: var(--geel); letter-spacing: 0.05em; margin-right: 0.2rem; }
         .pagina-indicator { margin-top: 1.6rem; color: var(--tekst-zacht); font-size: 1.15rem; }
 
@@ -147,7 +148,7 @@
                 <h2>{{ slide.titel }}</h2>
                 <div class="namen-grid">
                     {% for lid in slide.namen %}
-                    <span class="naam-chip{{ ' naam-chip--groot' if lid.extra_groot else '' }}">
+                    <span class="naam-chip{{ ' naam-chip--groot' if lid.extra_groot else '' }}{{ ' naam-chip--niet-betaald' if lid.niet_betaald else '' }}">
                         {% if lid.sterren %}<span class="naam-sterren">{{ '★' * lid.sterren }}</span>{% endif %}{{ lid.naam }}
                     </span>
                     {% endfor %}

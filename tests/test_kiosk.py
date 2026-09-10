@@ -546,7 +546,7 @@ def test_lid_status_wisselen_vereist_beheerder(client, db):
     assert rij["status"] == "actief"
 
 
-def test_kantine_scherm_toont_alleen_actieve_leden(client, db):
+def test_kantine_scherm_verbergt_inactieve_leden_maar_toont_niet_betaald(client, db):
     db.executemany(
         "INSERT INTO club_van_20_leden (naam, status, startdatum, einddatum, aangemaakt_op) "
         "VALUES (?, ?, '2026-01-01', '2027-01-01', '2026-01-01 10:00')",
@@ -559,11 +559,17 @@ def test_kantine_scherm_toont_alleen_actieve_leden(client, db):
     db.commit()
 
     resp = client.get("/kiosk/scherm")
+    tekst = resp.data.decode()
 
     assert resp.status_code == 200
-    assert b"Actief Lid" in resp.data
-    assert b"Inactief Lid" not in resp.data
-    assert b"Wanbetaler" not in resp.data
+    assert "Actief Lid" in tekst
+    assert "Inactief Lid" not in tekst
+    # Niet betaald blijft zichtbaar (als herinnering om te betalen), maar
+    # dan met de lichtrode waarschuwingsklasse i.p.v. de gewone chip-stijl.
+    assert "Wanbetaler" in tekst
+    positie = tekst.find("Wanbetaler")
+    fragment = tekst[max(0, positie - 200) : positie]
+    assert "naam-chip--niet-betaald" in fragment
 
 
 def test_sponsoren_leden_pagina_toont_status_en_looptijd(ingelogde_client, db):
