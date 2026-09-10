@@ -4,6 +4,7 @@ import qr
 from database import get_db
 from helpers import (
     PRODUCT_AFBEELDINGEN_MAP,
+    bereken_fust_verkopen,
     bewaar_subcategorie,
     categorienamen_zonder_verkoopprijsplicht,
     csv_response,
@@ -108,6 +109,11 @@ def register_routes(app):
         alle_subcategorieen_lijst = sorted({p["subcategorie"] for p in producten if p["subcategorie"]})
         heeft_producten_zonder_subcategorie = any(p["subcategorie"] is None for p in producten)
 
+        # Fusten hebben geen eigen tabel -- gewoon producten met
+        # glazen_per_fust > 0, hier meegenomen i.p.v. op een eigen pagina
+        # (zie routes/fusten.py, die alleen nog doorverwijst hierheen).
+        fust_producten = [p for p in producten if p["glazen_per_fust"] > 0]
+
         return {
             "producten": producten,
             "actieve_producten": actieve_producten,
@@ -125,6 +131,8 @@ def register_routes(app):
             "categorie_lijst": categorie_lijst,
             "top_waarde": top_waarde,
             "langst_niet_geteld": langst_niet_geteld,
+            "fust_producten": fust_producten,
+            "fust_verkopen": bereken_fust_verkopen(db) if fust_producten else None,
         }
 
     @app.route("/voorraadoverzicht")

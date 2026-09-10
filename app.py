@@ -284,12 +284,6 @@ NAV_ITEMS = [
         "label": "Boodschappenlijst",
     },
     {
-        "groep": "Bestellen",
-        "endpoints": ["fusten_overzicht"],
-        "url_endpoint": "fusten_overzicht",
-        "label": "Fusten",
-    },
-    {
         "groep": "Assortiment",
         "endpoints": [
             "producten_lijst",

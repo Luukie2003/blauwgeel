@@ -1,6 +1,8 @@
-"""Tests voor de fusten-pagina (/fusten, bereken_fust_verkopen in app.py):
-waarschijnlijke verkoop per fust, afgeleid uit de gewone voorraadtellingen op
-basis van de nieuwe velden glazen_per_fust en prijs_per_glas."""
+"""Tests voor fusten: geen eigen pagina meer, maar een sectie op
+Voorraadoverzicht (zie bereken_voorraadoverzicht in routes/producten.py en
+bereken_fust_verkopen in helpers.py) -- waarschijnlijke verkoop per fust,
+afgeleid uit de gewone voorraadtellingen op basis van de velden
+glazen_per_fust en prijs_per_glas. /fusten blijft bestaan als omleiding."""
 
 from conftest import stel_csrf_token_in as _csrf
 
@@ -26,10 +28,16 @@ def _bewerk_product(client, product, **overrides):
     )
 
 
-def test_fusten_pagina_leeg_zonder_ingestelde_fusten(ingelogde_client, db):
+def test_fusten_url_verwijst_door_naar_voorraadoverzicht(ingelogde_client, db):
     resp = ingelogde_client.get("/fusten")
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/voorraadoverzicht")
+
+
+def test_voorraadoverzicht_toont_geen_fusten_sectie_zonder_ingestelde_fusten(ingelogde_client, db):
+    resp = ingelogde_client.get("/voorraadoverzicht")
     assert resp.status_code == 200
-    assert "Nog geen enkel product ingesteld als fust".encode() in resp.data
+    assert "Fusten" not in resp.data.decode()
 
 
 def test_bewerken_slaat_glazen_per_fust_en_prijs_per_glas_op(ingelogde_client, db):
@@ -46,13 +54,14 @@ def test_bewerken_slaat_glazen_per_fust_en_prijs_per_glas_op(ingelogde_client, d
     assert bijgewerkt["prijs_per_glas"] == 2.5
 
 
-def test_ingesteld_fust_product_verschijnt_op_fusten_pagina(ingelogde_client, db):
+def test_ingesteld_fust_product_verschijnt_op_voorraadoverzicht(ingelogde_client, db):
     product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
     _bewerk_product(ingelogde_client, product, glazen_per_fust="80", prijs_per_glas="2.50")
 
-    resp = ingelogde_client.get("/fusten")
+    resp = ingelogde_client.get("/voorraadoverzicht")
     assert resp.status_code == 200
     body = resp.data.decode()
+    assert "Fusten" in body
     assert product["naam"] in body
     assert "Nog geen fust leeg geteld" in body
 
@@ -69,7 +78,7 @@ def test_lege_fust_via_telling_geeft_waarschijnlijke_verkoop(ingelogde_client, d
         data={"csrf_token": _csrf(ingelogde_client), f"geteld_{product['id']}": "1"},
     )
 
-    resp = ingelogde_client.get("/fusten")
+    resp = ingelogde_client.get("/voorraadoverzicht")
     body = resp.data.decode()
     assert resp.status_code == 200
     assert "1</td>" in body  # 1 fust leeg
@@ -86,6 +95,6 @@ def test_normaal_product_zonder_fust_instelling_telt_niet_mee(ingelogde_client, 
         data={"csrf_token": _csrf(ingelogde_client), f"geteld_{product['id']}": "5"},
     )
 
-    resp = ingelogde_client.get("/fusten")
+    resp = ingelogde_client.get("/voorraadoverzicht")
     assert resp.status_code == 200
-    assert "Nog geen enkel product ingesteld als fust".encode() in resp.data
+    assert "Fusten" not in resp.data.decode()
