@@ -108,6 +108,20 @@
         .kiosk-popup h2 { font-size: 3.4rem; margin: 0; }
         .kiosk-popup .popup-prijs { font-size: 2.4rem; font-weight: 800; color: var(--geel); }
         .kiosk-popup p { font-size: 1.7rem; max-width: 50rem; margin: 0; color: var(--tekst-zacht); }
+
+        /* Uitverkocht-melding valt extra op: het scherm knippert licht rood
+           en het label krijgt een uitdijende gloed, zodat 'm niet mist wie
+           er net even niet oplet. */
+        .kiosk-popup--uitverkocht.zichtbaar { animation: uitverkocht-knipper 1s ease-in-out infinite; }
+        @keyframes uitverkocht-knipper {
+            0%, 100% { background: rgba(8, 17, 43, 0.97); }
+            50% { background: rgba(129, 15, 15, 0.97); }
+        }
+        .kiosk-popup--uitverkocht .popup-label { animation: uitverkocht-label-gloed 1s ease-in-out infinite; }
+        @keyframes uitverkocht-label-gloed {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(216, 30, 30, 0.7); }
+            50% { box-shadow: 0 0 0 20px rgba(216, 30, 30, 0); }
+        }
     </style>
 </head>
 <body>
