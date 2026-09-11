@@ -550,9 +550,13 @@ def schaplabels_pdf(producten):
     producten: lijst van dicts met naam, categorie en verder allemaal
     optionele velden (ontbrekend of None wordt gewoon overgeslagen):
     subcategorie, artikelcode, min_voorraad, eenheid, qr_png (kant-en-klare
-    PNG-bytes) en foto_pad. Zonder qr_png (bijv. een verbruiksvoorwerp
-    zonder eigen productpagina om naartoe te scannen) vervalt ook de
-    foto-kolom en krijgt de tekst de volle breedte van het label."""
+    PNG-bytes), foto_pad en heeft_foto_kolom (standaard True). Zonder qr_png
+    (bijv. een verbruiksvoorwerp zonder eigen productpagina om naartoe te
+    scannen) vervalt ook de foto-kolom en krijgt de tekst de volle breedte
+    van het label. heeft_foto_kolom=False laat het lege foto-kadertje
+    achterwege voor iets dat sowieso nooit een foto heeft (verbruiksvoorwerpen
+    hebben geen eigen afbeeldingsveld, in tegenstelling tot producten die er
+    later nog een kunnen krijgen) -- de tekst gebruikt dan de ruimte ernaast."""
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(False)
 
@@ -561,12 +565,19 @@ def schaplabels_pdf(producten):
     tekst_x = LABEL_MARGE_LINKS + 34
     qr_x = LABEL_MARGE_LINKS + LABEL_BREEDTE - qr_grootte - 2
     foto_x = qr_x - foto_grootte - 4
-    tekst_breedte_met_qr = foto_x - tekst_x - 4
+    tekst_breedte_met_foto_en_qr = foto_x - tekst_x - 4
+    tekst_breedte_met_qr_zonder_foto = qr_x - tekst_x - 4
     tekst_breedte_zonder_qr = LABEL_MARGE_LINKS + LABEL_BREEDTE - 4 - tekst_x
 
     for i, product in enumerate(producten):
         heeft_qr = bool(product.get("qr_png"))
-        tekst_breedte = tekst_breedte_met_qr if heeft_qr else tekst_breedte_zonder_qr
+        heeft_foto_kolom = heeft_qr and product.get("heeft_foto_kolom", True)
+        if not heeft_qr:
+            tekst_breedte = tekst_breedte_zonder_qr
+        elif heeft_foto_kolom:
+            tekst_breedte = tekst_breedte_met_foto_en_qr
+        else:
+            tekst_breedte = tekst_breedte_met_qr_zonder_foto
 
         strook_index = i % LABEL_STROKEN_PER_PAGINA
         if strook_index == 0:
@@ -630,28 +641,29 @@ def schaplabels_pdf(producten):
         if not heeft_qr:
             continue
 
-        foto_y = y0 + (LABEL_HOOGTE - foto_grootte) / 2
-        foto_getekend = False
-        if product.get("foto_pad"):
-            try:
-                pdf.image(
-                    str(product["foto_pad"]),
-                    x=foto_x,
-                    y=foto_y,
-                    w=foto_grootte,
-                    h=foto_grootte,
-                    keep_aspect_ratio=True,
-                )
-                foto_getekend = True
-            except Exception:
-                # Bijv. een verwijderd of beschadigd bestand -- de rest van
-                # het label (en de andere labels op het vel) mag daar niet
-                # om mislukken, dan valt dit ene vakje terug op het lege
-                # kader hieronder.
-                foto_getekend = False
-        if not foto_getekend:
-            pdf.set_draw_color(*KLEUR_RAND)
-            pdf.rect(foto_x, foto_y, foto_grootte, foto_grootte, style="D")
+        if heeft_foto_kolom:
+            foto_y = y0 + (LABEL_HOOGTE - foto_grootte) / 2
+            foto_getekend = False
+            if product.get("foto_pad"):
+                try:
+                    pdf.image(
+                        str(product["foto_pad"]),
+                        x=foto_x,
+                        y=foto_y,
+                        w=foto_grootte,
+                        h=foto_grootte,
+                        keep_aspect_ratio=True,
+                    )
+                    foto_getekend = True
+                except Exception:
+                    # Bijv. een verwijderd of beschadigd bestand -- de rest van
+                    # het label (en de andere labels op het vel) mag daar niet
+                    # om mislukken, dan valt dit ene vakje terug op het lege
+                    # kader hieronder.
+                    foto_getekend = False
+            if not foto_getekend:
+                pdf.set_draw_color(*KLEUR_RAND)
+                pdf.rect(foto_x, foto_y, foto_grootte, foto_grootte, style="D")
 
         pdf.image(
             io.BytesIO(product["qr_png"]),

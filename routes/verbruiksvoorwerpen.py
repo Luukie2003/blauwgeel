@@ -61,6 +61,10 @@ def register_routes(app):
             "naam": item["naam"],
             "categorie": item["categorie"] or "Verbruiksvoorwerp",
             "qr_png": qr.qr_png_bytes(url),
+            # Verbruiksvoorwerpen hebben geen eigen afbeeldingsveld (in
+            # tegenstelling tot producten) -- dus geen leeg foto-kadertje op
+            # het label, de tekst krijgt die ruimte erbij.
+            "heeft_foto_kolom": False,
         }
 
     @app.route("/scan/verbruiksvoorwerp/<int:item_id>")
