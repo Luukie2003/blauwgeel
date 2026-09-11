@@ -170,48 +170,58 @@
         <video id="stream-video" autoplay playsinline></video>
     </div>
 
+    <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
     <script>
     (function () {
-        // ---------- Livestream: reactieve fallback op de prijslijst ----------
-        // Geen planning nodig: zodra de stream een fout geeft, stopt, of
-        // vastloopt, springt dit scherm terug naar de prijslijst en meldt
-        // dat ook meteen aan de server (kiosk_stream_uitschakelen), zodat een
-        // vergeten "weer uitzetten" na afloop zichzelf oplost -- ook op
-        // andere schermen die dezelfde instelling ophalen.
-        var streamUrl = {{ stream_url|tojson }};
+        // ---------- Chromecasten naar dit scherm, reactieve terugval ----------
+        // Dit scherm is een eigen Cast-ontvangerapp (zie de Cast-knop op
+        // Kiosk -> Prijzenscherm & acties, die hiernaartoe verbindt en een
+        // stream-URL stuurt via CAST_NAMESPACE). Geen planning nodig: zodra
+        // de video een fout geeft, stopt, of vastloopt, springt dit scherm
+        // vanzelf terug naar de prijslijst -- puur lokaal, dit scherm is de
+        // enige bron van waarheid over wat er nu op staat.
+        var CAST_NAMESPACE = 'urn:x-cast:nl.blauwgeel.prijzenscherm';
         var video = document.getElementById('stream-video');
-        var uitgeschakeld = false;
 
-        function terugNaarPrijslijst() {
-            if (uitgeschakeld) return;
-            uitgeschakeld = true;
-            document.body.classList.remove('stream-actief');
-            fetch('{{ url_for("kiosk_stream_uitschakelen") }}', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: 'csrf_token=' + encodeURIComponent({{ csrf_token()|tojson }})
-            }).catch(function () {});
+        function toonStream(url) {
+            video.src = url;
+            document.body.classList.add('stream-actief');
         }
 
-        if (streamUrl) {
-            video.src = streamUrl;
-            document.body.classList.add('stream-actief');
-            video.addEventListener('error', terugNaarPrijslijst);
-            video.addEventListener('ended', terugNaarPrijslijst);
-            // 'stalled' is ook een korte buffer-hik op een prima stream --
-            // pas terugvallen als het na 5s nog steeds niet speelt.
-            var stalledTimer = null;
-            video.addEventListener('stalled', function () {
-                if (stalledTimer) return;
-                stalledTimer = setTimeout(function () {
-                    stalledTimer = null;
-                    if (video.paused || video.readyState < 3) terugNaarPrijslijst();
-                }, 5000);
-            });
-            video.addEventListener('playing', function () {
-                clearTimeout(stalledTimer);
+        function terugNaarPrijslijst() {
+            document.body.classList.remove('stream-actief');
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+        }
+
+        video.addEventListener('error', terugNaarPrijslijst);
+        video.addEventListener('ended', terugNaarPrijslijst);
+        // 'stalled' is ook een korte buffer-hik op een prima stream -- pas
+        // terugvallen als het na 5s nog steeds niet speelt.
+        var stalledTimer = null;
+        video.addEventListener('stalled', function () {
+            if (stalledTimer) return;
+            stalledTimer = setTimeout(function () {
                 stalledTimer = null;
+                if (video.paused || video.readyState < 3) terugNaarPrijslijst();
+            }, 5000);
+        });
+        video.addEventListener('playing', function () {
+            clearTimeout(stalledTimer);
+            stalledTimer = null;
+        });
+
+        if (window.cast && cast.framework) {
+            var context = cast.framework.CastReceiverContext.getInstance();
+            context.addCustomMessageListener(CAST_NAMESPACE, function (event) {
+                if (event.data && event.data.url) {
+                    toonStream(event.data.url);
+                } else if (event.data && event.data.stop) {
+                    terugNaarPrijslijst();
+                }
             });
+            context.start();
         }
     })();
     </script>

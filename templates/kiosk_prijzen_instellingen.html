@@ -11,27 +11,87 @@
 {% endif %}
 
 <div class="kaart">
-    <h2>Livestream</h2>
+    <h2>Chromecasten naar het prijzenscherm</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Toont een livestream (bijv. een thuiswedstrijd) i.p.v. de prijslijst.
-        Valt vanzelf terug op de prijslijst zodra de stream een fout geeft,
-        stopt, of vastloopt -- je hoeft 'm dus niet per se zelf weer uit te
-        zetten na afloop.
+        Cast een video-URL (bijv. een livestream van een thuiswedstrijd) naar
+        het prijzenscherm. Het scherm valt vanzelf terug op de prijslijst
+        zodra de stream een fout geeft, stopt, of vastloopt -- je hoeft 'm
+        dus niet per se zelf weer uit te zetten na afloop.
     </p>
-    <form method="post" action="{{ url_for('kiosk_stream_instellingen_opslaan') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="veld">
-            <label for="stream_url">Stream-URL</label>
-            <input type="url" id="stream_url" name="stream_url" placeholder="https://..."
-                   value="{{ stream.stream_url or '' }}">
-        </div>
-        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin:0.6rem 0 1rem">
-            <input type="checkbox" name="actief" style="width:auto" {{ 'checked' if stream.actief }}>
-            Livestream actief (toont op het prijzenscherm i.p.v. de prijslijst)
-        </label>
-        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">Opslaan</button>
-    </form>
+    <div style="display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap; margin-bottom:0.6rem">
+        <google-cast-launcher id="cast-knop"
+            style="width:2.4rem; height:2.4rem; --connected-color:#146c34; --disconnected-color:#5b6270"></google-cast-launcher>
+        <input type="url" id="cast-stream-url" placeholder="https://... (stream-URL)" style="flex:1; min-width:220px">
+    </div>
+    <div style="display:flex; gap:0.6rem; flex-wrap:wrap">
+        <button type="button" id="cast-start-knop" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}" disabled>Start casten</button>
+        <button type="button" id="cast-stop-knop" class="btn btn-rand" disabled>Terug naar prijslijst</button>
+    </div>
+    <p id="cast-status" class="tekst-zacht" style="margin-top:0.6rem">Niet verbonden met een Chromecast.</p>
 </div>
+
+<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+<script>
+(function () {
+    // Zelfgemaakte Cast-ontvanger-app (zie kiosk_prijzen_scherm.html) i.p.v.
+    // de standaard mediaontvanger -- zo kan het prijzenscherm zelf bepalen
+    // wanneer 'ie terugvalt op de prijslijst i.p.v. Chromecast's eigen
+    // afspeelscherm te tonen. APPLICATION_ID komt uit de Google Cast
+    // Developer Console (Applications -> Application ID) na registratie
+    // van deze pagina als Receiver Application URL.
+    var APPLICATION_ID = 'PLAATS_HIER_JE_APPLICATION_ID';
+    var CAST_NAMESPACE = 'urn:x-cast:nl.blauwgeel.prijzenscherm';
+
+    var urlVeld = document.getElementById('cast-stream-url');
+    var startKnop = document.getElementById('cast-start-knop');
+    var stopKnop = document.getElementById('cast-stop-knop');
+    var statusTekst = document.getElementById('cast-status');
+
+    window['__onGCastApiAvailable'] = function (isAvailable) {
+        if (!isAvailable || !window.chrome || !chrome.cast) return;
+        var context = cast.framework.CastContext.getInstance();
+        context.setOptions({
+            receiverApplicationId: APPLICATION_ID,
+            autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+        });
+        context.addEventListener(
+            cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+            function (event) {
+                var verbonden = (
+                    event.sessionState === cast.framework.SessionState.SESSION_STARTED ||
+                    event.sessionState === cast.framework.SessionState.SESSION_RESUMED
+                );
+                startKnop.disabled = !verbonden;
+                stopKnop.disabled = !verbonden;
+                statusTekst.textContent = verbonden
+                    ? 'Verbonden met het prijzenscherm.'
+                    : 'Niet verbonden met een Chromecast.';
+            }
+        );
+    };
+
+    function stuurBericht(data) {
+        var session = cast.framework.CastContext.getInstance().getCurrentSession();
+        if (!session) {
+            statusTekst.textContent = 'Niet verbonden -- klik eerst op het Cast-icoon.';
+            return;
+        }
+        session.sendMessage(CAST_NAMESPACE, data).then(
+            function () { statusTekst.textContent = data.stop ? 'Teruggezet naar de prijslijst.' : 'Stream verstuurd.'; },
+            function (fout) { statusTekst.textContent = 'Versturen mislukt: ' + fout; }
+        );
+    }
+
+    startKnop.addEventListener('click', function () {
+        var url = urlVeld.value.trim();
+        if (!url) { statusTekst.textContent = 'Vul eerst een stream-URL in.'; return; }
+        stuurBericht({url: url});
+    });
+    stopKnop.addEventListener('click', function () {
+        stuurBericht({stop: true});
+    });
+})();
+</script>
 
 <div class="kaart">
     {% if producten %}

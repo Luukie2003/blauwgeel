@@ -54,9 +54,6 @@ def register_routes(app):
     def _scherm_instellingen(db):
         return db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
 
-    def _stream_instellingen(db):
-        return db.execute("SELECT * FROM kiosk_stream WHERE id = 1").fetchone()
-
     def _bouw_slides(db):
         """Bouwt de geordende lijst slides voor het kantine scherm, op basis
         van kiosk_scherm_instellingen: elke slide is een dict met minstens
@@ -175,35 +172,7 @@ def register_routes(app):
             "kiosk_prijzen_instellingen.html",
             producten=producten,
             acties=acties,
-            stream=_stream_instellingen(db),
         )
-
-    @app.route("/kiosk/prijzen/stream/instellingen", methods=["POST"])
-    def kiosk_stream_instellingen_opslaan():
-        db = get_db()
-        stream_url = request.form.get("stream_url", "").strip()
-        actief = 1 if request.form.get("actief") else 0
-        db.execute(
-            "UPDATE kiosk_stream SET stream_url = ?, actief = ? WHERE id = 1",
-            (stream_url or None, actief),
-        )
-        db.commit()
-        flash("Livestream-instellingen opgeslagen.", "success")
-        return redirect(url_for("kiosk_prijzen_instellingen"))
-
-    @app.route("/kiosk/prijzen/stream/uitschakelen", methods=["POST"])
-    def kiosk_stream_uitschakelen():
-        """Zet de livestream automatisch uit zodra het prijzenscherm zelf
-        signaleert dat de stream een fout geeft, stopt, of vastloopt (zie de
-        video-events in kiosk_prijzen_scherm.html). Publiek endpoint zonder
-        login, want het prijzenscherm zelf draait ook zonder account -- zie
-        OPEN_ENDPOINTS in app.py. Zo hoeft een beheerder een vergeten
-        stream niet zelf handmatig weer uit te zetten, en valt elk scherm
-        dat de instellingen ophaalt vanzelf terug op de prijslijst."""
-        db = get_db()
-        db.execute("UPDATE kiosk_stream SET actief = 0 WHERE id = 1")
-        db.commit()
-        return jsonify({"ok": True})
 
     @app.route("/kiosk/prijzen/product/<int:product_id>/toon", methods=["POST"])
     def kiosk_product_toon_wisselen(product_id):
@@ -291,12 +260,11 @@ def register_routes(app):
     def _uitverkocht_namen(categorieen):
         return [p["naam"] for _, lijst in categorieen for p in lijst if p["kiosk_uitverkocht"]]
 
-    def _prijzen_versie(categorieen, acties, stream):
+    def _prijzen_versie(categorieen, acties):
         # Alleen de velden die daadwerkelijk op het scherm staan -- zo
         # triggert bijv. een gewijzigde voorraad (niet zichtbaar hier) geen
-        # onnodige herlaadbeurt. Acties en de livestream tellen ook mee,
-        # zodat een nieuwe/aangepaste actie of het aan-/uitzetten van de
-        # stream het scherm net als de rest vanzelf bijwerkt.
+        # onnodige herlaadbeurt. Acties tellen ook mee, zodat een nieuwe of
+        # aangepaste actie het scherm net als de rest vanzelf bijwerkt.
         return _versie(
             [
                 (
@@ -306,7 +274,6 @@ def register_routes(app):
                 for naam, lijst in categorieen
             ],
             [(a["id"], a["tekst"], a["product_naam"], a["verkoopprijs"], a["afbeelding"]) for a in acties],
-            (stream["stream_url"], stream["actief"]),
         )
 
     @app.route("/kiosk/prijzen")
@@ -314,7 +281,6 @@ def register_routes(app):
         db = get_db()
         categorieen = _prijzen_categorieen(db)
         acties = _acties_actief(db)
-        stream = _stream_instellingen(db)
         # Simpele, JSON-vriendelijke vorm voor de pop-up-JS -- alleen wat er
         # daadwerkelijk getoond wordt, geen hele sqlite3.Row.
         acties_voor_scherm = [
@@ -330,9 +296,8 @@ def register_routes(app):
             "kiosk_prijzen_scherm.html",
             categorieen=categorieen,
             acties=acties_voor_scherm,
-            versie=_prijzen_versie(categorieen, acties, stream),
+            versie=_prijzen_versie(categorieen, acties),
             uitverkocht_namen=_uitverkocht_namen(categorieen),
-            stream_url=stream["stream_url"] if stream["actief"] else None,
         )
 
     @app.route("/kiosk/prijzen/versie")
@@ -340,10 +305,9 @@ def register_routes(app):
         db = get_db()
         categorieen = _prijzen_categorieen(db)
         acties = _acties_actief(db)
-        stream = _stream_instellingen(db)
         return jsonify(
             {
-                "versie": _prijzen_versie(categorieen, acties, stream),
+                "versie": _prijzen_versie(categorieen, acties),
                 "uitverkocht": _uitverkocht_namen(categorieen),
             }
         )
