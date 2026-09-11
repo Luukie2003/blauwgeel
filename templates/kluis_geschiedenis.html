@@ -1,35 +1,26 @@
 {% extends basis_template %}
-{% block titel %}Kassa geschiedenis{% endblock %}
+{% block titel %}Kluis geschiedenis{% endblock %}
 {% block inhoud %}
 <div class="actiebalk">
-    <p class="subtitel" style="margin:0">Alle tellingen, afdrachten en toevoegingen op een rij.</p>
+    <p class="subtitel" style="margin:0">
+        Alle kluistellingen, stortingen/opnames en overboekingen vanuit de kassalade op een rij.
+    </p>
     <div style="display:flex; gap:0.5rem">
-        <a href="{{ url_for('kassa_mutatie_nieuw') }}" class="btn btn-rand">Afdracht / toevoeging boeken</a>
-        <a href="{{ url_for('kassa_tellen') }}" class="btn btn-geel">Kassa tellen</a>
+        <a href="{{ url_for('kluis_mutatie_nieuw') }}" class="btn btn-rand">Storting / opname boeken</a>
+        <a href="{{ url_for('kluis_tellen') }}" class="btn btn-geel">Kluis tellen</a>
     </div>
 </div>
 
 <div class="statgrid">
     <div class="stat">
-        <div class="getal">€ {{ '%.2f'|format(kassalade_stand.stand) }}</div>
+        <div class="getal">€ {{ '%.2f'|format(kluis_stand.stand) }}</div>
         <div class="label">
-            Kassalade &mdash; bekende stand
-            {% if kassalade_stand.laatste_telling %}
-            <span class="tekst-zacht">(sinds telling van {{ kassalade_stand.laatste_telling.datum|datum_nl }})</span>
+            Huidige bekende stand
+            {% if kluis_stand.laatste_telling %}
+            <span class="tekst-zacht">(sinds telling van {{ kluis_stand.laatste_telling.datum|datum_nl }})</span>
             {% endif %}
         </div>
     </div>
-    {% if kluis_stand is defined and huidige_gebruiker_rol == 'beheerder' %}
-    <div class="stat">
-        <div class="getal">€ {{ '%.2f'|format(kluis_stand.stand) }}</div>
-        <div class="label">
-            Kluis &mdash; bekende stand
-            <span class="tekst-zacht">
-                (<a href="{{ url_for('kluis_geschiedenis') }}">bekijk kluis geschiedenis</a>)
-            </span>
-        </div>
-    </div>
-    {% endif %}
 </div>
 
 {% if verschil_trend.balken and not pda_modus %}
@@ -40,17 +31,11 @@
         {% for balk in verschil_trend.balken %}
         <div class="omzet-bar-kolom">
             <span class="omzet-bar-waarde">{{ '+' if balk.verschil > 0 else '' }}€{{ '%.0f'|format(balk.verschil) }}</span>
-            <a href="{{ url_for('kassa_telling_detail', telling_id=balk.id) }}"
+            <a href="{{ url_for('kluis_telling_detail', telling_id=balk.id) }}"
                class="omzet-bar {{ 'omzet-bar-tekort' if balk.verschil < 0 else ('omzet-bar-overschot' if balk.verschil > 0 else '') }}"
                style="height: {{ balk.hoogte_pct }}%; display:block"
                title="{{ balk.naam or 'Onbekend' }}: {{ '+' if balk.verschil > 0 else '' }}€ {{ '%.2f'|format(balk.verschil) }}"></a>
             <span class="omzet-bar-label">{{ balk.datum_kort }}</span>
-            {% if balk.afwijkend %}
-            <span class="omzet-bar-wedstrijden"
-                  title="Ingetypte omzet (PayPal): € {{ '%.2f'|format(balk.contante_omzet) }}. Omzet volgens voorraadtellingen in dezelfde periode: € {{ '%.2f'|format(balk.verkoop_omzet) }}. Klopt dit bedrag?">
-                ⚠ wijkt af
-            </span>
-            {% endif %}
         </div>
         {% endfor %}
     </div>
@@ -60,7 +45,7 @@
 <div class="kaart">
     {% if tijdlijn %}
     {% if pda_modus %}
-    <div id="kassa-tijdlijn-kaarten">
+    <div id="kluis-tijdlijn-kaarten">
         {% for regel in tijdlijn %}
         {% set item = regel.item %}
         <div class="pda-kaartje">
@@ -73,10 +58,14 @@
                         Telling &mdash; {{ 'klopt' if item.verschil == 0 else ('+€ %.2f overschot'|format(item.verschil) if item.verschil > 0 else '€ %.2f tekort'|format(-item.verschil)) }}
                     </span>
                     {% endif %}
-                {% elif regel.soort == 'afdracht' %}
-                <span class="badge badge-uit">Afdracht &rarr; kluis{% if item.ontvanger %} ({{ item.ontvanger }}){% endif %}</span>
+                {% elif regel.soort == 'storting' %}
+                <span class="badge badge-in">Storting{% if item.ontvanger %} van {{ item.ontvanger }}{% endif %}</span>
+                {% elif regel.soort == 'opname' %}
+                <span class="badge badge-uit">Opname{% if item.ontvanger %} naar {{ item.ontvanger }}{% endif %}</span>
+                {% elif regel.richting == 'afdracht' %}
+                <span class="badge badge-in">Overboeking &larr; kassalade</span>
                 {% else %}
-                <span class="badge badge-in">Toevoeging &larr; kluis</span>
+                <span class="badge badge-uit">Overboeking &rarr; kassalade</span>
                 {% endif %}
             </div>
             <div class="pda-kaartje-info" style="flex-direction:column; align-items:flex-start; gap:0.2rem; margin-left:0">
@@ -84,31 +73,37 @@
                 <strong>
                     {% if regel.soort == 'telling' %}
                     € {{ '%.2f'|format(item.geteld_bedrag) }}
-                    {% elif regel.soort == 'afdracht' %}
+                    {% elif regel.soort == 'opname' %}
                     &minus; € {{ '%.2f'|format(item.bedrag) }}
-                    {% else %}
+                    {% elif regel.soort == 'storting' %}
                     + € {{ '%.2f'|format(item.bedrag) }}
+                    {% elif regel.richting == 'afdracht' %}
+                    + € {{ '%.2f'|format(item.bedrag) }}
+                    {% else %}
+                    &minus; € {{ '%.2f'|format(item.bedrag) }}
                     {% endif %}
                 </strong>
                 {% if item.opmerking %}<span class="tekst-zacht">{{ item.opmerking }}</span>{% endif %}
-                {% if regel.soort != 'telling' and item.gecorrigeerd_op %}
+                {% if regel.soort in ('storting', 'opname') and item.gecorrigeerd_op %}
                 <span class="tekst-zacht" style="font-size:0.72rem">gecorrigeerd door {{ item.gecorrigeerd_door or 'onbekend' }} (was € {{ '%.2f'|format(item.bedrag_voor_correctie) }})</span>
                 {% endif %}
             </div>
             <div class="pda-kaartje-veld" style="display:flex; gap:0.5rem; flex-wrap:wrap">
                 {% if regel.soort == 'telling' %}
-                <a href="{{ url_for('kassa_telling_detail', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bekijken</a>
+                <a href="{{ url_for('kluis_telling_detail', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bekijken</a>
                 {% if not item.afgesloten %}
-                <a href="{{ url_for('kassa_telling_bewerken', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                <a href="{{ url_for('kluis_telling_bewerken', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
                 {% endif %}
-                {% else %}
-                <form method="post" action="{{ url_for('kassa_mutatie_corrigeren', mutatie_id=item.id) }}"
-                      onsubmit="return bevestigEnVerstuur(this, '{{ 'Afdracht' if regel.soort == 'afdracht' else 'Toevoeging' }} corrigeren?');"
+                {% elif regel.soort in ('storting', 'opname') %}
+                <form method="post" action="{{ url_for('kluis_mutatie_corrigeren', mutatie_id=item.id) }}"
+                      onsubmit="return bevestigEnVerstuur(this, '{{ 'Storting' if regel.soort == 'storting' else 'Opname' }} corrigeren?');"
                       style="display:flex; gap:0.4rem; align-items:center">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="number" step="0.01" min="0.01" name="bedrag" value="{{ '%.2f'|format(item.bedrag) }}" style="width:6rem">
                     <button type="submit" class="btn btn-rand btn-klein">Corrigeren</button>
                 </form>
+                {% else %}
+                <span class="tekst-zacht" style="font-size:0.8rem">Corrigeren via Kassa geschiedenis</span>
                 {% endif %}
             </div>
         </div>
@@ -134,10 +129,14 @@
                             Telling &mdash; {{ 'klopt' if item.verschil == 0 else ('+€ %.2f overschot'|format(item.verschil) if item.verschil > 0 else '€ %.2f tekort'|format(-item.verschil)) }}
                         </span>
                         {% endif %}
-                        {% elif regel.soort == 'afdracht' %}
-                        <span class="badge badge-uit">Afdracht &rarr; kluis{% if item.ontvanger %} ({{ item.ontvanger }}){% endif %}</span>
+                        {% elif regel.soort == 'storting' %}
+                        <span class="badge badge-in">Storting{% if item.ontvanger %} van {{ item.ontvanger }}{% endif %}</span>
+                        {% elif regel.soort == 'opname' %}
+                        <span class="badge badge-uit">Opname{% if item.ontvanger %} naar {{ item.ontvanger }}{% endif %}</span>
+                        {% elif regel.richting == 'afdracht' %}
+                        <span class="badge badge-in">Overboeking &larr; kassalade</span>
                         {% else %}
-                        <span class="badge badge-in">Toevoeging &larr; kluis</span>
+                        <span class="badge badge-uit">Overboeking &rarr; kassalade</span>
                         {% endif %}
                         {% if item.opmerking %}<div class="tekst-zacht" style="margin-top:0.2rem">{{ item.opmerking }}</div>{% endif %}
                     </td>
@@ -145,12 +144,16 @@
                     <td>
                         {% if regel.soort == 'telling' %}
                         € {{ '%.2f'|format(item.geteld_bedrag) }}
-                        {% elif regel.soort == 'afdracht' %}
+                        {% elif regel.soort == 'opname' %}
                         &minus; € {{ '%.2f'|format(item.bedrag) }}
-                        {% else %}
+                        {% elif regel.soort == 'storting' %}
                         + € {{ '%.2f'|format(item.bedrag) }}
+                        {% elif regel.richting == 'afdracht' %}
+                        + € {{ '%.2f'|format(item.bedrag) }}
+                        {% else %}
+                        &minus; € {{ '%.2f'|format(item.bedrag) }}
                         {% endif %}
-                        {% if regel.soort != 'telling' and item.gecorrigeerd_op %}
+                        {% if regel.soort in ('storting', 'opname') and item.gecorrigeerd_op %}
                         <div class="tekst-zacht" style="font-size:0.72rem">
                             gecorrigeerd door {{ item.gecorrigeerd_door or 'onbekend' }} (was € {{ '%.2f'|format(item.bedrag_voor_correctie) }})
                         </div>
@@ -158,18 +161,20 @@
                     </td>
                     <td>
                         {% if regel.soort == 'telling' %}
-                        <a href="{{ url_for('kassa_telling_detail', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bekijken</a>
+                        <a href="{{ url_for('kluis_telling_detail', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bekijken</a>
                         {% if not item.afgesloten %}
-                        <a href="{{ url_for('kassa_telling_bewerken', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                        <a href="{{ url_for('kluis_telling_bewerken', telling_id=item.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
                         {% endif %}
-                        {% else %}
-                        <form method="post" action="{{ url_for('kassa_mutatie_corrigeren', mutatie_id=item.id) }}"
-                              onsubmit="return bevestigEnVerstuur(this, '{{ 'Afdracht' if regel.soort == 'afdracht' else 'Toevoeging' }} corrigeren?');"
+                        {% elif regel.soort in ('storting', 'opname') %}
+                        <form method="post" action="{{ url_for('kluis_mutatie_corrigeren', mutatie_id=item.id) }}"
+                              onsubmit="return bevestigEnVerstuur(this, '{{ 'Storting' if regel.soort == 'storting' else 'Opname' }} corrigeren?');"
                               style="display:flex; gap:0.3rem; align-items:center">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="number" step="0.01" min="0.01" name="bedrag" value="{{ '%.2f'|format(item.bedrag) }}" style="width:5.5rem">
                             <button type="submit" class="btn btn-rand btn-klein">Corrigeren</button>
                         </form>
+                        {% else %}
+                        <span class="tekst-zacht" style="font-size:0.8rem">Via Kassa geschiedenis</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -179,7 +184,7 @@
     </div>
     {% endif %}
     {% else %}
-    <p class="leeg">Nog geen kassatellingen of -mutaties.</p>
+    <p class="leeg">Nog geen kluistellingen of -mutaties.</p>
     {% endif %}
 </div>
 {% endblock %}

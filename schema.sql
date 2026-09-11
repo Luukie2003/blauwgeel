@@ -144,7 +144,8 @@ CREATE TABLE IF NOT EXISTS instellingen (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     notificatie_email TEXT,
     banner_tekst TEXT,
-    kassa_stand REAL NOT NULL DEFAULT 0
+    kassalade_stand REAL NOT NULL DEFAULT 0,
+    kluis_stand REAL NOT NULL DEFAULT 0
 );
 INSERT OR IGNORE INTO instellingen (id, notificatie_email) VALUES (1, NULL);
 
@@ -193,6 +194,59 @@ CREATE TABLE IF NOT EXISTS kassa_mutaties (
     opmerking TEXT
 );
 
+-- Fysieke telling van de kluis -- zelfde vorm als kassa_tellingen, maar
+-- zonder contante_omzet: de kluis heeft geen eigen omzet, het verwachte
+-- bedrag is gewoon de op dat moment bekende kluis_stand.
+CREATE TABLE IF NOT EXISTS kluis_tellingen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    datum TEXT NOT NULL,
+    naam TEXT,
+    gebruiker_id INTEGER REFERENCES gebruikers(id),
+    verwacht_bedrag REAL NOT NULL DEFAULT 0,
+    geteld_bedrag REAL NOT NULL DEFAULT 0,
+    verschil REAL NOT NULL DEFAULT 0,
+    aantal_50 INTEGER NOT NULL DEFAULT 0,
+    aantal_20 INTEGER NOT NULL DEFAULT 0,
+    aantal_10 INTEGER NOT NULL DEFAULT 0,
+    aantal_5 INTEGER NOT NULL DEFAULT 0,
+    aantal_2 INTEGER NOT NULL DEFAULT 0,
+    aantal_1 INTEGER NOT NULL DEFAULT 0,
+    aantal_050 INTEGER NOT NULL DEFAULT 0,
+    aantal_020 INTEGER NOT NULL DEFAULT 0,
+    aantal_010 INTEGER NOT NULL DEFAULT 0,
+    aantal_005 INTEGER NOT NULL DEFAULT 0,
+    opmerking TEXT,
+    afgesloten INTEGER NOT NULL DEFAULT 0,
+    goedgekeurd_door_id INTEGER REFERENCES gebruikers(id),
+    goedgekeurd_door TEXT,
+    goedgekeurd_op TEXT,
+    goedkeuring_opmerking TEXT,
+    geteld_bedrag_voor_correctie REAL,
+    geteld_bedrag_gecorrigeerd_door_id INTEGER REFERENCES gebruikers(id),
+    geteld_bedrag_gecorrigeerd_door TEXT,
+    geteld_bedrag_gecorrigeerd_op TEXT,
+    geteld_bedrag_correctie_opmerking TEXT
+);
+
+-- Geld dat de kluis in-/uit gaat van/naar buiten de club-boekhouding (bank,
+-- penningmeester) -- i.t.t. kassa_mutaties (afdracht/toevoeging), dat de
+-- interne overboeking tussen kassalade en kluis is.
+CREATE TABLE IF NOT EXISTS kluis_mutaties (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL CHECK (type IN ('storting', 'opname')),
+    bedrag REAL NOT NULL,
+    datum TEXT NOT NULL,
+    naam TEXT,
+    gebruiker_id INTEGER REFERENCES gebruikers(id),
+    ontvanger TEXT,
+    opmerking TEXT,
+    bedrag_voor_correctie REAL,
+    gecorrigeerd_door_id INTEGER REFERENCES gebruikers(id),
+    gecorrigeerd_door TEXT,
+    gecorrigeerd_op TEXT,
+    correctie_opmerking TEXT
+);
+
 CREATE TABLE IF NOT EXISTS wedstrijden (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     team TEXT NOT NULL,
@@ -238,6 +292,8 @@ CREATE INDEX IF NOT EXISTS idx_bestelregels_bestelling ON bestelregels(bestellin
 CREATE INDEX IF NOT EXISTS idx_telling_regels_telling ON telling_regels(telling_id);
 CREATE INDEX IF NOT EXISTS idx_kassa_tellingen_datum ON kassa_tellingen(datum);
 CREATE INDEX IF NOT EXISTS idx_kassa_mutaties_datum ON kassa_mutaties(datum);
+CREATE INDEX IF NOT EXISTS idx_kluis_tellingen_datum ON kluis_tellingen(datum);
+CREATE INDEX IF NOT EXISTS idx_kluis_mutaties_datum ON kluis_mutaties(datum);
 
 -- ---------- Stemmen ----------
 

@@ -13,9 +13,10 @@ from helpers import (
     bereken_jaren_lid,
     bereken_frituurvet_status,
     bereken_kassa_coupure_bedrag,
-    bereken_kassa_stand,
     bereken_kassa_telling_status,
     bereken_kassa_verschil_trend,
+    bereken_kassalade_stand,
+    bereken_kluis_stand,
     bereken_komende_thuiswedstrijden,
     bereken_laatste_telling_status,
     bereken_omzet_trend_periode,
@@ -127,6 +128,19 @@ BEHEERDER_ENDPOINTS = {
     "kiosk_lid_status_wisselen",
     "kiosk_lid_verwijderen",
     "kiosk_scherm_instellingen",
+    # Kluis-acties zijn gevoeliger dan de kassalade (minder mutaties, groter
+    # bedrag) en daarom bewust beheerder-only, i.t.t. kassa_mutatie_nieuw
+    # (zie SECTIE_ENDPOINTS["kassa"] hieronder, die blijft voor iedereen met
+    # de kassa-sectie).
+    "kluis_tellen",
+    "kluis_telling_detail",
+    "kluis_telling_heropenen",
+    "kluis_telling_coupures_corrigeren",
+    "kluis_telling_bewerken",
+    "kluis_telling_goedkeuren",
+    "kluis_geschiedenis",
+    "kluis_mutatie_nieuw",
+    "kluis_mutatie_corrigeren",
 }
 
 # Fijnmazige rechten bovenop BEHEERDER_ENDPOINTS: elk account (ook
@@ -334,6 +348,30 @@ NAV_ITEMS = [
         "label": "Afdracht / toevoeging",
     },
     {
+        "groep": "Kluis",
+        "endpoints": [
+            "kluis_tellen",
+            "kluis_telling_detail",
+            "kluis_telling_bewerken",
+            "kluis_telling_goedkeuren",
+            "kluis_telling_heropenen",
+        ],
+        "url_endpoint": "kluis_tellen",
+        "label": "Kluis tellen",
+    },
+    {
+        "groep": "Kluis",
+        "endpoints": ["kluis_geschiedenis"],
+        "url_endpoint": "kluis_geschiedenis",
+        "label": "Kluis geschiedenis",
+    },
+    {
+        "groep": "Kluis",
+        "endpoints": ["kluis_mutatie_nieuw"],
+        "url_endpoint": "kluis_mutatie_nieuw",
+        "label": "Storting / opname",
+    },
+    {
         "groep": "Keuken",
         "endpoints": ["keuken_voorraad"],
         "url_endpoint": "keuken_voorraad",
@@ -459,6 +497,7 @@ NAV_GROEP_VOLGORDE = [
     "Bestellen",
     "Assortiment",
     "Kassa",
+    "Kluis",
     "Keuken",
     "Kantine-tv",
     "Stemmen",
@@ -467,12 +506,12 @@ NAV_GROEP_VOLGORDE = [
 ]
 NAV_ITEMS.sort(key=lambda item: NAV_GROEP_VOLGORDE.index(item["groep"]))
 
-# Kantine-tv- en Club-beheer zijn volledig beheerder-only (zie
+# Kantine-tv-, Club- en Kluisbeheer zijn volledig beheerder-only (zie
 # BEHEERDER_ENDPOINTS) -- i.t.t. de sectie-gebonden groepen hierboven (die
 # vrijwilligers met de juiste sectie wel mogen zien) toont de zijbalk deze
-# twee groepen daarom nooit aan een vrijwilliger, ook al staan ze niet in
+# groepen daarom nooit aan een vrijwilliger, ook al staan ze niet in
 # NAV_GROEP_SECTIE.
-NAV_GROEP_ALLEEN_BEHEERDER = {"Kantine-tv", "Club"}
+NAV_GROEP_ALLEEN_BEHEERDER = {"Kantine-tv", "Club", "Kluis"}
 
 # De PDA-modus (zie WEERGAVE_TELEFOON_PATROON hieronder) toont alleen deze
 # handvol pagina's -- puur vloerwerk, geen beheer/rapportages. Bewust een
@@ -727,6 +766,7 @@ def create_app(database_path=None):
         kassa,
         keuken,
         kiosk,
+        kluis,
         producten,
         stemmen,
         tellen,
@@ -744,6 +784,7 @@ def create_app(database_path=None):
     kassa.register_routes(app)
     keuken.register_routes(app)
     kiosk.register_routes(app)
+    kluis.register_routes(app)
     producten.register_routes(app)
     stemmen.register_routes(app)
     tellen.register_routes(app)

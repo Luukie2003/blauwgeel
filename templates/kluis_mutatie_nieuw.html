@@ -1,18 +1,14 @@
 {% extends basis_template %}
-{% block titel %}Afdracht / toevoeging{% endblock %}
+{% block titel %}Storting / opname{% endblock %}
 {% block inhoud %}
-<h1>Afdracht / toevoeging</h1>
+<h1>Storting / opname</h1>
 <p class="subtitel">
-    Boek een overboeking tussen kassalade en kluis, zonder meteen een volledige telling te
-    doen: een afdracht haalt geld uit de kassalade en stopt het in de kluis, een toevoeging
-    haalt geld uit de kluis om de kassalade (bijv. wisselgeld) aan te vullen.
+    Boek geld dat de kluis in- of uitgaat van/naar buiten de boekhouding om (bank,
+    penningmeester) &mdash; niet te verwarren met een afdracht/toevoeging, dat de
+    overboeking tussen kassalade en kluis is (zie Kassa geschiedenis).
 </p>
 
 <div class="statgrid">
-    <div class="stat">
-        <div class="getal">€ {{ '%.2f'|format(kassalade_stand.stand) }}</div>
-        <div class="label">Kassalade &mdash; huidige bekende stand</div>
-    </div>
     <div class="stat">
         <div class="getal">€ {{ '%.2f'|format(kluis_stand.stand) }}</div>
         <div class="label">Kluis &mdash; huidige bekende stand</div>
@@ -25,8 +21,8 @@
         <div class="veld">
             <label for="type">Type</label>
             <select id="type" name="type" required>
-                <option value="afdracht">Afdracht &mdash; kassalade &rarr; kluis</option>
-                <option value="toevoeging">Toevoeging &mdash; kluis &rarr; kassalade (bijv. wisselgeld aangevuld)</option>
+                <option value="storting">Storting (geld erbij, van buiten de boekhouding)</option>
+                <option value="opname">Opname (geld eruit, bijv. naar de bank)</option>
             </select>
         </div>
         <div class="veld">
@@ -34,8 +30,8 @@
             <input type="text" inputmode="decimal" id="bedrag" name="bedrag" required placeholder="Bijv. 50,00">
         </div>
         <div class="veld">
-            <label for="ontvanger">Wie heeft het fysiek overgedragen (optioneel)</label>
-            <input type="text" id="ontvanger" name="ontvanger" placeholder="Bijv. naam van de beheerder">
+            <label for="ontvanger">Van wie ontvangen / aan wie afgegeven (optioneel)</label>
+            <input type="text" id="ontvanger" name="ontvanger" placeholder="Bijv. 'Bank' of 'Penningmeester'">
         </div>
         <div class="veld">
             <label for="opmerking">Opmerking (optioneel)</label>

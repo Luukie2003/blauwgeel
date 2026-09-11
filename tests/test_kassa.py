@@ -1,6 +1,6 @@
 import re
 
-from app import bereken_kassa_stand
+from app import bereken_kassalade_stand, bereken_kluis_stand
 from conftest import stel_csrf_token_in as _csrf
 
 KOLOMMEN = [
@@ -19,7 +19,11 @@ def _maak_concept_telling(client, bedrag_50=1, contante_omzet="0"):
 
 
 def _stand(db):
-    return bereken_kassa_stand(db)["stand"]
+    return bereken_kassalade_stand(db)["stand"]
+
+
+def _kluis_stand(db):
+    return bereken_kluis_stand(db)["stand"]
 
 
 def _wissel_naar_andere_gebruiker(client, db, naam="goedkeurder"):
@@ -166,7 +170,7 @@ class TestKassaLevenscyclus:
         assert resp.status_code == 200
         assert resp.mimetype == "application/pdf"
 
-    def test_afdracht_verlaagt_kassa_stand(self, ingelogde_client, db):
+    def test_afdracht_verlaagt_kassa_stand_en_verhoogt_kluis_stand(self, ingelogde_client, db):
         ingelogde_client.post(
             "/kassa/mutatie/nieuw",
             data={
@@ -178,6 +182,21 @@ class TestKassaLevenscyclus:
             },
         )
         assert _stand(db) == -10.0
+        assert _kluis_stand(db) == 10.0  # gesloten kringloop: verlaat de kassalade, komt in de kluis
+
+    def test_toevoeging_verhoogt_kassa_stand_en_verlaagt_kluis_stand(self, ingelogde_client, db):
+        ingelogde_client.post(
+            "/kassa/mutatie/nieuw",
+            data={
+                "csrf_token": _csrf(ingelogde_client),
+                "type": "toevoeging",
+                "bedrag": "10",
+                "ontvanger": "",
+                "opmerking": "",
+            },
+        )
+        assert _stand(db) == 10.0
+        assert _kluis_stand(db) == -10.0  # komt uit de kluis, vult de kassalade aan
 
 
 class TestKassaZelfGoedkeuren:
@@ -438,6 +457,7 @@ class TestKassaMutatieCorrigeren:
         )
         mutatie = db.execute("SELECT * FROM kassa_mutaties ORDER BY id DESC LIMIT 1").fetchone()
         assert _stand(db) == -10.0
+        assert _kluis_stand(db) == 10.0
 
         resp = ingelogde_client.post(
             f"/kassa/mutaties/{mutatie['id']}/corrigeren",
@@ -445,11 +465,47 @@ class TestKassaMutatieCorrigeren:
         )
         assert resp.status_code == 302
         assert _stand(db) == -15.0
+        assert _kluis_stand(db) == 15.0
 
         mutatie_na = db.execute("SELECT * FROM kassa_mutaties WHERE id = ?", (mutatie["id"],)).fetchone()
         assert mutatie_na["bedrag"] == 15.0
         assert mutatie_na["bedrag_voor_correctie"] == 10.0
         assert mutatie_na["gecorrigeerd_door"] == "admin"
+
+    def test_corrigeren_raakt_kluis_stand_niet_als_kluis_al_apart_geteld_is(self, ingelogde_client, db):
+        """Kassalade en kluis worden onafhankelijk van elkaar vergrendeld: een
+        kluistelling na de mutatie blokkeert alleen de kluis-kant van een
+        correctie, niet de kassalade-kant (die kijkt naar kassa_tellingen)."""
+        token = _csrf(ingelogde_client)
+        ingelogde_client.post(
+            "/kassa/mutatie/nieuw",
+            data={"csrf_token": token, "type": "afdracht", "bedrag": "10", "ontvanger": "", "opmerking": ""},
+        )
+        mutatie = db.execute("SELECT * FROM kassa_mutaties ORDER BY id DESC LIMIT 1").fetchone()
+        db.execute("UPDATE kassa_mutaties SET datum = '2020-01-01 10:00' WHERE id = ?", (mutatie["id"],))
+        db.commit()
+        assert _stand(db) == -10.0
+        assert _kluis_stand(db) == 10.0
+
+        # Kluis wordt apart geteld en goedgekeurd -- 'vergrendelt' alleen de kluisstand.
+        resp = ingelogde_client.post(
+            "/kluis/tellen",
+            data=_coupure_data(_csrf(ingelogde_client), aantal_10="1"),  # 10 euro geteld
+        )
+        kluis_telling_id = int(resp.headers["Location"].rstrip("/").split("/")[-1])
+        ingelogde_client.post(
+            f"/kluis/tellingen/{kluis_telling_id}/goedkeuren",
+            data={"csrf_token": _csrf(ingelogde_client)},
+        )
+        assert _kluis_stand(db) == 10.0
+
+        resp = ingelogde_client.post(
+            f"/kassa/mutaties/{mutatie['id']}/corrigeren",
+            data={"csrf_token": _csrf(ingelogde_client), "bedrag": "25"},
+        )
+        assert resp.status_code == 302
+        assert _stand(db) == -25.0  # kassalade nog niet vergrendeld: wel aangepast
+        assert _kluis_stand(db) == 10.0  # kluis al vergrendeld door de kluistelling: ongewijzigd
 
     def test_toevoeging_corrigeren_past_kassa_stand_aan(self, ingelogde_client, db):
         token = _csrf(ingelogde_client)
@@ -459,12 +515,14 @@ class TestKassaMutatieCorrigeren:
         )
         mutatie = db.execute("SELECT * FROM kassa_mutaties ORDER BY id DESC LIMIT 1").fetchone()
         assert _stand(db) == 10.0
+        assert _kluis_stand(db) == -10.0
 
         ingelogde_client.post(
             f"/kassa/mutaties/{mutatie['id']}/corrigeren",
             data={"csrf_token": token, "bedrag": "25"},
         )
         assert _stand(db) == 25.0
+        assert _kluis_stand(db) == -25.0
 
     def test_corrigeren_raakt_kassa_stand_niet_als_er_al_een_latere_telling_is(self, ingelogde_client, db):
         token = _csrf(ingelogde_client)
@@ -489,7 +547,8 @@ class TestKassaMutatieCorrigeren:
             data={"csrf_token": _csrf(ingelogde_client), "bedrag": "25"},
         )
         assert resp.status_code == 302
-        assert _stand(db) == 50.0  # ongewijzigd
+        assert _stand(db) == 50.0  # ongewijzigd: kassalade is vergrendeld door de latere telling
+        assert _kluis_stand(db) == 25.0  # kluis-kant is onafhankelijk en dus wel aangepast
 
         mutatie_na = db.execute("SELECT * FROM kassa_mutaties WHERE id = ?", (mutatie["id"],)).fetchone()
         assert mutatie_na["bedrag"] == 25.0  # zelf wel gecorrigeerd

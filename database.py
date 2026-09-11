@@ -91,7 +91,8 @@ KOLOM_MIGRATIES = [
     ("gebruikers", "mail_factuur", "INTEGER NOT NULL DEFAULT 0"),
     ("gebruikers", "mail_week_overzicht", "INTEGER NOT NULL DEFAULT 0"),
     ("instellingen", "banner_tekst", "TEXT"),
-    ("instellingen", "kassa_stand", "REAL NOT NULL DEFAULT 0"),
+    ("instellingen", "kassalade_stand", "REAL NOT NULL DEFAULT 0"),
+    ("instellingen", "kluis_stand", "REAL NOT NULL DEFAULT 0"),
     ("mutaties", "gebruiker_id", "INTEGER REFERENCES gebruikers(id)"),
     ("tellingen", "gebruiker_id", "INTEGER REFERENCES gebruikers(id)"),
     ("bestellingen", "besteld_door_id", "INTEGER REFERENCES gebruikers(id)"),
@@ -243,6 +244,20 @@ def _migreer_kassa_afgesloten(db):
     db.execute("UPDATE kassa_tellingen SET afgesloten = 1")
 
 
+def _migreer_kluis_kassalade(db):
+    """instellingen.kassa_stand wordt hernoemd naar kassalade_stand nu de
+    kluis een eigen, gescheiden stand krijgt -- kassa_stand was tot nu toe de
+    enige pot en die naam dekt de lading niet meer zodra er twee zijn.
+    RENAME COLUMN behoudt de bestaande waarde vanzelf (in tegenstelling tot
+    een gewone kolom-migratie via KOLOM_MIGRATIES, die 'm terug op de
+    default 0 zou zetten). Moet daarom vóór _migreer_kolommen draaien: die
+    zou anders zelf al een lege kassalade_stand-kolom aanmaken voordat deze
+    functie de kans krijgt om 'm van de oude kolom te voorzien."""
+    bestaande = {row["name"] for row in db.execute("PRAGMA table_info(instellingen)")}
+    if "kassa_stand" in bestaande and "kassalade_stand" not in bestaande:
+        db.execute("ALTER TABLE instellingen RENAME COLUMN kassa_stand TO kassalade_stand")
+
+
 def _migreer_stemmen_meerdere_keuzes(db):
     """De UNIQUE-constraint op stemmen stond oorspronkelijk op
     (stemvraag_id, kiezer_sleutel): goed voor precies 1 keuze per stemmer.
@@ -359,6 +374,7 @@ def get_db():
         if db_pad not in _SCHEMA_TOEGEPAST_VOOR:
             with open(SCHEMA_PATH) as f:
                 g.db.executescript(f.read())
+            _migreer_kluis_kassalade(g.db)
             _migreer_kolommen(g.db)
             _migreer_stemmen_meerdere_keuzes(g.db)
             _migreer_categorieen(g.db)

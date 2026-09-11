@@ -631,22 +631,37 @@ def bereken_kassa_coupure_bedrag(request_form):
     return aantallen, round(totaal, 2)
 
 
-def bereken_kassa_stand(db):
-    """Het laatst bekende (verwachte) bedrag in de kassa. Wordt direct
-    bijgehouden in instellingen.kassa_stand -- elke afdracht/toevoeging past
-    'm meteen aan, en elke telling zet 'm gelijk aan het getelde bedrag
+def bereken_kassalade_stand(db):
+    """Het laatst bekende (verwachte) bedrag in de kassalade. Wordt direct
+    bijgehouden in instellingen.kassalade_stand -- elke afdracht/toevoeging
+    past 'm meteen aan, en elke telling zet 'm gelijk aan het getelde bedrag
     (zelfde patroon als producten.voorraad). Dat voorkomt dat je bij het
     afleiden via datums misgrijpt wanneer twee dingen binnen dezelfde minuut
     gebeuren (de datumvelden in deze app hebben geen secondeprecisie)."""
-    rij = db.execute("SELECT kassa_stand FROM instellingen WHERE id = 1").fetchone()
+    rij = db.execute("SELECT kassalade_stand FROM instellingen WHERE id = 1").fetchone()
     # Alleen afgesloten tellingen tellen mee -- een nog openstaande (concept)
-    # telling heeft zijn bedrag nog niet in kassa_stand verrekend, dus die
-    # mag hier niet als "laatste telling" worden aangezien.
+    # telling heeft zijn bedrag nog niet in kassalade_stand verrekend, dus
+    # die mag hier niet als "laatste telling" worden aangezien.
     laatste_telling = db.execute(
         "SELECT * FROM kassa_tellingen WHERE afgesloten = 1 ORDER BY datum DESC, id DESC LIMIT 1"
     ).fetchone()
     return {
-        "stand": round(rij["kassa_stand"] if rij else 0.0, 2),
+        "stand": round(rij["kassalade_stand"] if rij else 0.0, 2),
+        "laatste_telling": laatste_telling,
+    }
+
+
+def bereken_kluis_stand(db):
+    """Zelfde soort afgeleide stand als bereken_kassalade_stand, maar dan
+    voor de kluis: bijgehouden in instellingen.kluis_stand, aangepast door
+    kassalade<->kluis-overboekingen (kassa_mutaties), stortingen/opnames
+    naar extern (kluis_mutaties) en afgesloten kluis_tellingen."""
+    rij = db.execute("SELECT kluis_stand FROM instellingen WHERE id = 1").fetchone()
+    laatste_telling = db.execute(
+        "SELECT * FROM kluis_tellingen WHERE afgesloten = 1 ORDER BY datum DESC, id DESC LIMIT 1"
+    ).fetchone()
+    return {
+        "stand": round(rij["kluis_stand"] if rij else 0.0, 2),
         "laatste_telling": laatste_telling,
     }
 
@@ -707,6 +722,38 @@ def bereken_kassa_verschil_trend(db, limiet=20):
             }
         )
         vorige_datum = kt["datum"]
+
+    max_verschil = max((abs(b["verschil"]) for b in balken), default=0)
+    for balk in balken:
+        balk["hoogte_pct"] = (abs(balk["verschil"]) / max_verschil * 100) if max_verschil else 0
+
+    return {"balken": balken, "max_verschil": max_verschil}
+
+
+def bereken_kluis_verschil_trend(db, limiet=20):
+    """Verschil per afgesloten kluistelling, voor dezelfde soort
+    trendgrafiek als bereken_kassa_verschil_trend. Eenvoudiger dan die
+    functie: de kluis heeft geen eigen omzet om tegen te vergelijken, dus
+    hier is geen "afwijkend"-signalering nodig -- alleen het verschil
+    zelf."""
+    tellingen = db.execute(
+        """SELECT id, datum, naam, verschil FROM kluis_tellingen
+           WHERE afgesloten = 1 ORDER BY datum DESC, id DESC LIMIT ?""",
+        (limiet,),
+    ).fetchall()
+    tellingen = list(reversed(tellingen))
+    if not tellingen:
+        return {"balken": [], "max_verschil": 0}
+
+    balken = [
+        {
+            "id": kt["id"],
+            "datum_kort": datetime.strptime(kt["datum"], "%Y-%m-%d %H:%M").strftime("%d-%m"),
+            "verschil": kt["verschil"],
+            "naam": kt["naam"],
+        }
+        for kt in tellingen
+    ]
 
     max_verschil = max((abs(b["verschil"]) for b in balken), default=0)
     for balk in balken:
