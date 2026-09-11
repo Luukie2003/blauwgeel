@@ -603,6 +603,28 @@ class TestKassaMutatieCorrigeren:
         assert "€ 10.00" in body
 
 
+class TestKassaladeLegenKnop:
+    """De 'Kassalade volledig legen'-knop op /kassa/mutatie/nieuw vult het
+    bestaande afdracht-formulier alleen via JS voor met de huidige stand --
+    er is bewust geen aparte route, dit hergebruikt gewoon
+    kassa_mutatie_nieuw. Deze tests controleren dus alleen de server-kant:
+    of de knop (en het bedrag erin) wel/niet gerenderd wordt."""
+
+    def test_knop_verborgen_als_kassalade_leeg_is(self, ingelogde_client):
+        resp = ingelogde_client.get("/kassa/mutatie/nieuw")
+        assert "Kassalade volledig legen".encode() not in resp.data
+
+    def test_knop_zichtbaar_met_huidige_stand_als_kassalade_niet_leeg_is(self, ingelogde_client):
+        ingelogde_client.post(
+            "/kassa/mutatie/nieuw",
+            data={"csrf_token": _csrf(ingelogde_client), "type": "toevoeging", "bedrag": "37.50", "ontvanger": "", "opmerking": ""},
+        )
+        resp = ingelogde_client.get("/kassa/mutatie/nieuw")
+        body = resp.data.decode()
+        assert "Kassalade volledig legen" in body
+        assert "var kassaladeStand = 37.5;" in body
+
+
 def test_kassa_geschiedenis_begrenst_lange_lijst(ingelogde_client, db):
     """Regressietest voor de LIMIT op kassa_geschiedenis(): zonder begrenzing
     groeit de tijdlijn onbeperkt mee met elke kassatelling ooit."""

@@ -19,6 +19,19 @@
     </div>
 </div>
 
+{% if kassalade_stand.stand > 0.005 %}
+<div class="kaart" style="max-width:480px">
+    <button type="button" id="knop-kassalade-legen" class="btn btn-rand">
+        Kassalade volledig legen (naar kluis)
+    </button>
+    <p class="tekst-zacht" style="margin:0.5rem 0 0">
+        Vult hieronder alvast een afdracht van het volledige bekende kassalade-bedrag in
+        &mdash; handig vlak voor een nieuwe telling, zodat de lade weer op nul begint. Controleer
+        en druk daarna op Opslaan.
+    </p>
+</div>
+{% endif %}
+
 <div class="kaart" style="max-width:480px">
     <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -44,4 +57,25 @@
         <button type="submit" class="btn btn-geel">Opslaan</button>
     </form>
 </div>
+
+<script>
+(function () {
+    var knopLegen = document.getElementById('knop-kassalade-legen');
+    if (!knopLegen) {
+        return;
+    }
+    var kassaladeStand = {{ kassalade_stand.stand }};
+    var typeVeld = document.getElementById('type');
+    var bedragVeld = document.getElementById('bedrag');
+    var opmerkingVeld = document.getElementById('opmerking');
+    knopLegen.addEventListener('click', function () {
+        typeVeld.value = 'afdracht';
+        bedragVeld.value = kassaladeStand.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (!opmerkingVeld.value) {
+            opmerkingVeld.value = 'Kassalade volledig geleegd (voorbereiding nieuwe telling)';
+        }
+        bedragVeld.focus();
+    });
+})();
+</script>
 {% endblock %}
