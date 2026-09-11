@@ -1,5 +1,6 @@
 from flask import Response, flash, redirect, render_template, request, url_for
 
+import qr
 from database import get_db
 from helpers import now_str
 from pdf import schaplabels_pdf
@@ -55,10 +56,45 @@ def register_routes(app):
         return redirect(url_for("verbruiksvoorwerpen_lijst"))
 
     def _label_gegevens_verbruiksvoorwerp(item):
+        url = url_for("scan_landing_verbruiksvoorwerp", item_id=item["id"], _external=True)
         return {
             "naam": item["naam"],
             "categorie": item["categorie"] or "Verbruiksvoorwerp",
+            "qr_png": qr.qr_png_bytes(url),
         }
+
+    @app.route("/scan/verbruiksvoorwerp/<int:item_id>")
+    def scan_landing_verbruiksvoorwerp(item_id):
+        """Waar de QR-code op een verbruiksvoorwerp-schaplabel naartoe wijst
+        -- publiek, geen account nodig (zie OPEN_ENDPOINTS in app.py), zelfde
+        opzet als scan_landing voor gewone producten. Geen 'naar
+        productpagina'-knop: een verbruiksvoorwerp heeft geen eigen pagina
+        om naartoe te gaan, alleen de melding is relevant."""
+        db = get_db()
+        item = db.execute(
+            "SELECT * FROM verbruiksvoorwerpen WHERE id = ?", (item_id,)
+        ).fetchone()
+        if item is None:
+            return render_template("scan_landing_verbruiksvoorwerp.html", item=None), 404
+        return render_template("scan_landing_verbruiksvoorwerp.html", item=item)
+
+    @app.route("/scan/verbruiksvoorwerp/<int:item_id>/melden", methods=["POST"])
+    def scan_melden_verbruiksvoorwerp(item_id):
+        db = get_db()
+        item = db.execute(
+            "SELECT * FROM verbruiksvoorwerpen WHERE id = ?", (item_id,)
+        ).fetchone()
+        if item is None:
+            flash("Verbruiksvoorwerp niet gevonden.", "error")
+            return redirect(url_for("scan_landing_verbruiksvoorwerp", item_id=item_id))
+        db.execute(
+            """INSERT INTO bestellijst_meldingen (tekst, bron, aangemaakt_op)
+               VALUES (?, 'verbruiksvoorwerp', ?)""",
+            (item["naam"], now_str()),
+        )
+        db.commit()
+        flash("Bedankt! Dit is doorgegeven voor de bestellijst.", "success")
+        return redirect(url_for("scan_landing_verbruiksvoorwerp", item_id=item_id))
 
     @app.route("/verbruiksvoorwerpen/<int:item_id>/label.pdf")
     def verbruiksvoorwerp_label_pdf(item_id):

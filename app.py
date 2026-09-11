@@ -57,6 +57,11 @@ OPEN_ENDPOINTS = {
     # product_detail zelf staat niet in deze lijst.
     "scan_landing",
     "scan_melden",
+    # Zelfde als hierboven, maar dan voor de QR-code op een
+    # verbruiksvoorwerp-schaplabel (geen productpagina om naartoe te gaan,
+    # dus alleen een meld-knop).
+    "scan_landing_verbruiksvoorwerp",
+    "scan_melden_verbruiksvoorwerp",
     # De twee Kantine Kiosk-schermen draaien op een TV via Chromecast --
     # daar kan niemand op inloggen, dus moeten ze net als de stempagina's
     # zonder account bereikbaar zijn. Het beheer ervan (wat erop staat) zit
