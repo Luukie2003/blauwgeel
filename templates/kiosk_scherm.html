@@ -7,14 +7,6 @@
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
     <meta name="theme-color" content="#1e3a8a">
     <style>
-        :root {
-            --blauw: #1e3a8a;
-            --blauw-donker: #0f1f4d;
-            --geel: #fcd42f;
-            --geel-donker: #e0ba17;
-            --tekst-zacht: #b9c2e0;
-        }
-        * { box-sizing: border-box; }
         html, body { height: 100%; margin: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Calibri, sans-serif;
@@ -23,100 +15,16 @@
             overflow: hidden;
         }
         .scherm { position: relative; width: 100vw; height: 100vh; }
-        .slide {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-            padding: 3.5rem 5rem;
-            opacity: 0;
-            transition: opacity 1s ease;
-            text-align: center;
-        }
-        .slide.actief { opacity: 1; z-index: 1; }
-
-        /* Sponsor: afbeelding vult het scherm, titel als onderschrift */
-        .slide-sponsor.sjabloon-afbeelding_volledig { padding: 0; }
-        .slide-sponsor.sjabloon-afbeelding_volledig .sponsor-afbeelding {
-            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff;
-        }
-        .slide-sponsor.sjabloon-afbeelding_volledig .onderschrift {
-            position: absolute; left: 0; right: 0; bottom: 0;
-            background: rgba(15, 31, 77, 0.85);
-            padding: 1.1rem 2rem;
-            font-size: 1.7rem;
-            font-weight: 700;
-        }
-
-        /* Sponsor: afbeelding naast titel + tekst */
-        .slide-sponsor.sjabloon-afbeelding_titel_tekst { flex-direction: row; gap: 3.5rem; text-align: left; }
-        .slide-sponsor.sjabloon-afbeelding_titel_tekst img { max-width: 45%; max-height: 72vh; object-fit: contain; border-radius: 14px; background: #fff; }
-        .slide-sponsor.sjabloon-afbeelding_titel_tekst .inhoud h2 { font-size: 3.2rem; margin: 0 0 1rem; color: var(--geel); }
-        .slide-sponsor.sjabloon-afbeelding_titel_tekst .inhoud p { font-size: 1.7rem; line-height: 1.4; margin: 0; }
-
-        /* Sponsor: alleen titel + tekst, geen afbeelding */
-        .slide-sponsor.sjabloon-titel_tekst_groot h2 { font-size: 4.2rem; color: var(--geel); margin: 0; }
-        .slide-sponsor.sjabloon-titel_tekst_groot p { font-size: 2.1rem; max-width: 55rem; margin: 0; }
-
-        /* Sponsor: compacte gecentreerde banner */
-        .slide-sponsor.sjabloon-titel_ondertitel_banner .banner {
-            background: rgba(255, 255, 255, 0.08);
-            border: 2px solid var(--geel);
-            border-radius: 24px;
-            padding: 3rem 4.5rem;
-        }
-        .slide-sponsor.sjabloon-titel_ondertitel_banner h2 { font-size: 3.4rem; color: var(--geel); margin: 0 0 0.7rem; }
-        .slide-sponsor.sjabloon-titel_ondertitel_banner p { font-size: 1.7rem; color: var(--tekst-zacht); margin: 0; }
-
-        /* Mededeling: zelfde grote-tekst-opzet als hierboven, maar met een
-           duidelijk label zodat het nooit voor een betaalde sponsor
-           aangezien wordt -- oranje accent i.p.v. het geel van sponsors. */
-        .slide-sponsor.sjabloon-mededeling_groot { background: rgba(232, 137, 12, 0.12); }
-        .mededeling-label {
-            background: #e8890c;
-            color: #fff;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            padding: 0.5rem 1.6rem;
-            border-radius: 999px;
-            font-size: 1.15rem;
-            margin-bottom: 0.8rem;
-        }
-        .slide-sponsor.sjabloon-mededeling_groot h2 { font-size: 4rem; color: #fff; margin: 0; }
-        .slide-sponsor.sjabloon-mededeling_groot p { font-size: 2rem; max-width: 55rem; margin: 0; color: var(--tekst-zacht); }
-
-        /* Club van 20 */
-        .slide-club_van_20 h2 { font-size: 2.8rem; color: var(--geel); margin: 0 0 1.8rem; }
-        .namen-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.9rem 1.5rem; max-width: 72rem; }
-        .naam-chip { background: rgba(255, 255, 255, 0.09); border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 999px; padding: 0.6rem 1.5rem; font-size: 1.55rem; }
-        .naam-chip--groot { font-size: 2.15rem; font-weight: 700; padding: 0.7rem 1.8rem; border-color: var(--geel); background: rgba(252, 212, 47, 0.14); }
-        .naam-chip--niet-betaald { border-color: #e05a5a; background: rgba(224, 90, 90, 0.16); color: #ffb8b8; }
-        .naam-sterren { color: var(--geel); letter-spacing: 0.05em; margin-right: 0.2rem; }
-        .pagina-indicator { margin-top: 1.6rem; color: var(--tekst-zacht); font-size: 1.15rem; }
-
-        /* Wedstrijden */
-        .slide-wedstrijden h2 { font-size: 2.8rem; color: var(--geel); margin: 0 0 1.8rem; }
-        .wedstrijden-lijst { width: 100%; max-width: 62rem; }
-        .wedstrijd-dag { display: flex; justify-content: space-between; align-items: baseline; gap: 1.5rem; padding: 1rem 0; border-bottom: 1px solid rgba(255, 255, 255, 0.18); font-size: 1.5rem; text-align: left; }
-        .wedstrijd-dag .datum { font-weight: 700; color: var(--geel); min-width: 9rem; flex-shrink: 0; }
-        .wedstrijd-dag .teams { flex: 1; }
-        .wedstrijd-dag .weer { color: var(--tekst-zacht); font-size: 1.2rem; flex-shrink: 0; }
-
-        .leeg-scherm { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 1.2rem; color: var(--tekst-zacht); text-align: center; }
-        .leeg-scherm img { height: 5rem; width: auto; }
-        .leeg-scherm h1 { color: #fff; font-size: 2.2rem; margin: 0; }
+        {% include "_kiosk_scherm_stijl.html" %}
     </style>
 </head>
 <body>
     {% if slides %}
     <div class="scherm">
         {% for slide in slides %}
-        <section class="slide slide-{{ slide.type }}{% if slide.type == 'sponsor' %} sjabloon-{{ slide.sjabloon }}{% endif %}{% if loop.first %} actief{% endif %}"
-                 data-duur="{{ slide.duur }}">
+        <section class="slide slide-{{ slide.type }}{% if slide.type == 'sponsor' %} sjabloon-{{ slide.sjabloon }} overgang-{{ slide.overgang }} tekst-{{ slide.tekst_grootte }}{% endif %}{% if loop.first %} actief{% endif %}"
+                 data-duur="{{ slide.duur }}"
+                 {% if slide.sjabloon == 'aangepast' and slide.custom_achtergrond_kleur %}style="background: {{ slide.custom_achtergrond_kleur }};"{% endif %}>
             {% if slide.type == 'sponsor' %}
                 {% if slide.sjabloon == 'afbeelding_volledig' %}
                     {% if slide.afbeelding %}
@@ -137,9 +45,28 @@
                         {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
                     </div>
                 {% elif slide.sjabloon == 'mededeling_groot' %}
+                    {% if slide.achtergrond_afbeelding %}
+                    <img class="mededeling-achtergrond-img" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.achtergrond_afbeelding) }}" alt="">
+                    <div class="mededeling-overlay"></div>
+                    {% endif %}
                     <div class="mededeling-label">Mededeling</div>
                     {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
                     {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
+                {% elif slide.sjabloon == 'aangepast' %}
+                    {% if slide.custom_achtergrond_afbeelding %}
+                    <img class="canvas-achtergrond-img" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.custom_achtergrond_afbeelding) }}" alt="">
+                    {% if slide.custom_overlay_donker %}<div class="canvas-overlay"></div>{% endif %}
+                    {% endif %}
+                    {% for element in slide.elementen %}
+                    <div class="canvas-element canvas-element--{{ element.type|replace('_', '-') }} canvas-lettergrootte-{{ element.lettergrootte }}"
+                         style="left:{{ element.x }}%; top:{{ element.y }}%; width:{{ element.breedte }}%; height:{{ element.hoogte }}%; color:{{ element.kleur }}; text-align:{{ element.uitlijning|css_uitlijning }};">
+                        {% if element.type == 'foto' %}
+                            {% if element.inhoud %}<img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + element.inhoud) }}" alt="">{% endif %}
+                        {% else %}
+                            {{ element.inhoud }}
+                        {% endif %}
+                    </div>
+                    {% endfor %}
                 {% else %}
                     {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
                     {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}

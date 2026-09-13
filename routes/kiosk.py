@@ -1,4 +1,5 @@
 import hashlib
+import json
 import sqlite3
 from datetime import date
 
@@ -7,10 +8,18 @@ from flask import flash, jsonify, redirect, render_template, request, url_for
 import qr
 from database import get_db
 from helpers import (
+    HEX_KLEUR_PATROON,
     KIOSK_AFBEELDINGEN_MAP,
+    KIOSK_ELEMENT_TYPES,
+    KIOSK_OVERGANG_SLEUTELS,
+    KIOSK_OVERGANGEN,
+    KIOSK_SPONSOR_SJABLOON_AANGEPAST,
     KIOSK_SPONSOR_SJABLONEN,
     KIOSK_SPONSOR_SJABLOON_SLEUTELS,
     KIOSK_SPONSOR_SJABLOON_VOORBEELDEN,
+    KIOSK_TEKST_GROOTTE_SLEUTELS,
+    KIOSK_TEKST_GROOTTES,
+    KIOSK_UITLIJNINGEN,
     bereken_jaren_lid,
     bereken_komende_thuiswedstrijden,
     format_datum_kort,
@@ -54,6 +63,49 @@ def register_routes(app):
     def _scherm_instellingen(db):
         return db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
 
+    def _sponsor_slide(s, eigen_sjablonen):
+        """Bouwt de slide-dict voor 1 sponsor-/mededelingrij. Bij
+        sjabloon == 'aangepast' wordt het gekoppelde zelfgebouwde sjabloon
+        (kiosk_sjablonen_custom) verrijkt met de eigen titel/tekst/foto van
+        deze sponsor; is dat sjabloon inmiddels verwijderd, dan levert deze
+        sponsor gewoon geen slide op (zelfde 'leeg blok'-filosofie als de
+        rest van _bouw_slides)."""
+        slide = {
+            "type": "sponsor",
+            "duur": s["weergave_duur_seconden"],
+            "sjabloon": s["sjabloon"],
+            "titel": s["titel"],
+            "tekst": s["tekst"],
+            "afbeelding": s["afbeelding"],
+            "overgang": s["overgang"],
+            "tekst_grootte": s["tekst_grootte"],
+            "achtergrond_afbeelding": s["achtergrond_afbeelding"],
+        }
+        if s["sjabloon"] != KIOSK_SPONSOR_SJABLOON_AANGEPAST:
+            return slide
+        sjabloon = eigen_sjablonen.get(s["custom_sjabloon_id"])
+        if sjabloon is None:
+            return None
+        elementen = []
+        for element in json.loads(sjabloon["elementen"]):
+            element = dict(element)
+            if element.get("type") == "foto":
+                element["inhoud"] = s["afbeelding"]
+            elif element.get("type") == "titel":
+                element["inhoud"] = s["titel"]
+            elif element.get("type") == "tekst":
+                element["inhoud"] = s["tekst"]
+            elementen.append(element)
+        slide.update(
+            {
+                "custom_achtergrond_kleur": sjabloon["achtergrond_kleur"],
+                "custom_achtergrond_afbeelding": sjabloon["achtergrond_afbeelding"],
+                "custom_overlay_donker": bool(sjabloon["overlay_donker"]),
+                "elementen": elementen,
+            }
+        )
+        return slide
+
     def _bouw_slides(db):
         """Bouwt de geordende lijst slides voor het kantine scherm, op basis
         van kiosk_scherm_instellingen: elke slide is een dict met minstens
@@ -68,16 +120,16 @@ def register_routes(app):
             sponsoren = db.execute(
                 "SELECT * FROM kiosk_sponsoren WHERE actief = 1 ORDER BY volgorde, id"
             ).fetchall()
+            # Eigen sjablonen alvast allemaal ophalen (klein aantal, geen
+            # N+1 nodig) zodat _sponsor_slide er per sponsor zo 1 uit kan
+            # pakken zonder telkens een losse query.
+            eigen_sjablonen = {
+                r["id"]: r for r in db.execute("SELECT * FROM kiosk_sjablonen_custom").fetchall()
+            }
             slides = [
-                {
-                    "type": "sponsor",
-                    "duur": s["weergave_duur_seconden"],
-                    "sjabloon": s["sjabloon"],
-                    "titel": s["titel"],
-                    "tekst": s["tekst"],
-                    "afbeelding": s["afbeelding"],
-                }
+                slide
                 for s in sponsoren
+                if (slide := _sponsor_slide(s, eigen_sjablonen)) is not None
             ]
             if slides:
                 blokken.append((instellingen["sponsoren_volgorde"], slides))
@@ -441,16 +493,45 @@ def register_routes(app):
         leden = db.execute(
             "SELECT * FROM club_van_20_leden ORDER BY naam COLLATE NOCASE"
         ).fetchall()
+        sjablonen_custom = db.execute(
+            "SELECT * FROM kiosk_sjablonen_custom ORDER BY naam COLLATE NOCASE"
+        ).fetchall()
+        gebruik_per_sjabloon = dict(
+            db.execute(
+                """SELECT custom_sjabloon_id, COUNT(*) AS n FROM kiosk_sponsoren
+                   WHERE custom_sjabloon_id IS NOT NULL GROUP BY custom_sjabloon_id"""
+            ).fetchall()
+        )
+        aantal_elementen_per_sjabloon = {
+            s["id"]: len(json.loads(s["elementen"])) for s in sjablonen_custom
+        }
         return render_template(
             "kiosk_sponsoren_leden.html",
             sponsoren=sponsoren,
             leden=leden,
             sjabloon_labels=dict(KIOSK_SPONSOR_SJABLONEN),
+            sjablonen_custom=sjablonen_custom,
+            aantal_elementen_per_sjabloon=aantal_elementen_per_sjabloon,
+            gebruik_per_sjabloon=gebruik_per_sjabloon,
         )
 
     def _sponsor_uit_formulier():
         sjabloon = request.form.get("sjabloon", "").strip()
-        if sjabloon not in KIOSK_SPONSOR_SJABLOON_SLEUTELS:
+        custom_sjabloon_id = None
+        if sjabloon == KIOSK_SPONSOR_SJABLOON_AANGEPAST:
+            db = get_db()
+            try:
+                gekozen_id = int(request.form.get("custom_sjabloon_id") or 0)
+            except ValueError:
+                gekozen_id = 0
+            bestaat = db.execute(
+                "SELECT 1 FROM kiosk_sjablonen_custom WHERE id = ?", (gekozen_id,)
+            ).fetchone()
+            if bestaat:
+                custom_sjabloon_id = gekozen_id
+            else:
+                sjabloon = KIOSK_SPONSOR_SJABLONEN[0][0]
+        elif sjabloon not in KIOSK_SPONSOR_SJABLOON_SLEUTELS:
             sjabloon = KIOSK_SPONSOR_SJABLONEN[0][0]
         try:
             duur = int(request.form.get("weergave_duur_seconden") or 8)
@@ -460,31 +541,71 @@ def register_routes(app):
             volgorde = int(request.form.get("volgorde") or 0)
         except ValueError:
             volgorde = 0
+        overgang = request.form.get("overgang", "").strip()
+        if overgang not in KIOSK_OVERGANG_SLEUTELS:
+            overgang = "fade"
+        tekst_grootte = request.form.get("tekst_grootte", "").strip()
+        if tekst_grootte not in KIOSK_TEKST_GROOTTE_SLEUTELS:
+            tekst_grootte = "normaal"
         return {
             "sjabloon": sjabloon,
+            "custom_sjabloon_id": custom_sjabloon_id,
             "titel": request.form.get("titel", "").strip() or None,
             "tekst": request.form.get("tekst", "").strip() or None,
             "weergave_duur_seconden": max(2, duur),
             "volgorde": volgorde,
             "actief": 1 if request.form.get("actief") else 0,
+            "overgang": overgang,
+            "tekst_grootte": tekst_grootte,
         }
+
+    def _sjablonen_custom_context(db):
+        """Eigen sjablonen in 2 vormen voor kiosk_sponsor_form.html: de rijen
+        zelf (voor de dropdown) en een JSON-veilige lijst (voor het
+        client-side live voorbeeld, dat een sqlite3.Row niet met |tojson
+        kan serialiseren)."""
+        rijen = db.execute(
+            "SELECT * FROM kiosk_sjablonen_custom ORDER BY naam COLLATE NOCASE"
+        ).fetchall()
+        json_lijst = [
+            {
+                "id": r["id"],
+                "naam": r["naam"],
+                "achtergrond_kleur": r["achtergrond_kleur"],
+                "achtergrond_afbeelding": r["achtergrond_afbeelding"],
+                "overlay_donker": bool(r["overlay_donker"]),
+                "elementen": json.loads(r["elementen"]),
+            }
+            for r in rijen
+        ]
+        return rijen, json_lijst
 
     @app.route("/kiosk/sponsoren-leden/sponsoren/nieuw", methods=["GET", "POST"])
     def kiosk_sponsor_nieuw():
+        db = get_db()
         if request.method == "POST":
-            db = get_db()
             gegevens = _sponsor_uit_formulier()
             afbeelding = sla_afbeelding_op(request.files.get("afbeelding"), KIOSK_AFBEELDINGEN_MAP)
+            achtergrond_afbeelding = None
+            if gegevens["sjabloon"] == "mededeling_groot":
+                achtergrond_afbeelding = sla_afbeelding_op(
+                    request.files.get("achtergrond_afbeelding"), KIOSK_AFBEELDINGEN_MAP
+                )
             db.execute(
                 """INSERT INTO kiosk_sponsoren
-                   (sjabloon, titel, tekst, afbeelding, weergave_duur_seconden,
-                    volgorde, actief, aangemaakt_op)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (sjabloon, custom_sjabloon_id, titel, tekst, afbeelding,
+                    achtergrond_afbeelding, overgang, tekst_grootte,
+                    weergave_duur_seconden, volgorde, actief, aangemaakt_op)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     gegevens["sjabloon"],
+                    gegevens["custom_sjabloon_id"],
                     gegevens["titel"],
                     gegevens["tekst"],
                     afbeelding,
+                    achtergrond_afbeelding,
+                    gegevens["overgang"],
+                    gegevens["tekst_grootte"],
                     gegevens["weergave_duur_seconden"],
                     gegevens["volgorde"],
                     gegevens["actief"],
@@ -494,11 +615,16 @@ def register_routes(app):
             db.commit()
             flash("Sponsor toegevoegd.", "success")
             return redirect(url_for("kiosk_sponsoren_leden"))
+        sjablonen_custom, sjablonen_custom_json = _sjablonen_custom_context(db)
         return render_template(
             "kiosk_sponsor_form.html",
             sponsor=None,
             sjablonen=KIOSK_SPONSOR_SJABLONEN,
             sjabloon_voorbeelden=KIOSK_SPONSOR_SJABLOON_VOORBEELDEN,
+            sjablonen_custom=sjablonen_custom,
+            sjablonen_custom_json=sjablonen_custom_json,
+            overgangen=KIOSK_OVERGANGEN,
+            tekst_groottes=KIOSK_TEKST_GROOTTES,
         )
 
     @app.route("/kiosk/sponsoren-leden/sponsoren/<int:sponsor_id>/bewerken", methods=["GET", "POST"])
@@ -522,16 +648,35 @@ def register_routes(app):
                 afbeelding = None
             else:
                 afbeelding = sponsor["afbeelding"]
+
+            achtergrond_afbeelding = None
+            if gegevens["sjabloon"] == "mededeling_groot":
+                nieuwe_achtergrond = sla_afbeelding_op(
+                    request.files.get("achtergrond_afbeelding"), KIOSK_AFBEELDINGEN_MAP
+                )
+                if nieuwe_achtergrond:
+                    achtergrond_afbeelding = nieuwe_achtergrond
+                elif request.form.get("achtergrond_afbeelding_verwijderen"):
+                    achtergrond_afbeelding = None
+                else:
+                    achtergrond_afbeelding = sponsor["achtergrond_afbeelding"]
+
             db.execute(
                 """UPDATE kiosk_sponsoren
-                   SET sjabloon = ?, titel = ?, tekst = ?, afbeelding = ?,
-                       weergave_duur_seconden = ?, volgorde = ?, actief = ?
+                   SET sjabloon = ?, custom_sjabloon_id = ?, titel = ?, tekst = ?,
+                       afbeelding = ?, achtergrond_afbeelding = ?, overgang = ?,
+                       tekst_grootte = ?, weergave_duur_seconden = ?, volgorde = ?,
+                       actief = ?
                    WHERE id = ?""",
                 (
                     gegevens["sjabloon"],
+                    gegevens["custom_sjabloon_id"],
                     gegevens["titel"],
                     gegevens["tekst"],
                     afbeelding,
+                    achtergrond_afbeelding,
+                    gegevens["overgang"],
+                    gegevens["tekst_grootte"],
                     gegevens["weergave_duur_seconden"],
                     gegevens["volgorde"],
                     gegevens["actief"],
@@ -541,11 +686,16 @@ def register_routes(app):
             db.commit()
             flash("Sponsor bijgewerkt.", "success")
             return redirect(url_for("kiosk_sponsoren_leden"))
+        sjablonen_custom, sjablonen_custom_json = _sjablonen_custom_context(db)
         return render_template(
             "kiosk_sponsor_form.html",
             sponsor=sponsor,
             sjablonen=KIOSK_SPONSOR_SJABLONEN,
             sjabloon_voorbeelden=KIOSK_SPONSOR_SJABLOON_VOORBEELDEN,
+            sjablonen_custom=sjablonen_custom,
+            sjablonen_custom_json=sjablonen_custom_json,
+            overgangen=KIOSK_OVERGANGEN,
+            tekst_groottes=KIOSK_TEKST_GROOTTES,
         )
 
     @app.route("/kiosk/sponsoren-leden/sponsoren/<int:sponsor_id>/verwijderen", methods=["POST"])
@@ -554,6 +704,155 @@ def register_routes(app):
         db.execute("DELETE FROM kiosk_sponsoren WHERE id = ?", (sponsor_id,))
         db.commit()
         flash("Sponsor verwijderd.", "success")
+        return redirect(url_for("kiosk_sponsoren_leden"))
+
+    # ---------- Onderdeel 2b: Eigen sjablonen (drag-and-drop bouwer) ----------
+
+    def _sjabloon_elementen_uit_formulier():
+        """Parseert en valideert de door de bouwer opgestuurde elementen_json
+        (zie kiosk_sjabloon_bouwer.html). Ongeldige of onbekende velden per
+        element worden stilzwijgend teruggezet op een veilige standaard i.p.v.
+        het hele sjabloon te laten mislukken -- alleen echt kapotte JSON of
+        een niet-lijst levert een lege elementenlijst op."""
+        try:
+            ruw = json.loads(request.form.get("elementen_json") or "[]")
+        except (ValueError, TypeError):
+            return []
+        if not isinstance(ruw, list):
+            return []
+
+        def _percentage(waarde, standaard):
+            try:
+                getal = float(waarde)
+            except (TypeError, ValueError):
+                return standaard
+            return max(0.0, min(100.0, getal))
+
+        elementen = []
+        for item in ruw:
+            if not isinstance(item, dict):
+                continue
+            type_ = item.get("type")
+            if type_ not in KIOSK_ELEMENT_TYPES:
+                continue
+            kleur = item.get("kleur", "")
+            if not isinstance(kleur, str) or not HEX_KLEUR_PATROON.match(kleur):
+                kleur = "#ffffff"
+            uitlijning = item.get("uitlijning")
+            if uitlijning not in KIOSK_UITLIJNINGEN:
+                uitlijning = "links"
+            lettergrootte = item.get("lettergrootte")
+            if lettergrootte not in KIOSK_TEKST_GROOTTE_SLEUTELS:
+                lettergrootte = "normaal"
+            elementen.append(
+                {
+                    "type": type_,
+                    "x": _percentage(item.get("x"), 5.0),
+                    "y": _percentage(item.get("y"), 5.0),
+                    "breedte": _percentage(item.get("breedte"), 30.0),
+                    "hoogte": _percentage(item.get("hoogte"), 20.0),
+                    "kleur": kleur,
+                    "uitlijning": uitlijning,
+                    "lettergrootte": lettergrootte,
+                    "inhoud": str(item.get("inhoud") or "") if type_ == "vrije_tekst" else None,
+                }
+            )
+        return elementen
+
+    @app.route("/kiosk/sponsoren-leden/sjablonen/nieuw", methods=["GET", "POST"])
+    def kiosk_sjabloon_nieuw():
+        db = get_db()
+        if request.method == "POST":
+            naam = request.form.get("naam", "").strip() or "Naamloos sjabloon"
+            achtergrond_kleur = request.form.get("achtergrond_kleur", "").strip()
+            if not HEX_KLEUR_PATROON.match(achtergrond_kleur):
+                achtergrond_kleur = "#0f1f4d"
+            achtergrond_afbeelding = sla_afbeelding_op(
+                request.files.get("achtergrond_afbeelding"), KIOSK_AFBEELDINGEN_MAP
+            )
+            db.execute(
+                """INSERT INTO kiosk_sjablonen_custom
+                   (naam, achtergrond_kleur, achtergrond_afbeelding, overlay_donker,
+                    elementen, aangemaakt_op)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    naam,
+                    achtergrond_kleur,
+                    achtergrond_afbeelding,
+                    1 if request.form.get("overlay_donker") else 0,
+                    json.dumps(_sjabloon_elementen_uit_formulier()),
+                    now_str(),
+                ),
+            )
+            db.commit()
+            flash("Sjabloon opgeslagen.", "success")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+        return render_template(
+            "kiosk_sjabloon_bouwer.html",
+            sjabloon=None,
+            sjabloon_elementen=[],
+            tekst_groottes=KIOSK_TEKST_GROOTTES,
+        )
+
+    @app.route("/kiosk/sponsoren-leden/sjablonen/<int:sjabloon_id>/bewerken", methods=["GET", "POST"])
+    def kiosk_sjabloon_bewerken(sjabloon_id):
+        db = get_db()
+        sjabloon = db.execute(
+            "SELECT * FROM kiosk_sjablonen_custom WHERE id = ?", (sjabloon_id,)
+        ).fetchone()
+        if sjabloon is None:
+            flash("Sjabloon niet gevonden.", "error")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+
+        if request.method == "POST":
+            naam = request.form.get("naam", "").strip() or "Naamloos sjabloon"
+            achtergrond_kleur = request.form.get("achtergrond_kleur", "").strip()
+            if not HEX_KLEUR_PATROON.match(achtergrond_kleur):
+                achtergrond_kleur = "#0f1f4d"
+            nieuwe_achtergrond = sla_afbeelding_op(
+                request.files.get("achtergrond_afbeelding"), KIOSK_AFBEELDINGEN_MAP
+            )
+            if nieuwe_achtergrond:
+                achtergrond_afbeelding = nieuwe_achtergrond
+            elif request.form.get("achtergrond_afbeelding_verwijderen"):
+                achtergrond_afbeelding = None
+            else:
+                achtergrond_afbeelding = sjabloon["achtergrond_afbeelding"]
+            db.execute(
+                """UPDATE kiosk_sjablonen_custom
+                   SET naam = ?, achtergrond_kleur = ?, achtergrond_afbeelding = ?,
+                       overlay_donker = ?, elementen = ?
+                   WHERE id = ?""",
+                (
+                    naam,
+                    achtergrond_kleur,
+                    achtergrond_afbeelding,
+                    1 if request.form.get("overlay_donker") else 0,
+                    json.dumps(_sjabloon_elementen_uit_formulier()),
+                    sjabloon_id,
+                ),
+            )
+            db.commit()
+            flash("Sjabloon bijgewerkt.", "success")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+        return render_template(
+            "kiosk_sjabloon_bouwer.html",
+            sjabloon=sjabloon,
+            sjabloon_elementen=json.loads(sjabloon["elementen"]),
+            tekst_groottes=KIOSK_TEKST_GROOTTES,
+        )
+
+    @app.route("/kiosk/sponsoren-leden/sjablonen/<int:sjabloon_id>/verwijderen", methods=["POST"])
+    def kiosk_sjabloon_verwijderen(sjabloon_id):
+        db = get_db()
+        db.execute(
+            """UPDATE kiosk_sponsoren SET sjabloon = 'afbeelding_volledig', custom_sjabloon_id = NULL
+               WHERE custom_sjabloon_id = ?""",
+            (sjabloon_id,),
+        )
+        db.execute("DELETE FROM kiosk_sjablonen_custom WHERE id = ?", (sjabloon_id,))
+        db.commit()
+        flash("Sjabloon verwijderd.", "success")
         return redirect(url_for("kiosk_sponsoren_leden"))
 
     @app.route("/kiosk/sponsoren-leden/leden/nieuw", methods=["POST"])
@@ -689,6 +988,8 @@ def register_routes(app):
                 ),
             )
             db.commit()
+            if is_ajax_verzoek():
+                return jsonify({"ok": True, "melding": "Instellingen voor het kantine scherm opgeslagen."})
             flash("Instellingen voor het kantine scherm opgeslagen.", "success")
             return redirect(url_for("kiosk_scherm_instellingen"))
 

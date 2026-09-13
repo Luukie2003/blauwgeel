@@ -25,6 +25,7 @@ from helpers import (
     besteleenheid_factor,
     besteleenheid_naam,
     csrf_token,
+    css_uitlijning,
     dagdeel_groet,
     format_datum,
     format_datum_kort,
@@ -123,6 +124,9 @@ BEHEERDER_ENDPOINTS = {
     "kiosk_sponsor_nieuw",
     "kiosk_sponsor_bewerken",
     "kiosk_sponsor_verwijderen",
+    "kiosk_sjabloon_nieuw",
+    "kiosk_sjabloon_bewerken",
+    "kiosk_sjabloon_verwijderen",
     "kiosk_lid_nieuw",
     "kiosk_lid_bewerken",
     "kiosk_lid_status_wisselen",
@@ -460,6 +464,8 @@ NAV_ITEMS = [
             "kiosk_sponsoren_leden",
             "kiosk_sponsor_nieuw",
             "kiosk_sponsor_bewerken",
+            "kiosk_sjabloon_nieuw",
+            "kiosk_sjabloon_bewerken",
             "kiosk_lid_bewerken",
         ],
         "url_endpoint": "kiosk_sponsoren_leden",
@@ -560,6 +566,7 @@ def create_app(database_path=None):
     app.jinja_env.filters["besteleenheid_naam"] = besteleenheid_naam
     app.jinja_env.filters["naar_besteleenheden"] = naar_besteleenheden
     app.jinja_env.filters["met_tags"] = met_tags_filter
+    app.jinja_env.filters["css_uitlijning"] = css_uitlijning
     app.jinja_env.globals["stemming_is_open"] = stemming_is_open
     app.jinja_env.globals["secties_lijst"] = secties_lijst
     app.jinja_env.globals["jaren_lid"] = bereken_jaren_lid
@@ -713,7 +720,14 @@ def create_app(database_path=None):
         sommige pagina's nog inline <script>- en onsubmit-attributen
         gebruiken."""
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
+        # kiosk_scherm is een publieke, puur tonende pagina zonder enige
+        # interactieve/klikbare inhoud (geen formulieren, geen links) --
+        # geen clickjacking-risico dus, en die uitzondering is nodig zodat
+        # de instellingenpagina 'm in een live-voorbeeld-iframe kan tonen.
+        # Overal elders blijft framen (SAMEORIGIN-uitzondering incluis) uit.
+        response.headers["X-Frame-Options"] = (
+            "SAMEORIGIN" if request.endpoint == "kiosk_scherm" else "DENY"
+        )
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "

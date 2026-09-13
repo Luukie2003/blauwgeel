@@ -70,6 +70,45 @@ KIOSK_SPONSOR_SJABLOON_VOORBEELDEN = {
     ),
 }
 
+# Sentinel-waarde voor de sjabloon-kolom van kiosk_sponsoren: een zelfgebouwd
+# sjabloon (zie kiosk_sjablonen_custom) i.p.v. een van de vaste lay-outs
+# hierboven. Losse constante (i.p.v. in KIOSK_SPONSOR_SJABLONEN zelf) zodat
+# de vaste-sjablonen-lijst puur de vaste lay-outs blijft.
+KIOSK_SPONSOR_SJABLOON_AANGEPAST = "aangepast"
+
+KIOSK_OVERGANGEN = [
+    ("fade", "Fade in/uit"),
+    ("schuiven", "Schuiven"),
+    ("inzoomen", "Inzoomen"),
+]
+KIOSK_OVERGANG_SLEUTELS = {sleutel for sleutel, _ in KIOSK_OVERGANGEN}
+
+KIOSK_TEKST_GROOTTES = [
+    ("klein", "Klein"),
+    ("normaal", "Normaal"),
+    ("groot", "Groot"),
+    ("xl", "Extra groot"),
+]
+KIOSK_TEKST_GROOTTE_SLEUTELS = {sleutel for sleutel, _ in KIOSK_TEKST_GROOTTES}
+
+# Elementtypes voor de eigen-sjabloon-bouwer (zie kiosk_sjabloon_bouwer.html):
+# titel/tekst/foto halen hun inhoud van de sponsor die het sjabloon gebruikt,
+# vrije_tekst heeft eigen vaste inhoud die bij elk gebruik gelijk blijft.
+KIOSK_ELEMENT_TYPES = {"titel", "tekst", "foto", "vrije_tekst"}
+KIOSK_UITLIJNINGEN = {"links", "midden", "rechts"}
+HEX_KLEUR_PATROON = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+# CSS kent alleen de Engelse text-align-waarden -- de opgeslagen/getoonde
+# waarden (links/midden/rechts) zijn puur voor het formulier en mogen nooit
+# rechtstreeks als CSS-waarde belanden (zie css_uitlijning-filter, gebruikt
+# in kiosk_scherm.html en de gelijknamige JS-helper in kiosk_sponsor_form.html
+# / kiosk_sjabloon_bouwer.html).
+KIOSK_UITLIJNING_CSS = {"links": "left", "midden": "center", "rechts": "right"}
+
+
+def css_uitlijning(waarde):
+    return KIOSK_UITLIJNING_CSS.get(waarde, "left")
+
 # (kolomnaam, waarde in euro's, weergavenaam) -- geen 1- en 2-centstukken,
 # die worden bij contant afrekenen in Nederland toch afgerond op 5 cent.
 KASSA_COUPURES = [

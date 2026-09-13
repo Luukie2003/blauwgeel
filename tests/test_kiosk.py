@@ -1,3 +1,5 @@
+import io
+import json
 from datetime import date, timedelta
 
 from conftest import stel_csrf_token_in as _csrf
@@ -5,6 +7,12 @@ from helpers import voeg_maanden_toe
 from test_secties_rechten import _login, _maak_vrijwilliger
 
 from app import bereken_club_van_20_status
+
+_KLEINE_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00"
+    b"\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0"
+    b"\x00\x00\x00\x00IEND\xaeB`\x82"
+)
 
 
 def _voeg_product_toe(db, naam, categorie="Bier", prijs=2.0, toon_op_kiosk=0, actief=1):
@@ -44,6 +52,19 @@ def _voeg_actie_toe(db, product_id, tekst="Happy hour!", actief=1):
     db.commit()
     return db.execute(
         "SELECT id FROM kiosk_acties WHERE product_id = ?", (product_id,)
+    ).fetchone()["id"]
+
+
+def _voeg_sjabloon_custom_toe(db, naam, elementen=None, achtergrond_kleur="#0f1f4d"):
+    db.execute(
+        """INSERT INTO kiosk_sjablonen_custom
+               (naam, achtergrond_kleur, overlay_donker, elementen, aangemaakt_op)
+           VALUES (?, ?, 1, ?, '2026-01-01 10:00')""",
+        (naam, achtergrond_kleur, json.dumps(elementen or [])),
+    )
+    db.commit()
+    return db.execute(
+        "SELECT id FROM kiosk_sjablonen_custom WHERE naam = ?", (naam,)
     ).fetchone()["id"]
 
 
@@ -925,3 +946,386 @@ def test_kiosk_route_blijft_beschermd_ook_al_staat_die_nu_in_de_zijbalk(client, 
 
     assert resp.status_code == 200
     assert b"alleen voor beheerders" in resp.data
+
+
+# ---------- Onderdeel 2b: Eigen sjablonen (drag-and-drop bouwer) ----------
+
+
+def test_sjabloon_aanmaken_bewerken_en_verwijderen(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/kiosk/sponsoren-leden/sjablonen/nieuw",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "naam": "Testsjabloon",
+            "achtergrond_kleur": "#112233",
+            "overlay_donker": "on",
+            "elementen_json": json.dumps(
+                [
+                    {
+                        "type": "titel",
+                        "x": 10,
+                        "y": 10,
+                        "breedte": 30,
+                        "hoogte": 20,
+                        "kleur": "#ffffff",
+                        "uitlijning": "midden",
+                        "lettergrootte": "groot",
+                    }
+                ]
+            ),
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+    sjabloon = db.execute(
+        "SELECT * FROM kiosk_sjablonen_custom WHERE naam = 'Testsjabloon'"
+    ).fetchone()
+    assert sjabloon is not None
+    assert sjabloon["achtergrond_kleur"] == "#112233"
+    elementen = json.loads(sjabloon["elementen"])
+    assert len(elementen) == 1
+    assert elementen[0]["type"] == "titel"
+    assert elementen[0]["lettergrootte"] == "groot"
+
+    bewerk_pagina = ingelogde_client.get(
+        f"/kiosk/sponsoren-leden/sjablonen/{sjabloon['id']}/bewerken"
+    )
+    assert bewerk_pagina.status_code == 200
+    assert b"Testsjabloon" in bewerk_pagina.data
+
+    resp = ingelogde_client.post(
+        f"/kiosk/sponsoren-leden/sjablonen/{sjabloon['id']}/bewerken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "naam": "Testsjabloon Bijgewerkt",
+            "achtergrond_kleur": "#445566",
+            "elementen_json": "[]",
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+    bijgewerkt = db.execute(
+        "SELECT * FROM kiosk_sjablonen_custom WHERE id = ?", (sjabloon["id"],)
+    ).fetchone()
+    assert bijgewerkt["naam"] == "Testsjabloon Bijgewerkt"
+    assert bijgewerkt["achtergrond_kleur"] == "#445566"
+    assert bijgewerkt["overlay_donker"] == 0  # checkbox niet meegestuurd -> uit
+
+    resp = ingelogde_client.post(
+        f"/kiosk/sponsoren-leden/sjablonen/{sjabloon['id']}/verwijderen",
+        data={"csrf_token": _csrf(ingelogde_client)},
+    )
+    assert resp.status_code == 302
+    assert (
+        db.execute(
+            "SELECT * FROM kiosk_sjablonen_custom WHERE id = ?", (sjabloon["id"],)
+        ).fetchone()
+        is None
+    )
+
+
+def test_sjabloon_aanmaken_vereist_beheerder(client, db):
+    _maak_vrijwilliger(db, "vrijwilliger_sjabloon", "voorraad")
+    _login(client, "vrijwilliger_sjabloon")
+
+    resp = client.post(
+        "/kiosk/sponsoren-leden/sjablonen/nieuw",
+        data={
+            "csrf_token": _csrf(client),
+            "naam": "Stiekem sjabloon",
+            "elementen_json": "[]",
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+    volg_resp = client.get(resp.headers["Location"])
+    assert b"alleen voor beheerders" in volg_resp.data
+    assert db.execute("SELECT COUNT(*) AS n FROM kiosk_sjablonen_custom").fetchone()["n"] == 0
+
+
+def test_bouwer_pagina_vereist_beheerder(client, db):
+    _maak_vrijwilliger(db, "vrijwilliger_bouwer", "voorraad")
+    _login(client, "vrijwilliger_bouwer")
+
+    resp = client.get("/kiosk/sponsoren-leden/sjablonen/nieuw")
+    assert resp.status_code == 302
+    volg_resp = client.get(resp.headers["Location"])
+    assert b"alleen voor beheerders" in volg_resp.data
+
+
+def test_sjabloon_verwijderen_zet_gebruikende_sponsor_terug_op_standaard(ingelogde_client, db):
+    sjabloon_id = _voeg_sjabloon_custom_toe(db, "Wordt verwijderd")
+    db.execute(
+        """INSERT INTO kiosk_sponsoren
+               (sjabloon, custom_sjabloon_id, titel, weergave_duur_seconden,
+                volgorde, actief, aangemaakt_op)
+           VALUES ('aangepast', ?, 'Sponsor met eigen sjabloon', 8, 0, 1, '2026-01-01 10:00')""",
+        (sjabloon_id,),
+    )
+    db.commit()
+    sponsor = db.execute(
+        "SELECT id FROM kiosk_sponsoren WHERE titel = 'Sponsor met eigen sjabloon'"
+    ).fetchone()
+
+    resp = ingelogde_client.post(
+        f"/kiosk/sponsoren-leden/sjablonen/{sjabloon_id}/verwijderen",
+        data={"csrf_token": _csrf(ingelogde_client)},
+    )
+    assert resp.status_code == 302
+    assert (
+        db.execute(
+            "SELECT * FROM kiosk_sjablonen_custom WHERE id = ?", (sjabloon_id,)
+        ).fetchone()
+        is None
+    )
+    bijgewerkte_sponsor = db.execute(
+        "SELECT sjabloon, custom_sjabloon_id FROM kiosk_sponsoren WHERE id = ?",
+        (sponsor["id"],),
+    ).fetchone()
+    assert bijgewerkte_sponsor["sjabloon"] == "afbeelding_volledig"
+    assert bijgewerkte_sponsor["custom_sjabloon_id"] is None
+
+
+def test_sjabloon_elementen_json_valideert_en_klemt(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/kiosk/sponsoren-leden/sjablonen/nieuw",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "naam": "Validatietest",
+            "achtergrond_kleur": "geen-geldige-kleur",
+            "elementen_json": json.dumps(
+                [
+                    {"type": "onbekend_type", "x": 5, "y": 5, "breedte": 10, "hoogte": 10},
+                    {
+                        "type": "titel",
+                        "x": 500,
+                        "y": -50,
+                        "breedte": 30,
+                        "hoogte": 20,
+                        "kleur": "niet-hex",
+                        "uitlijning": "ergens",
+                        "lettergrootte": "gigantisch",
+                    },
+                ]
+            ),
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+    sjabloon = db.execute(
+        "SELECT * FROM kiosk_sjablonen_custom WHERE naam = 'Validatietest'"
+    ).fetchone()
+    assert sjabloon["achtergrond_kleur"] == "#0f1f4d"  # ongeldige kleur -> standaard
+    elementen = json.loads(sjabloon["elementen"])
+    assert len(elementen) == 1  # element met onbekend type is overgeslagen
+    element = elementen[0]
+    assert element["x"] == 100  # geklemd op 100 (was 500)
+    assert element["y"] == 0  # geklemd op 0 (was -50)
+    assert element["kleur"] == "#ffffff"  # ongeldige kleur -> standaard
+    assert element["uitlijning"] == "links"  # onbekende waarde -> standaard
+    assert element["lettergrootte"] == "normaal"  # onbekende waarde -> standaard
+
+
+def test_sjabloon_elementen_json_kapotte_json_geeft_lege_lijst(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/kiosk/sponsoren-leden/sjablonen/nieuw",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "naam": "Kapotte JSON",
+            "elementen_json": "dit is geen json{{{",
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+    sjabloon = db.execute(
+        "SELECT * FROM kiosk_sjablonen_custom WHERE naam = 'Kapotte JSON'"
+    ).fetchone()
+    assert json.loads(sjabloon["elementen"]) == []
+
+
+def test_sponsoren_leden_pagina_toont_eigen_sjablonen(ingelogde_client, db):
+    _voeg_sjabloon_custom_toe(
+        db,
+        "Zichtbaar Sjabloon",
+        elementen=[
+            {
+                "type": "titel",
+                "x": 0,
+                "y": 0,
+                "breedte": 10,
+                "hoogte": 10,
+                "kleur": "#fff",
+                "uitlijning": "links",
+                "lettergrootte": "normaal",
+            }
+        ],
+    )
+
+    resp = ingelogde_client.get("/kiosk/sponsoren-leden")
+
+    assert resp.status_code == 200
+    assert b"Zichtbaar Sjabloon" in resp.data
+    assert b"Ongebruikt" in resp.data
+
+
+def test_kantine_scherm_rendert_eigen_sjabloon_met_sponsorinhoud(client, db):
+    sjabloon_id = _voeg_sjabloon_custom_toe(
+        db,
+        "Canvas sjabloon",
+        elementen=[
+            {
+                "type": "titel",
+                "x": 10,
+                "y": 10,
+                "breedte": 30,
+                "hoogte": 15,
+                "kleur": "#ffffff",
+                "uitlijning": "midden",
+                "lettergrootte": "groot",
+            },
+            {
+                "type": "vrije_tekst",
+                "x": 10,
+                "y": 30,
+                "breedte": 30,
+                "hoogte": 15,
+                "kleur": "#ffff00",
+                "uitlijning": "rechts",
+                "lettergrootte": "klein",
+                "inhoud": "Vast label",
+            },
+        ],
+    )
+    db.execute(
+        """INSERT INTO kiosk_sponsoren
+               (sjabloon, custom_sjabloon_id, titel, weergave_duur_seconden,
+                volgorde, actief, aangemaakt_op)
+           VALUES ('aangepast', ?, 'Canvas Sponsor Titel', 8, 0, 1, '2026-01-01 10:00')""",
+        (sjabloon_id,),
+    )
+    db.commit()
+
+    resp = client.get("/kiosk/scherm")
+    tekst = resp.data.decode()
+
+    assert resp.status_code == 200
+    assert "slide-aangepast" in tekst
+    assert "Canvas Sponsor Titel" in tekst  # titel-element toont de sponsor's eigen titel
+    assert "Vast label" in tekst  # vrije_tekst-element toont zijn eigen vaste inhoud
+    # 'midden'/'rechts' moeten omgezet zijn naar geldige CSS text-align-waarden,
+    # nooit als het Nederlandse woord zelf in de CSS belanden.
+    assert "text-align:center;" in tekst
+    assert "text-align:right;" in tekst
+    assert "text-align:midden" not in tekst
+    assert "text-align:rechts" not in tekst
+
+
+def test_kantine_scherm_slaat_sponsor_over_als_gekoppeld_sjabloon_verwijderd_is(client, db):
+    """Randgeval: een sponsor met een custom_sjabloon_id die niet meer bestaat
+    (kiosk_sjabloon_verwijderen ruimt dit normaal zelf op bij sponsoren die
+    het sjabloon gebruiken -- dit test de defensieve fallback ernaast, voor
+    het geval de data toch inconsistent raakt)."""
+    db.execute(
+        """INSERT INTO kiosk_sponsoren
+               (sjabloon, custom_sjabloon_id, titel, weergave_duur_seconden,
+                volgorde, actief, aangemaakt_op)
+           VALUES ('aangepast', 9999, 'Wees sponsor', 8, 0, 1, '2026-01-01 10:00')"""
+    )
+    db.commit()
+
+    resp = client.get("/kiosk/scherm")
+
+    assert resp.status_code == 200
+    assert b"Wees sponsor" not in resp.data
+    assert b"nog niets ingesteld" in resp.data
+
+
+def test_sponsor_slaat_overgang_tekst_grootte_en_achtergrond_op(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/kiosk/sponsoren-leden/sponsoren/nieuw",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "sjabloon": "mededeling_groot",
+            "titel": "Kantinedienst gezocht",
+            "overgang": "inzoomen",
+            "tekst_grootte": "xl",
+            "achtergrond_afbeelding": (io.BytesIO(_KLEINE_PNG), "achtergrond.png"),
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+    sponsor = db.execute(
+        "SELECT * FROM kiosk_sponsoren WHERE titel = 'Kantinedienst gezocht'"
+    ).fetchone()
+    assert sponsor["overgang"] == "inzoomen"
+    assert sponsor["tekst_grootte"] == "xl"
+    assert sponsor["achtergrond_afbeelding"] is not None
+
+    resp = ingelogde_client.get("/kiosk/scherm")
+    tekst = resp.data.decode()
+    assert "overgang-inzoomen" in tekst
+    assert "tekst-xl" in tekst
+    assert "mededeling-achtergrond-img" in tekst
+
+
+def test_sponsor_achtergrond_afbeelding_alleen_voor_mededeling(ingelogde_client, db):
+    """Een achtergrondfoto is alleen bedoeld voor de mededeling-lay-out --
+    bij een ander sjabloon wordt een geuploade achtergrondfoto genegeerd,
+    zodat 'm niet als 'spook'-achtergrond blijft hangen als iemand later
+    terugschakelt naar mededeling."""
+    resp = ingelogde_client.post(
+        "/kiosk/sponsoren-leden/sponsoren/nieuw",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "sjabloon": "titel_tekst_groot",
+            "titel": "Gewone sponsor",
+            "achtergrond_afbeelding": (io.BytesIO(_KLEINE_PNG), "achtergrond.png"),
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+    sponsor = db.execute(
+        "SELECT * FROM kiosk_sponsoren WHERE titel = 'Gewone sponsor'"
+    ).fetchone()
+    assert sponsor["achtergrond_afbeelding"] is None
+
+
+def test_scherm_instellingen_accepteert_ajax_en_geeft_json(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/kiosk/scherm/instellingen",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "toon_sponsoren": "on",
+            "sponsoren_volgorde": "1",
+            "toon_club_van_20": "on",
+            "club_van_20_volgorde": "2",
+            "club_van_20_titel": "Club van 20",
+            "club_van_20_namen_per_slide": "40",
+            "club_van_20_looptijd_maanden": "12",
+            "toon_wedstrijden": "on",
+            "wedstrijden_volgorde": "3",
+        },
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+
+
+def test_scherm_instellingen_pagina_toont_live_voorbeeld_iframe(ingelogde_client, db):
+    resp = ingelogde_client.get("/kiosk/scherm/instellingen")
+    assert resp.status_code == 200
+    assert b'id="scherm-preview"' in resp.data
+    assert b"js-ajax-form" in resp.data
+
+
+def test_kantine_scherm_staat_alleen_zichzelf_toe_te_framen(client, db):
+    """X-Frame-Options staat standaard op DENY (zie beveiligingsheaders in
+    app.py) -- kiosk_scherm is de enige bewuste uitzondering (SAMEORIGIN),
+    puur zodat de instellingenpagina 'm in een live-voorbeeld-iframe kan
+    tonen. Andere pagina's mogen niet ge-framed kunnen worden."""
+    scherm_resp = client.get("/kiosk/scherm")
+    assert scherm_resp.headers["X-Frame-Options"] == "SAMEORIGIN"
+
+    prijzen_resp = client.get("/kiosk/prijzen")
+    assert prijzen_resp.headers["X-Frame-Options"] == "DENY"

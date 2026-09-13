@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+{% block titel %}{{ 'Sjabloon bewerken' if sjabloon else 'Nieuw sjabloon' }}{% endblock %}
+{% block inhoud %}
+<h1>{{ 'Sjabloon bewerken' if sjabloon else 'Nieuw sjabloon' }}</h1>
+<p class="subtitel"><a href="{{ url_for('kiosk_sponsoren_leden') }}">&larr; Terug naar sponsoren &amp; leden</a></p>
+
+<div class="kaart" style="max-width:760px; margin-bottom:1.2rem">
+    <p style="margin:0">
+        Sleep elementen naar de gewenste plek en verklein/vergroot via de gele hoek rechtsonder. Titel/Tekst/Foto
+        tonen straks automatisch de eigen inhoud van de sponsor die dit sjabloon kiest; Vrije tekst heeft altijd
+        dezelfde, hier ingevulde tekst (bijv. een vast label of watermerk).
+    </p>
+</div>
+
+<style>
+    {% include "_kiosk_scherm_stijl.html" %}
+    .bouwer-layout { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
+    .bouwer-canvas-kolom { flex: 2 1 560px; min-width: 320px; }
+    .bouwer-eigenschappen-kolom { flex: 1 1 260px; min-width: 240px; }
+    .bouwer-toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.8rem; }
+    .bouwer-venster {
+        position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;
+        border-radius: 12px; border: 1px solid var(--rand-licht, #ccc);
+        background: linear-gradient(160deg, var(--blauw) 0%, var(--blauw-donker) 100%);
+    }
+    #bouwer-achtergrond-img, #bouwer-overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #bouwer-achtergrond-img { object-fit: cover; z-index: 0; }
+    #bouwer-overlay { background: rgba(0, 0, 0, 0.45); z-index: 1; }
+    #bouwer-elementen-laag { position: absolute; inset: 0; z-index: 2; }
+    .bouwer-canvas-element { cursor: move; border: 1px dashed rgba(255, 255, 255, 0.5); touch-action: none; }
+    .bouwer-canvas-element.geselecteerd { border: 2px solid var(--geel); box-shadow: 0 0 0 2px rgba(252, 212, 47, 0.4); }
+    .bouwer-canvas-element .element-label {
+        position: absolute; top: 2px; left: 4px; font-size: 0.65rem; opacity: 0.75;
+        text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .bouwer-canvas-element .element-inhoud { margin-top: 1.1rem; padding: 0 0.3rem; }
+    .bouwer-canvas-element .verwijder-knop {
+        position: absolute; top: 2px; right: 2px; width: 1.4rem; height: 1.4rem; line-height: 1.3rem;
+        background: #d81e1e; color: #fff; border-radius: 50%; text-align: center; cursor: pointer;
+        font-size: 0.9rem; z-index: 5; user-select: none;
+    }
+    .bouwer-canvas-element .resize-handle {
+        position: absolute; right: 0; bottom: 0; width: 16px; height: 16px;
+        background: var(--geel); cursor: nwse-resize; z-index: 5; border-top-left-radius: 4px; touch-action: none;
+    }
+    #geen-selectie { padding: 0.6rem 0; }
+</style>
+
+<form method="post" enctype="multipart/form-data" id="sjabloon-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="elementen_json" id="elementen_json">
+
+    <div class="kaart" style="max-width:760px; margin-bottom:1.2rem">
+        <fieldset class="groupbox">
+            <legend>Sjabloon</legend>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="naam">Naam</label>
+                    <input type="text" id="naam" name="naam" required placeholder="Bijv. 'Hoofdsponsor breed'"
+                           value="{{ sjabloon.naam if sjabloon else '' }}">
+                </div>
+                <div class="veld">
+                    <label for="achtergrond_kleur">Achtergrondkleur</label>
+                    <input type="color" id="achtergrond_kleur" name="achtergrond_kleur"
+                           value="{{ sjabloon.achtergrond_kleur if sjabloon else '#0f1f4d' }}">
+                </div>
+            </div>
+            <div class="veld">
+                <label for="achtergrond_afbeelding">Achtergrondfoto (optioneel)</label>
+                {% if sjabloon and sjabloon.achtergrond_afbeelding %}
+                <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.4rem">
+                    <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + sjabloon.achtergrond_afbeelding) }}"
+                         alt="" class="product-thumb-preview">
+                    <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400; cursor:pointer">
+                        <input type="checkbox" name="achtergrond_afbeelding_verwijderen" style="width:auto">
+                        Verwijderen
+                    </label>
+                </div>
+                {% endif %}
+                <input type="file" id="achtergrond_afbeelding" name="achtergrond_afbeelding" accept="image/*">
+            </div>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer">
+                <input type="checkbox" id="overlay_donker" name="overlay_donker" style="width:auto"
+                       {{ 'checked' if not sjabloon or sjabloon.overlay_donker }}>
+                Donkere overlay over de achtergrondfoto (voor leesbare tekst)
+            </label>
+        </fieldset>
+    </div>
+
+    <div class="kaart">
+        <div class="bouwer-layout">
+            <div class="bouwer-canvas-kolom">
+                <div class="bouwer-toolbar">
+                    <button type="button" class="btn btn-rand btn-klein" data-nieuw="titel">+ Titel</button>
+                    <button type="button" class="btn btn-rand btn-klein" data-nieuw="tekst">+ Tekst</button>
+                    <button type="button" class="btn btn-rand btn-klein" data-nieuw="foto">+ Foto</button>
+                    <button type="button" class="btn btn-rand btn-klein" data-nieuw="vrije_tekst">+ Vrije tekst</button>
+                </div>
+                <div class="bouwer-venster" id="bouwer-venster">
+                    <img id="bouwer-achtergrond-img" style="display:none" alt="">
+                    <div id="bouwer-overlay" style="display:none"></div>
+                    <div id="bouwer-elementen-laag"></div>
+                </div>
+            </div>
+            <div class="bouwer-eigenschappen-kolom">
+                <div id="geen-selectie" class="tekst-zacht">Selecteer een element om de eigenschappen aan te passen.</div>
+                <div id="eigenschappen-paneel" hidden>
+                    <div class="veld">
+                        <label>Type</label>
+                        <div id="eigenschap-type" style="font-weight:600"></div>
+                    </div>
+                    <div class="veld" id="eigenschap-inhoud-veld" hidden>
+                        <label for="eigenschap-inhoud">Tekst</label>
+                        <textarea id="eigenschap-inhoud" rows="2"></textarea>
+                    </div>
+                    <div class="veld" id="eigenschap-lettergrootte-veld">
+                        <label for="eigenschap-lettergrootte">Lettergrootte</label>
+                        <select id="eigenschap-lettergrootte">
+                            {% for sleutel, label in tekst_groottes %}
+                            <option value="{{ sleutel }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="veld" id="eigenschap-kleur-veld">
+                        <label for="eigenschap-kleur">Kleur</label>
+                        <input type="color" id="eigenschap-kleur">
+                    </div>
+                    <div class="veld" id="eigenschap-uitlijning-veld">
+                        <label for="eigenschap-uitlijning">Uitlijning</label>
+                        <select id="eigenschap-uitlijning">
+                            <option value="links">Links</option>
+                            <option value="midden">Midden</option>
+                            <option value="rechts">Rechts</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-gevaar btn-klein" id="element-verwijderen">Element verwijderen</button>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-geel" style="margin-top:1.2rem">{{ 'Opslaan' if sjabloon else 'Sjabloon opslaan' }}</button>
+    </div>
+</form>
+
+<script>
+(function () {
+    var venster = document.getElementById('bouwer-venster');
+    var laag = document.getElementById('bouwer-elementen-laag');
+    var elementenJsonVeld = document.getElementById('elementen_json');
+    var achtergrondKleurVeld = document.getElementById('achtergrond_kleur');
+    var achtergrondAfbeeldingVeld = document.getElementById('achtergrond_afbeelding');
+    var overlayDonkerVeld = document.getElementById('overlay_donker');
+    var verwijderAchtergrondVeld = document.querySelector('input[name="achtergrond_afbeelding_verwijderen"]');
+
+    {% set achtergrond_url = url_for('static', filename='kiosk_afbeeldingen/' + sjabloon.achtergrond_afbeelding) if sjabloon and sjabloon.achtergrond_afbeelding else None %}
+    var achtergrondAfbeeldingUrl = {{ achtergrond_url|tojson }};
+
+    var volgendeId = 1;
+    var elementen = ({{ sjabloon_elementen|tojson }}).map(function (e) {
+        e = Object.assign({}, e);
+        e._id = volgendeId++;
+        return e;
+    });
+    var geselecteerdId = null;
+
+    var LABELS = { titel: 'Titel', tekst: 'Tekst', foto: 'Foto', vrije_tekst: 'Vrije tekst' };
+
+    function klem(getal, min, max) {
+        return Math.max(min, Math.min(max, getal));
+    }
+
+    function cssUitlijning(waarde) {
+        return waarde === 'midden' ? 'center' : waarde === 'rechts' ? 'right' : 'left';
+    }
+
+    function elementBijId(id) {
+        for (var i = 0; i < elementen.length; i++) {
+            if (elementen[i]._id === id) return elementen[i];
+        }
+        return null;
+    }
+
+    function nieuwElement(type) {
+        var aantal = elementen.length;
+        var e = {
+            _id: volgendeId++,
+            type: type,
+            x: klem(8 + (aantal % 5) * 7, 0, 65),
+            y: klem(8 + (aantal % 5) * 7, 0, 65),
+            breedte: 30,
+            hoogte: 20,
+            kleur: '#ffffff',
+            uitlijning: 'links',
+            lettergrootte: 'normaal',
+            inhoud: type === 'vrije_tekst' ? 'Tekst hier' : null,
+        };
+        elementen.push(e);
+        selecteer(e._id);
+    }
+
+    function plaatshouderTekst(type) {
+        if (type === 'titel') return 'Titel';
+        if (type === 'tekst') return 'Tekst...';
+        if (type === 'foto') return '🖼 Foto';
+        return null;
+    }
+
+    function renderCanvas() {
+        laag.innerHTML = '';
+        elementen.forEach(function (e) {
+            var div = document.createElement('div');
+            div.className = 'canvas-element bouwer-canvas-element canvas-element--' + e.type.replace('_', '-') +
+                ' canvas-lettergrootte-' + e.lettergrootte + (e._id === geselecteerdId ? ' geselecteerd' : '');
+            div.style.left = e.x + '%';
+            div.style.top = e.y + '%';
+            div.style.width = e.breedte + '%';
+            div.style.height = e.hoogte + '%';
+            div.style.color = e.kleur;
+            div.style.textAlign = cssUitlijning(e.uitlijning);
+
+            var label = document.createElement('span');
+            label.className = 'element-label';
+            label.textContent = LABELS[e.type];
+            div.appendChild(label);
+
+            var inhoud = document.createElement('div');
+            inhoud.className = 'element-inhoud';
+            inhoud.textContent = e.type === 'vrije_tekst' ? (e.inhoud || '') : plaatshouderTekst(e.type);
+            div.appendChild(inhoud);
+
+            var verwijder = document.createElement('span');
+            verwijder.className = 'verwijder-knop';
+            verwijder.textContent = '×';
+            verwijder.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
+            verwijder.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                elementen = elementen.filter(function (x) { return x._id !== e._id; });
+                if (geselecteerdId === e._id) geselecteerdId = null;
+                renderCanvas();
+                vulEigenschappenPaneel();
+            });
+            div.appendChild(verwijder);
+
+            var handle = document.createElement('span');
+            handle.className = 'resize-handle';
+            handle.addEventListener('pointerdown', function (ev) { startVergroten(ev, e, div); });
+            div.appendChild(handle);
+
+            div.addEventListener('pointerdown', function (ev) {
+                if (ev.target === handle || ev.target === verwijder) return;
+                startSlepen(ev, e, div);
+            });
+            div.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                selecteer(e._id);
+            });
+
+            laag.appendChild(div);
+        });
+    }
+
+    function startSlepen(ev, e, div) {
+        ev.preventDefault();
+        try { div.setPointerCapture(ev.pointerId); } catch (fout) { /* geen actieve pointer (bijv. bij geautomatiseerd testen) -- de sleepbeweging werkt hierna alsnog via de gewone bubbelende pointer-events */ }
+        var rect = venster.getBoundingClientRect();
+        var startX = ev.clientX, startY = ev.clientY;
+        var beginX = e.x, beginY = e.y;
+        var bewogen = false;
+
+        function verplaatsen(ev2) {
+            bewogen = true;
+            var dx = ((ev2.clientX - startX) / rect.width) * 100;
+            var dy = ((ev2.clientY - startY) / rect.height) * 100;
+            e.x = klem(beginX + dx, 0, 100 - e.breedte);
+            e.y = klem(beginY + dy, 0, 100 - e.hoogte);
+            div.style.left = e.x + '%';
+            div.style.top = e.y + '%';
+        }
+        function loslaten() {
+            div.removeEventListener('pointermove', verplaatsen);
+            div.removeEventListener('pointerup', loslaten);
+        }
+        div.addEventListener('pointermove', verplaatsen);
+        div.addEventListener('pointerup', loslaten);
+        selecteer(e._id);
+    }
+
+    function startVergroten(ev, e, div) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        try { div.setPointerCapture(ev.pointerId); } catch (fout) { /* zie startSlepen hierboven */ }
+        var rect = venster.getBoundingClientRect();
+        var startX = ev.clientX, startY = ev.clientY;
+        var beginBreedte = e.breedte, beginHoogte = e.hoogte;
+
+        function aanpassen(ev2) {
+            var dx = ((ev2.clientX - startX) / rect.width) * 100;
+            var dy = ((ev2.clientY - startY) / rect.height) * 100;
+            e.breedte = klem(beginBreedte + dx, 5, 100 - e.x);
+            e.hoogte = klem(beginHoogte + dy, 5, 100 - e.y);
+            div.style.width = e.breedte + '%';
+            div.style.height = e.hoogte + '%';
+        }
+        function loslaten() {
+            div.removeEventListener('pointermove', aanpassen);
+            div.removeEventListener('pointerup', loslaten);
+        }
+        div.addEventListener('pointermove', aanpassen);
+        div.addEventListener('pointerup', loslaten);
+        selecteer(e._id);
+    }
+
+    function selecteer(id) {
+        geselecteerdId = id;
+        renderCanvas();
+        vulEigenschappenPaneel();
+    }
+
+    function vulEigenschappenPaneel() {
+        var geenSelectie = document.getElementById('geen-selectie');
+        var paneel = document.getElementById('eigenschappen-paneel');
+        var e = geselecteerdId ? elementBijId(geselecteerdId) : null;
+        if (!e) {
+            geenSelectie.hidden = false;
+            paneel.hidden = true;
+            return;
+        }
+        geenSelectie.hidden = true;
+        paneel.hidden = false;
+        document.getElementById('eigenschap-type').textContent = LABELS[e.type];
+        document.getElementById('eigenschap-inhoud-veld').hidden = e.type !== 'vrije_tekst';
+        document.getElementById('eigenschap-inhoud').value = e.inhoud || '';
+        document.getElementById('eigenschap-lettergrootte-veld').hidden = e.type === 'foto';
+        document.getElementById('eigenschap-lettergrootte').value = e.lettergrootte;
+        document.getElementById('eigenschap-kleur-veld').hidden = e.type === 'foto';
+        document.getElementById('eigenschap-kleur').value = e.kleur;
+        document.getElementById('eigenschap-uitlijning-veld').hidden = e.type === 'foto';
+        document.getElementById('eigenschap-uitlijning').value = e.uitlijning;
+    }
+
+    document.getElementById('eigenschap-inhoud').addEventListener('input', function (ev) {
+        var e = elementBijId(geselecteerdId);
+        if (!e) return;
+        e.inhoud = ev.target.value;
+        renderCanvas();
+    });
+    document.getElementById('eigenschap-lettergrootte').addEventListener('change', function (ev) {
+        var e = elementBijId(geselecteerdId);
+        if (!e) return;
+        e.lettergrootte = ev.target.value;
+        renderCanvas();
+    });
+    document.getElementById('eigenschap-kleur').addEventListener('input', function (ev) {
+        var e = elementBijId(geselecteerdId);
+        if (!e) return;
+        e.kleur = ev.target.value;
+        renderCanvas();
+    });
+    document.getElementById('eigenschap-uitlijning').addEventListener('change', function (ev) {
+        var e = elementBijId(geselecteerdId);
+        if (!e) return;
+        e.uitlijning = ev.target.value;
+        renderCanvas();
+    });
+    document.getElementById('element-verwijderen').addEventListener('click', function () {
+        elementen = elementen.filter(function (x) { return x._id !== geselecteerdId; });
+        geselecteerdId = null;
+        renderCanvas();
+        vulEigenschappenPaneel();
+    });
+
+    document.querySelectorAll('[data-nieuw]').forEach(function (knop) {
+        knop.addEventListener('click', function () { nieuwElement(knop.dataset.nieuw); });
+    });
+    venster.addEventListener('click', function (ev) {
+        if (ev.target === venster || ev.target === laag) selecteer(null);
+    });
+
+    function bijwerkenAchtergrond() {
+        venster.style.background = achtergrondKleurVeld.value;
+        var img = document.getElementById('bouwer-achtergrond-img');
+        var overlay = document.getElementById('bouwer-overlay');
+        if (achtergrondAfbeeldingUrl) {
+            img.src = achtergrondAfbeeldingUrl;
+            img.style.display = 'block';
+            overlay.style.display = overlayDonkerVeld.checked ? 'block' : 'none';
+        } else {
+            img.style.display = 'none';
+            overlay.style.display = 'none';
+        }
+    }
+    achtergrondKleurVeld.addEventListener('input', bijwerkenAchtergrond);
+    overlayDonkerVeld.addEventListener('change', bijwerkenAchtergrond);
+    achtergrondAfbeeldingVeld.addEventListener('change', function () {
+        if (achtergrondAfbeeldingVeld.files && achtergrondAfbeeldingVeld.files[0]) {
+            achtergrondAfbeeldingUrl = URL.createObjectURL(achtergrondAfbeeldingVeld.files[0]);
+            bijwerkenAchtergrond();
+        }
+    });
+    if (verwijderAchtergrondVeld) {
+        verwijderAchtergrondVeld.addEventListener('change', function () {
+            if (verwijderAchtergrondVeld.checked) {
+                achtergrondAfbeeldingUrl = null;
+                bijwerkenAchtergrond();
+            }
+        });
+    }
+
+    document.getElementById('sjabloon-form').addEventListener('submit', function () {
+        elementenJsonVeld.value = JSON.stringify(elementen.map(function (e) {
+            return {
+                type: e.type, x: e.x, y: e.y, breedte: e.breedte, hoogte: e.hoogte,
+                kleur: e.kleur, uitlijning: e.uitlijning, lettergrootte: e.lettergrootte, inhoud: e.inhoud,
+            };
+        }));
+    });
+
+    renderCanvas();
+    vulEigenschappenPaneel();
+    bijwerkenAchtergrond();
+})();
+</script>
+{% endblock %}

@@ -8,8 +8,23 @@
     <a href="{{ url_for('kiosk_hub') }}">&larr; Terug naar Kantine Kiosk</a>
 </p>
 
+<style>
+    .kiosk-instellingen-layout { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
+    .kiosk-instellingen-layout > .kaart { flex: 1 1 420px; margin: 0; }
+    .kiosk-voorbeeld { flex: 1 1 360px; min-width: 300px; position: sticky; top: 1rem; }
+    .kiosk-voorbeeld-venster-buiten {
+        position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;
+        border-radius: 12px; background: #0f1f4d;
+    }
+    .kiosk-voorbeeld-venster-buiten iframe {
+        position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
+        border: 0; transform-origin: top left; pointer-events: none;
+    }
+</style>
+
+<div class="kiosk-instellingen-layout">
 <div class="kaart" style="max-width:640px">
-    <form method="post">
+    <form method="post" class="js-ajax-form" id="scherm-instellingen-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <fieldset class="groupbox">
@@ -83,4 +98,39 @@
         <button type="submit" class="btn btn-geel">Opslaan</button>
     </form>
 </div>
+
+<div class="kiosk-voorbeeld">
+    <div class="actiebalk" style="margin-bottom:0.6rem">
+        <h2 style="margin:0">Live voorbeeld</h2>
+        <button type="button" class="btn btn-rand btn-klein" id="voorbeeld-verversen">&#8635; Ververs</button>
+    </div>
+    <div class="kiosk-voorbeeld-venster-buiten">
+        <iframe id="scherm-preview" src="{{ url_for('kiosk_scherm') }}" title="Voorbeeld kantine scherm"></iframe>
+    </div>
+    <p class="tekst-zacht" style="margin-bottom:0">Ververst automatisch zodra je de instellingen opslaat.</p>
+</div>
+</div>
+
+<script>
+(function () {
+    var iframe = document.getElementById('scherm-preview');
+    var buiten = document.querySelector('.kiosk-voorbeeld-venster-buiten');
+
+    function schaalVoorbeeld() {
+        var schaal = buiten.clientWidth / 1920;
+        iframe.style.transform = 'scale(' + schaal + ')';
+    }
+
+    var form = document.getElementById('scherm-instellingen-form');
+    form.addEventListener('ajax-form:success', function () {
+        iframe.contentWindow.location.reload();
+    });
+    document.getElementById('voorbeeld-verversen').addEventListener('click', function () {
+        iframe.contentWindow.location.reload();
+    });
+
+    window.addEventListener('resize', schaalVoorbeeld);
+    schaalVoorbeeld();
+})();
+</script>
 {% endblock %}

@@ -393,6 +393,20 @@ CREATE TABLE IF NOT EXISTS kiosk_sponsoren (
 );
 CREATE INDEX IF NOT EXISTS idx_kiosk_sponsoren_volgorde ON kiosk_sponsoren(volgorde);
 
+-- Zelfgebouwde sjablonen (drag-and-drop bouwer, zie kiosk_sjabloon_bouwer.html)
+-- naast de vaste lay-outs hierboven. elementen is een JSON-array van vrij
+-- gepositioneerde onderdelen (titel/tekst/foto/vrije_tekst), zie
+-- routes/kiosk.py (_sjabloon_elementen_uit_formulier / _bouw_slides).
+CREATE TABLE IF NOT EXISTS kiosk_sjablonen_custom (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    naam TEXT NOT NULL,
+    achtergrond_kleur TEXT NOT NULL DEFAULT '#0f1f4d',
+    achtergrond_afbeelding TEXT,
+    overlay_donker INTEGER NOT NULL DEFAULT 1,
+    elementen TEXT NOT NULL DEFAULT '[]',
+    aangemaakt_op TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS club_van_20_leden (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     naam TEXT NOT NULL,

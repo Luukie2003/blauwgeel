@@ -56,6 +56,46 @@
     {% endif %}
 </div>
 
+<div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">Eigen sjablonen</h2>
+        <a href="{{ url_for('kiosk_sjabloon_nieuw') }}" class="btn btn-geel">Nieuw sjabloon</a>
+    </div>
+    {% if sjablonen_custom %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Naam</th><th>Elementen</th><th>In gebruik</th><th></th></tr></thead>
+            <tbody>
+                {% for s in sjablonen_custom %}
+                {% set aantal_gebruikt = gebruik_per_sjabloon.get(s.id, 0) %}
+                <tr>
+                    <td>{{ s.naam }}</td>
+                    <td>{{ aantal_elementen_per_sjabloon.get(s.id, 0) }}</td>
+                    <td>
+                        {% if aantal_gebruikt %}
+                        <span class="badge badge-ok">{{ aantal_gebruikt }} sponsor{{ 'en' if aantal_gebruikt != 1 }}</span>
+                        {% else %}
+                        <span class="badge badge-neutraal">Ongebruikt</span>
+                        {% endif %}
+                    </td>
+                    <td class="tabel-acties">
+                        <a href="{{ url_for('kiosk_sjabloon_bewerken', sjabloon_id=s.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                        <form method="post" action="{{ url_for('kiosk_sjabloon_verwijderen', sjabloon_id=s.id) }}"
+                              onsubmit="return bevestigEnVerstuur(this, '\'{{ s.naam }}\' verwijderen?{{ (' Wordt gebruikt door ' ~ aantal_gebruikt ~ ' sponsor(en), die vallen dan terug op het standaardsjabloon.') if aantal_gebruikt else '' }}');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen eigen sjablonen. Bouw er &eacute;&eacute;n via "Nieuw sjabloon".</p>
+    {% endif %}
+</div>
+
 <div class="kaart" style="max-width:760px">
     <h2>Club van 20 &mdash; leden</h2>
     <form method="post" action="{{ url_for('kiosk_lid_nieuw') }}" class="formgrid">

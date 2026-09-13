@@ -165,6 +165,15 @@ KOLOM_MIGRATIES = [
     # (zie kiosk_lid_bewerken) -- los van de sterren, die volgen automatisch
     # uit de looptijd.
     ("club_van_20_leden", "extra_groot", "INTEGER NOT NULL DEFAULT 0"),
+    # Extra weergave-opties per sponsor-/mededelingslide (zie
+    # _sponsor_uit_formulier in routes/kiosk.py). custom_sjabloon_id verwijst
+    # naar kiosk_sjablonen_custom zodra sjabloon = 'aangepast'; bewust geen
+    # FK-constraint (zie kiosk_sjabloon_verwijderen, die referenties zelf
+    # opruimt vóór het verwijderen).
+    ("kiosk_sponsoren", "overgang", "TEXT NOT NULL DEFAULT 'fade'"),
+    ("kiosk_sponsoren", "tekst_grootte", "TEXT NOT NULL DEFAULT 'normaal'"),
+    ("kiosk_sponsoren", "achtergrond_afbeelding", "TEXT"),
+    ("kiosk_sponsoren", "custom_sjabloon_id", "INTEGER"),
 ]
 
 

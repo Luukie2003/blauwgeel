@@ -12,10 +12,24 @@
         <li><strong>Mededeling</strong> &mdash; een interne oproep (bijv. "kantinedienst gezocht") met een duidelijk MEDEDELING-label, zodat 'm niemand voor een betaalde sponsor aanziet.</li>
     </ul>
     <p class="tekst-zacht" style="margin-bottom:0">
-        Kies hieronder een sjabloon; de invoervelden tonen dan een voorbeeld van wat erin past.
+        Kies hieronder een sjabloon; de invoervelden tonen dan een voorbeeld van wat erin past. Kies je "Eigen
+        sjabloon...", dan bouw je zelf de layout bij <a href="{{ url_for('kiosk_sjabloon_nieuw') }}" target="_blank">Eigen sjablonen</a>.
     </p>
 </div>
 
+<style>
+    {% include "_kiosk_scherm_stijl.html" %}
+    .kiosk-sponsor-layout { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
+    .kiosk-sponsor-layout > .kaart { flex: 1 1 420px; margin: 0; }
+    .kiosk-voorbeeld { flex: 1 1 360px; min-width: 300px; position: sticky; top: 1rem; }
+    .kiosk-voorbeeld-venster {
+        position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;
+        border-radius: 12px; background: linear-gradient(160deg, var(--blauw) 0%, var(--blauw-donker) 100%);
+    }
+    .kiosk-voorbeeld-scherm { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; transform-origin: top left; color: #fff; }
+</style>
+
+<div class="kiosk-sponsor-layout">
 <div class="kaart">
     <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -27,8 +41,18 @@
                     {% for sleutel, label in sjablonen %}
                     <option value="{{ sleutel }}" {{ 'selected' if sponsor and sponsor.sjabloon == sleutel }}>{{ label }}</option>
                     {% endfor %}
+                    <option value="aangepast" {{ 'selected' if sponsor and sponsor.sjabloon == 'aangepast' }}>Eigen sjabloon...</option>
                 </select>
                 <span class="tekst-zacht">Bepaalt hoe titel, tekst en afbeelding op het kantine scherm worden getoond.</span>
+            </div>
+            <div class="veld" id="custom-sjabloon-veld" hidden>
+                <label for="custom_sjabloon_id">Welk eigen sjabloon</label>
+                <select id="custom_sjabloon_id" name="custom_sjabloon_id">
+                    {% for s in sjablonen_custom %}
+                    <option value="{{ s.id }}" {{ 'selected' if sponsor and sponsor.custom_sjabloon_id == s.id }}>{{ s.naam }}</option>
+                    {% endfor %}
+                </select>
+                <span class="tekst-zacht"><a href="{{ url_for('kiosk_sjabloon_nieuw') }}" target="_blank">+ Nieuw sjabloon maken</a></span>
             </div>
         </fieldset>
         <fieldset class="groupbox">
@@ -69,6 +93,39 @@
                 {% endif %}
                 <input type="file" id="afbeelding" name="afbeelding" accept="image/*">
             </div>
+            <div class="veld" id="achtergrond-afbeelding-veld" hidden>
+                <label for="achtergrond_afbeelding">Eigen achtergrondfoto (mededeling)</label>
+                {% if sponsor and sponsor.achtergrond_afbeelding %}
+                <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.4rem">
+                    <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + sponsor.achtergrond_afbeelding) }}"
+                         alt="" class="product-thumb-preview">
+                    <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400; cursor:pointer">
+                        <input type="checkbox" name="achtergrond_afbeelding_verwijderen" style="width:auto">
+                        Verwijderen
+                    </label>
+                </div>
+                {% endif %}
+                <input type="file" id="achtergrond_afbeelding" name="achtergrond_afbeelding" accept="image/*">
+                <span class="tekst-zacht">Wordt gedimd getoond achter de mededeling zodat de tekst leesbaar blijft.</span>
+            </div>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="overgang">Overgangsanimatie</label>
+                    <select id="overgang" name="overgang">
+                        {% for sleutel, label in overgangen %}
+                        <option value="{{ sleutel }}" {{ 'selected' if sponsor and sponsor.overgang == sleutel }}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="veld" id="tekst-grootte-veld">
+                    <label for="tekst_grootte">Tekstgrootte</label>
+                    <select id="tekst_grootte" name="tekst_grootte">
+                        {% for sleutel, label in tekst_groottes %}
+                        <option value="{{ sleutel }}" {{ 'selected' if sponsor and sponsor.tekst_grootte == sleutel }}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
             <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer">
                 <input type="checkbox" id="actief" name="actief" style="width:auto"
                        {{ 'checked' if not sponsor or sponsor.actief }}>
@@ -79,22 +136,159 @@
     </form>
 </div>
 
+<div class="kiosk-voorbeeld">
+    <h2 style="margin-top:0">Live voorbeeld</h2>
+    <div class="kiosk-voorbeeld-venster" id="voorbeeld-venster">
+        <div class="scherm kiosk-voorbeeld-scherm" id="voorbeeld-scherm">
+            <section class="slide actief slide-sponsor" id="voorbeeld-slide"></section>
+        </div>
+    </div>
+    <p class="tekst-zacht" style="margin-bottom:0">Dit is precies hoe de slide er op het kantine scherm uit komt te zien.</p>
+</div>
+</div>
+
 <script>
 (function () {
     var sjabloonVeld = document.getElementById('sjabloon');
+    var customSjabloonVeld = document.getElementById('custom_sjabloon_id');
     var titelVeld = document.getElementById('titel');
     var tekstVeld = document.getElementById('tekst');
+    var afbeeldingVeld = document.getElementById('afbeelding');
+    var achtergrondVeld = document.getElementById('achtergrond_afbeelding');
+    var overgangVeld = document.getElementById('overgang');
+    var tekstGrootteVeld = document.getElementById('tekst_grootte');
     var voorbeelden = {{ sjabloon_voorbeelden|tojson }};
 
-    function bijwerken() {
+    {% set afbeelding_url = url_for('static', filename='kiosk_afbeeldingen/' + sponsor.afbeelding) if sponsor and sponsor.afbeelding else None %}
+    {% set achtergrond_url = url_for('static', filename='kiosk_afbeeldingen/' + sponsor.achtergrond_afbeelding) if sponsor and sponsor.achtergrond_afbeelding else None %}
+    var afbeeldingUrl = {{ afbeelding_url|tojson }};
+    var achtergrondUrl = {{ achtergrond_url|tojson }};
+    var KIOSK_AFB_PREFIX = "{{ url_for('static', filename='kiosk_afbeeldingen/') }}";
+
+    var sjablonenCustom = {};
+    ({{ sjablonen_custom_json|tojson }}).forEach(function (s) { sjablonenCustom[String(s.id)] = s; });
+
+    function escapeHtml(tekst) {
+        var div = document.createElement('div');
+        div.textContent = tekst || '';
+        return div.innerHTML;
+    }
+
+    function cssUitlijning(waarde) {
+        return waarde === 'midden' ? 'center' : waarde === 'rechts' ? 'right' : 'left';
+    }
+
+    function bijwerkenPlaceholders() {
         var voorbeeld = voorbeelden[sjabloonVeld.value];
         if (!voorbeeld) return;
         titelVeld.placeholder = voorbeeld[0] || '';
         tekstVeld.placeholder = voorbeeld[1] || '';
     }
 
-    sjabloonVeld.addEventListener('change', bijwerken);
-    bijwerken();
+    function bijwerkenZichtbaarheid() {
+        var sjabloon = sjabloonVeld.value;
+        document.getElementById('custom-sjabloon-veld').hidden = sjabloon !== 'aangepast';
+        document.getElementById('tekst-grootte-veld').hidden = sjabloon === 'aangepast';
+        document.getElementById('achtergrond-afbeelding-veld').hidden = sjabloon !== 'mededeling_groot';
+    }
+
+    function renderVoorbeeld() {
+        var sjabloon = sjabloonVeld.value;
+        var titel = titelVeld.value;
+        var tekst = tekstVeld.value;
+        var slide = document.getElementById('voorbeeld-slide');
+        slide.className = 'slide actief slide-sponsor sjabloon-' + sjabloon +
+            ' overgang-' + overgangVeld.value + ' tekst-' + tekstGrootteVeld.value;
+        slide.style.background = '';
+        var html = '';
+
+        if (sjabloon === 'afbeelding_volledig') {
+            if (afbeeldingUrl) html += '<img class="sponsor-afbeelding" src="' + afbeeldingUrl + '" alt="">';
+            if (titel) html += '<div class="onderschrift">' + escapeHtml(titel) + '</div>';
+        } else if (sjabloon === 'afbeelding_titel_tekst') {
+            if (afbeeldingUrl) html += '<img src="' + afbeeldingUrl + '" alt="">';
+            html += '<div class="inhoud">';
+            if (titel) html += '<h2>' + escapeHtml(titel) + '</h2>';
+            if (tekst) html += '<p>' + escapeHtml(tekst) + '</p>';
+            html += '</div>';
+        } else if (sjabloon === 'titel_ondertitel_banner') {
+            html += '<div class="banner">';
+            if (titel) html += '<h2>' + escapeHtml(titel) + '</h2>';
+            if (tekst) html += '<p>' + escapeHtml(tekst) + '</p>';
+            html += '</div>';
+        } else if (sjabloon === 'mededeling_groot') {
+            if (achtergrondUrl) {
+                html += '<img class="mededeling-achtergrond-img" src="' + achtergrondUrl + '" alt="">';
+                html += '<div class="mededeling-overlay"></div>';
+            }
+            html += '<div class="mededeling-label">Mededeling</div>';
+            if (titel) html += '<h2>' + escapeHtml(titel) + '</h2>';
+            if (tekst) html += '<p>' + escapeHtml(tekst) + '</p>';
+        } else if (sjabloon === 'aangepast') {
+            var custom = sjablonenCustom[customSjabloonVeld.value];
+            if (custom) {
+                slide.style.background = custom.achtergrond_kleur;
+                if (custom.achtergrond_afbeelding) {
+                    html += '<img class="canvas-achtergrond-img" src="' + KIOSK_AFB_PREFIX + custom.achtergrond_afbeelding + '" alt="">';
+                    if (custom.overlay_donker) html += '<div class="canvas-overlay"></div>';
+                }
+                custom.elementen.forEach(function (el) {
+                    var inhoud = el.type === 'foto' ? afbeeldingUrl
+                        : el.type === 'titel' ? titel
+                        : el.type === 'tekst' ? tekst
+                        : el.inhoud;
+                    html += '<div class="canvas-element canvas-element--' + el.type.replace('_', '-') +
+                        ' canvas-lettergrootte-' + el.lettergrootte + '" style="left:' + el.x + '%; top:' +
+                        el.y + '%; width:' + el.breedte + '%; height:' + el.hoogte + '%; color:' + el.kleur +
+                        '; text-align:' + cssUitlijning(el.uitlijning) + ';">';
+                    if (el.type === 'foto') {
+                        if (inhoud) html += '<img src="' + inhoud + '" alt="">';
+                    } else {
+                        html += escapeHtml(inhoud || '');
+                    }
+                    html += '</div>';
+                });
+            }
+        } else {
+            if (titel) html += '<h2>' + escapeHtml(titel) + '</h2>';
+            if (tekst) html += '<p>' + escapeHtml(tekst) + '</p>';
+        }
+        slide.innerHTML = html;
+    }
+
+    function schaalVoorbeeld() {
+        var venster = document.getElementById('voorbeeld-venster');
+        var scherm = document.getElementById('voorbeeld-scherm');
+        var schaal = venster.clientWidth / 1920;
+        scherm.style.transform = 'scale(' + schaal + ')';
+    }
+
+    function allesBijwerken() {
+        bijwerkenPlaceholders();
+        bijwerkenZichtbaarheid();
+        renderVoorbeeld();
+    }
+
+    [sjabloonVeld, customSjabloonVeld, titelVeld, tekstVeld, overgangVeld, tekstGrootteVeld].forEach(function (veld) {
+        veld.addEventListener('input', allesBijwerken);
+        veld.addEventListener('change', allesBijwerken);
+    });
+    afbeeldingVeld.addEventListener('change', function () {
+        if (afbeeldingVeld.files && afbeeldingVeld.files[0]) {
+            afbeeldingUrl = URL.createObjectURL(afbeeldingVeld.files[0]);
+            renderVoorbeeld();
+        }
+    });
+    achtergrondVeld.addEventListener('change', function () {
+        if (achtergrondVeld.files && achtergrondVeld.files[0]) {
+            achtergrondUrl = URL.createObjectURL(achtergrondVeld.files[0]);
+            renderVoorbeeld();
+        }
+    });
+    window.addEventListener('resize', schaalVoorbeeld);
+
+    allesBijwerken();
+    schaalVoorbeeld();
 })();
 </script>
 {% endblock %}
