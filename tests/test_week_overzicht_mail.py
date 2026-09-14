@@ -18,6 +18,7 @@ def test_bouw_mailtekst_met_minimaal_overzicht():
         "week_tot": date(2026, 1, 11),
         "totale_omzet": 123.45,
         "verschil_percentage": None,
+        "afwijkende_periode": False,
         "top_verkopers": [],
         "onder_minimum": [],
         "open_bestellingen": [],
