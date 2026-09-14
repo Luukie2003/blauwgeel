@@ -406,9 +406,17 @@ NAV_ITEMS = [
     },
     {
         "groep": "Kantine-tv",
-        "endpoints": ["kiosk_scherm_instellingen"],
-        "url_endpoint": "kiosk_scherm_instellingen",
-        "label": "Kantine scherm",
+        "endpoints": [
+            "kiosk_scherm_instellingen",
+            "kiosk_sponsoren_leden",
+            "kiosk_sponsor_nieuw",
+            "kiosk_sponsor_bewerken",
+            "kiosk_sjabloon_nieuw",
+            "kiosk_sjabloon_bewerken",
+            "kiosk_lid_bewerken",
+        ],
+        "url_endpoint": "kiosk_sponsoren_leden",
+        "label": "Dia's",
     },
     {
         "groep": "Stemmen",
@@ -457,19 +465,6 @@ NAV_ITEMS = [
         "endpoints": ["accounts_lijst"],
         "url_endpoint": "accounts_lijst",
         "label": "Accounts beheren",
-    },
-    {
-        "groep": "Club",
-        "endpoints": [
-            "kiosk_sponsoren_leden",
-            "kiosk_sponsor_nieuw",
-            "kiosk_sponsor_bewerken",
-            "kiosk_sjabloon_nieuw",
-            "kiosk_sjabloon_bewerken",
-            "kiosk_lid_bewerken",
-        ],
-        "url_endpoint": "kiosk_sponsoren_leden",
-        "label": "Sponsoren & leden",
     },
     {
         "groep": "Club",

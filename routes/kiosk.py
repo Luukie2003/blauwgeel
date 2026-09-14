@@ -513,6 +513,7 @@ def register_routes(app):
             sjablonen_custom=sjablonen_custom,
             aantal_elementen_per_sjabloon=aantal_elementen_per_sjabloon,
             gebruik_per_sjabloon=gebruik_per_sjabloon,
+            instellingen=_scherm_instellingen(db),
         )
 
     def _sponsor_uit_formulier():
@@ -991,11 +992,12 @@ def register_routes(app):
             if is_ajax_verzoek():
                 return jsonify({"ok": True, "melding": "Instellingen voor het kantine scherm opgeslagen."})
             flash("Instellingen voor het kantine scherm opgeslagen.", "success")
-            return redirect(url_for("kiosk_scherm_instellingen"))
+            return redirect(url_for("kiosk_sponsoren_leden"))
 
-        return render_template(
-            "kiosk_scherm_instellingen.html", instellingen=_scherm_instellingen(db)
-        )
+        # Geen eigen pagina meer -- de instellingen staan nu op hetzelfde
+        # scherm als de dia's zelf (zie kiosk_sponsoren_leden), dus een GET
+        # hierheen (bijv. een oude bladwijzer) stuurt gewoon door.
+        return redirect(url_for("kiosk_sponsoren_leden"))
 
     @app.route("/kiosk/scherm")
     def kiosk_scherm():

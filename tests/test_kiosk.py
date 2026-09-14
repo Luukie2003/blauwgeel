@@ -1312,11 +1312,21 @@ def test_scherm_instellingen_accepteert_ajax_en_geeft_json(ingelogde_client, db)
     assert data["ok"] is True
 
 
-def test_scherm_instellingen_pagina_toont_live_voorbeeld_iframe(ingelogde_client, db):
+def test_scherm_instellingen_get_stuurt_door_naar_dias_pagina(ingelogde_client, db):
+    """Er is geen losse instellingenpagina meer -- de instellingen staan nu
+    op dezelfde pagina als de dia's zelf (kiosk_sponsoren_leden), dus een
+    oude bladwijzer naar /kiosk/scherm/instellingen stuurt gewoon door."""
     resp = ingelogde_client.get("/kiosk/scherm/instellingen")
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/kiosk/sponsoren-leden")
+
+
+def test_dias_pagina_toont_diashow_instellingen_en_live_voorbeeld(ingelogde_client, db):
+    resp = ingelogde_client.get("/kiosk/sponsoren-leden")
     assert resp.status_code == 200
     assert b'id="scherm-preview"' in resp.data
     assert b"js-ajax-form" in resp.data
+    assert b"Diashow instellen" in resp.data
 
 
 def test_kantine_scherm_staat_alleen_zichzelf_toe_te_framen(client, db):

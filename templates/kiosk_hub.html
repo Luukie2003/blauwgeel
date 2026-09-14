@@ -23,15 +23,12 @@
     </div>
 
     <div class="kaart">
-        <h2>3. Sponsoren/leden beheren</h2>
-        <p class="tekst-zacht">Beheer de sponsor-slides en de Club van 20-ledenlijst voor het kantine scherm.</p>
-        <p><a href="{{ url_for('kiosk_sponsoren_leden') }}" class="btn btn-geel">Sponsoren &amp; leden beheren</a></p>
-    </div>
-
-    <div class="kaart">
-        <h2>4. Kantine scherm</h2>
-        <p class="tekst-zacht">Stel in welke onderdelen in de diashow zitten, in welke volgorde, en hoe Club van 20 wordt weergegeven.</p>
-        <p><a href="{{ url_for('kiosk_scherm_instellingen') }}" class="btn btn-geel">Scherm instellen</a></p>
+        <h2>3. Dia's</h2>
+        <p class="tekst-zacht">
+            Voeg dia's toe (sponsoren, mededelingen), bouw eigen sjablonen, koppel de Club van 20
+            en stel in welke onderdelen in de diashow zitten en in welke volgorde.
+        </p>
+        <p><a href="{{ url_for('kiosk_sponsoren_leden') }}" class="btn btn-geel">Dia's beheren</a></p>
         <p><a href="{{ url_for('kiosk_scherm') }}" target="_blank" rel="noopener" class="btn btn-rand">Scherm openen &#8599;</a></p>
         <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ scherm_url }}</p>
         <div class="stem-qr">{{ scherm_qr_svg|safe }}</div>
