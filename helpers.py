@@ -901,6 +901,13 @@ def bereken_wedstrijd_geschiedenis(db, limiet=25):
     ]
 
 
+_WEEKDAG_KORT = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"]
+_MAAND_KORT = [
+    "jan", "feb", "mrt", "apr", "mei", "jun",
+    "jul", "aug", "sep", "okt", "nov", "dec",
+]
+
+
 def bereken_komende_thuiswedstrijden(db, dagen=14):
     """Groepeert de komende thuiswedstrijden per datum -- gevuld door
     agenda.py (de gekoppelde teamagenda's) -- samen met de weersverwachting
@@ -931,14 +938,22 @@ def bereken_komende_thuiswedstrijden(db, dagen=14):
     resultaat = []
     for datum, lijst in sorted(per_datum.items()):
         w = weer_per_datum.get(datum)
+        dt = datetime.strptime(datum, "%Y-%m-%d")
         resultaat.append(
             {
                 "datum": datum,
-                "datum_weergave": datetime.strptime(datum, "%Y-%m-%d").strftime("%d-%m-%Y"),
+                "datum_weergave": dt.strftime("%d-%m-%Y"),
+                # Losse velden voor de datumbadge op het kantine scherm (zie
+                # kiosk_scherm.html) -- puur presentatie, datum/datum_weergave
+                # hierboven blijven de brontijd voor de rest van de app.
+                "dag_kort": _WEEKDAG_KORT[dt.weekday()],
+                "dag_nummer": dt.day,
+                "maand_kort": _MAAND_KORT[dt.month - 1],
                 "wedstrijden": lijst,
                 "weer": (
                     {
                         "label": weer.weer_label(w["weercode"]),
+                        "icoon": weer.weer_icoon(w["weercode"]),
                         "max_temp": w["max_temp"],
                         "neerslag_kans": w["neerslag_kans"],
                     }

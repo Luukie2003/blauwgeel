@@ -916,6 +916,20 @@ def test_kantine_scherm_toont_wedstrijden_blok_indien_aanwezig(client, db):
     assert resp.status_code == 200
     assert b"Komende thuiswedstrijden" in resp.data
     assert b"Kiosk tegenstander" in resp.data
+    # Datumbadge (dag/nummer/maand) en de eerstvolgende-markering, zie
+    # bereken_komende_thuiswedstrijden (helpers.py) en kiosk_scherm.html.
+    assert b"datumbadge" in resp.data
+    assert b"wedstrijd-dag--eerstvolgende" in resp.data
+    assert b"Eerstvolgende" in resp.data
+
+
+def test_kantine_scherm_toont_club_van_20_animatie_klassen(client, db):
+    _voeg_lid_toe(db, "Animatie Test")
+
+    resp = client.get("/kiosk/scherm")
+
+    assert resp.status_code == 200
+    assert b"animation-delay" in resp.data
 
 
 def test_kantine_scherm_toont_lege_staat_als_alles_uit_staat(client, db):
@@ -1562,8 +1576,15 @@ def test_kiosk_tv_blijft_dicht_voor_framen(client, db):
     assert resp.headers["X-Frame-Options"] == "DENY"
 
 
-def test_hub_pagina_toont_gedeeld_scherm_kaart(ingelogde_client, db):
+def test_hub_pagina_toont_drie_schermen_en_instellen_snelkoppelingen(ingelogde_client, db):
     resp = ingelogde_client.get("/kiosk")
     assert resp.status_code == 200
-    assert b"Gedeeld scherm" in resp.data
+    assert b"Scherm 1" in resp.data
+    assert b"Scherm 2" in resp.data
+    assert b"Scherm 3" in resp.data
+    assert b"Wisselscherm" in resp.data
     assert b"Bardienst plannen" in resp.data
+    # De beknopte "Instellen"-snelkoppelingen naar Acties/Sponsoren/Club van 20.
+    assert b'href="/kiosk/prijzen/acties"' in resp.data
+    assert b"#dias-tabel" in resp.data
+    assert b"#club-van-20" in resp.data

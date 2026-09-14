@@ -58,6 +58,37 @@ def weer_label(weercode):
     return WEERCODE_LABELS.get(weercode, "onbekend")
 
 
+# Puur voor het kantine scherm (zie bereken_komende_thuiswedstrijden in
+# helpers.py) -- een emoji kost geen icoonbibliotheek en werkt overal.
+WEERCODE_ICONEN = {
+    0: "☀️",
+    1: "🌤️",
+    2: "⛅",
+    3: "☁️",
+    45: "🌫️",
+    48: "🌫️",
+    51: "🌦️",
+    53: "🌦️",
+    55: "🌧️",
+    61: "🌧️",
+    63: "🌧️",
+    65: "🌧️",
+    71: "🌨️",
+    73: "🌨️",
+    75: "❄️",
+    80: "🌦️",
+    81: "🌧️",
+    82: "⛈️",
+    95: "⛈️",
+    96: "⛈️",
+    99: "⛈️",
+}
+
+
+def weer_icoon(weercode):
+    return WEERCODE_ICONEN.get(weercode, "🌡️")
+
+
 def haal_voorspelling_op():
     """Haalt de dagelijkse verwachting op. Gooit een uitzondering door bij
     een netwerkfout; de aanroeper bepaalt hoe dat afgehandeld wordt."""

@@ -127,22 +127,119 @@
 .canvas-lettergrootte-groot { font-size: 2.4rem; }
 .canvas-lettergrootte-xl { font-size: 3.3rem; }
 
-/* Club van 20 */
-.slide-club_van_20 h2 { font-size: 2.8rem; color: var(--geel); margin: 0 0 1.8rem; }
-.namen-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.9rem 1.5rem; max-width: 72rem; }
-.naam-chip { background: rgba(255, 255, 255, 0.09); border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 999px; padding: 0.6rem 1.5rem; font-size: 1.55rem; }
-.naam-chip--groot { font-size: 2.15rem; font-weight: 700; padding: 0.7rem 1.8rem; border-color: var(--geel); background: rgba(252, 212, 47, 0.14); }
+/* Club van 20 -- groot, pakkend, met een zachte gele gloed achter de titel
+   en een binnenkomst-animatie per naam. De animatie zit vast aan
+   ".actief" (i.p.v. gewoon op .naam-chip) zodat 'm ELKE keer opnieuw
+   afspeelt zodra deze dia weer aan de beurt is in de diashow, niet alleen
+   bij het laden van de pagina. */
+.slide-club_van_20 {
+    background: radial-gradient(ellipse 60% 55% at 50% 38%, rgba(252, 212, 47, 0.16) 0%, transparent 70%);
+}
+.slide-club_van_20 h2 {
+    font-size: 4.2rem;
+    font-weight: 800;
+    color: var(--geel);
+    margin: 0 0 2.2rem;
+    text-shadow: 0 0 34px rgba(252, 212, 47, 0.45);
+}
+.slide-club_van_20 h2::before, .slide-club_van_20 h2::after {
+    content: "\2605";
+    display: inline-block;
+    color: var(--geel);
+    opacity: 0.75;
+    font-size: 0.6em;
+    margin: 0 0.7rem;
+    vertical-align: middle;
+}
+.namen-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.1rem 1.7rem; max-width: 76rem; }
+.naam-chip {
+    background: rgba(255, 255, 255, 0.09);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    padding: 0.75rem 1.9rem;
+    font-size: 1.85rem;
+    font-weight: 600;
+    opacity: 0;
+}
+.naam-chip--groot { font-size: 2.5rem; font-weight: 800; padding: 0.85rem 2.2rem; border-color: var(--geel); background: rgba(252, 212, 47, 0.14); box-shadow: 0 0 22px rgba(252, 212, 47, 0.25); }
 .naam-chip--niet-betaald { border-color: #e05a5a; background: rgba(224, 90, 90, 0.16); color: #ffb8b8; }
-.naam-sterren { color: var(--geel); letter-spacing: 0.05em; margin-right: 0.2rem; }
-.pagina-indicator { margin-top: 1.6rem; color: var(--tekst-zacht); font-size: 1.15rem; }
+.naam-sterren { color: var(--geel); letter-spacing: 0.05em; margin-right: 0.3rem; }
+.pagina-indicator { margin-top: 1.8rem; color: var(--tekst-zacht); font-size: 1.2rem; }
 
-/* Wedstrijden */
-.slide-wedstrijden h2 { font-size: 2.8rem; color: var(--geel); margin: 0 0 1.8rem; }
-.wedstrijden-lijst { width: 100%; max-width: 62rem; }
-.wedstrijd-dag { display: flex; justify-content: space-between; align-items: baseline; gap: 1.5rem; padding: 1rem 0; border-bottom: 1px solid rgba(255, 255, 255, 0.18); font-size: 1.5rem; text-align: left; }
-.wedstrijd-dag .datum { font-weight: 700; color: var(--geel); min-width: 9rem; flex-shrink: 0; }
-.wedstrijd-dag .teams { flex: 1; }
-.wedstrijd-dag .weer { color: var(--tekst-zacht); font-size: 1.2rem; flex-shrink: 0; }
+.slide-club_van_20.actief .naam-chip {
+    animation: chip-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes chip-in {
+    from { opacity: 0; transform: translateY(18px) scale(0.85); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Wedstrijden -- visuele kaarten met een datumbadge i.p.v. een kale
+   regel-per-regel lijst, de eerstvolgende wedstrijd extra uitgelicht, en
+   dezelfde binnenkomst-animatie-truc als hierboven bij Club van 20. */
+.slide-wedstrijden h2 {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--geel);
+    margin: 0 0 2.2rem;
+    text-shadow: 0 0 34px rgba(252, 212, 47, 0.4);
+}
+.wedstrijden-lijst { width: 100%; max-width: 68rem; display: flex; flex-direction: column; gap: 1.1rem; }
+.wedstrijd-dag {
+    display: flex;
+    align-items: center;
+    gap: 1.8rem;
+    padding: 1.2rem 1.8rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 20px;
+    text-align: left;
+    opacity: 0;
+}
+.wedstrijd-dag--eerstvolgende {
+    background: rgba(252, 212, 47, 0.12);
+    border-color: var(--geel);
+    box-shadow: 0 0 28px rgba(252, 212, 47, 0.22);
+}
+.wedstrijd-dag .datumbadge {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 5.4rem;
+    height: 5.4rem;
+    border-radius: 16px;
+    background: var(--blauw);
+    border: 2px solid var(--geel);
+}
+.wedstrijd-dag .datumbadge .dag-kort { font-size: 0.85rem; font-weight: 700; color: var(--geel); text-transform: uppercase; letter-spacing: 0.04em; }
+.wedstrijd-dag .datumbadge .dag-nummer { font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
+.wedstrijd-dag .datumbadge .maand-kort { font-size: 0.8rem; color: var(--tekst-zacht); text-transform: uppercase; }
+.wedstrijd-dag .inhoud { flex: 1; min-width: 0; }
+.wedstrijd-dag .eerstvolgende-label {
+    display: inline-block;
+    background: var(--geel);
+    color: var(--blauw-donker);
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.75rem;
+    border-radius: 999px;
+    margin-bottom: 0.5rem;
+}
+.wedstrijd-dag .teams { font-size: 1.7rem; font-weight: 700; line-height: 1.4; }
+.wedstrijd-dag .weer { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; color: var(--tekst-zacht); font-size: 1.1rem; }
+.wedstrijd-dag .weer-icoon { font-size: 1.9rem; line-height: 1; }
+
+.slide-wedstrijden.actief .wedstrijd-dag {
+    animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes card-in {
+    from { opacity: 0; transform: translateX(-26px); }
+    to { opacity: 1; transform: translateX(0); }
+}
 
 .leeg-scherm { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 1.2rem; color: var(--tekst-zacht); text-align: center; }
 .leeg-scherm img { height: 5rem; width: auto; }

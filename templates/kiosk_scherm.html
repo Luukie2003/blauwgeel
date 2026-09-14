@@ -95,7 +95,8 @@
                 <h2>{{ slide.titel }}</h2>
                 <div class="namen-grid">
                     {% for lid in slide.namen %}
-                    <span class="naam-chip{{ ' naam-chip--groot' if lid.extra_groot else '' }}{{ ' naam-chip--niet-betaald' if lid.niet_betaald else '' }}">
+                    <span class="naam-chip{{ ' naam-chip--groot' if lid.extra_groot else '' }}{{ ' naam-chip--niet-betaald' if lid.niet_betaald else '' }}"
+                          style="animation-delay: {{ (loop.index0 * 0.06)|round(3) }}s">
                         {% if lid.sterren %}<span class="naam-sterren">{{ '★' * lid.sterren }}</span>{% endif %}{{ lid.naam }}
                     </span>
                     {% endfor %}
@@ -105,14 +106,25 @@
                 <h2>Komende thuiswedstrijden</h2>
                 <div class="wedstrijden-lijst">
                     {% for dag in slide.dagen %}
-                    <div class="wedstrijd-dag">
-                        <span class="datum">{{ dag.datum_weergave }}</span>
-                        <span class="teams">
-                            {% for w in dag.wedstrijden %}{{ w.omschrijving }}{% if not loop.last %}<br>{% endif %}{% endfor %}
-                        </span>
+                    <div class="wedstrijd-dag{{ ' wedstrijd-dag--eerstvolgende' if loop.first else '' }}"
+                         style="animation-delay: {{ (loop.index0 * 0.12)|round(3) }}s">
+                        <div class="datumbadge">
+                            <span class="dag-kort">{{ dag.dag_kort }}</span>
+                            <span class="dag-nummer">{{ dag.dag_nummer }}</span>
+                            <span class="maand-kort">{{ dag.maand_kort }}</span>
+                        </div>
+                        <div class="inhoud">
+                            {% if loop.first %}<span class="eerstvolgende-label">Eerstvolgende</span><br>{% endif %}
+                            <span class="teams">
+                                {% for w in dag.wedstrijden %}{{ w.omschrijving }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+                            </span>
+                        </div>
+                        {% if dag.weer %}
                         <span class="weer">
-                            {% if dag.weer %}{{ dag.weer.label }}, {{ '%.0f'|format(dag.weer.max_temp) }}&deg;C{% endif %}
+                            <span class="weer-icoon">{{ dag.weer.icoon }}</span>
+                            {{ '%.0f'|format(dag.weer.max_temp) }}&deg;C
                         </span>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
