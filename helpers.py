@@ -98,6 +98,10 @@ KIOSK_ELEMENT_TYPES = {"titel", "tekst", "foto", "vrije_tekst"}
 KIOSK_UITLIJNINGEN = {"links", "midden", "rechts"}
 HEX_KLEUR_PATROON = re.compile(r"^#[0-9a-fA-F]{6}$")
 
+# 24-uurs 'HH:MM', gebruikt voor bardienst-tijden (zie kiosk_bardienst in
+# routes/kiosk.py) -- hetzelfde formaat als een <input type="time"> teruggeeft.
+KIOSK_TIJD_PATROON = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
 # CSS kent alleen de Engelse text-align-waarden -- de opgeslagen/getoonde
 # waarden (links/midden/rechts) zijn puur voor het formulier en mogen nooit
 # rechtstreeks als CSS-waarde belanden (zie css_uitlijning-filter, gebruikt

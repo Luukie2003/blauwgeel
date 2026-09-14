@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block titel %}Bardienst bewerken{% endblock %}
+{% block inhoud %}
+<h1>Bardienst bewerken</h1>
+<p class="subtitel"><a href="{{ url_for('kiosk_bardienst') }}">&larr; Terug naar bardienst</a></p>
+
+<div class="kaart" style="max-width:480px">
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="datum">Datum</label>
+            <input type="date" id="datum" name="datum" required value="{{ bardienst.datum }}">
+        </div>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="start_tijd">Van</label>
+                <input type="time" id="start_tijd" name="start_tijd" required value="{{ bardienst.start_tijd }}">
+            </div>
+            <div class="veld">
+                <label for="eind_tijd">Tot</label>
+                <input type="time" id="eind_tijd" name="eind_tijd" required value="{{ bardienst.eind_tijd }}">
+            </div>
+        </div>
+        <div class="veld">
+            <label for="namen">Wie</label>
+            <input type="text" id="namen" name="namen" required value="{{ bardienst.namen }}">
+        </div>
+        <button type="submit" class="btn btn-geel" style="margin-top:1rem">Opslaan</button>
+    </form>
+</div>
+{% endblock %}

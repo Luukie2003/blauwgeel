@@ -174,6 +174,12 @@ KOLOM_MIGRATIES = [
     ("kiosk_sponsoren", "tekst_grootte", "TEXT NOT NULL DEFAULT 'normaal'"),
     ("kiosk_sponsoren", "achtergrond_afbeelding", "TEXT"),
     ("kiosk_sponsoren", "custom_sjabloon_id", "INTEGER"),
+    # Welk scherm het gedeelde /kiosk/tv-scherm nu toont (zie kiosk_tv in
+    # routes/kiosk.py) -- 'prijzen' of 'dias'. Puur voor wie nog maar 1
+    # fysiek scherm heeft en daarop wil kunnen wisselen met een knop i.p.v.
+    # de Chromecast zelf aan te raken; de losse /kiosk/prijzen en
+    # /kiosk/scherm blijven hierdoor ongewijzigd.
+    ("kiosk_scherm_instellingen", "actief_tv_scherm", "TEXT NOT NULL DEFAULT 'prijzen'"),
 ]
 
 

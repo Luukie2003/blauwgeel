@@ -11,6 +11,7 @@
         <h2>1. Prijzenscherm</h2>
         <p class="tekst-zacht">Kies welke producten getoond worden op een grote, leesbare prijslijst.</p>
         <p><a href="{{ url_for('kiosk_prijzen_instellingen') }}" class="btn btn-geel">Producten kiezen</a></p>
+        <p><a href="{{ url_for('kiosk_bardienst') }}" class="btn btn-rand">Bardienst plannen</a></p>
         <p><a href="{{ url_for('kiosk_prijzen_scherm') }}" target="_blank" rel="noopener" class="btn btn-rand">Scherm openen &#8599;</a></p>
         <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ prijzen_url }}</p>
         <div class="stem-qr">{{ prijzen_qr_svg|safe }}</div>
@@ -33,5 +34,35 @@
         <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ scherm_url }}</p>
         <div class="stem-qr">{{ scherm_qr_svg|safe }}</div>
     </div>
+
+    <div class="kaart">
+        <h2>Gedeeld scherm</h2>
+        <p class="tekst-zacht">
+            Heb je (nog) maar 1 fysiek scherm? Cast dit scherm en wissel met de knop tussen de
+            prijzenlijst en de dia's, zonder de Chromecast zelf aan te raken.
+        </p>
+        <p class="tekst-zacht">Toont nu: <strong id="tv-modus-tekst">{{ "de dia's" if instellingen.actief_tv_scherm == 'dias' else 'de prijzenlijst' }}</strong></p>
+        <form method="post" action="{{ url_for('kiosk_tv_wisselen') }}" class="js-ajax-form" id="tv-wissel-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-geel" id="tv-wissel-knop">
+                Wissel naar {{ 'de prijzenlijst' if instellingen.actief_tv_scherm == 'dias' else "de dia's" }}
+            </button>
+        </form>
+        <p><a href="{{ url_for('kiosk_tv') }}" target="_blank" rel="noopener" class="btn btn-rand">Scherm openen &#8599;</a></p>
+        <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ tv_url }}</p>
+        <div class="stem-qr">{{ tv_qr_svg|safe }}</div>
+    </div>
 </div>
+
+<script>
+(function () {
+    var form = document.getElementById('tv-wissel-form');
+    if (!form) return;
+    form.addEventListener('ajax-form:success', function (e) {
+        var modus = e.detail.modus;
+        document.getElementById('tv-modus-tekst').textContent = modus === 'dias' ? "de dia's" : 'de prijzenlijst';
+        document.getElementById('tv-wissel-knop').textContent = 'Wissel naar ' + (modus === 'dias' ? 'de prijzenlijst' : "de dia's");
+    });
+})();
+</script>
 {% endblock %}

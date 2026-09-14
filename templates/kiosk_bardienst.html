@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block titel %}Bardienst{% endblock %}
+{% block inhoud %}
+<h1>Bardienst</h1>
+<p class="subtitel">
+    Plan per dag wie er bardienst heeft; het prijzenscherm toont dit vanzelf onderaan in een
+    gele balk zodra de klok in de ingestelde tijd valt.
+    <a href="{{ url_for('kiosk_prijzen_instellingen') }}">&larr; Terug naar Prijzenscherm &amp; acties</a>
+</p>
+
+<div class="kaart" style="max-width:760px">
+    <h2 style="margin-top:0">Nieuwe bardienst</h2>
+    <form method="post" action="{{ url_for('kiosk_bardienst_nieuw') }}" class="formgrid">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="datum">Datum</label>
+            <input type="date" id="datum" name="datum" required value="{{ vandaag }}">
+        </div>
+        <div class="veld">
+            <label for="start_tijd">Van</label>
+            <input type="time" id="start_tijd" name="start_tijd" required value="15:00">
+        </div>
+        <div class="veld">
+            <label for="eind_tijd">Tot</label>
+            <input type="time" id="eind_tijd" name="eind_tijd" required value="17:00">
+        </div>
+        <div class="veld">
+            <label for="namen">Wie</label>
+            <input type="text" id="namen" name="namen" required placeholder="Bijv. Luuk &amp; Femke">
+        </div>
+        <div class="veld" style="justify-content:flex-end">
+            <button type="submit" class="btn btn-geel">Toevoegen</button>
+        </div>
+    </form>
+</div>
+
+<div class="kaart">
+    <h2>Overzicht</h2>
+    {% if bardiensten %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Datum</th><th>Tijd</th><th>Wie</th><th></th></tr></thead>
+            <tbody>
+                {% for b in bardiensten %}
+                <tr>
+                    <td>{{ b.datum|datum_kort }}</td>
+                    <td>{{ b.start_tijd }} &ndash; {{ b.eind_tijd }}</td>
+                    <td>{{ b.namen }}</td>
+                    <td class="tabel-acties">
+                        <a href="{{ url_for('kiosk_bardienst_bewerken', bardienst_id=b.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                        <form method="post" action="{{ url_for('kiosk_bardienst_verwijderen', bardienst_id=b.id) }}"
+                              onsubmit="return bevestigEnVerstuur(this, 'Bardienst van {{ b.namen }} op {{ b.datum|datum_kort }} verwijderen?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen bardiensten ingepland.</p>
+    {% endif %}
+</div>
+{% endblock %}

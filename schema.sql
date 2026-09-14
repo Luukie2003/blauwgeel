@@ -413,6 +413,20 @@ CREATE TABLE IF NOT EXISTS club_van_20_leden (
     aangemaakt_op TEXT NOT NULL
 );
 
+-- Vooraf ingeplande bardiensten per specifieke dag (geen wekelijks
+-- terugkerend rooster -- de bezetting wisselt elke week). Het prijzenscherm
+-- toont de bijpassende rij vanzelf in een gele balk zodra de klok tussen
+-- start_tijd en eind_tijd valt, zie kiosk_prijzen_scherm.html.
+CREATE TABLE IF NOT EXISTS kiosk_bardiensten (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    datum TEXT NOT NULL,
+    start_tijd TEXT NOT NULL,
+    eind_tijd TEXT NOT NULL,
+    namen TEXT NOT NULL,
+    aangemaakt_op TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_kiosk_bardiensten_datum ON kiosk_bardiensten(datum);
+
 -- Losse product-acties voor het prijzenscherm (bijv. "happy hour"): een
 -- korte, opvallende pop-up die af en toe over de prijslijst heen verschijnt.
 -- Gebruikt de naam/foto/prijs van het gekoppelde product zelf, geen eigen

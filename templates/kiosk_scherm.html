@@ -137,7 +137,7 @@
     (function () {
         var huidigeVersie = {{ versie|tojson }};
         setInterval(function () {
-            fetch('{{ url_for("kiosk_scherm_versie") }}')
+            fetch('{{ versie_url }}')
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     if (data.versie && data.versie !== huidigeVersie) window.location.reload();

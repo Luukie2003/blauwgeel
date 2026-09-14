@@ -70,11 +70,16 @@ OPEN_ENDPOINTS = {
     # wel achter login, zie BEHEERDER_ENDPOINTS hieronder.
     "kiosk_prijzen_scherm",
     "kiosk_scherm",
-    # De schermen pollen deze twee endpoints zelf (zie de <script> in
+    # Optioneel derde scherm voor wie (nog) maar 1 fysiek scherm heeft en
+    # daarop wisselt tussen prijzen/dia's (zie kiosk_tv in routes/kiosk.py) --
+    # zelfde publieke, geen-account-nodig behandeling als de 2 vaste schermen.
+    "kiosk_tv",
+    # De schermen pollen deze endpoints zelf (zie de <script> in
     # kiosk_prijzen_scherm.html/kiosk_scherm.html) om te bepalen of ze zichzelf
     # moeten herladen -- dus ook zonder account bereikbaar.
     "kiosk_prijzen_versie",
     "kiosk_scherm_versie",
+    "kiosk_tv_versie",
 }
 
 # Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers
@@ -120,6 +125,11 @@ BEHEERDER_ENDPOINTS = {
     "kiosk_actie_bewerken",
     "kiosk_actie_verwijderen",
     "kiosk_actie_toon_wisselen",
+    "kiosk_bardienst",
+    "kiosk_bardienst_nieuw",
+    "kiosk_bardienst_bewerken",
+    "kiosk_bardienst_verwijderen",
+    "kiosk_tv_wisselen",
     "kiosk_sponsoren_leden",
     "kiosk_sponsor_nieuw",
     "kiosk_sponsor_bewerken",
@@ -400,6 +410,8 @@ NAV_ITEMS = [
             "kiosk_acties",
             "kiosk_actie_nieuw",
             "kiosk_actie_bewerken",
+            "kiosk_bardienst",
+            "kiosk_bardienst_bewerken",
         ],
         "url_endpoint": "kiosk_prijzen_instellingen",
         "label": "Prijzenscherm & acties",

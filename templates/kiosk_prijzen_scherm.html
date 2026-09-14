@@ -75,6 +75,24 @@
         }
         .leeg { color: var(--tekst-zacht); font-size: 1.3rem; margin-top: 2rem; }
 
+        /* Bardienst: vaste gele balk onderaan, alleen zichtbaar zolang er nu
+           een bardienst-tijdvak actief is (zie de JS onderaan). */
+        body.heeft-bardienst { padding-bottom: 5.5rem; }
+        .bardienst-balk {
+            display: none;
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            background: var(--geel);
+            color: var(--blauw-donker);
+            font-weight: 800;
+            font-size: 1.5rem;
+            text-align: center;
+            padding: 1rem 1.5rem;
+            letter-spacing: 0.01em;
+            z-index: 4;
+        }
+        body.heeft-bardienst .bardienst-balk { display: block; }
+
         /* Livestream i.p.v. de prijslijst -- vult het hele scherm, prijslijst
            en header blijven verborgen zolang de stream loopt. */
         #stream-scherm { display: none; position: fixed; inset: 0; background: #000; z-index: 5; }
@@ -165,6 +183,7 @@
     {% endif %}
 
     <div id="kiosk-popup" class="kiosk-popup"></div>
+    <div id="bardienst-balk" class="bardienst-balk"></div>
 
     <div id="stream-scherm">
         <video id="stream-video" autoplay playsinline></video>
@@ -231,8 +250,30 @@
             var el = document.getElementById('klok');
             if (el) el.textContent = new Date().toLocaleTimeString('nl-NL', {hour: '2-digit', minute: '2-digit'});
         }
+
+        // ---------- Bardienst: gele balk aan/uit op basis van de klok ----------
+        // Puur client-side (geen herlaad-roundtrip nodig): de bardiensten van
+        // vandaag staan al in de pagina, en elke tik wordt opnieuw bepaald of
+        // er nu een tijdvak actief is. Wijzigt een beheerder de planning
+        // terwijl het scherm al open staat, dan komt dat via de gewone
+        // 10s-versiepoll hieronder alsnog door (herlaadt de hele pagina).
+        var bardienstenVandaag = {{ bardiensten_vandaag|tojson }};
+
+        function werkBardienstBij() {
+            var balk = document.getElementById('bardienst-balk');
+            if (!balk) return;
+            var nu = new Date();
+            var huidigeTijd = ('0' + nu.getHours()).slice(-2) + ':' + ('0' + nu.getMinutes()).slice(-2);
+            var actief = bardienstenVandaag.filter(function (b) {
+                return huidigeTijd >= b.start_tijd && huidigeTijd < b.eind_tijd;
+            })[0];
+            document.body.classList.toggle('heeft-bardienst', !!actief);
+            balk.textContent = actief ? 'Bardienst: ' + actief.namen : '';
+        }
+
         werkKlokBij();
-        setInterval(werkKlokBij, 15000);
+        werkBardienstBij();
+        setInterval(function () { werkKlokBij(); werkBardienstBij(); }, 15000);
     </script>
 
     <script>
@@ -288,7 +329,7 @@
         var bekendeUitverkocht = {{ uitverkocht_namen|tojson }};
 
         setInterval(function () {
-            fetch('{{ url_for("kiosk_prijzen_versie") }}')
+            fetch('{{ versie_url }}')
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     if (!data.versie || data.versie === huidigeVersie) return;

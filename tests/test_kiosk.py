@@ -1339,3 +1339,218 @@ def test_kantine_scherm_staat_alleen_zichzelf_toe_te_framen(client, db):
 
     prijzen_resp = client.get("/kiosk/prijzen")
     assert prijzen_resp.headers["X-Frame-Options"] == "DENY"
+
+
+# ---------- Bardienst (onderdeel van het prijzenscherm) ----------
+
+
+def _voeg_bardienst_toe(db, datum, start_tijd="15:00", eind_tijd="17:00", namen="Luuk & Femke"):
+    db.execute(
+        """INSERT INTO kiosk_bardiensten (datum, start_tijd, eind_tijd, namen, aangemaakt_op)
+           VALUES (?, ?, ?, ?, '2026-01-01 10:00')""",
+        (datum, start_tijd, eind_tijd, namen),
+    )
+    db.commit()
+    return db.execute(
+        "SELECT id FROM kiosk_bardiensten WHERE datum = ? AND start_tijd = ?", (datum, start_tijd)
+    ).fetchone()["id"]
+
+
+def test_bardienst_aanmaken_bewerken_en_verwijderen(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/kiosk/prijzen/bardienst/nieuw",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "datum": "2026-09-20",
+            "start_tijd": "15:00",
+            "eind_tijd": "17:00",
+            "namen": "Luuk & Femke",
+        },
+    )
+    assert resp.status_code == 302
+    bardienst = db.execute(
+        "SELECT * FROM kiosk_bardiensten WHERE namen = 'Luuk & Femke'"
+    ).fetchone()
+    assert bardienst is not None
+    assert bardienst["datum"] == "2026-09-20"
+    assert bardienst["start_tijd"] == "15:00"
+    assert bardienst["eind_tijd"] == "17:00"
+
+    overzicht = ingelogde_client.get("/kiosk/prijzen/bardienst")
+    assert overzicht.status_code == 200
+    assert b"Luuk &amp; Femke" in overzicht.data
+
+    resp = ingelogde_client.post(
+        f"/kiosk/prijzen/bardienst/{bardienst['id']}/bewerken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "datum": "2026-09-20",
+            "start_tijd": "17:00",
+            "eind_tijd": "19:00",
+            "namen": "Bart & Peter",
+        },
+    )
+    assert resp.status_code == 302
+    bijgewerkt = db.execute(
+        "SELECT * FROM kiosk_bardiensten WHERE id = ?", (bardienst["id"],)
+    ).fetchone()
+    assert bijgewerkt["namen"] == "Bart & Peter"
+    assert bijgewerkt["start_tijd"] == "17:00"
+
+    resp = ingelogde_client.post(
+        f"/kiosk/prijzen/bardienst/{bardienst['id']}/verwijderen",
+        data={"csrf_token": _csrf(ingelogde_client)},
+    )
+    assert resp.status_code == 302
+    assert (
+        db.execute("SELECT * FROM kiosk_bardiensten WHERE id = ?", (bardienst["id"],)).fetchone()
+        is None
+    )
+
+
+def test_bardienst_aanmaken_vereist_beheerder(client, db):
+    _maak_vrijwilliger(db, "vrijwilliger_bardienst", "voorraad")
+    _login(client, "vrijwilliger_bardienst")
+
+    resp = client.post(
+        "/kiosk/prijzen/bardienst/nieuw",
+        data={
+            "csrf_token": _csrf(client),
+            "datum": "2026-09-20",
+            "start_tijd": "15:00",
+            "eind_tijd": "17:00",
+            "namen": "Stiekeme Bardienst",
+        },
+    )
+    assert resp.status_code == 302
+    volg_resp = client.get(resp.headers["Location"])
+    assert b"alleen voor beheerders" in volg_resp.data
+    assert db.execute("SELECT COUNT(*) AS n FROM kiosk_bardiensten").fetchone()["n"] == 0
+
+
+def test_bardienst_zonder_namen_geeft_foutmelding(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/kiosk/prijzen/bardienst/nieuw",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "datum": "2026-09-20",
+            "start_tijd": "15:00",
+            "eind_tijd": "17:00",
+            "namen": "",
+        },
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+    assert b"Vul in wie er bardienst heeft" in resp.data
+    assert db.execute("SELECT COUNT(*) AS n FROM kiosk_bardiensten").fetchone()["n"] == 0
+
+
+def test_prijzenscherm_toont_alleen_bardienst_van_vandaag(client, db):
+    vandaag = date.today().isoformat()
+    morgen = (date.today() + timedelta(days=1)).isoformat()
+    _voeg_bardienst_toe(db, vandaag, "15:00", "17:00", "Luuk & Femke")
+    _voeg_bardienst_toe(db, vandaag, "17:00", "19:00", "Bart & Peter")
+    _voeg_bardienst_toe(db, morgen, "15:00", "17:00", "Morgen Team")
+
+    resp = client.get("/kiosk/prijzen")
+    tekst = resp.data.decode()
+
+    assert resp.status_code == 200
+    # De namen zitten in de JSON voor de JS (bardiensten_vandaag|tojson),
+    # waar Jinja '&' veiligheidshalve als & escaped -- vandaar niet op
+    # de letterlijke tekens zoeken, maar op de losse woorden.
+    assert "Luuk" in tekst and "Femke" in tekst
+    assert "Bart" in tekst and "Peter" in tekst
+    assert "Morgen Team" not in tekst
+    assert "bardienst-balk" in tekst
+
+
+def test_prijzenscherm_versie_verandert_bij_bardienst_wijziging(client, db):
+    resp1 = client.get("/kiosk/prijzen/versie")
+    versie1 = resp1.get_json()["versie"]
+
+    _voeg_bardienst_toe(db, date.today().isoformat())
+
+    resp2 = client.get("/kiosk/prijzen/versie")
+    versie2 = resp2.get_json()["versie"]
+    assert versie1 != versie2
+
+
+# ---------- Gedeeld scherm (/kiosk/tv) ----------
+
+
+def test_kiosk_tv_toont_standaard_de_prijzenlijst(client, db):
+    resp = client.get("/kiosk/tv")
+    assert resp.status_code == 200
+    assert b"Prijslijst" in resp.data
+
+
+def test_kiosk_tv_wisselen_schakelt_tussen_prijzen_en_dias(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/kiosk/tv/wisselen", data={"csrf_token": _csrf(ingelogde_client)}
+    )
+    assert resp.status_code == 302
+    instellingen = db.execute(
+        "SELECT actief_tv_scherm FROM kiosk_scherm_instellingen WHERE id = 1"
+    ).fetchone()
+    assert instellingen["actief_tv_scherm"] == "dias"
+
+    tv_resp = ingelogde_client.get("/kiosk/tv")
+    assert b"Prijslijst" not in tv_resp.data
+
+    ingelogde_client.post("/kiosk/tv/wisselen", data={"csrf_token": _csrf(ingelogde_client)})
+    instellingen = db.execute(
+        "SELECT actief_tv_scherm FROM kiosk_scherm_instellingen WHERE id = 1"
+    ).fetchone()
+    assert instellingen["actief_tv_scherm"] == "prijzen"
+
+
+def test_kiosk_tv_wisselen_via_ajax_geeft_json_met_modus(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/kiosk/tv/wisselen",
+        data={"csrf_token": _csrf(ingelogde_client)},
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["modus"] == "dias"
+
+
+def test_kiosk_tv_wisselen_vereist_beheerder(client, db):
+    _maak_vrijwilliger(db, "vrijwilliger_tv", "voorraad")
+    _login(client, "vrijwilliger_tv")
+
+    resp = client.post("/kiosk/tv/wisselen", data={"csrf_token": _csrf(client)})
+    assert resp.status_code == 302
+    volg_resp = client.get(resp.headers["Location"])
+    assert b"alleen voor beheerders" in volg_resp.data
+    instellingen = db.execute(
+        "SELECT actief_tv_scherm FROM kiosk_scherm_instellingen WHERE id = 1"
+    ).fetchone()
+    assert instellingen["actief_tv_scherm"] == "prijzen"
+
+
+def test_kiosk_tv_versie_verandert_bij_wisselen(ingelogde_client, db):
+    resp1 = ingelogde_client.get("/kiosk/tv/versie")
+    versie1 = resp1.get_json()["versie"]
+
+    ingelogde_client.post("/kiosk/tv/wisselen", data={"csrf_token": _csrf(ingelogde_client)})
+
+    resp2 = ingelogde_client.get("/kiosk/tv/versie")
+    versie2 = resp2.get_json()["versie"]
+    assert versie1 != versie2
+
+
+def test_kiosk_tv_blijft_dicht_voor_framen(client, db):
+    """/kiosk/tv is geen bewuste iframe-uitzondering (i.t.t. kiosk_scherm) --
+    moet dus gewoon op de standaard DENY blijven staan."""
+    resp = client.get("/kiosk/tv")
+    assert resp.headers["X-Frame-Options"] == "DENY"
+
+
+def test_hub_pagina_toont_gedeeld_scherm_kaart(ingelogde_client, db):
+    resp = ingelogde_client.get("/kiosk")
+    assert resp.status_code == 200
+    assert b"Gedeeld scherm" in resp.data
+    assert b"Bardienst plannen" in resp.data

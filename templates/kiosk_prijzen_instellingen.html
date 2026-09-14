@@ -3,6 +3,29 @@
 {% block inhoud %}
 {% if pda_modus %}
 <p class="subtitel">Zet met 1 tik welke producten op het prijzenscherm staan.</p>
+
+<div class="kaart">
+    <h2>Gedeeld scherm</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Toont nu: <strong id="tv-modus-tekst">{{ "de dia's" if instellingen.actief_tv_scherm == 'dias' else 'de prijzenlijst' }}</strong>
+    </p>
+    <form method="post" action="{{ url_for('kiosk_tv_wisselen') }}" class="js-ajax-form" id="tv-wissel-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-geel btn-icoon" id="tv-wissel-knop">
+            Wissel naar {{ 'de prijzenlijst' if instellingen.actief_tv_scherm == 'dias' else "de dia's" }}
+        </button>
+    </form>
+</div>
+<script>
+(function () {
+    var form = document.getElementById('tv-wissel-form');
+    form.addEventListener('ajax-form:success', function (e) {
+        var modus = e.detail.modus;
+        document.getElementById('tv-modus-tekst').textContent = modus === 'dias' ? "de dia's" : 'de prijzenlijst';
+        document.getElementById('tv-wissel-knop').textContent = 'Wissel naar ' + (modus === 'dias' ? 'de prijzenlijst' : "de dia's");
+    });
+})();
+</script>
 {% else %}
 <p class="subtitel">
     Vink aan welke producten op het prijzenscherm getoond moeten worden en sla in één keer alles op.

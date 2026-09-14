@@ -19,6 +19,7 @@ from helpers import (
     KIOSK_SPONSOR_SJABLOON_VOORBEELDEN,
     KIOSK_TEKST_GROOTTE_SLEUTELS,
     KIOSK_TEKST_GROOTTES,
+    KIOSK_TIJD_PATROON,
     KIOSK_UITLIJNINGEN,
     bereken_jaren_lid,
     bereken_komende_thuiswedstrijden,
@@ -186,14 +187,19 @@ def register_routes(app):
 
     @app.route("/kiosk")
     def kiosk_hub():
+        db = get_db()
         prijzen_url = url_for("kiosk_prijzen_scherm", _external=True)
         scherm_url = url_for("kiosk_scherm", _external=True)
+        tv_url = url_for("kiosk_tv", _external=True)
         return render_template(
             "kiosk_hub.html",
             prijzen_url=prijzen_url,
             scherm_url=scherm_url,
+            tv_url=tv_url,
             prijzen_qr_svg=qr.qr_svg(prijzen_url),
             scherm_qr_svg=qr.qr_svg(scherm_url),
+            tv_qr_svg=qr.qr_svg(tv_url),
+            instellingen=_scherm_instellingen(db),
         )
 
     # ---------- Onderdeel 1: Prijzenscherm ----------
@@ -224,6 +230,7 @@ def register_routes(app):
             "kiosk_prijzen_instellingen.html",
             producten=producten,
             acties=acties,
+            instellingen=_scherm_instellingen(db),
         )
 
     @app.route("/kiosk/prijzen/product/<int:product_id>/toon", methods=["POST"])
@@ -312,11 +319,30 @@ def register_routes(app):
     def _uitverkocht_namen(categorieen):
         return [p["naam"] for _, lijst in categorieen for p in lijst if p["kiosk_uitverkocht"]]
 
-    def _prijzen_versie(categorieen, acties):
+    def _bardiensten_vandaag(db):
+        """Bardiensten voor vandaag, op tijd gesorteerd -- geen wekelijks
+        terugkerend rooster, dus alleen rijen met exact de datum van vandaag
+        tellen mee (zie kiosk_bardienst hieronder voor de planning zelf)."""
+        return db.execute(
+            "SELECT * FROM kiosk_bardiensten WHERE datum = ? ORDER BY start_tijd",
+            (date.today().isoformat(),),
+        ).fetchall()
+
+    def _bardiensten_voor_scherm(bardiensten):
+        return [
+            {"start_tijd": b["start_tijd"], "eind_tijd": b["eind_tijd"], "namen": b["namen"]}
+            for b in bardiensten
+        ]
+
+    def _prijzen_versie(categorieen, acties, bardiensten, *extra):
         # Alleen de velden die daadwerkelijk op het scherm staan -- zo
         # triggert bijv. een gewijzigde voorraad (niet zichtbaar hier) geen
-        # onnodige herlaadbeurt. Acties tellen ook mee, zodat een nieuwe of
-        # aangepaste actie het scherm net als de rest vanzelf bijwerkt.
+        # onnodige herlaadbeurt. Acties en de bardiensten van vandaag tellen
+        # ook mee, zodat een wijziging daaraan het scherm net als de rest
+        # vanzelf bijwerkt. *extra is puur om /kiosk/tv (zie kiosk_tv) een
+        # eigen versie-'namespace' te geven, zodat het wisselen tussen
+        # prijzen/dia's ook zonder inhoudelijke wijziging als een update
+        # gezien wordt.
         return _versie(
             [
                 (
@@ -326,15 +352,17 @@ def register_routes(app):
                 for naam, lijst in categorieen
             ],
             [(a["id"], a["tekst"], a["product_naam"], a["verkoopprijs"], a["afbeelding"]) for a in acties],
+            [(b["id"], b["start_tijd"], b["eind_tijd"], b["namen"]) for b in bardiensten],
+            *extra,
         )
 
-    @app.route("/kiosk/prijzen")
-    def kiosk_prijzen_scherm():
-        db = get_db()
+    def _prijzen_render_kwargs(db, versie_url, extra_versie=None):
+        """Gedeelde render-context voor zowel /kiosk/prijzen als de
+        prijzen-stand van /kiosk/tv (zie kiosk_tv) -- 1 plek voor de opbouw
+        zodat beide altijd exact hetzelfde renderen."""
         categorieen = _prijzen_categorieen(db)
         acties = _acties_actief(db)
-        # Simpele, JSON-vriendelijke vorm voor de pop-up-JS -- alleen wat er
-        # daadwerkelijk getoond wordt, geen hele sqlite3.Row.
+        bardiensten = _bardiensten_vandaag(db)
         acties_voor_scherm = [
             {
                 "naam": a["product_naam"],
@@ -344,12 +372,22 @@ def register_routes(app):
             }
             for a in acties
         ]
+        extra = (extra_versie,) if extra_versie else ()
+        return {
+            "categorieen": categorieen,
+            "acties": acties_voor_scherm,
+            "versie": _prijzen_versie(categorieen, acties, bardiensten, *extra),
+            "versie_url": versie_url,
+            "uitverkocht_namen": _uitverkocht_namen(categorieen),
+            "bardiensten_vandaag": _bardiensten_voor_scherm(bardiensten),
+        }
+
+    @app.route("/kiosk/prijzen")
+    def kiosk_prijzen_scherm():
+        db = get_db()
         return render_template(
             "kiosk_prijzen_scherm.html",
-            categorieen=categorieen,
-            acties=acties_voor_scherm,
-            versie=_prijzen_versie(categorieen, acties),
-            uitverkocht_namen=_uitverkocht_namen(categorieen),
+            **_prijzen_render_kwargs(db, url_for("kiosk_prijzen_versie")),
         )
 
     @app.route("/kiosk/prijzen/versie")
@@ -357,12 +395,100 @@ def register_routes(app):
         db = get_db()
         categorieen = _prijzen_categorieen(db)
         acties = _acties_actief(db)
+        bardiensten = _bardiensten_vandaag(db)
         return jsonify(
             {
-                "versie": _prijzen_versie(categorieen, acties),
+                "versie": _prijzen_versie(categorieen, acties, bardiensten),
                 "uitverkocht": _uitverkocht_namen(categorieen),
             }
         )
+
+    # ---------- Bardienst (onderdeel van het prijzenscherm) ----------
+
+    def _bardienst_uit_formulier():
+        datum = request.form.get("datum", "").strip()
+        try:
+            date.fromisoformat(datum)
+        except ValueError:
+            datum = date.today().isoformat()
+        start_tijd = request.form.get("start_tijd", "").strip()
+        if not KIOSK_TIJD_PATROON.match(start_tijd):
+            start_tijd = "00:00"
+        eind_tijd = request.form.get("eind_tijd", "").strip()
+        if not KIOSK_TIJD_PATROON.match(eind_tijd):
+            eind_tijd = "23:59"
+        return {
+            "datum": datum,
+            "start_tijd": start_tijd,
+            "eind_tijd": eind_tijd,
+            "namen": request.form.get("namen", "").strip(),
+        }
+
+    @app.route("/kiosk/prijzen/bardienst")
+    def kiosk_bardienst():
+        db = get_db()
+        bardiensten = db.execute(
+            "SELECT * FROM kiosk_bardiensten ORDER BY datum, start_tijd"
+        ).fetchall()
+        return render_template(
+            "kiosk_bardienst.html", bardiensten=bardiensten, vandaag=date.today().isoformat()
+        )
+
+    @app.route("/kiosk/prijzen/bardienst/nieuw", methods=["POST"])
+    def kiosk_bardienst_nieuw():
+        gegevens = _bardienst_uit_formulier()
+        if not gegevens["namen"]:
+            flash("Vul in wie er bardienst heeft.", "error")
+            return redirect(url_for("kiosk_bardienst"))
+        db = get_db()
+        db.execute(
+            """INSERT INTO kiosk_bardiensten (datum, start_tijd, eind_tijd, namen, aangemaakt_op)
+               VALUES (?, ?, ?, ?, ?)""",
+            (gegevens["datum"], gegevens["start_tijd"], gegevens["eind_tijd"], gegevens["namen"], now_str()),
+        )
+        db.commit()
+        flash("Bardienst toegevoegd.", "success")
+        return redirect(url_for("kiosk_bardienst"))
+
+    @app.route("/kiosk/prijzen/bardienst/<int:bardienst_id>/bewerken", methods=["GET", "POST"])
+    def kiosk_bardienst_bewerken(bardienst_id):
+        db = get_db()
+        bardienst = db.execute(
+            "SELECT * FROM kiosk_bardiensten WHERE id = ?", (bardienst_id,)
+        ).fetchone()
+        if bardienst is None:
+            flash("Bardienst niet gevonden.", "error")
+            return redirect(url_for("kiosk_bardienst"))
+
+        if request.method == "POST":
+            gegevens = _bardienst_uit_formulier()
+            if not gegevens["namen"]:
+                flash("Vul in wie er bardienst heeft.", "error")
+                return redirect(url_for("kiosk_bardienst_bewerken", bardienst_id=bardienst_id))
+            db.execute(
+                """UPDATE kiosk_bardiensten
+                   SET datum = ?, start_tijd = ?, eind_tijd = ?, namen = ?
+                   WHERE id = ?""",
+                (
+                    gegevens["datum"],
+                    gegevens["start_tijd"],
+                    gegevens["eind_tijd"],
+                    gegevens["namen"],
+                    bardienst_id,
+                ),
+            )
+            db.commit()
+            flash("Bardienst bijgewerkt.", "success")
+            return redirect(url_for("kiosk_bardienst"))
+        return render_template("kiosk_bardienst_form.html", bardienst=bardienst)
+
+    @app.route("/kiosk/prijzen/bardienst/<int:bardienst_id>/verwijderen", methods=["POST"])
+    def kiosk_bardienst_verwijderen(bardienst_id):
+        db = get_db()
+        db.execute("DELETE FROM kiosk_bardiensten WHERE id = ?", (bardienst_id,))
+        db.commit()
+        flash("Bardienst verwijderd.", "success")
+        return redirect(url_for("kiosk_bardienst"))
 
     # ---------- Prijs-acties (onderdeel van het prijzenscherm) ----------
 
@@ -1003,9 +1129,72 @@ def register_routes(app):
     def kiosk_scherm():
         db = get_db()
         slides = _bouw_slides(db)
-        return render_template("kiosk_scherm.html", slides=slides, versie=_versie(slides))
+        return render_template(
+            "kiosk_scherm.html",
+            slides=slides,
+            versie=_versie(slides),
+            versie_url=url_for("kiosk_scherm_versie"),
+        )
 
     @app.route("/kiosk/scherm/versie")
     def kiosk_scherm_versie():
         db = get_db()
         return jsonify({"versie": _versie(_bouw_slides(db))})
+
+    # ---------- Gedeeld scherm: 1 fysiek scherm wisselen tussen prijzen/dia's ----------
+    # Losstaand van de 2 vaste schermen hierboven (die blijven ongewijzigd
+    # werken voor wie 2 fysieke TV's heeft) -- /kiosk/tv is een extra,
+    # optionele derde weergave voor wie (nog) maar 1 scherm heeft en daarop
+    # met een knop wil wisselen zonder de Chromecast zelf aan te raken.
+
+    @app.route("/kiosk/tv")
+    def kiosk_tv():
+        db = get_db()
+        instellingen = _scherm_instellingen(db)
+        if instellingen["actief_tv_scherm"] == "dias":
+            slides = _bouw_slides(db)
+            return render_template(
+                "kiosk_scherm.html",
+                slides=slides,
+                versie=_versie("tv", slides),
+                versie_url=url_for("kiosk_tv_versie"),
+            )
+        return render_template(
+            "kiosk_prijzen_scherm.html",
+            **_prijzen_render_kwargs(db, url_for("kiosk_tv_versie"), extra_versie="tv"),
+        )
+
+    @app.route("/kiosk/tv/versie")
+    def kiosk_tv_versie():
+        db = get_db()
+        instellingen = _scherm_instellingen(db)
+        if instellingen["actief_tv_scherm"] == "dias":
+            return jsonify({"versie": _versie("tv", _bouw_slides(db))})
+        categorieen = _prijzen_categorieen(db)
+        acties = _acties_actief(db)
+        bardiensten = _bardiensten_vandaag(db)
+        return jsonify(
+            {
+                "versie": _prijzen_versie(categorieen, acties, bardiensten, "tv"),
+                "uitverkocht": _uitverkocht_namen(categorieen),
+            }
+        )
+
+    @app.route("/kiosk/tv/wisselen", methods=["POST"])
+    def kiosk_tv_wisselen():
+        db = get_db()
+        instellingen = _scherm_instellingen(db)
+        nieuwe_modus = "dias" if instellingen["actief_tv_scherm"] == "prijzen" else "prijzen"
+        db.execute(
+            "UPDATE kiosk_scherm_instellingen SET actief_tv_scherm = ? WHERE id = 1", (nieuwe_modus,)
+        )
+        db.commit()
+        melding = (
+            "Gedeeld scherm toont nu de dia's."
+            if nieuwe_modus == "dias"
+            else "Gedeeld scherm toont nu de prijzenlijst."
+        )
+        if is_ajax_verzoek():
+            return jsonify({"ok": True, "modus": nieuwe_modus, "melding": melding})
+        flash(melding, "success")
+        return redirect(request.referrer or url_for("kiosk_hub"))
