@@ -866,6 +866,19 @@ def test_kantine_scherm_is_publiek_en_toont_alleen_actieve_sponsoren(client, db)
     assert b"Inactieve Sponsor" not in resp.data
 
 
+def test_kantine_scherm_toont_vast_clubbeeldmerk_op_elke_dia(client, db):
+    """Los van welke dia er toevallig getoond wordt (sponsor, mededeling,
+    Club van 20, wedstrijden) staat er altijd hetzelfde vaste clubbadge --
+    zit dus buiten de per-dia-rendering, niet per sjabloon herhaald."""
+    _voeg_sponsor_toe(db, "Willekeurige Sponsor")
+
+    resp = client.get("/kiosk/scherm")
+
+    assert resp.status_code == 200
+    assert b"club-badge" in resp.data
+    assert b"S.V. BLAUW-GEEL 1915" in resp.data
+
+
 def test_kantine_scherm_verdeelt_leden_over_meerdere_slides(client, db):
     db.execute(
         "UPDATE kiosk_scherm_instellingen SET club_van_20_namen_per_slide = 2 WHERE id = 1"

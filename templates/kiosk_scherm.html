@@ -16,6 +16,26 @@
         }
         .scherm { position: relative; width: 100vw; height: 100vh; }
         {% include "_kiosk_scherm_stijl.html" %}
+
+        /* Vast clubbeeldmerk rechtsonder op elke dia (sponsor, mededeling,
+           Club van 20, wedstrijden -- ongeacht sjabloon) zodat altijd
+           duidelijk is dat dit het scherm van s.v. Blauw-Geel 1915 is, ook
+           tijdens een sponsor-slide met een eigen foto. */
+        .club-badge {
+            position: fixed;
+            right: 1.4rem;
+            bottom: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            background: rgba(15, 31, 77, 0.7);
+            border: 1px solid rgba(252, 212, 47, 0.55);
+            border-radius: 999px;
+            padding: 0.45rem 1.1rem 0.45rem 0.45rem;
+            z-index: 10;
+        }
+        .club-badge img { height: 2.1rem; width: auto; display: block; }
+        .club-badge span { font-size: 0.95rem; font-weight: 800; letter-spacing: 0.04em; color: var(--geel); white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -99,6 +119,10 @@
             {% endif %}
         </section>
         {% endfor %}
+    </div>
+    <div class="club-badge">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="">
+        <span>S.V. BLAUW-GEEL 1915</span>
     </div>
     {% else %}
     <div class="leeg-scherm">
