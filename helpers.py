@@ -396,11 +396,17 @@ def categorienamen_zonder_verkoopprijsplicht(db):
 def bereken_trend(omzet_per_week, huidige_jaar, huidige_week):
     """Voortschrijdend gemiddelde + trendrichting op basis van volledig
     afgesloten weken (de lopende week telt niet mee, die is nog niet klaar).
+    Weken met een 'afwijkende_periode' (geteld op een ongebruikelijke dag,
+    waardoor de periode veel korter of langer dan een week was) tellen ook
+    niet mee -- die zouden de trend anders vervuilen met een schijnbare
+    piek of dal die alleen door de teldag komt, niet door de verkoop.
 
     omzet_per_week: lijst met dicts (jaar, week, omzet, ...), nieuwste eerst.
     """
     afgeronde_weken = [
-        w for w in omzet_per_week if (w["jaar"], w["week"]) != (huidige_jaar, huidige_week)
+        w
+        for w in omzet_per_week
+        if (w["jaar"], w["week"]) != (huidige_jaar, huidige_week) and not w.get("afwijkende_periode")
     ]
     chronologisch = list(reversed(afgeronde_weken))  # oud -> nieuw
 
@@ -434,11 +440,38 @@ def bereken_trend(omzet_per_week, huidige_jaar, huidige_week):
     }
 
 
+TRAININGSDAG = 2  # woensdag (maandag=0) -- alle teams trainen op dezelfde vaste avond
+
+
+def _aantal_dagen_met_weekdag(van, tot, weekdag, inclusief_van=True):
+    """Telt hoeveel dagen met de gegeven weekdag (0=maandag) er vallen tussen
+    'van' en 'tot' (date-strings 'YYYY-MM-DD', 'tot' inclusief). Gebruikt
+    voor trainingsavonden, net zoals wedstrijden uit de 'wedstrijden'-tabel
+    komen -- maar omdat elk team op dezelfde avond traint is daar geen
+    losse tabel met agendadata voor nodig."""
+    start = datetime.strptime(van, "%Y-%m-%d").date()
+    eind = datetime.strptime(tot, "%Y-%m-%d").date()
+    dag = start if inclusief_van else start + timedelta(days=1)
+    aantal = 0
+    while dag <= eind:
+        if dag.weekday() == weekdag:
+            aantal += 1
+        dag += timedelta(days=1)
+    return aantal
+
+
 def bereken_omzet_trend_periode(db, van, tot):
     """Omzet + best verkopende producten voor alle tellingen binnen een zelf
     gekozen periode -- gebruikt door het verkooprapport en het weekoverzicht.
     Rekent met de bevroren telling-prijs (tr.verkoopprijs), niet de actuele
-    productprijs, zodat latere prijswijzigingen oude cijfers niet aanpassen."""
+    productprijs, zodat latere prijswijzigingen oude cijfers niet aanpassen.
+
+    Elke balk representeert de periode sinds de vorige telling, die niet
+    per se een week beslaat (dat hangt af van wanneer er geteld is). Om
+    balken van sterk wisselende lengte niet stilzwijgend als gelijkwaardige
+    'weken' te laten ogen, krijgt elke balk ook het aantal dagen, de omzet
+    per dag, en een 'periode_afwijkend'-vlag (korter dan 5 of langer dan 9
+    dagen) mee."""
     tellingen = db.execute(
         """SELECT t.id, t.datum, t.naam,
                   COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0) AS omzet
@@ -484,8 +517,22 @@ def bereken_omzet_trend_periode(db, van, tot):
         ).fetchall()
     ]
 
+    # Voor de periodelengte/trainingsavonden van de eerste balk telt de
+    # écht vorige telling (ook als die vóór 'van' viel), niet 'van' zelf --
+    # anders lijkt elke eerste balk in een vast weekvenster (zoals het
+    # weekoverzicht dat gebruikt) systematisch te kort, puur omdat 'van' nu
+    # eenmaal de gekozen kalendergrens is en niet de vorige teldatum.
+    # Wedstrijden blijven wel vanaf 'van' geteld: een gemiste wedstrijd vlak
+    # voor 'van' is een verwaarloosbare afwijking voor die indicator.
+    werkelijke_vorige_telling = db.execute(
+        "SELECT datum FROM tellingen WHERE datum < ? ORDER BY datum DESC LIMIT 1",
+        (f"{van} 00:00",),
+    ).fetchone()
+    periode_start = werkelijke_vorige_telling["datum"][:10] if werkelijke_vorige_telling else van
+
     balken = []
     vorige_datum = van
+    vorige_periode_start = periode_start
     eerste_balk = True
     for t in tellingen:
         periode_eind = t["datum"][:10]
@@ -494,23 +541,39 @@ def bereken_omzet_trend_periode(db, van, tot):
             # periode, geen eerdere telling waarvan een wedstrijd al is
             # meegeteld.
             aantal_wedstrijden = sum(1 for d in wedstrijd_datums if vorige_datum <= d <= periode_eind)
+            aantal_trainingsavonden = _aantal_dagen_met_weekdag(
+                vorige_periode_start, periode_eind, TRAININGSDAG, inclusief_van=True
+            )
             eerste_balk = False
         else:
             aantal_wedstrijden = sum(1 for d in wedstrijd_datums if vorige_datum < d <= periode_eind)
+            aantal_trainingsavonden = _aantal_dagen_met_weekdag(
+                vorige_periode_start, periode_eind, TRAININGSDAG, inclusief_van=False
+            )
+        aantal_dagen = (
+            datetime.strptime(periode_eind, "%Y-%m-%d").date()
+            - datetime.strptime(vorige_periode_start, "%Y-%m-%d").date()
+        ).days
         balken.append(
             {
                 "datum_kort": datetime.strptime(t["datum"], "%Y-%m-%d %H:%M").strftime("%d-%m"),
                 "omzet": t["omzet"],
                 "hoogte_pct": (t["omzet"] / max_omzet * 100) if max_omzet else 0,
                 "thuiswedstrijden": aantal_wedstrijden,
+                "trainingsavonden": aantal_trainingsavonden,
+                "aantal_dagen": aantal_dagen,
+                "omzet_per_dag": t["omzet"] / max(aantal_dagen, 1),
+                "periode_afwijkend": aantal_dagen < 5 or aantal_dagen > 9,
             }
         )
         vorige_datum = periode_eind
+        vorige_periode_start = periode_eind
 
     return {
         "balken": balken,
         "top_verkopers": top_verkopers,
         "totale_omzet": totale_omzet,
+        "bevat_afwijkende_periode": any(b["periode_afwijkend"] for b in balken),
     }
 
 
@@ -650,6 +713,11 @@ def bereken_week_overzicht(db, vandaag=None):
         "totale_omzet": huidige["totale_omzet"],
         "vorige_omzet": vorige["totale_omzet"],
         "verschil_percentage": verschil_percentage,
+        # True als deze of de vorige week een telling bevat met een
+        # ongebruikelijk korte/lange periode (bijv. een keer op vrijdag
+        # geteld i.p.v. de gebruikelijke dag) -- de omzetvergelijking
+        # hierboven kan daardoor vertekend zijn.
+        "afwijkende_periode": huidige["bevat_afwijkende_periode"] or vorige["bevat_afwijkende_periode"],
         "top_verkopers": huidige["top_verkopers"],
         "onder_minimum": bestel_suggesties(db),
         "open_bestellingen": open_bestellingen,
@@ -887,7 +955,8 @@ def bereken_voorspelde_tekorten(db, dagen_vooruit=7):
     `dagen_vooruit` dagen, ook als de voorraad nu nog boven het minimum
     zit -- in tegenstelling tot bestel_suggesties(), dat pas waarschuwt als
     het al te laat is. Combineert de gemiddelde historische verkoop per week
-    met het aantal thuiswedstrijden en de weersverwachting in die periode.
+    met het aantal thuiswedstrijden, trainingsavonden en de weersverwachting
+    in die periode.
 
     Dit is een eerste, simpele versie: met weinig telling-geschiedenis is de
     schatting grof. Hoe meer tellingen er bijkomen, hoe betrouwbaarder het
@@ -914,6 +983,9 @@ def bereken_voorspelde_tekorten(db, dagen_vooruit=7):
            WHERE thuis = 1 AND datum >= ? AND datum <= ?""",
         (vandaag.isoformat(), grens.isoformat()),
     ).fetchone()["n"]
+    aantal_trainingsavonden = _aantal_dagen_met_weekdag(
+        vandaag.isoformat(), grens.isoformat(), TRAININGSDAG
+    )
 
     weer_rijen = db.execute(
         "SELECT * FROM weer_voorspelling WHERE datum >= ? AND datum <= ?",
@@ -931,8 +1003,11 @@ def bereken_voorspelde_tekorten(db, dagen_vooruit=7):
     # Elke thuiswedstrijddag telt als een fikse boost bovenop een gemiddelde
     # dag -- een ruwe aanname (30% meer verkoop per wedstrijddag), niet
     # afgeleid uit eigen historie omdat daar simpelweg nog te weinig
-    # gekoppelde agenda- en omzetgegevens voor zijn.
+    # gekoppelde agenda- en omzetgegevens voor zijn. Een trainingsavond
+    # krijgt een kleinere boost (20%) dan een wedstrijddag -- minder bezoek
+    # dan een thuiswedstrijd, maar wel duidelijk drukker dan een gewone dag.
     wedstrijd_factor = 1 + 0.3 * aantal_wedstrijddagen
+    training_factor = 1 + 0.2 * aantal_trainingsavonden
     periode_factor = dagen_vooruit / 7
 
     reeds_gesignaleerd = {p["id"] for p in bestel_suggesties(db)}
@@ -942,7 +1017,9 @@ def bereken_voorspelde_tekorten(db, dagen_vooruit=7):
         if p["id"] in reeds_gesignaleerd:
             continue
         gem_per_week = verkoop_per_product.get(p["id"], 0) / verstreken_weken
-        verwacht_verbruik = gem_per_week * periode_factor * wedstrijd_factor * weer_factor
+        verwacht_verbruik = (
+            gem_per_week * periode_factor * wedstrijd_factor * training_factor * weer_factor
+        )
         verwachte_voorraad = p["voorraad"] - verwacht_verbruik
         if verwacht_verbruik > 0 and verwachte_voorraad < 0:
             resultaat.append(

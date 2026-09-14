@@ -8,6 +8,14 @@
     Accounts &rarr; Mijn voorkeuren.
 </p>
 
+{% if overzicht.afwijkende_periode %}
+<div class="flash flash-warning">
+    Let op: deze of de vorige week bevat een telling met een ongebruikelijk korte of lange
+    periode sinds de telling ervoor (bijv. geteld op een andere dag dan gebruikelijk).
+    De omzetvergelijking hieronder kan daardoor vertekend zijn.
+</div>
+{% endif %}
+
 <div class="statgrid">
     <div class="stat">
         <div class="getal">€ {{ '%.0f'|format(overzicht.totale_omzet) }}</div>

@@ -363,16 +363,18 @@ def register_routes(app):
             for t in tellingen
         }
 
-        verkoop_regels = db.execute(
-            """SELECT t.datum, tr.verkocht, tr.verkoopprijs
-               FROM telling_regels tr
-               JOIN tellingen t ON t.id = tr.telling_id
-               WHERE tr.verkocht > 0"""
-        ).fetchall()
-
+        # Per week groeperen op basis van de tellingen zelf (al opgehaald
+        # hierboven, inclusief de omzet per telling) i.p.v. een aparte query
+        # over telling_regels -- scheelt een dubbele berekening van dezelfde
+        # som. Elke telling representeert de periode sinds de vórige telling;
+        # als die periode fors afwijkt van een week (bijv. een keer op
+        # vrijdag geteld i.p.v. de gebruikelijke dag) wordt de betreffende
+        # week als 'afwijkend' gemarkeerd, zodat bereken_trend() 'm kan
+        # negeren en de pagina het kan laten zien.
         weken = {}
-        for r in verkoop_regels:
-            dt = datetime.strptime(r["datum"], "%Y-%m-%d %H:%M")
+        vorige_datum = None
+        for t in sorted(tellingen, key=lambda t: t["datum"]):
+            dt = datetime.strptime(t["datum"], "%Y-%m-%d %H:%M")
             jaar, week, _ = dt.isocalendar()
             sleutel = (jaar, week)
             if sleutel not in weken:
@@ -384,8 +386,14 @@ def register_routes(app):
                     "van": maandag.strftime("%Y-%m-%d"),
                     "tot": zondag.strftime("%Y-%m-%d"),
                     "omzet": 0.0,
+                    "afwijkende_periode": False,
                 }
-            weken[sleutel]["omzet"] += r["verkocht"] * r["verkoopprijs"]
+            if vorige_datum is not None:
+                aantal_dagen = (dt.date() - vorige_datum.date()).days
+                if aantal_dagen < 5 or aantal_dagen > 9:
+                    weken[sleutel]["afwijkende_periode"] = True
+            weken[sleutel]["omzet"] += t["omzet"]
+            vorige_datum = dt
 
         omzet_per_week = sorted(
             weken.values(), key=lambda w: (w["jaar"], w["week"]), reverse=True

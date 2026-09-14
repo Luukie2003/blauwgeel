@@ -52,8 +52,17 @@ def bouw_mailtekst(overzicht):
         teken = "+" if overzicht["verschil_percentage"] >= 0 else ""
         verschil = f" ({teken}{overzicht['verschil_percentage']:.0f}% t.o.v. week ervoor)"
 
+    waarschuwing = ""
+    if overzicht["afwijkende_periode"]:
+        waarschuwing = (
+            "Let op: deze of de vorige week bevat een telling met een ongebruikelijk korte "
+            "of lange periode sinds de telling ervoor -- de omzetvergelijking hieronder kan "
+            "daardoor vertekend zijn.\n\n"
+        )
+
     return (
         f"Weekoverzicht {overzicht['week_van']:%d-%m-%Y} t/m {overzicht['week_tot']:%d-%m-%Y}\n\n"
+        f"{waarschuwing}"
         f"Omzet: € {overzicht['totale_omzet']:.2f}{verschil}\n\n"
         f"Top verkopers:\n{regels_top}\n\n"
         f"Onder minimumvoorraad:\n{regels_minimum}\n\n"

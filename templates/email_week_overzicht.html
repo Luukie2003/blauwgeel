@@ -29,6 +29,13 @@
   <tr>
     <td style="padding:24px; font-family:Arial, Helvetica, sans-serif; color:#1c2333;">
 
+      {% if overzicht.afwijkende_periode %}
+      <div style="background:#fdf3e2; color:#a6590a; border:1px solid #edc98d; border-radius:4px; padding:10px 14px; font-size:12px; margin-bottom:16px;">
+        Let op: deze of de vorige week bevat een telling met een ongebruikelijk korte of lange
+        periode sinds de telling ervoor. De omzetvergelijking hieronder kan daardoor vertekend zijn.
+      </div>
+      {% endif %}
+
       <div style="font-size:30px; font-weight:bold; color:#1c2333;">
         &euro; {{ '%.0f'|format(overzicht.totale_omzet) }}
         {% if overzicht.verschil_percentage is not none %}

@@ -490,6 +490,24 @@ fieldset.groupbox legend {
     white-space: nowrap;
 }
 
+.omzet-bar-trainingen {
+    font-size: 0.68rem;
+    margin-top: 0.15rem;
+    white-space: nowrap;
+}
+
+.omzet-bar-dagen {
+    font-size: 0.62rem;
+    color: var(--tekst-zacht);
+    margin-top: 0.15rem;
+    white-space: nowrap;
+}
+
+.omzet-bar-afwijkend {
+    outline: 2px dashed var(--oranje);
+    outline-offset: 1px;
+}
+
 .omzet-bar-tekort { background: var(--rood); }
 .omzet-bar-overschot { background: var(--groen); }
 

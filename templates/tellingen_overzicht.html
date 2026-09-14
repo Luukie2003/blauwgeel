@@ -49,6 +49,9 @@
                         {% if w.jaar == huidige_jaar and w.week == huidige_week %}
                         <span class="badge badge-neutraal">loopt nog</span>
                         {% endif %}
+                        {% if w.afwijkende_periode %}
+                        <span class="badge badge-uit" title="Bevat een telling met een ongebruikelijk korte of lange periode sinds de vorige telling -- vergelijk deze week met voorzichtigheid.">afwijkende periode</span>
+                        {% endif %}
                     </td>
                     <td>{{ w.van }} t/m {{ w.tot }}</td>
                     <td>{{ "€ %.2f"|format(w.omzet) }}</td>

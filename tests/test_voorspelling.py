@@ -84,6 +84,37 @@ def test_thuiswedstrijden_verhogen_het_verwachte_verbruik(db):
     assert verbruik_met > verbruik_zonder
 
 
+def test_trainingsavonden_verhogen_het_verwachte_verbruik(db):
+    """Alle teams trainen op dezelfde vaste avond (woensdag) -- de
+    tekortvoorspelling moet daar net als bij thuiswedstrijden rekening mee
+    houden, zonder dat iemand dat handmatig hoeft aan te geven. Vergelijkt
+    het resultaat met de formule zelf (i.p.v. 'met' vs 'zonder' te draaien),
+    want elk vooruitkijkvenster van >= 7 dagen bevat sowieso altijd minstens
+    één woensdag."""
+    product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    db.execute(
+        "UPDATE producten SET voorraad = 50, min_voorraad = 0 WHERE id = ?", (product["id"],)
+    )
+    db.commit()
+    _maak_historische_telling(db, product["id"], verkocht=100, dagen_geleden=7)
+
+    dagen_vooruit = 7
+    vandaag = date.today()
+    verwachte_trainingsavonden = sum(
+        1 for i in range(dagen_vooruit + 1) if (vandaag + timedelta(days=i)).weekday() == 2
+    )
+    assert verwachte_trainingsavonden >= 1
+
+    resultaat = bereken_voorspelde_tekorten(db, dagen_vooruit=dagen_vooruit)
+    verbruik = next(
+        r["verwacht_verbruik"] for r in resultaat if r["product"]["naam"] == product["naam"]
+    )
+    # gem_per_week (100) * periode_factor (1, want dagen_vooruit == 7) *
+    # wedstrijd_factor (1, geen wedstrijden) * training_factor * weer_factor (1, geen weerdata).
+    verwacht = 100 * (1 + 0.2 * verwachte_trainingsavonden)
+    assert verbruik == round(verwacht)
+
+
 def test_komende_thuiswedstrijden_koppelt_weer_op_datum(db):
     morgen = (date.today() + timedelta(days=1)).isoformat()
     db.execute(
