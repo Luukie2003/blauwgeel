@@ -13,8 +13,9 @@ from datetime import datetime
 from flask import render_template
 
 import mail
-from app import bereken_week_overzicht, create_app
+from app import create_app
 from database import get_db
+from helpers import bereken_week_overzicht
 
 SITE_URL = "https://www.kantineblauwgeel.nl"
 
