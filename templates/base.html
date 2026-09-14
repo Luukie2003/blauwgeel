@@ -96,6 +96,9 @@
             </div>
         </main>
     </div>
-    <footer>Kantine Beheer &middot; <a href="https://blauwgeel1915.nl" target="_blank" rel="noopener">s.v. Blauw-Geel 1915</a></footer>
+    <footer>
+        Kantine Beheer &middot; <a href="https://blauwgeel1915.nl" target="_blank" rel="noopener">s.v. Blauw-Geel 1915</a>
+        {% if huidige_gebruiker %} &middot; <a href="{{ url_for('tips_pagina') }}">💡 Tips &amp; functies</a>{% endif %}
+    </footer>
 </body>
 </html>

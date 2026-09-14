@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block titel %}Tips & functies{% endblock %}
+{% block inhoud %}
+<h1>Tips &amp; functies</h1>
+<p class="subtitel">
+    Deze app kan best veel &mdash; hieronder een overzicht per onderdeel, zodat je niets mist.
+    Bullets met 💡 zijn dingen die makkelijk over het hoofd worden gezien.
+</p>
+
+<div class="kaart">
+    <div style="display:flex; flex-wrap:wrap; gap:0.4rem">
+        <a href="#start" class="btn btn-rand btn-klein">Start</a>
+        <a href="#voorraad" class="btn btn-rand btn-klein">Voorraad</a>
+        <a href="#tellen" class="btn btn-rand btn-klein">Tellen</a>
+        <a href="#bestellen" class="btn btn-rand btn-klein">Bestellen</a>
+        <a href="#assortiment" class="btn btn-rand btn-klein">Assortiment</a>
+        <a href="#kassa" class="btn btn-rand btn-klein">Kassa</a>
+        <a href="#kluis" class="btn btn-rand btn-klein">Kluis</a>
+        <a href="#keuken" class="btn btn-rand btn-klein">Keuken</a>
+        <a href="#kiosk" class="btn btn-rand btn-klein">Kantine-tv</a>
+        <a href="#stemmen" class="btn btn-rand btn-klein">Stemmen</a>
+        <a href="#rapporten" class="btn btn-rand btn-klein">Rapporten</a>
+        <a href="#club" class="btn btn-rand btn-klein">Club (beheer)</a>
+        <a href="#account" class="btn btn-rand btn-klein">Account &amp; toegang</a>
+        <a href="#overal" class="btn btn-rand btn-klein">Handig overal</a>
+    </div>
+</div>
+
+<div class="kaart">
+    <h2 id="start">Start</h2>
+    <ul>
+        <li><strong>Dashboard</strong> &mdash; in één oogopslag lage voorraad, openstaande bestellingen, kassastatus en frituurvet, zodat je meteen weet wat er vandaag moet gebeuren.</li>
+        <li>💡 <strong>Omzettrend-grafiek</strong> &mdash; een balkgrafiekje van de omzet per dag met de bestverkopende producten, zodat je in één blik ziet of het drukker of rustiger was dan normaal.</li>
+        <li><strong>Prikbord (Bijzonderheden)</strong> &mdash; een gedeeld mededelingenbord met urgent-markering, reacties en afhandelen/heropenen, zodat belangrijke berichten niet verloren gaan in een WhatsApp-groep.</li>
+        <li>💡 <strong>@naam-vermelding</strong> &mdash; tik iemands naam met een @ in een mededeling of reactie en diegene krijgt automatisch een mailtje &mdash; handig om iemand persoonlijk aan te spreken zonder los te bellen/appen.</li>
+        <li>💡 <strong>Mededeling als banner pinnen</strong> &mdash; zet met één klik een belangrijk bericht bovenaan als banner op elke pagina voor iedereen, bijv. "pinapparaat kapot".</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="voorraad">Voorraad</h2>
+    <ul>
+        <li><strong>Voorraadoverzicht</strong> &mdash; totale voorraadwaarde per categorie én subcategorie, producten zonder voorraad/prijs, en de top-10 meest waardevolle producten.</li>
+        <li>💡 <strong>Subcategorie-rapportage</strong> &mdash; binnen elke hoofdcategorie zie je de verdeling naar subcategorie, bijv. binnen "Bier" wat fles versus fust oplevert.</li>
+        <li>💡 <strong>"Langst niet geteld"-signalering</strong> &mdash; laat zien welke producten al het langst niet zijn meegeteld, zodat niets structureel buiten de tellingen om blijft glippen.</li>
+        <li><strong>In/uit boeken</strong> &mdash; snel voorraad bijwerken bij een losse levering of verkoop/verbruik buiten de kassa om, met naam en opmerking, alles gelogd.</li>
+        <li><strong>Leveringen inboeken (bulk)</strong> &mdash; boek een hele factuur/levering in één keer in per besteleenheid (bijv. kratten).</li>
+        <li><strong>Geschiedenis</strong> &mdash; compleet logboek van alle voorraadmutaties, filterbaar per product.</li>
+        <li>💡 <strong>Automatisch op inactief bij voorraad 0</strong> &mdash; een product kan zichzelf uitschakelen zodra de voorraad op 0 komt, zodat een uitverkocht product niet blijft meetellen op bestellijst en tellijsten.</li>
+        <li><strong>Boodschappenlijst</strong> &mdash; losse afvinklijst voor inkopen buiten de vaste voorraad om (schoonmaakspullen e.d.), gedeeld met alle vrijwilligers.</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="tellen">Tellen</h2>
+    <ul>
+        <li><strong>Voorraad tellen</strong> &mdash; vul de werkelijk getelde voorraad in; het verschil wordt automatisch verwerkt als verkoop of correctie en sluit de periode af met een verkooprapport.</li>
+        <li><strong>Looplijst tellen</strong> &mdash; loop product voor product langs met je telefoon (eerst de bar, dan het hok), met een controlescherm voordat er iets wordt opgeslagen.</li>
+        <li>💡 <strong>Herstel van een onderbroken looplijst</strong> &mdash; sluit je tussentijds de app of valt het bereik weg, dan staan je al ingevulde tellingen bij terugkeer nog klaar &mdash; je hoeft niet opnieuw te beginnen.</li>
+        <li>💡 <strong>Afwijkende-telling-signalering</strong> &mdash; wijkt een telling sterk af van het gemiddelde van eerdere tellingen, dan waarschuwt het controlescherm je vóór het opslaan &mdash; vangt tikfouten af.</li>
+        <li><strong>Omzet per week + trend</strong> &mdash; alle tellingen op een rij met omzet per week en een trendindicatie t.o.v. eerdere weken.</li>
+        <li>💡 <strong>Tellingen combineren tot één PDF</strong> &mdash; selecteer zelf een aantal tellingen en download er één samengevoegd verkooprapport van, bijv. voor een heel toernooiweekend.</li>
+        <li>💡 <strong>Tellingregel achteraf corrigeren</strong> &mdash; corrigeer een verkeerd geteld aantal in een al afgeronde telling, voor als er bijv. een krat over het hoofd is gezien.</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="bestellen">Bestellen</h2>
+    <ul>
+        <li><strong>Automatische bestellijst</strong> &mdash; producten onder het minimum verschijnen vanzelf op een voorstellijst; aanvinken en versturen maakt de bestelling aan.</li>
+        <li>💡 <strong>Voorspelde tekorten</strong> &mdash; ook producten die nog boven het minimum zitten maar op basis van verkoophistorie, wedstrijden/trainingen en het weer waarschijnlijk krap gaan worden, worden alvast gesignaleerd.</li>
+        <li><strong>Bestelling handmatig klaarzetten</strong> &mdash; voor bestellingen die al telefonisch/online zijn geplaatst: leg ze vast zodat je ze later, bij binnenkomst, alleen nog hoeft in te boeken.</li>
+        <li><strong>Bestelling inboeken met manco/extra</strong> &mdash; vink per regel af wat echt binnen is; niet-aangevinkte regels tellen als manco, en extra meegeleverde producten voeg je meteen toe.</li>
+        <li>💡 <strong>QR-meldingen op de bestellijst</strong> &mdash; meldingen van bezoekers (via QR-scan zonder account) en van Verbruiksvoorwerpen komen gebundeld met een teller op de bestellijst, met een afhandelen-knop.</li>
+        <li><strong>Bestellijst als PDF</strong> &mdash; download de bestelvoorstellen als printbare PDF, handig om mee te nemen naar de groothandel.</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="assortiment">Assortiment</h2>
+    <ul>
+        <li><strong>Producten per categorie</strong> &mdash; inklapbaar per categorie, met een zoek-/filterbalk op naam, categorie en subcategorie.</li>
+        <li>💡 <strong>Bulk minimumvoorraad &amp; besteleenheid bewerken</strong> &mdash; pas voor meerdere producten tegelijk het minimum en de besteleenheid aan, in plaats van product voor product.</li>
+        <li>💡 <strong>Snel product toevoegen</strong> &mdash; vanaf de bestellijst of levering-inboeken kun je meteen een ontbrekend product aanmaken zonder het scherm te verlaten.</li>
+        <li>💡 <strong>Prijsgeschiedenis</strong> &mdash; elke wijziging van in- of verkoopprijs wordt gelogd, zodat je kunt terugzien wanneer en door wie een prijs is aangepast.</li>
+        <li>💡 <strong>Oude omzetcijfers blijven kloppen</strong> &mdash; een telling rekent altijd met de prijs die op dát moment gold, zodat een latere prijswijziging oude omzetcijfers niet met terugwerkende kracht verandert.</li>
+        <li><strong>Subcategorieën</strong> &mdash; maak subcategorieën aan onder een hoofdcategorie (bijv. "Bier" &rarr; "Fles"/"Fust") voor fijnmaziger overzicht en rapportage.</li>
+        <li><strong>Schaplabels met QR-code</strong> &mdash; print A4-schaplabels met logo, foto, minimumvoorraad en een QR-code, per product of in bulk.</li>
+        <li>💡 <strong>QR-scan zonder account</strong> &mdash; scan de QR-code op een schaplabel met elke telefooncamera en kom op een keuzescherm: naar de productpagina, of direct (zonder in te loggen) melden voor de bestellijst.</li>
+        <li>💡 <strong>In-app camera scanner</strong> &mdash; scan een schaplabel direct in de app zelf om meteen bij dat product uit te komen, zonder de camera-app te hoeven openen.</li>
+        <li><strong>Verbruiksvoorwerpen</strong> &mdash; aparte lijst voor dingen zonder eigen voorraad (bijv. bakjes, rietjes): alleen een naam voor een schaplabel en de bestellijst.</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="kassa">Kassa</h2>
+    <ul>
+        <li><strong>Kassa tellen per coupure</strong> &mdash; tel het kasgeld coupure voor coupure en vergelijk automatisch met het verwachte bedrag.</li>
+        <li>💡 <strong>Vier-ogen-principe</strong> &mdash; wie een kassatelling heeft gemaakt, kan die niet zomaar zelf goedkeuren &mdash; een tweede check op het tellen.</li>
+        <li>💡 <strong>Telling heropenen of achteraf corrigeren</strong> &mdash; pas een net afgesloten telling aan, of corrigeer later losstaand de omzet of het getelde bedrag, met volledige herleidbaarheid van wie/wanneer/waarom.</li>
+        <li><strong>Afdracht/toevoeging boeken</strong> &mdash; boek geld dat van de kassalade naar de kluis gaat (of andersom), met automatische verrekening in beide standen.</li>
+        <li><strong>Kassageschiedenis met trend</strong> &mdash; één tijdlijn van tellingen én afdrachten/toevoegingen, met een verschillentrend om structurele telverschillen te herkennen.</li>
+        <li><strong>Kassatelling als PDF</strong> &mdash; download een kasverslag met wie geteld en wie goedgekeurd heeft.</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="kluis">Kluis</h2>
+    <ul>
+        <li><strong>Kluis tellen per coupure</strong> &mdash; zelfde coupure-telling als bij de kassa, inclusief vier-ogen-principe bij goedkeuren.</li>
+        <li><strong>Storting/opname boeken</strong> &mdash; leg geldstromen van/naar de kluis vast, los van de kassalade-overboekingen.</li>
+        <li>💡 <strong>Kluisgeschiedenis met overboekingen</strong> &mdash; toont naast eigen tellingen/mutaties ook ter info de afdrachten/toevoegingen vanuit de kassa.</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="keuken">Keuken</h2>
+    <ul>
+        <li>💡 <strong>Eigen keuken-ingang</strong> &mdash; dezelfde Producten-pagina, maar vergrendeld op categorie "Keuken", zodat iemand met alleen keuken-rechten niet bij de rest van het assortiment kan.</li>
+        <li><strong>Frituurvet-vervanging bewaken</strong> &mdash; één knop om een vervanging te loggen; het dashboard waarschuwt zodra het ingestelde interval is verstreken.</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="kiosk">Kantine-tv (Kiosk)</h2>
+    <ul>
+        <li>💡 <strong>Kiosk-hub met cast-QR-codes</strong> &mdash; één startpagina met QR-codes om de prijzen-, dia- en gedeelde-scherm-pagina snel op een TV/Chromecast te openen.</li>
+        <li><strong>Prijzenscherm</strong> &mdash; een op TV te casten prijzenlijst per categorie die je zelf samenstelt, met live "uitverkocht"-markering per product.</li>
+        <li>💡 <strong>Ververst zichzelf</strong> &mdash; het prijzen- en diascherm herladen zichzelf zodra er iets wijzigt &mdash; niemand hoeft fysiek bij de TV te komen.</li>
+        <li>💡 <strong>Prijs-acties</strong> &mdash; tijdelijke actiemeldingen die af en toe over het prijzenscherm heen verschijnen, gekoppeld aan een bestaand product.</li>
+        <li>💡 <strong>Bardienstplanning op het scherm</strong> &mdash; wie er vandaag bardienst heeft, staat automatisch met tijden op het prijzenscherm.</li>
+        <li><strong>Sponsoren &amp; mededelingen-diashow</strong> &mdash; bouw een diashow met sponsorlogo's, foto's en mededelingen, elk met eigen sjabloon, duur en overgangseffect.</li>
+        <li>💡 <strong>Kiosk-sjabloonbouwer</strong> &mdash; bouw zelf een complete dia-lay-out (tekst/foto-vlakken vrij positioneren, kleuren, uitlijning) in plaats van een vast sjabloon te kiezen.</li>
+        <li>💡 <strong>Club van 20-beheer</strong> &mdash; houd leden bij met start-/einddatum en status, en toon ze met sterren per lidjaar op het scherm.</li>
+        <li>💡 <strong>Eén scherm wisselen tussen prijzen/dia's</strong> &mdash; heb je maar één fysieke TV? Wissel met een knop tussen de prijzenlijst en de diashow op datzelfde scherm.</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="stemmen">Stemmen</h2>
+    <ul>
+        <li><strong>Stemming aanmaken</strong> &mdash; maak een meerkeuze-stemvraag (bijv. "elftal van het jaar") met foto's per optie.</li>
+        <li>💡 <strong>Bierbibliotheek</strong> &mdash; eerder gebruikte stemopties (met foto) worden hergebruikt bij nieuwe stemmingen, zodat je niet steeds dezelfde foto's hoeft te uploaden.</li>
+        <li>💡 <strong>Publieke stempagina zonder account</strong> &mdash; bezoekers stemmen via een QR-code/link zonder in te loggen; dubbel stemmen wordt tegengegaan.</li>
+        <li><strong>Stemmen modereren</strong> &mdash; keur individuele stemmen goed/af (bijv. bij misbruik) zonder de hele stemming te hoeven verwijderen.</li>
+        <li>💡 <strong>Stemming-poster als PDF</strong> &mdash; genereer een poster met QR-code om op te hangen in de kantine.</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="rapporten">Rapporten</h2>
+    <ul>
+        <li><strong>Verkooprapport over een periode</strong> &mdash; kies zelf een periode en zie omzet/verkoop per product, met PDF- en CSV-export voor de boekhouding.</li>
+        <li>💡 <strong>Training/wedstrijd zichtbaar per omzetbalk</strong> &mdash; elke balk op het verkooprapport laat zien of er een training of thuiswedstrijd in die periode viel, plus het aantal dagen en de omzet per dag &mdash; zo zie je meteen of een piek klopt met de agenda, ongeacht op welke dag je toevallig hebt geteld. Een ongebruikelijk korte/lange periode wordt gemarkeerd zodat de weekvergelijking daar niet door vertekend raakt.</li>
+        <li>💡 <strong>Weekoverzicht-pagina</strong> &mdash; een kant-en-klare samenvatting van de laatst afgesloten week: omzet met vergelijking t.o.v. de vorige week, topverkopers, nieuwe mededelingen en producten zonder prijs.</li>
+        <li>💡 <strong>Wekelijkse omzet-e-mail</strong> &mdash; elke maandag krijgt wie dat wil (instelbaar bij "Mijn voorkeuren") hetzelfde weekoverzicht automatisch gemaild.</li>
+        <li>💡 <strong>Wedstrijden-overzicht met weer</strong> &mdash; komende thuiswedstrijden mét de weersverwachting van die dag, als indicatie hoe druk het kan worden.</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="club">Club (beheer)</h2>
+    <ul>
+        <li><strong>Accounts beheren</strong> &mdash; maak accounts aan (met welkomstmail om zelf een wachtwoord te kiezen), wijzig rol/e-mailadres, of verwijder ze.</li>
+        <li>💡 <strong>Rechten per sectie</strong> &mdash; naast de rol beheerder/vrijwilliger kun je per account precies aanvinken bij welke onderdelen (Voorraad, Kassa, Keuken, Stemmen) iemand mag.</li>
+        <li>💡 <strong>Teamagenda's koppelen</strong> &mdash; koppel de agenda-links van teams zodat wedstrijden automatisch worden opgehaald voor het wedstrijdenoverzicht en de kiosk.</li>
+        <li>💡 <strong>Automatische back-ups</strong> &mdash; dagelijks wordt automatisch een back-up gemaakt (90 dagen bewaard); je kunt ook zelf een back-up maken, downloaden of terugzetten.</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="account">Account &amp; toegang</h2>
+    <ul>
+        <li>💡 <strong>Wachtwoord vergeten</strong> &mdash; vraag zelf een reset-link per e-mail aan, zonder tussenkomst van een beheerder.</li>
+        <li>💡 <strong>Handterminal-weergave (PDA-modus)</strong> &mdash; een sterk vereenvoudigde, mobielvriendelijke weergave met alleen de vloertaken (tellen, boeken, kassa, bestellijst, prikbord). Wisselen kan met één link via "Welkom, [naam]" rechtsboven, en wordt onthouden per toestel.</li>
+        <li><strong>Mijn voorkeuren</strong> &mdash; stel zelf in of je factuurmeldingen en/of het wekelijkse omzetoverzicht per mail wilt ontvangen.</li>
+    </ul>
+</div>
+
+<div class="kaart">
+    <h2 id="overal">Handig overal</h2>
+    <ul>
+        <li><strong>PDF-export</strong> &mdash; bijna elk overzicht (bestellijst, voorraad, verkooprapport, tellingen, kassa/kluis, schaplabels, stemposter) is te downloaden als nette PDF.</li>
+        <li>💡 <strong>CSV-export voor Excel</strong> &mdash; voorraadoverzicht en verkooprapport zijn ook als CSV te downloaden voor eigen berekeningen.</li>
+        <li>💡 <strong>QR-scannen zonder account</strong> &mdash; schaplabels, stemposters en kiosk-cast-links zijn los scanbaar met een gewone telefooncamera, zonder in te loggen.</li>
+        <li>💡 <strong>Offline-bestendig boeken</strong> &mdash; lukt een boeking niet door slecht bereik, dan wordt hij lokaal bewaard en automatisch alsnog verstuurd zodra er weer verbinding is.</li>
+        <li>💡 <strong>Installeerbaar als app</strong> &mdash; zet de site als app op je beginscherm, met eigen icoon en een nette melding als het even geen verbinding heeft.</li>
+    </ul>
+</div>
+{% endblock %}

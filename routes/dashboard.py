@@ -25,8 +25,18 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.9.0"
+HUIDIGE_VERSIE = "1.10.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.10.0",
+        "datum": "14 september 2026",
+        "punten": [
+            "Nieuwe 'Tips & functies'-pagina met een overzicht van alle functies per onderdeel (link in de footer)",
+            "Verkooprapport laat nu per omzetbalk ook trainingsavonden zien (naast de bestaande thuiswedstrijden-indicator), plus het aantal dagen en de omzet per dag van die periode",
+            "Een ongebruikelijk korte of lange telperiode wordt gemarkeerd en genegeerd in de omzettrend en het weekoverzicht, zodat een andere teldag de cijfers niet vertekent",
+            "Tekortvoorspelling houdt nu ook rekening met trainingsavonden, naast wedstrijden en het weer",
+        ],
+    },
     {
         "versie": "1.9.0",
         "datum": "8 september 2026",
@@ -177,6 +187,10 @@ def register_routes(app):
         return render_template(
             "help.html", huidige_versie=HUIDIGE_VERSIE, wijzigingen=WIJZIGINGEN
         )
+
+    @app.route("/tips")
+    def tips_pagina():
+        return render_template("tips.html")
 
     def bereken_omzet_trend(db, aantal_dagen=8):
         """Omzet per dag (chronologisch, tellingen van dezelfde dag samengevoegd
