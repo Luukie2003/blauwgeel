@@ -1,3 +1,5 @@
+import sqlite3
+
 from flask import Response, flash, jsonify, redirect, render_template, request, session, url_for
 
 import qr
@@ -478,9 +480,25 @@ def register_routes(app):
             "SELECT * FROM producten WHERE id = ?", (product_id,)
         ).fetchone()
         if product:
-            db.execute("DELETE FROM producten WHERE id = ?", (product_id,))
-            db.commit()
-            flash(f"Product '{product['naam']}' verwijderd.", "success")
+            try:
+                db.execute("DELETE FROM producten WHERE id = ?", (product_id,))
+                db.commit()
+                flash(f"Product '{product['naam']}' verwijderd.", "success")
+            except sqlite3.IntegrityError:
+                # Product staat nog in bestellingen en/of tellingen
+                # (bestelregels/telling_regels hebben bewust geen ON DELETE
+                # CASCADE, om die geschiedenis nooit stilzwijgend te laten
+                # verdwijnen) -- i.p.v. een 500 gewoon vragen om het product
+                # op inactief te zetten, dat verbergt 'm net zo goed overal
+                # (bestellijst, tellen, kiosk) zonder de geschiedenis kwijt
+                # te raken.
+                db.rollback()
+                flash(
+                    f"'{product['naam']}' kan niet verwijderd worden: het staat nog in "
+                    "bestellingen en/of tellingen. Zet het product op inactief in plaats "
+                    "van te verwijderen -- dat verbergt 'm net zo goed.",
+                    "error",
+                )
         return redirect(url_for("producten_lijst"))
 
     # Endpoints waar het snel-toevoegen-formulier (pop-up) naar mag

@@ -7,6 +7,59 @@ def _zet_actief(client, db, product_id, actief):
         client.post(f"/producten/{product_id}/actief", data={"csrf_token": _csrf(client)})
 
 
+def test_verwijderen_van_product_met_bestelgeschiedenis_geeft_nette_foutmelding(ingelogde_client, db):
+    """bestelregels.product_id heeft bewust geen ON DELETE CASCADE (die
+    geschiedenis mag nooit stilzwijgend verdwijnen) -- verwijderen moet dus
+    netjes geweigerd worden i.p.v. een 500 (sqlite3.IntegrityError)."""
+    product = db.execute("SELECT id, naam FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    db.execute(
+        "INSERT INTO bestellingen (status, aangemaakt_op) VALUES ('besteld', '2026-01-01 10:00')"
+    )
+    bestelling_id = db.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
+    db.execute(
+        "INSERT INTO bestelregels (bestelling_id, product_id, aantal_besteld) VALUES (?, ?, 1)",
+        (bestelling_id, product["id"]),
+    )
+    db.commit()
+
+    resp = ingelogde_client.post(
+        f"/producten/{product['id']}/verwijderen",
+        data={"csrf_token": _csrf(ingelogde_client)},
+    )
+    assert resp.status_code == 302
+
+    nog_aanwezig = db.execute(
+        "SELECT id FROM producten WHERE id = ?", (product["id"],)
+    ).fetchone()
+    assert nog_aanwezig is not None
+
+    vervolg = ingelogde_client.get(resp.headers["Location"])
+    assert "kan niet verwijderd worden" in vervolg.data.decode()
+
+
+def test_verwijderen_van_product_met_tellinggeschiedenis_geeft_nette_foutmelding(ingelogde_client, db):
+    product = db.execute("SELECT id, naam FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+    db.execute("INSERT INTO tellingen (datum, naam) VALUES ('2026-01-01', 'Test')")
+    telling_id = db.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
+    db.execute(
+        """INSERT INTO telling_regels (telling_id, product_id, voorraad_voor, geteld_aantal)
+           VALUES (?, ?, 10, 8)""",
+        (telling_id, product["id"]),
+    )
+    db.commit()
+
+    resp = ingelogde_client.post(
+        f"/producten/{product['id']}/verwijderen",
+        data={"csrf_token": _csrf(ingelogde_client)},
+    )
+    assert resp.status_code == 302
+
+    nog_aanwezig = db.execute(
+        "SELECT id FROM producten WHERE id = ?", (product["id"],)
+    ).fetchone()
+    assert nog_aanwezig is not None
+
+
 def test_inactieve_producten_staan_onderaan_op_productenlijst(ingelogde_client, db):
     actief = db.execute("SELECT id, naam FROM producten WHERE actief = 1 LIMIT 1").fetchone()
     ander = db.execute(

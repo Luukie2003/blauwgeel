@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.11.0"
+HUIDIGE_VERSIE = "1.11.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.11.1",
+        "datum": "16 september 2026",
+        "punten": [
+            "Een product verwijderen dat nog in een bestelling of telling voorkomt gaf een foutpagina -- geeft nu een duidelijke melding met het advies om het product op inactief te zetten in plaats van te verwijderen",
+        ],
+    },
     {
         "versie": "1.11.0",
         "datum": "16 september 2026",
