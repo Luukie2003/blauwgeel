@@ -252,21 +252,44 @@
         }
 
         // ---------- Bardienst: gele balk aan/uit op basis van de klok ----------
-        // Puur client-side (geen herlaad-roundtrip nodig): de bardiensten van
-        // vandaag staan al in de pagina, en elke tik wordt opnieuw bepaald of
-        // er nu een tijdvak actief is. Wijzigt een beheerder de planning
-        // terwijl het scherm al open staat, dan komt dat via de gewone
-        // 10s-versiepoll hieronder alsnog door (herlaadt de hele pagina).
+        // Puur client-side (geen herlaad-roundtrip nodig): de bardiensten
+        // rond vandaag staan al in de pagina (zie _bardiensten_vandaag in
+        // routes/kiosk.py -- bewust ook gisteren/morgen erbij, want de
+        // server draait op UTC terwijl dit scherm in Europe/Amsterdam
+        // staat), en elke tik wordt hier opnieuw met de EIGEN klok van dit
+        // scherm bepaald of er nu een tijdvak actief is. Dat voorkomt dat
+        // een dienst rond middernacht een paar uur te vroeg/laat verschijnt
+        // door het tijdzoneverschil, en ondersteunt meteen ook een dienst
+        // die middernacht overschrijdt (bijv. 22:00-01:00). Wijzigt een
+        // beheerder de planning terwijl het scherm al open staat, dan komt
+        // dat via de gewone 10s-versiepoll hieronder alsnog door (herlaadt
+        // de hele pagina).
         var bardienstenVandaag = {{ bardiensten_vandaag|tojson }};
+
+        function tweeCijfers(getal) {
+            return ('0' + getal).slice(-2);
+        }
 
         function werkBardienstBij() {
             var balk = document.getElementById('bardienst-balk');
             if (!balk) return;
             var nu = new Date();
-            var huidigeTijd = ('0' + nu.getHours()).slice(-2) + ':' + ('0' + nu.getMinutes()).slice(-2);
+            var vandaag = nu.getFullYear() + '-' + tweeCijfers(nu.getMonth() + 1) + '-' + tweeCijfers(nu.getDate());
+            var gisterenDatum = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() - 1);
+            var gisteren = gisterenDatum.getFullYear() + '-' + tweeCijfers(gisterenDatum.getMonth() + 1) + '-' + tweeCijfers(gisterenDatum.getDate());
+            var huidigeTijd = tweeCijfers(nu.getHours()) + ':' + tweeCijfers(nu.getMinutes());
+
             var actief = bardienstenVandaag.filter(function (b) {
-                return huidigeTijd >= b.start_tijd && huidigeTijd < b.eind_tijd;
+                var overNacht = b.eind_tijd <= b.start_tijd;
+                if (b.datum === vandaag) {
+                    return overNacht ? huidigeTijd >= b.start_tijd : (huidigeTijd >= b.start_tijd && huidigeTijd < b.eind_tijd);
+                }
+                if (b.datum === gisteren && overNacht) {
+                    return huidigeTijd < b.eind_tijd;
+                }
+                return false;
             })[0];
+
             document.body.classList.toggle('heeft-bardienst', !!actief);
             balk.textContent = actief ? 'Bardienst: ' + actief.namen : '';
         }

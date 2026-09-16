@@ -1,7 +1,7 @@
 import hashlib
 import json
 import sqlite3
-from datetime import date
+from datetime import date, timedelta
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
 
@@ -320,17 +320,25 @@ def register_routes(app):
         return [p["naam"] for _, lijst in categorieen for p in lijst if p["kiosk_uitverkocht"]]
 
     def _bardiensten_vandaag(db):
-        """Bardiensten voor vandaag, op tijd gesorteerd -- geen wekelijks
-        terugkerend rooster, dus alleen rijen met exact de datum van vandaag
-        tellen mee (zie kiosk_bardienst hieronder voor de planning zelf)."""
+        """Bardiensten rond vandaag, op datum+tijd gesorteerd -- geen
+        wekelijks terugkerend rooster, dus alleen echte datums tellen mee
+        (zie kiosk_bardienst hieronder voor de planning zelf). Haalt bewust
+        ook gisteren en morgen op (serverdatum) i.p.v. alleen exact vandaag:
+        de server draait op UTC terwijl het scherm in Europe/Amsterdam
+        staat, dus rond middernacht kan de serverdatum een paar uur
+        achterlopen op de kloktijd van de kantine zelf. Welke dienst nu
+        precies actief is (en het afhandelen van een dienst die middernacht
+        overschrijdt, bijv. 22:00-01:00) wordt daarom client-side bepaald
+        met de eigen klok van het scherm, zie kiosk_prijzen_scherm.html."""
+        vandaag = date.today()
         return db.execute(
-            "SELECT * FROM kiosk_bardiensten WHERE datum = ? ORDER BY start_tijd",
-            (date.today().isoformat(),),
+            "SELECT * FROM kiosk_bardiensten WHERE datum BETWEEN ? AND ? ORDER BY datum, start_tijd",
+            ((vandaag - timedelta(days=1)).isoformat(), (vandaag + timedelta(days=1)).isoformat()),
         ).fetchall()
 
     def _bardiensten_voor_scherm(bardiensten):
         return [
-            {"start_tijd": b["start_tijd"], "eind_tijd": b["eind_tijd"], "namen": b["namen"]}
+            {"datum": b["datum"], "start_tijd": b["start_tijd"], "eind_tijd": b["eind_tijd"], "namen": b["namen"]}
             for b in bardiensten
         ]
 
@@ -352,7 +360,7 @@ def register_routes(app):
                 for naam, lijst in categorieen
             ],
             [(a["id"], a["tekst"], a["product_naam"], a["verkoopprijs"], a["afbeelding"]) for a in acties],
-            [(b["id"], b["start_tijd"], b["eind_tijd"], b["namen"]) for b in bardiensten],
+            [(b["id"], b["datum"], b["start_tijd"], b["eind_tijd"], b["namen"]) for b in bardiensten],
             *extra,
         )
 

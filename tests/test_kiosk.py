@@ -1472,12 +1472,21 @@ def test_bardienst_zonder_namen_geeft_foutmelding(ingelogde_client, db):
     assert db.execute("SELECT COUNT(*) AS n FROM kiosk_bardiensten").fetchone()["n"] == 0
 
 
-def test_prijzenscherm_toont_alleen_bardienst_van_vandaag(client, db):
+def test_prijzenscherm_stuurt_gisteren_vandaag_en_morgen_mee(client, db):
+    """De server haalt bewust een venster van 3 dagen op (i.p.v. alleen
+    exact vandaag): de server draait op UTC terwijl het scherm in
+    Europe/Amsterdam staat, dus 'vandaag' kan rond middernacht een paar uur
+    verschillen. Welke dienst nu precies actief is, bepaalt de JS zelf aan
+    de hand van datum+klok van het scherm (zie test_kiosk_prijzen* hieronder
+    voor een dienst die middernacht overschrijdt)."""
+    gisteren = (date.today() - timedelta(days=1)).isoformat()
     vandaag = date.today().isoformat()
     morgen = (date.today() + timedelta(days=1)).isoformat()
+    eergisteren = (date.today() - timedelta(days=2)).isoformat()
+    _voeg_bardienst_toe(db, gisteren, "22:00", "23:59", "Gister Team")
     _voeg_bardienst_toe(db, vandaag, "15:00", "17:00", "Luuk & Femke")
-    _voeg_bardienst_toe(db, vandaag, "17:00", "19:00", "Bart & Peter")
     _voeg_bardienst_toe(db, morgen, "15:00", "17:00", "Morgen Team")
+    _voeg_bardienst_toe(db, eergisteren, "15:00", "17:00", "Te Ver Terug")
 
     resp = client.get("/kiosk/prijzen")
     tekst = resp.data.decode()
@@ -1486,9 +1495,10 @@ def test_prijzenscherm_toont_alleen_bardienst_van_vandaag(client, db):
     # De namen zitten in de JSON voor de JS (bardiensten_vandaag|tojson),
     # waar Jinja '&' veiligheidshalve als & escaped -- vandaar niet op
     # de letterlijke tekens zoeken, maar op de losse woorden.
+    assert "Gister Team" in tekst
     assert "Luuk" in tekst and "Femke" in tekst
-    assert "Bart" in tekst and "Peter" in tekst
-    assert "Morgen Team" not in tekst
+    assert "Morgen Team" in tekst
+    assert "Te Ver Terug" not in tekst
     assert "bardienst-balk" in tekst
 
 
