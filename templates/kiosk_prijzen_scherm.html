@@ -22,6 +22,8 @@
             background: linear-gradient(160deg, var(--blauw) 0%, var(--blauw-donker) 100%);
             color: #fff;
             padding: 2.2rem 3rem;
+            display: flex;
+            flex-direction: column;
         }
         header {
             display: flex;
@@ -75,13 +77,17 @@
         }
         .leeg { color: var(--tekst-zacht); font-size: 1.3rem; margin-top: 2rem; }
 
-        /* Bardienst: vaste gele balk onderaan, alleen zichtbaar zolang er nu
-           een bardienst-tijdvak actief is (zie de JS onderaan). */
-        body.heeft-bardienst { padding-bottom: 5.5rem; }
+        /* Bardienst: gele balk onderaan, alleen zichtbaar zolang er nu een
+           bardienst-tijdvak actief is (zie de JS onderaan). Bewust GEEN
+           position:fixed meer: dat overlapte de laatste prijsregels zodra
+           de prijslijst zelf al (bijna) de volledige schermhoogte vulde --
+           met de balk gewoon in de document-flow (en margin-top:auto om 'm
+           bij een korte lijst toch onderaan te duwen, zoals een sticky
+           footer) kan 'm nooit meer overlappen: hij schuift content omlaag
+           i.p.v. eroverheen te vallen. */
         .bardienst-balk {
             display: none;
-            position: fixed;
-            left: 0; right: 0; bottom: 0;
+            margin-top: auto;
             background: var(--geel);
             color: var(--blauw-donker);
             font-weight: 800;
@@ -89,7 +95,6 @@
             text-align: center;
             padding: 1rem 1.5rem;
             letter-spacing: 0.01em;
-            z-index: 4;
         }
         body.heeft-bardienst .bardienst-balk { display: block; }
 
