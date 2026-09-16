@@ -165,6 +165,18 @@
                        {{ 'checked' if product and product.kiosk_uitverkocht }}>
                 Als uitverkocht markeren op het prijzenscherm
             </label>
+            <div class="veld" style="margin-top:0.8rem">
+                <label for="kiosk_categorie">Categorie op het prijzenscherm</label>
+                <select id="kiosk_categorie" name="kiosk_categorie">
+                    <option value="">Zelfde als categorie hierboven</option>
+                    {% for c in categorieen %}
+                    <option value="{{ c.naam }}" {{ 'selected' if product and product.kiosk_categorie == c.naam else '' }}>{{ c.naam }}</option>
+                    {% endfor %}
+                </select>
+                <span class="tekst-zacht">Alleen voor de indeling op dit scherm, de echte categorie hierboven
+                    (tellen, rapportage) blijft ongewijzigd. Handig voor prijsopties die je liever onder een
+                    andere categorie toont, bijv. een pitcher/glas uit een fust onder "Bier" i.p.v. "Telling".</span>
+            </div>
         </fieldset>
         <fieldset class="groupbox">
             <legend>Prijsopties op het prijzenscherm (optioneel)</legend>

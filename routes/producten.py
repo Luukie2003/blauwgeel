@@ -309,8 +309,8 @@ def register_routes(app):
                    (artikelcode, naam, categorie, subcategorie, eenheid, voorraad, min_voorraad,
                     bestel_hoeveelheid, verkoopprijs, inkoopprijs, actief, besteleenheid,
                     besteleenheid_factor, opmerking, afbeelding, glazen_per_fust, prijs_per_glas,
-                    auto_inactief_bij_nul, toon_op_kiosk, kiosk_uitverkocht)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    auto_inactief_bij_nul, toon_op_kiosk, kiosk_uitverkocht, kiosk_categorie)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
                     request.form["naam"].strip(),
@@ -332,6 +332,7 @@ def register_routes(app):
                     auto_inactief_bij_nul,
                     1 if request.form.get("toon_op_kiosk") else 0,
                     1 if request.form.get("kiosk_uitverkocht") else 0,
+                    request.form.get("kiosk_categorie", "").strip() or None,
                 ),
             ).lastrowid
             vervang_product_prijsopties(db, nieuw_id)
@@ -411,7 +412,8 @@ def register_routes(app):
                        voorraad = ?, min_voorraad = ?, bestel_hoeveelheid = ?, verkoopprijs = ?,
                        inkoopprijs = ?, actief = ?, besteleenheid = ?, besteleenheid_factor = ?,
                        opmerking = ?, afbeelding = ?, glazen_per_fust = ?, prijs_per_glas = ?,
-                       auto_inactief_bij_nul = ?, toon_op_kiosk = ?, kiosk_uitverkocht = ?
+                       auto_inactief_bij_nul = ?, toon_op_kiosk = ?, kiosk_uitverkocht = ?,
+                       kiosk_categorie = ?
                    WHERE id = ?""",
                 (
                     request.form.get("artikelcode", "").strip() or None,
@@ -434,6 +436,7 @@ def register_routes(app):
                     auto_inactief_bij_nul,
                     1 if request.form.get("toon_op_kiosk") else 0,
                     1 if request.form.get("kiosk_uitverkocht") else 0,
+                    request.form.get("kiosk_categorie", "").strip() or None,
                     product_id,
                 ),
             )

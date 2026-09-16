@@ -25,8 +25,16 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.11.2"
+HUIDIGE_VERSIE = "1.11.3"
 WIJZIGINGEN = [
+    {
+        "versie": "1.11.3",
+        "datum": "16 september 2026",
+        "punten": [
+            "Product bewerken heeft een nieuw veld 'Categorie op het prijzenscherm' -- handig om bijv. prijsopties van een fust (pitcher/glas) onder een bestaande verkoopcategorie zoals 'Bier' te tonen in plaats van onder de echte (tel)categorie",
+            "Kolommen op het prijzenscherm die per ongeluk niet mooi op een lijn stonden met de rest, staan nu weer netjes uitgelijnd",
+        ],
+    },
     {
         "versie": "1.11.2",
         "datum": "16 september 2026",

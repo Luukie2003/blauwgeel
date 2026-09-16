@@ -39,9 +39,19 @@
             column-width: 24rem;
             column-gap: 2.5rem;
         }
+        /* margin-top i.p.v. margin-bottom, en niet op het eerste blok: een
+           TRAILEND margin-bottom vlak vóór een kolom-afbreking (CSS-
+           meerkoloms-layout) telt soms niet mee in de hoogteberekening die
+           de browser gebruikt om de kolommen te balanceren, wat een kop
+           van een volgende kolom een stukje kan laten "zakken" t.o.v. de
+           koppen ernaast. Met de marge alleen aan de bovenkant van een
+           niet-eerste blok speelt dat niet: die marge zit dan nooit aan het
+           einde van een kolom. */
         .categorie-blok {
             break-inside: avoid;
-            margin-bottom: 1.6rem;
+        }
+        .categorie-blok + .categorie-blok {
+            margin-top: 1.6rem;
         }
         .categorie-blok h2 {
             font-size: 1.3rem;

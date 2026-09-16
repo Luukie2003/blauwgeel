@@ -306,6 +306,13 @@ def register_routes(app):
 
         per_categorie = {}
         for p in producten:
+            # kiosk_categorie is een optionele override, alleen voor de
+            # indeling op dit scherm -- de echte categorie (tellen,
+            # rapportage) blijft ongemoeid. Handig voor een product met
+            # prijsopties (bijv. een fust in categorie 'Telling') dat je
+            # liever onder een bestaande verkoopcategorie toont, bijv.
+            # 'Bier'.
+            weergave_categorie = p["kiosk_categorie"] or p["categorie"]
             opties = opties_per_product.get(p["id"])
             if opties:
                 # Een fust-achtig product wordt zelf niet in zijn geheel
@@ -315,7 +322,7 @@ def register_routes(app):
                 # uitverkocht gemarkeerd (leeg fust), dan geldt dat voor elke
                 # portie ervan.
                 for optie in opties:
-                    per_categorie.setdefault(p["categorie"], []).append(
+                    per_categorie.setdefault(weergave_categorie, []).append(
                         {
                             "id": optie["id"],
                             "naam": optie["naam"],
@@ -324,7 +331,13 @@ def register_routes(app):
                         }
                     )
             else:
-                per_categorie.setdefault(p["categorie"], []).append(p)
+                per_categorie.setdefault(weergave_categorie, []).append(p)
+        # Op naam sorteren binnen de groep: door de kiosk_categorie-override
+        # kunnen producten uit verschillende echte categorieën in dezelfde
+        # groep belanden, in een andere volgorde dan de SQL ORDER BY hierboven
+        # (die op de ECHTE categorie sorteert) garandeert.
+        for lijst in per_categorie.values():
+            lijst.sort(key=lambda p: p["naam"].lower())
         return sorted(per_categorie.items())
 
     def _acties_actief(db):

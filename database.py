@@ -180,6 +180,13 @@ KOLOM_MIGRATIES = [
     # de Chromecast zelf aan te raken; de losse /kiosk/prijzen en
     # /kiosk/scherm blijven hierdoor ongewijzigd.
     ("kiosk_scherm_instellingen", "actief_tv_scherm", "TEXT NOT NULL DEFAULT 'prijzen'"),
+    # Optionele override van de categorie-kop waaronder dit product op het
+    # prijzenscherm valt -- handig voor een product met prijsopties (bijv.
+    # een fust in categorie 'Telling') dat je liever onder een bestaande
+    # verkoopcategorie toont (bijv. 'Bier'), zonder de echte categorie (die
+    # telmethode/rapportage bepaalt) aan te passen. Leeg = gewoon de eigen
+    # categorie, zoals voorheen. Zie _prijzen_categorieen in routes/kiosk.py.
+    ("producten", "kiosk_categorie", "TEXT"),
 ]
 
 

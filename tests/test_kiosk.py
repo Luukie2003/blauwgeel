@@ -186,6 +186,62 @@ def test_product_formulier_slaat_prijsopties_op(ingelogde_client, db):
     ]
 
 
+def test_product_formulier_slaat_kiosk_categorie_override_op(ingelogde_client, db):
+    """kiosk_categorie is een optionele override, alleen voor de indeling op
+    het prijzenscherm (bijv. een fust in categorie 'Telling' onder 'Bier'
+    tonen) -- de echte categorie blijft ongemoeid."""
+    product_id = _voeg_product_toe(db, "Testfust Hertog Jan", categorie="Telling", toon_op_kiosk=1)
+    product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+
+    resp = ingelogde_client.post(
+        f"/producten/{product_id}/bewerken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "naam": product["naam"],
+            "categorie": product["categorie"],
+            "eenheid": product["eenheid"],
+            "voorraad": product["voorraad"],
+            "min_voorraad": product["min_voorraad"],
+            "bestel_hoeveelheid": product["bestel_hoeveelheid"],
+            "verkoopprijs": product["verkoopprijs"],
+            "besteleenheid_factor": 1,
+            "actief": "on",
+            "toon_op_kiosk": "on",
+            "kiosk_categorie": "Bier",
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+
+    bijgewerkt = db.execute(
+        "SELECT categorie, kiosk_categorie FROM producten WHERE id = ?", (product_id,)
+    ).fetchone()
+    assert bijgewerkt["categorie"] == "Telling"
+    assert bijgewerkt["kiosk_categorie"] == "Bier"
+
+
+def test_prijzenscherm_groepeert_op_kiosk_categorie_override(client, db):
+    """Prijsopties van een fust in 'Telling' met een kiosk_categorie-override
+    verschijnen onder de overrule-categorie i.p.v. onder 'Telling'."""
+    product_id = _voeg_product_toe(db, "Testfust Radler", categorie="Telling", toon_op_kiosk=1)
+    db.execute("UPDATE producten SET kiosk_categorie = 'Bier' WHERE id = ?", (product_id,))
+    db.execute(
+        """INSERT INTO product_prijsopties (product_id, naam, prijs, volgorde) VALUES
+               (?, 'Radler pitcher', 12.0, 0), (?, 'Radler glas', 2.0, 1)""",
+        (product_id, product_id),
+    )
+    _voeg_product_toe(db, "Radler Fles", categorie="Bier", prijs=2.2, toon_op_kiosk=1)
+    db.commit()
+
+    resp = client.get("/kiosk/prijzen")
+    tekst = resp.data.decode()
+
+    assert resp.status_code == 200
+    assert "Telling" not in tekst
+    bier_index = tekst.index(">Bier<")
+    assert bier_index < tekst.index("Radler glas") < tekst.index("Radler pitcher")
+
+
 def test_product_formulier_negeert_lege_prijsoptie_regels(ingelogde_client, db):
     """Een leeggelaten extra rij in de bouwer (bijv. na op '+ Optie
     toevoegen' te klikken zonder 'm in te vullen) mag geen kale optie
