@@ -11,6 +11,7 @@ from helpers import (
     is_ajax_verzoek,
     now_str,
     sla_afbeelding_op,
+    vervang_product_prijsopties,
 )
 from pdf import schaplabels_pdf, voorraadoverzicht_pdf
 
@@ -301,7 +302,7 @@ def register_routes(app):
             gedwongen_inactief = bool(auto_inactief_bij_nul and nieuwe_voorraad <= 0 and actief)
             if gedwongen_inactief:
                 actief = 0
-            db.execute(
+            nieuw_id = db.execute(
                 """INSERT INTO producten
                    (artikelcode, naam, categorie, subcategorie, eenheid, voorraad, min_voorraad,
                     bestel_hoeveelheid, verkoopprijs, inkoopprijs, actief, besteleenheid,
@@ -330,7 +331,8 @@ def register_routes(app):
                     1 if request.form.get("toon_op_kiosk") else 0,
                     1 if request.form.get("kiosk_uitverkocht") else 0,
                 ),
-            )
+            ).lastrowid
+            vervang_product_prijsopties(db, nieuw_id)
             db.commit()
             flash(f"Product '{request.form['naam']}' toegevoegd.", "success")
             if gedwongen_inactief:
@@ -354,6 +356,7 @@ def register_routes(app):
             categorieen=categorieen,
             subcategorieen=subcategorieen,
             voorgestelde_categorie=request.args.get("categorie", "").strip(),
+            prijsopties=[],
         )
 
     @app.route("/producten/<int:product_id>/bewerken", methods=["GET", "POST"])
@@ -432,6 +435,7 @@ def register_routes(app):
                     product_id,
                 ),
             )
+            vervang_product_prijsopties(db, product_id)
             db.commit()
             flash(f"Product '{request.form['naam']}' bijgewerkt.", "success")
             if gedwongen_inactief:
@@ -454,12 +458,17 @@ def register_routes(app):
                ORDER BY datum DESC, id DESC""",
             (product_id,),
         ).fetchall()
+        prijsopties = db.execute(
+            "SELECT * FROM product_prijsopties WHERE product_id = ? ORDER BY volgorde, id",
+            (product_id,),
+        ).fetchall()
         return render_template(
             "product_form.html",
             product=product,
             categorieen=categorieen,
             subcategorieen=subcategorieen,
             prijs_geschiedenis=prijs_geschiedenis,
+            prijsopties=prijsopties,
         )
 
     @app.route("/producten/<int:product_id>/verwijderen", methods=["POST"])

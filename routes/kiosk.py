@@ -298,9 +298,33 @@ def register_routes(app):
                WHERE actief = 1 AND toon_op_kiosk = 1
                ORDER BY categorie, naam"""
         ).fetchall()
+        opties_per_product = {}
+        for optie in db.execute(
+            "SELECT * FROM product_prijsopties ORDER BY product_id, volgorde, id"
+        ).fetchall():
+            opties_per_product.setdefault(optie["product_id"], []).append(optie)
+
         per_categorie = {}
         for p in producten:
-            per_categorie.setdefault(p["categorie"], []).append(p)
+            opties = opties_per_product.get(p["id"])
+            if opties:
+                # Een fust-achtig product wordt zelf niet in zijn geheel
+                # verkocht: i.p.v. de eigen verkoopprijs tonen we de losse
+                # porties die eruit getapt/geschonken worden (bijv. pitcher
+                # of glas, zie product_form.html). Is het hele product als
+                # uitverkocht gemarkeerd (leeg fust), dan geldt dat voor elke
+                # portie ervan.
+                for optie in opties:
+                    per_categorie.setdefault(p["categorie"], []).append(
+                        {
+                            "id": optie["id"],
+                            "naam": optie["naam"],
+                            "verkoopprijs": optie["prijs"],
+                            "kiosk_uitverkocht": p["kiosk_uitverkocht"],
+                        }
+                    )
+            else:
+                per_categorie.setdefault(p["categorie"], []).append(p)
         return sorted(per_categorie.items())
 
     def _acties_actief(db):

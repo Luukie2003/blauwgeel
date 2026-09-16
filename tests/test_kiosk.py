@@ -148,6 +148,108 @@ def test_product_formulier_slaat_kiosk_vlaggen_op(ingelogde_client, db):
     assert bijgewerkt["kiosk_uitverkocht"] == 1
 
 
+def test_product_formulier_slaat_prijsopties_op(ingelogde_client, db):
+    """Losse porties uit 1 product (bijv. pitcher/glas uit een fust) zijn op
+    het productformulier te beheren via de parallelle optie_naam/optie_prijs-
+    velden (zie prijsopties-lijst in product_form.html)."""
+    product_id = _voeg_product_toe(db, "Fust Jupiler", prijs=80.0, toon_op_kiosk=1)
+    product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+
+    resp = ingelogde_client.post(
+        f"/producten/{product_id}/bewerken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "naam": product["naam"],
+            "categorie": product["categorie"],
+            "eenheid": product["eenheid"],
+            "voorraad": product["voorraad"],
+            "min_voorraad": product["min_voorraad"],
+            "bestel_hoeveelheid": product["bestel_hoeveelheid"],
+            "verkoopprijs": product["verkoopprijs"],
+            "besteleenheid_factor": 1,
+            "actief": "on",
+            "toon_op_kiosk": "on",
+            "optie_naam": ["Jupiler pitcher", "Jupiler glas"],
+            "optie_prijs": ["12.00", "2.00"],
+        },
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+
+    opties = db.execute(
+        "SELECT naam, prijs FROM product_prijsopties WHERE product_id = ? ORDER BY volgorde",
+        (product_id,),
+    ).fetchall()
+    assert [dict(o) for o in opties] == [
+        {"naam": "Jupiler pitcher", "prijs": 12.0},
+        {"naam": "Jupiler glas", "prijs": 2.0},
+    ]
+
+
+def test_product_formulier_negeert_lege_prijsoptie_regels(ingelogde_client, db):
+    """Een leeggelaten extra rij in de bouwer (bijv. na op '+ Optie
+    toevoegen' te klikken zonder 'm in te vullen) mag geen kale optie
+    opleveren."""
+    product_id = _voeg_product_toe(db, "Fust Radler", toon_op_kiosk=1)
+    product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+
+    ingelogde_client.post(
+        f"/producten/{product_id}/bewerken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "naam": product["naam"],
+            "categorie": product["categorie"],
+            "eenheid": product["eenheid"],
+            "voorraad": product["voorraad"],
+            "min_voorraad": product["min_voorraad"],
+            "bestel_hoeveelheid": product["bestel_hoeveelheid"],
+            "verkoopprijs": product["verkoopprijs"],
+            "besteleenheid_factor": 1,
+            "actief": "on",
+            "optie_naam": ["Radler glas", ""],
+            "optie_prijs": ["2.00", "0.00"],
+        },
+        content_type="multipart/form-data",
+    )
+
+    opties = db.execute(
+        "SELECT naam FROM product_prijsopties WHERE product_id = ?", (product_id,)
+    ).fetchall()
+    assert [o["naam"] for o in opties] == ["Radler glas"]
+
+
+def test_product_formulier_kan_prijsopties_weer_verwijderen(ingelogde_client, db):
+    product_id = _voeg_product_toe(db, "Fust Test", toon_op_kiosk=1)
+    product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+    db.execute(
+        "INSERT INTO product_prijsopties (product_id, naam, prijs, volgorde) VALUES (?, 'Glas', 2.0, 0)",
+        (product_id,),
+    )
+    db.commit()
+
+    ingelogde_client.post(
+        f"/producten/{product_id}/bewerken",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "naam": product["naam"],
+            "categorie": product["categorie"],
+            "eenheid": product["eenheid"],
+            "voorraad": product["voorraad"],
+            "min_voorraad": product["min_voorraad"],
+            "bestel_hoeveelheid": product["bestel_hoeveelheid"],
+            "verkoopprijs": product["verkoopprijs"],
+            "besteleenheid_factor": 1,
+            "actief": "on",
+        },
+        content_type="multipart/form-data",
+    )
+
+    aantal = db.execute(
+        "SELECT COUNT(*) AS n FROM product_prijsopties WHERE product_id = ?", (product_id,)
+    ).fetchone()["n"]
+    assert aantal == 0
+
+
 def test_product_toon_op_kiosk_wisselen_via_ajax(ingelogde_client, db):
     """Het losse schuifje op de Kiosk-pagina in de PDA-weergave -- 1 tik,
     direct opgeslagen, geen 'Alles opslaan' nodig."""
@@ -267,6 +369,51 @@ def test_prijzenscherm_toont_uitverkocht_duidelijk(client, db):
     assert b"Bijna Op" in resp.data
     assert b"Uitverkocht" in resp.data
     assert b"prijs-regel--uitverkocht" in resp.data
+
+
+def test_prijzenscherm_toont_prijsopties_i_p_v_eigen_prijs(client, db):
+    """Een fust hoort niet in zijn geheel op de prijslijst -- heeft een
+    product prijsopties, dan tonen die losse regels i.p.v. de eigen
+    verkoopprijs van het product zelf (zie _prijzen_categorieen)."""
+    product_id = _voeg_product_toe(db, "Fust Jupiler", categorie="Bier", prijs=80.0, toon_op_kiosk=1)
+    db.execute(
+        """INSERT INTO product_prijsopties (product_id, naam, prijs, volgorde) VALUES
+               (?, 'Jupiler pitcher', 12.0, 0), (?, 'Jupiler glas', 2.0, 1)""",
+        (product_id, product_id),
+    )
+    db.commit()
+
+    resp = client.get("/kiosk/prijzen")
+    tekst = resp.data.decode()
+
+    assert resp.status_code == 200
+    assert "Jupiler pitcher" in tekst
+    assert "&euro; 12.00" in tekst
+    assert "Jupiler glas" in tekst
+    assert "&euro; 2.00" in tekst
+    # De naam/prijs van het fust-product zelf mag niet los verschijnen.
+    assert "Fust Jupiler<" not in tekst
+    assert "&euro; 80.00" not in tekst
+
+
+def test_prijzenscherm_prijsopties_tonen_uitverkocht_als_fust_leeg_is(client, db):
+    """Wordt het hele fust als uitverkocht gemarkeerd, dan geldt dat voor elke
+    portie die eruit getapt wordt -- er is geen los voorraadniveau per
+    pitcher/glas."""
+    product_id = _voeg_product_toe(db, "Fust Leeg", toon_op_kiosk=1)
+    db.execute(
+        "INSERT INTO product_prijsopties (product_id, naam, prijs, volgorde) VALUES (?, 'Glas', 2.0, 0)",
+        (product_id,),
+    )
+    db.execute("UPDATE producten SET kiosk_uitverkocht = 1 WHERE id = ?", (product_id,))
+    db.commit()
+
+    resp = client.get("/kiosk/prijzen")
+    tekst = resp.data.decode()
+
+    assert "Glas" in tekst
+    assert "Uitverkocht" in tekst
+    assert "&euro; 2.00" not in tekst
 
 
 def test_prijzenscherm_versie_verandert_bij_uitverkocht_wisselen(ingelogde_client, db):

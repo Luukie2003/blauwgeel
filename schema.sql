@@ -280,6 +280,21 @@ CREATE TABLE IF NOT EXISTS prijs_geschiedenis (
 );
 
 CREATE INDEX IF NOT EXISTS idx_prijs_geschiedenis_product ON prijs_geschiedenis(product_id);
+
+-- Losse naam+prijs-varianten die uit 1 product getapt/geschonken worden,
+-- bijv. een pitcher (12,00) en een glas (2,00) uit een fust dat zelf niet in
+-- zijn geheel verkocht wordt. Heeft een product 1 of meer van deze opties,
+-- dan toont het prijzenscherm die losse regels i.p.v. de eigen verkoopprijs
+-- van het product (zie _prijzen_categorieen in routes/kiosk.py) -- het
+-- product zelf blijft gewoon meetellen/bestellen zoals altijd.
+CREATE TABLE IF NOT EXISTS product_prijsopties (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL REFERENCES producten(id) ON DELETE CASCADE,
+    naam TEXT NOT NULL,
+    prijs REAL NOT NULL DEFAULT 0,
+    volgorde INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_product_prijsopties_product ON product_prijsopties(product_id);
 CREATE INDEX IF NOT EXISTS idx_wedstrijden_datum ON wedstrijden(datum);
 -- Voorkomt dubbele rijen als dezelfde wedstrijd bij een volgende ververs-
 -- ronde opnieuw uit de feed komt (agenda.py gebruikt hierdoor veilig

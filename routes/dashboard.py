@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.10.1"
+HUIDIGE_VERSIE = "1.11.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.11.0",
+        "datum": "16 september 2026",
+        "punten": [
+            "Product bewerken heeft een nieuw veld 'Prijsopties op het prijzenscherm' -- voor een product dat je niet in zijn geheel verkoopt (bijv. een fust), kun je nu losse porties met eigen naam en prijs opgeven (bijv. pitcher en glas) die op het prijzenscherm verschijnen in plaats van de gewone verkoopprijs",
+        ],
+    },
     {
         "versie": "1.10.1",
         "datum": "16 september 2026",

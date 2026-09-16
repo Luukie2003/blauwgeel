@@ -166,6 +166,37 @@
                 Als uitverkocht markeren op het prijzenscherm
             </label>
         </fieldset>
+        <fieldset class="groupbox">
+            <legend>Prijsopties op het prijzenscherm (optioneel)</legend>
+            <p class="tekst-zacht" style="margin-top:-0.3rem">
+                Voor een product dat je niet in zijn geheel verkoopt (bijv.
+                een fust), maar waar je losse porties uit tapt of schenkt.
+                Vul hieronder 1 of meer varianten met een eigen naam en prijs
+                in, bijv. "Jupiler pitcher" (&euro; 12,00) en "Jupiler glas"
+                (&euro; 2,00). Staat hier iets in, dan toont het
+                prijzenscherm deze regels in plaats van de gewone
+                verkoopprijs hierboven &mdash; het product zelf blijft
+                gewoon normaal tellen en bestellen.
+            </p>
+            <div id="prijsopties-lijst">
+                {% for optie in prijsopties %}
+                <div class="formgrid prijsoptie-regel">
+                    <div class="veld">
+                        <label>Naam</label>
+                        <input type="text" name="optie_naam" placeholder="Bijv. Jupiler pitcher" value="{{ optie.naam }}">
+                    </div>
+                    <div class="veld">
+                        <label>Prijs</label>
+                        <input type="number" name="optie_prijs" min="0" step="0.01" value="{{ '%.2f'|format(optie.prijs) }}">
+                    </div>
+                    <div class="veld" style="justify-content:flex-end">
+                        <button type="button" class="btn btn-gevaar btn-klein js-verwijder-optie">Verwijderen</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" id="optie-toevoegen" class="btn btn-rand btn-klein" style="margin-top:0.5rem">+ Optie toevoegen</button>
+        </fieldset>
         <button type="submit" class="btn btn-geel">{{ 'Opslaan' if product else 'Toevoegen' }}</button>
     </form>
 </div>
@@ -216,6 +247,36 @@
 
     catVeld.addEventListener('change', vulSubcategorieOpties);
     vulSubcategorieOpties();
+})();
+
+(function () {
+    var lijst = document.getElementById('prijsopties-lijst');
+    var toevoegenKnop = document.getElementById('optie-toevoegen');
+    if (!lijst || !toevoegenKnop) return;
+
+    toevoegenKnop.addEventListener('click', function () {
+        var regel = document.createElement('div');
+        regel.className = 'formgrid prijsoptie-regel';
+        regel.innerHTML =
+            '<div class="veld">' +
+                '<label>Naam</label>' +
+                '<input type="text" name="optie_naam" placeholder="Bijv. Jupiler pitcher">' +
+            '</div>' +
+            '<div class="veld">' +
+                '<label>Prijs</label>' +
+                '<input type="number" name="optie_prijs" min="0" step="0.01" value="0.00">' +
+            '</div>' +
+            '<div class="veld" style="justify-content:flex-end">' +
+                '<button type="button" class="btn btn-gevaar btn-klein js-verwijder-optie">Verwijderen</button>' +
+            '</div>';
+        lijst.appendChild(regel);
+    });
+
+    lijst.addEventListener('click', function (event) {
+        var knop = event.target.closest('.js-verwijder-optie');
+        if (!knop) return;
+        knop.closest('.prijsoptie-regel').remove();
+    });
 })();
 </script>
 {% endblock %}

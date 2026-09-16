@@ -624,6 +624,31 @@ def bereken_fust_verkopen(db, limiet=100):
     }
 
 
+def vervang_product_prijsopties(db, product_id):
+    """Slaat de prijsopties van een product op vanuit het formulier
+    (parallelle 'optie_naam'/'optie_prijs'-lijsten, zie product_form.html) --
+    bestaande opties worden eerst verwijderd en dan opnieuw ingevoegd, net
+    als bij subcategorieën. Rijen met een lege naam (een leeggelaten extra
+    rij in de bouwer) worden overgeslagen."""
+    db.execute("DELETE FROM product_prijsopties WHERE product_id = ?", (product_id,))
+    namen = request.form.getlist("optie_naam")
+    prijzen = request.form.getlist("optie_prijs")
+    volgorde = 0
+    for naam, prijs in zip(namen, prijzen):
+        naam = naam.strip()
+        if not naam:
+            continue
+        try:
+            prijs_waarde = float(prijs or 0)
+        except ValueError:
+            prijs_waarde = 0.0
+        db.execute(
+            "INSERT INTO product_prijsopties (product_id, naam, prijs, volgorde) VALUES (?, ?, ?, ?)",
+            (product_id, naam, prijs_waarde, volgorde),
+        )
+        volgorde += 1
+
+
 def bestel_suggesties(db):
     product_ids_in_open_bestelling = {
         row["product_id"]
