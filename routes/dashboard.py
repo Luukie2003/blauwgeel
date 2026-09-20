@@ -25,8 +25,17 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.12.0"
+HUIDIGE_VERSIE = "1.13.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.13.0",
+        "datum": "20 september 2026",
+        "punten": [
+            "Dia's en Prijzenscherm & acties opnieuw ingedeeld met tabbladen i.p.v. één lange pagina of losse verstopte schermen",
+            "Trainingsavond-tabblad bij Producten: eigen productselectie voor de vaste trainingsavond, het prijzenscherm schakelt daar automatisch naartoe",
+            "Wedstrijddag-welkomstbanner op het prijzenscherm: speelt de club vandaag thuis (volgens de agenda), dan verschijnt automatisch een instelbare welkomsttekst met de tegenstander erin",
+        ],
+    },
     {
         "versie": "1.12.0",
         "datum": "20 september 2026",

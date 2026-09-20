@@ -1942,3 +1942,40 @@ footer {
     font-size: 0.85rem;
     color: var(--tekst-zacht);
 }
+
+/* ---------- Tabbladen & subnavigatie (Kantine-tv) ---------- */
+/* Twee toepassingen, zelfde uiterlijk: (1) losse <a>-links tussen
+   verschillende pagina's, "actief" server-side bepaald (geen JS nodig) --
+   zie kiosk_prijzen_instellingen/kiosk_acties/kiosk_bardienst; (2) losse
+   <button>-tabbladen die panelen op dezelfde pagina tonen/verbergen via JS
+   -- zie kiosk_sponsoren_leden.html en het tabblad-scriptje in
+   _gedeelde_script.html. */
+.tab-balk {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    border-bottom: 2px solid var(--rand-licht);
+    margin-bottom: 1.2rem;
+}
+
+.tab-knop {
+    appearance: none;
+    background: none;
+    border: none;
+    font: inherit;
+    font-weight: 600;
+    color: var(--tekst-zacht);
+    padding: 0.6rem 0.9rem;
+    margin-bottom: -2px;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+}
+
+.tab-knop:hover { color: var(--tekst); text-decoration: none; }
+
+.tab-knop.actief {
+    color: var(--blauw);
+    border-bottom-color: var(--blauw);
+}
+
+.tab-paneel[hidden] { display: none; }

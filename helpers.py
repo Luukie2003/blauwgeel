@@ -18,6 +18,7 @@ from markupsafe import Markup, escape
 
 import mail
 import weer
+from agenda import CLUBNAAM
 
 BASE_DIR = Path(__file__).parent
 
@@ -469,6 +470,35 @@ def _aantal_dagen_met_weekdag(van, tot, weekdag, inclusief_van=True):
             aantal += 1
         dag += timedelta(days=1)
     return aantal
+
+
+def is_trainingsavond(datum):
+    """True als de gegeven datum (date-object) op de vaste trainingsavond
+    valt (zie TRAININGSDAG hierboven) -- gebruikt door het prijzenscherm om
+    op trainingsavonden een eigen productselectie te tonen (zie
+    producten.toon_op_kiosk_trainingsavond)."""
+    return datum.weekday() == TRAININGSDAG
+
+
+def bepaal_tegenstander(omschrijving):
+    """Haalt de tegenstander uit een wedstrijd-omschrijving zoals
+    "Blauw Geel'15 2-Potetos 4" (zie agenda.py, dezelfde tabel/kolom als
+    wedstrijden.omschrijving). Splitst net als agenda.py op het eerste kale
+    streepje en bepaalt met CLUBNAAM welke kant de tegenstander is -- een
+    teamnaam die zelf een streepje bevat (bijv. "O23-1") kan dit net als
+    daar in de war sturen, maar dat is dezelfde al geaccepteerde beperking
+    als bij de thuis/uit-bepaling in agenda.py, niet een nieuwe.
+    Geeft None terug als geen van beide kanten CLUBNAAM bevat (bijv. een
+    kale/onverwachte tekst)."""
+    delen = omschrijving.split("-", 1)
+    if len(delen) < 2:
+        return None
+    kant_a, kant_b = delen[0].strip(), delen[1].strip()
+    if CLUBNAAM in kant_a.lower():
+        return kant_b or None
+    if CLUBNAAM in kant_b.lower():
+        return kant_a or None
+    return None
 
 
 def bereken_omzet_trend_periode(db, van, tot):

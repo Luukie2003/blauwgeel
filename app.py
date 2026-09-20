@@ -136,6 +136,7 @@ BEHEERDER_ENDPOINTS = {
     "mededeling_pinnen_als_banner",
     "kiosk_hub",
     "kiosk_prijzen_instellingen",
+    "kiosk_wedstrijddag_welkom_instellingen",
     "kiosk_product_toon_wisselen",
     "kiosk_product_uitverkocht_wisselen",
     "kiosk_acties",
@@ -426,6 +427,7 @@ NAV_ITEMS = [
         "groep": "Kantine-tv",
         "endpoints": [
             "kiosk_prijzen_instellingen",
+            "kiosk_wedstrijddag_welkom_instellingen",
             "kiosk_acties",
             "kiosk_actie_nieuw",
             "kiosk_actie_bewerken",

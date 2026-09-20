@@ -8,6 +8,8 @@
     <a href="{{ url_for('kiosk_prijzen_instellingen') }}">&larr; Terug naar Prijzenscherm &amp; acties</a>
 </p>
 
+{% include "_kiosk_prijzen_subnav.html" %}
+
 <div class="kaart" style="max-width:760px">
     <h2 style="margin-top:0">Nieuwe bardienst</h2>
     <form method="post" action="{{ url_for('kiosk_bardienst_nieuw') }}" class="formgrid">

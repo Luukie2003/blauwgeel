@@ -87,6 +87,23 @@
         }
         .leeg { color: var(--tekst-zacht); font-size: 1.3rem; margin-top: 2rem; }
 
+        /* Wedstrijddag-welkomstbanner: alleen zichtbaar als er vandaag een
+           eigen thuiswedstrijd gepland staat (zie _wedstrijddag_welkom in
+           routes/kiosk.py) -- puur server-side bepaald, i.t.t. de
+           bardienst-balk hieronder, want een wedstrijddag heeft geen
+           moment-tot-moment tijdvak nodig (geldt de hele dag). */
+        .wedstrijddag-banner {
+            background: var(--geel);
+            color: var(--blauw-donker);
+            font-weight: 800;
+            font-size: 1.8rem;
+            text-align: center;
+            letter-spacing: 0.01em;
+            padding: 0.9rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.6rem;
+        }
+
         /* Bardienst: gele balk onderaan, alleen zichtbaar zolang er nu een
            bardienst-tijdvak actief is (zie de JS onderaan). Bewust GEEN
            position:fixed meer: dat overlapte de laatste prijsregels zodra
@@ -173,6 +190,10 @@
         </div>
         <div id="klok"></div>
     </header>
+
+    {% if wedstrijddag_welkom %}
+    <div class="wedstrijddag-banner">{{ wedstrijddag_welkom }}</div>
+    {% endif %}
 
     {% if categorieen %}
     <div class="prijzen-grid">

@@ -219,6 +219,25 @@ def _migreer_telling_verkoopprijs(db):
     )
 
 
+def _migreer_kiosk_trainingsavond(db):
+    """toon_op_kiosk_trainingsavond is nieuw: een gewone kolom-migratie (via
+    KOLOM_MIGRATIES) zou 'm op DEFAULT 0 laten staan, waardoor het
+    prijzenscherm op de eerstvolgende trainingsavond ineens leeg lijkt voor
+    iedereen die nog niets heeft ingesteld. In plaats daarvan vullen we 'm,
+    precies op het moment dat de kolom voor het eerst wordt aangemaakt,
+    eenmalig met de dan geldende toon_op_kiosk-waarde -- zodat de
+    trainingsavond-versie er in eerste instantie hetzelfde uitziet als
+    normaal, tot een beheerder 'm zelf aanpast via de Trainingsavond-tab
+    (zie routes/kiosk.py)."""
+    bestaande = {row["name"] for row in db.execute("PRAGMA table_info(producten)")}
+    if "toon_op_kiosk_trainingsavond" in bestaande:
+        return
+    db.execute(
+        "ALTER TABLE producten ADD COLUMN toon_op_kiosk_trainingsavond INTEGER NOT NULL DEFAULT 0"
+    )
+    db.execute("UPDATE producten SET toon_op_kiosk_trainingsavond = toon_op_kiosk")
+
+
 def _migreer_categorieen(db):
     """De categorieen-tabel is nieuw: als hij leeg is (nieuwe kolom op een
     bestaande database, of een gloednieuwe installatie), vullen we 'm met de
@@ -402,6 +421,7 @@ def get_db():
             _migreer_categorieen(g.db)
             _migreer_keuken_categorie(g.db)
             _migreer_telling_verkoopprijs(g.db)
+            _migreer_kiosk_trainingsavond(g.db)
             _migreer_kassa_afgesloten(g.db)
             _migreer_bieren_backfill(g.db)
             _migreer_club_van_20_datums(g.db)

@@ -54,8 +54,12 @@
     <p class="tekst-zacht" style="margin-top:0">Snel naar de inhoud van scherm 2.</p>
     <div style="display:flex; gap:0.8rem; flex-wrap:wrap">
         <a href="{{ url_for('kiosk_acties') }}" class="btn btn-rand">Acties</a>
+        <a href="{{ url_for('kiosk_bardienst') }}" class="btn btn-rand">Bardienst</a>
         <a href="{{ url_for('kiosk_sponsoren_leden') }}#dias-tabel" class="btn btn-rand">Sponsoren</a>
+        <a href="{{ url_for('kiosk_sponsoren_leden') }}#sjablonen" class="btn btn-rand">Sjablonen</a>
         <a href="{{ url_for('kiosk_sponsoren_leden') }}#club-van-20" class="btn btn-rand">Club van 20</a>
+        <a href="{{ url_for('kiosk_prijzen_instellingen', dag='trainingsavond') }}" class="btn btn-rand">Trainingsavond-selectie</a>
+        <a href="{{ url_for('kiosk_prijzen_instellingen') }}#wedstrijddag-welkom" class="btn btn-rand">Wedstrijddag-welkom</a>
     </div>
 </div>
 

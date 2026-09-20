@@ -309,4 +309,54 @@
             banner.style.display = "none";
         });
     })();
+
+    // ---------- Tabbladen binnen 1 pagina ----------
+    // Zie .tab-balk/.tab-knop/.tab-paneel in style.css. Markup: een
+    // <div class="tab-balk" data-tab-js> met daarin knoppen
+    // data-tab-doel="naam", en ergens op de pagina bijpassende panelen
+    // data-tab-paneel="naam". Alleen voor tabbladen die panelen op DEZELFDE
+    // pagina tonen/verbergen (bijv. kiosk_sponsoren_leden.html) -- een
+    // subnav van gewone links naar andere pagina's (bijv. de sub-navigatie
+    // boven Prijzenscherm & acties) heeft deze JS niet nodig, "actief"
+    // wordt daar gewoon server-side bepaald. Het huidige tabblad staat in het
+    // URL-fragment (#naam), zodat een link van elders (bijv. vanaf de
+    // kantine-tv-hub) direct op het juiste tabblad kan uitkomen en
+    // verversen niet terugvalt op het eerste tabblad.
+    //
+    // Dit script staat vóór de pagina-inhoud in de HTML (zie base.html,
+    // zelfde reden als de inklapbare zijbalk-groepen hierboven), dus de
+    // tabbladen/panelen bestaan nog niet op het moment dat dit script
+    // geparsed wordt -- vandaar ook hier tot na DOMContentLoaded wachten.
+    document.addEventListener("DOMContentLoaded", function () {
+        var balken = document.querySelectorAll(".tab-balk[data-tab-js]");
+        if (!balken.length) return;
+
+        function activeer(doel) {
+            document.querySelectorAll("[data-tab-doel]").forEach(function (knop) {
+                knop.classList.toggle("actief", knop.dataset.tabDoel === doel);
+            });
+            document.querySelectorAll("[data-tab-paneel]").forEach(function (paneel) {
+                paneel.hidden = paneel.dataset.tabPaneel !== doel;
+            });
+        }
+
+        balken.forEach(function (balk) {
+            balk.addEventListener("click", function (e) {
+                var knop = e.target.closest("[data-tab-doel]");
+                if (!knop) return;
+                e.preventDefault();
+                activeer(knop.dataset.tabDoel);
+                history.replaceState(null, "", "#" + knop.dataset.tabDoel);
+            });
+        });
+
+        var starttab = (location.hash || "").slice(1);
+        var startKnop = starttab && document.querySelector('[data-tab-doel="' + starttab + '"]');
+        var eersteKnop = document.querySelector("[data-tab-doel]");
+        if (startKnop) {
+            activeer(starttab);
+        } else if (eersteKnop) {
+            activeer(eersteKnop.dataset.tabDoel);
+        }
+    });
 </script>

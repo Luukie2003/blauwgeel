@@ -487,3 +487,14 @@ CREATE TABLE IF NOT EXISTS paginabezoeken (
 );
 CREATE INDEX IF NOT EXISTS idx_paginabezoeken_datum ON paginabezoeken(datum);
 CREATE INDEX IF NOT EXISTS idx_paginabezoeken_endpoint ON paginabezoeken(endpoint);
+
+-- Instellingen (1 rij) voor het prijzenscherm zelf -- los van
+-- kiosk_scherm_instellingen hierboven, dat gaat over het andere scherm
+-- (de dia's). Nu alleen de wedstrijddag-welkomstbanner, zie
+-- routes/kiosk.py (_wedstrijddag_welkom).
+CREATE TABLE IF NOT EXISTS kiosk_prijzen_instellingen (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    wedstrijddag_welkom_actief INTEGER NOT NULL DEFAULT 1,
+    wedstrijddag_welkom_tekst TEXT NOT NULL DEFAULT 'Welkom {tegenstander}!'
+);
+INSERT OR IGNORE INTO kiosk_prijzen_instellingen (id) VALUES (1);

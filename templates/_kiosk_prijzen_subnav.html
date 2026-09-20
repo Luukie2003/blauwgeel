@@ -1,0 +1,12 @@
+{# Subnav voor de 3 pagina's onder "Prijzenscherm & acties" (zie app.py) --
+   dit zijn 3 losse routes, dus "actief" is hier gewoon request.endpoint
+   vergelijken, geen JS nodig (i.t.t. de tabbladen-JS voor Dia's, waar alle
+   panelen al op dezelfde pagina staan). #}
+<div class="tab-balk">
+    <a href="{{ url_for('kiosk_prijzen_instellingen') }}"
+       class="tab-knop{{ ' actief' if request.endpoint == 'kiosk_prijzen_instellingen' else '' }}">Producten</a>
+    <a href="{{ url_for('kiosk_acties') }}"
+       class="tab-knop{{ ' actief' if request.endpoint in ('kiosk_acties', 'kiosk_actie_nieuw', 'kiosk_actie_bewerken') else '' }}">Acties</a>
+    <a href="{{ url_for('kiosk_bardienst') }}"
+       class="tab-knop{{ ' actief' if request.endpoint in ('kiosk_bardienst', 'kiosk_bardienst_bewerken') else '' }}">Bardienst</a>
+</div>

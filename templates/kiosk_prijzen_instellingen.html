@@ -31,6 +31,7 @@
     Vink aan welke producten op het prijzenscherm getoond moeten worden en sla in één keer alles op.
     <a href="{{ url_for('kiosk_hub') }}">&larr; Terug naar Kantine Kiosk</a>
 </p>
+{% include "_kiosk_prijzen_subnav.html" %}
 {% endif %}
 
 <div class="kaart">
@@ -116,8 +117,49 @@
 })();
 </script>
 
+{% if not pda_modus %}
+<div class="kaart" id="wedstrijddag-welkom">
+    <h2 style="margin-top:0">Wedstrijddag-welkomstbanner</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Speelt de club vandaag thuis (volgens de agenda uit
+        <a href="{{ url_for('club_instellingen') }}">Club instellingen</a>), dan toont het prijzenscherm
+        deze tekst prominent bovenaan. Gebruik <code>{tegenstander}</code> als plaatshouder -- die wordt
+        automatisch vervangen door de naam(en) uit de agenda, bijv. "Welkom Haren!".
+    </p>
+    <form method="post" action="{{ url_for('kiosk_wedstrijddag_welkom_instellingen') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.7rem">
+            <input type="checkbox" name="wedstrijddag_welkom_actief" style="width:auto"
+                   {{ 'checked' if prijzen_instellingen.wedstrijddag_welkom_actief }}>
+            Banner tonen op thuiswedstrijddagen
+        </label>
+        <div class="veld">
+            <label for="wedstrijddag_welkom_tekst">Tekst</label>
+            <input type="text" id="wedstrijddag_welkom_tekst" name="wedstrijddag_welkom_tekst"
+                   value="{{ prijzen_instellingen.wedstrijddag_welkom_tekst }}" style="max-width:28rem">
+        </div>
+        <button type="submit" class="btn btn-geel">Opslaan</button>
+    </form>
+</div>
+{% endif %}
+
 <div class="kaart">
     {% if producten %}
+    {% if not pda_modus %}
+    <div class="tab-balk" style="margin-bottom:1rem">
+        <a href="{{ url_for('kiosk_prijzen_instellingen', dag='normaal') }}"
+           class="tab-knop{{ ' actief' if gekozen_dag == 'normaal' else '' }}">Normaal</a>
+        <a href="{{ url_for('kiosk_prijzen_instellingen', dag='trainingsavond') }}"
+           class="tab-knop{{ ' actief' if gekozen_dag == 'trainingsavond' else '' }}">Trainingsavond</a>
+    </div>
+    <p class="tekst-zacht" style="margin-top:-0.6rem; margin-bottom:1rem">
+        {% if gekozen_dag == 'trainingsavond' %}
+        Deze selectie geldt automatisch op de vaste trainingsavond i.p.v. de normale selectie hiernaast.
+        {% else %}
+        De gewone selectie, elke dag behalve de trainingsavond (die heeft een eigen tabblad hierboven).
+        {% endif %}
+    </p>
+    {% endif %}
     <div class="filterbalk">
         <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">
         <span id="filter-aantal" class="tekst-zacht"></span>
@@ -151,6 +193,7 @@
     {% else %}
     <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="dag" value="{{ gekozen_dag }}">
         <div class="tabel-wrap">
             <table id="producten-tabel">
                 <thead>
@@ -166,7 +209,7 @@
                     <tr class="filter-rij" data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie)|lower }}">
                         <td>
                             <label class="schuif">
-                                <input type="checkbox" name="toon_{{ p.id }}" {{ 'checked' if p.toon_op_kiosk }}>
+                                <input type="checkbox" name="toon_{{ p.id }}" {{ 'checked' if p.toon_op_kiosk_huidig }}>
                                 <span class="schuif-balk"></span>
                             </label>
                         </td>
