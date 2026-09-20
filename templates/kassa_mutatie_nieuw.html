@@ -70,7 +70,10 @@
     var opmerkingVeld = document.getElementById('opmerking');
     knopLegen.addEventListener('click', function () {
         typeVeld.value = 'afdracht';
-        bedragVeld.value = kassaladeStand.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        // Geen toLocaleString (die zet er vanaf 1000 een duizendtal-punt bij,
+        // wat de backend-parser -- die alleen de komma naar een punt
+        // vervangt -- juist stuk maakt: "1.234,56" wordt dan "1.234.56").
+        bedragVeld.value = kassaladeStand.toFixed(2).replace('.', ',');
         if (!opmerkingVeld.value) {
             opmerkingVeld.value = 'Kassalade volledig geleegd (voorbereiding nieuwe telling)';
         }

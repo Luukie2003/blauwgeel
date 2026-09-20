@@ -31,9 +31,11 @@ from helpers import (
     format_datum_kort,
     SECTIES,
     heeft_sectie_toegang,
+    is_ajax_verzoek,
     met_tags_filter,
     naar_besteleenheden,
     naar_voorraadeenheden,
+    now_str,
     secties_lijst,
     stemming_is_open,
 )
@@ -77,6 +79,22 @@ OPEN_ENDPOINTS = {
     # De schermen pollen deze endpoints zelf (zie de <script> in
     # kiosk_prijzen_scherm.html/kiosk_scherm.html) om te bepalen of ze zichzelf
     # moeten herladen -- dus ook zonder account bereikbaar.
+    "kiosk_prijzen_versie",
+    "kiosk_scherm_versie",
+    "kiosk_tv_versie",
+}
+
+# Endpoints die niet meetellen als paginabezoek voor Club > Gebruiksstatistieken
+# (zie log_paginabezoek hieronder en routes/gebruik.py) -- puur technisch
+# verkeer zonder betekenis voor "wie gebruikt welk onderdeel". De _versie-
+# polls draaien elke 10s zolang een kiosk-scherm openstaat; het scherm zelf
+# openen/herladen (kiosk_scherm/kiosk_prijzen_scherm/kiosk_tv) wordt wél
+# gelogd, want dat gebeurt alleen bij een echte (her)start van het scherm.
+GEBRUIK_NIET_LOGGEN = {
+    "static",
+    "favicon_ico",
+    "service_worker",
+    "offline_pagina",
     "kiosk_prijzen_versie",
     "kiosk_scherm_versie",
     "kiosk_tv_versie",
@@ -155,6 +173,7 @@ BEHEERDER_ENDPOINTS = {
     "kluis_geschiedenis",
     "kluis_mutatie_nieuw",
     "kluis_mutatie_corrigeren",
+    "gebruiksstatistieken",
 }
 
 # Fijnmazige rechten bovenop BEHEERDER_ENDPOINTS: elk account (ook
@@ -496,6 +515,12 @@ NAV_ITEMS = [
         "url_endpoint": "instellingen_pagina",
         "label": "Instellingen",
     },
+    {
+        "groep": "Club",
+        "endpoints": ["gebruiksstatistieken"],
+        "url_endpoint": "gebruiksstatistieken",
+        "label": "Gebruiksstatistieken",
+    },
 ]
 
 # Groepen komen in deze volgorde in de zijbalk te staan (Python dicts noch
@@ -767,6 +792,35 @@ def create_app(database_path=None):
             )
         return response
 
+    @app.after_request
+    def log_paginabezoek(response):
+        """Registreert paginabezoeken voor Club > Gebruiksstatistieken (zie
+        routes/gebruik.py) -- alleen gewone volledige paginabezoeken tellen
+        mee: een echte GET-navigatie (geen AJAX-fetch die maar een stukje
+        JSON ophaalt), geen technisch/polling-verkeer (zie
+        GEBRUIK_NIET_LOGGEN hierboven) en geen foutpagina's (status >= 400),
+        want de view heeft dan mogelijk niet eens gecommit."""
+        if (
+            request.method == "GET"
+            and response.status_code < 400
+            and request.endpoint is not None
+            and request.endpoint not in GEBRUIK_NIET_LOGGEN
+            and not is_ajax_verzoek()
+        ):
+            db = get_db()
+            db.execute(
+                """INSERT INTO paginabezoeken (endpoint, gebruiker_id, weergave_modus, datum)
+                   VALUES (?, ?, ?, ?)""",
+                (
+                    request.endpoint,
+                    session.get("gebruiker_id"),
+                    g.get("weergave_modus", "desktop"),
+                    now_str(),
+                ),
+            )
+            db.commit()
+        return response
+
     @app.errorhandler(404)
     def pagina_niet_gevonden(fout):
         return render_template("404.html"), 404
@@ -783,6 +837,7 @@ def create_app(database_path=None):
         boodschappenlijst,
         dashboard,
         fusten,
+        gebruik,
         instellingen,
         kassa,
         keuken,
@@ -801,6 +856,7 @@ def create_app(database_path=None):
     boodschappenlijst.register_routes(app)
     dashboard.register_routes(app)
     fusten.register_routes(app)
+    gebruik.register_routes(app)
     instellingen.register_routes(app)
     kassa.register_routes(app)
     keuken.register_routes(app)

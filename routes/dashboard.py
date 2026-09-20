@@ -25,8 +25,43 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.11.3"
+HUIDIGE_VERSIE = "1.12.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.12.0",
+        "datum": "20 september 2026",
+        "punten": [
+            "Nieuwe pagina 'Gebruiksstatistieken' (Club, alleen beheerder): bezoeken per dag, meest gebruikte functies, gebruik per account en desktop vs. handterminal — puur intern, geen externe trackingdienst",
+        ],
+    },
+    {
+        "versie": "1.11.7",
+        "datum": "20 september 2026",
+        "punten": [
+            "Bardienst aanmaken (Kiosk) vulde de datum rond middernacht soms een dag te vroeg in door hetzelfde tijdzoneverschil als de eerdere weergavefix -- vult nu ook hier de juiste (Amsterdamse) datum in",
+        ],
+    },
+    {
+        "versie": "1.11.6",
+        "datum": "20 september 2026",
+        "punten": [
+            "'Kassalade volledig legen' vulde bij een stand van €1000 of meer een bedrag in dat niet werd geaccepteerd -- werkt nu ook correct bij grote bedragen",
+        ],
+    },
+    {
+        "versie": "1.11.5",
+        "datum": "20 september 2026",
+        "punten": [
+            "De UITVERKOCHT-popup op het prijzenscherm toonde bij een product met prijsopties (bijv. een fust) de naam van de portie (\"Klein glas\") i.p.v. het product zelf (\"Jupiler\") -- toont nu de juiste naam, en maar 1x per product",
+        ],
+    },
+    {
+        "versie": "1.11.4",
+        "datum": "20 september 2026",
+        "punten": [
+            "Een account verwijderen dat nog in boekingen, tellingen of kassa-/kluisgeschiedenis voorkomt gaf een foutpagina -- geeft nu een duidelijke melding met het advies om het account op vrijwilliger zonder secties te zetten in plaats van te verwijderen",
+        ],
+    },
     {
         "versie": "1.11.3",
         "datum": "16 september 2026",

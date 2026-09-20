@@ -1,5 +1,6 @@
 import io
 import json
+import re
 from datetime import date, timedelta
 
 from conftest import stel_csrf_token_in as _csrf
@@ -450,6 +451,28 @@ def test_prijzenscherm_toont_prijsopties_i_p_v_eigen_prijs(client, db):
     # De naam/prijs van het fust-product zelf mag niet los verschijnen.
     assert "Fust Jupiler<" not in tekst
     assert "&euro; 80.00" not in tekst
+
+
+def test_uitverkocht_popup_toont_productnaam_niet_portienaam(client, db):
+    """De uitverkocht-popup moet het product tonen (bijv. "Jupiler"), niet de
+    portienaam van een prijsoptie (bijv. "Klein glas") -- en maar 1x, ook al
+    zijn er meerdere uitverkochte porties van hetzelfde product."""
+    product_id = _voeg_product_toe(db, "Jupiler", categorie="Bier", toon_op_kiosk=1)
+    db.execute(
+        """INSERT INTO product_prijsopties (product_id, naam, prijs, volgorde) VALUES
+               (?, 'Klein glas', 2.0, 0), (?, 'Groot glas', 3.0, 1)""",
+        (product_id, product_id),
+    )
+    db.execute("UPDATE producten SET kiosk_uitverkocht = 1 WHERE id = ?", (product_id,))
+    db.commit()
+
+    resp = client.get("/kiosk/prijzen")
+    tekst = resp.data.decode()
+
+    match = re.search(r"bekendeUitverkocht = (\[.*?\]);", tekst)
+    assert match is not None
+    uitverkocht_namen = json.loads(match.group(1))
+    assert uitverkocht_namen == ["Jupiler"]
 
 
 def test_prijzenscherm_prijsopties_tonen_uitverkocht_als_fust_leeg_is(client, db):

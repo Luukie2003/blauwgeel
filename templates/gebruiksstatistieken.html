@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block titel %}Gebruiksstatistieken{% endblock %}
+{% block inhoud %}
+<h1>Gebruiksstatistieken</h1>
+<p class="subtitel">
+    Inzicht in welke onderdelen van de app daadwerkelijk gebruikt worden en door wie &mdash;
+    puur intern, gebaseerd op paginabezoeken binnen deze site. Geen externe trackingdienst.
+</p>
+
+<div class="actiebalk">
+    <div style="display:flex; gap:0.5rem">
+        {% for optie in [7, 30, 90] %}
+        <a href="{{ url_for('gebruiksstatistieken', dagen=optie) }}"
+           class="btn btn-klein {{ 'btn-geel' if gekozen_dagen == optie else 'btn-rand' }}">
+            Laatste {{ optie }} dagen
+        </a>
+        {% endfor %}
+    </div>
+    <span class="tekst-zacht">
+        Totaal <strong>{{ statistieken.totaal_bezoeken }}</strong> paginabezoeken
+        ({{ statistieken.anoniem_aantal }} zonder account, bijv. kiosk-schermen en QR-scans)
+    </span>
+</div>
+
+<div class="kaart">
+    <h2 style="margin-top:0">Bezoeken per dag</h2>
+    {% if statistieken.totaal_bezoeken %}
+    <div class="omzet-trend-grafiek">
+        {% for balk in statistieken.balken %}
+        <div class="omzet-bar-kolom">
+            <span class="omzet-bar-waarde">{{ balk.aantal }}</span>
+            <div class="omzet-bar" style="height: {{ balk.hoogte_pct }}%" title="{{ balk.aantal }} bezoeken"></div>
+            <span class="omzet-bar-label">{{ balk.datum_kort }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen bezoeken geregistreerd in deze periode.</p>
+    {% endif %}
+</div>
+
+<div class="formgrid" style="align-items:start">
+    <div class="kaart">
+        <h2 style="margin-top:0">Meest gebruikte functies</h2>
+        {% if statistieken.top_functies %}
+        <div class="tabel-wrap">
+            <table>
+                <thead>
+                    <tr><th>Functie</th><th>Bezoeken</th><th>Aandeel</th></tr>
+                </thead>
+                <tbody>
+                    {% for functie in statistieken.top_functies %}
+                    <tr>
+                        <td>{{ functie.label }}</td>
+                        <td>{{ functie.aantal }}</td>
+                        <td>{{ '%.0f'|format(functie.aandeel_pct) }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="leeg">Nog geen bezoeken geregistreerd in deze periode.</p>
+        {% endif %}
+    </div>
+
+    <div class="kaart">
+        <h2 style="margin-top:0">Gebruik per account</h2>
+        {% if statistieken.gebruik_per_account %}
+        <div class="tabel-wrap">
+            <table>
+                <thead>
+                    <tr><th>Account</th><th>Bezoeken</th><th>Laatst actief</th></tr>
+                </thead>
+                <tbody>
+                    {% for regel in statistieken.gebruik_per_account %}
+                    <tr>
+                        <td>{{ regel.naam }}</td>
+                        <td>{{ regel.aantal }}</td>
+                        <td>{{ regel.laatste_bezoek|datum_nl }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="leeg">Nog geen bezoeken van een ingelogd account in deze periode.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="kaart">
+    <h2 style="margin-top:0">Desktop vs. handterminal</h2>
+    {% if statistieken.weergave_verdeling %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Weergave</th><th>Bezoeken</th><th>Aandeel</th></tr>
+            </thead>
+            <tbody>
+                {% for regel in statistieken.weergave_verdeling %}
+                <tr>
+                    <td>{{ 'Handterminal (PDA)' if regel.modus == 'pda' else 'Desktop' }}</td>
+                    <td>{{ regel.aantal }}</td>
+                    <td>{{ '%.0f'|format(regel.aandeel_pct) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen bezoeken geregistreerd in deze periode.</p>
+    {% endif %}
+</div>
+{% endblock %}

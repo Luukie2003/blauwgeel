@@ -469,3 +469,21 @@ CREATE TABLE IF NOT EXISTS kiosk_scherm_instellingen (
     wedstrijden_volgorde INTEGER NOT NULL DEFAULT 3
 );
 INSERT OR IGNORE INTO kiosk_scherm_instellingen (id) VALUES (1);
+
+-- 1 rij per paginabezoek, voor Club > Gebruiksstatistieken -- puur intern
+-- inzicht in welke onderdelen daadwerkelijk gebruikt worden (en door wie),
+-- geen externe trackingdienst. gebruiker_id is bewust ON DELETE SET NULL
+-- (i.t.t. de meeste andere gebruiker_id-kolommen hierboven, die geen
+-- ON DELETE hebben): een verwijderd account mag deze historie niet blokkeren
+-- zoals dat wel gebeurde bij producten/accounts met echte boekingsgeschiedenis
+-- (zie routes/producten.py en routes/accounts.py) -- hier is de naam sowieso
+-- al niet meer te herleiden na verwijdering, dus NULL is geen verlies.
+CREATE TABLE IF NOT EXISTS paginabezoeken (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint TEXT NOT NULL,
+    gebruiker_id INTEGER REFERENCES gebruikers(id) ON DELETE SET NULL,
+    weergave_modus TEXT NOT NULL,
+    datum TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_paginabezoeken_datum ON paginabezoeken(datum);
+CREATE INDEX IF NOT EXISTS idx_paginabezoeken_endpoint ON paginabezoeken(endpoint);

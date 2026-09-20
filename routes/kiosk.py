@@ -27,6 +27,7 @@ from helpers import (
     is_ajax_verzoek,
     now_str,
     sla_afbeelding_op,
+    vandaag_amsterdam,
     voeg_maanden_toe,
 )
 
@@ -326,6 +327,11 @@ def register_routes(app):
                         {
                             "id": optie["id"],
                             "naam": optie["naam"],
+                            # Los van "naam" (de portienaam, bijv. "Klein
+                            # glas") bewaard voor _uitverkocht_namen hieronder
+                            # -- die moet het onderliggende product tonen
+                            # (bijv. "Jupiler"), niet de portienaam.
+                            "product_naam": p["naam"],
                             "verkoopprijs": optie["prijs"],
                             "kiosk_uitverkocht": p["kiosk_uitverkocht"],
                         }
@@ -354,7 +360,20 @@ def register_routes(app):
         ).fetchall()
 
     def _uitverkocht_namen(categorieen):
-        return [p["naam"] for _, lijst in categorieen for p in lijst if p["kiosk_uitverkocht"]]
+        # Bij prijsopties (fust-achtige producten, zie hierboven) is "naam"
+        # de portienaam (bijv. "Klein glas"); voor de uitverkocht-popup moet
+        # het onderliggende product getoond worden ("product_naam", bijv.
+        # "Jupiler"), en maar 1x per product, ook al zijn er meerdere
+        # uitverkochte porties van hetzelfde product.
+        namen = []
+        for _, lijst in categorieen:
+            for p in lijst:
+                if not p["kiosk_uitverkocht"]:
+                    continue
+                naam = p["product_naam"] if "product_naam" in p.keys() else p["naam"]
+                if naam not in namen:
+                    namen.append(naam)
+        return namen
 
     def _bardiensten_vandaag(db):
         """Bardiensten rond vandaag, op datum+tijd gesorteerd -- geen
@@ -455,7 +474,12 @@ def register_routes(app):
         try:
             date.fromisoformat(datum)
         except ValueError:
-            datum = date.today().isoformat()
+            # vandaag_amsterdam() i.p.v. date.today() (serverdatum, UTC op
+            # deze hosting) -- anders komt een lege/ongeldige datum rond
+            # middernacht een dag te vroeg te staan, precies de bug die de
+            # bardienst-datumfix van 16 september 2026 al voor het scherm
+            # oploste.
+            datum = vandaag_amsterdam().isoformat()
         start_tijd = request.form.get("start_tijd", "").strip()
         if not KIOSK_TIJD_PATROON.match(start_tijd):
             start_tijd = "00:00"
@@ -476,7 +500,7 @@ def register_routes(app):
             "SELECT * FROM kiosk_bardiensten ORDER BY datum, start_tijd"
         ).fetchall()
         return render_template(
-            "kiosk_bardienst.html", bardiensten=bardiensten, vandaag=date.today().isoformat()
+            "kiosk_bardienst.html", bardiensten=bardiensten, vandaag=vandaag_amsterdam().isoformat()
         )
 
     @app.route("/kiosk/prijzen/bardienst/nieuw", methods=["POST"])

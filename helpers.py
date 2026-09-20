@@ -11,6 +11,7 @@ import re
 import secrets
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from flask import Response, request, session
 from markupsafe import Markup, escape
@@ -224,6 +225,16 @@ def bereken_jaren_lid(startdatum_iso, vandaag=None):
 
 def now_str():
     return datetime.now().strftime("%Y-%m-%d %H:%M")
+
+
+def vandaag_amsterdam():
+    """De datum van vandaag in Europe/Amsterdam, i.p.v. date.today() (de
+    servertijdzone, UTC op de hosting van deze site) -- gebruikt overal waar
+    een datumveld standaard "vandaag" moet zijn voor een gebruiker die zelf
+    in Amsterdamse tijd zit. Zonder dit staat zo'n veld tussen middernacht en
+    ~02:00 zomertijd (of ~01:00 wintertijd) een dag te vroeg (zie de
+    bardienst-datumbug van 16 september 2026, routes/kiosk.py)."""
+    return datetime.now(ZoneInfo("Europe/Amsterdam")).date()
 
 
 def now_datetime_local():

@@ -1,4 +1,5 @@
 import secrets
+import sqlite3
 
 from flask import flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -158,9 +159,28 @@ def register_routes(app):
                 "error",
             )
         else:
-            db.execute("DELETE FROM gebruikers WHERE id = ?", (gebruiker_id,))
-            db.commit()
-            flash("Account verwijderd.", "success")
+            try:
+                db.execute("DELETE FROM gebruikers WHERE id = ?", (gebruiker_id,))
+                db.commit()
+                flash("Account verwijderd.", "success")
+            except sqlite3.IntegrityError:
+                # Account staat nog ergens als gebruiker_id/besteld_door_id/
+                # goedgekeurd_door_id in boekingen, tellingen, bestellingen of
+                # kassa-/kluisgeschiedenis (bewust geen ON DELETE CASCADE, om
+                # die geschiedenis nooit stilzwijgend te laten verdwijnen) --
+                # i.p.v. een 500 gewoon uitleggen dat verwijderen niet kan.
+                # Er is geen "inactief"-vlag voor accounts (zoals bij
+                # producten): het account de rol vrijwilliger geven en alle
+                # secties uitvinken beperkt in elk geval wat het account nog
+                # kan doen.
+                db.rollback()
+                flash(
+                    f"'{gebruiker['naam']}' kan niet verwijderd worden: dit account staat nog in "
+                    "boekingen, tellingen en/of kassa-/kluisgeschiedenis. Zet het account op "
+                    "vrijwilliger zonder secties in plaats van te verwijderen -- dat beperkt de "
+                    "toegang zonder de geschiedenis kwijt te raken.",
+                    "error",
+                )
         return redirect(url_for("accounts_lijst"))
 
     @app.route("/account/wachtwoord", methods=["GET", "POST"])
