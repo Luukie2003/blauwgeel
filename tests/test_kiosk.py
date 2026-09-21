@@ -240,7 +240,9 @@ def test_prijzenscherm_groepeert_op_kiosk_categorie_override(client, db):
     assert resp.status_code == 200
     assert "Telling" not in tekst
     bier_index = tekst.index(">Bier<")
-    assert bier_index < tekst.index("Radler glas") < tekst.index("Radler pitcher")
+    # Binnen het special-kaartje staan de opties op volgorde (pitcher voor
+    # glas, zie volgorde=0/1 hierboven), niet alfabetisch.
+    assert bier_index < tekst.index("Radler pitcher") < tekst.index("Radler glas")
 
 
 def test_product_formulier_negeert_lege_prijsoptie_regels(ingelogde_client, db):
@@ -430,8 +432,9 @@ def test_prijzenscherm_toont_uitverkocht_duidelijk(client, db):
 
 def test_prijzenscherm_toont_prijsopties_i_p_v_eigen_prijs(client, db):
     """Een fust hoort niet in zijn geheel op de prijslijst -- heeft een
-    product prijsopties, dan tonen die losse regels i.p.v. de eigen
-    verkoopprijs van het product zelf (zie _prijzen_categorieen)."""
+    product prijsopties, dan tonen die als 1 special-kaartje (met de
+    productnaam als kop) i.p.v. de eigen verkoopprijs van het product zelf
+    (zie _prijzen_categorieen)."""
     product_id = _voeg_product_toe(db, "Fust Jupiler", categorie="Bier", prijs=80.0, toon_op_kiosk=1)
     db.execute(
         """INSERT INTO product_prijsopties (product_id, naam, prijs, volgorde) VALUES
@@ -444,12 +447,12 @@ def test_prijzenscherm_toont_prijsopties_i_p_v_eigen_prijs(client, db):
     tekst = resp.data.decode()
 
     assert resp.status_code == 200
+    assert 'prijs-special-kop">Fust Jupiler<' in tekst
     assert "Jupiler pitcher" in tekst
     assert "&euro; 12.00" in tekst
     assert "Jupiler glas" in tekst
     assert "&euro; 2.00" in tekst
-    # De naam/prijs van het fust-product zelf mag niet los verschijnen.
-    assert "Fust Jupiler<" not in tekst
+    # De eigen verkoopprijs van het fust-product zelf mag niet los verschijnen.
     assert "&euro; 80.00" not in tekst
 
 
@@ -1582,16 +1585,17 @@ def test_dias_pagina_toont_diashow_instellingen_en_live_voorbeeld(ingelogde_clie
     assert b"Diashow instellen" in resp.data
 
 
-def test_kantine_scherm_staat_alleen_zichzelf_toe_te_framen(client, db):
+def test_kiosk_schermen_staan_zichzelf_toe_te_framen(ingelogde_client, db):
     """X-Frame-Options staat standaard op DENY (zie beveiligingsheaders in
-    app.py) -- kiosk_scherm is de enige bewuste uitzondering (SAMEORIGIN),
-    puur zodat de instellingenpagina 'm in een live-voorbeeld-iframe kan
-    tonen. Andere pagina's mogen niet ge-framed kunnen worden."""
-    scherm_resp = client.get("/kiosk/scherm")
-    assert scherm_resp.headers["X-Frame-Options"] == "SAMEORIGIN"
+    app.py) -- de 3 kiosk-schermen zijn de bewuste uitzondering (SAMEORIGIN),
+    puur zodat de instellingenpagina en de Kiosk-hub 'm in een
+    live-voorbeeld-iframe kunnen tonen. Andere pagina's mogen niet
+    ge-framed kunnen worden."""
+    assert ingelogde_client.get("/kiosk/scherm").headers["X-Frame-Options"] == "SAMEORIGIN"
+    assert ingelogde_client.get("/kiosk/prijzen").headers["X-Frame-Options"] == "SAMEORIGIN"
+    assert ingelogde_client.get("/kiosk/tv").headers["X-Frame-Options"] == "SAMEORIGIN"
 
-    prijzen_resp = client.get("/kiosk/prijzen")
-    assert prijzen_resp.headers["X-Frame-Options"] == "DENY"
+    assert ingelogde_client.get("/").headers["X-Frame-Options"] == "DENY"
 
 
 # ---------- Bardienst (onderdeel van het prijzenscherm) ----------
@@ -1805,13 +1809,6 @@ def test_kiosk_tv_versie_verandert_bij_wisselen(ingelogde_client, db):
     assert versie1 != versie2
 
 
-def test_kiosk_tv_blijft_dicht_voor_framen(client, db):
-    """/kiosk/tv is geen bewuste iframe-uitzondering (i.t.t. kiosk_scherm) --
-    moet dus gewoon op de standaard DENY blijven staan."""
-    resp = client.get("/kiosk/tv")
-    assert resp.headers["X-Frame-Options"] == "DENY"
-
-
 def test_hub_pagina_toont_drie_schermen_en_instellen_snelkoppelingen(ingelogde_client, db):
     resp = ingelogde_client.get("/kiosk")
     assert resp.status_code == 200
@@ -1819,7 +1816,7 @@ def test_hub_pagina_toont_drie_schermen_en_instellen_snelkoppelingen(ingelogde_c
     assert b"Scherm 2" in resp.data
     assert b"Scherm 3" in resp.data
     assert b"Wisselscherm" in resp.data
-    assert b"Bardienst plannen" in resp.data
+    assert b"Bardienst" in resp.data
     # De beknopte "Instellen"-snelkoppelingen naar Acties/Sponsoren/Club van 20.
     assert b'href="/kiosk/prijzen/acties"' in resp.data
     assert b"#dias-tabel" in resp.data

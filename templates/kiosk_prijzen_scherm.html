@@ -74,6 +74,35 @@
         .prijs-regel .bedrag { flex-shrink: 0; font-weight: 700; color: var(--geel); }
         .prijs-regel--uitverkocht .naam { text-decoration: line-through; opacity: 0.55; }
         .prijs-regel--uitverkocht .stippel { opacity: 0.3; }
+
+        /* Specials (prijsopties, bijv. een fust met pitcher/glas): een
+           duidelijk afgebakend kaartje i.p.v. gewone dotted-line regels, zodat
+           ze opvallen tussen de rest van de prijslijst i.p.v. te verdwijnen. */
+        .prijs-special {
+            border: 2px solid var(--geel);
+            border-radius: 10px;
+            padding: 0.5rem 0.8rem;
+            margin: 0.4rem 0;
+            background: rgba(252, 212, 47, 0.08);
+        }
+        .prijs-special-kop {
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: var(--geel);
+            font-size: 1.05rem;
+            margin-bottom: 0.2rem;
+        }
+        .prijs-special-regel {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 0.5rem;
+            font-size: 1.15rem;
+            padding: 0.15rem 0;
+        }
+        .prijs-special--uitverkocht { opacity: 0.6; }
+        .prijs-special--uitverkocht .naam { text-decoration: line-through; }
         .bedrag-uitverkocht {
             flex-shrink: 0;
             background: #d81e1e;
@@ -87,11 +116,11 @@
         }
         .leeg { color: var(--tekst-zacht); font-size: 1.3rem; margin-top: 2rem; }
 
-        /* Wedstrijddag-welkomstbanner: alleen zichtbaar als er vandaag een
-           eigen thuiswedstrijd gepland staat (zie _wedstrijddag_welkom in
-           routes/kiosk.py) -- puur server-side bepaald, i.t.t. de
-           bardienst-balk hieronder, want een wedstrijddag heeft geen
-           moment-tot-moment tijdvak nodig (geldt de hele dag). */
+        /* Wedstrijddag-welkomstbanner: alleen zichtbaar zolang het tijdvak
+           van een eigen thuiswedstrijd vandaag actief is (zie
+           werkWedstrijddagWelkomBij() onderaan) -- client-side bepaald met
+           de eigen klok van het scherm, net als de bardienst-balk
+           hieronder en om dezelfde reden (servertijdzone). */
         .wedstrijddag-banner {
             background: var(--geel);
             color: var(--blauw-donker);
@@ -103,6 +132,7 @@
             border-radius: 12px;
             margin-bottom: 1.6rem;
         }
+        .wedstrijddag-banner[hidden] { display: none; }
 
         /* Bardienst: gele balk onderaan, alleen zichtbaar zolang er nu een
            bardienst-tijdvak actief is (zie de JS onderaan). Bewust GEEN
@@ -162,6 +192,8 @@
         }
         .kiosk-popup--uitverkocht .popup-label { background: #d81e1e; color: #fff; }
         .kiosk-popup--actie .popup-label { background: var(--geel); color: var(--blauw-donker); }
+        .kiosk-popup--wedstrijddag .popup-label { background: var(--geel); color: var(--blauw-donker); }
+        .kiosk-popup--wedstrijddag h2 { color: var(--geel); }
         .kiosk-popup h2 { font-size: 3.4rem; margin: 0; }
         .kiosk-popup .popup-prijs { font-size: 2.4rem; font-weight: 800; color: var(--geel); }
         .kiosk-popup p { font-size: 1.7rem; max-width: 50rem; margin: 0; color: var(--tekst-zacht); }
@@ -191,9 +223,7 @@
         <div id="klok"></div>
     </header>
 
-    {% if wedstrijddag_welkom %}
-    <div class="wedstrijddag-banner">{{ wedstrijddag_welkom }}</div>
-    {% endif %}
+    <div id="wedstrijddag-banner" class="wedstrijddag-banner" hidden></div>
 
     {% if categorieen %}
     <div class="prijzen-grid">
@@ -201,6 +231,21 @@
         <div class="categorie-blok">
             <h2>{{ naam }}</h2>
             {% for p in producten %}
+            {% if p.special %}
+            <div class="prijs-special{{ ' prijs-special--uitverkocht' if p.kiosk_uitverkocht else '' }}">
+                <div class="prijs-special-kop">{{ p.naam }}</div>
+                {% for optie in p.opties %}
+                <div class="prijs-special-regel">
+                    <span class="naam">{{ optie.naam }}</span>
+                    {% if p.kiosk_uitverkocht %}
+                    <span class="bedrag-uitverkocht">Uitverkocht</span>
+                    {% else %}
+                    <span class="bedrag">&euro; {{ '%.2f'|format(optie.verkoopprijs) }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
             <div class="prijs-regel{{ ' prijs-regel--uitverkocht' if p.kiosk_uitverkocht else '' }}">
                 <span class="naam">{{ p.naam }}</span>
                 <span class="stippel"></span>
@@ -210,6 +255,7 @@
                 <span class="bedrag">&euro; {{ '%.2f'|format(p.verkoopprijs) }}</span>
                 {% endif %}
             </div>
+            {% endif %}
             {% endfor %}
         </div>
         {% endfor %}
@@ -330,9 +376,56 @@
             balk.textContent = actief ? 'Bardienst: ' + actief.namen : '';
         }
 
+        // ---------- Wedstrijddag-welkom: banner aan/uit op basis van de klok ----------
+        // Zelfde opzet als de bardienst hierboven: wedstrijdenVandaag staat
+        // op tijd gesorteerd (onbekende tijd -- een "hele dag"-agenda-item
+        // zonder aanvangstijd -- altijd achteraan, zie
+        // _wedstrijddag_welkom_wedstrijden in routes/kiosk.py). Is er geen
+        // enkele wedstrijd met bekende tijd, dan is de banner de hele dag
+        // actief (oud gedrag). Is de tijd wel bekend, dan geldt een tijdvak
+        // van een uur voor aanvang tot een uur voor de volgende wedstrijd
+        // van vandaag -- bij de laatste (of enige) wedstrijd van de dag tot
+        // 2 uur na aanvang.
+        var wedstrijdenVandaag = {{ wedstrijden_vandaag|tojson }};
+        var wedstrijddagWelkomTekst = {{ wedstrijddag_welkom_tekst|tojson }};
+
+        function minutenSindsMidnacht(tijdTekst) {
+            var delen = tijdTekst.split(':');
+            return parseInt(delen[0], 10) * 60 + parseInt(delen[1], 10);
+        }
+
+        function actieveWedstrijddagTegenstander() {
+            if (!wedstrijdenVandaag.length) return null;
+            var metTijd = wedstrijdenVandaag.filter(function (w) { return w.tijd; });
+            if (!metTijd.length) {
+                return wedstrijdenVandaag.map(function (w) { return w.tegenstander; }).join(' & ');
+            }
+            var nu = new Date();
+            var huidigeMinuten = nu.getHours() * 60 + nu.getMinutes();
+            for (var i = 0; i < metTijd.length; i++) {
+                var kickoff = minutenSindsMidnacht(metTijd[i].tijd);
+                var eind = (i + 1 < metTijd.length)
+                    ? minutenSindsMidnacht(metTijd[i + 1].tijd) - 60
+                    : kickoff + 120;
+                if (huidigeMinuten >= kickoff - 60 && huidigeMinuten < eind) {
+                    return metTijd[i].tegenstander;
+                }
+            }
+            return null;
+        }
+
+        function werkWedstrijddagWelkomBij() {
+            var banner = document.getElementById('wedstrijddag-banner');
+            if (!banner) return;
+            var tegenstander = actieveWedstrijddagTegenstander();
+            banner.hidden = !tegenstander;
+            if (tegenstander) banner.textContent = wedstrijddagWelkomTekst.replace('{tegenstander}', tegenstander);
+        }
+
         werkKlokBij();
         werkBardienstBij();
-        setInterval(function () { werkKlokBij(); werkBardienstBij(); }, 15000);
+        werkWedstrijddagWelkomBij();
+        setInterval(function () { werkKlokBij(); werkBardienstBij(); werkWedstrijddagWelkomBij(); }, 15000);
     </script>
 
     <script>
@@ -376,6 +469,23 @@
             setTimeout(toonActie, 25000);
             setInterval(toonActie, 3 * 60 * 1000);
         }
+
+        // ---------- Wedstrijddag-welkom: af en toe ook groot in beeld ----------
+        // actieveWedstrijddagTegenstander() komt uit het vorige <script>-blok
+        // (top-level function, dus gewoon bereikbaar hier).
+        function toonWedstrijddagWelkom() {
+            if (overlayBezig) return;
+            var tegenstander = actieveWedstrijddagTegenstander();
+            if (!tegenstander) return;
+            toonPopup(
+                '<div class="popup-label">Welkom</div><h2>' +
+                    wedstrijddagWelkomTekst.replace('{tegenstander}', tegenstander) + '</h2>',
+                'kiosk-popup--wedstrijddag',
+                9000
+            );
+        }
+        setTimeout(toonWedstrijddagWelkom, 40000);
+        setInterval(toonWedstrijddagWelkom, 3 * 60 * 1000);
 
         // ---------- Prijzen/acties bijwerken + grote pop-up bij UITVERKOCHT ----------
         // Poll elke 10s of de getoonde producten/prijzen/acties nog kloppen,

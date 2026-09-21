@@ -70,13 +70,16 @@ def register_routes(app):
     def _prijzen_instellingen(db):
         return db.execute("SELECT * FROM kiosk_prijzen_instellingen WHERE id = 1").fetchone()
 
-    def _sponsor_slide(s, eigen_sjablonen):
+    def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None):
         """Bouwt de slide-dict voor 1 sponsor-/mededelingrij. Bij
         sjabloon == 'aangepast' wordt het gekoppelde zelfgebouwde sjabloon
         (kiosk_sjablonen_custom) verrijkt met de eigen titel/tekst/foto van
         deze sponsor; is dat sjabloon inmiddels verwijderd, dan levert deze
         sponsor gewoon geen slide op (zelfde 'leeg blok'-filosofie als de
-        rest van _bouw_slides)."""
+        rest van _bouw_slides). Een 'prijs'-element krijgt hier zijn inhoud
+        vers uit producten_bij_id -- dat gebeurt bij elke opbouw opnieuw
+        (elke paginalaad/versiepoll), dus een latere prijswijziging van het
+        gekoppelde product komt vanzelf door, net als de rest van het scherm."""
         slide = {
             "type": "sponsor",
             "duur": s["weergave_duur_seconden"],
@@ -93,6 +96,7 @@ def register_routes(app):
         sjabloon = eigen_sjablonen.get(s["custom_sjabloon_id"])
         if sjabloon is None:
             return None
+        producten_bij_id = producten_bij_id or {}
         elementen = []
         for element in json.loads(sjabloon["elementen"]):
             element = dict(element)
@@ -102,6 +106,11 @@ def register_routes(app):
                 element["inhoud"] = s["titel"]
             elif element.get("type") == "tekst":
                 element["inhoud"] = s["tekst"]
+            elif element.get("type") == "prijs":
+                product = producten_bij_id.get(element.get("product_id"))
+                element["inhoud"] = (
+                    ("€ " + f"{product['verkoopprijs']:.2f}".replace(".", ",")) if product else None
+                )
             elementen.append(element)
         slide.update(
             {
@@ -133,10 +142,14 @@ def register_routes(app):
             eigen_sjablonen = {
                 r["id"]: r for r in db.execute("SELECT * FROM kiosk_sjablonen_custom").fetchall()
             }
+            producten_bij_id = {
+                r["id"]: r
+                for r in db.execute("SELECT id, verkoopprijs FROM producten").fetchall()
+            }
             slides = [
                 slide
                 for s in sponsoren
-                if (slide := _sponsor_slide(s, eigen_sjablonen)) is not None
+                if (slide := _sponsor_slide(s, eigen_sjablonen, producten_bij_id)) is not None
             ]
             if slides:
                 blokken.append((instellingen["sponsoren_volgorde"], slides))
@@ -365,23 +378,22 @@ def register_routes(app):
                 # Een fust-achtig product wordt zelf niet in zijn geheel
                 # verkocht: i.p.v. de eigen verkoopprijs tonen we de losse
                 # porties die eruit getapt/geschonken worden (bijv. pitcher
-                # of glas, zie product_form.html). Is het hele product als
-                # uitverkocht gemarkeerd (leeg fust), dan geldt dat voor elke
-                # portie ervan.
-                for optie in opties:
-                    per_categorie.setdefault(weergave_categorie, []).append(
-                        {
-                            "id": optie["id"],
-                            "naam": optie["naam"],
-                            # Los van "naam" (de portienaam, bijv. "Klein
-                            # glas") bewaard voor _uitverkocht_namen hieronder
-                            # -- die moet het onderliggende product tonen
-                            # (bijv. "Jupiler"), niet de portienaam.
-                            "product_naam": p["naam"],
-                            "verkoopprijs": optie["prijs"],
-                            "kiosk_uitverkocht": p["kiosk_uitverkocht"],
-                        }
-                    )
+                # of glas, zie product_form.html) -- als 1 special-kaartje
+                # i.p.v. aparte prijsregels, zodat het als geheel meer
+                # opvalt (zie .prijs-special in kiosk_prijzen_scherm.html).
+                # Is het hele product als uitverkocht gemarkeerd (leeg
+                # fust), dan geldt dat voor elke portie ervan.
+                per_categorie.setdefault(weergave_categorie, []).append(
+                    {
+                        "special": True,
+                        "naam": p["naam"],
+                        "kiosk_uitverkocht": p["kiosk_uitverkocht"],
+                        "opties": [
+                            {"naam": optie["naam"], "verkoopprijs": optie["prijs"]}
+                            for optie in opties
+                        ],
+                    }
+                )
             else:
                 per_categorie.setdefault(weergave_categorie, []).append(p)
         # Op naam sorteren binnen de groep: door de kiosk_categorie-override
@@ -406,17 +418,15 @@ def register_routes(app):
         ).fetchall()
 
     def _uitverkocht_namen(categorieen):
-        # Bij prijsopties (fust-achtige producten, zie hierboven) is "naam"
-        # de portienaam (bijv. "Klein glas"); voor de uitverkocht-popup moet
-        # het onderliggende product getoond worden ("product_naam", bijv.
-        # "Jupiler"), en maar 1x per product, ook al zijn er meerdere
-        # uitverkochte porties van hetzelfde product.
+        # Elk item (special-kaartje of gewoon product) staat hier al 1x per
+        # product in "naam" -- ook bij een special (meerdere prijsopties)
+        # verschijnt de productnaam dus maar 1x in de uitverkocht-popup.
         namen = []
         for _, lijst in categorieen:
             for p in lijst:
                 if not p["kiosk_uitverkocht"]:
                     continue
-                naam = p["product_naam"] if "product_naam" in p.keys() else p["naam"]
+                naam = p["naam"]
                 if naam not in namen:
                     namen.append(naam)
         return namen
@@ -452,52 +462,66 @@ def register_routes(app):
         de selectie een paar uur te vroeg/laat rond middernacht."""
         return "trainingsavond" if is_trainingsavond(vandaag_amsterdam()) else "normaal"
 
-    def _wedstrijddag_welkom(db):
-        """Welkomsttekst voor een eigen thuiswedstrijd vandaag (instelling:
-        zie kiosk_wedstrijddag_welkom_instellingen) -- None als de banner
-        uitstaat, er geen thuiswedstrijd vandaag gepland staat, of de
-        tegenstander niet uit de omschrijving te halen was. Spelen er
-        meerdere teams vandaag thuis, dan worden alle tegenstanders
-        samengevoegd in de plaatshouder."""
+    def _wedstrijddag_welkom_wedstrijden(db):
+        """Eigen thuiswedstrijden vandaag, voor de welkomstbanner/-popup op
+        het prijzenscherm (instelling: zie kiosk_wedstrijddag_welkom_instellingen)
+        -- lege lijst als de banner uitstaat of er niets gepland staat.
+        Op tijd gesorteerd (onbekende tijd/"hele dag" achteraan) zodat de
+        client precies weet in welke volgorde de wedstrijden vandaag
+        plaatsvinden -- de client bepaalt met die volgorde en de eigen klok
+        welk tijdvak nu actief is (zie werkWedstrijddagWelkomBij() in
+        kiosk_prijzen_scherm.html), net als bij de bardienst-balk en om
+        dezelfde reden: geen servertijdzone-afhankelijkheid."""
         instellingen = _prijzen_instellingen(db)
         if not instellingen["wedstrijddag_welkom_actief"]:
-            return None
+            return []
         vandaag = vandaag_amsterdam().isoformat()
         wedstrijden = db.execute(
-            "SELECT omschrijving FROM wedstrijden WHERE thuis = 1 AND datum = ? ORDER BY team",
+            """SELECT tijd, omschrijving FROM wedstrijden
+               WHERE thuis = 1 AND datum = ?
+               ORDER BY tijd IS NULL, tijd, team""",
             (vandaag,),
         ).fetchall()
-        tegenstanders = []
+        resultaat = []
+        gezien = set()
         for w in wedstrijden:
             naam = bepaal_tegenstander(w["omschrijving"])
-            if naam and naam not in tegenstanders:
-                tegenstanders.append(naam)
-        if not tegenstanders:
-            return None
-        return instellingen["wedstrijddag_welkom_tekst"].replace(
-            "{tegenstander}", " & ".join(tegenstanders)
-        )
+            if not naam or naam in gezien:
+                continue
+            gezien.add(naam)
+            resultaat.append({"tijd": w["tijd"], "tegenstander": naam})
+        return resultaat
 
-    def _prijzen_versie(categorieen, acties, bardiensten, wedstrijddag_welkom, *extra):
+    def _prijs_regel_voor_hash(p):
+        # p is ofwel een gewoon product (sqlite3.Row) ofwel een
+        # special-kaartje (plain dict, zie _prijzen_categorieen) -- die twee
+        # hebben geen gemeenschappelijke "id"/"verkoopprijs"-vorm, dus hier
+        # per soort een eigen hashbare tuple.
+        if isinstance(p, dict):
+            return (
+                p["naam"],
+                p["kiosk_uitverkocht"],
+                tuple((o["naam"], o["verkoopprijs"]) for o in p["opties"]),
+            )
+        return (p["id"], p["naam"], p["verkoopprijs"], p["kiosk_uitverkocht"])
+
+    def _prijzen_versie(categorieen, acties, bardiensten, wedstrijden_vandaag, *extra):
         # Alleen de velden die daadwerkelijk op het scherm staan -- zo
         # triggert bijv. een gewijzigde voorraad (niet zichtbaar hier) geen
         # onnodige herlaadbeurt. Acties, de bardiensten van vandaag en de
-        # wedstrijddag-welkomsttekst tellen ook mee, zodat een wijziging
+        # thuiswedstrijden van vandaag tellen ook mee, zodat een wijziging
         # daaraan het scherm net als de rest vanzelf bijwerkt. *extra is puur
         # om /kiosk/tv (zie kiosk_tv) een eigen versie-'namespace' te geven,
         # zodat het wisselen tussen prijzen/dia's ook zonder inhoudelijke
         # wijziging als een update gezien wordt.
         return _versie(
             [
-                (
-                    naam,
-                    [(p["id"], p["naam"], p["verkoopprijs"], p["kiosk_uitverkocht"]) for p in lijst],
-                )
+                (naam, [_prijs_regel_voor_hash(p) for p in lijst])
                 for naam, lijst in categorieen
             ],
             [(a["id"], a["tekst"], a["product_naam"], a["verkoopprijs"], a["afbeelding"]) for a in acties],
             [(b["id"], b["datum"], b["start_tijd"], b["eind_tijd"], b["namen"]) for b in bardiensten],
-            wedstrijddag_welkom,
+            [(w["tijd"], w["tegenstander"]) for w in wedstrijden_vandaag],
             *extra,
         )
 
@@ -508,7 +532,7 @@ def register_routes(app):
         categorieen = _prijzen_categorieen(db, _dag_type_vandaag())
         acties = _acties_actief(db)
         bardiensten = _bardiensten_vandaag(db)
-        wedstrijddag_welkom = _wedstrijddag_welkom(db)
+        wedstrijden_vandaag = _wedstrijddag_welkom_wedstrijden(db)
         acties_voor_scherm = [
             {
                 "naam": a["product_naam"],
@@ -522,11 +546,12 @@ def register_routes(app):
         return {
             "categorieen": categorieen,
             "acties": acties_voor_scherm,
-            "versie": _prijzen_versie(categorieen, acties, bardiensten, wedstrijddag_welkom, *extra),
+            "versie": _prijzen_versie(categorieen, acties, bardiensten, wedstrijden_vandaag, *extra),
             "versie_url": versie_url,
             "uitverkocht_namen": _uitverkocht_namen(categorieen),
             "bardiensten_vandaag": _bardiensten_voor_scherm(bardiensten),
-            "wedstrijddag_welkom": wedstrijddag_welkom,
+            "wedstrijden_vandaag": wedstrijden_vandaag,
+            "wedstrijddag_welkom_tekst": _prijzen_instellingen(db)["wedstrijddag_welkom_tekst"],
         }
 
     @app.route("/kiosk/prijzen")
@@ -545,7 +570,9 @@ def register_routes(app):
         bardiensten = _bardiensten_vandaag(db)
         return jsonify(
             {
-                "versie": _prijzen_versie(categorieen, acties, bardiensten, _wedstrijddag_welkom(db)),
+                "versie": _prijzen_versie(
+                    categorieen, acties, bardiensten, _wedstrijddag_welkom_wedstrijden(db)
+                ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
             }
         )
@@ -904,6 +931,7 @@ def register_routes(app):
             sjablonen_custom_json=sjablonen_custom_json,
             overgangen=KIOSK_OVERGANGEN,
             tekst_groottes=KIOSK_TEKST_GROOTTES,
+            producten=_sjabloon_producten(db),
         )
 
     @app.route("/kiosk/sponsoren-leden/sponsoren/<int:sponsor_id>/bewerken", methods=["GET", "POST"])
@@ -975,6 +1003,7 @@ def register_routes(app):
             sjablonen_custom_json=sjablonen_custom_json,
             overgangen=KIOSK_OVERGANGEN,
             tekst_groottes=KIOSK_TEKST_GROOTTES,
+            producten=_sjabloon_producten(db),
         )
 
     @app.route("/kiosk/sponsoren-leden/sponsoren/<int:sponsor_id>/verwijderen", methods=["POST"])
@@ -986,6 +1015,16 @@ def register_routes(app):
         return redirect(url_for("kiosk_sponsoren_leden"))
 
     # ---------- Onderdeel 2b: Eigen sjablonen (drag-and-drop bouwer) ----------
+
+    def _sjabloon_producten(db):
+        """Producten voor de product-kiezer bij een 'prijs'-element (zie
+        KIOSK_ELEMENT_TYPES) -- inclusief de huidige prijs, zodat de bouwer
+        al een levensechte live-preview kan tonen. Platte dicts (i.p.v.
+        sqlite3.Row) omdat dit rechtstreeks als JSON naar de pagina gaat."""
+        rijen = db.execute(
+            "SELECT id, naam, verkoopprijs FROM producten WHERE actief = 1 ORDER BY naam"
+        ).fetchall()
+        return [{"id": r["id"], "naam": r["naam"], "verkoopprijs": r["verkoopprijs"]} for r in rijen]
 
     def _sjabloon_elementen_uit_formulier():
         """Parseert en valideert de door de bouwer opgestuurde elementen_json
@@ -1023,6 +1062,12 @@ def register_routes(app):
             lettergrootte = item.get("lettergrootte")
             if lettergrootte not in KIOSK_TEKST_GROOTTE_SLEUTELS:
                 lettergrootte = "normaal"
+            product_id = None
+            if type_ == "prijs":
+                try:
+                    product_id = int(item.get("product_id"))
+                except (TypeError, ValueError):
+                    product_id = None
             elementen.append(
                 {
                     "type": type_,
@@ -1034,6 +1079,7 @@ def register_routes(app):
                     "uitlijning": uitlijning,
                     "lettergrootte": lettergrootte,
                     "inhoud": str(item.get("inhoud") or "") if type_ == "vrije_tekst" else None,
+                    "product_id": product_id,
                 }
             )
         return elementen
@@ -1071,6 +1117,7 @@ def register_routes(app):
             sjabloon=None,
             sjabloon_elementen=[],
             tekst_groottes=KIOSK_TEKST_GROOTTES,
+            producten=_sjabloon_producten(db),
         )
 
     @app.route("/kiosk/sponsoren-leden/sjablonen/<int:sjabloon_id>/bewerken", methods=["GET", "POST"])
@@ -1119,6 +1166,7 @@ def register_routes(app):
             sjabloon=sjabloon,
             sjabloon_elementen=json.loads(sjabloon["elementen"]),
             tekst_groottes=KIOSK_TEKST_GROOTTES,
+            producten=_sjabloon_producten(db),
         )
 
     @app.route("/kiosk/sponsoren-leden/sjablonen/<int:sjabloon_id>/verwijderen", methods=["POST"])
@@ -1327,7 +1375,9 @@ def register_routes(app):
         bardiensten = _bardiensten_vandaag(db)
         return jsonify(
             {
-                "versie": _prijzen_versie(categorieen, acties, bardiensten, _wedstrijddag_welkom(db), "tv"),
+                "versie": _prijzen_versie(
+                    categorieen, acties, bardiensten, _wedstrijddag_welkom_wedstrijden(db), "tv"
+                ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
             }
         )

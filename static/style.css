@@ -671,6 +671,7 @@ form.inline { display: inline; }
 .formgrid[hidden] { display: none; }
 
 .veld { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.9rem; }
+.veld[hidden] { display: none; }
 .veld label { font-size: 0.78rem; font-weight: 700; color: var(--tekst-zacht); }
 
 .veld-waarde {

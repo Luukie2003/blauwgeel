@@ -1,3 +1,5 @@
+import json
+import re
 import sqlite3
 from datetime import date
 
@@ -111,7 +113,31 @@ def test_prijzenscherm_toont_trainingsavond_selectie_op_trainingsavond(client, d
     assert "Alleen normaal" not in tekst
 
 
+def _wedstrijden_json(tekst):
+    """Haalt de JS-array 'wedstrijdenVandaag' uit de paginabron (zie
+    kiosk_prijzen_scherm.html) -- de banner/popup zelf wordt client-side
+    gevuld, dus in de kale server-HTML valt alleen deze data te checken."""
+    match = re.search(r"var wedstrijdenVandaag = (\[.*?\]);", tekst)
+    assert match is not None
+    return json.loads(match.group(1))
+
+
 def test_wedstrijddag_welkom_toont_tegenstander_uit_agenda(client, db):
+    vandaag = vandaag_amsterdam().isoformat()
+    db.execute(
+        "INSERT INTO wedstrijden (team, datum, omschrijving, thuis, tijd) VALUES (?, ?, ?, 1, ?)",
+        ("Blauw Geel'15 2", vandaag, "Blauw Geel'15 2-Haren 1", "14:00"),
+    )
+    db.commit()
+
+    resp = client.get("/kiosk/prijzen")
+    assert _wedstrijden_json(resp.data.decode()) == [{"tijd": "14:00", "tegenstander": "Haren 1"}]
+
+
+def test_wedstrijddag_welkom_zonder_bekende_tijd(client, db):
+    """Geen tijd bekend (bijv. een 'hele dag'-agenda-item) -- de banner moet
+    dan alsnog gegevens krijgen (client-side valt 'ie dan terug op de hele
+    dag, zie actieveWedstrijddagTegenstander())."""
     vandaag = vandaag_amsterdam().isoformat()
     db.execute(
         "INSERT INTO wedstrijden (team, datum, omschrijving, thuis) VALUES (?, ?, ?, 1)",
@@ -120,12 +146,31 @@ def test_wedstrijddag_welkom_toont_tegenstander_uit_agenda(client, db):
     db.commit()
 
     resp = client.get("/kiosk/prijzen")
-    assert "Welkom Haren 1!" in resp.data.decode()
+    assert _wedstrijden_json(resp.data.decode()) == [{"tijd": None, "tegenstander": "Haren 1"}]
+
+
+def test_wedstrijddag_welkom_meerdere_thuiswedstrijden_op_tijd_gesorteerd(client, db):
+    vandaag = vandaag_amsterdam().isoformat()
+    db.execute(
+        "INSERT INTO wedstrijden (team, datum, omschrijving, thuis, tijd) VALUES (?, ?, ?, 1, ?)",
+        ("Blauw Geel'15 1", vandaag, "Blauw Geel'15 1-VEV'67 1", "16:00"),
+    )
+    db.execute(
+        "INSERT INTO wedstrijden (team, datum, omschrijving, thuis, tijd) VALUES (?, ?, ?, 1, ?)",
+        ("Blauw Geel'15 2", vandaag, "Blauw Geel'15 2-Haren 1", "12:00"),
+    )
+    db.commit()
+
+    resp = client.get("/kiosk/prijzen")
+    assert _wedstrijden_json(resp.data.decode()) == [
+        {"tijd": "12:00", "tegenstander": "Haren 1"},
+        {"tijd": "16:00", "tegenstander": "VEV'67 1"},
+    ]
 
 
 def test_wedstrijddag_welkom_verschijnt_niet_zonder_thuiswedstrijd(client, db):
     resp = client.get("/kiosk/prijzen")
-    assert '<div class="wedstrijddag-banner">' not in resp.data.decode()
+    assert _wedstrijden_json(resp.data.decode()) == []
 
 
 def test_wedstrijddag_welkom_uitgezet_toont_niets(client, db):
@@ -138,7 +183,7 @@ def test_wedstrijddag_welkom_uitgezet_toont_niets(client, db):
     db.commit()
 
     resp = client.get("/kiosk/prijzen")
-    assert '<div class="wedstrijddag-banner">' not in resp.data.decode()
+    assert _wedstrijden_json(resp.data.decode()) == []
 
 
 def test_wedstrijddag_welkom_instellingen_opslaan(ingelogde_client, db):

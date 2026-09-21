@@ -754,13 +754,16 @@ def create_app(database_path=None):
         sommige pagina's nog inline <script>- en onsubmit-attributen
         gebruiken."""
         response.headers["X-Content-Type-Options"] = "nosniff"
-        # kiosk_scherm is een publieke, puur tonende pagina zonder enige
-        # interactieve/klikbare inhoud (geen formulieren, geen links) --
-        # geen clickjacking-risico dus, en die uitzondering is nodig zodat
-        # de instellingenpagina 'm in een live-voorbeeld-iframe kan tonen.
-        # Overal elders blijft framen (SAMEORIGIN-uitzondering incluis) uit.
+        # De 3 kiosk-schermen zijn publieke, puur tonende pagina's zonder
+        # enige interactieve/klikbare inhoud (geen formulieren, geen links)
+        # -- geen clickjacking-risico dus, en die uitzondering is nodig
+        # zodat de instellingenpagina en de Kiosk-hub 'm in een
+        # live-voorbeeld-iframe kunnen tonen. Overal elders blijft framen
+        # (SAMEORIGIN-uitzondering incluis) uit.
         response.headers["X-Frame-Options"] = (
-            "SAMEORIGIN" if request.endpoint == "kiosk_scherm" else "DENY"
+            "SAMEORIGIN"
+            if request.endpoint in ("kiosk_scherm", "kiosk_prijzen_scherm", "kiosk_tv")
+            else "DENY"
         )
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Content-Security-Policy"] = (

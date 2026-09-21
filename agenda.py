@@ -18,6 +18,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 from urllib.request import urlopen
+from zoneinfo import ZoneInfo
 
 BASE_DIR = Path(__file__).parent
 DB_PAD = BASE_DIR / "voorraad.db"
@@ -43,24 +44,43 @@ def _team_naam(tekst):
 def _parse_ics(tekst):
     """Minimalistische iCal-parser: leest per VEVENT-blok de SUMMARY en
     DTSTART. Geen externe library nodig voor deze paar velden -- ICS is een
-    simpel regelformaat, en we hebben alleen datum + omschrijving nodig."""
+    simpel regelformaat, en we hebben alleen datum + omschrijving (+ eventueel
+    aanvangstijd) nodig."""
     wedstrijden = []
     for blok in tekst.split("BEGIN:VEVENT")[1:]:
         blok = blok.split("END:VEVENT")[0]
         samenvatting_match = re.search(r"SUMMARY:(.+)", blok)
-        datum_match = re.search(r"DTSTART[^:]*:(\d{8})", blok)
+        # Groep 1: datumcijfers (altijd aanwezig). Groepen 2-4: uur/minuut/
+        # seconde, alleen aanwezig bij een echte DTSTART:...T-tijdstip (een
+        # "heel-de-dag"-event zoals DTSTART;VALUE=DATE:20260920 heeft dat
+        # niet). Groep 5: een kale "Z" betekent UTC i.p.v. lokale tijd.
+        datum_match = re.search(r"DTSTART[^:]*:(\d{8})(?:T(\d{2})(\d{2})\d{2}(Z)?)?", blok)
         if not samenvatting_match or not datum_match:
             continue
         try:
             datum = datetime.strptime(datum_match.group(1), "%Y%m%d").date()
         except ValueError:
             continue
+        tijd = None
+        if datum_match.group(2):
+            uur, minuut = int(datum_match.group(2)), int(datum_match.group(3))
+            if datum_match.group(4):
+                # UTC-tijdstip -- omzetten naar Europe/Amsterdam kan de datum
+                # zelf ook verschuiven (net na middernacht lokaal).
+                lokaal = datetime(
+                    datum.year, datum.month, datum.day, uur, minuut, tzinfo=ZoneInfo("UTC")
+                ).astimezone(ZoneInfo("Europe/Amsterdam"))
+                datum = lokaal.date()
+                tijd = lokaal.strftime("%H:%M")
+            else:
+                tijd = f"{uur:02d}:{minuut:02d}"
         samenvatting = samenvatting_match.group(1).strip().replace("\\,", ",").replace("\\;", ";")
         thuisploeg = samenvatting.split("-", 1)[0]
         wedstrijden.append({
             "datum": datum.isoformat(),
             "omschrijving": samenvatting,
             "thuis": CLUBNAAM in thuisploeg.lower(),
+            "tijd": tijd,
         })
     return wedstrijden
 
@@ -120,12 +140,34 @@ def ververs_wedstrijden(db_pad=None):
         conn.execute("UPDATE agenda_feeds SET team = ? WHERE id = ?", (team, feed["id"]))
         for wedstrijd in wedstrijden:
             cursor = conn.execute(
-                """INSERT OR IGNORE INTO wedstrijden (team, datum, omschrijving, thuis)
-                   VALUES (?, ?, ?, ?)""",
-                (team, wedstrijd["datum"], wedstrijd["omschrijving"], int(wedstrijd["thuis"])),
+                """INSERT OR IGNORE INTO wedstrijden (team, datum, omschrijving, thuis, tijd)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (
+                    team,
+                    wedstrijd["datum"],
+                    wedstrijd["omschrijving"],
+                    int(wedstrijd["thuis"]),
+                    wedstrijd["tijd"],
+                ),
             )
             if cursor.rowcount:
                 aantal += 1
+            elif wedstrijd["tijd"]:
+                # Was al bekend (bijv. van vóór de tijd werd meegenomen uit de
+                # feed) -- tijd alsnog bijwerken, want INSERT OR IGNORE raakt
+                # een bestaande rij verder niet aan.
+                conn.execute(
+                    """UPDATE wedstrijden SET tijd = ?
+                       WHERE team = ? AND datum = ? AND omschrijving = ?
+                             AND (tijd IS NULL OR tijd != ?)""",
+                    (
+                        wedstrijd["tijd"],
+                        team,
+                        wedstrijd["datum"],
+                        wedstrijd["omschrijving"],
+                        wedstrijd["tijd"],
+                    ),
+                )
 
     conn.commit()
     conn.close()

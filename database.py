@@ -187,6 +187,11 @@ KOLOM_MIGRATIES = [
     # telmethode/rapportage bepaalt) aan te passen. Leeg = gewoon de eigen
     # categorie, zoals voorheen. Zie _prijzen_categorieen in routes/kiosk.py.
     ("producten", "kiosk_categorie", "TEXT"),
+    # Aanvangstijd (Europe/Amsterdam, "UU:MM") uit de agenda-feed, voor zover
+    # bekend -- een "hele dag"-event in de ICS-feed heeft geen tijd, dan
+    # blijft dit NULL. Zie agenda.py (_parse_ics) en de
+    # wedstrijddag-welkomstbanner in routes/kiosk.py.
+    ("wedstrijden", "tijd", "TEXT"),
 ]
 
 

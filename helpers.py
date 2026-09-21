@@ -95,8 +95,11 @@ KIOSK_TEKST_GROOTTE_SLEUTELS = {sleutel for sleutel, _ in KIOSK_TEKST_GROOTTES}
 
 # Elementtypes voor de eigen-sjabloon-bouwer (zie kiosk_sjabloon_bouwer.html):
 # titel/tekst/foto halen hun inhoud van de sponsor die het sjabloon gebruikt,
-# vrije_tekst heeft eigen vaste inhoud die bij elk gebruik gelijk blijft.
-KIOSK_ELEMENT_TYPES = {"titel", "tekst", "foto", "vrije_tekst"}
+# vrije_tekst heeft eigen vaste inhoud die bij elk gebruik gelijk blijft, en
+# prijs toont de actuele verkoopprijs van een zelf gekozen product (element
+# heeft dan ook een "product_id") -- wijzigt die prijs later, dan verandert
+# de dia vanzelf mee, net als de rest van het scherm.
+KIOSK_ELEMENT_TYPES = {"titel", "tekst", "foto", "vrije_tekst", "prijs"}
 KIOSK_UITLIJNINGEN = {"links", "midden", "rechts"}
 HEX_KLEUR_PATROON = re.compile(r"^#[0-9a-fA-F]{6}$")
 

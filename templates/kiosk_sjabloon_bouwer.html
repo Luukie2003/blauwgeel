@@ -8,7 +8,8 @@
     <p style="margin:0">
         Sleep elementen naar de gewenste plek en verklein/vergroot via de gele hoek rechtsonder. Titel/Tekst/Foto
         tonen straks automatisch de eigen inhoud van de sponsor die dit sjabloon kiest; Vrije tekst heeft altijd
-        dezelfde, hier ingevulde tekst (bijv. een vast label of watermerk).
+        dezelfde, hier ingevulde tekst (bijv. een vast label of watermerk); Prijs toont de actuele verkoopprijs
+        van een zelf gekozen product en werkt vanzelf bij zodra die prijs verandert.
     </p>
 </div>
 
@@ -95,6 +96,7 @@
                     <button type="button" class="btn btn-rand btn-klein" data-nieuw="tekst">+ Tekst</button>
                     <button type="button" class="btn btn-rand btn-klein" data-nieuw="foto">+ Foto</button>
                     <button type="button" class="btn btn-rand btn-klein" data-nieuw="vrije_tekst">+ Vrije tekst</button>
+                    <button type="button" class="btn btn-rand btn-klein" data-nieuw="prijs">+ Prijs</button>
                 </div>
                 <div class="bouwer-venster" id="bouwer-venster">
                     <img id="bouwer-achtergrond-img" style="display:none" alt="">
@@ -112,6 +114,14 @@
                     <div class="veld" id="eigenschap-inhoud-veld" hidden>
                         <label for="eigenschap-inhoud">Tekst</label>
                         <textarea id="eigenschap-inhoud" rows="2"></textarea>
+                    </div>
+                    <div class="veld" id="eigenschap-product-veld" hidden>
+                        <label for="eigenschap-product">Product</label>
+                        <select id="eigenschap-product">
+                            {% for p in producten %}
+                            <option value="{{ p.id }}">{{ p.naam }} (&euro; {{ '%.2f'|format(p.verkoopprijs) }})</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="veld" id="eigenschap-lettergrootte-veld">
                         <label for="eigenschap-lettergrootte">Lettergrootte</label>
@@ -153,6 +163,7 @@
 
     {% set achtergrond_url = url_for('static', filename='kiosk_afbeeldingen/' + sjabloon.achtergrond_afbeelding) if sjabloon and sjabloon.achtergrond_afbeelding else None %}
     var achtergrondAfbeeldingUrl = {{ achtergrond_url|tojson }};
+    var producten = {{ producten|tojson }};
 
     var volgendeId = 1;
     var elementen = ({{ sjabloon_elementen|tojson }}).map(function (e) {
@@ -162,7 +173,14 @@
     });
     var geselecteerdId = null;
 
-    var LABELS = { titel: 'Titel', tekst: 'Tekst', foto: 'Foto', vrije_tekst: 'Vrije tekst' };
+    var LABELS = { titel: 'Titel', tekst: 'Tekst', foto: 'Foto', vrije_tekst: 'Vrije tekst', prijs: 'Prijs' };
+
+    function productBijId(id) {
+        for (var i = 0; i < producten.length; i++) {
+            if (producten[i].id === id) return producten[i];
+        }
+        return null;
+    }
 
     function klem(getal, min, max) {
         return Math.max(min, Math.min(max, getal));
@@ -192,15 +210,20 @@
             uitlijning: 'links',
             lettergrootte: 'normaal',
             inhoud: type === 'vrije_tekst' ? 'Tekst hier' : null,
+            product_id: type === 'prijs' && producten.length ? producten[0].id : null,
         };
         elementen.push(e);
         selecteer(e._id);
     }
 
-    function plaatshouderTekst(type) {
-        if (type === 'titel') return 'Titel';
-        if (type === 'tekst') return 'Tekst...';
-        if (type === 'foto') return '🖼 Foto';
+    function plaatshouderTekst(e) {
+        if (e.type === 'titel') return 'Titel';
+        if (e.type === 'tekst') return 'Tekst...';
+        if (e.type === 'foto') return '🖼 Foto';
+        if (e.type === 'prijs') {
+            var product = productBijId(e.product_id);
+            return product ? ('€ ' + product.verkoopprijs.toFixed(2).replace('.', ',') + ' (' + product.naam + ')') : '€ Prijs';
+        }
         return null;
     }
 
@@ -224,7 +247,7 @@
 
             var inhoud = document.createElement('div');
             inhoud.className = 'element-inhoud';
-            inhoud.textContent = e.type === 'vrije_tekst' ? (e.inhoud || '') : plaatshouderTekst(e.type);
+            inhoud.textContent = e.type === 'vrije_tekst' ? (e.inhoud || '') : plaatshouderTekst(e);
             div.appendChild(inhoud);
 
             var verwijder = document.createElement('span');
@@ -329,6 +352,10 @@
         document.getElementById('eigenschap-type').textContent = LABELS[e.type];
         document.getElementById('eigenschap-inhoud-veld').hidden = e.type !== 'vrije_tekst';
         document.getElementById('eigenschap-inhoud').value = e.inhoud || '';
+        document.getElementById('eigenschap-product-veld').hidden = e.type !== 'prijs';
+        if (e.type === 'prijs') {
+            document.getElementById('eigenschap-product').value = e.product_id || '';
+        }
         document.getElementById('eigenschap-lettergrootte-veld').hidden = e.type === 'foto';
         document.getElementById('eigenschap-lettergrootte').value = e.lettergrootte;
         document.getElementById('eigenschap-kleur-veld').hidden = e.type === 'foto';
@@ -359,6 +386,12 @@
         var e = elementBijId(geselecteerdId);
         if (!e) return;
         e.uitlijning = ev.target.value;
+        renderCanvas();
+    });
+    document.getElementById('eigenschap-product').addEventListener('change', function (ev) {
+        var e = elementBijId(geselecteerdId);
+        if (!e) return;
+        e.product_id = parseInt(ev.target.value, 10) || null;
         renderCanvas();
     });
     document.getElementById('element-verwijderen').addEventListener('click', function () {
@@ -410,6 +443,7 @@
             return {
                 type: e.type, x: e.x, y: e.y, breedte: e.breedte, hoogte: e.hoogte,
                 kleur: e.kleur, uitlijning: e.uitlijning, lettergrootte: e.lettergrootte, inhoud: e.inhoud,
+                product_id: e.product_id,
             };
         }));
     });

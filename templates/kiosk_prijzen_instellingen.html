@@ -123,8 +123,11 @@
     <p class="tekst-zacht" style="margin-top:-0.4rem">
         Speelt de club vandaag thuis (volgens de agenda uit
         <a href="{{ url_for('club_instellingen') }}">Club instellingen</a>), dan toont het prijzenscherm
-        deze tekst prominent bovenaan. Gebruik <code>{tegenstander}</code> als plaatshouder -- die wordt
-        automatisch vervangen door de naam(en) uit de agenda, bijv. "Welkom Haren!".
+        deze tekst als banner bovenaan, en af en toe ook groot in beeld. Gebruik <code>{tegenstander}</code>
+        als plaatshouder -- die wordt automatisch vervangen door de naam uit de agenda, bijv. "Welkom Haren!".
+        Is de aanvangstijd bekend, dan is de banner actief vanaf een uur voor aanvang tot een uur voor de
+        volgende thuiswedstrijd van die dag (bij de laatste/enige wedstrijd: tot 2 uur na aanvang). Zonder
+        bekende aanvangstijd is de banner de hele dag actief.
     </p>
     <form method="post" action="{{ url_for('kiosk_wedstrijddag_welkom_instellingen') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

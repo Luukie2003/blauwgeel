@@ -4,73 +4,147 @@
 <p class="subtitel">
     TV-schermen voor in de kantine, te casten via Chromecast. De schermen zelf
     zijn publieke pagina's (geen account nodig) -- wat erop staat stel je hier in.
+    Hieronder een live voorbeeld van elk scherm, zodat je in één oogopslag ziet wat erop staat.
 </p>
 
+<style>
+    .kiosk-schermen-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:1.1rem; margin-bottom:1.8rem; }
+    .kiosk-mini-voorbeeld-buiten {
+        position:relative; width:100%; aspect-ratio:16/9; overflow:hidden;
+        border-radius:10px; background:#0f1f4d;
+    }
+    .kiosk-mini-voorbeeld-buiten iframe {
+        position:absolute; top:0; left:0; width:1920px; height:1080px;
+        border:0; transform-origin:top left; pointer-events:none;
+    }
+    .kiosk-schermkaart-acties { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.7rem; }
+    .kiosk-qr-blok { margin-top:0.7rem; }
+    .kiosk-qr-blok[hidden] { display:none; }
+    .kiosk-instellen-kolommen { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1.1rem; }
+</style>
+
 <h2 style="margin:0 0 0.7rem">Schermen</h2>
-<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.1rem; margin-bottom:1.8rem">
-    <div class="kaart">
-        <h2 style="margin-top:0">Scherm 1 &mdash; Prijzenlijst</h2>
-        <p class="tekst-zacht">Een grote, leesbare prijslijst. Kies welke producten getoond worden en plan de bardienst.</p>
-        <p><a href="{{ url_for('kiosk_prijzen_instellingen') }}" class="btn btn-geel">Producten kiezen</a></p>
-        <p><a href="{{ url_for('kiosk_bardienst') }}" class="btn btn-rand">Bardienst plannen</a></p>
-        <p><a href="{{ url_for('kiosk_prijzen_scherm') }}" target="_blank" rel="noopener" class="btn btn-rand">Scherm openen &#8599;</a></p>
-        <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ prijzen_url }}</p>
-        <div class="stem-qr">{{ prijzen_qr_svg|safe }}</div>
+<div class="kiosk-schermen-grid">
+    <div class="kaart kiosk-schermkaart">
+        <div class="actiebalk" style="margin-bottom:0.6rem">
+            <h2 style="margin:0">Scherm 1 &mdash; Prijzenlijst</h2>
+            <a href="{{ url_for('kiosk_prijzen_scherm') }}" target="_blank" rel="noopener" class="btn btn-rand btn-klein">Openen &#8599;</a>
+        </div>
+        <div class="kiosk-mini-voorbeeld-buiten">
+            <iframe class="kiosk-mini-voorbeeld" data-bron="{{ url_for('kiosk_prijzen_scherm') }}" title="Live voorbeeld prijzenlijst"></iframe>
+        </div>
+        <div class="kiosk-schermkaart-acties">
+            <a href="{{ url_for('kiosk_prijzen_instellingen') }}" class="btn btn-geel btn-klein">Producten kiezen</a>
+            <a href="{{ url_for('kiosk_bardienst') }}" class="btn btn-rand btn-klein">Bardienst</a>
+            <button type="button" class="btn btn-rand btn-klein" data-qr-toggle="qr-prijzen">QR-code</button>
+        </div>
+        <div class="kiosk-qr-blok stem-qr" id="qr-prijzen" hidden>
+            <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ prijzen_url }}</p>
+            {{ prijzen_qr_svg|safe }}
+        </div>
     </div>
 
-    <div class="kaart">
-        <h2 style="margin-top:0">Scherm 2 &mdash; Dia's</h2>
-        <p class="tekst-zacht">
-            Volledig gepersonaliseerde dia's: sponsoren, mededelingen en eigen sjablonen, plus de
-            Club van 20 en de wedstrijdenkalender. Stel in wat er in de diashow zit en in welke volgorde.
-        </p>
-        <p><a href="{{ url_for('kiosk_sponsoren_leden') }}" class="btn btn-geel">Dia's beheren</a></p>
-        <p><a href="{{ url_for('kiosk_scherm') }}" target="_blank" rel="noopener" class="btn btn-rand">Scherm openen &#8599;</a></p>
-        <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ scherm_url }}</p>
-        <div class="stem-qr">{{ scherm_qr_svg|safe }}</div>
+    <div class="kaart kiosk-schermkaart">
+        <div class="actiebalk" style="margin-bottom:0.6rem">
+            <h2 style="margin:0">Scherm 2 &mdash; Dia's</h2>
+            <a href="{{ url_for('kiosk_scherm') }}" target="_blank" rel="noopener" class="btn btn-rand btn-klein">Openen &#8599;</a>
+        </div>
+        <div class="kiosk-mini-voorbeeld-buiten">
+            <iframe class="kiosk-mini-voorbeeld" data-bron="{{ url_for('kiosk_scherm') }}" title="Live voorbeeld kantine scherm"></iframe>
+        </div>
+        <div class="kiosk-schermkaart-acties">
+            <a href="{{ url_for('kiosk_sponsoren_leden') }}" class="btn btn-geel btn-klein">Dia's beheren</a>
+            <button type="button" class="btn btn-rand btn-klein" data-qr-toggle="qr-scherm">QR-code</button>
+        </div>
+        <div class="kiosk-qr-blok stem-qr" id="qr-scherm" hidden>
+            <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ scherm_url }}</p>
+            {{ scherm_qr_svg|safe }}
+        </div>
     </div>
 
-    <div class="kaart">
-        <h2 style="margin-top:0">Scherm 3 &mdash; Wisselscherm</h2>
-        <p class="tekst-zacht">
-            Heb je (nog) maar 1 fysiek scherm? Cast dit scherm en wissel met de knop tussen de
-            prijzenlijst en de dia's, zonder de Chromecast zelf aan te raken.
+    <div class="kaart kiosk-schermkaart">
+        <div class="actiebalk" style="margin-bottom:0.6rem">
+            <h2 style="margin:0">Scherm 3 &mdash; Wisselscherm</h2>
+            <a href="{{ url_for('kiosk_tv') }}" target="_blank" rel="noopener" class="btn btn-rand btn-klein">Openen &#8599;</a>
+        </div>
+        <div class="kiosk-mini-voorbeeld-buiten">
+            <iframe class="kiosk-mini-voorbeeld" data-bron="{{ url_for('kiosk_tv') }}" title="Live voorbeeld wisselscherm"></iframe>
+        </div>
+        <p class="tekst-zacht" style="margin:0.6rem 0 0">
+            Voor wie (nog) maar 1 fysiek scherm heeft. Toont nu:
+            <strong id="tv-modus-tekst">{{ "de dia's" if instellingen.actief_tv_scherm == 'dias' else 'de prijzenlijst' }}</strong>
         </p>
-        <p class="tekst-zacht">Toont nu: <strong id="tv-modus-tekst">{{ "de dia's" if instellingen.actief_tv_scherm == 'dias' else 'de prijzenlijst' }}</strong></p>
-        <form method="post" action="{{ url_for('kiosk_tv_wisselen') }}" class="js-ajax-form" id="tv-wissel-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-geel" id="tv-wissel-knop">
-                Wissel naar {{ 'de prijzenlijst' if instellingen.actief_tv_scherm == 'dias' else "de dia's" }}
-            </button>
-        </form>
-        <p><a href="{{ url_for('kiosk_tv') }}" target="_blank" rel="noopener" class="btn btn-rand">Scherm openen &#8599;</a></p>
-        <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ tv_url }}</p>
-        <div class="stem-qr">{{ tv_qr_svg|safe }}</div>
+        <div class="kiosk-schermkaart-acties">
+            <form method="post" action="{{ url_for('kiosk_tv_wisselen') }}" class="js-ajax-form" id="tv-wissel-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-geel btn-klein" id="tv-wissel-knop">
+                    Wissel naar {{ 'de prijzenlijst' if instellingen.actief_tv_scherm == 'dias' else "de dia's" }}
+                </button>
+            </form>
+            <button type="button" class="btn btn-rand btn-klein" data-qr-toggle="qr-tv">QR-code</button>
+        </div>
+        <div class="kiosk-qr-blok stem-qr" id="qr-tv" hidden>
+            <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ tv_url }}</p>
+            {{ tv_qr_svg|safe }}
+        </div>
     </div>
 </div>
 
 <h2 style="margin:0 0 0.7rem">Instellen</h2>
-<div class="kaart">
-    <p class="tekst-zacht" style="margin-top:0">Snel naar de inhoud van scherm 2.</p>
-    <div style="display:flex; gap:0.8rem; flex-wrap:wrap">
-        <a href="{{ url_for('kiosk_acties') }}" class="btn btn-rand">Acties</a>
-        <a href="{{ url_for('kiosk_bardienst') }}" class="btn btn-rand">Bardienst</a>
-        <a href="{{ url_for('kiosk_sponsoren_leden') }}#dias-tabel" class="btn btn-rand">Sponsoren</a>
-        <a href="{{ url_for('kiosk_sponsoren_leden') }}#sjablonen" class="btn btn-rand">Sjablonen</a>
-        <a href="{{ url_for('kiosk_sponsoren_leden') }}#club-van-20" class="btn btn-rand">Club van 20</a>
-        <a href="{{ url_for('kiosk_prijzen_instellingen', dag='trainingsavond') }}" class="btn btn-rand">Trainingsavond-selectie</a>
-        <a href="{{ url_for('kiosk_prijzen_instellingen') }}#wedstrijddag-welkom" class="btn btn-rand">Wedstrijddag-welkom</a>
+<div class="kiosk-instellen-kolommen">
+    <div class="kaart">
+        <h3 style="margin-top:0">Prijzenscherm</h3>
+        <div style="display:flex; gap:0.6rem; flex-wrap:wrap">
+            <a href="{{ url_for('kiosk_prijzen_instellingen') }}" class="btn btn-rand btn-klein">Producten</a>
+            <a href="{{ url_for('kiosk_prijzen_instellingen', dag='trainingsavond') }}" class="btn btn-rand btn-klein">Trainingsavond-selectie</a>
+            <a href="{{ url_for('kiosk_prijzen_instellingen') }}#wedstrijddag-welkom" class="btn btn-rand btn-klein">Wedstrijddag-welkom</a>
+            <a href="{{ url_for('kiosk_acties') }}" class="btn btn-rand btn-klein">Acties</a>
+            <a href="{{ url_for('kiosk_bardienst') }}" class="btn btn-rand btn-klein">Bardienst</a>
+        </div>
+    </div>
+    <div class="kaart">
+        <h3 style="margin-top:0">Dia's</h3>
+        <div style="display:flex; gap:0.6rem; flex-wrap:wrap">
+            <a href="{{ url_for('kiosk_sponsoren_leden') }}" class="btn btn-rand btn-klein">Diashow instellen</a>
+            <a href="{{ url_for('kiosk_sponsoren_leden') }}#dias-tabel" class="btn btn-rand btn-klein">Sponsoren</a>
+            <a href="{{ url_for('kiosk_sponsoren_leden') }}#sjablonen" class="btn btn-rand btn-klein">Sjablonen</a>
+            <a href="{{ url_for('kiosk_sponsoren_leden') }}#club-van-20" class="btn btn-rand btn-klein">Club van 20</a>
+        </div>
     </div>
 </div>
 
 <script>
 (function () {
     var form = document.getElementById('tv-wissel-form');
-    if (!form) return;
-    form.addEventListener('ajax-form:success', function (e) {
-        var modus = e.detail.modus;
-        document.getElementById('tv-modus-tekst').textContent = modus === 'dias' ? "de dia's" : 'de prijzenlijst';
-        document.getElementById('tv-wissel-knop').textContent = 'Wissel naar ' + (modus === 'dias' ? 'de prijzenlijst' : "de dia's");
+    if (form) {
+        form.addEventListener('ajax-form:success', function (e) {
+            var modus = e.detail.modus;
+            document.getElementById('tv-modus-tekst').textContent = modus === 'dias' ? "de dia's" : 'de prijzenlijst';
+            document.getElementById('tv-wissel-knop').textContent = 'Wissel naar ' + (modus === 'dias' ? 'de prijzenlijst' : "de dia's");
+        });
+    }
+
+    document.querySelectorAll('[data-qr-toggle]').forEach(function (knop) {
+        knop.addEventListener('click', function () {
+            var blok = document.getElementById(knop.dataset.qrToggle);
+            if (blok) blok.hidden = !blok.hidden;
+        });
+    });
+
+    // Live mini-voorbeelden: op 1/10e schaal getekend (net als de live
+    // voorbeeld bij Dia's instellen) en elke 30s ververst, zodat deze hub
+    // ook echt een actueel overzicht blijft zonder dat iemand fysiek bij elk
+    // scherm hoeft te kijken.
+    var voorbeelden = document.querySelectorAll('.kiosk-mini-voorbeeld');
+    voorbeelden.forEach(function (iframe) {
+        function schaal() {
+            var buiten = iframe.parentElement;
+            iframe.style.transform = 'scale(' + (buiten.clientWidth / 1920) + ')';
+        }
+        iframe.src = iframe.dataset.bron;
+        window.addEventListener('resize', schaal);
+        iframe.addEventListener('load', schaal);
+        setInterval(function () { iframe.src = iframe.dataset.bron; }, 30000);
     });
 })();
 </script>

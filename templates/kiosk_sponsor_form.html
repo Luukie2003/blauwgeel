@@ -167,6 +167,8 @@
 
     var sjablonenCustom = {};
     ({{ sjablonen_custom_json|tojson }}).forEach(function (s) { sjablonenCustom[String(s.id)] = s; });
+    var productenBijId = {};
+    ({{ producten|tojson }}).forEach(function (p) { productenBijId[p.id] = p; });
 
     function escapeHtml(tekst) {
         var div = document.createElement('div');
@@ -233,9 +235,11 @@
                     if (custom.overlay_donker) html += '<div class="canvas-overlay"></div>';
                 }
                 custom.elementen.forEach(function (el) {
+                    var product = el.type === 'prijs' ? productenBijId[el.product_id] : null;
                     var inhoud = el.type === 'foto' ? afbeeldingUrl
                         : el.type === 'titel' ? titel
                         : el.type === 'tekst' ? tekst
+                        : el.type === 'prijs' ? (product ? ('€ ' + product.verkoopprijs.toFixed(2).replace('.', ',')) : '€ Prijs')
                         : el.inhoud;
                     html += '<div class="canvas-element canvas-element--' + el.type.replace('_', '-') +
                         ' canvas-lettergrootte-' + el.lettergrootte + '" style="left:' + el.x + '%; top:' +

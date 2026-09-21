@@ -25,8 +25,18 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.13.0"
+HUIDIGE_VERSIE = "1.14.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.14.0",
+        "datum": "21 september 2026",
+        "punten": [
+            "Kiosk-hub toont nu een live miniatuurvoorbeeld van elk van de 3 schermen i.p.v. alleen tekst en knoppen; QR-codes staan achter een knopje",
+            "Wedstrijddag-welkomstbanner verschijnt nu ook af en toe groot in beeld, en houdt bij een bekende aanvangstijd rekening met een tijdvak (en met meerdere thuiswedstrijden op één dag)",
+            "Prijsopties (bijv. pitcher/glas van een fust) staan nu in een duidelijk afgebakend special-kaartje op het prijzenscherm i.p.v. tussen de gewone prijsregels",
+            "Nieuw 'Prijs'-element in de sjabloonbouwer: koppel een vlak op een dia aan een zelf gekozen product, toont altijd de actuele verkoopprijs",
+        ],
+    },
     {
         "versie": "1.13.0",
         "datum": "20 september 2026",
