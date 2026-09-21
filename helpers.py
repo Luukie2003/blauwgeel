@@ -309,12 +309,14 @@ def is_ajax_verzoek():
 # overal toegang, ongeacht wat er in hun secties-kolom staat -- die kolom doet
 # er voor hen simpelweg niet toe. "Algemeen" (dashboard, bijzonderheden e.d.)
 # heeft bewust geen sectie: dat blijft voor iedereen zichtbaar, zoals nu.
-SECTIES = ["voorraad", "kassa", "keuken", "stemmen"]
+SECTIES = ["voorraad", "kassa", "keuken", "stemmen", "kantine_tv", "club"]
 SECTIE_LABELS = {
     "voorraad": "Voorraad",
     "kassa": "Kassa",
     "keuken": "Keuken",
     "stemmen": "Stemmen",
+    "kantine_tv": "Kantine-tv",
+    "club": "Club instellingen",
 }
 
 

@@ -661,7 +661,7 @@ def test_kiosk_pda_pagina_toont_acties_sectie(ingelogde_client, db):
 # ---------- Onderdeel 2: Sponsoren/leden beheren ----------
 
 
-def test_sponsor_aanmaken_vereist_beheerder(client, db):
+def test_sponsor_aanmaken_vereist_kantine_tv_sectie(client, db):
     _maak_vrijwilliger(db, "vrijwilliger_kiosk", "voorraad")
     _login(client, "vrijwilliger_kiosk")
 
@@ -675,7 +675,7 @@ def test_sponsor_aanmaken_vereist_beheerder(client, db):
     )
     assert resp.status_code == 302
     volg_resp = client.get(resp.headers["Location"])
-    assert b"alleen voor beheerders" in volg_resp.data
+    assert b"niet beschikbaar voor jouw account" in volg_resp.data
     assert db.execute("SELECT COUNT(*) AS n FROM kiosk_sponsoren").fetchone()["n"] == 0
 
 
@@ -1156,7 +1156,7 @@ def test_kiosk_route_blijft_beschermd_ook_al_staat_die_nu_in_de_zijbalk(client, 
     resp = client.get("/kiosk", follow_redirects=True)
 
     assert resp.status_code == 200
-    assert b"alleen voor beheerders" in resp.data
+    assert b"niet beschikbaar voor jouw account" in resp.data
 
 
 # ---------- Onderdeel 2b: Eigen sjablonen (drag-and-drop bouwer) ----------
@@ -1235,7 +1235,7 @@ def test_sjabloon_aanmaken_bewerken_en_verwijderen(ingelogde_client, db):
     )
 
 
-def test_sjabloon_aanmaken_vereist_beheerder(client, db):
+def test_sjabloon_aanmaken_vereist_kantine_tv_sectie(client, db):
     _maak_vrijwilliger(db, "vrijwilliger_sjabloon", "voorraad")
     _login(client, "vrijwilliger_sjabloon")
 
@@ -1250,18 +1250,18 @@ def test_sjabloon_aanmaken_vereist_beheerder(client, db):
     )
     assert resp.status_code == 302
     volg_resp = client.get(resp.headers["Location"])
-    assert b"alleen voor beheerders" in volg_resp.data
+    assert b"niet beschikbaar voor jouw account" in volg_resp.data
     assert db.execute("SELECT COUNT(*) AS n FROM kiosk_sjablonen_custom").fetchone()["n"] == 0
 
 
-def test_bouwer_pagina_vereist_beheerder(client, db):
+def test_bouwer_pagina_vereist_kantine_tv_sectie(client, db):
     _maak_vrijwilliger(db, "vrijwilliger_bouwer", "voorraad")
     _login(client, "vrijwilliger_bouwer")
 
     resp = client.get("/kiosk/sponsoren-leden/sjablonen/nieuw")
     assert resp.status_code == 302
     volg_resp = client.get(resp.headers["Location"])
-    assert b"alleen voor beheerders" in volg_resp.data
+    assert b"niet beschikbaar voor jouw account" in volg_resp.data
 
 
 def test_sjabloon_verwijderen_zet_gebruikende_sponsor_terug_op_standaard(ingelogde_client, db):
@@ -1620,7 +1620,7 @@ def test_bardienst_aanmaken_bewerken_en_verwijderen(ingelogde_client, db):
     )
 
 
-def test_bardienst_aanmaken_vereist_beheerder(client, db):
+def test_bardienst_aanmaken_vereist_kantine_tv_sectie(client, db):
     _maak_vrijwilliger(db, "vrijwilliger_bardienst", "voorraad")
     _login(client, "vrijwilliger_bardienst")
 
@@ -1636,7 +1636,7 @@ def test_bardienst_aanmaken_vereist_beheerder(client, db):
     )
     assert resp.status_code == 302
     volg_resp = client.get(resp.headers["Location"])
-    assert b"alleen voor beheerders" in volg_resp.data
+    assert b"niet beschikbaar voor jouw account" in volg_resp.data
     assert db.execute("SELECT COUNT(*) AS n FROM kiosk_bardiensten").fetchone()["n"] == 0
 
 
@@ -1739,14 +1739,14 @@ def test_kiosk_tv_wisselen_via_ajax_geeft_json_met_modus(ingelogde_client, db):
     assert data["modus"] == "dias"
 
 
-def test_kiosk_tv_wisselen_vereist_beheerder(client, db):
+def test_kiosk_tv_wisselen_vereist_kantine_tv_sectie(client, db):
     _maak_vrijwilliger(db, "vrijwilliger_tv", "voorraad")
     _login(client, "vrijwilliger_tv")
 
     resp = client.post("/kiosk/tv/wisselen", data={"csrf_token": _csrf(client)})
     assert resp.status_code == 302
     volg_resp = client.get(resp.headers["Location"])
-    assert b"alleen voor beheerders" in volg_resp.data
+    assert b"niet beschikbaar voor jouw account" in volg_resp.data
     instellingen = db.execute(
         "SELECT actief_tv_scherm FROM kiosk_scherm_instellingen WHERE id = 1"
     ).fetchone()

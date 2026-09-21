@@ -22,16 +22,20 @@ def register_routes(app):
     def accounts_lijst():
         db = get_db()
         gebruikers = db.execute(
-            "SELECT id, naam, email, rol, secties, aangemaakt_op, laatste_login "
+            "SELECT id, naam, email, rol, secties, aangemaakt_op, laatste_login, actief "
             "FROM gebruikers ORDER BY naam"
         ).fetchall()
         aantal_beheerders = db.execute(
             "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder'"
         ).fetchone()["n"]
+        aantal_actieve_beheerders = db.execute(
+            "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder' AND actief = 1"
+        ).fetchone()["n"]
         return render_template(
             "accounts.html",
             gebruikers=gebruikers,
             aantal_beheerders=aantal_beheerders,
+            aantal_actieve_beheerders=aantal_actieve_beheerders,
             alle_secties=SECTIES,
             sectie_labels=SECTIE_LABELS,
         )
@@ -106,13 +110,17 @@ def register_routes(app):
             return redirect(url_for("accounts_lijst"))
 
         nieuwe_rol = "vrijwilliger" if gebruiker["rol"] == "beheerder" else "beheerder"
-        if gebruiker["rol"] == "beheerder" and nieuwe_rol == "vrijwilliger":
-            aantal_beheerders = db.execute(
-                "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder'"
+        # Alleen relevant als dit account zelf actief is: een al geblokkeerd
+        # account telt sowieso niet mee als werkende beheerder, dus die mag
+        # altijd gedegradeerd worden zonder de teller te raken.
+        if gebruiker["rol"] == "beheerder" and nieuwe_rol == "vrijwilliger" and gebruiker["actief"]:
+            aantal_actieve_beheerders = db.execute(
+                "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder' AND actief = 1"
             ).fetchone()["n"]
-            if aantal_beheerders <= 1:
+            if aantal_actieve_beheerders <= 1:
                 flash(
-                    "Dit is de laatste beheerder. Er moet altijd minstens één overblijven.",
+                    "Dit is de laatste actieve beheerder. Er moet altijd minstens één "
+                    "overblijven die kan inloggen.",
                     "error",
                 )
                 return redirect(url_for("accounts_lijst"))
@@ -138,6 +146,75 @@ def register_routes(app):
         flash(f"Rechten van '{gebruiker['naam']}' bijgewerkt.", "success")
         return redirect(url_for("accounts_lijst"))
 
+    @app.route("/accounts/<int:gebruiker_id>/actief", methods=["POST"])
+    def account_actief_wisselen(gebruiker_id):
+        """Blokkeert/deblokkeert een account (inloggen geweigerd, zie
+        vereis_login en login() in routes/auth.py) zonder het te
+        verwijderen -- handig voor iemand die (tijdelijk) geen toegang meer
+        moet hebben terwijl de geschiedenis (boekingen, tellingen, kassa-/
+        kluismutaties) gewoon aan het account gekoppeld blijft."""
+        db = get_db()
+        gebruiker = db.execute(
+            "SELECT * FROM gebruikers WHERE id = ?", (gebruiker_id,)
+        ).fetchone()
+        if gebruiker is None:
+            flash("Account niet gevonden.", "error")
+            return redirect(url_for("accounts_lijst"))
+
+        if gebruiker["actief"]:
+            if gebruiker_id == session.get("gebruiker_id"):
+                flash("Je kunt je eigen account niet blokkeren terwijl je bent ingelogd.", "error")
+                return redirect(url_for("accounts_lijst"))
+            if gebruiker["rol"] == "beheerder" and db.execute(
+                "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder' AND actief = 1"
+            ).fetchone()["n"] <= 1:
+                flash(
+                    "Dit is de laatste actieve beheerder. Er moet altijd minstens één "
+                    "overblijven die kan inloggen.",
+                    "error",
+                )
+                return redirect(url_for("accounts_lijst"))
+
+        nieuw = 0 if gebruiker["actief"] else 1
+        db.execute("UPDATE gebruikers SET actief = ? WHERE id = ?", (nieuw, gebruiker_id))
+        db.commit()
+        flash(
+            f"'{gebruiker['naam']}' is {'geblokkeerd' if not nieuw else 'gedeblokkeerd'}.",
+            "success",
+        )
+        return redirect(url_for("accounts_lijst"))
+
+    @app.route("/accounts/<int:gebruiker_id>/wachtwoord-link", methods=["POST"])
+    def account_wachtwoord_link_versturen(gebruiker_id):
+        """Stuurt (opnieuw) een link om een wachtwoord in te stellen -- voor
+        een account dat de welkomstmail kwijt is/nooit kreeg, of gewoon een
+        nieuw wachtwoord nodig heeft. Zelfde mechanisme als account_nieuw
+        (nieuwe account) en wachtwoord_vergeten (zelf aangevraagd), nu op
+        initiatief van een beheerder."""
+        db = get_db()
+        gebruiker = db.execute(
+            "SELECT * FROM gebruikers WHERE id = ?", (gebruiker_id,)
+        ).fetchone()
+        if gebruiker is None:
+            flash("Account niet gevonden.", "error")
+        elif not gebruiker["email"]:
+            flash(
+                f"'{gebruiker['naam']}' heeft nog geen e-mailadres -- vul dat eerst in.", "error"
+            )
+        else:
+            token = genereer_wachtwoord_token(db, gebruiker_id, geldig_uren=72)
+            link = url_for("wachtwoord_instellen", token=token, _external=True)
+            mail.stuur_mail(
+                "Kantine Beheer: wachtwoord instellen",
+                f"Hoi {gebruiker['naam']},\n\n"
+                f"Er is een link aangevraagd om je wachtwoord in te stellen.\n"
+                f"Gebruik onderstaande link (deze is 72 uur geldig):\n\n"
+                f"{link}",
+                naar=gebruiker["email"],
+            )
+            flash(f"Wachtwoord-link verstuurd naar {gebruiker['email']}.", "success")
+        return redirect(url_for("accounts_lijst"))
+
     @app.route("/accounts/<int:gebruiker_id>/verwijderen", methods=["POST"])
     def account_verwijderen(gebruiker_id):
         db = get_db()
@@ -151,11 +228,12 @@ def register_routes(app):
             flash("Je kunt het laatste account niet verwijderen.", "error")
         elif gebruiker_id == session.get("gebruiker_id"):
             flash("Je kunt je eigen account niet verwijderen terwijl je bent ingelogd.", "error")
-        elif gebruiker["rol"] == "beheerder" and db.execute(
-            "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder'"
+        elif gebruiker["rol"] == "beheerder" and gebruiker["actief"] and db.execute(
+            "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder' AND actief = 1"
         ).fetchone()["n"] <= 1:
             flash(
-                "Dit is de laatste beheerder. Er moet altijd minstens één overblijven.",
+                "Dit is de laatste actieve beheerder. Er moet altijd minstens één "
+                "overblijven die kan inloggen.",
                 "error",
             )
         else:

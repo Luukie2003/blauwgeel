@@ -111,6 +111,8 @@ BEHEERDER_ENDPOINTS = {
     "account_rol_wijzigen",
     "account_secties_wijzigen",
     "account_email_wijzigen",
+    "account_actief_wisselen",
+    "account_wachtwoord_link_versturen",
     "categorieen_lijst",
     "categorie_verwijderen",
     "categorie_verkoopprijs_verplicht_wisselen",
@@ -128,39 +130,6 @@ BEHEERDER_ENDPOINTS = {
     "producten_besteleenheid",
     "producten_bulk_bewerken",
     "instellingen_pagina",
-    "club_instellingen",
-    "club_agenda_toevoegen",
-    "club_agenda_verwijderen",
-    "club_agenda_verversen",
-    "club_agenda_controleren",
-    "mededeling_pinnen_als_banner",
-    "kiosk_hub",
-    "kiosk_prijzen_instellingen",
-    "kiosk_wedstrijddag_welkom_instellingen",
-    "kiosk_product_toon_wisselen",
-    "kiosk_product_uitverkocht_wisselen",
-    "kiosk_acties",
-    "kiosk_actie_nieuw",
-    "kiosk_actie_bewerken",
-    "kiosk_actie_verwijderen",
-    "kiosk_actie_toon_wisselen",
-    "kiosk_bardienst",
-    "kiosk_bardienst_nieuw",
-    "kiosk_bardienst_bewerken",
-    "kiosk_bardienst_verwijderen",
-    "kiosk_tv_wisselen",
-    "kiosk_sponsoren_leden",
-    "kiosk_sponsor_nieuw",
-    "kiosk_sponsor_bewerken",
-    "kiosk_sponsor_verwijderen",
-    "kiosk_sjabloon_nieuw",
-    "kiosk_sjabloon_bewerken",
-    "kiosk_sjabloon_verwijderen",
-    "kiosk_lid_nieuw",
-    "kiosk_lid_bewerken",
-    "kiosk_lid_status_wisselen",
-    "kiosk_lid_verwijderen",
-    "kiosk_scherm_instellingen",
     # Kluis-acties zijn gevoeliger dan de kassalade (minder mutaties, groter
     # bedrag) en daarom bewust beheerder-only, i.t.t. kassa_mutatie_nieuw
     # (zie SECTIE_ENDPOINTS["kassa"] hieronder, die blijft voor iedereen met
@@ -259,6 +228,53 @@ SECTIE_ENDPOINTS = {
         "bieren_lijst",
         "bier_verwijderen",
     },
+    # Kantine-tv is losgemaakt van BEHEERDER_ENDPOINTS: puur scherminstellingen
+    # (prijzenscherm, dia's), geen toegang tot accounts/back-ups/instellingen,
+    # dus veilig om als losse sectie aan een vrijwilliger te geven.
+    "kantine_tv": {
+        "kiosk_hub",
+        "kiosk_prijzen_instellingen",
+        "kiosk_wedstrijddag_welkom_instellingen",
+        "kiosk_categorie_kolommen_instellingen",
+        "kiosk_uitgelicht_product_instellingen",
+        "kiosk_product_toon_wisselen",
+        "kiosk_product_uitverkocht_wisselen",
+        "kiosk_acties",
+        "kiosk_actie_nieuw",
+        "kiosk_actie_bewerken",
+        "kiosk_actie_verwijderen",
+        "kiosk_actie_toon_wisselen",
+        "kiosk_bardienst",
+        "kiosk_bardienst_nieuw",
+        "kiosk_bardienst_bewerken",
+        "kiosk_bardienst_verwijderen",
+        "kiosk_tv_wisselen",
+        "kiosk_sponsoren_leden",
+        "kiosk_sponsor_nieuw",
+        "kiosk_sponsor_bewerken",
+        "kiosk_sponsor_verwijderen",
+        "kiosk_sjabloon_nieuw",
+        "kiosk_sjabloon_bewerken",
+        "kiosk_sjabloon_verwijderen",
+        "kiosk_lid_nieuw",
+        "kiosk_lid_bewerken",
+        "kiosk_lid_status_wisselen",
+        "kiosk_lid_verwijderen",
+        "kiosk_scherm_instellingen",
+    },
+    # Losgemaakt van BEHEERDER_ENDPOINTS voor hetzelfde soort reden --
+    # agenda/banner raakt geen accounts, categorieën of back-ups. Alleen
+    # club_instellingen zelf (het NAV-item) i.p.v. de hele "Club"-groep, zie
+    # NAV_ITEM_SECTIE hieronder: Accounts/Back-ups/Instellingen/Statistieken
+    # in diezelfde zijbalkgroep blijven beheerder-only.
+    "club": {
+        "club_instellingen",
+        "club_agenda_toevoegen",
+        "club_agenda_verwijderen",
+        "club_agenda_verversen",
+        "club_agenda_controleren",
+        "mededeling_pinnen_als_banner",
+    },
 }
 # Omgekeerde opzoektabel: endpoint -> vereiste sectie, 1x opgebouwd bij het
 # starten van het proces i.p.v. bij elk verzoek opnieuw over te zoeken.
@@ -276,6 +292,15 @@ NAV_GROEP_SECTIE = {
     "Kassa": "kassa",
     "Keuken": "keuken",
     "Stemmen": "stemmen",
+    "Kantine-tv": "kantine_tv",
+}
+# Uitzondering per los NAV-item (i.p.v. de hele groep) op NAV_GROEP_SECTIE/
+# NAV_GROEP_ALLEEN_BEHEERDER hieronder -- voor een item dat wél sectie-
+# gebonden is terwijl de rest van zijn zijbalkgroep beheerder-only blijft
+# (zie "club" hierboven: Club instellingen is delegeerbaar, Accounts/
+# Back-ups/Instellingen in dezelfde groep niet).
+NAV_ITEM_SECTIE = {
+    "club_instellingen": "club",
 }
 
 NAV_ITEMS = [
@@ -548,12 +573,12 @@ NAV_GROEP_VOLGORDE = [
 ]
 NAV_ITEMS.sort(key=lambda item: NAV_GROEP_VOLGORDE.index(item["groep"]))
 
-# Kantine-tv-, Club- en Kluisbeheer zijn volledig beheerder-only (zie
-# BEHEERDER_ENDPOINTS) -- i.t.t. de sectie-gebonden groepen hierboven (die
-# vrijwilligers met de juiste sectie wel mogen zien) toont de zijbalk deze
-# groepen daarom nooit aan een vrijwilliger, ook al staan ze niet in
-# NAV_GROEP_SECTIE.
-NAV_GROEP_ALLEEN_BEHEERDER = {"Kantine-tv", "Club", "Kluis"}
+# Club- en Kluisbeheer zijn (op het "club_instellingen"-item na, zie
+# NAV_ITEM_SECTIE hierboven) volledig beheerder-only (zie BEHEERDER_ENDPOINTS)
+# -- i.t.t. de sectie-gebonden groepen hierboven (die vrijwilligers met de
+# juiste sectie wel mogen zien) toont de zijbalk deze groepen daarom nooit aan
+# een vrijwilliger, ook al staan ze niet in NAV_GROEP_SECTIE.
+NAV_GROEP_ALLEEN_BEHEERDER = {"Club", "Kluis"}
 
 # De PDA-modus (zie WEERGAVE_TELEFOON_PATROON hieronder) toont alleen deze
 # handvol pagina's -- puur vloerwerk, geen beheer/rapportages. Bewust een
@@ -644,17 +669,23 @@ def create_app(database_path=None):
             return None
         if "gebruiker_id" not in session:
             return redirect(url_for("login", next=request.path))
+        # Elke keer opnieuw (i.p.v. alleen als rol/secties nog in de sessie
+        # ontbreken, zoals hieronder) omdat "actief" direct moet gelden zodra
+        # een beheerder iemand blokkeert (zie account_actief_wisselen) -- een
+        # geblokkeerd account moet niet kunnen doorwerken met een sessie die
+        # van vóór de blokkade dateert.
+        db = get_db()
+        gebruiker = db.execute(
+            "SELECT rol, secties, actief FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)
+        ).fetchone()
+        if gebruiker is None or not gebruiker["actief"]:
+            session.clear()
+            flash("Dit account bestaat niet meer of is geblokkeerd. Neem contact op met een beheerder.", "error")
+            return redirect(url_for("login"))
         if "gebruiker_rol" not in session or "gebruiker_secties" not in session:
             # Sessie is aangemaakt voor rollen/secties bestonden (of
             # anderszins verouderd) -- alsnog ophalen zodat je niet
             # handmatig hoeft uit/in te loggen na een update.
-            db = get_db()
-            gebruiker = db.execute(
-                "SELECT rol, secties FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)
-            ).fetchone()
-            if gebruiker is None:
-                session.clear()
-                return redirect(url_for("login", next=request.path))
             session["gebruiker_rol"] = gebruiker["rol"]
             session["gebruiker_secties"] = gebruiker["secties"]
         if request.endpoint in BEHEERDER_ENDPOINTS and session.get("gebruiker_rol") != "beheerder":
@@ -668,18 +699,24 @@ def create_app(database_path=None):
             return redirect(url_for("dashboard"))
         return None
 
+    def _nav_item_zichtbaar(item, gebruiker_rol, gebruiker_secties):
+        # Een los item-vlak (NAV_ITEM_SECTIE) wint altijd van de groepregels
+        # hieronder -- daarmee kan 1 item uit een verder beheerder-only groep
+        # (bijv. "Club instellingen" in de groep "Club") toch aan een
+        # vrijwilliger met de juiste sectie getoond worden.
+        sectie = NAV_ITEM_SECTIE.get(item["url_endpoint"]) or NAV_GROEP_SECTIE.get(item["groep"])
+        if sectie:
+            return heeft_sectie_toegang(gebruiker_rol, gebruiker_secties, sectie)
+        if item["groep"] in NAV_GROEP_ALLEEN_BEHEERDER:
+            return gebruiker_rol == "beheerder"
+        return True
+
     @app.context_processor
     def inject_nav():
         gebruiker_rol = session.get("gebruiker_rol")
         gebruiker_secties = session.get("gebruiker_secties")
         zichtbare_nav_items = [
-            item
-            for item in NAV_ITEMS
-            if (
-                item["groep"] not in NAV_GROEP_SECTIE
-                or heeft_sectie_toegang(gebruiker_rol, gebruiker_secties, NAV_GROEP_SECTIE[item["groep"]])
-            )
-            and (item["groep"] not in NAV_GROEP_ALLEEN_BEHEERDER or gebruiker_rol == "beheerder")
+            item for item in NAV_ITEMS if _nav_item_zichtbaar(item, gebruiker_rol, gebruiker_secties)
         ]
         zichtbare_pda_items = [
             item

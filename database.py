@@ -204,6 +204,12 @@ KOLOM_MIGRATIES = [
     # routes/kiosk.py.
     ("kiosk_prijzen_instellingen", "uitgelicht_product_id", "INTEGER"),
     ("kiosk_prijzen_instellingen", "uitgelicht_titel", "TEXT NOT NULL DEFAULT 'Snack van de week'"),
+    # Tijdelijk blokkeren van een account (inloggen geweigerd) zonder het te
+    # verwijderen -- i.t.t. verwijderen kan dit altijd, ook als het account
+    # nog in boekingen/tellingen/kassa- of kluisgeschiedenis staat. Zie
+    # account_actief_wisselen in routes/accounts.py en de check in
+    # vereis_login (app.py).
+    ("gebruikers", "actief", "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 

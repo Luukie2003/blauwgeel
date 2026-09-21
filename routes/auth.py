@@ -49,6 +49,16 @@ def register_routes(app):
             gebruiker = db.execute(
                 "SELECT * FROM gebruikers WHERE naam = ?", (naam,)
             ).fetchone()
+            if gebruiker and check_password_hash(gebruiker["wachtwoord_hash"], wachtwoord) and not gebruiker["actief"]:
+                # Wachtwoord klopt, maar het account is geblokkeerd (zie
+                # account_actief_wisselen) -- geen mislukte-pogingenteller
+                # ophogen (het wachtwoord was immers goed), gewoon een
+                # duidelijke, andere melding dan "onjuiste naam of
+                # wachtwoord" tonen.
+                flash(
+                    "Dit account is geblokkeerd. Neem contact op met een beheerder.", "error"
+                )
+                return render_template("login.html")
             if gebruiker and check_password_hash(gebruiker["wachtwoord_hash"], wachtwoord):
                 if not gebruiker["wachtwoord_hash"].startswith(WACHTWOORD_HASH_METHODE + "$"):
                     # Hash met een ouder/trager aantal iteraties (werkzeug's
@@ -181,6 +191,9 @@ def register_routes(app):
         if gebruiker is None:
             flash("Deze link is ongeldig of verlopen. Vraag een nieuwe aan.", "error")
             return redirect(url_for("wachtwoord_vergeten"))
+        if not gebruiker["actief"]:
+            flash("Dit account is geblokkeerd. Neem contact op met een beheerder.", "error")
+            return redirect(url_for("login"))
 
         if request.method == "POST":
             nieuw = request.form.get("nieuw_wachtwoord", "")

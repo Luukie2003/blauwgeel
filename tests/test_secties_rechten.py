@@ -118,3 +118,65 @@ def test_vrijwilliger_kan_secties_niet_zelf_wijzigen(client, db):
         "SELECT secties FROM gebruikers WHERE id = ?", (gebruiker["id"],)
     ).fetchone()
     assert ongewijzigd["secties"] == "kassa"
+
+
+def test_vrijwilliger_zonder_kantine_tv_sectie_wordt_geweerd(client, db):
+    _maak_vrijwilliger(db, "geen_kiosk", "voorraad")
+    _login(client, "geen_kiosk")
+
+    resp = client.get("/kiosk", follow_redirects=True)
+    assert b"niet beschikbaar voor jouw account" in resp.data
+    assert resp.request.path == "/"
+
+
+def test_vrijwilliger_met_kantine_tv_sectie_mag_er_wel_in(client, db):
+    _maak_vrijwilliger(db, "wel_kiosk", "kantine_tv")
+    _login(client, "wel_kiosk")
+
+    resp = client.get("/kiosk")
+    assert resp.status_code == 200
+    resp = client.get("/kiosk/prijzen/instellingen")
+    assert resp.status_code == 200
+
+
+def test_vrijwilliger_zonder_kantine_tv_sectie_ziet_geen_kantine_tv_in_zijbalk(client, db):
+    _maak_vrijwilliger(db, "geen_kiosk_nav", "voorraad")
+    _login(client, "geen_kiosk_nav")
+
+    resp = client.get("/")
+    assert b'href="/kiosk"' not in resp.data
+
+
+def test_vrijwilliger_met_kantine_tv_sectie_ziet_kantine_tv_in_zijbalk(client, db):
+    _maak_vrijwilliger(db, "wel_kiosk_nav", "kantine_tv")
+    _login(client, "wel_kiosk_nav")
+
+    resp = client.get("/")
+    assert b'href="/kiosk"' in resp.data
+
+
+def test_vrijwilliger_zonder_club_sectie_wordt_geweerd_bij_club_instellingen(client, db):
+    _maak_vrijwilliger(db, "geen_club", "voorraad")
+    _login(client, "geen_club")
+
+    resp = client.get("/club-instellingen", follow_redirects=True)
+    assert b"niet beschikbaar voor jouw account" in resp.data
+
+
+def test_vrijwilliger_met_club_sectie_mag_club_instellingen_maar_niet_accounts(client, db):
+    """'club' geeft alleen club_instellingen zelf vrij (zie NAV_ITEM_SECTIE in
+    app.py) -- Accounts/Back-ups/Instellingen in dezelfde zijbalkgroep blijven
+    beheerder-only, ook met deze sectie."""
+    _maak_vrijwilliger(db, "wel_club", "club")
+    _login(client, "wel_club")
+
+    resp = client.get("/club-instellingen")
+    assert resp.status_code == 200
+
+    resp = client.get("/accounts", follow_redirects=True)
+    assert b"alleen voor beheerders" in resp.data
+
+    resp = client.get("/", follow_redirects=True)
+    assert b'href="/club-instellingen"' in resp.data
+    assert b'href="/accounts"' not in resp.data
+    assert b'href="/backups"' not in resp.data

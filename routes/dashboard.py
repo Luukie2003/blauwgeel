@@ -25,8 +25,18 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.14.2"
+HUIDIGE_VERSIE = "1.15.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.0",
+        "datum": "21 september 2026",
+        "punten": [
+            "Accounts beheren vernieuwd: elk account is nu uitklapbaar voor alle instellingen op één plek (i.p.v. één brede tabel)",
+            "Nieuw: 2 extra rechten-secties (Kantine-tv, Club instellingen) zodat een vrijwilliger ook zonder beheerder te zijn het prijzenscherm/de dia's of de club-agenda kan beheren",
+            "Nieuw: een account tijdelijk blokkeren (inloggen geweigerd) zonder het te verwijderen",
+            "Nieuw: een wachtwoord-link opnieuw versturen voor een account",
+        ],
+    },
     {
         "versie": "1.14.2",
         "datum": "21 september 2026",
