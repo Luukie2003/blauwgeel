@@ -192,6 +192,12 @@ KOLOM_MIGRATIES = [
     # blijft dit NULL. Zie agenda.py (_parse_ics) en de
     # wedstrijddag-welkomstbanner in routes/kiosk.py.
     ("wedstrijden", "tijd", "TEXT"),
+    # Welke categorie-kop in welke van de 3 vaste kolommen van het
+    # prijzenscherm staat, en in welke volgorde -- JSON {"1": [...namen],
+    # "2": [...], "3": [...]}, versleept via de drag-and-drop-indeling op
+    # kiosk_prijzen_instellingen.html. Zie _categorie_kolommen_indeling in
+    # routes/kiosk.py.
+    ("kiosk_prijzen_instellingen", "categorie_kolommen", "TEXT NOT NULL DEFAULT '{}'"),
 ]
 
 

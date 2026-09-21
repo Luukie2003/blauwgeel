@@ -35,20 +35,19 @@
         header h1 { font-size: 2.6rem; margin: 0; line-height: 1.1; }
         header .club { color: var(--tekst-zacht); font-size: 1.05rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; margin: 0.15rem 0 0; }
         #klok { margin-left: auto; font-size: 2rem; font-weight: 700; color: var(--geel); font-variant-numeric: tabular-nums; }
+        /* 3 vaste kolommen i.p.v. automatische CSS-meerkoloms-flow: de
+           beheerder bepaalt zelf welke categorie in welke kolom staat (zie
+           de sleep-indeling op kiosk_prijzen_instellingen.html en
+           _verdeel_over_kolommen in routes/kiosk.py) i.p.v. dat de browser
+           ze alfabetisch verdeelt. */
         .prijzen-grid {
-            column-width: 24rem;
-            column-gap: 2.5rem;
+            display: flex;
+            gap: 2.5rem;
+            align-items: flex-start;
         }
-        /* margin-top i.p.v. margin-bottom, en niet op het eerste blok: een
-           TRAILEND margin-bottom vlak vóór een kolom-afbreking (CSS-
-           meerkoloms-layout) telt soms niet mee in de hoogteberekening die
-           de browser gebruikt om de kolommen te balanceren, wat een kop
-           van een volgende kolom een stukje kan laten "zakken" t.o.v. de
-           koppen ernaast. Met de marge alleen aan de bovenkant van een
-           niet-eerste blok speelt dat niet: die marge zit dan nooit aan het
-           einde van een kolom. */
-        .categorie-blok {
-            break-inside: avoid;
+        .prijzen-kolom {
+            flex: 1 1 0;
+            min-width: 0;
         }
         .categorie-blok + .categorie-blok {
             margin-top: 1.6rem;
@@ -225,37 +224,41 @@
 
     <div id="wedstrijddag-banner" class="wedstrijddag-banner" hidden></div>
 
-    {% if categorieen %}
+    {% if categorieen_kolommen and (categorieen_kolommen[0] or categorieen_kolommen[1] or categorieen_kolommen[2]) %}
     <div class="prijzen-grid">
-        {% for naam, producten in categorieen %}
-        <div class="categorie-blok">
-            <h2>{{ naam }}</h2>
-            {% for p in producten %}
-            {% if p.special %}
-            <div class="prijs-special{{ ' prijs-special--uitverkocht' if p.kiosk_uitverkocht else '' }}">
-                <div class="prijs-special-kop">{{ p.naam }}</div>
-                {% for optie in p.opties %}
-                <div class="prijs-special-regel">
-                    <span class="naam">{{ optie.naam }}</span>
+        {% for kolom in categorieen_kolommen if kolom %}
+        <div class="prijzen-kolom">
+            {% for naam, producten in kolom %}
+            <div class="categorie-blok">
+                <h2>{{ naam }}</h2>
+                {% for p in producten %}
+                {% if p.special %}
+                <div class="prijs-special{{ ' prijs-special--uitverkocht' if p.kiosk_uitverkocht else '' }}">
+                    <div class="prijs-special-kop">{{ p.naam }}</div>
+                    {% for optie in p.opties %}
+                    <div class="prijs-special-regel">
+                        <span class="naam">{{ optie.naam }}</span>
+                        {% if p.kiosk_uitverkocht %}
+                        <span class="bedrag-uitverkocht">Uitverkocht</span>
+                        {% else %}
+                        <span class="bedrag">&euro; {{ '%.2f'|format(optie.verkoopprijs) }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="prijs-regel{{ ' prijs-regel--uitverkocht' if p.kiosk_uitverkocht else '' }}">
+                    <span class="naam">{{ p.naam }}</span>
+                    <span class="stippel"></span>
                     {% if p.kiosk_uitverkocht %}
                     <span class="bedrag-uitverkocht">Uitverkocht</span>
                     {% else %}
-                    <span class="bedrag">&euro; {{ '%.2f'|format(optie.verkoopprijs) }}</span>
+                    <span class="bedrag">&euro; {{ '%.2f'|format(p.verkoopprijs) }}</span>
                     {% endif %}
                 </div>
+                {% endif %}
                 {% endfor %}
             </div>
-            {% else %}
-            <div class="prijs-regel{{ ' prijs-regel--uitverkocht' if p.kiosk_uitverkocht else '' }}">
-                <span class="naam">{{ p.naam }}</span>
-                <span class="stippel"></span>
-                {% if p.kiosk_uitverkocht %}
-                <span class="bedrag-uitverkocht">Uitverkocht</span>
-                {% else %}
-                <span class="bedrag">&euro; {{ '%.2f'|format(p.verkoopprijs) }}</span>
-                {% endif %}
-            </div>
-            {% endif %}
             {% endfor %}
         </div>
         {% endfor %}
@@ -346,7 +349,17 @@
         // beheerder de planning terwijl het scherm al open staat, dan komt
         // dat via de gewone 10s-versiepoll hieronder alsnog door (herlaadt
         // de hele pagina).
-        var bardienstenVandaag = {{ bardiensten_vandaag|tojson }};
+        //
+        // |default() op alle |tojson-variabelen in dit bestand vangt het
+        // geval af dat deze pagina rendert terwijl zo'n variabele er (nog)
+        // niet is -- bijv. een reload die precies tijdens een deploy
+        // binnenkomt, met de nieuwe template maar de oude routes.py nog in
+        // het geheugen van deze worker. Zonder default geeft Jinja dan een
+        // Undefined terug en crasht |tojson (TypeError: Object of type
+        // Undefined is not JSON serializable) -- dodelijk voor een onbemand
+        // scherm dat daar niet zelf van herstelt. Zie ook
+        // tests/test_tojson_context_regressie.py.
+        var bardienstenVandaag = {{ bardiensten_vandaag|default([])|tojson }};
 
         function tweeCijfers(getal) {
             return ('0' + getal).slice(-2);
@@ -386,8 +399,8 @@
         // van een uur voor aanvang tot een uur voor de volgende wedstrijd
         // van vandaag -- bij de laatste (of enige) wedstrijd van de dag tot
         // 2 uur na aanvang.
-        var wedstrijdenVandaag = {{ wedstrijden_vandaag|tojson }};
-        var wedstrijddagWelkomTekst = {{ wedstrijddag_welkom_tekst|tojson }};
+        var wedstrijdenVandaag = {{ wedstrijden_vandaag|default([])|tojson }};
+        var wedstrijddagWelkomTekst = {{ wedstrijddag_welkom_tekst|default('')|tojson }};
 
         function minutenSindsMidnacht(tijdTekst) {
             var delen = tijdTekst.split(':');
@@ -445,7 +458,7 @@
         }
 
         // ---------- Acties: af en toe kort prominent in beeld ----------
-        var acties = {{ acties|tojson }};
+        var acties = {{ acties|default([])|tojson }};
         var actieIndex = 0;
 
         function toonActie() {
@@ -494,8 +507,8 @@
         // uitverkocht bij, dan verschijnt eerst een korte grote melding --
         // de herlaadbeurt zelf wordt dan even uitgesteld zodat die melding
         // niet meteen wordt weggeklikt.
-        var huidigeVersie = {{ versie|tojson }};
-        var bekendeUitverkocht = {{ uitverkocht_namen|tojson }};
+        var huidigeVersie = {{ versie|default('')|tojson }};
+        var bekendeUitverkocht = {{ uitverkocht_namen|default([])|tojson }};
 
         setInterval(function () {
             fetch('{{ versie_url }}')

@@ -171,7 +171,15 @@
     // gewijzigd is -- zo komt een aanpassing snel door zonder de diashow
     // onnodig te onderbreken als er niets veranderd is.
     (function () {
-        var huidigeVersie = {{ versie|tojson }};
+        // |default() vangt het geval af dat deze pagina ooit gerenderd wordt
+        // terwijl 'versie' er (nog) niet is -- bijv. een reload die precies
+        // tijdens een deploy binnenkomt, met de nieuwe template maar de oude
+        // routes.py nog in het geheugen van deze worker. Zonder default geeft
+        // Jinja dan een Undefined terug en crasht |tojson (TypeError: Object
+        // of type Undefined is not JSON serializable) -- dodelijk voor een
+        // onbemand scherm dat daar niet zelf van herstelt. Zie ook
+        // tests/test_tojson_context_regressie.py.
+        var huidigeVersie = {{ versie|default('')|tojson }};
         setInterval(function () {
             fetch('{{ versie_url }}')
                 .then(function (r) { return r.json(); })

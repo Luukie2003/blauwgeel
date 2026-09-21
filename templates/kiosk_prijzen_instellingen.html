@@ -144,6 +144,133 @@
         <button type="submit" class="btn btn-geel">Opslaan</button>
     </form>
 </div>
+
+<div class="kaart" id="categorie-kolommen">
+    <h2 style="margin-top:0">Indeling prijzenscherm</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Sleep elke categorie naar de kolom en de plek waar je 'm op het prijzenscherm wilt zien
+        (bijv. dranken links). Een categorie die je nog niet hebt ingedeeld -- bijv. net
+        toegevoegd -- verschijnt vanzelf onderaan kolom 1, zodat 'ie niet stiekem van het scherm
+        verdwijnt.
+    </p>
+    <div class="kolom-sleepbalk">
+        {% for namen in categorie_kolommen_namen %}
+        <div class="kolom-sleepzone">
+            <h3>Kolom {{ loop.index }}</h3>
+            <div class="kolom-lijst" data-kolom="{{ loop.index }}">
+                {% for naam in namen %}
+                <div class="kolom-item" draggable="true" data-naam="{{ naam }}">{{ naam }}</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <form method="post" action="{{ url_for('kiosk_categorie_kolommen_instellingen') }}"
+          id="categorie-kolommen-form" style="margin-top:1rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="indeling" id="categorie-kolommen-indeling-veld">
+        <button type="submit" class="btn btn-geel">Indeling opslaan</button>
+    </form>
+</div>
+
+<style>
+    .kolom-sleepbalk { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .kolom-sleepzone { flex: 1 1 14rem; min-width: 12rem; }
+    .kolom-sleepzone h3 {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--tekst-zacht, #6b7280);
+        margin: 0 0 0.4rem;
+    }
+    .kolom-lijst {
+        min-height: 4rem;
+        border: 2px dashed #d7dae2;
+        border-radius: 8px;
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+    .kolom-lijst.sleep-over { border-color: #1e3a8a; background: rgba(30, 58, 138, 0.05); }
+    .kolom-item {
+        background: #fff;
+        border: 1px solid #d7dae2;
+        border-radius: 6px;
+        padding: 0.5rem 0.7rem;
+        cursor: grab;
+        font-weight: 600;
+        user-select: none;
+    }
+    .kolom-item.wordt-gesleept { opacity: 0.4; }
+</style>
+
+<script>
+(function () {
+    // Vanilla HTML5 drag-and-drop, geen library: tijdens dragover wordt het
+    // gesleepte item live verplaatst in de DOM (zowel tussen kolommen als
+    // binnen 1 kolom), en pas bij Opslaan wordt de uiteindelijke DOM-volgorde
+    // van alle 3 kolommen in 1 keer als JSON meegestuurd -- het aantal en de
+    // namen van categorieën staan niet vooraf vast, dus losse velden per
+    // categorie kunnen hier niet.
+    var lijsten = Array.prototype.slice.call(document.querySelectorAll('.kolom-lijst'));
+    var gesleeptItem = null;
+
+    lijsten.forEach(function (lijst) {
+        lijst.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            if (!gesleeptItem) return;
+            lijst.classList.add('sleep-over');
+            var voorDit = elementOpPositie(lijst, e.clientY);
+            if (voorDit) {
+                lijst.insertBefore(gesleeptItem, voorDit);
+            } else {
+                lijst.appendChild(gesleeptItem);
+            }
+        });
+        lijst.addEventListener('dragleave', function (e) {
+            if (e.target === lijst) lijst.classList.remove('sleep-over');
+        });
+        lijst.addEventListener('drop', function (e) {
+            e.preventDefault();
+            lijst.classList.remove('sleep-over');
+        });
+    });
+
+    document.querySelectorAll('.kolom-item').forEach(function (item) {
+        item.addEventListener('dragstart', function () {
+            gesleeptItem = item;
+            setTimeout(function () { item.classList.add('wordt-gesleept'); }, 0);
+        });
+        item.addEventListener('dragend', function () {
+            item.classList.remove('wordt-gesleept');
+            lijsten.forEach(function (l) { l.classList.remove('sleep-over'); });
+            gesleeptItem = null;
+        });
+    });
+
+    function elementOpPositie(lijst, muisY) {
+        var items = Array.prototype.slice.call(
+            lijst.querySelectorAll('.kolom-item:not(.wordt-gesleept)')
+        );
+        for (var i = 0; i < items.length; i++) {
+            var rect = items[i].getBoundingClientRect();
+            if (muisY < rect.top + rect.height / 2) return items[i];
+        }
+        return null;
+    }
+
+    document.getElementById('categorie-kolommen-form').addEventListener('submit', function () {
+        var indeling = {};
+        lijsten.forEach(function (lijst) {
+            indeling[lijst.dataset.kolom] = Array.prototype.slice.call(
+                lijst.querySelectorAll('.kolom-item')
+            ).map(function (item) { return item.dataset.naam; });
+        });
+        document.getElementById('categorie-kolommen-indeling-veld').value = JSON.stringify(indeling);
+    });
+})();
+</script>
 {% endif %}
 
 <div class="kaart">

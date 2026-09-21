@@ -271,6 +271,9 @@ def register_routes(app):
             instellingen=_scherm_instellingen(db),
             prijzen_instellingen=_prijzen_instellingen(db),
             gekozen_dag=dag,
+            categorie_kolommen_namen=_verdeel_namen_over_kolommen(
+                _alle_kiosk_categorie_namen(db), _categorie_kolommen_indeling(db)
+            ),
         )
 
     @app.route("/kiosk/prijzen/wedstrijddag-welkom", methods=["POST"])
@@ -285,6 +288,31 @@ def register_routes(app):
         )
         db.commit()
         flash("Wedstrijddag-welkomstbanner opgeslagen.", "success")
+        return redirect(url_for("kiosk_prijzen_instellingen"))
+
+    @app.route("/kiosk/prijzen/categorie-kolommen", methods=["POST"])
+    def kiosk_categorie_kolommen_instellingen():
+        """Slaat de gesleepte kolomindeling op (zie kiosk_prijzen_instellingen.html)
+        -- 1 verborgen JSON-veld met de 3 kolommen, i.p.v. losse velden per
+        categorie, want het aantal categorieën en hun namen staan niet vooraf
+        vast."""
+        db = get_db()
+        try:
+            data = json.loads(request.form.get("indeling", "{}"))
+        except ValueError:
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+        schoon = {
+            kolom: [naam for naam in data.get(kolom, []) if isinstance(naam, str)]
+            for kolom in ("1", "2", "3")
+        }
+        db.execute(
+            "UPDATE kiosk_prijzen_instellingen SET categorie_kolommen = ? WHERE id = 1",
+            (json.dumps(schoon),),
+        )
+        db.commit()
+        flash("Indeling van het prijzenscherm opgeslagen.", "success")
         return redirect(url_for("kiosk_prijzen_instellingen"))
 
     @app.route("/kiosk/prijzen/product/<int:product_id>/toon", methods=["POST"])
@@ -492,6 +520,66 @@ def register_routes(app):
             resultaat.append({"tijd": w["tijd"], "tegenstander": naam})
         return resultaat
 
+    def _categorie_kolommen_indeling(db):
+        """Leest de opgeslagen kolomindeling (zie kiosk_prijzen_instellingen.html,
+        de sleep-interface) -- {"1": [...namen], "2": [...], "3": [...]}.
+        Onherkenbare/kapotte inhoud (zou hier nooit moeten voorkomen, alleen
+        via _categorie_kolommen_opslaan hieronder geschreven) valt terug op
+        een lege indeling i.p.v. de pagina te laten crashen."""
+        ruw = _prijzen_instellingen(db)["categorie_kolommen"]
+        try:
+            data = json.loads(ruw)
+        except (TypeError, ValueError):
+            data = {}
+        return {
+            kolom: [naam for naam in data.get(kolom, []) if isinstance(naam, str)]
+            for kolom in ("1", "2", "3")
+        }
+
+    def _alle_kiosk_categorie_namen(db):
+        """Alle categorie-koppen die op het prijzenscherm kunnen voorkomen,
+        op normale dagen én trainingsavonden samen -- zodat de sleep-indeling
+        ook categorieën toont die vandaag toevallig niet in beeld zijn (bijv.
+        een trainingsavond-only categorie), en die niet pas verschijnen op
+        het moment dat ze voor het eerst zichtbaar worden."""
+        namen = set()
+        for dag in DAG_KOLOM:
+            for naam, _ in _prijzen_categorieen(db, dag):
+                namen.add(naam)
+        return sorted(namen, key=str.lower)
+
+    def _verdeel_namen_over_kolommen(namen, indeling):
+        """Kern van de kolomindeling: verdeelt een lijst categorienamen over
+        de 3 vaste kolommen volgens de opgeslagen (gesleepte) indeling. Een
+        naam die er niet in voorkomt -- nieuw, of nog nooit gesleept --
+        belandt achteraan in kolom 1, zodat 'ie zichtbaar blijft i.p.v. te
+        verdwijnen totdat iemand 'm een plek geeft. Gebruikt voor zowel de
+        sleep-interface (alleen namen, zie kiosk_prijzen_instellingen) als
+        het prijzenscherm zelf (naam + producten, zie _verdeel_over_kolommen
+        hieronder)."""
+        beschikbaar = set(namen)
+        geplaatst = set()
+        kolommen = []
+        for kolom in ("1", "2", "3"):
+            lijst = [
+                naam
+                for naam in indeling.get(kolom, [])
+                if naam in beschikbaar and naam not in geplaatst
+            ]
+            geplaatst.update(lijst)
+            kolommen.append(lijst)
+        for naam in namen:
+            if naam not in geplaatst:
+                kolommen[0].append(naam)
+        return kolommen
+
+    def _verdeel_over_kolommen(categorieen, indeling):
+        bij_naam = dict(categorieen)
+        namen_per_kolom = _verdeel_namen_over_kolommen(
+            [naam for naam, _ in categorieen], indeling
+        )
+        return [[(naam, bij_naam[naam]) for naam in namen] for namen in namen_per_kolom]
+
     def _prijs_regel_voor_hash(p):
         # p is ofwel een gewoon product (sqlite3.Row) ofwel een
         # special-kaartje (plain dict, zie _prijzen_categorieen) -- die twee
@@ -505,15 +593,16 @@ def register_routes(app):
             )
         return (p["id"], p["naam"], p["verkoopprijs"], p["kiosk_uitverkocht"])
 
-    def _prijzen_versie(categorieen, acties, bardiensten, wedstrijden_vandaag, *extra):
+    def _prijzen_versie(categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, *extra):
         # Alleen de velden die daadwerkelijk op het scherm staan -- zo
         # triggert bijv. een gewijzigde voorraad (niet zichtbaar hier) geen
-        # onnodige herlaadbeurt. Acties, de bardiensten van vandaag en de
-        # thuiswedstrijden van vandaag tellen ook mee, zodat een wijziging
-        # daaraan het scherm net als de rest vanzelf bijwerkt. *extra is puur
-        # om /kiosk/tv (zie kiosk_tv) een eigen versie-'namespace' te geven,
-        # zodat het wisselen tussen prijzen/dia's ook zonder inhoudelijke
-        # wijziging als een update gezien wordt.
+        # onnodige herlaadbeurt. Acties, de bardiensten van vandaag, de
+        # thuiswedstrijden van vandaag en de kolomindeling tellen ook mee,
+        # zodat een wijziging daaraan het scherm net als de rest vanzelf
+        # bijwerkt. *extra is puur om /kiosk/tv (zie kiosk_tv) een eigen
+        # versie-'namespace' te geven, zodat het wisselen tussen prijzen/
+        # dia's ook zonder inhoudelijke wijziging als een update gezien
+        # wordt.
         return _versie(
             [
                 (naam, [_prijs_regel_voor_hash(p) for p in lijst])
@@ -522,6 +611,7 @@ def register_routes(app):
             [(a["id"], a["tekst"], a["product_naam"], a["verkoopprijs"], a["afbeelding"]) for a in acties],
             [(b["id"], b["datum"], b["start_tijd"], b["eind_tijd"], b["namen"]) for b in bardiensten],
             [(w["tijd"], w["tegenstander"]) for w in wedstrijden_vandaag],
+            indeling,
             *extra,
         )
 
@@ -533,6 +623,7 @@ def register_routes(app):
         acties = _acties_actief(db)
         bardiensten = _bardiensten_vandaag(db)
         wedstrijden_vandaag = _wedstrijddag_welkom_wedstrijden(db)
+        indeling = _categorie_kolommen_indeling(db)
         acties_voor_scherm = [
             {
                 "naam": a["product_naam"],
@@ -544,9 +635,9 @@ def register_routes(app):
         ]
         extra = (extra_versie,) if extra_versie else ()
         return {
-            "categorieen": categorieen,
+            "categorieen_kolommen": _verdeel_over_kolommen(categorieen, indeling),
             "acties": acties_voor_scherm,
-            "versie": _prijzen_versie(categorieen, acties, bardiensten, wedstrijden_vandaag, *extra),
+            "versie": _prijzen_versie(categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, *extra),
             "versie_url": versie_url,
             "uitverkocht_namen": _uitverkocht_namen(categorieen),
             "bardiensten_vandaag": _bardiensten_voor_scherm(bardiensten),
@@ -571,7 +662,11 @@ def register_routes(app):
         return jsonify(
             {
                 "versie": _prijzen_versie(
-                    categorieen, acties, bardiensten, _wedstrijddag_welkom_wedstrijden(db)
+                    categorieen,
+                    acties,
+                    bardiensten,
+                    _wedstrijddag_welkom_wedstrijden(db),
+                    _categorie_kolommen_indeling(db),
                 ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
             }
@@ -1376,7 +1471,12 @@ def register_routes(app):
         return jsonify(
             {
                 "versie": _prijzen_versie(
-                    categorieen, acties, bardiensten, _wedstrijddag_welkom_wedstrijden(db), "tv"
+                    categorieen,
+                    acties,
+                    bardiensten,
+                    _wedstrijddag_welkom_wedstrijden(db),
+                    _categorie_kolommen_indeling(db),
+                    "tv",
                 ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
             }

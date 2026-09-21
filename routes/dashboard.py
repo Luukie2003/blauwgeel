@@ -25,8 +25,16 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.14.0"
+HUIDIGE_VERSIE = "1.14.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.14.1",
+        "datum": "21 september 2026",
+        "punten": [
+            "Fix: het prijzenscherm kon vastlopen met een foutmelding op het moment dat het zichzelf herlaadde (bijv. op een Chromecast) tijdens het bijwerken van de site",
+            "Nieuw: indeling van het prijzenscherm zelf te slepen over 3 vaste kolommen (bijv. dranken links) bij Kiosk → Prijzenscherm & acties",
+        ],
+    },
     {
         "versie": "1.14.0",
         "datum": "21 september 2026",

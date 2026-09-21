@@ -428,6 +428,7 @@ NAV_ITEMS = [
         "endpoints": [
             "kiosk_prijzen_instellingen",
             "kiosk_wedstrijddag_welkom_instellingen",
+            "kiosk_categorie_kolommen_instellingen",
             "kiosk_acties",
             "kiosk_actie_nieuw",
             "kiosk_actie_bewerken",
