@@ -34,89 +34,6 @@
 {% include "_kiosk_prijzen_subnav.html" %}
 {% endif %}
 
-<div class="kaart">
-    <h2>Chromecasten naar het prijzenscherm</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Cast een video-URL (bijv. een livestream van een thuiswedstrijd) naar
-        het prijzenscherm. Het scherm valt vanzelf terug op de prijslijst
-        zodra de stream een fout geeft, stopt, of vastloopt -- je hoeft 'm
-        dus niet per se zelf weer uit te zetten na afloop.
-    </p>
-    <div style="display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap; margin-bottom:0.6rem">
-        <google-cast-launcher id="cast-knop"
-            style="width:2.4rem; height:2.4rem; --connected-color:#146c34; --disconnected-color:#5b6270"></google-cast-launcher>
-        <input type="url" id="cast-stream-url" placeholder="https://... (stream-URL)" style="flex:1; min-width:220px">
-    </div>
-    <div style="display:flex; gap:0.6rem; flex-wrap:wrap">
-        <button type="button" id="cast-start-knop" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}" disabled>Start casten</button>
-        <button type="button" id="cast-stop-knop" class="btn btn-rand" disabled>Terug naar prijslijst</button>
-    </div>
-    <p id="cast-status" class="tekst-zacht" style="margin-top:0.6rem">Niet verbonden met een Chromecast.</p>
-</div>
-
-<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
-<script>
-(function () {
-    // Zelfgemaakte Cast-ontvanger-app (zie kiosk_prijzen_scherm.html) i.p.v.
-    // de standaard mediaontvanger -- zo kan het prijzenscherm zelf bepalen
-    // wanneer 'ie terugvalt op de prijslijst i.p.v. Chromecast's eigen
-    // afspeelscherm te tonen. APPLICATION_ID komt uit de Google Cast
-    // Developer Console (Applications -> Application ID) na registratie
-    // van deze pagina als Receiver Application URL.
-    var APPLICATION_ID = '4411914A';
-    var CAST_NAMESPACE = 'urn:x-cast:nl.blauwgeel.prijzenscherm';
-
-    var urlVeld = document.getElementById('cast-stream-url');
-    var startKnop = document.getElementById('cast-start-knop');
-    var stopKnop = document.getElementById('cast-stop-knop');
-    var statusTekst = document.getElementById('cast-status');
-
-    window['__onGCastApiAvailable'] = function (isAvailable) {
-        if (!isAvailable || !window.chrome || !chrome.cast) return;
-        var context = cast.framework.CastContext.getInstance();
-        context.setOptions({
-            receiverApplicationId: APPLICATION_ID,
-            autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
-        });
-        context.addEventListener(
-            cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
-            function (event) {
-                var verbonden = (
-                    event.sessionState === cast.framework.SessionState.SESSION_STARTED ||
-                    event.sessionState === cast.framework.SessionState.SESSION_RESUMED
-                );
-                startKnop.disabled = !verbonden;
-                stopKnop.disabled = !verbonden;
-                statusTekst.textContent = verbonden
-                    ? 'Verbonden met het prijzenscherm.'
-                    : 'Niet verbonden met een Chromecast.';
-            }
-        );
-    };
-
-    function stuurBericht(data) {
-        var session = cast.framework.CastContext.getInstance().getCurrentSession();
-        if (!session) {
-            statusTekst.textContent = 'Niet verbonden -- klik eerst op het Cast-icoon.';
-            return;
-        }
-        session.sendMessage(CAST_NAMESPACE, data).then(
-            function () { statusTekst.textContent = data.stop ? 'Teruggezet naar de prijslijst.' : 'Stream verstuurd.'; },
-            function (fout) { statusTekst.textContent = 'Versturen mislukt: ' + fout; }
-        );
-    }
-
-    startKnop.addEventListener('click', function () {
-        var url = urlVeld.value.trim();
-        if (!url) { statusTekst.textContent = 'Vul eerst een stream-URL in.'; return; }
-        stuurBericht({url: url});
-    });
-    stopKnop.addEventListener('click', function () {
-        stuurBericht({stop: true});
-    });
-})();
-</script>
-
 {% if not pda_modus %}
 <div class="kaart" id="wedstrijddag-welkom">
     <h2 style="margin-top:0">Wedstrijddag-welkomstbanner</h2>
@@ -271,6 +188,32 @@
     });
 })();
 </script>
+
+<div class="kaart" id="uitgelicht-product">
+    <h2 style="margin-top:0">Uitgelicht product</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Licht 1 zelf gekozen product groot en omlijnd uit op het prijzenscherm (bijv. de snack van
+        de week) -- los van zijn eigen categorie. Kies "Geen" om 'm weer uit te zetten.
+    </p>
+    <form method="post" action="{{ url_for('kiosk_uitgelicht_product_instellingen') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="uitgelicht-titel">Titel</label>
+            <input type="text" id="uitgelicht-titel" name="titel"
+                   value="{{ prijzen_instellingen.uitgelicht_titel }}" style="max-width:20rem">
+        </div>
+        <div class="veld">
+            <label for="uitgelicht-product-select">Product</label>
+            <select id="uitgelicht-product-select" name="product_id" style="max-width:20rem">
+                <option value="">Geen</option>
+                {% for p in alle_producten %}
+                <option value="{{ p.id }}"{{ ' selected' if uitgelicht and uitgelicht.product_id == p.id else '' }}>{{ p.naam }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-geel">Opslaan</button>
+    </form>
+</div>
 {% endif %}
 
 <div class="kaart">

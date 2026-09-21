@@ -198,6 +198,12 @@ KOLOM_MIGRATIES = [
     # kiosk_prijzen_instellingen.html. Zie _categorie_kolommen_indeling in
     # routes/kiosk.py.
     ("kiosk_prijzen_instellingen", "categorie_kolommen", "TEXT NOT NULL DEFAULT '{}'"),
+    # Eén door de beheerder gekozen product dat groot en omlijnd uitgelicht
+    # wordt op het prijzenscherm (bijv. "Snack van de week"), los van zijn
+    # eigen categorie -- NULL = uitgeschakeld. Zie _uitgelicht_product in
+    # routes/kiosk.py.
+    ("kiosk_prijzen_instellingen", "uitgelicht_product_id", "INTEGER"),
+    ("kiosk_prijzen_instellingen", "uitgelicht_titel", "TEXT NOT NULL DEFAULT 'Snack van de week'"),
 ]
 
 

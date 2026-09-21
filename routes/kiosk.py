@@ -274,6 +274,8 @@ def register_routes(app):
             categorie_kolommen_namen=_verdeel_namen_over_kolommen(
                 _alle_kiosk_categorie_namen(db), _categorie_kolommen_indeling(db)
             ),
+            alle_producten=_sjabloon_producten(db),
+            uitgelicht=_uitgelicht_product(db),
         )
 
     @app.route("/kiosk/prijzen/wedstrijddag-welkom", methods=["POST"])
@@ -313,6 +315,24 @@ def register_routes(app):
         )
         db.commit()
         flash("Indeling van het prijzenscherm opgeslagen.", "success")
+        return redirect(url_for("kiosk_prijzen_instellingen"))
+
+    @app.route("/kiosk/prijzen/uitgelicht", methods=["POST"])
+    def kiosk_uitgelicht_product_instellingen():
+        """Slaat het 'uitgelicht'-product op (zie _uitgelicht_product) -- een
+        leeg product-veld zet de kaart weer uit."""
+        db = get_db()
+        ruw_id = request.form.get("product_id", "").strip()
+        product_id = int(ruw_id) if ruw_id.isdigit() else None
+        titel = request.form.get("titel", "").strip()
+        db.execute(
+            """UPDATE kiosk_prijzen_instellingen
+               SET uitgelicht_product_id = ?, uitgelicht_titel = ?
+               WHERE id = 1""",
+            (product_id, titel or "Snack van de week"),
+        )
+        db.commit()
+        flash("Uitgelicht product opgeslagen.", "success")
         return redirect(url_for("kiosk_prijzen_instellingen"))
 
     @app.route("/kiosk/prijzen/product/<int:product_id>/toon", methods=["POST"])
@@ -374,7 +394,7 @@ def register_routes(app):
             )
         return redirect(url_for("kiosk_prijzen_instellingen"))
 
-    def _prijzen_categorieen(db, dag="normaal"):
+    def _prijzen_categorieen(db, dag="normaal", uitgelicht_product_id=None):
         # dag bepaalt welke zichtbaarheidskolom geldt (zie DAG_KOLOM
         # hierboven) -- dag komt hier nooit rechtstreeks van een gebruiker,
         # alleen via _dag_uit_request (die 'm al tegen DAG_KOLOM valideert)
@@ -394,6 +414,10 @@ def register_routes(app):
 
         per_categorie = {}
         for p in producten:
+            if uitgelicht_product_id is not None and p["id"] == uitgelicht_product_id:
+                # Dit product wordt al apart, groot en los van zijn categorie
+                # getoond (zie _uitgelicht_product) -- niet nog eens hier.
+                continue
             # kiosk_categorie is een optionele override, alleen voor de
             # indeling op dit scherm -- de echte categorie (tellen,
             # rapportage) blijft ongemoeid. Handig voor een product met
@@ -406,22 +430,23 @@ def register_routes(app):
                 # Een fust-achtig product wordt zelf niet in zijn geheel
                 # verkocht: i.p.v. de eigen verkoopprijs tonen we de losse
                 # porties die eruit getapt/geschonken worden (bijv. pitcher
-                # of glas, zie product_form.html) -- als 1 special-kaartje
-                # i.p.v. aparte prijsregels, zodat het als geheel meer
-                # opvalt (zie .prijs-special in kiosk_prijzen_scherm.html).
-                # Is het hele product als uitverkocht gemarkeerd (leeg
-                # fust), dan geldt dat voor elke portie ervan.
-                per_categorie.setdefault(weergave_categorie, []).append(
-                    {
-                        "special": True,
-                        "naam": p["naam"],
-                        "kiosk_uitverkocht": p["kiosk_uitverkocht"],
-                        "opties": [
-                            {"naam": optie["naam"], "verkoopprijs": optie["prijs"]}
-                            for optie in opties
-                        ],
-                    }
-                )
+                # of glas, zie product_form.html). Is het hele product als
+                # uitverkocht gemarkeerd (leeg fust), dan geldt dat voor elke
+                # portie ervan.
+                for optie in opties:
+                    per_categorie.setdefault(weergave_categorie, []).append(
+                        {
+                            "id": optie["id"],
+                            "naam": optie["naam"],
+                            # Los van "naam" (de portienaam, bijv. "Klein
+                            # glas") bewaard voor _uitverkocht_namen hieronder
+                            # -- die moet het onderliggende product tonen
+                            # (bijv. "Jupiler"), niet de portienaam.
+                            "product_naam": p["naam"],
+                            "verkoopprijs": optie["prijs"],
+                            "kiosk_uitverkocht": p["kiosk_uitverkocht"],
+                        }
+                    )
             else:
                 per_categorie.setdefault(weergave_categorie, []).append(p)
         # Op naam sorteren binnen de groep: door de kiosk_categorie-override
@@ -431,6 +456,31 @@ def register_routes(app):
         for lijst in per_categorie.values():
             lijst.sort(key=lambda p: p["naam"].lower())
         return sorted(per_categorie.items())
+
+    def _uitgelicht_product(db):
+        """Het door de beheerder gekozen 'uitgelicht'-product (bijv. Snack
+        van de week, zie kiosk_prijzen_instellingen.html) -- groot en
+        omlijnd getoond op het prijzenscherm, los van zijn eigen categorie.
+        None als er niets gekozen is, of het gekozen product inmiddels
+        verwijderd/gedeactiveerd is (dan verdwijnt de kaart gewoon, net als
+        de rest van dit scherm bij een leeg blok -- zie _bouw_slides)."""
+        instellingen = _prijzen_instellingen(db)
+        product_id = instellingen["uitgelicht_product_id"]
+        if product_id is None:
+            return None
+        p = db.execute(
+            "SELECT id, naam, verkoopprijs, kiosk_uitverkocht FROM producten WHERE id = ? AND actief = 1",
+            (product_id,),
+        ).fetchone()
+        if p is None:
+            return None
+        return {
+            "titel": instellingen["uitgelicht_titel"],
+            "product_id": p["id"],
+            "naam": p["naam"],
+            "verkoopprijs": p["verkoopprijs"],
+            "kiosk_uitverkocht": p["kiosk_uitverkocht"],
+        }
 
     def _acties_actief(db):
         """Actieve prijs-acties met de gegevens van het gekoppelde product --
@@ -446,15 +496,17 @@ def register_routes(app):
         ).fetchall()
 
     def _uitverkocht_namen(categorieen):
-        # Elk item (special-kaartje of gewoon product) staat hier al 1x per
-        # product in "naam" -- ook bij een special (meerdere prijsopties)
-        # verschijnt de productnaam dus maar 1x in de uitverkocht-popup.
+        # Bij prijsopties (fust-achtige producten, zie hierboven) is "naam"
+        # de portienaam (bijv. "Klein glas"); voor de uitverkocht-popup moet
+        # het onderliggende product getoond worden ("product_naam", bijv.
+        # "Jupiler"), en maar 1x per product, ook al zijn er meerdere
+        # uitverkochte porties van hetzelfde product.
         namen = []
         for _, lijst in categorieen:
             for p in lijst:
                 if not p["kiosk_uitverkocht"]:
                     continue
-                naam = p["naam"]
+                naam = p["product_naam"] if "product_naam" in p.keys() else p["naam"]
                 if naam not in namen:
                     namen.append(naam)
         return namen
@@ -580,38 +632,37 @@ def register_routes(app):
         )
         return [[(naam, bij_naam[naam]) for naam in namen] for namen in namen_per_kolom]
 
-    def _prijs_regel_voor_hash(p):
-        # p is ofwel een gewoon product (sqlite3.Row) ofwel een
-        # special-kaartje (plain dict, zie _prijzen_categorieen) -- die twee
-        # hebben geen gemeenschappelijke "id"/"verkoopprijs"-vorm, dus hier
-        # per soort een eigen hashbare tuple.
-        if isinstance(p, dict):
-            return (
-                p["naam"],
-                p["kiosk_uitverkocht"],
-                tuple((o["naam"], o["verkoopprijs"]) for o in p["opties"]),
-            )
-        return (p["id"], p["naam"], p["verkoopprijs"], p["kiosk_uitverkocht"])
-
-    def _prijzen_versie(categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, *extra):
+    def _prijzen_versie(categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, uitgelicht, *extra):
         # Alleen de velden die daadwerkelijk op het scherm staan -- zo
         # triggert bijv. een gewijzigde voorraad (niet zichtbaar hier) geen
         # onnodige herlaadbeurt. Acties, de bardiensten van vandaag, de
-        # thuiswedstrijden van vandaag en de kolomindeling tellen ook mee,
-        # zodat een wijziging daaraan het scherm net als de rest vanzelf
-        # bijwerkt. *extra is puur om /kiosk/tv (zie kiosk_tv) een eigen
-        # versie-'namespace' te geven, zodat het wisselen tussen prijzen/
-        # dia's ook zonder inhoudelijke wijziging als een update gezien
-        # wordt.
+        # thuiswedstrijden van vandaag, de kolomindeling en het uitgelichte
+        # product tellen ook mee, zodat een wijziging daaraan het scherm net
+        # als de rest vanzelf bijwerkt. *extra is puur om /kiosk/tv (zie
+        # kiosk_tv) een eigen versie-'namespace' te geven, zodat het
+        # wisselen tussen prijzen/dia's ook zonder inhoudelijke wijziging
+        # als een update gezien wordt.
         return _versie(
             [
-                (naam, [_prijs_regel_voor_hash(p) for p in lijst])
+                (
+                    naam,
+                    [(p["id"], p["naam"], p["verkoopprijs"], p["kiosk_uitverkocht"]) for p in lijst],
+                )
                 for naam, lijst in categorieen
             ],
             [(a["id"], a["tekst"], a["product_naam"], a["verkoopprijs"], a["afbeelding"]) for a in acties],
             [(b["id"], b["datum"], b["start_tijd"], b["eind_tijd"], b["namen"]) for b in bardiensten],
             [(w["tijd"], w["tegenstander"]) for w in wedstrijden_vandaag],
             indeling,
+            (
+                uitgelicht["titel"],
+                uitgelicht["product_id"],
+                uitgelicht["naam"],
+                uitgelicht["verkoopprijs"],
+                uitgelicht["kiosk_uitverkocht"],
+            )
+            if uitgelicht
+            else None,
             *extra,
         )
 
@@ -619,7 +670,12 @@ def register_routes(app):
         """Gedeelde render-context voor zowel /kiosk/prijzen als de
         prijzen-stand van /kiosk/tv (zie kiosk_tv) -- 1 plek voor de opbouw
         zodat beide altijd exact hetzelfde renderen."""
-        categorieen = _prijzen_categorieen(db, _dag_type_vandaag())
+        uitgelicht = _uitgelicht_product(db)
+        categorieen = _prijzen_categorieen(
+            db,
+            _dag_type_vandaag(),
+            uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None,
+        )
         acties = _acties_actief(db)
         bardiensten = _bardiensten_vandaag(db)
         wedstrijden_vandaag = _wedstrijddag_welkom_wedstrijden(db)
@@ -637,7 +693,10 @@ def register_routes(app):
         return {
             "categorieen_kolommen": _verdeel_over_kolommen(categorieen, indeling),
             "acties": acties_voor_scherm,
-            "versie": _prijzen_versie(categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, *extra),
+            "uitgelicht": uitgelicht,
+            "versie": _prijzen_versie(
+                categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, uitgelicht, *extra
+            ),
             "versie_url": versie_url,
             "uitverkocht_namen": _uitverkocht_namen(categorieen),
             "bardiensten_vandaag": _bardiensten_voor_scherm(bardiensten),
@@ -656,7 +715,12 @@ def register_routes(app):
     @app.route("/kiosk/prijzen/versie")
     def kiosk_prijzen_versie():
         db = get_db()
-        categorieen = _prijzen_categorieen(db, _dag_type_vandaag())
+        uitgelicht = _uitgelicht_product(db)
+        categorieen = _prijzen_categorieen(
+            db,
+            _dag_type_vandaag(),
+            uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None,
+        )
         acties = _acties_actief(db)
         bardiensten = _bardiensten_vandaag(db)
         return jsonify(
@@ -667,6 +731,7 @@ def register_routes(app):
                     bardiensten,
                     _wedstrijddag_welkom_wedstrijden(db),
                     _categorie_kolommen_indeling(db),
+                    uitgelicht,
                 ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
             }
@@ -1465,7 +1530,12 @@ def register_routes(app):
         instellingen = _scherm_instellingen(db)
         if instellingen["actief_tv_scherm"] == "dias":
             return jsonify({"versie": _versie("tv", _bouw_slides(db))})
-        categorieen = _prijzen_categorieen(db, _dag_type_vandaag())
+        uitgelicht = _uitgelicht_product(db)
+        categorieen = _prijzen_categorieen(
+            db,
+            _dag_type_vandaag(),
+            uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None,
+        )
         acties = _acties_actief(db)
         bardiensten = _bardiensten_vandaag(db)
         return jsonify(
@@ -1476,6 +1546,7 @@ def register_routes(app):
                     bardiensten,
                     _wedstrijddag_welkom_wedstrijden(db),
                     _categorie_kolommen_indeling(db),
+                    uitgelicht,
                     "tv",
                 ),
                 "uitverkocht": _uitverkocht_namen(categorieen),

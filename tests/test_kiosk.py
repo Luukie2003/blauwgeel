@@ -240,9 +240,7 @@ def test_prijzenscherm_groepeert_op_kiosk_categorie_override(client, db):
     assert resp.status_code == 200
     assert "Telling" not in tekst
     bier_index = tekst.index(">Bier<")
-    # Binnen het special-kaartje staan de opties op volgorde (pitcher voor
-    # glas, zie volgorde=0/1 hierboven), niet alfabetisch.
-    assert bier_index < tekst.index("Radler pitcher") < tekst.index("Radler glas")
+    assert bier_index < tekst.index("Radler glas") < tekst.index("Radler pitcher")
 
 
 def test_product_formulier_negeert_lege_prijsoptie_regels(ingelogde_client, db):
@@ -432,9 +430,8 @@ def test_prijzenscherm_toont_uitverkocht_duidelijk(client, db):
 
 def test_prijzenscherm_toont_prijsopties_i_p_v_eigen_prijs(client, db):
     """Een fust hoort niet in zijn geheel op de prijslijst -- heeft een
-    product prijsopties, dan tonen die als 1 special-kaartje (met de
-    productnaam als kop) i.p.v. de eigen verkoopprijs van het product zelf
-    (zie _prijzen_categorieen)."""
+    product prijsopties, dan tonen die losse regels i.p.v. de eigen
+    verkoopprijs van het product zelf (zie _prijzen_categorieen)."""
     product_id = _voeg_product_toe(db, "Fust Jupiler", categorie="Bier", prijs=80.0, toon_op_kiosk=1)
     db.execute(
         """INSERT INTO product_prijsopties (product_id, naam, prijs, volgorde) VALUES
@@ -447,12 +444,12 @@ def test_prijzenscherm_toont_prijsopties_i_p_v_eigen_prijs(client, db):
     tekst = resp.data.decode()
 
     assert resp.status_code == 200
-    assert 'prijs-special-kop">Fust Jupiler<' in tekst
     assert "Jupiler pitcher" in tekst
     assert "&euro; 12.00" in tekst
     assert "Jupiler glas" in tekst
     assert "&euro; 2.00" in tekst
-    # De eigen verkoopprijs van het fust-product zelf mag niet los verschijnen.
+    # De naam/prijs van het fust-product zelf mag niet los verschijnen.
+    assert "Fust Jupiler<" not in tekst
     assert "&euro; 80.00" not in tekst
 
 
@@ -538,48 +535,6 @@ def test_kiosk_pda_pagina_toont_uitverkocht_knop(ingelogde_client, db):
     assert resp.status_code == 200
     assert b"Uitverkocht" in resp.data
     assert b"btn-uitverkocht" in resp.data
-
-
-# ---------- Chromecasten naar het prijzenscherm ----------
-# De daadwerkelijke cast-sessie (sender <-> Chromecast <-> ontvanger) is met
-# pytest niet te simuleren -- dat vereist echte Cast-infrastructuur en een
-# fysiek apparaat. Deze tests controleren daarom alleen wat wél statisch te
-# verifiëren is: dat beide pagina's de juiste SDK's laden en dezelfde
-# custom-message-namespace gebruiken, en dat het prijzenscherm zelf (zonder
-# cast-sessie) gewoon de prijslijst laat zien.
-
-
-def test_prijzenscherm_laadt_de_cast_ontvanger_sdk(client, db):
-    resp = client.get("/kiosk/prijzen")
-    body = resp.data.decode()
-    assert resp.status_code == 200
-    assert "cast_receiver_framework.js" in body
-    assert "CastReceiverContext" in body
-
-
-def test_prijzenscherm_toont_prijslijst_zonder_castsessie(client, db):
-    """Zonder een actieve cast-sessie moet het scherm gewoon de prijslijst
-    laten zien -- de video/stream-modus wordt alleen client-side via een
-    custom cast-bericht geactiveerd, niet vanuit de server."""
-    resp = client.get("/kiosk/prijzen")
-    body = resp.data.decode()
-    assert resp.status_code == 200
-    assert "Er zijn nog geen producten gekozen" in body or "prijzen-grid" in body
-
-
-def test_prijzenscherm_instellingen_toont_cast_knop(ingelogde_client, db):
-    resp = ingelogde_client.get("/kiosk/prijzen/instellingen")
-    body = resp.data.decode()
-    assert resp.status_code == 200
-    assert "google-cast-launcher" in body
-    assert "cast_sender.js" in body
-
-
-def test_sender_en_ontvanger_gebruiken_dezelfde_cast_namespace(ingelogde_client, db, client):
-    namespace_instellingen = ingelogde_client.get("/kiosk/prijzen/instellingen").data.decode()
-    namespace_scherm = client.get("/kiosk/prijzen").data.decode()
-    assert "urn:x-cast:nl.blauwgeel.prijzenscherm" in namespace_instellingen
-    assert "urn:x-cast:nl.blauwgeel.prijzenscherm" in namespace_scherm
 
 
 # ---------- Acties (onderdeel van het prijzenscherm) ----------

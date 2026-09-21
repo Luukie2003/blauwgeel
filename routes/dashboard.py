@@ -25,8 +25,17 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.14.1"
+HUIDIGE_VERSIE = "1.14.2"
 WIJZIGINGEN = [
+    {
+        "versie": "1.14.2",
+        "datum": "21 september 2026",
+        "punten": [
+            "Chromecasten van een losse video-URL naar het prijzenscherm verwijderd (werkte niet meer)",
+            "Prijsopties (bijv. pitcher/glas van een fust) tonen weer als gewone prijsregels i.p.v. een omlijnd kaartje",
+            "Nieuw: 1 zelf gekozen product groot en omlijnd uitlichten op het prijzenscherm (bijv. 'Snack van de week'), los van zijn eigen categorie, bij Kiosk → Prijzenscherm & acties",
+        ],
+    },
     {
         "versie": "1.14.1",
         "datum": "21 september 2026",

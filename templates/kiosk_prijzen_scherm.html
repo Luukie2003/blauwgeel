@@ -74,34 +74,6 @@
         .prijs-regel--uitverkocht .naam { text-decoration: line-through; opacity: 0.55; }
         .prijs-regel--uitverkocht .stippel { opacity: 0.3; }
 
-        /* Specials (prijsopties, bijv. een fust met pitcher/glas): een
-           duidelijk afgebakend kaartje i.p.v. gewone dotted-line regels, zodat
-           ze opvallen tussen de rest van de prijslijst i.p.v. te verdwijnen. */
-        .prijs-special {
-            border: 2px solid var(--geel);
-            border-radius: 10px;
-            padding: 0.5rem 0.8rem;
-            margin: 0.4rem 0;
-            background: rgba(252, 212, 47, 0.08);
-        }
-        .prijs-special-kop {
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
-            color: var(--geel);
-            font-size: 1.05rem;
-            margin-bottom: 0.2rem;
-        }
-        .prijs-special-regel {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            gap: 0.5rem;
-            font-size: 1.15rem;
-            padding: 0.15rem 0;
-        }
-        .prijs-special--uitverkocht { opacity: 0.6; }
-        .prijs-special--uitverkocht .naam { text-decoration: line-through; }
         .bedrag-uitverkocht {
             flex-shrink: 0;
             background: #d81e1e;
@@ -133,6 +105,35 @@
         }
         .wedstrijddag-banner[hidden] { display: none; }
 
+        /* Uitgelicht product (bijv. "Snack van de week", zie
+           kiosk_prijzen_instellingen.html) -- groot en omlijnd, los van de
+           gewone prijskolommen, zodat het opvalt. */
+        .uitgelicht-kaart {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            border: 3px solid var(--geel);
+            border-radius: 16px;
+            padding: 1.1rem 1.6rem;
+            margin-bottom: 1.6rem;
+            background: rgba(252, 212, 47, 0.1);
+        }
+        .uitgelicht-label {
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-size: 1rem;
+            background: var(--geel);
+            color: var(--blauw-donker);
+            padding: 0.3rem 0.9rem;
+            border-radius: 999px;
+        }
+        .uitgelicht-naam { flex: 1; font-size: 2rem; font-weight: 800; min-width: 12rem; }
+        .uitgelicht-bedrag { font-size: 2.2rem; font-weight: 800; color: var(--geel); }
+        .uitgelicht-kaart--uitverkocht { opacity: 0.6; }
+        .uitgelicht-kaart--uitverkocht .uitgelicht-naam { text-decoration: line-through; }
+
         /* Bardienst: gele balk onderaan, alleen zichtbaar zolang er nu een
            bardienst-tijdvak actief is (zie de JS onderaan). Bewust GEEN
            position:fixed meer: dat overlapte de laatste prijsregels zodra
@@ -153,13 +154,6 @@
             letter-spacing: 0.01em;
         }
         body.heeft-bardienst .bardienst-balk { display: block; }
-
-        /* Livestream i.p.v. de prijslijst -- vult het hele scherm, prijslijst
-           en header blijven verborgen zolang de stream loopt. */
-        #stream-scherm { display: none; position: fixed; inset: 0; background: #000; z-index: 5; }
-        #stream-scherm video { width: 100%; height: 100%; object-fit: contain; }
-        body.stream-actief header, body.stream-actief .prijzen-grid, body.stream-actief .leeg { visibility: hidden; }
-        body.stream-actief #stream-scherm { display: block; }
 
         /* Grote pop-up: zowel voor de UITVERKOCHT-melding als voor een
            actie -- zelfde overlay, alleen de klasse/inhoud verschilt. */
@@ -224,6 +218,18 @@
 
     <div id="wedstrijddag-banner" class="wedstrijddag-banner" hidden></div>
 
+    {% if uitgelicht %}
+    <div class="uitgelicht-kaart{{ ' uitgelicht-kaart--uitverkocht' if uitgelicht.kiosk_uitverkocht else '' }}">
+        <span class="uitgelicht-label">{{ uitgelicht.titel }}</span>
+        <span class="uitgelicht-naam">{{ uitgelicht.naam }}</span>
+        {% if uitgelicht.kiosk_uitverkocht %}
+        <span class="bedrag-uitverkocht">Uitverkocht</span>
+        {% else %}
+        <span class="uitgelicht-bedrag">&euro; {{ '%.2f'|format(uitgelicht.verkoopprijs) }}</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {% if categorieen_kolommen and (categorieen_kolommen[0] or categorieen_kolommen[1] or categorieen_kolommen[2]) %}
     <div class="prijzen-grid">
         {% for kolom in categorieen_kolommen if kolom %}
@@ -232,21 +238,6 @@
             <div class="categorie-blok">
                 <h2>{{ naam }}</h2>
                 {% for p in producten %}
-                {% if p.special %}
-                <div class="prijs-special{{ ' prijs-special--uitverkocht' if p.kiosk_uitverkocht else '' }}">
-                    <div class="prijs-special-kop">{{ p.naam }}</div>
-                    {% for optie in p.opties %}
-                    <div class="prijs-special-regel">
-                        <span class="naam">{{ optie.naam }}</span>
-                        {% if p.kiosk_uitverkocht %}
-                        <span class="bedrag-uitverkocht">Uitverkocht</span>
-                        {% else %}
-                        <span class="bedrag">&euro; {{ '%.2f'|format(optie.verkoopprijs) }}</span>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
                 <div class="prijs-regel{{ ' prijs-regel--uitverkocht' if p.kiosk_uitverkocht else '' }}">
                     <span class="naam">{{ p.naam }}</span>
                     <span class="stippel"></span>
@@ -256,7 +247,6 @@
                     <span class="bedrag">&euro; {{ '%.2f'|format(p.verkoopprijs) }}</span>
                     {% endif %}
                 </div>
-                {% endif %}
                 {% endfor %}
             </div>
             {% endfor %}
@@ -269,66 +259,6 @@
 
     <div id="kiosk-popup" class="kiosk-popup"></div>
     <div id="bardienst-balk" class="bardienst-balk"></div>
-
-    <div id="stream-scherm">
-        <video id="stream-video" autoplay playsinline></video>
-    </div>
-
-    <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
-    <script>
-    (function () {
-        // ---------- Chromecasten naar dit scherm, reactieve terugval ----------
-        // Dit scherm is een eigen Cast-ontvangerapp (zie de Cast-knop op
-        // Kiosk -> Prijzenscherm & acties, die hiernaartoe verbindt en een
-        // stream-URL stuurt via CAST_NAMESPACE). Geen planning nodig: zodra
-        // de video een fout geeft, stopt, of vastloopt, springt dit scherm
-        // vanzelf terug naar de prijslijst -- puur lokaal, dit scherm is de
-        // enige bron van waarheid over wat er nu op staat.
-        var CAST_NAMESPACE = 'urn:x-cast:nl.blauwgeel.prijzenscherm';
-        var video = document.getElementById('stream-video');
-
-        function toonStream(url) {
-            video.src = url;
-            document.body.classList.add('stream-actief');
-        }
-
-        function terugNaarPrijslijst() {
-            document.body.classList.remove('stream-actief');
-            video.pause();
-            video.removeAttribute('src');
-            video.load();
-        }
-
-        video.addEventListener('error', terugNaarPrijslijst);
-        video.addEventListener('ended', terugNaarPrijslijst);
-        // 'stalled' is ook een korte buffer-hik op een prima stream -- pas
-        // terugvallen als het na 5s nog steeds niet speelt.
-        var stalledTimer = null;
-        video.addEventListener('stalled', function () {
-            if (stalledTimer) return;
-            stalledTimer = setTimeout(function () {
-                stalledTimer = null;
-                if (video.paused || video.readyState < 3) terugNaarPrijslijst();
-            }, 5000);
-        });
-        video.addEventListener('playing', function () {
-            clearTimeout(stalledTimer);
-            stalledTimer = null;
-        });
-
-        if (window.cast && cast.framework) {
-            var context = cast.framework.CastReceiverContext.getInstance();
-            context.addCustomMessageListener(CAST_NAMESPACE, function (event) {
-                if (event.data && event.data.url) {
-                    toonStream(event.data.url);
-                } else if (event.data && event.data.stop) {
-                    terugNaarPrijslijst();
-                }
-            });
-            context.start();
-        }
-    })();
-    </script>
 
     <script>
         function werkKlokBij() {
