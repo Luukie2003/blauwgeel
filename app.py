@@ -84,6 +84,14 @@ OPEN_ENDPOINTS = {
     "kiosk_tv_versie",
 }
 
+# Iedereen moet bij de eerste keer inloggen een eigen 6-cijferige tablet-code
+# instellen (zie tablet_code_instellen in routes/auth.py) -- die code wordt
+# straks gebruikt om aan te melden op de kiosk-tablet/tv-app (los van deze
+# website), zonder gebruikersnaam. Zolang dat nog niet is gebeurd, blokkeert
+# vereis_login hieronder alle andere pagina's; deze twee blijven bereikbaar
+# zodat niemand vast komt te zitten.
+TABLET_CODE_UITGEZONDERD = {"tablet_code_instellen", "logout"}
+
 # Endpoints die niet meetellen als paginabezoek voor Club > Gebruiksstatistieken
 # (zie log_paginabezoek hieronder en routes/gebruik.py) -- puur technisch
 # verkeer zonder betekenis voor "wie gebruikt welk onderdeel". De _versie-
@@ -676,7 +684,8 @@ def create_app(database_path=None):
         # van vóór de blokkade dateert.
         db = get_db()
         gebruiker = db.execute(
-            "SELECT rol, secties, actief FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)
+            "SELECT rol, secties, actief, tablet_code_hash FROM gebruikers WHERE id = ?",
+            (session["gebruiker_id"],),
         ).fetchone()
         if gebruiker is None or not gebruiker["actief"]:
             session.clear()
@@ -688,6 +697,11 @@ def create_app(database_path=None):
             # handmatig hoeft uit/in te loggen na een update.
             session["gebruiker_rol"] = gebruiker["rol"]
             session["gebruiker_secties"] = gebruiker["secties"]
+        if (
+            gebruiker["tablet_code_hash"] is None
+            and request.endpoint not in TABLET_CODE_UITGEZONDERD
+        ):
+            return redirect(url_for("tablet_code_instellen", next=request.path))
         if request.endpoint in BEHEERDER_ENDPOINTS and session.get("gebruiker_rol") != "beheerder":
             flash("Deze pagina is alleen voor beheerders.", "error")
             return redirect(url_for("dashboard"))

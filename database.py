@@ -210,6 +210,12 @@ KOLOM_MIGRATIES = [
     # account_actief_wisselen in routes/accounts.py en de check in
     # vereis_login (app.py).
     ("gebruikers", "actief", "INTEGER NOT NULL DEFAULT 1"),
+    # 6-cijferige code (gehasht, net als wachtwoord_hash) waarmee iemand
+    # zichzelf kan aanmelden op de kiosk-tablet/tv-app (die los van deze
+    # website wordt gebouwd) -- geen gebruikersnaam nodig, alleen de code.
+    # NULL = nog niet ingesteld; iedereen moet 'm bij de eerste keer
+    # inloggen kiezen, zie tablet_code_instellen in routes/auth.py.
+    ("gebruikers", "tablet_code_hash", "TEXT"),
 ]
 
 

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tablet-code instellen · Kantine Beheer</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#1c2b4a">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Kantine Beheer">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_versie }}">
+</head>
+<body class="login-body">
+    <div class="login-wrap">
+        <div class="login-venster">
+            <div class="app-titelbalk">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="titelbalk-logo">
+                <span>Kantine Beheer — Tablet-code</span>
+            </div>
+            <div class="login-logo-groot">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915">
+            </div>
+            <div class="login-inhoud">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="flashes">
+                            {% for category, message in messages %}
+                                <div class="flash flash-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+                {% if heeft_al_code %}
+                <p class="subtitel" style="margin-top:0">
+                    Kies een nieuwe 6-cijferige code. Je huidige code werkt hierna niet meer.
+                </p>
+                {% else %}
+                <p class="subtitel" style="margin-top:0">
+                    Kies een 6-cijferige code waarmee je je straks kunt aanmelden op de
+                    kiosk-tablet, zonder gebruikersnaam of wachtwoord.
+                </p>
+                {% endif %}
+                <form method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="next" value="{{ next }}">
+                    <div class="veld">
+                        <label for="code">Code (6 cijfers)</label>
+                        <input type="text" inputmode="numeric" pattern="\d{6}" maxlength="6"
+                               id="code" name="code" autocomplete="off" autofocus required>
+                    </div>
+                    <div class="veld">
+                        <label for="code_herhaald">Code (herhalen)</label>
+                        <input type="text" inputmode="numeric" pattern="\d{6}" maxlength="6"
+                               id="code_herhaald" name="code_herhaald" autocomplete="off" required>
+                    </div>
+                    <button type="submit" class="btn btn-geel login-btn">Code opslaan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

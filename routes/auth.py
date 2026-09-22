@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta
 
 from flask import current_app, flash, redirect, render_template, request, session, url_for
@@ -12,6 +13,9 @@ from helpers import genereer_wachtwoord_token, now_str, veilig_redirect_pad, vin
 # ongeacht of het wachtwoord daarna wel klopt.
 LOGIN_MAX_POGINGEN = 5
 LOGIN_LOCKOUT_MINUTEN = 15
+
+# Precies 6 cijfers -- zie tablet_code_instellen hieronder.
+TABLET_CODE_PATROON = re.compile(r"^\d{6}$")
 
 
 def register_routes(app):
@@ -222,3 +226,56 @@ def register_routes(app):
                 return redirect(url_for("dashboard"))
 
         return render_template("wachtwoord_instellen.html", gebruiker=gebruiker, token=token)
+
+    def _tablet_code_al_in_gebruik(db, code, uitgezonderd_gebruiker_id):
+        """Codes zijn gehasht opgeslagen (net als wachtwoorden) -- de enige
+        manier om te weten of code X al bezet is, is 'm tegen elke bestaande
+        hash aan te houden (zie tablet_code_instellen). Bij een handvol tot
+        een paar tientallen accounts is dat verwaarloosbaar traag."""
+        rijen = db.execute(
+            "SELECT tablet_code_hash FROM gebruikers WHERE tablet_code_hash IS NOT NULL AND id != ?",
+            (uitgezonderd_gebruiker_id,),
+        ).fetchall()
+        return any(check_password_hash(r["tablet_code_hash"], code) for r in rijen)
+
+    @app.route("/tablet-code/instellen", methods=["GET", "POST"])
+    def tablet_code_instellen():
+        """Elk account stelt hier een eigen 6-cijferige code in -- verplicht
+        bij de eerste keer inloggen (zie vereis_login in app.py), en
+        daarna vrijblijvend te wijzigen (zie account_voorkeuren.html). Die
+        code is bedoeld om zonder gebruikersnaam aan te melden op de
+        kiosk-tablet/tv-app die los van deze website wordt gebouwd -- deze
+        pagina regelt alleen het instellen/bewaren ervan, niet die app zelf."""
+        db = get_db()
+        gebruiker = db.execute(
+            "SELECT * FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)
+        ).fetchone()
+        if gebruiker is None:
+            return redirect(url_for("login"))
+
+        if request.method == "POST":
+            code = request.form.get("code", "").strip()
+            code_herhaald = request.form.get("code_herhaald", "").strip()
+            if not TABLET_CODE_PATROON.match(code):
+                flash("De code moet precies 6 cijfers zijn.", "error")
+            elif code != code_herhaald:
+                flash("De codes komen niet overeen.", "error")
+            elif _tablet_code_al_in_gebruik(db, code, gebruiker["id"]):
+                flash("Deze code is al in gebruik door een ander account -- kies een andere.", "error")
+            else:
+                db.execute(
+                    "UPDATE gebruikers SET tablet_code_hash = ? WHERE id = ?",
+                    (generate_password_hash(code, method=WACHTWOORD_HASH_METHODE), gebruiker["id"]),
+                )
+                db.commit()
+                flash("Tablet-code opgeslagen.", "success")
+                volgende = veilig_redirect_pad(
+                    request.form.get("next") or request.args.get("next"), url_for("dashboard")
+                )
+                return redirect(volgende)
+
+        return render_template(
+            "tablet_code_instellen.html",
+            heeft_al_code=gebruiker["tablet_code_hash"] is not None,
+            next=request.args.get("next", ""),
+        )

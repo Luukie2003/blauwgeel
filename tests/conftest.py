@@ -2,11 +2,12 @@ import sys
 from pathlib import Path
 
 import pytest
+from werkzeug.security import generate_password_hash
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import create_app  # noqa: E402
-from database import get_db  # noqa: E402
+from database import WACHTWOORD_HASH_METHODE, get_db  # noqa: E402
 
 
 @pytest.fixture
@@ -17,6 +18,30 @@ def app(tmp_path):
     # maar de testclient praat over http -- anders verstuurt de browser het
     # sessiecookie nooit terug en blijft elke request "uitgelogd".
     flask_app.config["SESSION_COOKIE_SECURE"] = False
+    with flask_app.app_context():
+        # tablet_code_hash IS NULL dwingt (zie vereis_login in app.py) elk
+        # account naar de instelpagina voor de tablet-code -- zonder dit zou
+        # vrijwel elke test die een account aanmaakt/inlogt daarop vastlopen,
+        # terwijl geen van die tests over deze functie gaat. Vult 'm hier
+        # 1x voor het seed-account, en met een trigger voor elk account dat
+        # een test hierna zelf aanmaakt. Een test die de instelpagina zelf
+        # wil testen, zet 'm voor zijn eigen testgebruiker expliciet terug op
+        # NULL.
+        db = get_db()
+        test_hash = generate_password_hash("999999", method=WACHTWOORD_HASH_METHODE)
+        db.execute(
+            "UPDATE gebruikers SET tablet_code_hash = ? WHERE tablet_code_hash IS NULL",
+            (test_hash,),
+        )
+        db.execute(
+            f"""CREATE TRIGGER IF NOT EXISTS test_auto_tablet_code
+                AFTER INSERT ON gebruikers
+                WHEN NEW.tablet_code_hash IS NULL
+                BEGIN
+                    UPDATE gebruikers SET tablet_code_hash = '{test_hash}' WHERE id = NEW.id;
+                END"""
+        )
+        db.commit()
     yield flask_app
 
 
