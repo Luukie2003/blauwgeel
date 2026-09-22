@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kantine Beheer</string>
+    <string name="drawer_open">Menu openen</string>
+    <string name="drawer_close">Menu sluiten</string>
+    <string name="instellingen">Instellingen</string>
+
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_voorraad">Voorraadoverzicht</string>
+    <string name="nav_producten">Producten</string>
+    <string name="nav_acties">Acties</string>
+    <string name="nav_bardiensten">Bardiensten</string>
+    <string name="nav_prijzenscherm_instellingen">Prijzenscherm instellingen</string>
+    <string name="nav_dias_sponsoren">Dia\'s &amp; sponsoren</string>
+    <string name="nav_kiosk_overzicht">Kiosk-overzicht</string>
+    <string name="nav_app_instellingen">App-instellingen</string>
+
+    <string name="bestand_kiezen">Bestand kiezen</string>
+    <string name="basis_url_label">Website-adres</string>
+    <string name="opslaan">Opslaan</string>
+    <string name="uitloggen">Uitloggen (cookies wissen)</string>
+    <string name="instellingen_opgeslagen">Instellingen opgeslagen</string>
+    <string name="uitgelogd">Uitgelogd</string>
+</resources>

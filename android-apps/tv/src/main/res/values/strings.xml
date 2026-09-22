@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kantine TV</string>
+    <string name="kies_scherm_titel">Kies een scherm</string>
+    <string name="instellingen">Instellingen</string>
+    <string name="zoom_titel">Zoom-niveau</string>
+    <string name="zoom_uitleg">Deze zoom wordt gebruikt op alle 3 de schermen en blijft bewaard, ook na herstarten.</string>
+    <string name="zoom_percentage">%d%%</string>
+    <string name="zoom_reset">Terug naar 100%%</string>
+    <string name="auto_start_label">Bij opstarten automatisch het laatst gebruikte scherm tonen</string>
+    <string name="verbinding_mislukt">Geen verbinding met kantineblauwgeel.nl</string>
+    <string name="opnieuw_proberen">Opnieuw proberen</string>
+</resources>

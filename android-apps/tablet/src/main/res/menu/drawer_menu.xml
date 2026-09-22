@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_dashboard"
+            android:icon="@android:drawable/ic_menu_view"
+            android:title="@string/nav_dashboard" />
+        <item
+            android:id="@+id/nav_voorraad"
+            android:icon="@android:drawable/ic_menu_agenda"
+            android:title="@string/nav_voorraad" />
+        <item
+            android:id="@+id/nav_producten"
+            android:icon="@android:drawable/ic_menu_sort_by_size"
+            android:title="@string/nav_producten" />
+        <item
+            android:id="@+id/nav_acties"
+            android:icon="@android:drawable/ic_menu_myplaces"
+            android:title="@string/nav_acties" />
+        <item
+            android:id="@+id/nav_bardiensten"
+            android:icon="@android:drawable/ic_menu_my_calendar"
+            android:title="@string/nav_bardiensten" />
+    </group>
+
+    <item android:title="@string/instellingen">
+        <menu>
+            <item
+                android:id="@+id/nav_prijzenscherm_instellingen"
+                android:title="@string/nav_prijzenscherm_instellingen" />
+            <item
+                android:id="@+id/nav_dias_sponsoren"
+                android:title="@string/nav_dias_sponsoren" />
+            <item
+                android:id="@+id/nav_kiosk_overzicht"
+                android:title="@string/nav_kiosk_overzicht" />
+            <item
+                android:id="@+id/nav_instellingen"
+                android:title="@string/nav_app_instellingen" />
+        </menu>
+    </item>
+</menu>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="@string/basis_url_label"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/baseUrlVeld"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:autofillHints="url"
+        android:inputType="textUri" />
+
+    <Button
+        android:id="@+id/opslaanKnop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/opslaan" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginVertical="32dp"
+        android:background="#DDDDDD" />
+
+    <Button
+        android:id="@+id/uitloggenKnop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/uitloggen" />
+
+</LinearLayout>

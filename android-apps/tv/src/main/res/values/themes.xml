@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.KantineTv" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="colorPrimary">@color/blauw</item>
+        <item name="colorPrimaryDark">@color/blauw_donker</item>
+        <item name="colorAccent">@color/geel</item>
+        <item name="android:windowBackground">@color/achtergrond</item>
+        <item name="android:statusBarColor">@color/achtergrond</item>
+    </style>
+
+    <style name="Theme.KantineTv.Player">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/achtergrond"
+    android:orientation="vertical"
+    android:padding="64dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/zoom_titel"
+        android:textColor="@color/wit"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="24dp"
+        android:text="@string/zoom_uitleg"
+        android:textColor="@color/wit"
+        android:alpha="0.8" />
+
+    <TextView
+        android:id="@+id/zoomWaarde"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:textColor="@color/geel"
+        android:textSize="36sp"
+        android:textStyle="bold" />
+
+    <SeekBar
+        android:id="@+id/zoomSeekbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/zoomResetKnop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/tv_card_background"
+        android:paddingHorizontal="24dp"
+        android:text="@string/zoom_reset"
+        android:textColor="@color/wit" />
+
+    <CheckBox
+        android:id="@+id/autoStartCheckbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="48dp"
+        android:text="@string/auto_start_label"
+        android:textColor="@color/wit" />
+
+</LinearLayout>
