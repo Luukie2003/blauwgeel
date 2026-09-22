@@ -1,196 +1,146 @@
 package nl.kantineblauwgeel.tablet
 
-import android.annotation.SuppressLint
-import android.app.Activity
-import android.app.DownloadManager
-import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
-import android.webkit.CookieManager
-import android.webkit.URLUtil
-import android.webkit.ValueCallback
-import android.webkit.WebChromeClient
-import android.webkit.WebChromeClient.FileChooserParams
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.ActionBarDrawerToggle
+import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.GravityCompat
 import nl.kantineblauwgeel.tablet.databinding.ActivityMainBinding
+import org.json.JSONObject
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
 
+/** Startscherm: vraagt de 6-cijferige tablet-code (zie tablet_code_instellen
+ * op de website) en stuurt 'm ter controle naar /api/tablet-code/controleren.
+ * Bij een geldige code ga je naar het schermkiezer (ScreenPickerActivity) --
+ * verder is dit apparaat puur kiosk: geen gebruikersnaam, geen wachtwoord,
+ * geen toegang tot de rest van de website. Lang indrukken op het logo opent
+ * de (verborgen) instellingen, voor het wijzigen van het website-adres. */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private var bestandCallback: ValueCallback<Array<Uri>>? = null
-    private var geladenBaseUrl: String? = null
+    private val ingevoerdeCode = StringBuilder()
+    private lateinit var stippen: List<TextView>
+    private lateinit var cijferKnoppen: List<Pair<View, String>>
 
-    private val bestandsKiezerLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val data = result.data
-        val uris: Array<Uri>? = if (result.resultCode == Activity.RESULT_OK && data != null) {
-            val clip = data.clipData
-            when {
-                clip != null -> Array(clip.itemCount) { i -> clip.getItemAt(i).uri }
-                data.data != null -> arrayOf(data.data!!)
-                else -> null
-            }
-        } else null
-        bestandCallback?.onReceiveValue(uris)
-        bestandCallback = null
-    }
+    private enum class ControleResultaat { GELDIG, ONGELDIG, TE_VEEL_POGINGEN, VERBINDINGSFOUT }
 
-    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setSupportActionBar(binding.toolbar)
-        val toggle = ActionBarDrawerToggle(
-            this, binding.drawerLayout, binding.toolbar,
-            R.string.drawer_open, R.string.drawer_close
+        stippen = listOf(
+            binding.stip1, binding.stip2, binding.stip3,
+            binding.stip4, binding.stip5, binding.stip6
         )
-        binding.drawerLayout.addDrawerListener(toggle)
-        toggle.syncState()
-
-        binding.navView.setNavigationItemSelectedListener { item ->
-            if (item.itemId == R.id.nav_instellingen) {
-                startActivity(Intent(this, SettingsActivity::class.java))
-            } else {
-                val pad = padVoorMenuItem(item.itemId)
-                if (pad != null) {
-                    binding.webview.loadUrl(Prefs.getBaseUrl(this) + pad)
-                }
-            }
-            binding.drawerLayout.closeDrawers()
+        cijferKnoppen = listOf(
+            binding.cijfer0 to "0", binding.cijfer1 to "1", binding.cijfer2 to "2",
+            binding.cijfer3 to "3", binding.cijfer4 to "4", binding.cijfer5 to "5",
+            binding.cijfer6 to "6", binding.cijfer7 to "7", binding.cijfer8 to "8",
+            binding.cijfer9 to "9"
+        )
+        cijferKnoppen.forEach { (knop, cijfer) -> knop.setOnClickListener { voegCijferToe(cijfer) } }
+        binding.wisKnop.setOnClickListener { wisCode() }
+        binding.backspaceKnop.setOnClickListener { verwijderLaatsteCijfer() }
+        binding.logo.setOnLongClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
             true
         }
 
-        CookieManager.getInstance().setAcceptCookie(true)
-        CookieManager.getInstance().setAcceptThirdPartyCookies(binding.webview, false)
+        werkStippenBij()
+    }
 
-        binding.webview.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            loadWithOverviewMode = true
-            useWideViewPort = true
-            cacheMode = WebSettings.LOAD_DEFAULT
+    private fun voegCijferToe(cijfer: String) {
+        if (ingevoerdeCode.length >= 6 || !binding.cijfer0.isEnabled) return
+        ingevoerdeCode.append(cijfer)
+        werkStippenBij()
+        if (ingevoerdeCode.length == 6) controleerCode()
+    }
+
+    private fun verwijderLaatsteCijfer() {
+        if (ingevoerdeCode.isNotEmpty()) {
+            ingevoerdeCode.deleteCharAt(ingevoerdeCode.length - 1)
+            werkStippenBij()
         }
+        verbergFout()
+    }
 
-        binding.webview.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                val url = request.url.toString()
-                return when {
-                    url.startsWith(Prefs.getBaseUrl(this@MainActivity)) -> false
-                    url.startsWith("tel:") || url.startsWith("mailto:") -> {
-                        startActivity(Intent(Intent.ACTION_VIEW, request.url))
-                        true
+    private fun wisCode() {
+        ingevoerdeCode.clear()
+        werkStippenBij()
+        verbergFout()
+    }
+
+    private fun werkStippenBij() {
+        stippen.forEachIndexed { i, stip -> stip.text = if (i < ingevoerdeCode.length) "●" else "○" }
+    }
+
+    private fun verbergFout() {
+        binding.foutmelding.visibility = View.GONE
+    }
+
+    private fun toonFout(bericht: String) {
+        binding.foutmelding.text = bericht
+        binding.foutmelding.visibility = View.VISIBLE
+        wisCode()
+    }
+
+    private fun setInvoerIngeschakeld(ingeschakeld: Boolean) {
+        cijferKnoppen.forEach { (knop, _) -> knop.isEnabled = ingeschakeld }
+        binding.wisKnop.isEnabled = ingeschakeld
+        binding.backspaceKnop.isEnabled = ingeschakeld
+    }
+
+    private fun controleerCode() {
+        val code = ingevoerdeCode.toString()
+        setInvoerIngeschakeld(false)
+        binding.laadindicator.visibility = View.VISIBLE
+        verbergFout()
+
+        Thread {
+            val resultaat = probeerControleren(code)
+            runOnUiThread {
+                binding.laadindicator.visibility = View.GONE
+                setInvoerIngeschakeld(true)
+                when (resultaat) {
+                    ControleResultaat.GELDIG -> {
+                        startActivity(Intent(this, ScreenPickerActivity::class.java))
+                        wisCode()
                     }
-                    else -> false
+                    ControleResultaat.ONGELDIG -> toonFout(getString(R.string.code_onjuist))
+                    ControleResultaat.TE_VEEL_POGINGEN -> toonFout(getString(R.string.te_veel_pogingen))
+                    ControleResultaat.VERBINDINGSFOUT -> toonFout(getString(R.string.geen_verbinding))
                 }
             }
+        }.start()
+    }
 
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                binding.verversen.isRefreshing = false
+    private fun probeerControleren(code: String): ControleResultaat {
+        return try {
+            val verbinding = URL(Prefs.getBaseUrl(this) + "/api/tablet-code/controleren")
+                .openConnection() as HttpURLConnection
+            verbinding.requestMethod = "POST"
+            verbinding.doOutput = true
+            verbinding.connectTimeout = 8000
+            verbinding.readTimeout = 8000
+            verbinding.setRequestProperty("Content-Type", "application/json")
+            verbinding.outputStream.use {
+                it.write(JSONObject().put("code", code).toString().toByteArray(Charsets.UTF_8))
             }
-
-            override fun onReceivedError(
-                view: WebView?,
-                request: WebResourceRequest?,
-                error: WebResourceError?
-            ) {
-                super.onReceivedError(view, request, error)
-                binding.verversen.isRefreshing = false
+            val status = verbinding.responseCode
+            val stream = if (status in 200..299) verbinding.inputStream else verbinding.errorStream
+            val antwoord = JSONObject(stream.bufferedReader().use { it.readText() })
+            when {
+                status == 429 -> ControleResultaat.TE_VEEL_POGINGEN
+                antwoord.optBoolean("geldig", false) -> ControleResultaat.GELDIG
+                else -> ControleResultaat.ONGELDIG
             }
+        } catch (e: IOException) {
+            ControleResultaat.VERBINDINGSFOUT
+        } catch (e: Exception) {
+            ControleResultaat.VERBINDINGSFOUT
         }
-
-        binding.webview.webChromeClient = object : WebChromeClient() {
-            override fun onShowFileChooser(
-                webView: WebView?,
-                filePathCallback: ValueCallback<Array<Uri>>?,
-                fileChooserParams: FileChooserParams?
-            ): Boolean {
-                bestandCallback?.onReceiveValue(null)
-                bestandCallback = filePathCallback
-
-                val intent = fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "*/*"
-                }
-                return try {
-                    bestandsKiezerLauncher.launch(intent)
-                    true
-                } catch (e: Exception) {
-                    bestandCallback = null
-                    false
-                }
-            }
-        }
-
-        binding.webview.setDownloadListener { url, _, contentDisposition, mimeType, _ ->
-            downloadStarten(url, contentDisposition, mimeType)
-        }
-
-        binding.verversen.setOnRefreshListener { binding.webview.reload() }
-
-        if (savedInstanceState == null) {
-            geladenBaseUrl = Prefs.getBaseUrl(this)
-            binding.webview.loadUrl(geladenBaseUrl!!)
-        }
-    }
-
-    private fun padVoorMenuItem(itemId: Int): String? = when (itemId) {
-        R.id.nav_dashboard -> "/"
-        R.id.nav_voorraad -> "/voorraadoverzicht"
-        R.id.nav_producten -> "/producten"
-        R.id.nav_acties -> "/kiosk/prijzen/acties"
-        R.id.nav_bardiensten -> "/kiosk/prijzen/bardienst"
-        R.id.nav_prijzenscherm_instellingen -> "/kiosk/prijzen/instellingen"
-        R.id.nav_dias_sponsoren -> "/kiosk/sponsoren-leden"
-        R.id.nav_kiosk_overzicht -> "/kiosk"
-        else -> null
-    }
-
-    private fun downloadStarten(url: String, contentDisposition: String?, mimeType: String?) {
-        val bestandsnaam = URLUtil.guessFileName(url, contentDisposition, mimeType)
-        val request = DownloadManager.Request(Uri.parse(url)).apply {
-            setMimeType(mimeType)
-            addRequestHeader("cookie", CookieManager.getInstance().getCookie(url))
-            setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, bestandsnaam)
-        }
-        val manager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        manager.enqueue(request)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val huidigeBaseUrl = Prefs.getBaseUrl(this)
-        if (geladenBaseUrl != null && geladenBaseUrl != huidigeBaseUrl) {
-            geladenBaseUrl = huidigeBaseUrl
-            binding.webview.loadUrl(huidigeBaseUrl)
-        }
-    }
-
-    @Suppress("DEPRECATION")
-    override fun onBackPressed() {
-        when {
-            binding.drawerLayout.isDrawerOpen(GravityCompat.START) -> binding.drawerLayout.closeDrawers()
-            binding.webview.canGoBack() -> binding.webview.goBack()
-            else -> super.onBackPressed()
-        }
-    }
-
-    override fun onDestroy() {
-        binding.webview.destroy()
-        super.onDestroy()
     }
 }

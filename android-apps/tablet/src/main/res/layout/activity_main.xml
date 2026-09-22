@@ -1,44 +1,126 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/drawerLayout"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/achtergrond"
+    android:orientation="horizontal"
+    android:padding="32dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <!-- Links: clublogo, lang indrukken opent de instellingen. -->
+    <FrameLayout
+        android:layout_width="0dp"
         android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center">
+
+        <ImageView
+            android:id="@+id/logo"
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:background="@drawable/logo_kader"
+            android:contentDescription="@string/app_name"
+            android:padding="28dp"
+            android:src="@drawable/app_icon" />
+    </FrameLayout>
+
+    <!-- Rechts: titel bovenaan, code-invoer daaronder. -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="32dp"
+        android:layout_weight="1.4"
         android:orientation="vertical">
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
+        <TextView
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="@color/blauw"
-            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-            app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-            app:title="@string/app_name" />
+            android:layout_height="wrap_content"
+            android:background="@drawable/kaart_achtergrond"
+            android:gravity="center"
+            android:padding="20dp"
+            android:text="@string/kiosk_titel"
+            android:textColor="@color/tekst_donker"
+            android:textSize="26sp"
+            android:textStyle="bold" />
 
-        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-            android:id="@+id/verversen"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1">
+            android:layout_marginTop="20dp"
+            android:layout_weight="1"
+            android:background="@drawable/kaart_achtergrond">
 
-            <WebView
-                android:id="@+id/webview"
+            <ScrollView
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent"
+                android:fillViewport="true">
 
-        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/code_instructie"
+                        android:textColor="@color/tekst_zacht"
+                        android:textSize="15sp" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal">
+
+                        <TextView android:id="@+id/stip1" style="@style/CodeStip" />
+                        <TextView android:id="@+id/stip2" style="@style/CodeStip" />
+                        <TextView android:id="@+id/stip3" style="@style/CodeStip" />
+                        <TextView android:id="@+id/stip4" style="@style/CodeStip" />
+                        <TextView android:id="@+id/stip5" style="@style/CodeStip" />
+                        <TextView android:id="@+id/stip6" style="@style/CodeStip" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/foutmelding"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:textColor="@color/fout"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
+
+                    <ProgressBar
+                        android:id="@+id/laadindicator"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone" />
+
+                    <android.widget.GridLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:columnCount="3"
+                        android:rowCount="4">
+
+                        <Button android:id="@+id/cijfer1" style="@style/CijferKnop" android:layout_row="0" android:layout_column="0" android:text="1" />
+                        <Button android:id="@+id/cijfer2" style="@style/CijferKnop" android:layout_row="0" android:layout_column="1" android:text="2" />
+                        <Button android:id="@+id/cijfer3" style="@style/CijferKnop" android:layout_row="0" android:layout_column="2" android:text="3" />
+                        <Button android:id="@+id/cijfer4" style="@style/CijferKnop" android:layout_row="1" android:layout_column="0" android:text="4" />
+                        <Button android:id="@+id/cijfer5" style="@style/CijferKnop" android:layout_row="1" android:layout_column="1" android:text="5" />
+                        <Button android:id="@+id/cijfer6" style="@style/CijferKnop" android:layout_row="1" android:layout_column="2" android:text="6" />
+                        <Button android:id="@+id/cijfer7" style="@style/CijferKnop" android:layout_row="2" android:layout_column="0" android:text="7" />
+                        <Button android:id="@+id/cijfer8" style="@style/CijferKnop" android:layout_row="2" android:layout_column="1" android:text="8" />
+                        <Button android:id="@+id/cijfer9" style="@style/CijferKnop" android:layout_row="2" android:layout_column="2" android:text="9" />
+                        <Button android:id="@+id/wisKnop" style="@style/CijferKnopKlein" android:layout_row="3" android:layout_column="0" android:text="C" />
+                        <Button android:id="@+id/cijfer0" style="@style/CijferKnop" android:layout_row="3" android:layout_column="1" android:text="0" />
+                        <Button android:id="@+id/backspaceKnop" style="@style/CijferKnopKlein" android:layout_row="3" android:layout_column="2" android:text="&#8592;" />
+                    </android.widget.GridLayout>
+                </LinearLayout>
+            </ScrollView>
+        </FrameLayout>
     </LinearLayout>
-
-    <com.google.android.material.navigation.NavigationView
-        android:id="@+id/navView"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_gravity="start"
-        app:menu="@menu/drawer_menu" />
-
-</androidx.drawerlayout.widget.DrawerLayout>
+</LinearLayout>

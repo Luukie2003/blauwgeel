@@ -1,11 +1,13 @@
 package nl.kantineblauwgeel.tablet
 
 import android.os.Bundle
-import android.webkit.CookieManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import nl.kantineblauwgeel.tablet.databinding.ActivitySettingsBinding
 
+/** Verborgen instellingenscherm (bereikbaar door lang op het logo op de
+ * code-invoerpagina te drukken) -- alleen het website-adres, voor als je dit
+ * apparaat ooit tegen een test-omgeving aan wilt zetten. */
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
@@ -27,12 +29,6 @@ class SettingsActivity : AppCompatActivity() {
             Prefs.setBaseUrl(this, url)
             Toast.makeText(this, R.string.instellingen_opgeslagen, Toast.LENGTH_SHORT).show()
             finish()
-        }
-
-        binding.uitloggenKnop.setOnClickListener {
-            CookieManager.getInstance().removeAllCookies(null)
-            CookieManager.getInstance().flush()
-            Toast.makeText(this, R.string.uitgelogd, Toast.LENGTH_SHORT).show()
         }
     }
 }

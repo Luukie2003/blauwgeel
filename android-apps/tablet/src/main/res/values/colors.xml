@@ -3,5 +3,11 @@
     <color name="blauw">#4061AF</color>
     <color name="blauw_donker">#2C4680</color>
     <color name="geel">#FCD42F</color>
+    <color name="geel_donker">#E0BA17</color>
+    <color name="achtergrond">#12213E</color>
     <color name="wit">#FFFFFF</color>
+    <color name="tekst_donker">#1C2B4A</color>
+    <color name="tekst_zacht">#6B7280</color>
+    <color name="fout">#D81E1E</color>
+    <color name="rand_licht">#D7DAE2</color>
 </resources>

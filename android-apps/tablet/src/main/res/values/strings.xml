@@ -1,24 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Kantine Beheer</string>
-    <string name="drawer_open">Menu openen</string>
-    <string name="drawer_close">Menu sluiten</string>
+    <string name="app_name">Kantine Kiosk</string>
+    <string name="kiosk_titel">Blauw-Geel Kiosk</string>
+    <string name="code_instructie">Voer je 6-cijferige code in</string>
+    <string name="code_onjuist">Onjuiste code, probeer opnieuw</string>
+    <string name="te_veel_pogingen">Te veel pogingen, probeer het over een paar minuten opnieuw</string>
+    <string name="geen_verbinding">Geen verbinding met de website</string>
+
+    <string name="kies_scherm_titel">Welk scherm wil je tonen?</string>
+    <string name="scherm_prijzen">Prijzenscherm</string>
+    <string name="scherm_dias">Dia\'s &amp; sponsoren</string>
+    <string name="scherm_gedeeld">Kantine-tv (gedeeld)</string>
+    <string name="terug_naar_code">Andere code invoeren</string>
+    <string name="opnieuw_proberen">Opnieuw proberen</string>
+
     <string name="instellingen">Instellingen</string>
-
-    <string name="nav_dashboard">Dashboard</string>
-    <string name="nav_voorraad">Voorraadoverzicht</string>
-    <string name="nav_producten">Producten</string>
-    <string name="nav_acties">Acties</string>
-    <string name="nav_bardiensten">Bardiensten</string>
-    <string name="nav_prijzenscherm_instellingen">Prijzenscherm instellingen</string>
-    <string name="nav_dias_sponsoren">Dia\'s &amp; sponsoren</string>
-    <string name="nav_kiosk_overzicht">Kiosk-overzicht</string>
-    <string name="nav_app_instellingen">App-instellingen</string>
-
-    <string name="bestand_kiezen">Bestand kiezen</string>
     <string name="basis_url_label">Website-adres</string>
     <string name="opslaan">Opslaan</string>
-    <string name="uitloggen">Uitloggen (cookies wissen)</string>
     <string name="instellingen_opgeslagen">Instellingen opgeslagen</string>
-    <string name="uitgelogd">Uitgelogd</string>
 </resources>
