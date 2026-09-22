@@ -1,7 +1,7 @@
 import re
 from datetime import datetime, timedelta
 
-from flask import current_app, flash, redirect, render_template, request, session, url_for
+from flask import current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import mail
@@ -16,6 +16,11 @@ LOGIN_LOCKOUT_MINUTEN = 15
 
 # Precies 6 cijfers -- zie tablet_code_instellen hieronder.
 TABLET_CODE_PATROON = re.compile(r"^\d{6}$")
+
+# Zelfde soort brute-force-bescherming als hierboven, maar dan per IP-adres
+# i.p.v. gebruikersnaam -- zie tablet_code_controleren onderaan dit bestand.
+TABLET_CODE_MAX_POGINGEN = 10
+TABLET_CODE_LOCKOUT_MINUTEN = 15
 
 
 def register_routes(app):
@@ -279,3 +284,63 @@ def register_routes(app):
             heeft_al_code=gebruiker["tablet_code_hash"] is not None,
             next=request.args.get("next", ""),
         )
+
+    @app.route("/api/tablet-code/controleren", methods=["POST"])
+    def tablet_code_controleren():
+        """JSON-API voor de kiosk-tablet-app (los project, zie android-apps/
+        tablet) -- controleert een 6-cijferige code tegen alle actieve
+        accounts (zie tablet_code_instellen hierboven) en meldt alleen
+        geldig/ongeldig terug, zonder te verklappen om welk account het gaat.
+        Geen sessie/cookie beschikbaar (de app heeft nooit ingelogd), dus
+        eigen brute-force-bescherming per IP-adres i.p.v. de sessie-/
+        gebruikersnaam-gebonden bescherming van het normale inlogscherm.
+        Uitgezonderd van csrf_beschermen (zie app.py): dat mechanisme
+        veronderstelt een browser met een sessie, wat hier niet bestaat."""
+        db = get_db()
+        ip = request.remote_addr or "onbekend"
+
+        poging = db.execute(
+            "SELECT * FROM tablet_code_pogingen WHERE ip_adres = ?", (ip,)
+        ).fetchone()
+        if poging and poging["geblokkeerd_tot"]:
+            geblokkeerd_tot = datetime.strptime(poging["geblokkeerd_tot"], "%Y-%m-%d %H:%M")
+            if geblokkeerd_tot > datetime.now():
+                return jsonify({"geldig": False, "fout": "te_veel_pogingen"}), 429
+
+        data = request.get_json(silent=True) or {}
+        code = str(data.get("code", "")).strip()
+
+        geldig = False
+        if TABLET_CODE_PATROON.match(code):
+            rijen = db.execute(
+                "SELECT tablet_code_hash FROM gebruikers WHERE tablet_code_hash IS NOT NULL AND actief = 1"
+            ).fetchall()
+            geldig = any(check_password_hash(r["tablet_code_hash"], code) for r in rijen)
+
+        if geldig:
+            db.execute("DELETE FROM tablet_code_pogingen WHERE ip_adres = ?", (ip,))
+            db.commit()
+            return jsonify({"geldig": True})
+
+        mislukte_pogingen = (poging["mislukte_pogingen"] if poging else 0) + 1
+        nieuwe_blokkade = None
+        if mislukte_pogingen >= TABLET_CODE_MAX_POGINGEN:
+            nieuwe_blokkade = (
+                datetime.now() + timedelta(minutes=TABLET_CODE_LOCKOUT_MINUTEN)
+            ).strftime("%Y-%m-%d %H:%M")
+        if poging:
+            db.execute(
+                """UPDATE tablet_code_pogingen
+                   SET mislukte_pogingen = ?, laatste_poging = ?, geblokkeerd_tot = ?
+                   WHERE ip_adres = ?""",
+                (mislukte_pogingen, now_str(), nieuwe_blokkade, ip),
+            )
+        else:
+            db.execute(
+                """INSERT INTO tablet_code_pogingen
+                       (ip_adres, mislukte_pogingen, laatste_poging, geblokkeerd_tot)
+                   VALUES (?, ?, ?, ?)""",
+                (ip, mislukte_pogingen, now_str(), nieuwe_blokkade),
+            )
+        db.commit()
+        return jsonify({"geldig": False})

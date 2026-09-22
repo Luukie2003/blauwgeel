@@ -183,6 +183,16 @@ CREATE TABLE IF NOT EXISTS login_pogingen (
     geblokkeerd_tot TEXT
 );
 
+-- Brute-force-bescherming voor /api/tablet-code/controleren (zie
+-- routes/auth.py) -- die JSON-API heeft geen gebruikersnaam om op te
+-- blokkeren zoals login_pogingen hierboven, dus per IP-adres i.p.v. naam.
+CREATE TABLE IF NOT EXISTS tablet_code_pogingen (
+    ip_adres TEXT PRIMARY KEY,
+    mislukte_pogingen INTEGER NOT NULL DEFAULT 0,
+    laatste_poging TEXT,
+    geblokkeerd_tot TEXT
+);
+
 CREATE TABLE IF NOT EXISTS kassa_mutaties (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL CHECK (type IN ('afdracht', 'toevoeging')),

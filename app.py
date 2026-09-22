@@ -51,6 +51,11 @@ OPEN_ENDPOINTS = {
     "offline_pagina",
     "wachtwoord_vergeten",
     "wachtwoord_instellen",
+    # Machine-naar-machine JSON-API voor de kiosk-tablet-app (los project,
+    # zie android-apps/tablet) -- die heeft geen sessie/cookie, dus kan
+    # nooit ingelogd zijn. Zie ook de CSRF-uitzondering in csrf_beschermen
+    # hieronder.
+    "tablet_code_controleren",
     # De publieke stempagina's hebben geen account nodig, bezoekers scannen
     # 'm via een QR-code of stemmen.kantineblauwgeel.nl, ze loggen nergens in.
     "stem_pagina",
@@ -656,14 +661,21 @@ def create_app(database_path=None):
         de site bevat een verborgen csrf_token-veld (zie de context_processor
         hieronder), dat moet overeenkomen met de waarde die bij het laden van
         de pagina in de sessie is gezet. Geldt voor alle POSTs, ook naar
-        open endpoints (login e.d.) -- geen uitzonderingen, dat voorkomt dat
-        er per ongeluk een nieuw gat ontstaat als er later een open endpoint
-        bijkomt.
+        open endpoints (login e.d.) -- op precies 1 na (zie hieronder), dat
+        voorkomt dat er per ongeluk een nieuw gat ontstaat als er later een
+        open endpoint bijkomt.
 
         Bij een mismatch (bijv. een pagina die via de terug-knop/cache met
         een verouderd token werd getoond) sturen we terug naar dezelfde
         pagina i.p.v. een kale 400-foutpagina te tonen -- die pagina heeft
         dan meteen weer een geldig token."""
+        if request.method == "POST" and request.endpoint == "tablet_code_controleren":
+            # CSRF is een misbruik van een browser die AL een geldige sessie
+            # heeft -- dat bestaat hier niet: dit is een kale JSON-API-aanroep
+            # vanuit de kiosk-tablet-app, zonder cookies/sessie, dus zonder
+            # csrf_token om te controleren. Eigen brute-force-bescherming
+            # (per IP) zit al in tablet_code_controleren zelf.
+            return None
         if request.method == "POST":
             verwacht = session.get("csrf_token")
             verzonden = request.form.get("csrf_token", "")
