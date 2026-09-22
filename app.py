@@ -52,10 +52,10 @@ OPEN_ENDPOINTS = {
     "wachtwoord_vergeten",
     "wachtwoord_instellen",
     # Machine-naar-machine JSON-API voor de kiosk-tablet-app (los project,
-    # zie android-apps/tablet) -- die heeft geen sessie/cookie, dus kan
-    # nooit ingelogd zijn. Zie ook de CSRF-uitzondering in csrf_beschermen
-    # hieronder.
-    "tablet_code_controleren",
+    # zie android-apps/tablet) -- die heeft nog geen sessie/cookie op het
+    # moment van de aanroep zelf (die start 'm juist, bij een geldige code).
+    # Zie ook de CSRF-uitzondering in csrf_beschermen hieronder.
+    "tablet_code_inloggen",
     # De publieke stempagina's hebben geen account nodig, bezoekers scannen
     # 'm via een QR-code of stemmen.kantineblauwgeel.nl, ze loggen nergens in.
     "stem_pagina",
@@ -669,12 +669,12 @@ def create_app(database_path=None):
         een verouderd token werd getoond) sturen we terug naar dezelfde
         pagina i.p.v. een kale 400-foutpagina te tonen -- die pagina heeft
         dan meteen weer een geldig token."""
-        if request.method == "POST" and request.endpoint == "tablet_code_controleren":
+        if request.method == "POST" and request.endpoint == "tablet_code_inloggen":
             # CSRF is een misbruik van een browser die AL een geldige sessie
             # heeft -- dat bestaat hier niet: dit is een kale JSON-API-aanroep
             # vanuit de kiosk-tablet-app, zonder cookies/sessie, dus zonder
             # csrf_token om te controleren. Eigen brute-force-bescherming
-            # (per IP) zit al in tablet_code_controleren zelf.
+            # (per IP) zit al in tablet_code_inloggen zelf.
             return None
         if request.method == "POST":
             verwacht = session.get("csrf_token")

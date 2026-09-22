@@ -176,7 +176,7 @@ def test_next_parameter_stuurt_terug_naar_bedoelde_pagina(client, db):
     assert resp.headers["Location"] == "/bijzonderheden"
 
 
-# ---------- JSON-API voor de kiosk-tablet-app (tablet_code_controleren) ----------
+# ---------- JSON-API voor de kiosk-tablet-app (tablet_code_inloggen) ----------
 
 
 def _zet_tablet_code(db, naam, code, actief=1):
@@ -187,50 +187,65 @@ def _zet_tablet_code(db, naam, code, actief=1):
     db.commit()
 
 
-def test_controleren_werkt_zonder_sessie_of_csrf_token(client, db):
+def test_inloggen_werkt_zonder_sessie_of_csrf_token(client, db):
     """De app heeft geen cookies/sessie -- dit moet dus lukken met een kale
     POST, zonder in te loggen en zonder csrf_token (zie de uitzondering in
     csrf_beschermen, app.py)."""
     _zet_tablet_code(db, "admin", "246813")
-    resp = client.post("/api/tablet-code/controleren", json={"code": "246813"})
+    resp = client.post("/api/tablet-code/inloggen", json={"code": "246813"})
     assert resp.status_code == 200
     assert resp.get_json() == {"geldig": True}
 
 
-def test_controleren_met_onjuiste_code(client, db):
+def test_geldige_code_logt_het_bijbehorende_account_in(client, db):
+    """De hele reden voor deze endpoint: na een geldige code moet de sessie
+    exact zo opgebouwd zijn als na een normale /login, zodat de app daarna
+    met dat account ingelogd de gewone website kan tonen."""
+    gebruiker_id = db.execute("SELECT id FROM gebruikers WHERE naam = 'admin'").fetchone()["id"]
     _zet_tablet_code(db, "admin", "246813")
-    resp = client.post("/api/tablet-code/controleren", json={"code": "999999"})
+    resp = client.post("/api/tablet-code/inloggen", json={"code": "246813"})
+    assert resp.get_json() == {"geldig": True}
+    with client.session_transaction() as sess:
+        assert sess["gebruiker_id"] == gebruiker_id
+        assert sess["gebruiker_naam"] == "admin"
+
+
+def test_inloggen_met_onjuiste_code(client, db):
+    _zet_tablet_code(db, "admin", "246813")
+    resp = client.post("/api/tablet-code/inloggen", json={"code": "999999"})
     assert resp.status_code == 200
     assert resp.get_json()["geldig"] is False
+    with client.session_transaction() as sess:
+        assert "gebruiker_id" not in sess
 
 
-def test_controleren_met_ongeldig_formaat_crasht_niet(client, db):
+def test_inloggen_met_ongeldig_formaat_crasht_niet(client, db):
     for code in ("12345", "1234567", "abcdef", ""):
-        resp = client.post("/api/tablet-code/controleren", json={"code": code})
+        resp = client.post("/api/tablet-code/inloggen", json={"code": code})
         assert resp.status_code == 200
         assert resp.get_json()["geldig"] is False
 
 
-def test_controleren_zonder_body_crasht_niet(client, db):
-    resp = client.post("/api/tablet-code/controleren")
+def test_inloggen_zonder_body_crasht_niet(client, db):
+    resp = client.post("/api/tablet-code/inloggen")
     assert resp.status_code == 200
     assert resp.get_json()["geldig"] is False
 
 
 def test_geblokkeerd_account_zijn_code_werkt_niet_meer(client, db):
     _zet_tablet_code(db, "admin", "246813", actief=0)
-    resp = client.post("/api/tablet-code/controleren", json={"code": "246813"})
+    resp = client.post("/api/tablet-code/inloggen", json={"code": "246813"})
     assert resp.get_json()["geldig"] is False
 
 
 def test_te_veel_mislukte_pogingen_blokkeert_tijdelijk(client, db):
     _zet_tablet_code(db, "admin", "246813")
     for _ in range(10):
-        client.post("/api/tablet-code/controleren", json={"code": "000000"})
+        client.post("/api/tablet-code/inloggen", json={"code": "000000"})
 
     # Zelfs de juiste code wordt nu geweigerd -- de blokkade geldt voor het
     # IP-adres, niet voor een specifieke code.
-    resp = client.post("/api/tablet-code/controleren", json={"code": "246813"})
+    resp = client.post("/api/tablet-code/inloggen", json={"code": "246813"})
     assert resp.status_code == 429
     data = resp.get_json()
     assert data["geldig"] is False
@@ -240,15 +255,15 @@ def test_te_veel_mislukte_pogingen_blokkeert_tijdelijk(client, db):
 def test_geldige_code_ruimt_eigen_mislukte_pogingen_op(client, db):
     _zet_tablet_code(db, "admin", "246813")
     for _ in range(5):
-        client.post("/api/tablet-code/controleren", json={"code": "000000"})
+        client.post("/api/tablet-code/inloggen", json={"code": "000000"})
 
-    resp = client.post("/api/tablet-code/controleren", json={"code": "246813"})
+    resp = client.post("/api/tablet-code/inloggen", json={"code": "246813"})
     assert resp.get_json() == {"geldig": True}
 
     # Na een geslaagde poging is de teller voor dit IP-adres helemaal weg --
     # geen enkele rij meer, dus een volgende mislukte poging begint weer bij 0
     # (dus zeker niet meteen geblokkeerd door de 5 pogingen van hierboven).
     assert db.execute("SELECT COUNT(*) AS n FROM tablet_code_pogingen").fetchone()["n"] == 0
-    resp = client.post("/api/tablet-code/controleren", json={"code": "000000"})
+    resp = client.post("/api/tablet-code/inloggen", json={"code": "000000"})
     assert resp.status_code == 200
     assert resp.get_json()["geldig"] is False

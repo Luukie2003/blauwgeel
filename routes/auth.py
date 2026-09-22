@@ -18,7 +18,7 @@ LOGIN_LOCKOUT_MINUTEN = 15
 TABLET_CODE_PATROON = re.compile(r"^\d{6}$")
 
 # Zelfde soort brute-force-bescherming als hierboven, maar dan per IP-adres
-# i.p.v. gebruikersnaam -- zie tablet_code_controleren onderaan dit bestand.
+# i.p.v. gebruikersnaam -- zie tablet_code_inloggen onderaan dit bestand.
 TABLET_CODE_MAX_POGINGEN = 10
 TABLET_CODE_LOCKOUT_MINUTEN = 15
 
@@ -285,17 +285,22 @@ def register_routes(app):
             next=request.args.get("next", ""),
         )
 
-    @app.route("/api/tablet-code/controleren", methods=["POST"])
-    def tablet_code_controleren():
+    @app.route("/api/tablet-code/inloggen", methods=["POST"])
+    def tablet_code_inloggen():
         """JSON-API voor de kiosk-tablet-app (los project, zie android-apps/
-        tablet) -- controleert een 6-cijferige code tegen alle actieve
-        accounts (zie tablet_code_instellen hierboven) en meldt alleen
-        geldig/ongeldig terug, zonder te verklappen om welk account het gaat.
-        Geen sessie/cookie beschikbaar (de app heeft nooit ingelogd), dus
-        eigen brute-force-bescherming per IP-adres i.p.v. de sessie-/
-        gebruikersnaam-gebonden bescherming van het normale inlogscherm.
+        tablet) -- zoekt het account waarvan de 6-cijferige code overeenkomt
+        (zie tablet_code_instellen hierboven) en logt dat account in, precies
+        zoals het normale /login-formulier doet (zelfde sessie-opbouw), zodat
+        de app daarna met dat account ingelogd de gewone website kan tonen
+        (producten, acties, bardiensten, ...) -- geen aparte rechten-laag,
+        gewoon wat dat account al mag zien. De JSON-respons meldt alleen
+        geldig/ongeldig terug; welk account het is blijkt uit de sessie-
+        cookie die de app na een geldige code overneemt in zijn WebView.
+        Eigen brute-force-bescherming per IP-adres (i.p.v. de sessie-/
+        gebruikersnaam-gebonden bescherming van het normale inlogscherm),
+        want er is nog geen sessie op het moment van deze aanroep zelf.
         Uitgezonderd van csrf_beschermen (zie app.py): dat mechanisme
-        veronderstelt een browser met een sessie, wat hier niet bestaat."""
+        veronderstelt een browser met een sessie, wat hier nog niet bestaat."""
         db = get_db()
         ip = request.remote_addr or "onbekend"
 
@@ -310,15 +315,26 @@ def register_routes(app):
         data = request.get_json(silent=True) or {}
         code = str(data.get("code", "")).strip()
 
-        geldig = False
+        gebruiker = None
         if TABLET_CODE_PATROON.match(code):
             rijen = db.execute(
-                "SELECT tablet_code_hash FROM gebruikers WHERE tablet_code_hash IS NOT NULL AND actief = 1"
+                "SELECT * FROM gebruikers WHERE tablet_code_hash IS NOT NULL AND actief = 1"
             ).fetchall()
-            geldig = any(check_password_hash(r["tablet_code_hash"], code) for r in rijen)
+            gebruiker = next(
+                (r for r in rijen if check_password_hash(r["tablet_code_hash"], code)), None
+            )
 
-        if geldig:
+        if gebruiker is not None:
             db.execute("DELETE FROM tablet_code_pogingen WHERE ip_adres = ?", (ip,))
+            session.clear()
+            session["gebruiker_id"] = gebruiker["id"]
+            session["gebruiker_naam"] = gebruiker["naam"]
+            session["gebruiker_rol"] = gebruiker["rol"]
+            session["toon_welkom_popup"] = True
+            db.execute(
+                "UPDATE gebruikers SET laatste_login = ? WHERE id = ?",
+                (now_str(), gebruiker["id"]),
+            )
             db.commit()
             return jsonify({"geldig": True})
 
