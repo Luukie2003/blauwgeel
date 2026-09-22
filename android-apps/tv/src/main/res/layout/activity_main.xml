@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/achtergrond"
+    android:clipChildren="false"
     android:orientation="vertical"
     android:paddingHorizontal="64dp"
     android:paddingVertical="48dp">
@@ -20,6 +22,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:clipChildren="false"
         android:orientation="horizontal">
 
         <Button
@@ -31,7 +34,8 @@
             android:background="@drawable/tv_card_background"
             android:textColor="@color/wit"
             android:textSize="20sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            app:backgroundTint="@null" />
 
         <Button
             android:id="@+id/knopDias"
@@ -42,7 +46,8 @@
             android:background="@drawable/tv_card_background"
             android:textColor="@color/wit"
             android:textSize="20sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            app:backgroundTint="@null" />
 
         <Button
             android:id="@+id/knopGedeeld"
@@ -52,7 +57,8 @@
             android:background="@drawable/tv_card_background"
             android:textColor="@color/wit"
             android:textSize="20sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            app:backgroundTint="@null" />
     </LinearLayout>
 
     <Button
@@ -64,6 +70,7 @@
         android:background="@drawable/tv_card_background"
         android:paddingHorizontal="24dp"
         android:text="@string/instellingen"
-        android:textColor="@color/wit" />
+        android:textColor="@color/wit"
+        app:backgroundTint="@null" />
 
 </LinearLayout>
