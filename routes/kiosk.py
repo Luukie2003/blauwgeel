@@ -332,8 +332,28 @@ def register_routes(app):
             (product_id, titel or "Snack van de week"),
         )
         db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
         flash("Uitgelicht product opgeslagen.", "success")
         return redirect(url_for("kiosk_prijzen_instellingen"))
+
+    @app.route("/api/tablet/uitgelicht")
+    def api_tablet_uitgelicht():
+        """JSON-versie voor de kiosk-tablet-app (los project, zie
+        android-apps/tablet) -- "huidig" is precies _uitgelicht_product,
+        "producten" dezelfde actieve-productenlijst als bij een prijs-actie
+        (zie _actie_producten hierboven). Opslaan gaat via
+        kiosk_uitgelicht_product_instellingen hierboven."""
+        db = get_db()
+        return jsonify(
+            {
+                "huidig": _uitgelicht_product(db),
+                "producten": [
+                    {"id": p["id"], "naam": p["naam"], "categorie": p["categorie"]}
+                    for p in _actie_producten(db)
+                ],
+            }
+        )
 
     @app.route("/kiosk/prijzen/product/<int:product_id>/toon", methods=["POST"])
     def kiosk_product_toon_wisselen(product_id):

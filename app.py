@@ -251,6 +251,7 @@ SECTIE_ENDPOINTS = {
         "kiosk_wedstrijddag_welkom_instellingen",
         "kiosk_categorie_kolommen_instellingen",
         "kiosk_uitgelicht_product_instellingen",
+        "api_tablet_uitgelicht",
         "kiosk_product_toon_wisselen",
         "kiosk_product_uitverkocht_wisselen",
         "kiosk_acties",
