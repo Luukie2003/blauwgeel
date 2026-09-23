@@ -77,7 +77,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun werkStippenBij() {
-        stippen.forEachIndexed { i, stip -> stip.text = if (i < ingevoerdeCode.length) "●" else "○" }
+        stippen.forEachIndexed { i, stip ->
+            val ingevuld = i < ingevoerdeCode.length
+            stip.text = if (ingevuld) "●" else "○"
+            stip.setTextColor(getColor(if (ingevuld) R.color.geel_donker else R.color.blauw))
+        }
     }
 
     private fun verbergFout() {
@@ -166,6 +170,7 @@ class MainActivity : AppCompatActivity() {
         val csrfToken = antwoord.optString("csrf_token").takeIf { it.isNotEmpty() } ?: return false
         Sessie.cookie = cookie
         Sessie.csrfToken = csrfToken
+        Sessie.naam = antwoord.optString("naam").takeIf { it.isNotEmpty() }
         return true
     }
 }

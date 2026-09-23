@@ -8,6 +8,7 @@
     <string name="geen_verbinding">Geen verbinding met de website</string>
 
     <string name="beheer_menu_titel">Wat wil je aanpassen?</string>
+    <string name="ingelogd_als">Ingelogd als %1$s</string>
     <string name="menu_producten">Producten</string>
     <string name="menu_acties">Acties</string>
     <string name="menu_bardienst">Bardiensten</string>

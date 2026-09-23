@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Zelfde motief als .bedrag-uitverkocht op het echte prijzenscherm: een
+     rode pil-vormige badge, i.p.v. gewone rode vetgedrukte tekst. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/fout" />
+    <corners android:radius="999dp" />
+</shape>

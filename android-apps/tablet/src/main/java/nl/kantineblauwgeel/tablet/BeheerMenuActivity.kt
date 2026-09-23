@@ -2,6 +2,7 @@ package nl.kantineblauwgeel.tablet
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import nl.kantineblauwgeel.tablet.databinding.ActivityBeheerMenuBinding
 
@@ -18,6 +19,11 @@ class BeheerMenuActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityBeheerMenuBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        Sessie.naam?.let {
+            binding.ingelogdAlsTekst.text = getString(R.string.ingelogd_als, it)
+            binding.ingelogdAlsTekst.visibility = View.VISIBLE
+        }
 
         binding.knopProducten.setOnClickListener {
             startActivity(Intent(this, ProductenActivity::class.java))

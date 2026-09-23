@@ -216,6 +216,7 @@ def test_geldige_code_logt_het_bijbehorende_account_in(client, db):
         # schrijfacties nooit langs csrf_beschermen krijgen (zie de
         # toelichting bij tablet_code_inloggen).
         assert data["csrf_token"] == sess["csrf_token"]
+    assert data["naam"] == "admin"
 
 
 def test_inloggen_met_onjuiste_code(client, db):

@@ -11,6 +11,9 @@ package nl.kantineblauwgeel.tablet
 object Sessie {
     var cookie: String? = null
     var csrfToken: String? = null
+    /** Naam van het ingelogde account, puur om te tonen in BeheerMenuActivity
+     * -- geen functionele rol, zie tablet_code_inloggen in routes/auth.py. */
+    var naam: String? = null
 
     fun ingelogd(): Boolean = cookie != null
 }

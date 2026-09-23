@@ -342,7 +342,9 @@ def register_routes(app):
             # Een latere aparte aanroep zou een Set-Cookie met het token erin
             # opleveren die de app nooit ziet, waarna elke schrijfactie
             # daarna door csrf_beschermen wordt geweigerd.
-            return jsonify({"geldig": True, "csrf_token": csrf_token()})
+            # "naam" is puur voor de app om te tonen wie er is ingelogd (zie
+            # BeheerMenuActivity) -- geen functionele rol.
+            return jsonify({"geldig": True, "csrf_token": csrf_token(), "naam": gebruiker["naam"]})
 
         mislukte_pogingen = (poging["mislukte_pogingen"] if poging else 0) + 1
         nieuwe_blokkade = None

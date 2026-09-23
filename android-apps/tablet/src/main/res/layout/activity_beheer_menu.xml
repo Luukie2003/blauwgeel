@@ -7,14 +7,29 @@
     android:orientation="vertical"
     android:padding="48dp">
 
-    <TextView
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="32dp"
-        android:text="@string/beheer_menu_titel"
-        android:textColor="@color/wit"
-        android:textSize="30sp"
-        android:textStyle="bold" />
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/beheer_menu_titel"
+            android:textColor="@color/wit"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/ingelogdAlsTekst"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/tekst_zacht_licht"
+            android:textSize="16sp"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"

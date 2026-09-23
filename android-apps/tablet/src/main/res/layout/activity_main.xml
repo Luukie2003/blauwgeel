@@ -34,7 +34,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/kaart_achtergrond"
+            android:background="@drawable/kaart_hero"
             android:elevation="6dp"
             android:gravity="center"
             android:padding="20dp"
@@ -48,7 +48,7 @@
             android:layout_height="0dp"
             android:layout_marginTop="20dp"
             android:layout_weight="1"
-            android:background="@drawable/kaart_achtergrond"
+            android:background="@drawable/kaart_hero"
             android:elevation="6dp">
 
             <ScrollView
@@ -88,9 +88,12 @@
                         android:id="@+id/foutmelding"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/badge_fout"
                         android:gravity="center"
-                        android:textColor="@color/fout"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="8dp"
+                        android:textColor="@color/wit"
                         android:textStyle="bold"
                         android:visibility="gone" />
 

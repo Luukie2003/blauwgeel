@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Zelfde motief als .uitgelicht-kaart op het echte prijzenscherm (gouden
+     kader om een lichte kaart), gebruikt voor de 2 "hero"-kaarten op het
+     inlogscherm (titel + code-invoer). Gewone lijst-rijen elders blijven
+     kaart_achtergrond.xml, zonder kader. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/wit" />
+    <corners android:radius="20dp" />
+    <stroke android:width="3dp" android:color="@color/geel" />
+</shape>
