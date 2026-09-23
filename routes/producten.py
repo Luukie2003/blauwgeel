@@ -237,11 +237,16 @@ def register_routes(app):
         """Lichtgewicht JSON-lijst voor de kiosk-tablet-app (los project,
         zie android-apps/tablet) -- de bestaande /producten-pagina rendert
         een volledige HTML-pagina (filters, paginering, ...), dat wil de
-        native app niet parsen. Schrijven gaat gewoon via de bestaande
-        /producten/<id>/actief (zie product_actief_wisselen hierboven)."""
+        native app niet parsen. Schrijven gaat via de bestaande
+        /producten/<id>/actief (zie product_actief_wisselen hierboven) en
+        /kiosk/prijzen/product/<id>/uitverkocht (zie
+        kiosk_product_uitverkocht_wisselen in routes/kiosk.py) -- dat laatste
+        is een apart, kiosk-specifiek veld (kiosk_uitverkocht), los van de
+        echte voorraad/actief-status."""
         db = get_db()
         producten = db.execute(
-            "SELECT id, naam, categorie, actief FROM producten ORDER BY actief DESC, categorie, naam"
+            """SELECT id, naam, categorie, actief, kiosk_uitverkocht FROM producten
+               ORDER BY actief DESC, categorie, naam"""
         ).fetchall()
         return jsonify(
             {
@@ -251,6 +256,7 @@ def register_routes(app):
                         "naam": p["naam"],
                         "categorie": p["categorie"],
                         "actief": bool(p["actief"]),
+                        "uitverkocht": bool(p["kiosk_uitverkocht"]),
                     }
                     for p in producten
                 ]
