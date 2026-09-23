@@ -7,12 +7,40 @@
     <string name="te_veel_pogingen">Te veel pogingen, probeer het over een paar minuten opnieuw</string>
     <string name="geen_verbinding">Geen verbinding met de website</string>
 
-    <string name="kies_scherm_titel">Welk scherm wil je tonen?</string>
-    <string name="scherm_prijzen">Prijzenscherm</string>
-    <string name="scherm_dias">Dia\'s &amp; sponsoren</string>
-    <string name="scherm_gedeeld">Kantine-tv (gedeeld)</string>
+    <string name="beheer_menu_titel">Wat wil je aanpassen?</string>
+    <string name="menu_producten">Producten</string>
+    <string name="menu_acties">Acties</string>
+    <string name="menu_bardienst">Bardiensten</string>
     <string name="terug_naar_code">Andere code invoeren</string>
     <string name="opnieuw_proberen">Opnieuw proberen</string>
+    <string name="terug">Terug</string>
+    <string name="fout_laden">Kon niet laden. Tik om opnieuw te proberen.</string>
+    <string name="fout_opslaan">Kon niet opslaan</string>
+    <string name="annuleren">Annuleren</string>
+    <string name="verwijderen">Verwijderen</string>
+
+    <string name="titel_producten">Producten</string>
+    <string name="label_actief">Actief</string>
+    <string name="label_uitverkocht">Uitverkocht</string>
+
+    <string name="titel_acties">Acties</string>
+    <string name="knop_nieuwe_actie">+ Nieuwe actie</string>
+    <string name="nieuwe_actie_titel">Nieuwe actie</string>
+    <string name="actie_bewerken_titel">Actie bewerken</string>
+    <string name="actie_product_label">Product</string>
+    <string name="actie_tekst_label">Tekst (optioneel)</string>
+    <string name="actie_actief_label">Toon op prijzenscherm</string>
+    <string name="bevestig_verwijderen_actie">Deze actie verwijderen?</string>
+
+    <string name="titel_bardiensten">Bardiensten</string>
+    <string name="knop_nieuwe_bardienst">+ Nieuwe bardienst</string>
+    <string name="nieuwe_bardienst_titel">Nieuwe bardienst</string>
+    <string name="bardienst_bewerken_titel">Bardienst bewerken</string>
+    <string name="bardienst_datum_label">Datum</string>
+    <string name="bardienst_start_label">Vanaf</string>
+    <string name="bardienst_eind_label">Tot</string>
+    <string name="bardienst_namen_label">Wie</string>
+    <string name="bevestig_verwijderen_bardienst">Deze bardienst verwijderen?</string>
 
     <string name="instellingen">Instellingen</string>
     <string name="basis_url_label">Website-adres</string>

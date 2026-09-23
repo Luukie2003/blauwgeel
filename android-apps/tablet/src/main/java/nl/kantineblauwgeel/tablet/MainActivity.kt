@@ -12,11 +12,14 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /** Startscherm: vraagt de 6-cijferige tablet-code (zie tablet_code_instellen
- * op de website) en stuurt 'm ter controle naar /api/tablet-code/controleren.
- * Bij een geldige code ga je naar het schermkiezer (ScreenPickerActivity) --
- * verder is dit apparaat puur kiosk: geen gebruikersnaam, geen wachtwoord,
- * geen toegang tot de rest van de website. Lang indrukken op het logo opent
- * de (verborgen) instellingen, voor het wijzigen van het website-adres. */
+ * op de website) en stuurt 'm ter controle naar /api/tablet-code/inloggen.
+ * Bij een geldige code logt die aanroep het bijbehorende account echt in
+ * (zelfde sessie als het normale /login-formulier) -- de sessie-cookie en
+ * het csrf_token nemen we hier over in Sessie (zie Sessie.kt/Api.kt), zodat
+ * het beheermenu (BeheerMenuActivity) en de native Producten/Acties/
+ * Bardiensten-schermen daarna gewoon met dat account kunnen praten. Lang
+ * indrukken op het logo opent de (verborgen) instellingen, voor het
+ * wijzigen van het website-adres. */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -106,7 +109,7 @@ class MainActivity : AppCompatActivity() {
                 setInvoerIngeschakeld(true)
                 when (resultaat) {
                     ControleResultaat.GELDIG -> {
-                        startActivity(Intent(this, ScreenPickerActivity::class.java))
+                        startActivity(Intent(this, BeheerMenuActivity::class.java))
                         wisCode()
                     }
                     ControleResultaat.ONGELDIG -> toonFout(getString(R.string.code_onjuist))
@@ -118,8 +121,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun probeerControleren(code: String): ControleResultaat {
+        val basisUrl = Prefs.getBaseUrl(this)
         return try {
-            val verbinding = URL(Prefs.getBaseUrl(this) + "/api/tablet-code/controleren")
+            val verbinding = URL(basisUrl + "/api/tablet-code/inloggen")
                 .openConnection() as HttpURLConnection
             verbinding.requestMethod = "POST"
             verbinding.doOutput = true
@@ -132,9 +136,11 @@ class MainActivity : AppCompatActivity() {
             val status = verbinding.responseCode
             val stream = if (status in 200..299) verbinding.inputStream else verbinding.errorStream
             val antwoord = JSONObject(stream.bufferedReader().use { it.readText() })
+            val geldig = antwoord.optBoolean("geldig", false)
             when {
                 status == 429 -> ControleResultaat.TE_VEEL_POGINGEN
-                antwoord.optBoolean("geldig", false) -> ControleResultaat.GELDIG
+                geldig && neemSessieOver(verbinding, antwoord) -> ControleResultaat.GELDIG
+                geldig -> ControleResultaat.VERBINDINGSFOUT
                 else -> ControleResultaat.ONGELDIG
             }
         } catch (e: IOException) {
@@ -142,5 +148,24 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             ControleResultaat.VERBINDINGSFOUT
         }
+    }
+
+    /** Bewaart de sessie-cookie EN het csrf_token uit dezelfde /inloggen-
+     * respons in Sessie (zie Sessie.kt/Api.kt) -- alle schermen na deze zijn
+     * native (geen WebView meer), dus geen CookieManager. Beide moeten uit
+     * dit ENE antwoord komen: een latere, aparte aanroep voor het
+     * csrf_token zou een eigen Set-Cookie opleveren die de app nooit
+     * overneemt, waarna elke schrijfactie daarna alsnog door
+     * csrf_beschermen wordt geweigerd (zie tablet_code_inloggen). */
+    private fun neemSessieOver(verbinding: HttpURLConnection, antwoord: JSONObject): Boolean {
+        val cookie = verbinding.headerFields.entries
+            .firstOrNull { it.key?.equals("Set-Cookie", ignoreCase = true) == true }
+            ?.value
+            ?.joinToString("; ") { it.substringBefore(";") }
+            ?: return false
+        val csrfToken = antwoord.optString("csrf_token").takeIf { it.isNotEmpty() } ?: return false
+        Sessie.cookie = cookie
+        Sessie.csrfToken = csrfToken
+        return true
     }
 }

@@ -25,12 +25,22 @@
         </activity>
 
         <activity
-            android:name=".ScreenPickerActivity"
+            android:name=".BeheerMenuActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="false" />
 
         <activity
-            android:name=".KioskWebViewActivity"
+            android:name=".ProductenActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
+
+        <activity
+            android:name=".ActiesActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
+
+        <activity
+            android:name=".BardienstenActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="false" />
 
