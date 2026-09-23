@@ -232,6 +232,31 @@ def register_routes(app):
     def producten_lijst():
         return render_producten_pagina()
 
+    @app.route("/api/tablet/producten")
+    def api_tablet_producten():
+        """Lichtgewicht JSON-lijst voor de kiosk-tablet-app (los project,
+        zie android-apps/tablet) -- de bestaande /producten-pagina rendert
+        een volledige HTML-pagina (filters, paginering, ...), dat wil de
+        native app niet parsen. Schrijven gaat gewoon via de bestaande
+        /producten/<id>/actief (zie product_actief_wisselen hierboven)."""
+        db = get_db()
+        producten = db.execute(
+            "SELECT id, naam, categorie, actief FROM producten ORDER BY actief DESC, categorie, naam"
+        ).fetchall()
+        return jsonify(
+            {
+                "producten": [
+                    {
+                        "id": p["id"],
+                        "naam": p["naam"],
+                        "categorie": p["categorie"],
+                        "actief": bool(p["actief"]),
+                    }
+                    for p in producten
+                ]
+            }
+        )
+
     @app.route("/producten/bulk-bewerken", methods=["GET", "POST"])
     def producten_bulk_bewerken():
         """Minimumvoorraad én besteleenheid in 1 scherm i.p.v. 2 losse

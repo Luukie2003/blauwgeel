@@ -773,10 +773,37 @@ def register_routes(app):
             "kiosk_bardienst.html", bardiensten=bardiensten, vandaag=vandaag_amsterdam().isoformat()
         )
 
+    @app.route("/api/tablet/bardiensten")
+    def api_tablet_bardiensten():
+        """JSON-lijst voor de kiosk-tablet-app (los project, zie
+        android-apps/tablet) -- schrijven gaat via dezelfde routes hieronder
+        (nieuw/bewerken/verwijderen), die bij is_ajax_verzoek() JSON i.p.v.
+        een redirect teruggeven."""
+        db = get_db()
+        bardiensten = db.execute(
+            "SELECT * FROM kiosk_bardiensten ORDER BY datum, start_tijd"
+        ).fetchall()
+        return jsonify(
+            {
+                "bardiensten": [
+                    {
+                        "id": b["id"],
+                        "datum": b["datum"],
+                        "start_tijd": b["start_tijd"],
+                        "eind_tijd": b["eind_tijd"],
+                        "namen": b["namen"],
+                    }
+                    for b in bardiensten
+                ]
+            }
+        )
+
     @app.route("/kiosk/prijzen/bardienst/nieuw", methods=["POST"])
     def kiosk_bardienst_nieuw():
         gegevens = _bardienst_uit_formulier()
         if not gegevens["namen"]:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Vul in wie er bardienst heeft."})
             flash("Vul in wie er bardienst heeft.", "error")
             return redirect(url_for("kiosk_bardienst"))
         db = get_db()
@@ -786,6 +813,8 @@ def register_routes(app):
             (gegevens["datum"], gegevens["start_tijd"], gegevens["eind_tijd"], gegevens["namen"], now_str()),
         )
         db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
         flash("Bardienst toegevoegd.", "success")
         return redirect(url_for("kiosk_bardienst"))
 
@@ -796,12 +825,16 @@ def register_routes(app):
             "SELECT * FROM kiosk_bardiensten WHERE id = ?", (bardienst_id,)
         ).fetchone()
         if bardienst is None:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Bardienst niet gevonden."}), 404
             flash("Bardienst niet gevonden.", "error")
             return redirect(url_for("kiosk_bardienst"))
 
         if request.method == "POST":
             gegevens = _bardienst_uit_formulier()
             if not gegevens["namen"]:
+                if is_ajax_verzoek():
+                    return jsonify({"ok": False, "fout": "Vul in wie er bardienst heeft."})
                 flash("Vul in wie er bardienst heeft.", "error")
                 return redirect(url_for("kiosk_bardienst_bewerken", bardienst_id=bardienst_id))
             db.execute(
@@ -817,6 +850,8 @@ def register_routes(app):
                 ),
             )
             db.commit()
+            if is_ajax_verzoek():
+                return jsonify({"ok": True})
             flash("Bardienst bijgewerkt.", "success")
             return redirect(url_for("kiosk_bardienst"))
         return render_template("kiosk_bardienst_form.html", bardienst=bardienst)
@@ -826,6 +861,8 @@ def register_routes(app):
         db = get_db()
         db.execute("DELETE FROM kiosk_bardiensten WHERE id = ?", (bardienst_id,))
         db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
         flash("Bardienst verwijderd.", "success")
         return redirect(url_for("kiosk_bardienst"))
 
@@ -850,6 +887,39 @@ def register_routes(app):
         ).fetchall()
         return render_template("kiosk_acties.html", acties=acties)
 
+    @app.route("/api/tablet/acties")
+    def api_tablet_acties():
+        """JSON-lijst voor de kiosk-tablet-app (los project, zie
+        android-apps/tablet) -- "producten" hierin zijn de actieve producten
+        waaruit gekozen kan worden bij het aanmaken/bewerken van een actie
+        (zie _actie_producten hierboven). Schrijven gaat via de routes
+        hieronder (nieuw/bewerken/verwijderen/toon), die bij
+        is_ajax_verzoek() JSON i.p.v. een redirect teruggeven."""
+        db = get_db()
+        acties = db.execute(
+            """SELECT ka.*, p.naam AS product_naam
+               FROM kiosk_acties ka JOIN producten p ON p.id = ka.product_id
+               ORDER BY ka.id"""
+        ).fetchall()
+        return jsonify(
+            {
+                "acties": [
+                    {
+                        "id": a["id"],
+                        "product_id": a["product_id"],
+                        "product_naam": a["product_naam"],
+                        "tekst": a["tekst"] or "",
+                        "actief": bool(a["actief"]),
+                    }
+                    for a in acties
+                ],
+                "producten": [
+                    {"id": p["id"], "naam": p["naam"], "categorie": p["categorie"]}
+                    for p in _actie_producten(db)
+                ],
+            }
+        )
+
     @app.route("/kiosk/prijzen/acties/nieuw", methods=["GET", "POST"])
     def kiosk_actie_nieuw():
         db = get_db()
@@ -862,6 +932,8 @@ def register_routes(app):
                 "SELECT id FROM producten WHERE id = ?", (product_id,)
             ).fetchone()
             if product is None:
+                if is_ajax_verzoek():
+                    return jsonify({"ok": False, "fout": "Kies een geldig product."})
                 flash("Kies een geldig product.", "error")
             else:
                 db.execute(
@@ -875,6 +947,8 @@ def register_routes(app):
                     ),
                 )
                 db.commit()
+                if is_ajax_verzoek():
+                    return jsonify({"ok": True})
                 flash("Actie toegevoegd.", "success")
                 return redirect(url_for("kiosk_acties"))
         return render_template("kiosk_actie_form.html", actie=None, producten=_actie_producten(db))
@@ -884,6 +958,8 @@ def register_routes(app):
         db = get_db()
         actie = db.execute("SELECT * FROM kiosk_acties WHERE id = ?", (actie_id,)).fetchone()
         if actie is None:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Actie niet gevonden."}), 404
             flash("Actie niet gevonden.", "error")
             return redirect(url_for("kiosk_acties"))
         if request.method == "POST":
@@ -895,6 +971,8 @@ def register_routes(app):
                 "SELECT id FROM producten WHERE id = ?", (product_id,)
             ).fetchone()
             if product is None:
+                if is_ajax_verzoek():
+                    return jsonify({"ok": False, "fout": "Kies een geldig product."})
                 flash("Kies een geldig product.", "error")
             else:
                 db.execute(
@@ -907,6 +985,8 @@ def register_routes(app):
                     ),
                 )
                 db.commit()
+                if is_ajax_verzoek():
+                    return jsonify({"ok": True})
                 flash("Actie bijgewerkt.", "success")
                 return redirect(url_for("kiosk_acties"))
         return render_template(
@@ -918,6 +998,8 @@ def register_routes(app):
         db = get_db()
         db.execute("DELETE FROM kiosk_acties WHERE id = ?", (actie_id,))
         db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
         flash("Actie verwijderd.", "success")
         return redirect(url_for("kiosk_acties"))
 

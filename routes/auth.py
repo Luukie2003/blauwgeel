@@ -6,7 +6,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import mail
 from database import WACHTWOORD_HASH_METHODE, get_db
-from helpers import genereer_wachtwoord_token, now_str, veilig_redirect_pad, vind_gebruiker_bij_token
+from helpers import csrf_token, genereer_wachtwoord_token, now_str, veilig_redirect_pad, vind_gebruiker_bij_token
 
 # Brute-force-bescherming op het inlogscherm: na dit aantal mislukte
 # pogingen voor dezelfde gebruikersnaam wordt die naam tijdelijk geblokkeerd,
@@ -360,3 +360,14 @@ def register_routes(app):
             )
         db.commit()
         return jsonify({"geldig": False})
+
+    @app.route("/api/tablet/csrf")
+    def api_tablet_csrf():
+        """De tablet-app doet zijn schrijfacties (producten/acties/
+        bardiensten) via gewone form-encoded POSTs naar de bestaande routes
+        (zie routes/producten.py en routes/kiosk.py), dus die lopen gewoon
+        door csrf_beschermen -- de app heeft dus, net als een browser, een
+        geldig csrf_token nodig. Hier haalt-ie 'm op na het inloggen, in
+        plaats van 'm (zoals een browser) uit een verborgen formulierveld
+        te lezen."""
+        return jsonify({"csrf_token": csrf_token()})
