@@ -289,8 +289,23 @@ def register_routes(app):
             (1 if request.form.get("wedstrijddag_welkom_actief") else 0, tekst or "Welkom {tegenstander}!"),
         )
         db.commit()
-        flash("Wedstrijddag-welkomstbanner opgeslagen.", "success")
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
+        flash("Wedstrijddag-welkomstmelding opgeslagen.", "success")
         return redirect(url_for("kiosk_prijzen_instellingen"))
+
+    @app.route("/api/tablet/wedstrijddag-welkom")
+    def api_tablet_wedstrijddag_welkom():
+        """JSON-versie voor de kiosk-tablet-app (los project, zie
+        android-apps/tablet). Opslaan gaat via
+        kiosk_wedstrijddag_welkom_instellingen hierboven."""
+        instellingen = _prijzen_instellingen(get_db())
+        return jsonify(
+            {
+                "actief": bool(instellingen["wedstrijddag_welkom_actief"]),
+                "tekst": instellingen["wedstrijddag_welkom_tekst"],
+            }
+        )
 
     @app.route("/kiosk/prijzen/categorie-kolommen", methods=["POST"])
     def kiosk_categorie_kolommen_instellingen():

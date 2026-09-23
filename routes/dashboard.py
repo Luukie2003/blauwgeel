@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.2"
+HUIDIGE_VERSIE = "1.15.3"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.3",
+        "datum": "23 september 2026",
+        "punten": [
+            "Wedstrijddag-welkomstmelding op het prijzenscherm: de vaste gele banner is weg, alleen nog de schermvullende melding die af en toe verschijnt",
+        ],
+    },
     {
         "versie": "1.15.2",
         "datum": "23 september 2026",

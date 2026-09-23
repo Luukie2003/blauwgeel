@@ -69,8 +69,17 @@
             style="@style/KaartKnop"
             android:layout_width="0dp"
             android:layout_height="match_parent"
+            android:layout_marginEnd="20dp"
             android:layout_weight="1"
             android:text="@string/menu_uitgelicht" />
+
+        <Button
+            android:id="@+id/knopWedstrijddag"
+            style="@style/KaartKnop"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="@string/menu_wedstrijddag" />
     </LinearLayout>
 
     <Button

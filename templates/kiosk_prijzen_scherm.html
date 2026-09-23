@@ -87,24 +87,6 @@
         }
         .leeg { color: var(--tekst-zacht); font-size: 1.3rem; margin-top: 2rem; }
 
-        /* Wedstrijddag-welkomstbanner: alleen zichtbaar zolang het tijdvak
-           van een eigen thuiswedstrijd vandaag actief is (zie
-           werkWedstrijddagWelkomBij() onderaan) -- client-side bepaald met
-           de eigen klok van het scherm, net als de bardienst-balk
-           hieronder en om dezelfde reden (servertijdzone). */
-        .wedstrijddag-banner {
-            background: var(--geel);
-            color: var(--blauw-donker);
-            font-weight: 800;
-            font-size: 1.8rem;
-            text-align: center;
-            letter-spacing: 0.01em;
-            padding: 0.9rem 1.5rem;
-            border-radius: 12px;
-            margin-bottom: 1.6rem;
-        }
-        .wedstrijddag-banner[hidden] { display: none; }
-
         /* Uitgelicht product (bijv. "Snack van de week", zie
            kiosk_prijzen_instellingen.html) -- groot en omlijnd, los van de
            gewone prijskolommen, zodat het opvalt. */
@@ -210,8 +192,6 @@
         <div id="bardienst-header" class="bardienst-header"></div>
         <div id="klok"></div>
     </header>
-
-    <div id="wedstrijddag-banner" class="wedstrijddag-banner" hidden></div>
 
     {% if uitgelicht %}
     <div class="uitgelicht-kaart{{ ' uitgelicht-kaart--uitverkocht' if uitgelicht.kiosk_uitverkocht else '' }}">
@@ -356,18 +336,9 @@
             return null;
         }
 
-        function werkWedstrijddagWelkomBij() {
-            var banner = document.getElementById('wedstrijddag-banner');
-            if (!banner) return;
-            var tegenstander = actieveWedstrijddagTegenstander();
-            banner.hidden = !tegenstander;
-            if (tegenstander) banner.textContent = wedstrijddagWelkomTekst.replace('{tegenstander}', tegenstander);
-        }
-
         werkKlokBij();
         werkBardienstBij();
-        werkWedstrijddagWelkomBij();
-        setInterval(function () { werkKlokBij(); werkBardienstBij(); werkWedstrijddagWelkomBij(); }, 15000);
+        setInterval(function () { werkKlokBij(); werkBardienstBij(); }, 15000);
     </script>
 
     <script>

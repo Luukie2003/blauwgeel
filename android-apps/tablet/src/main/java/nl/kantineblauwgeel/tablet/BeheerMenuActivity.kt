@@ -37,6 +37,9 @@ class BeheerMenuActivity : AppCompatActivity() {
         binding.knopUitgelicht.setOnClickListener {
             startActivity(Intent(this, UitgelichtActivity::class.java))
         }
+        binding.knopWedstrijddag.setOnClickListener {
+            startActivity(Intent(this, WedstrijddagActivity::class.java))
+        }
         binding.terugKnop.setOnClickListener { finish() }
     }
 }

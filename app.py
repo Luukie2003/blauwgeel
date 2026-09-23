@@ -249,6 +249,7 @@ SECTIE_ENDPOINTS = {
         "kiosk_hub",
         "kiosk_prijzen_instellingen",
         "kiosk_wedstrijddag_welkom_instellingen",
+        "api_tablet_wedstrijddag_welkom",
         "kiosk_categorie_kolommen_instellingen",
         "kiosk_uitgelicht_product_instellingen",
         "api_tablet_uitgelicht",

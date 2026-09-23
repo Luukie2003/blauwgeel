@@ -13,6 +13,7 @@
     <string name="menu_acties">Acties</string>
     <string name="menu_bardienst">Bardiensten</string>
     <string name="menu_uitgelicht">Uitgelicht</string>
+    <string name="menu_wedstrijddag">Wedstrijddag</string>
     <string name="terug_naar_code">Andere code invoeren</string>
     <string name="opnieuw_proberen">Opnieuw proberen</string>
     <string name="terug">Terug</string>
@@ -50,6 +51,10 @@
     <string name="uitgelicht_titel_label">Titel op het scherm</string>
     <string name="uitgelicht_huidig">Nu uitgelicht: %1$s</string>
     <string name="uitgelicht_niets_huidig">Nu niets uitgelicht</string>
+
+    <string name="titel_wedstrijddag">Wedstrijddag-welkom</string>
+    <string name="wedstrijddag_actief_label">Welkomstmelding actief</string>
+    <string name="wedstrijddag_tekst_label">Tekst ({tegenstander} wordt vervangen)</string>
 
     <string name="instellingen">Instellingen</string>
     <string name="basis_url_label">Website-adres</string>
