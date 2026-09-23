@@ -11,6 +11,7 @@
     <string name="menu_producten">Producten</string>
     <string name="menu_acties">Acties</string>
     <string name="menu_bardienst">Bardiensten</string>
+    <string name="menu_uitgelicht">Uitgelicht</string>
     <string name="terug_naar_code">Andere code invoeren</string>
     <string name="opnieuw_proberen">Opnieuw proberen</string>
     <string name="terug">Terug</string>
@@ -41,6 +42,13 @@
     <string name="bardienst_eind_label">Tot</string>
     <string name="bardienst_namen_label">Wie</string>
     <string name="bevestig_verwijderen_bardienst">Deze bardienst verwijderen?</string>
+
+    <string name="titel_uitgelicht">Uitgelicht product</string>
+    <string name="uitgelicht_geen_optie">Geen (uitzetten)</string>
+    <string name="uitgelicht_product_label">Product</string>
+    <string name="uitgelicht_titel_label">Titel op het scherm</string>
+    <string name="uitgelicht_huidig">Nu uitgelicht: %1$s</string>
+    <string name="uitgelicht_niets_huidig">Nu niets uitgelicht</string>
 
     <string name="instellingen">Instellingen</string>
     <string name="basis_url_label">Website-adres</string>

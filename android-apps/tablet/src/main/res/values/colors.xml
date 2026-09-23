@@ -1,13 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="blauw">#4061AF</color>
-    <color name="blauw_donker">#2C4680</color>
+    <!-- Exact dezelfde kleuren als het echte prijzenscherm (zie de
+         :root-variabelen in templates/kiosk_prijzen_scherm.html), zodat de
+         app-schermen er hetzelfde "merk-gevoel" aan overhouden. -->
+    <color name="blauw">#1E3A8A</color>
+    <color name="blauw_donker">#0F1F4D</color>
     <color name="geel">#FCD42F</color>
     <color name="geel_donker">#E0BA17</color>
-    <color name="achtergrond">#12213E</color>
+    <color name="achtergrond">#0F1F4D</color>
     <color name="wit">#FFFFFF</color>
     <color name="tekst_donker">#1C2B4A</color>
     <color name="tekst_zacht">#6B7280</color>
+    <!-- Zelfde tekst-zacht als het prijzenscherm: alleen voor tekst die
+         rechtstreeks op de blauwe gradient staat (geen witte kaart eronder).
+         tekst_zacht hierboven blijft voor tekst op een witte kaart, daar
+         zou dit veel te licht/onleesbaar zijn. -->
+    <color name="tekst_zacht_licht">#B9C2E0</color>
     <color name="fout">#D81E1E</color>
     <color name="rand_licht">#D7DAE2</color>
 </resources>

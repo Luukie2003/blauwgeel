@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/achtergrond"
+    android:background="@drawable/gradient_achtergrond"
     android:orientation="horizontal"
     android:padding="32dp">
 
@@ -35,6 +35,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/kaart_achtergrond"
+            android:elevation="6dp"
             android:gravity="center"
             android:padding="20dp"
             android:text="@string/kiosk_titel"
@@ -47,7 +48,8 @@
             android:layout_height="0dp"
             android:layout_marginTop="20dp"
             android:layout_weight="1"
-            android:background="@drawable/kaart_achtergrond">
+            android:background="@drawable/kaart_achtergrond"
+            android:elevation="6dp">
 
             <ScrollView
                 android:layout_width="match_parent"

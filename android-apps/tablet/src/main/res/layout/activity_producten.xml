@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/achtergrond"
+    android:background="@drawable/gradient_achtergrond"
     android:orientation="vertical"
     android:padding="32dp">
 
@@ -29,7 +29,7 @@
             android:background="@android:color/transparent"
             android:text="@string/terug"
             android:textAllCaps="false"
-            android:textColor="@color/tekst_zacht" />
+            android:textColor="@color/tekst_zacht_licht" />
     </LinearLayout>
 
     <FrameLayout

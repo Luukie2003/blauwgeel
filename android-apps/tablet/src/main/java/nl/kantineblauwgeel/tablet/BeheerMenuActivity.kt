@@ -28,6 +28,9 @@ class BeheerMenuActivity : AppCompatActivity() {
         binding.knopBardienst.setOnClickListener {
             startActivity(Intent(this, BardienstenActivity::class.java))
         }
+        binding.knopUitgelicht.setOnClickListener {
+            startActivity(Intent(this, UitgelichtActivity::class.java))
+        }
         binding.terugKnop.setOnClickListener { finish() }
     }
 }

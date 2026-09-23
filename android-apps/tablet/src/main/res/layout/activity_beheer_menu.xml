@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/achtergrond"
+    android:background="@drawable/gradient_achtergrond"
     android:orientation="vertical"
     android:padding="48dp">
 
@@ -45,8 +45,17 @@
             style="@style/KaartKnop"
             android:layout_width="0dp"
             android:layout_height="match_parent"
+            android:layout_marginEnd="20dp"
             android:layout_weight="1"
             android:text="@string/menu_bardienst" />
+
+        <Button
+            android:id="@+id/knopUitgelicht"
+            style="@style/KaartKnop"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="@string/menu_uitgelicht" />
     </LinearLayout>
 
     <Button
@@ -58,6 +67,6 @@
         android:background="@android:color/transparent"
         android:text="@string/terug_naar_code"
         android:textAllCaps="false"
-        android:textColor="@color/tekst_zacht" />
+        android:textColor="@color/tekst_zacht_licht" />
 
 </LinearLayout>
