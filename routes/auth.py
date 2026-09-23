@@ -336,7 +336,13 @@ def register_routes(app):
                 (now_str(), gebruiker["id"]),
             )
             db.commit()
-            return jsonify({"geldig": True})
+            # csrf_token() zet 'm ook in de sessie (als 'ie er nog niet was) --
+            # dat moet in DEZE respons gebeuren, want dit is de enige
+            # Set-Cookie die de app overneemt (zie MainActivity.neemSessieOver).
+            # Een latere aparte aanroep zou een Set-Cookie met het token erin
+            # opleveren die de app nooit ziet, waarna elke schrijfactie
+            # daarna door csrf_beschermen wordt geweigerd.
+            return jsonify({"geldig": True, "csrf_token": csrf_token()})
 
         mislukte_pogingen = (poging["mislukte_pogingen"] if poging else 0) + 1
         nieuwe_blokkade = None
@@ -360,14 +366,3 @@ def register_routes(app):
             )
         db.commit()
         return jsonify({"geldig": False})
-
-    @app.route("/api/tablet/csrf")
-    def api_tablet_csrf():
-        """De tablet-app doet zijn schrijfacties (producten/acties/
-        bardiensten) via gewone form-encoded POSTs naar de bestaande routes
-        (zie routes/producten.py en routes/kiosk.py), dus die lopen gewoon
-        door csrf_beschermen -- de app heeft dus, net als een browser, een
-        geldig csrf_token nodig. Hier haalt-ie 'm op na het inloggen, in
-        plaats van 'm (zoals een browser) uit een verborgen formulierveld
-        te lezen."""
-        return jsonify({"csrf_token": csrf_token()})

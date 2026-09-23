@@ -194,7 +194,9 @@ def test_inloggen_werkt_zonder_sessie_of_csrf_token(client, db):
     _zet_tablet_code(db, "admin", "246813")
     resp = client.post("/api/tablet-code/inloggen", json={"code": "246813"})
     assert resp.status_code == 200
-    assert resp.get_json() == {"geldig": True}
+    data = resp.get_json()
+    assert data["geldig"] is True
+    assert data["csrf_token"]
 
 
 def test_geldige_code_logt_het_bijbehorende_account_in(client, db):
@@ -204,10 +206,16 @@ def test_geldige_code_logt_het_bijbehorende_account_in(client, db):
     gebruiker_id = db.execute("SELECT id FROM gebruikers WHERE naam = 'admin'").fetchone()["id"]
     _zet_tablet_code(db, "admin", "246813")
     resp = client.post("/api/tablet-code/inloggen", json={"code": "246813"})
-    assert resp.get_json() == {"geldig": True}
+    data = resp.get_json()
+    assert data["geldig"] is True
     with client.session_transaction() as sess:
         assert sess["gebruiker_id"] == gebruiker_id
         assert sess["gebruiker_naam"] == "admin"
+        # Cruciaal: het csrf_token in de respons moet exact het token zijn
+        # dat in de sessie van DEZE respons staat -- anders kan de app
+        # schrijfacties nooit langs csrf_beschermen krijgen (zie de
+        # toelichting bij tablet_code_inloggen).
+        assert data["csrf_token"] == sess["csrf_token"]
 
 
 def test_inloggen_met_onjuiste_code(client, db):
@@ -258,7 +266,7 @@ def test_geldige_code_ruimt_eigen_mislukte_pogingen_op(client, db):
         client.post("/api/tablet-code/inloggen", json={"code": "000000"})
 
     resp = client.post("/api/tablet-code/inloggen", json={"code": "246813"})
-    assert resp.get_json() == {"geldig": True}
+    assert resp.get_json()["geldig"] is True
 
     # Na een geslaagde poging is de teller voor dit IP-adres helemaal weg --
     # geen enkele rij meer, dus een volgende mislukte poging begint weer bij 0
