@@ -216,6 +216,13 @@ KOLOM_MIGRATIES = [
     # NULL = nog niet ingesteld; iedereen moet 'm bij de eerste keer
     # inloggen kiezen, zie tablet_code_instellen in routes/auth.py.
     ("gebruikers", "tablet_code_hash", "TEXT"),
+    # Oplopende teller: elke keer opgehoogd als iemand (vanuit de
+    # kiosk-tablet-app) de wedstrijddag-welkomstmelding wil TESTEN op het
+    # prijzenscherm, los van of er nu echt een thuiswedstrijd is. Het
+    # scherm herkent een nieuwe waarde via zijn gewone 10s-versiepoll (zie
+    # kiosk_prijzen_scherm.html) en toont de melding dan 1x, ongeacht het
+    # tijdvak. Zie kiosk_wedstrijddag_welkom_testen in routes/kiosk.py.
+    ("kiosk_prijzen_instellingen", "wedstrijddag_test_teller", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

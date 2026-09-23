@@ -97,6 +97,16 @@
                     android:layout_height="wrap_content"
                     android:paddingVertical="16dp"
                     android:text="@string/opslaan" />
+
+                <Button
+                    android:id="@+id/testKnop"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@android:color/transparent"
+                    android:text="@string/wedstrijddag_test_knop"
+                    android:textAllCaps="false"
+                    android:textColor="@color/blauw" />
             </LinearLayout>
         </ScrollView>
 

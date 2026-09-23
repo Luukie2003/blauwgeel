@@ -432,11 +432,27 @@
         // niet meteen wordt weggeklikt.
         var huidigeVersie = {{ versie|default('')|tojson }};
         var bekendeUitverkocht = {{ uitverkocht_namen|default([])|tojson }};
+        // Losse teller (niet in "versie" zelf) waarmee de tablet-app een
+        // testmelding kan afdwingen (zie kiosk_wedstrijddag_welkom_testen
+        // in routes/kiosk.py) -- los van de rest, want een test moet ook
+        // werken als er verder niets aan de pagina veranderd is.
+        var bekendeWedstrijddagTest = {{ wedstrijddag_test|default(0)|tojson }};
 
         setInterval(function () {
             fetch('{{ versie_url }}')
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
+                    if (data.wedstrijddag_test && data.wedstrijddag_test !== bekendeWedstrijddagTest) {
+                        bekendeWedstrijddagTest = data.wedstrijddag_test;
+                        if (!overlayBezig) {
+                            toonPopup(
+                                '<div class="popup-label">Welkom</div><h2>' +
+                                    wedstrijddagWelkomTekst.replace('{tegenstander}', 'Tegenstander') + '</h2>',
+                                'kiosk-popup--wedstrijddag',
+                                9000
+                            );
+                        }
+                    }
                     if (!data.versie || data.versie === huidigeVersie) return;
                     var nieuwUitverkocht = (data.uitverkocht || []).filter(function (naam) {
                         return bekendeUitverkocht.indexOf(naam) === -1;

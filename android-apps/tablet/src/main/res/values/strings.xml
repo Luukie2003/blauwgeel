@@ -55,6 +55,8 @@
     <string name="titel_wedstrijddag">Wedstrijddag-welkom</string>
     <string name="wedstrijddag_actief_label">Welkomstmelding actief</string>
     <string name="wedstrijddag_tekst_label">Tekst ({tegenstander} wordt vervangen)</string>
+    <string name="wedstrijddag_test_knop">Testen op prijzenscherm</string>
+    <string name="wedstrijddag_test_verstuurd">Testmelding verstuurd</string>
 
     <string name="instellingen">Instellingen</string>
     <string name="basis_url_label">Website-adres</string>

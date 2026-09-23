@@ -25,6 +25,7 @@ class WedstrijddagActivity : AppCompatActivity() {
         binding.terugKnop.setOnClickListener { finish() }
         binding.foutmelding.setOnClickListener { laadGegevens() }
         binding.opslaanKnop.setOnClickListener { slaOp() }
+        binding.testKnop.setOnClickListener { testen() }
         laadGegevens()
     }
 
@@ -64,6 +65,26 @@ class WedstrijddagActivity : AppCompatActivity() {
                 val antwoord = Api.postForm(this, "/kiosk/prijzen/wedstrijddag-welkom", velden)
                 if (antwoord.optBoolean("ok", false)) {
                     runOnUiThread { Toast.makeText(this, R.string.instellingen_opgeslagen, Toast.LENGTH_SHORT).show() }
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(this, antwoord.optString("fout", getString(R.string.fout_opslaan)), Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread { Toast.makeText(this, R.string.fout_opslaan, Toast.LENGTH_SHORT).show() }
+            }
+        }.start()
+    }
+
+    /** Dwingt de melding 1x schermvullend af op het (al open staande)
+     * prijzenscherm, los van of er nu echt een thuiswedstrijd is -- zie
+     * kiosk_wedstrijddag_welkom_testen in routes/kiosk.py. */
+    private fun testen() {
+        Thread {
+            try {
+                val antwoord = Api.postForm(this, "/kiosk/prijzen/wedstrijddag-welkom/test", emptyMap())
+                if (antwoord.optBoolean("ok", false)) {
+                    runOnUiThread { Toast.makeText(this, R.string.wedstrijddag_test_verstuurd, Toast.LENGTH_SHORT).show() }
                 } else {
                     runOnUiThread {
                         Toast.makeText(this, antwoord.optString("fout", getString(R.string.fout_opslaan)), Toast.LENGTH_LONG).show()

@@ -203,6 +203,31 @@ def test_wedstrijddag_welkom_instellingen_opslaan(ingelogde_client, db):
     assert rij["wedstrijddag_welkom_tekst"] == "Hup {tegenstander}, welkom!"
 
 
+def test_wedstrijddag_welkom_testen_hoogt_teller_op_en_komt_in_versie_terug(ingelogde_client, db):
+    """De tablet-app dwingt hiermee een testmelding af zonder een echte
+    thuiswedstrijd nodig te hebben -- het scherm herkent 'm via zijn gewone
+    versiepoll (zie kiosk_prijzen_versie en de JS in
+    kiosk_prijzen_scherm.html)."""
+    voor = db.execute("SELECT wedstrijddag_test_teller FROM kiosk_prijzen_instellingen WHERE id = 1").fetchone()[
+        "wedstrijddag_test_teller"
+    ]
+
+    resp = ingelogde_client.post(
+        "/kiosk/prijzen/wedstrijddag-welkom/test",
+        data={"csrf_token": _csrf(ingelogde_client)},
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert resp.get_json() == {"ok": True}
+
+    na = db.execute("SELECT wedstrijddag_test_teller FROM kiosk_prijzen_instellingen WHERE id = 1").fetchone()[
+        "wedstrijddag_test_teller"
+    ]
+    assert na == voor + 1
+
+    versie = ingelogde_client.get("/kiosk/prijzen/versie").get_json()
+    assert versie["wedstrijddag_test"] == na
+
+
 def test_subnav_markeert_actieve_pagina(ingelogde_client):
     resp = ingelogde_client.get("/kiosk/prijzen/acties")
     tekst = resp.data.decode()

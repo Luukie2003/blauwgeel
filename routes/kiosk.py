@@ -294,6 +294,25 @@ def register_routes(app):
         flash("Wedstrijddag-welkomstmelding opgeslagen.", "success")
         return redirect(url_for("kiosk_prijzen_instellingen"))
 
+    @app.route("/kiosk/prijzen/wedstrijddag-welkom/test", methods=["POST"])
+    def kiosk_wedstrijddag_welkom_testen():
+        """Laat de welkomstmelding 1x schermvullend zien op het (al open
+        staande) prijzenscherm, los van of er nu echt een thuiswedstrijd is
+        -- puur om de tekst/stijl te controleren zonder op een echte
+        wedstrijddag te hoeven wachten. Werkt door een teller op te hogen
+        die het scherm zelf al met zijn gewone 10s-versiepoll binnenhaalt
+        (zie kiosk_prijzen_versie/kiosk_tv_versie hierboven en de JS in
+        kiosk_prijzen_scherm.html) -- geen aparte polling-mechaniek nodig."""
+        db = get_db()
+        db.execute(
+            "UPDATE kiosk_prijzen_instellingen SET wedstrijddag_test_teller = wedstrijddag_test_teller + 1 WHERE id = 1"
+        )
+        db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
+        flash("Testmelding verstuurd naar het prijzenscherm.", "success")
+        return redirect(url_for("kiosk_prijzen_instellingen"))
+
     @app.route("/api/tablet/wedstrijddag-welkom")
     def api_tablet_wedstrijddag_welkom():
         """JSON-versie voor de kiosk-tablet-app (los project, zie
@@ -725,6 +744,7 @@ def register_routes(app):
             for a in acties
         ]
         extra = (extra_versie,) if extra_versie else ()
+        instellingen = _prijzen_instellingen(db)
         return {
             "categorieen_kolommen": _verdeel_over_kolommen(categorieen, indeling),
             "acties": acties_voor_scherm,
@@ -736,7 +756,8 @@ def register_routes(app):
             "uitverkocht_namen": _uitverkocht_namen(categorieen),
             "bardiensten_vandaag": _bardiensten_voor_scherm(bardiensten),
             "wedstrijden_vandaag": wedstrijden_vandaag,
-            "wedstrijddag_welkom_tekst": _prijzen_instellingen(db)["wedstrijddag_welkom_tekst"],
+            "wedstrijddag_welkom_tekst": instellingen["wedstrijddag_welkom_tekst"],
+            "wedstrijddag_test": instellingen["wedstrijddag_test_teller"],
         }
 
     @app.route("/kiosk/prijzen")
@@ -769,6 +790,7 @@ def register_routes(app):
                     uitgelicht,
                 ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
+                "wedstrijddag_test": _prijzen_instellingen(db)["wedstrijddag_test_teller"],
             }
         )
 
@@ -1667,6 +1689,7 @@ def register_routes(app):
                     "tv",
                 ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
+                "wedstrijddag_test": _prijzen_instellingen(db)["wedstrijddag_test_teller"],
             }
         )
 
