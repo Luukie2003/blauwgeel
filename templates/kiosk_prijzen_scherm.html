@@ -134,16 +134,17 @@
         .uitgelicht-kaart--uitverkocht { opacity: 0.6; }
         .uitgelicht-kaart--uitverkocht .uitgelicht-naam { text-decoration: line-through; }
 
-        /* Bardienst: subtiele tekst in de kop, tussen de titel en de klok --
-           alleen zichtbaar zolang er nu een bardienst-tijdvak actief is
-           (leeg anders, zie de JS onderaan). Wie er nét gewisseld is
-           verschijnt daarnaast kort groot in beeld, zie
-           .kiosk-popup--bardienst hieronder. */
+        /* Bardienst: tekst in de kop, tussen de titel en de klok -- geen
+           balk/vlak, gewoon in het geel (net als de klok) zodat het opvalt
+           zonder een apart blok in te nemen. Alleen zichtbaar zolang er nu
+           een bardienst-tijdvak actief is (leeg anders, zie de JS
+           onderaan). Wie er nét gewisseld is verschijnt daarnaast kort
+           groot in beeld, zie .kiosk-popup--bardienst hieronder. */
         .bardienst-header {
             flex: 1;
             text-align: center;
-            color: var(--tekst-zacht);
-            font-size: 1.1rem;
+            color: var(--geel);
+            font-size: 1.6rem;
             font-weight: 600;
         }
 
