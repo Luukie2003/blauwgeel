@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.KantineTablet" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Bewust .Light, geen .DayNight: deze kiosk-app heeft een eigen vaste
+         merkstijl (donkerblauwe gradient + witte kaarten), die niet moet
+         meeschakelen met de systeem-donkere modus van het toestel. Met
+         .DayNight kozen widgets zoals EditText in donkere modus voor witte
+         invoertekst, onleesbaar op onze altijd-witte kaarten. -->
+    <style name="Theme.KantineTablet" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/blauw</item>
         <item name="colorPrimaryDark">@color/blauw_donker</item>
         <item name="colorAccent">@color/geel</item>
