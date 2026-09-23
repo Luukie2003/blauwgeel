@@ -10,12 +10,12 @@
     </style>
 
     <style name="CijferKnop">
-        <item name="android:layout_width">50dp</item>
-        <item name="android:layout_height">50dp</item>
-        <item name="android:layout_margin">5dp</item>
+        <item name="android:layout_width">74dp</item>
+        <item name="android:layout_height">74dp</item>
+        <item name="android:layout_margin">6dp</item>
         <item name="android:background">@drawable/knop_cijfer</item>
         <item name="android:textColor">@color/wit</item>
-        <item name="android:textSize">18sp</item>
+        <item name="android:textSize">28sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:minWidth">0dp</item>
@@ -32,7 +32,7 @@
     </style>
 
     <style name="CijferKnopKlein" parent="CijferKnop">
-        <item name="android:textSize">14sp</item>
+        <item name="android:textSize">20sp</item>
     </style>
 
     <style name="KaartKnop">

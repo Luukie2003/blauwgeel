@@ -18,4 +18,10 @@
     <color name="tekst_zacht_licht">#B9C2E0</color>
     <color name="fout">#D81E1E</color>
     <color name="rand_licht">#D7DAE2</color>
+    <!-- Exacte kleur van de eigen (ondoorzichtige) hoeken van app_icon.png.
+         Het kader eromheen (logo_kader.xml) gebruikt precies deze tint,
+         zodat er geen zichtbare naad zit tussen de afbeelding en zijn
+         eigen kader, in plaats van het lichtere "blauw" van de
+         paginagradient. -->
+    <color name="logo_achtergrond">#1C2B4A</color>
 </resources>
