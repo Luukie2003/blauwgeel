@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.1"
+HUIDIGE_VERSIE = "1.15.2"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.2",
+        "datum": "23 september 2026",
+        "punten": [
+            "Bardienst op het prijzenscherm: nu subtiel in de kop (tussen titel en klok) i.p.v. een gele balk onderaan -- bij een wissel naar een nieuwe dienst verschijnen de namen ook even groot in beeld",
+        ],
+    },
     {
         "versie": "1.15.1",
         "datum": "22 september 2026",

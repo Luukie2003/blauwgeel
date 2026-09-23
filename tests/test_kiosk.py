@@ -1684,7 +1684,7 @@ def test_prijzenscherm_stuurt_gisteren_vandaag_en_morgen_mee(client, db):
     assert "Luuk" in tekst and "Femke" in tekst
     assert "Morgen Team" in tekst
     assert "Te Ver Terug" not in tekst
-    assert "bardienst-balk" in tekst
+    assert "bardienst-header" in tekst
 
 
 def test_prijzenscherm_versie_verandert_bij_bardienst_wijziging(client, db):

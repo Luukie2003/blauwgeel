@@ -134,26 +134,18 @@
         .uitgelicht-kaart--uitverkocht { opacity: 0.6; }
         .uitgelicht-kaart--uitverkocht .uitgelicht-naam { text-decoration: line-through; }
 
-        /* Bardienst: gele balk onderaan, alleen zichtbaar zolang er nu een
-           bardienst-tijdvak actief is (zie de JS onderaan). Bewust GEEN
-           position:fixed meer: dat overlapte de laatste prijsregels zodra
-           de prijslijst zelf al (bijna) de volledige schermhoogte vulde --
-           met de balk gewoon in de document-flow (en margin-top:auto om 'm
-           bij een korte lijst toch onderaan te duwen, zoals een sticky
-           footer) kan 'm nooit meer overlappen: hij schuift content omlaag
-           i.p.v. eroverheen te vallen. */
-        .bardienst-balk {
-            display: none;
-            margin-top: auto;
-            background: var(--geel);
-            color: var(--blauw-donker);
-            font-weight: 800;
-            font-size: 1.5rem;
+        /* Bardienst: subtiele tekst in de kop, tussen de titel en de klok --
+           alleen zichtbaar zolang er nu een bardienst-tijdvak actief is
+           (leeg anders, zie de JS onderaan). Wie er nét gewisseld is
+           verschijnt daarnaast kort groot in beeld, zie
+           .kiosk-popup--bardienst hieronder. */
+        .bardienst-header {
+            flex: 1;
             text-align: center;
-            padding: 1rem 1.5rem;
-            letter-spacing: 0.01em;
+            color: var(--tekst-zacht);
+            font-size: 1.1rem;
+            font-weight: 600;
         }
-        body.heeft-bardienst .bardienst-balk { display: block; }
 
         /* Grote pop-up: zowel voor de UITVERKOCHT-melding als voor een
            actie -- zelfde overlay, alleen de klasse/inhoud verschilt. */
@@ -187,6 +179,7 @@
         .kiosk-popup--actie .popup-label { background: var(--geel); color: var(--blauw-donker); }
         .kiosk-popup--wedstrijddag .popup-label { background: var(--geel); color: var(--blauw-donker); }
         .kiosk-popup--wedstrijddag h2 { color: var(--geel); }
+        .kiosk-popup--bardienst .popup-label { background: var(--geel); color: var(--blauw-donker); }
         .kiosk-popup h2 { font-size: 3.4rem; margin: 0; }
         .kiosk-popup .popup-prijs { font-size: 2.4rem; font-weight: 800; color: var(--geel); }
         .kiosk-popup p { font-size: 1.7rem; max-width: 50rem; margin: 0; color: var(--tekst-zacht); }
@@ -213,6 +206,7 @@
             <p class="club">s.v. Blauw-Geel 1915</p>
             <h1>Prijslijst</h1>
         </div>
+        <div id="bardienst-header" class="bardienst-header"></div>
         <div id="klok"></div>
     </header>
 
@@ -258,7 +252,6 @@
     {% endif %}
 
     <div id="kiosk-popup" class="kiosk-popup"></div>
-    <div id="bardienst-balk" class="bardienst-balk"></div>
 
     <script>
         function werkKlokBij() {
@@ -266,7 +259,7 @@
             if (el) el.textContent = new Date().toLocaleTimeString('nl-NL', {hour: '2-digit', minute: '2-digit'});
         }
 
-        // ---------- Bardienst: gele balk aan/uit op basis van de klok ----------
+        // ---------- Bardienst: subtiele tekst in de kop op basis van de klok ----------
         // Puur client-side (geen herlaad-roundtrip nodig): de bardiensten
         // rond vandaag staan al in de pagina (zie _bardiensten_vandaag in
         // routes/kiosk.py -- bewust ook gisteren/morgen erbij, want de
@@ -291,13 +284,18 @@
         // tests/test_tojson_context_regressie.py.
         var bardienstenVandaag = {{ bardiensten_vandaag|default([])|tojson }};
 
+        // Gedeeld met het 2e <script>-blok hieronder (kiosk-popup--bardienst):
+        // die vergelijkt elke tik of dit sinds de vorige keer veranderd is,
+        // om te bepalen of er net gewisseld is naar een nieuwe bardienst.
+        var huidigeBardienstNamen = null;
+
         function tweeCijfers(getal) {
             return ('0' + getal).slice(-2);
         }
 
         function werkBardienstBij() {
-            var balk = document.getElementById('bardienst-balk');
-            if (!balk) return;
+            var kop = document.getElementById('bardienst-header');
+            if (!kop) return;
             var nu = new Date();
             var vandaag = nu.getFullYear() + '-' + tweeCijfers(nu.getMonth() + 1) + '-' + tweeCijfers(nu.getDate());
             var gisterenDatum = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() - 1);
@@ -315,8 +313,8 @@
                 return false;
             })[0];
 
-            document.body.classList.toggle('heeft-bardienst', !!actief);
-            balk.textContent = actief ? 'Bardienst: ' + actief.namen : '';
+            huidigeBardienstNamen = actief ? actief.namen : null;
+            kop.textContent = huidigeBardienstNamen ? 'Bardienst: ' + huidigeBardienstNamen : '';
         }
 
         // ---------- Wedstrijddag-welkom: banner aan/uit op basis van de klok ----------
@@ -429,6 +427,29 @@
         }
         setTimeout(toonWedstrijddagWelkom, 40000);
         setInterval(toonWedstrijddagWelkom, 3 * 60 * 1000);
+
+        // ---------- Bardienst-wissel: kort groot in beeld bij een nieuwe dienst ----------
+        // huidigeBardienstNamen komt uit het vorige <script>-blok en wordt
+        // daar elke 15s bijgewerkt (werkBardienstBij) met de EIGEN klok van
+        // dit scherm -- hier alleen vergelijken of dat sinds de vorige tik
+        // veranderd is. De startwaarde is meteen de dienst die al liep toen
+        // de pagina laadde (werkBardienstBij() heeft dan al gedraaid), dus
+        // een reload toont nooit meteen een "wissel" voor een dienst die
+        // allang bezig was -- alleen een ECHTE wissel terwijl het scherm al
+        // openstaat.
+        var vorigeBardienstNamen = huidigeBardienstNamen;
+
+        function controleerBardienstWissel() {
+            if (huidigeBardienstNamen && huidigeBardienstNamen !== vorigeBardienstNamen && !overlayBezig) {
+                toonPopup(
+                    '<div class="popup-label">Bardienst</div><h2>' + huidigeBardienstNamen + '</h2>',
+                    'kiosk-popup--bardienst',
+                    9000
+                );
+            }
+            vorigeBardienstNamen = huidigeBardienstNamen;
+        }
+        setInterval(controleerBardienstWissel, 15000);
 
         // ---------- Prijzen/acties bijwerken + grote pop-up bij UITVERKOCHT ----------
         // Poll elke 10s of de getoonde producten/prijzen/acties nog kloppen,
