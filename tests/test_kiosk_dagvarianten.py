@@ -1,7 +1,7 @@
 import json
 import re
 import sqlite3
-from datetime import date
+from datetime import date, timedelta
 
 import database
 from conftest import stel_csrf_token_in as _csrf
@@ -226,6 +226,35 @@ def test_wedstrijddag_welkom_testen_hoogt_teller_op_en_komt_in_versie_terug(inge
 
     versie = ingelogde_client.get("/kiosk/prijzen/versie").get_json()
     assert versie["wedstrijddag_test"] == na
+
+
+def test_versie_geeft_eerstvolgende_bekende_tegenstander_voor_de_testknop(client, db):
+    """Los van 'wedstrijddag_welkom_actief' en los van of het vandaag is --
+    de testknop moet ook werken zonder geplande thuiswedstrijd vandaag (zie
+    _eerstvolgende_bekende_tegenstander in routes/kiosk.py)."""
+    over_een_week = date.fromisoformat(vandaag_amsterdam().isoformat())
+    later = (over_een_week + timedelta(days=7)).isoformat()
+    db.execute("UPDATE kiosk_prijzen_instellingen SET wedstrijddag_welkom_actief = 0 WHERE id = 1")
+    db.execute(
+        "INSERT INTO wedstrijden (team, datum, omschrijving, thuis, tijd) VALUES (?, ?, ?, 1, ?)",
+        ("Blauw Geel'15 1", later, "Blauw Geel'15 1-VEV'67 1", "14:00"),
+    )
+    db.commit()
+
+    versie = client.get("/kiosk/prijzen/versie").get_json()
+    assert versie["wedstrijddag_test_tegenstander"] == "VEV'67 1"
+
+
+def test_versie_negeert_verleden_wedstrijden_voor_eerstvolgende_tegenstander(client, db):
+    gisteren = (date.fromisoformat(vandaag_amsterdam().isoformat()) - timedelta(days=1)).isoformat()
+    db.execute(
+        "INSERT INTO wedstrijden (team, datum, omschrijving, thuis) VALUES (?, ?, ?, 1)",
+        ("Blauw Geel'15 1", gisteren, "Blauw Geel'15 1-Verleden 1"),
+    )
+    db.commit()
+
+    versie = client.get("/kiosk/prijzen/versie").get_json()
+    assert versie["wedstrijddag_test_tegenstander"] is None
 
 
 def test_subnav_markeert_actieve_pagina(ingelogde_client):

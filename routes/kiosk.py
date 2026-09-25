@@ -626,6 +626,28 @@ def register_routes(app):
             resultaat.append({"tijd": w["tijd"], "tegenstander": naam})
         return resultaat
 
+    def _eerstvolgende_bekende_tegenstander(db):
+        """Voor de testknop bij de wedstrijddag-welkomstmelding (zie
+        kiosk_wedstrijddag_welkom_testen) -- toont daar een echte naam i.p.v.
+        het kale "Tegenstander"-placeholder, ook als er vandaag geen eigen
+        thuiswedstrijd gepland staat (de test moet altijd werken, los van de
+        instelling/datum, dus geen 'wedstrijddag_welkom_actief'-check zoals
+        bij _wedstrijddag_welkom_wedstrijden hierboven). Pakt de eerste
+        aankomende thuiswedstrijd waarvan de tegenstander uit de omschrijving
+        te herleiden is; None als er niets (meer) gepland staat."""
+        vandaag = vandaag_amsterdam().isoformat()
+        wedstrijden = db.execute(
+            """SELECT omschrijving FROM wedstrijden
+               WHERE thuis = 1 AND datum >= ?
+               ORDER BY datum, tijd IS NULL, tijd""",
+            (vandaag,),
+        ).fetchall()
+        for w in wedstrijden:
+            naam = bepaal_tegenstander(w["omschrijving"])
+            if naam:
+                return naam
+        return None
+
     def _categorie_kolommen_indeling(db):
         """Leest de opgeslagen kolomindeling (zie kiosk_prijzen_instellingen.html,
         de sleep-interface) -- {"1": [...namen], "2": [...], "3": [...]}.
@@ -791,6 +813,7 @@ def register_routes(app):
                 ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
                 "wedstrijddag_test": _prijzen_instellingen(db)["wedstrijddag_test_teller"],
+                "wedstrijddag_test_tegenstander": _eerstvolgende_bekende_tegenstander(db),
             }
         )
 
@@ -1690,6 +1713,7 @@ def register_routes(app):
                 ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
                 "wedstrijddag_test": _prijzen_instellingen(db)["wedstrijddag_test_teller"],
+                "wedstrijddag_test_tegenstander": _eerstvolgende_bekende_tegenstander(db),
             }
         )
 

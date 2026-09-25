@@ -445,9 +445,10 @@
                     if (data.wedstrijddag_test && data.wedstrijddag_test !== bekendeWedstrijddagTest) {
                         bekendeWedstrijddagTest = data.wedstrijddag_test;
                         if (!overlayBezig) {
+                            var testTegenstander = data.wedstrijddag_test_tegenstander || 'Tegenstander';
                             toonPopup(
                                 '<div class="popup-label">Welkom</div><h2>' +
-                                    wedstrijddagWelkomTekst.replace('{tegenstander}', 'Tegenstander') + '</h2>',
+                                    wedstrijddagWelkomTekst.replace('{tegenstander}', testTegenstander) + '</h2>',
                                 'kiosk-popup--wedstrijddag',
                                 9000
                             );

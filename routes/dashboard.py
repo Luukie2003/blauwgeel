@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.3"
+HUIDIGE_VERSIE = "1.15.4"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.4",
+        "datum": "25 september 2026",
+        "punten": [
+            "Testknop wedstrijddag-welkomstmelding (tablet): toont nu de eerstvolgende bekende tegenstander i.p.v. het kale 'Tegenstander'",
+        ],
+    },
     {
         "versie": "1.15.3",
         "datum": "23 september 2026",
