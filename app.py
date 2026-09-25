@@ -248,6 +248,7 @@ SECTIE_ENDPOINTS = {
     "kantine_tv": {
         "kiosk_hub",
         "kiosk_prijzen_instellingen",
+        "kiosk_trainingsavond_modus_wisselen",
         "kiosk_wedstrijddag_welkom_instellingen",
         "kiosk_wedstrijddag_welkom_testen",
         "api_tablet_wedstrijddag_welkom",

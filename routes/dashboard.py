@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.4"
+HUIDIGE_VERSIE = "1.15.5"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.5",
+        "datum": "25 september 2026",
+        "punten": [
+            "Trainingsavond-modus op het prijzenscherm is nu een handmatige knop (bij Prijzenscherm instellen) i.p.v. automatisch op de vaste kalenderdag",
+        ],
+    },
     {
         "versie": "1.15.4",
         "datum": "25 september 2026",

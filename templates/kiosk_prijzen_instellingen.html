@@ -26,6 +26,30 @@
     });
 })();
 </script>
+
+<div class="kaart">
+    <h2>Trainingsavond-modus</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Prijzenscherm toont nu:
+        <strong id="trainingsavond-modus-tekst">{{ 'de trainingsavond-selectie' if prijzen_instellingen.trainingsavond_modus_actief else 'de normale selectie' }}</strong>
+    </p>
+    <form method="post" action="{{ url_for('kiosk_trainingsavond_modus_wisselen') }}" class="js-ajax-form" id="trainingsavond-modus-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-geel btn-icoon" id="trainingsavond-modus-knop">
+            Wissel naar {{ 'de normale selectie' if prijzen_instellingen.trainingsavond_modus_actief else 'de trainingsavond-selectie' }}
+        </button>
+    </form>
+</div>
+<script>
+(function () {
+    var form = document.getElementById('trainingsavond-modus-form');
+    form.addEventListener('ajax-form:success', function (e) {
+        var actief = e.detail.trainingsavond_modus_actief;
+        document.getElementById('trainingsavond-modus-tekst').textContent = actief ? 'de trainingsavond-selectie' : 'de normale selectie';
+        document.getElementById('trainingsavond-modus-knop').textContent = 'Wissel naar ' + (actief ? 'de normale selectie' : 'de trainingsavond-selectie');
+    });
+})();
+</script>
 {% else %}
 <p class="subtitel">
     Vink aan welke producten op het prijzenscherm getoond moeten worden en sla in één keer alles op.
@@ -219,19 +243,38 @@
 <div class="kaart">
     {% if producten %}
     {% if not pda_modus %}
-    <div class="tab-balk" style="margin-bottom:1rem">
-        <a href="{{ url_for('kiosk_prijzen_instellingen', dag='normaal') }}"
-           class="tab-knop{{ ' actief' if gekozen_dag == 'normaal' else '' }}">Normaal</a>
-        <a href="{{ url_for('kiosk_prijzen_instellingen', dag='trainingsavond') }}"
-           class="tab-knop{{ ' actief' if gekozen_dag == 'trainingsavond' else '' }}">Trainingsavond</a>
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem">
+        <div class="tab-balk" style="margin-bottom:0">
+            <a href="{{ url_for('kiosk_prijzen_instellingen', dag='normaal') }}"
+               class="tab-knop{{ ' actief' if gekozen_dag == 'normaal' else '' }}">Normaal</a>
+            <a href="{{ url_for('kiosk_prijzen_instellingen', dag='trainingsavond') }}"
+               class="tab-knop{{ ' actief' if gekozen_dag == 'trainingsavond' else '' }}">Trainingsavond</a>
+        </div>
+        <form method="post" action="{{ url_for('kiosk_trainingsavond_modus_wisselen') }}" class="js-ajax-form" id="trainingsavond-modus-form-2" style="margin:0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <span class="tekst-zacht">Prijzenscherm toont nu <strong id="trainingsavond-modus-tekst-2">{{ 'trainingsavond' if prijzen_instellingen.trainingsavond_modus_actief else 'normaal' }}</strong></span>
+            <button type="submit" class="btn btn-klein btn-rand" id="trainingsavond-modus-knop-2">
+                Wissel naar {{ 'normaal' if prijzen_instellingen.trainingsavond_modus_actief else 'trainingsavond' }}
+            </button>
+        </form>
     </div>
     <p class="tekst-zacht" style="margin-top:-0.6rem; margin-bottom:1rem">
         {% if gekozen_dag == 'trainingsavond' %}
-        Deze selectie geldt automatisch op de vaste trainingsavond i.p.v. de normale selectie hiernaast.
+        Deze selectie geldt zodra je hierboven naar "trainingsavond" wisselt, i.p.v. de normale selectie hiernaast.
         {% else %}
-        De gewone selectie, elke dag behalve de trainingsavond (die heeft een eigen tabblad hierboven).
+        De gewone selectie -- geldt zolang je hierboven niet naar "trainingsavond" hebt gewisseld (die heeft een eigen tabblad hierboven).
         {% endif %}
     </p>
+    <script>
+    (function () {
+        var form = document.getElementById('trainingsavond-modus-form-2');
+        form.addEventListener('ajax-form:success', function (e) {
+            var actief = e.detail.trainingsavond_modus_actief;
+            document.getElementById('trainingsavond-modus-tekst-2').textContent = actief ? 'trainingsavond' : 'normaal';
+            document.getElementById('trainingsavond-modus-knop-2').textContent = 'Wissel naar ' + (actief ? 'normaal' : 'trainingsavond');
+        });
+    })();
+    </script>
     {% endif %}
     <div class="filterbalk">
         <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">

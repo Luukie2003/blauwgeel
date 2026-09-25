@@ -477,14 +477,6 @@ def _aantal_dagen_met_weekdag(van, tot, weekdag, inclusief_van=True):
     return aantal
 
 
-def is_trainingsavond(datum):
-    """True als de gegeven datum (date-object) op de vaste trainingsavond
-    valt (zie TRAININGSDAG hierboven) -- gebruikt door het prijzenscherm om
-    op trainingsavonden een eigen productselectie te tonen (zie
-    producten.toon_op_kiosk_trainingsavond)."""
-    return datum.weekday() == TRAININGSDAG
-
-
 def bepaal_tegenstander(omschrijving):
     """Haalt de tegenstander uit een wedstrijd-omschrijving zoals
     "Blauw Geel'15 2-Potetos 4" (zie agenda.py, dezelfde tabel/kolom als

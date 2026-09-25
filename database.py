@@ -223,6 +223,13 @@ KOLOM_MIGRATIES = [
     # kiosk_prijzen_scherm.html) en toont de melding dan 1x, ongeacht het
     # tijdvak. Zie kiosk_wedstrijddag_welkom_testen in routes/kiosk.py.
     ("kiosk_prijzen_instellingen", "wedstrijddag_test_teller", "INTEGER NOT NULL DEFAULT 0"),
+    # Handmatige schakelaar: bepaalt of het prijzenscherm nu de
+    # trainingsavond-productselectie toont i.p.v. de normale (zie
+    # DAG_KOLOM/_dag_type_vandaag in routes/kiosk.py) -- bewust geen
+    # automatische koppeling meer aan de kalenderdag, want de training
+    # verschuift weleens (vakantie, extra training, calamiteit) en dan klopt
+    # de vaste dag niet. Zie kiosk_trainingsavond_modus_wisselen.
+    ("kiosk_prijzen_instellingen", "trainingsavond_modus_actief", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 
