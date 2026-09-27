@@ -135,7 +135,12 @@
                     <div class="standdia-rij{{ ' standdia-rij--eigen' if team.eigen_team else '' }}"
                          style="animation-delay: {{ (loop.index0 * 0.06)|round(3) }}s">
                         <span class="standdia-positie">{{ team.positie }}</span>
+                        {% if team.logo %}
+                        <img class="standdia-logo" src="{{ url_for('static', filename='club_logos/' ~ team.logo) }}" alt="">
+                        {% endif %}
                         <span class="standdia-naam">{{ team.naam }}</span>
+                        <span class="standdia-vorm">W {{ team.gewonnen }} &middot; GL {{ team.gelijk }} &middot; V {{ team.verloren }}</span>
+                        <span class="standdia-punten">{{ team.punten }}<small>pt</small></span>
                     </div>
                     {% endfor %}
                 </div>

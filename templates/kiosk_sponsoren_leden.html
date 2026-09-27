@@ -142,7 +142,9 @@
 <div class="kaart" id="standen-teams">
     <h2 style="margin-top:0">Standen bijwerken</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Sleep de teams in de juiste volgorde (1e plaats bovenaan). Het eigen team staat in het geel.
+        Sleep de teams in de juiste volgorde (1e plaats bovenaan) en vul W/GL/V bij -- Gespeeld en Punten
+        volgen daar vanzelf uit. Het eigen team staat in het geel. Klik het logo aan om er 1 te
+        uploaden/vervangen (geldt meteen voor elk team van die club, in elke poule).
     </p>
     {% for poule, label in stand_poules %}
     <div class="stand-poule">
@@ -150,16 +152,36 @@
         <div class="stand-lijst" data-poule="{{ poule }}">
             {% for team in stand_teams[poule] %}
             <div class="stand-item{{ ' stand-item--eigen' if team.eigen_team else '' }}" draggable="true" data-id="{{ team.id }}">
-                <span class="stand-item-naam">{{ team.naam }}</span>
-                <div class="stand-item-knoppen">
-                    <form method="post" action="{{ url_for('kiosk_stand_team_eigen_wisselen', team_id=team.id) }}">
+                <div class="stand-item-top">
+                    <form method="post" action="{{ url_for('kiosk_club_logo_opslaan') }}" enctype="multipart/form-data"
+                          class="stand-logo-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="stand-item-knop" title="{{ 'Niet meer het eigen team' if team.eigen_team else 'Dit is het eigen team' }}">&#9733;</button>
+                        <input type="hidden" name="club" value="{{ team.club }}">
+                        <label class="stand-logo-label" title="Logo uploaden/vervangen voor '{{ team.club }}'">
+                            {% if club_logos.get(team.club) %}
+                            <img src="{{ url_for('static', filename='club_logos/' ~ club_logos[team.club]) }}" alt="">
+                            {% else %}
+                            <span class="stand-logo-placeholder">+</span>
+                            {% endif %}
+                            <input type="file" name="logo" accept="image/*" onchange="this.form.requestSubmit()">
+                        </label>
                     </form>
-                    <form method="post" action="{{ url_for('kiosk_stand_team_verwijderen', team_id=team.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="stand-item-knop" title="Verwijderen">&times;</button>
-                    </form>
+                    <span class="stand-item-naam">{{ team.naam }}</span>
+                    <div class="stand-item-knoppen">
+                        <form method="post" action="{{ url_for('kiosk_stand_team_eigen_wisselen', team_id=team.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="stand-item-knop" title="{{ 'Niet meer het eigen team' if team.eigen_team else 'Dit is het eigen team' }}">&#9733;</button>
+                        </form>
+                        <form method="post" action="{{ url_for('kiosk_stand_team_verwijderen', team_id=team.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="stand-item-knop" title="Verwijderen">&times;</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="stand-item-stats">
+                    <label>W<input type="number" min="0" class="stand-stat-veld" data-veld="w" value="{{ team.gewonnen }}"></label>
+                    <label>GL<input type="number" min="0" class="stand-stat-veld" data-veld="gl" value="{{ team.gelijk }}"></label>
+                    <label>V<input type="number" min="0" class="stand-stat-veld" data-veld="v" value="{{ team.verloren }}"></label>
                 </div>
             </div>
             {% endfor %}
@@ -168,12 +190,15 @@
               class="stand-volgorde-form" data-poule="{{ poule }}" style="margin-top:0.6rem">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="volgorde" class="stand-volgorde-veld">
-            <button type="submit" class="btn btn-rand btn-klein">Volgorde opslaan</button>
+            <input type="hidden" name="statistieken" class="stand-statistieken-veld">
+            <button type="submit" class="btn btn-rand btn-klein">Stand opslaan</button>
         </form>
-        <form method="post" action="{{ url_for('kiosk_stand_team_nieuw') }}" style="margin-top:0.6rem; display:flex; gap:0.5rem">
+        <form method="post" action="{{ url_for('kiosk_stand_team_nieuw') }}" enctype="multipart/form-data"
+              style="margin-top:0.6rem; display:flex; gap:0.5rem; align-items:center">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="poule" value="{{ poule }}">
             <input type="text" name="naam" placeholder="Naam club toevoegen..." style="flex:1">
+            <input type="file" name="logo" accept="image/*" title="Logo (optioneel)" style="max-width:9rem">
             <button type="submit" class="btn btn-rand btn-klein">+ Team</button>
         </form>
     </div>
@@ -206,17 +231,14 @@
         border-radius: 6px;
         padding: 0.4rem 0.6rem;
         cursor: grab;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.5rem;
         user-select: none;
     }
     .stand-item.wordt-gesleept { opacity: 0.4; }
     .stand-item--eigen { background: rgba(252, 212, 47, 0.15); border-color: var(--geel-donker); font-weight: 700; }
+    .stand-item-top { display: flex; align-items: center; gap: 0.5rem; }
     .stand-item-naam { flex: 1; }
     .stand-item-knoppen { display: flex; gap: 0.3rem; flex-shrink: 0; }
-    .stand-item-knoppen form { margin: 0; }
+    .stand-item-knoppen form, .stand-logo-form { margin: 0; }
     .stand-item-knop {
         border: 1px solid #d7dae2;
         background: #fff;
@@ -227,6 +249,31 @@
         cursor: pointer;
     }
     .stand-item--eigen .stand-item-knop:first-child { color: var(--geel-donker); }
+    .stand-logo-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 6px;
+        border: 1px dashed #d7dae2;
+        flex-shrink: 0;
+        cursor: pointer;
+        overflow: hidden;
+    }
+    .stand-logo-label img { width: 100%; height: 100%; object-fit: contain; }
+    .stand-logo-placeholder { color: var(--tekst-zacht, #6b7280); font-weight: 700; }
+    .stand-logo-label input[type="file"] { display: none; }
+    .stand-item-stats { display: flex; gap: 0.8rem; margin-top: 0.4rem; padding-left: 2.7rem; }
+    .stand-item-stats label {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--tekst-zacht, #6b7280);
+    }
+    .stand-stat-veld { width: 3rem; padding: 0.15rem 0.3rem; }
 </style>
 
 <script>
@@ -285,9 +332,18 @@
     document.querySelectorAll('.stand-volgorde-form').forEach(function (form) {
         form.addEventListener('submit', function () {
             var lijst = document.querySelector('.stand-lijst[data-poule="' + form.dataset.poule + '"]');
-            var volgorde = Array.prototype.slice.call(lijst.querySelectorAll('.stand-item'))
-                .map(function (item) { return item.dataset.id; });
+            var items = Array.prototype.slice.call(lijst.querySelectorAll('.stand-item'));
+            var volgorde = items.map(function (item) { return item.dataset.id; });
+            var statistieken = {};
+            items.forEach(function (item) {
+                var velden = {};
+                item.querySelectorAll('.stand-stat-veld').forEach(function (input) {
+                    velden[input.dataset.veld] = input.value;
+                });
+                statistieken[item.dataset.id] = velden;
+            });
             form.querySelector('.stand-volgorde-veld').value = JSON.stringify(volgorde);
+            form.querySelector('.stand-statistieken-veld').value = JSON.stringify(statistieken);
         });
     });
 })();

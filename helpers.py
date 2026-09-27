@@ -32,6 +32,7 @@ WEERGAVE_TELEFOON_PATROON = re.compile(r"iPhone|iPod|Android.+Mobile", re.IGNORE
 STEM_AFBEELDINGEN_MAP = BASE_DIR / "static" / "stem_afbeeldingen"
 PRODUCT_AFBEELDINGEN_MAP = BASE_DIR / "static" / "product_afbeeldingen"
 KIOSK_AFBEELDINGEN_MAP = BASE_DIR / "static" / "kiosk_afbeeldingen"
+CLUB_LOGO_MAP = BASE_DIR / "static" / "club_logos"
 TOEGESTANE_AFBEELDING_EXTENSIES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 
 # De vaste layout-sjablonen voor een sponsor-slide op het kantine scherm --
@@ -163,6 +164,26 @@ def bewaar_bier(db, naam, afbeelding):
         """INSERT INTO bieren (naam, afbeelding, aangemaakt_op) VALUES (?, ?, ?)
            ON CONFLICT(naam) DO UPDATE SET afbeelding = excluded.afbeelding""",
         (naam, afbeelding, now_str()),
+    )
+
+
+def sla_club_logo_op(bestand):
+    return sla_afbeelding_op(bestand, CLUB_LOGO_MAP)
+
+
+def bewaar_club_logo(db, club, afbeelding):
+    """Zelfde register-idee als bewaar_bier hierboven, maar dan voor
+    clublogo's op de standen-dia's (zie kiosk_stand_teams/STAND_POULES in
+    routes/kiosk.py): 1 keer een logo uploaden voor bijv. "Oranje Nassau",
+    en elk team van die club (welke poule dan ook, dit of een volgend
+    seizoen) gebruikt 'm automatisch. Bestond de club al, dan wordt alleen
+    het logo bijgewerkt (en enkel als er een nieuwe is)."""
+    if not club or not afbeelding:
+        return
+    db.execute(
+        """INSERT INTO kiosk_club_logos (club, afbeelding, aangemaakt_op) VALUES (?, ?, ?)
+           ON CONFLICT(club) DO UPDATE SET afbeelding = excluded.afbeelding""",
+        (club, afbeelding, now_str()),
     )
 
 
@@ -496,6 +517,19 @@ def bepaal_tegenstander(omschrijving):
     if CLUBNAAM in kant_b.lower():
         return kant_a or None
     return None
+
+
+def club_van_team_naam(naam):
+    """Haalt de clubnaam uit een teamnaam zoals "Oranje Nassau 5" of
+    "Blauw Geel'15 O23-1" (zie kiosk_stand_teams/STAND_POULES in
+    routes/kiosk.py) door alleen het LAATSTE team-volgnummer te strippen --
+    bijv. "5"/"6" of een jeugdcode als "O23-1". Zo blijft een jaartal dat
+    toevallig in de clubnaam zelf zit (bijv. "Velocitas 1897", "Be Quick
+    1887") intact, want dat wordt nooit als laatste woord nogmaals herhaald.
+    Meerdere teams van dezelfde club (bijv. "Oranje Nassau 5" en "Oranje
+    Nassau 6") leveren zo dezelfde clubnaam op, en delen dus 1 logo (zie
+    kiosk_club_logos)."""
+    return re.sub(r"\s+(?:O\d+-\d+|\d+)$", "", naam).strip()
 
 
 def bereken_omzet_trend_periode(db, van, tot):

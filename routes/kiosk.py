@@ -24,10 +24,13 @@ from helpers import (
     bepaal_tegenstander,
     bereken_jaren_lid,
     bereken_komende_thuiswedstrijden,
+    bewaar_club_logo,
+    club_van_team_naam,
     format_datum_kort,
     is_ajax_verzoek,
     now_str,
     sla_afbeelding_op,
+    sla_club_logo_op,
     vandaag_amsterdam,
     voeg_maanden_toe,
 )
@@ -220,14 +223,7 @@ def register_routes(app):
                         "type": "stand",
                         "duur": instellingen["standen_duur_seconden"],
                         "titel": label,
-                        "teams": [
-                            {
-                                "positie": i + 1,
-                                "naam": t["naam"],
-                                "eigen_team": bool(t["eigen_team"]),
-                            }
-                            for i, t in enumerate(teams)
-                        ],
+                        "teams": [_stand_team_weergave(db, i + 1, t) for i, t in enumerate(teams)],
                     }
                 )
             if stand_slides:
@@ -240,6 +236,30 @@ def register_routes(app):
         return db.execute(
             "SELECT * FROM kiosk_stand_teams WHERE poule = ? ORDER BY volgorde, id", (poule,)
         ).fetchall()
+
+    def _club_logo(db, club):
+        rij = db.execute(
+            "SELECT afbeelding FROM kiosk_club_logos WHERE club = ?", (club,)
+        ).fetchone()
+        return rij["afbeelding"] if rij else None
+
+    def _stand_team_weergave(db, positie, team):
+        """Bouwt 1 team-rij voor de standen-dia (zie kiosk_scherm.html) --
+        Gespeeld en Punten worden hier berekend uit W/GL/V (3-1-0-systeem,
+        zelfde als voetbal.nl) i.p.v. los opgeslagen, zodat ze nooit uit de
+        pas kunnen gaan lopen met de ingevulde W/GL/V."""
+        gewonnen, gelijk, verloren = team["gewonnen"], team["gelijk"], team["verloren"]
+        return {
+            "positie": positie,
+            "naam": team["naam"],
+            "eigen_team": bool(team["eigen_team"]),
+            "logo": _club_logo(db, team["club"]) if team["club"] else None,
+            "gewonnen": gewonnen,
+            "gelijk": gelijk,
+            "verloren": verloren,
+            "gespeeld": gewonnen + gelijk + verloren,
+            "punten": gewonnen * 3 + gelijk,
+        }
 
     # ---------- Hub ----------
 
@@ -1208,6 +1228,9 @@ def register_routes(app):
             instellingen=_scherm_instellingen(db),
             stand_poules=STAND_POULES,
             stand_teams={poule: _stand_teams(db, poule) for poule, _ in STAND_POULES},
+            club_logos={
+                r["club"]: r["afbeelding"] for r in db.execute("SELECT club, afbeelding FROM kiosk_club_logos").fetchall()
+            },
         )
 
     def _sponsor_uit_formulier():
@@ -1735,14 +1758,25 @@ def register_routes(app):
                 return jsonify({"ok": False, "fout": "Vul een clubnaam in."}), 400
             flash("Vul een clubnaam in.", "error")
             return redirect(url_for("kiosk_sponsoren_leden"))
+        club = club_van_team_naam(naam)
+        # Nieuw logo geupload? Gebruik dat. Anders: staat er al 1 geregistreerd
+        # voor deze club (bijv. via een ander team/poule), hergebruik die.
+        afbeelding = sla_club_logo_op(request.files.get("logo"))
+        if not afbeelding:
+            bekend = db.execute(
+                "SELECT afbeelding FROM kiosk_club_logos WHERE club = ?", (club,)
+            ).fetchone()
+            if bekend:
+                afbeelding = bekend["afbeelding"]
         volgende = db.execute(
             "SELECT COALESCE(MAX(volgorde), -1) + 1 AS volgende FROM kiosk_stand_teams WHERE poule = ?",
             (poule,),
         ).fetchone()["volgende"]
         db.execute(
-            "INSERT INTO kiosk_stand_teams (poule, naam, volgorde) VALUES (?, ?, ?)",
-            (poule, naam, volgende),
+            "INSERT INTO kiosk_stand_teams (poule, naam, club, volgorde) VALUES (?, ?, ?, ?)",
+            (poule, naam, club, volgende),
         )
+        bewaar_club_logo(db, club, afbeelding)
         db.commit()
         if is_ajax_verzoek():
             return jsonify({"ok": True})
@@ -1800,10 +1834,56 @@ def register_routes(app):
                 "UPDATE kiosk_stand_teams SET volgorde = ? WHERE id = ? AND poule = ?",
                 (index, team_id, poule),
             )
+        # W/GL/V per team komen in dezelfde submit mee (zie de sleeplijst op
+        # kiosk_sponsoren_leden.html) -- 1 "Opslaan"-knop voor zowel de
+        # volgorde als de bijgewerkte stand, i.p.v. 2 losse acties.
+        try:
+            statistieken = json.loads(request.form.get("statistieken") or "{}")
+        except ValueError:
+            statistieken = {}
+
+        def _getal(waarde):
+            try:
+                return max(0, int(waarde))
+            except (TypeError, ValueError):
+                return 0
+
+        for team_id, s in statistieken.items():
+            db.execute(
+                """UPDATE kiosk_stand_teams SET gewonnen = ?, gelijk = ?, verloren = ?
+                   WHERE id = ? AND poule = ?""",
+                (_getal(s.get("w")), _getal(s.get("gl")), _getal(s.get("v")), team_id, poule),
+            )
         db.commit()
         if is_ajax_verzoek():
             return jsonify({"ok": True})
-        flash("Volgorde opgeslagen.", "success")
+        flash("Stand opgeslagen.", "success")
+        return redirect(url_for("kiosk_sponsoren_leden"))
+
+    @app.route("/kiosk/scherm/standen/club-logo", methods=["POST"])
+    def kiosk_club_logo_opslaan():
+        """Los van het toevoegen van een team: een logo later alsnog
+        toevoegen of vervangen voor een club die al in 1 of meer poules
+        staat -- werkt meteen door voor elk team van die club, in elke
+        poule (zie _club_logo/_stand_team_weergave hierboven)."""
+        db = get_db()
+        club = request.form.get("club", "").strip()
+        if not club:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Onbekende club."}), 400
+            flash("Onbekende club.", "error")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+        afbeelding = sla_club_logo_op(request.files.get("logo"))
+        if not afbeelding:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Kies een afbeelding om te uploaden."}), 400
+            flash("Kies een afbeelding om te uploaden.", "error")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+        bewaar_club_logo(db, club, afbeelding)
+        db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
+        flash(f"Logo voor '{club}' opgeslagen.", "success")
         return redirect(url_for("kiosk_sponsoren_leden"))
 
     @app.route("/kiosk/scherm")

@@ -252,12 +252,12 @@
     margin: 0 0 2.2rem;
     text-shadow: 0 0 34px rgba(252, 212, 47, 0.4);
 }
-.standdia-lijst { width: 100%; max-width: 42rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.standdia-lijst { width: 100%; max-width: 64rem; display: flex; flex-direction: column; gap: 0.55rem; }
 .standdia-rij {
     display: flex;
     align-items: center;
-    gap: 1.2rem;
-    padding: 0.7rem 1.4rem;
+    gap: 1.1rem;
+    padding: 0.6rem 1.4rem;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 14px;
@@ -271,8 +271,8 @@
 }
 .standdia-positie {
     flex-shrink: 0;
-    width: 2.6rem;
-    height: 2.6rem;
+    width: 2.3rem;
+    height: 2.3rem;
     border-radius: 50%;
     background: var(--blauw);
     border: 2px solid var(--geel);
@@ -280,10 +280,21 @@
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    font-size: 1.3rem;
+    font-size: 1.15rem;
 }
-.standdia-naam { font-size: 1.7rem; font-weight: 700; }
+.standdia-logo { flex-shrink: 0; width: 2.6rem; height: 2.6rem; object-fit: contain; }
+.standdia-naam { flex: 1; min-width: 0; font-size: 1.5rem; font-weight: 700; }
 .standdia-rij--eigen .standdia-naam { font-weight: 800; }
+.standdia-vorm { flex-shrink: 0; font-size: 1.05rem; color: var(--tekst-zacht); }
+.standdia-punten {
+    flex-shrink: 0;
+    min-width: 3.4rem;
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--geel);
+}
+.standdia-punten small { font-size: 0.55em; font-weight: 700; margin-left: 0.15rem; }
 
 .slide-stand.actief .standdia-rij {
     animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;

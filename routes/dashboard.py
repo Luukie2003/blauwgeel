@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.8"
+HUIDIGE_VERSIE = "1.15.9"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.9",
+        "datum": "27 september 2026",
+        "punten": [
+            "Standen-dia's: W/GL/V (Gespeeld en Punten volgen daaruit) en clublogo's toegevoegd, met een herbruikbaar logo-register per club",
+        ],
+    },
     {
         "versie": "1.15.8",
         "datum": "27 september 2026",

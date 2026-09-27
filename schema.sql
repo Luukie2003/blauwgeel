@@ -495,6 +495,23 @@ CREATE TABLE IF NOT EXISTS kiosk_stand_teams (
 );
 CREATE INDEX IF NOT EXISTS idx_kiosk_stand_teams_poule ON kiosk_stand_teams(poule, volgorde);
 
+-- Herbruikbaar clublogo-register, zelfde opzet als de bieren-bibliotheek
+-- hierboven (zie bewaar_bier/bewaar_club_logo in helpers.py): 1 keer een
+-- logo uploaden voor bijv. "Oranje Nassau", en elk team van die club (in
+-- welke poule dan ook, dit of een volgend seizoen) gebruikt 'm automatisch
+-- -- de clubnaam volgt uit de teamnaam via club_van_team_naam() in
+-- helpers.py (bijv. "Oranje Nassau 5" en "Oranje Nassau 6" -> "Oranje
+-- Nassau"). Gespeeld/Punten staan bewust niet in kiosk_stand_teams: die
+-- volgen rechtstreeks uit W/GL/V (3-1-0-systeem), dus geen apart veld dat
+-- uit de pas kan gaan lopen.
+CREATE TABLE IF NOT EXISTS kiosk_club_logos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    club TEXT NOT NULL COLLATE NOCASE,
+    afbeelding TEXT,
+    aangemaakt_op TEXT NOT NULL,
+    UNIQUE(club)
+);
+
 -- 1 rij per paginabezoek, voor Club > Gebruiksstatistieken -- puur intern
 -- inzicht in welke onderdelen daadwerkelijk gebruikt worden (en door wie),
 -- geen externe trackingdienst. gebruiker_id is bewust ON DELETE SET NULL

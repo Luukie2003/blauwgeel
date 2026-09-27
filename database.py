@@ -5,7 +5,7 @@ from pathlib import Path
 from flask import current_app, g
 from werkzeug.security import generate_password_hash
 
-from helpers import voeg_maanden_toe
+from helpers import club_van_team_naam, voeg_maanden_toe
 
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
@@ -240,6 +240,15 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "toon_standen", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "standen_volgorde", "INTEGER NOT NULL DEFAULT 4"),
     ("kiosk_scherm_instellingen", "standen_duur_seconden", "INTEGER NOT NULL DEFAULT 10"),
+    # Wedstrijdstatistieken per team-rij, handmatig bijgewerkt (zie
+    # kiosk_stand_volgorde_opslaan) -- Gespeeld/Punten staan er bewust niet
+    # bij, die volgen rechtstreeks uit W/GL/V (3-1-0-systeem). club is de
+    # sleutel naar kiosk_club_logos (zie club_van_team_naam in helpers.py);
+    # NULL voor rijen van voor deze migratie, zie _migreer_stand_club_backfill.
+    ("kiosk_stand_teams", "club", "TEXT"),
+    ("kiosk_stand_teams", "gewonnen", "INTEGER NOT NULL DEFAULT 0"),
+    ("kiosk_stand_teams", "gelijk", "INTEGER NOT NULL DEFAULT 0"),
+    ("kiosk_stand_teams", "verloren", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 
@@ -407,6 +416,19 @@ def _migreer_bieren_backfill(db):
         )
 
 
+def _migreer_stand_club_backfill(db):
+    """club is nieuw op kiosk_stand_teams (voor de koppeling met het
+    logo-register kiosk_club_logos) -- vul 'm eenmalig in voor rijen die er
+    al stonden voordat dat veld bestond. Nieuwe rijen krijgen 'm al meteen
+    bij het toevoegen (zie kiosk_stand_team_nieuw), dus die komen hier nooit
+    doorheen."""
+    for regel in db.execute("SELECT id, naam FROM kiosk_stand_teams WHERE club IS NULL").fetchall():
+        db.execute(
+            "UPDATE kiosk_stand_teams SET club = ? WHERE id = ?",
+            (club_van_team_naam(regel["naam"]), regel["id"]),
+        )
+
+
 def _migreer_club_van_20_datums(db):
     """startdatum/einddatum zijn nieuw: vul ze eenmalig voor bestaande leden
     (van vóór deze functie) met hun aanmaakdatum als startdatum en de op
@@ -478,6 +500,7 @@ def get_db():
             _migreer_kassa_afgesloten(g.db)
             _migreer_bieren_backfill(g.db)
             _migreer_club_van_20_datums(g.db)
+            _migreer_stand_club_backfill(g.db)
             g.db.commit()
             _SCHEMA_TOEGEPAST_VOOR.add(db_pad)
     return g.db
