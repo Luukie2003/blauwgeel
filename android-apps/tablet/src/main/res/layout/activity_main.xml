@@ -19,8 +19,8 @@
             android:layout_height="220dp"
             android:background="@drawable/logo_kader"
             android:contentDescription="@string/app_name"
-            android:padding="28dp"
-            android:src="@drawable/app_icon" />
+            android:padding="24dp"
+            android:src="@drawable/logo_met_schaduw" />
     </FrameLayout>
 
     <!-- Rechts: titel bovenaan, code-invoer daaronder. -->
