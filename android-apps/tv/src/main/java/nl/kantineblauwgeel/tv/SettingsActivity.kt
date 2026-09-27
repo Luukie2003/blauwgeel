@@ -37,6 +37,8 @@ class SettingsActivity : AppCompatActivity() {
         binding.autoStartCheckbox.setOnCheckedChangeListener { _, isChecked ->
             Prefs.setAutoStartEnabled(this, isChecked)
         }
+
+        binding.prijzenZoomSeekbar.requestFocus()
     }
 
     /** Zet 1 scherm z'n eigen zoom-regelaar op -- elk scherm heeft zijn eigen

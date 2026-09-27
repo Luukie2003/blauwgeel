@@ -57,7 +57,9 @@
         <SeekBar
             android:id="@+id/prijzenZoomSeekbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:focusable="true"
+            android:nextFocusDown="@id/prijzenZoomResetKnop" />
 
         <Button
             android:id="@+id/prijzenZoomResetKnop"
@@ -68,6 +70,8 @@
             android:paddingHorizontal="24dp"
             android:text="@string/zoom_reset"
             android:textColor="@color/wit"
+            android:nextFocusUp="@id/prijzenZoomSeekbar"
+            android:nextFocusDown="@id/diasZoomSeekbar"
             app:backgroundTint="@null" />
 
         <!-- Dia's & sponsoren -->
@@ -98,7 +102,10 @@
         <SeekBar
             android:id="@+id/diasZoomSeekbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:focusable="true"
+            android:nextFocusUp="@id/prijzenZoomResetKnop"
+            android:nextFocusDown="@id/diasZoomResetKnop" />
 
         <Button
             android:id="@+id/diasZoomResetKnop"
@@ -109,6 +116,8 @@
             android:paddingHorizontal="24dp"
             android:text="@string/zoom_reset"
             android:textColor="@color/wit"
+            android:nextFocusUp="@id/diasZoomSeekbar"
+            android:nextFocusDown="@id/gedeeldZoomSeekbar"
             app:backgroundTint="@null" />
 
         <!-- Kantine-TV (gedeeld) -->
@@ -139,7 +148,10 @@
         <SeekBar
             android:id="@+id/gedeeldZoomSeekbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:focusable="true"
+            android:nextFocusUp="@id/diasZoomResetKnop"
+            android:nextFocusDown="@id/gedeeldZoomResetKnop" />
 
         <Button
             android:id="@+id/gedeeldZoomResetKnop"
@@ -149,6 +161,8 @@
             android:paddingHorizontal="24dp"
             android:text="@string/zoom_reset"
             android:textColor="@color/wit"
+            android:nextFocusUp="@id/gedeeldZoomSeekbar"
+            android:nextFocusDown="@id/autoStartCheckbox"
             app:backgroundTint="@null" />
 
         <CheckBox
@@ -157,7 +171,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="48dp"
             android:text="@string/auto_start_label"
-            android:textColor="@color/wit" />
+            android:textColor="@color/wit"
+            android:nextFocusUp="@id/gedeeldZoomResetKnop" />
 
     </LinearLayout>
 </ScrollView>
