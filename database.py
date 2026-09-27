@@ -235,6 +235,11 @@ KOLOM_MIGRATIES = [
     # wedstrijden is dat soms te kort om te lezen. Zie _bouw_slides in
     # routes/kiosk.py.
     ("kiosk_scherm_instellingen", "wedstrijden_duur_seconden", "INTEGER NOT NULL DEFAULT 10"),
+    # Standen-dia's (zie kiosk_stand_teams hierboven in schema.sql) -- zelfde
+    # aan/uit + volgorde + duur-opzet als de andere blokken hierboven.
+    ("kiosk_scherm_instellingen", "toon_standen", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "standen_volgorde", "INTEGER NOT NULL DEFAULT 4"),
+    ("kiosk_scherm_instellingen", "standen_duur_seconden", "INTEGER NOT NULL DEFAULT 10"),
 ]
 
 

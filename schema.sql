@@ -480,6 +480,21 @@ CREATE TABLE IF NOT EXISTS kiosk_scherm_instellingen (
 );
 INSERT OR IGNORE INTO kiosk_scherm_instellingen (id) VALUES (1);
 
+-- Standen-dia's op het kantine scherm: per eigen team (poule 'za2'/'za3'/
+-- 'o23') een handmatig bijgehouden, gesleepte volgorde van alle clubs in die
+-- poule -- geen live koppeling met voetbal.nl, gewoon 1x per week zelf
+-- bijwerken (zie kiosk_stand_volgorde_opslaan in routes/kiosk.py).
+-- eigen_team markeert welke rij de vereniging zelf is (voor de uitlichting
+-- op de dia) -- ten hoogste 1 per poule.
+CREATE TABLE IF NOT EXISTS kiosk_stand_teams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    poule TEXT NOT NULL,
+    naam TEXT NOT NULL,
+    eigen_team INTEGER NOT NULL DEFAULT 0,
+    volgorde INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_kiosk_stand_teams_poule ON kiosk_stand_teams(poule, volgorde);
+
 -- 1 rij per paginabezoek, voor Club > Gebruiksstatistieken -- puur intern
 -- inzicht in welke onderdelen daadwerkelijk gebruikt worden (en door wie),
 -- geen externe trackingdienst. gebruiker_id is bewust ON DELETE SET NULL

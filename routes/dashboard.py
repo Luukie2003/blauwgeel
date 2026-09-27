@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.7"
+HUIDIGE_VERSIE = "1.15.8"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.8",
+        "datum": "27 september 2026",
+        "punten": [
+            "Nieuw: standen-dia's op het kantine scherm voor ZA 2, ZA 3 en O23 -- teams zelf slepen in de juiste volgorde bij Kiosk → Dia's & sponsoren",
+        ],
+    },
     {
         "versie": "1.15.7",
         "datum": "27 september 2026",

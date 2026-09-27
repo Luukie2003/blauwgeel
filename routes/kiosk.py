@@ -39,6 +39,13 @@ from helpers import (
 # beheerder 'm terugzet.
 KIOSK_LID_STATUSSEN = {"actief", "inactief", "niet_betaald"}
 
+# De 3 eigen teams waarvan de standen-dia's op het kantine scherm kunnen
+# draaien (zie kiosk_stand_teams in schema.sql) -- vaste, hardcoded lijst
+# net als Screens in de tv-app: dit zijn de 3 teams van de vereniging zelf,
+# geen dynamische invoer.
+STAND_POULES = [("za2", "ZA 2"), ("za3", "ZA 3"), ("o23", "O23")]
+STAND_POULE_SLEUTELS = {sleutel for sleutel, _ in STAND_POULES}
+
 
 def register_routes(app):
     def _voor_hash(waarde):
@@ -202,8 +209,37 @@ def register_routes(app):
                     )
                 )
 
+        if instellingen["toon_standen"]:
+            stand_slides = []
+            for poule, label in STAND_POULES:
+                teams = _stand_teams(db, poule)
+                if not teams:
+                    continue
+                stand_slides.append(
+                    {
+                        "type": "stand",
+                        "duur": instellingen["standen_duur_seconden"],
+                        "titel": label,
+                        "teams": [
+                            {
+                                "positie": i + 1,
+                                "naam": t["naam"],
+                                "eigen_team": bool(t["eigen_team"]),
+                            }
+                            for i, t in enumerate(teams)
+                        ],
+                    }
+                )
+            if stand_slides:
+                blokken.append((instellingen["standen_volgorde"], stand_slides))
+
         blokken.sort(key=lambda blok: blok[0])
         return [slide for _, slides in blokken for slide in slides]
+
+    def _stand_teams(db, poule):
+        return db.execute(
+            "SELECT * FROM kiosk_stand_teams WHERE poule = ? ORDER BY volgorde, id", (poule,)
+        ).fetchall()
 
     # ---------- Hub ----------
 
@@ -1170,6 +1206,8 @@ def register_routes(app):
             aantal_elementen_per_sjabloon=aantal_elementen_per_sjabloon,
             gebruik_per_sjabloon=gebruik_per_sjabloon,
             instellingen=_scherm_instellingen(db),
+            stand_poules=STAND_POULES,
+            stand_teams={poule: _stand_teams(db, poule) for poule, _ in STAND_POULES},
         )
 
     def _sponsor_uit_formulier():
@@ -1652,7 +1690,8 @@ def register_routes(app):
                        club_van_20_titel = ?, club_van_20_namen_per_slide = ?,
                        club_van_20_looptijd_maanden = ?,
                        toon_wedstrijden = ?, wedstrijden_volgorde = ?,
-                       wedstrijden_duur_seconden = ?
+                       wedstrijden_duur_seconden = ?,
+                       toon_standen = ?, standen_volgorde = ?, standen_duur_seconden = ?
                    WHERE id = 1""",
                 (
                     1 if request.form.get("toon_sponsoren") else 0,
@@ -1665,6 +1704,9 @@ def register_routes(app):
                     1 if request.form.get("toon_wedstrijden") else 0,
                     _getal("wedstrijden_volgorde", 3),
                     max(3, _getal("wedstrijden_duur_seconden", 10)),
+                    1 if request.form.get("toon_standen") else 0,
+                    _getal("standen_volgorde", 4),
+                    max(3, _getal("standen_duur_seconden", 10)),
                 ),
             )
             db.commit()
@@ -1676,6 +1718,92 @@ def register_routes(app):
         # Geen eigen pagina meer -- de instellingen staan nu op hetzelfde
         # scherm als de dia's zelf (zie kiosk_sponsoren_leden), dus een GET
         # hierheen (bijv. een oude bladwijzer) stuurt gewoon door.
+        return redirect(url_for("kiosk_sponsoren_leden"))
+
+    @app.route("/kiosk/scherm/standen/team-nieuw", methods=["POST"])
+    def kiosk_stand_team_nieuw():
+        db = get_db()
+        poule = request.form.get("poule", "")
+        if poule not in STAND_POULE_SLEUTELS:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Onbekend team."}), 404
+            flash("Onbekend team.", "error")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+        naam = request.form.get("naam", "").strip()
+        if not naam:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Vul een clubnaam in."}), 400
+            flash("Vul een clubnaam in.", "error")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+        volgende = db.execute(
+            "SELECT COALESCE(MAX(volgorde), -1) + 1 AS volgende FROM kiosk_stand_teams WHERE poule = ?",
+            (poule,),
+        ).fetchone()["volgende"]
+        db.execute(
+            "INSERT INTO kiosk_stand_teams (poule, naam, volgorde) VALUES (?, ?, ?)",
+            (poule, naam, volgende),
+        )
+        db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
+        flash(f"'{naam}' toegevoegd.", "success")
+        return redirect(url_for("kiosk_sponsoren_leden"))
+
+    @app.route("/kiosk/scherm/standen/team/<int:team_id>/verwijderen", methods=["POST"])
+    def kiosk_stand_team_verwijderen(team_id):
+        db = get_db()
+        db.execute("DELETE FROM kiosk_stand_teams WHERE id = ?", (team_id,))
+        db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
+        flash("Team verwijderd.", "success")
+        return redirect(url_for("kiosk_sponsoren_leden"))
+
+    @app.route("/kiosk/scherm/standen/team/<int:team_id>/eigen-team", methods=["POST"])
+    def kiosk_stand_team_eigen_wisselen(team_id):
+        """Markeert dit team als de vereniging zelf (voor de uitlichting op
+        de dia, zie kiosk_scherm.html) -- ten hoogste 1 per poule, dus de
+        rest van dezelfde poule gaat eerst weer uit."""
+        db = get_db()
+        team = db.execute("SELECT * FROM kiosk_stand_teams WHERE id = ?", (team_id,)).fetchone()
+        if team is None:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Team niet gevonden."}), 404
+            flash("Team niet gevonden.", "error")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+        nieuwe_status = 0 if team["eigen_team"] else 1
+        db.execute("UPDATE kiosk_stand_teams SET eigen_team = 0 WHERE poule = ?", (team["poule"],))
+        db.execute("UPDATE kiosk_stand_teams SET eigen_team = ? WHERE id = ?", (nieuwe_status, team_id))
+        db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
+        flash(
+            f"'{team['naam']}' is nu het eigen team." if nieuwe_status else f"'{team['naam']}' is geen eigen team meer.",
+            "success",
+        )
+        return redirect(url_for("kiosk_sponsoren_leden"))
+
+    @app.route("/kiosk/scherm/standen/<poule>/volgorde", methods=["POST"])
+    def kiosk_stand_volgorde_opslaan(poule):
+        db = get_db()
+        if poule not in STAND_POULE_SLEUTELS:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Onbekend team."}), 404
+            flash("Onbekend team.", "error")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+        try:
+            volgorde_ids = json.loads(request.form.get("volgorde") or "[]")
+        except ValueError:
+            volgorde_ids = []
+        for index, team_id in enumerate(volgorde_ids):
+            db.execute(
+                "UPDATE kiosk_stand_teams SET volgorde = ? WHERE id = ? AND poule = ?",
+                (index, team_id, poule),
+            )
+        db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
+        flash("Volgorde opgeslagen.", "success")
         return redirect(url_for("kiosk_sponsoren_leden"))
 
     @app.route("/kiosk/scherm")

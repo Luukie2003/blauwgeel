@@ -281,6 +281,10 @@ SECTIE_ENDPOINTS = {
         "kiosk_lid_status_wisselen",
         "kiosk_lid_verwijderen",
         "kiosk_scherm_instellingen",
+        "kiosk_stand_team_nieuw",
+        "kiosk_stand_team_verwijderen",
+        "kiosk_stand_team_eigen_wisselen",
+        "kiosk_stand_volgorde_opslaan",
     },
     # Losgemaakt van BEHEERDER_ENDPOINTS voor hetzelfde soort reden --
     # agenda/banner raakt geen accounts, categorieën of back-ups. Alleen

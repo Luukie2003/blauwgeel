@@ -109,10 +109,189 @@
             </span>
         </fieldset>
 
+        <fieldset class="groupbox">
+            <legend>Standen</legend>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.7rem">
+                <input type="checkbox" name="toon_standen" style="width:auto"
+                       {{ 'checked' if instellingen.toon_standen }}>
+                Standen tonen
+            </label>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="standen_volgorde">Volgorde</label>
+                    <input type="number" id="standen_volgorde" name="standen_volgorde" min="1"
+                           value="{{ instellingen.standen_volgorde }}" style="max-width:8rem">
+                </div>
+                <div class="veld">
+                    <label for="standen_duur_seconden">Weergaveduur (seconden)</label>
+                    <input type="number" id="standen_duur_seconden" name="standen_duur_seconden" min="3"
+                           value="{{ instellingen.standen_duur_seconden }}" style="max-width:8rem">
+                </div>
+            </div>
+            <span class="tekst-zacht">
+                Voor ZA 2, ZA 3 en O23 een eigen dia met de huidige stand. De teams zelf (en de volgorde)
+                stel je hieronder in -- geen live koppeling met voetbal.nl, dus werk dit zelf 1x per week bij.
+                Een poule zonder teams slaat de diashow vanzelf over.
+            </span>
+        </fieldset>
+
         <button type="submit" class="btn btn-geel">Opslaan</button>
     </form>
 </div>
+
+<div class="kaart" id="standen-teams">
+    <h2 style="margin-top:0">Standen bijwerken</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Sleep de teams in de juiste volgorde (1e plaats bovenaan). Het eigen team staat in het geel.
+    </p>
+    {% for poule, label in stand_poules %}
+    <div class="stand-poule">
+        <h3>{{ label }}</h3>
+        <div class="stand-lijst" data-poule="{{ poule }}">
+            {% for team in stand_teams[poule] %}
+            <div class="stand-item{{ ' stand-item--eigen' if team.eigen_team else '' }}" draggable="true" data-id="{{ team.id }}">
+                <span class="stand-item-naam">{{ team.naam }}</span>
+                <div class="stand-item-knoppen">
+                    <form method="post" action="{{ url_for('kiosk_stand_team_eigen_wisselen', team_id=team.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="stand-item-knop" title="{{ 'Niet meer het eigen team' if team.eigen_team else 'Dit is het eigen team' }}">&#9733;</button>
+                    </form>
+                    <form method="post" action="{{ url_for('kiosk_stand_team_verwijderen', team_id=team.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="stand-item-knop" title="Verwijderen">&times;</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <form method="post" action="{{ url_for('kiosk_stand_volgorde_opslaan', poule=poule) }}"
+              class="stand-volgorde-form" data-poule="{{ poule }}" style="margin-top:0.6rem">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="volgorde" class="stand-volgorde-veld">
+            <button type="submit" class="btn btn-rand btn-klein">Volgorde opslaan</button>
+        </form>
+        <form method="post" action="{{ url_for('kiosk_stand_team_nieuw') }}" style="margin-top:0.6rem; display:flex; gap:0.5rem">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="poule" value="{{ poule }}">
+            <input type="text" name="naam" placeholder="Naam club toevoegen..." style="flex:1">
+            <button type="submit" class="btn btn-rand btn-klein">+ Team</button>
+        </form>
+    </div>
+    {% endfor %}
 </div>
+</div>
+
+<style>
+    .stand-poule + .stand-poule { margin-top: 1.5rem; }
+    .stand-poule h3 {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--tekst-zacht, #6b7280);
+        margin: 0 0 0.4rem;
+    }
+    .stand-lijst {
+        min-height: 3rem;
+        border: 2px dashed #d7dae2;
+        border-radius: 8px;
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+    .stand-lijst.sleep-over { border-color: #1e3a8a; background: rgba(30, 58, 138, 0.05); }
+    .stand-item {
+        background: #fff;
+        border: 1px solid #d7dae2;
+        border-radius: 6px;
+        padding: 0.4rem 0.6rem;
+        cursor: grab;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        user-select: none;
+    }
+    .stand-item.wordt-gesleept { opacity: 0.4; }
+    .stand-item--eigen { background: rgba(252, 212, 47, 0.15); border-color: var(--geel-donker); font-weight: 700; }
+    .stand-item-naam { flex: 1; }
+    .stand-item-knoppen { display: flex; gap: 0.3rem; flex-shrink: 0; }
+    .stand-item-knoppen form { margin: 0; }
+    .stand-item-knop {
+        border: 1px solid #d7dae2;
+        background: #fff;
+        border-radius: 6px;
+        width: 1.8rem;
+        height: 1.8rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+    .stand-item--eigen .stand-item-knop:first-child { color: var(--geel-donker); }
+</style>
+
+<script>
+(function () {
+    // Zelfde vanilla drag-and-drop-opzet als de kolomindeling van het
+    // prijzenscherm hierboven, maar dan 1 losse lijst per poule (geen
+    // slepen tussen ZA 2/ZA 3/O23 heen, dat zou toch nooit de bedoeling
+    // zijn) -- zie kiosk_stand_volgorde_opslaan in routes/kiosk.py.
+    var lijsten = Array.prototype.slice.call(document.querySelectorAll('.stand-lijst'));
+    var gesleeptItem = null;
+
+    lijsten.forEach(function (lijst) {
+        lijst.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            if (!gesleeptItem) return;
+            lijst.classList.add('sleep-over');
+            var voorDit = elementOpPositie(lijst, e.clientY);
+            if (voorDit) {
+                lijst.insertBefore(gesleeptItem, voorDit);
+            } else {
+                lijst.appendChild(gesleeptItem);
+            }
+        });
+        lijst.addEventListener('dragleave', function (e) {
+            if (e.target === lijst) lijst.classList.remove('sleep-over');
+        });
+        lijst.addEventListener('drop', function (e) {
+            e.preventDefault();
+            lijst.classList.remove('sleep-over');
+        });
+    });
+
+    document.querySelectorAll('.stand-item').forEach(function (item) {
+        item.addEventListener('dragstart', function () {
+            gesleeptItem = item;
+            setTimeout(function () { item.classList.add('wordt-gesleept'); }, 0);
+        });
+        item.addEventListener('dragend', function () {
+            item.classList.remove('wordt-gesleept');
+            lijsten.forEach(function (l) { l.classList.remove('sleep-over'); });
+            gesleeptItem = null;
+        });
+    });
+
+    function elementOpPositie(lijst, muisY) {
+        var items = Array.prototype.slice.call(
+            lijst.querySelectorAll('.stand-item:not(.wordt-gesleept)')
+        );
+        for (var i = 0; i < items.length; i++) {
+            var rect = items[i].getBoundingClientRect();
+            if (muisY < rect.top + rect.height / 2) return items[i];
+        }
+        return null;
+    }
+
+    document.querySelectorAll('.stand-volgorde-form').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            var lijst = document.querySelector('.stand-lijst[data-poule="' + form.dataset.poule + '"]');
+            var volgorde = Array.prototype.slice.call(lijst.querySelectorAll('.stand-item'))
+                .map(function (item) { return item.dataset.id; });
+            form.querySelector('.stand-volgorde-veld').value = JSON.stringify(volgorde);
+        });
+    });
+})();
+</script>
 
 <div data-tab-paneel="dias-tabel" hidden>
 <div class="kaart">

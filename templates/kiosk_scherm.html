@@ -128,6 +128,17 @@
                     </div>
                     {% endfor %}
                 </div>
+            {% elif slide.type == 'stand' %}
+                <h2>Stand {{ slide.titel }}</h2>
+                <div class="standdia-lijst">
+                    {% for team in slide.teams %}
+                    <div class="standdia-rij{{ ' standdia-rij--eigen' if team.eigen_team else '' }}"
+                         style="animation-delay: {{ (loop.index0 * 0.06)|round(3) }}s">
+                        <span class="standdia-positie">{{ team.positie }}</span>
+                        <span class="standdia-naam">{{ team.naam }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
             {% endif %}
         </section>
         {% endfor %}
@@ -140,7 +151,7 @@
     <div class="leeg-scherm">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="">
         <h1>Kantine scherm</h1>
-        <p>Er is nog niets ingesteld om te tonen. Zet sponsoren, de Club van 20 of wedstrijden aan bij Kantine scherm instellen.</p>
+        <p>Er is nog niets ingesteld om te tonen. Zet sponsoren, de Club van 20, wedstrijden of standen aan bij Kantine scherm instellen.</p>
     </div>
     {% endif %}
 

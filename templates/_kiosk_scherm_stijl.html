@@ -242,6 +242,53 @@
     to { opacity: 1; transform: translateX(0); }
 }
 
+/* Standen -- eenvoudige gerangschikte lijst per eigen team (ZA 2/ZA 3/O23),
+   handmatig bijgehouden (zie kiosk_stand_teams/kiosk_sponsoren_leden.html),
+   het eigen team springt eruit net als de eerstvolgende wedstrijd hierboven. */
+.slide-stand h2 {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--geel);
+    margin: 0 0 2.2rem;
+    text-shadow: 0 0 34px rgba(252, 212, 47, 0.4);
+}
+.standdia-lijst { width: 100%; max-width: 42rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.standdia-rij {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 0.7rem 1.4rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 14px;
+    text-align: left;
+    opacity: 0;
+}
+.standdia-rij--eigen {
+    background: rgba(252, 212, 47, 0.16);
+    border-color: var(--geel);
+    box-shadow: 0 0 24px rgba(252, 212, 47, 0.22);
+}
+.standdia-positie {
+    flex-shrink: 0;
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    background: var(--blauw);
+    border: 2px solid var(--geel);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.3rem;
+}
+.standdia-naam { font-size: 1.7rem; font-weight: 700; }
+.standdia-rij--eigen .standdia-naam { font-weight: 800; }
+
+.slide-stand.actief .standdia-rij {
+    animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .leeg-scherm { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 1.2rem; color: var(--tekst-zacht); text-align: center; }
 .leeg-scherm img { height: 5rem; width: auto; }
 .leeg-scherm h1 { color: #fff; font-size: 2.2rem; margin: 0; }
