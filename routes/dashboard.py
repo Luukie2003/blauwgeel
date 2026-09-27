@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.6"
+HUIDIGE_VERSIE = "1.15.7"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.7",
+        "datum": "27 september 2026",
+        "punten": [
+            "Weergaveduur van de \"komende thuiswedstrijden\"-dia op het kantine scherm is nu zelf instelbaar (was vast op 10 seconden)",
+        ],
+    },
     {
         "versie": "1.15.6",
         "datum": "27 september 2026",

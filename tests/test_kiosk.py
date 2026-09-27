@@ -1014,6 +1014,7 @@ def test_scherm_instellingen_opslaan(ingelogde_client, db):
             "club_van_20_looptijd_maanden": "6",
             # toon_wedstrijden bewust niet meegestuurd -> uit
             "wedstrijden_volgorde": "3",
+            "wedstrijden_duur_seconden": "20",
         },
     )
     assert resp.status_code == 302
@@ -1025,6 +1026,7 @@ def test_scherm_instellingen_opslaan(ingelogde_client, db):
     assert instellingen["club_van_20_namen_per_slide"] == 2
     assert instellingen["club_van_20_looptijd_maanden"] == 6
     assert instellingen["toon_wedstrijden"] == 0
+    assert instellingen["wedstrijden_duur_seconden"] == 20
 
     # Een nieuw lid gebruikt meteen de zojuist opgeslagen looptijd.
     ingelogde_client.post(
@@ -1105,6 +1107,22 @@ def test_kantine_scherm_toont_wedstrijden_blok_indien_aanwezig(client, db):
     assert b"datumbadge" in resp.data
     assert b"wedstrijd-dag--eerstvolgende" in resp.data
     assert b"Eerstvolgende" in resp.data
+
+
+def test_kantine_scherm_wedstrijden_duur_is_instelbaar(client, db):
+    """Was hardcoded op 10s -- bij meerdere komende wedstrijden soms te kort
+    om te lezen, zie wedstrijden_duur_seconden in kiosk_scherm_instellingen."""
+    from datetime import date, timedelta
+
+    morgen = (date.today() + timedelta(days=1)).isoformat()
+    _voeg_wedstrijd_toe(db, morgen, "1e - Kiosk tegenstander")
+    db.execute("UPDATE kiosk_scherm_instellingen SET wedstrijden_duur_seconden = 25 WHERE id = 1")
+    db.commit()
+
+    resp = client.get("/kiosk/scherm")
+
+    assert resp.status_code == 200
+    assert b'data-duur="25"' in resp.data
 
 
 def test_kantine_scherm_toont_club_van_20_animatie_klassen(client, db):

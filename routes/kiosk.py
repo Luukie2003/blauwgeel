@@ -194,7 +194,11 @@ def register_routes(app):
                 blokken.append(
                     (
                         instellingen["wedstrijden_volgorde"],
-                        [{"type": "wedstrijden", "duur": 10, "dagen": komende}],
+                        [{
+                            "type": "wedstrijden",
+                            "duur": instellingen["wedstrijden_duur_seconden"],
+                            "dagen": komende,
+                        }],
                     )
                 )
 
@@ -1647,7 +1651,8 @@ def register_routes(app):
                        toon_club_van_20 = ?, club_van_20_volgorde = ?,
                        club_van_20_titel = ?, club_van_20_namen_per_slide = ?,
                        club_van_20_looptijd_maanden = ?,
-                       toon_wedstrijden = ?, wedstrijden_volgorde = ?
+                       toon_wedstrijden = ?, wedstrijden_volgorde = ?,
+                       wedstrijden_duur_seconden = ?
                    WHERE id = 1""",
                 (
                     1 if request.form.get("toon_sponsoren") else 0,
@@ -1659,6 +1664,7 @@ def register_routes(app):
                     max(1, _getal("club_van_20_looptijd_maanden", 12)),
                     1 if request.form.get("toon_wedstrijden") else 0,
                     _getal("wedstrijden_volgorde", 3),
+                    max(3, _getal("wedstrijden_duur_seconden", 10)),
                 ),
             )
             db.commit()

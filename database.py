@@ -230,6 +230,11 @@ KOLOM_MIGRATIES = [
     # verschuift weleens (vakantie, extra training, calamiteit) en dan klopt
     # de vaste dag niet. Zie kiosk_trainingsavond_modus_wisselen.
     ("kiosk_prijzen_instellingen", "trainingsavond_modus_actief", "INTEGER NOT NULL DEFAULT 0"),
+    # Weergaveduur (seconden) van het "komende thuiswedstrijden"-blok op het
+    # kantine scherm -- was hardcoded op 10s, maar bij meerdere komende
+    # wedstrijden is dat soms te kort om te lezen. Zie _bouw_slides in
+    # routes/kiosk.py.
+    ("kiosk_scherm_instellingen", "wedstrijden_duur_seconden", "INTEGER NOT NULL DEFAULT 10"),
 ]
 
 

@@ -96,6 +96,12 @@
                 <input type="number" id="wedstrijden_volgorde" name="wedstrijden_volgorde" min="1"
                        value="{{ instellingen.wedstrijden_volgorde }}" style="max-width:8rem">
             </div>
+            <div class="veld">
+                <label for="wedstrijden_duur_seconden">Weergaveduur (seconden)</label>
+                <input type="number" id="wedstrijden_duur_seconden" name="wedstrijden_duur_seconden" min="3"
+                       value="{{ instellingen.wedstrijden_duur_seconden }}" style="max-width:8rem">
+                <span class="tekst-zacht">Bij meerdere komende wedstrijden kan het fijn zijn dit wat langer te zetten.</span>
+            </div>
             <span class="tekst-zacht">
                 Gebruikt de agenda uit <a href="{{ url_for('club_instellingen') }}">Club instellingen</a>. Staat er niets
                 gepland, dan slaat de diashow dit onderdeel vanzelf over. Diezelfde agenda bepaalt ook de
