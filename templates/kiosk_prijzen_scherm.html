@@ -183,54 +183,56 @@
     </style>
 </head>
 <body>
-    <header>
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="">
-        <div>
-            <p class="club">s.v. Blauw-Geel 1915</p>
-            <h1>Prijslijst</h1>
+    <div id="inhoud">
+        <header>
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="">
+            <div>
+                <p class="club">s.v. Blauw-Geel 1915</p>
+                <h1>Prijslijst</h1>
+            </div>
+            <div id="bardienst-header" class="bardienst-header"></div>
+            <div id="klok"></div>
+        </header>
+
+        {% if uitgelicht %}
+        <div class="uitgelicht-kaart{{ ' uitgelicht-kaart--uitverkocht' if uitgelicht.kiosk_uitverkocht else '' }}">
+            <span class="uitgelicht-label">{{ uitgelicht.titel }}</span>
+            <span class="uitgelicht-naam">{{ uitgelicht.naam }}</span>
+            {% if uitgelicht.kiosk_uitverkocht %}
+            <span class="bedrag-uitverkocht">Uitverkocht</span>
+            {% else %}
+            <span class="uitgelicht-bedrag">&euro; {{ '%.2f'|format(uitgelicht.verkoopprijs) }}</span>
+            {% endif %}
         </div>
-        <div id="bardienst-header" class="bardienst-header"></div>
-        <div id="klok"></div>
-    </header>
-
-    {% if uitgelicht %}
-    <div class="uitgelicht-kaart{{ ' uitgelicht-kaart--uitverkocht' if uitgelicht.kiosk_uitverkocht else '' }}">
-        <span class="uitgelicht-label">{{ uitgelicht.titel }}</span>
-        <span class="uitgelicht-naam">{{ uitgelicht.naam }}</span>
-        {% if uitgelicht.kiosk_uitverkocht %}
-        <span class="bedrag-uitverkocht">Uitverkocht</span>
-        {% else %}
-        <span class="uitgelicht-bedrag">&euro; {{ '%.2f'|format(uitgelicht.verkoopprijs) }}</span>
         {% endif %}
-    </div>
-    {% endif %}
 
-    {% if categorieen_kolommen and (categorieen_kolommen[0] or categorieen_kolommen[1] or categorieen_kolommen[2]) %}
-    <div class="prijzen-grid">
-        {% for kolom in categorieen_kolommen if kolom %}
-        <div class="prijzen-kolom">
-            {% for naam, producten in kolom %}
-            <div class="categorie-blok">
-                <h2>{{ naam }}</h2>
-                {% for p in producten %}
-                <div class="prijs-regel{{ ' prijs-regel--uitverkocht' if p.kiosk_uitverkocht else '' }}">
-                    <span class="naam">{{ p.naam }}</span>
-                    <span class="stippel"></span>
-                    {% if p.kiosk_uitverkocht %}
-                    <span class="bedrag-uitverkocht">Uitverkocht</span>
-                    {% else %}
-                    <span class="bedrag">&euro; {{ '%.2f'|format(p.verkoopprijs) }}</span>
-                    {% endif %}
+        {% if categorieen_kolommen and (categorieen_kolommen[0] or categorieen_kolommen[1] or categorieen_kolommen[2]) %}
+        <div class="prijzen-grid">
+            {% for kolom in categorieen_kolommen if kolom %}
+            <div class="prijzen-kolom">
+                {% for naam, producten in kolom %}
+                <div class="categorie-blok">
+                    <h2>{{ naam }}</h2>
+                    {% for p in producten %}
+                    <div class="prijs-regel{{ ' prijs-regel--uitverkocht' if p.kiosk_uitverkocht else '' }}">
+                        <span class="naam">{{ p.naam }}</span>
+                        <span class="stippel"></span>
+                        {% if p.kiosk_uitverkocht %}
+                        <span class="bedrag-uitverkocht">Uitverkocht</span>
+                        {% else %}
+                        <span class="bedrag">&euro; {{ '%.2f'|format(p.verkoopprijs) }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
                 </div>
                 {% endfor %}
             </div>
             {% endfor %}
         </div>
-        {% endfor %}
+        {% else %}
+        <p class="leeg">Er zijn nog geen producten gekozen voor het prijzenscherm.</p>
+        {% endif %}
     </div>
-    {% else %}
-    <p class="leeg">Er zijn nog geen producten gekozen voor het prijzenscherm.</p>
-    {% endif %}
 
     <div id="kiosk-popup" class="kiosk-popup"></div>
 
@@ -336,9 +338,39 @@
             return null;
         }
 
+        // ---------- Alles laten passen op 1 scherm ----------
+        // Dit scherm draait onbemand (geen scrollbalk die iemand gebruikt),
+        // dus alles moet altijd in 1 beeld passen -- ongeacht hoeveel
+        // categorieen/producten er gekozen zijn of of het uitgelichte
+        // product (dat extra hoogte toevoegt boven de kolommen, zie
+        // .uitgelicht-kaart) nu aan staat. In plaats van 1 vaste
+        // lettergrootte die bij veel inhoud overloopt, meet dit de
+        // werkelijke inhoud t.o.v. de beschikbare hoogte en verkleint het
+        // geheel zo nodig met CSS-zoom (behoudt verhoudingen, i.t.t.
+        // transform:scale dat de layout-breedte niet meeschaalt). Nooit
+        // verder dan 60% (zie MINIMALE_SCHAAL): bij zoveel inhoud dat het
+        // dan nog niet past is de kolomindeling zelf te vol geworden en
+        // helpt verder verkleinen toch niet meer leesbaar.
+        var MINIMALE_SCHAAL = 0.6;
+
+        function pasInhoudSchaalAan() {
+            var inhoud = document.getElementById('inhoud');
+            if (!inhoud) return;
+            inhoud.style.zoom = 1;
+            var stijl = getComputedStyle(document.body);
+            var beschikbaar = window.innerHeight
+                - parseFloat(stijl.paddingTop)
+                - parseFloat(stijl.paddingBottom);
+            var nodig = inhoud.scrollHeight;
+            if (nodig <= beschikbaar) return;
+            inhoud.style.zoom = Math.max(MINIMALE_SCHAAL, beschikbaar / nodig);
+        }
+
         werkKlokBij();
         werkBardienstBij();
+        pasInhoudSchaalAan();
         setInterval(function () { werkKlokBij(); werkBardienstBij(); }, 15000);
+        window.addEventListener('resize', pasInhoudSchaalAan);
     </script>
 
     <script>

@@ -84,3 +84,20 @@ def test_uitgelicht_wijziging_verandert_versie(client, ingelogde_client, db):
     _zet_uitgelicht(ingelogde_client, product_id)
     na = client.get("/kiosk/prijzen/versie").get_json()["versie"]
     assert voor != na
+
+
+def test_uitgelicht_kaart_staat_binnen_de_schaalbare_inhoud_wrapper(client, ingelogde_client, db):
+    """De uitgelicht-kaart voegt extra hoogte toe boven de kolommen -- die
+    moet binnen #inhoud vallen, anders telt pasInhoudSchaalAan() (zie
+    kiosk_prijzen_scherm.html) 'm niet mee en loopt het scherm alsnog over
+    zodra deze kaart aan staat."""
+    product_id = _voeg_product_toe(db, "Bitterballen", categorie="Keuken", prijs=4.5, toon_op_kiosk=1)
+    _voeg_product_toe(db, "Chips", categorie="Chips", toon_op_kiosk=1)
+    _zet_uitgelicht(ingelogde_client, product_id, titel="Snack van de week")
+
+    tekst = client.get("/kiosk/prijzen").get_data(as_text=True)
+    assert '<div id="inhoud">' in tekst
+    voor_inhoud = tekst.split('<div id="inhoud">')[1].split('<div id="kiosk-popup"')[0]
+    assert 'uitgelicht-kaart' in voor_inhoud
+    assert 'prijzen-grid' in voor_inhoud
+    assert 'pasInhoudSchaalAan' in tekst

@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.5"
+HUIDIGE_VERSIE = "1.15.6"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.6",
+        "datum": "27 september 2026",
+        "punten": [
+            "Prijzenscherm past zichzelf automatisch aan zodat alles op 1 scherm blijft passen, ook met het uitgelichte product (\"snack van de week\") erbij",
+        ],
+    },
     {
         "versie": "1.15.5",
         "datum": "25 september 2026",
