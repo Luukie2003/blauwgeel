@@ -16,12 +16,16 @@ import nl.kantineblauwgeel.tv.databinding.ActivityPlayerBinding
 class PlayerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPlayerBinding
+    private lateinit var schermSleutel: String
 
     companion object {
         private const val EXTRA_URL = "extra_url"
+        private const val EXTRA_SCHERM_SLEUTEL = "extra_scherm_sleutel"
 
-        fun intentVoor(context: Context, url: String): Intent =
-            Intent(context, PlayerActivity::class.java).putExtra(EXTRA_URL, url)
+        fun intentVoor(context: Context, scherm: Screen): Intent =
+            Intent(context, PlayerActivity::class.java)
+                .putExtra(EXTRA_URL, scherm.url)
+                .putExtra(EXTRA_SCHERM_SLEUTEL, scherm.sleutel)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -33,14 +37,16 @@ class PlayerActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         verbergSysteembalken()
 
-        val url = intent.getStringExtra(EXTRA_URL) ?: Screens.GEDEELD.url
+        val scherm = Screens.opSleutel(intent.getStringExtra(EXTRA_SCHERM_SLEUTEL))
+        val url = intent.getStringExtra(EXTRA_URL) ?: scherm.url
+        schermSleutel = scherm.sleutel
 
         binding.webview.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
             loadWithOverviewMode = true
             useWideViewPort = true
-            textZoom = Prefs.getZoom(this@PlayerActivity)
+            textZoom = Prefs.getZoom(this@PlayerActivity, schermSleutel)
             cacheMode = WebSettings.LOAD_DEFAULT
         }
 
@@ -72,7 +78,7 @@ class PlayerActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         // De zoom kan gewijzigd zijn via het instellingenscherm; opnieuw toepassen.
-        binding.webview.settings.textZoom = Prefs.getZoom(this)
+        binding.webview.settings.textZoom = Prefs.getZoom(this, schermSleutel)
     }
 
     private fun verbergSysteembalken() {

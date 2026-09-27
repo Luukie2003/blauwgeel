@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openScherm(scherm: Screen) {
-        Prefs.setLastUrl(this, scherm.url)
-        startActivity(PlayerActivity.intentVoor(this, scherm.url))
+        Prefs.setLastSchermSleutel(this, scherm.sleutel)
+        startActivity(PlayerActivity.intentVoor(this, scherm))
     }
 }

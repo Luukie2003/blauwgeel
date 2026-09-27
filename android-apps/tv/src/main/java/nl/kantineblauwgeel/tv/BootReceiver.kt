@@ -13,8 +13,8 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
         if (!Prefs.isAutoStartEnabled(context)) return
 
-        val url = Prefs.getLastUrl(context) ?: Screens.GEDEELD.url
-        val playerIntent = PlayerActivity.intentVoor(context, url).apply {
+        val scherm = Screens.opSleutel(Prefs.getLastSchermSleutel(context))
+        val playerIntent = PlayerActivity.intentVoor(context, scherm).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(playerIntent)
