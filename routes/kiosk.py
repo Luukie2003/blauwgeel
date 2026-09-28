@@ -235,7 +235,7 @@ def register_routes(app):
             # dat team, en heeft geen enkel team een speler dan slaat de hele
             # dia over, net als de andere blokken hierboven bij lege data.
             motm_teams = [
-                {"team": t["team"], "speler": t["speler"]}
+                {"team": t["team"], "speler": _motm_namen_weergave(t["speler"])}
                 for t in _motm_teams(db)
                 if (t["speler"] or "").strip()
             ]
@@ -261,6 +261,15 @@ def register_routes(app):
 
     def _motm_teams(db):
         return db.execute("SELECT * FROM kiosk_motm ORDER BY volgorde, id").fetchall()
+
+    def _motm_namen_weergave(speler):
+        """speler mag meerdere, komma-gescheiden namen bevatten (bijv. een
+        gedeelde Man of the Match) -- op de dia worden die netjes met "&"
+        samengevoegd i.p.v. de kale komma's te tonen."""
+        namen = [n.strip() for n in (speler or "").split(",") if n.strip()]
+        if len(namen) <= 1:
+            return namen[0] if namen else ""
+        return ", ".join(namen[:-1]) + " & " + namen[-1]
 
     def _club_logo(db, club):
         rij = db.execute(
@@ -1884,6 +1893,22 @@ def register_routes(app):
                    WHERE id = ? AND poule = ?""",
                 (_getal(s.get("w")), _getal(s.get("gl")), _getal(s.get("v")), team_id, poule),
             )
+        # Teamnaam aanpassen komt in dezelfde submit mee (het naamveld op de
+        # sleeplijst is nu een tekstveld i.p.v. statische tekst) -- club volgt
+        # opnieuw uit de (mogelijk aangepaste) naam, zodat het logo-register
+        # gewoon blijft kloppen. Leeg laten negeert de wijziging.
+        try:
+            namen = json.loads(request.form.get("namen") or "{}")
+        except ValueError:
+            namen = {}
+        for team_id, naam in namen.items():
+            naam = (naam or "").strip()
+            if not naam:
+                continue
+            db.execute(
+                "UPDATE kiosk_stand_teams SET naam = ?, club = ? WHERE id = ? AND poule = ?",
+                (naam, club_van_team_naam(naam), team_id, poule),
+            )
         db.commit()
         if is_ajax_verzoek():
             return jsonify({"ok": True})
@@ -1965,6 +1990,18 @@ def register_routes(app):
                 "UPDATE kiosk_motm SET speler = ? WHERE id = ?",
                 ((speler or "").strip() or None, team_id),
             )
+        # Teamnaam aanpassen komt in dezelfde submit mee, zelfde opzet als
+        # kiosk_stand_volgorde_opslaan hierboven -- leeg laten negeert de
+        # wijziging.
+        try:
+            teamnamen = json.loads(request.form.get("teamnamen") or "{}")
+        except ValueError:
+            teamnamen = {}
+        for team_id, team in teamnamen.items():
+            team = (team or "").strip()
+            if not team:
+                continue
+            db.execute("UPDATE kiosk_motm SET team = ? WHERE id = ?", (team, team_id))
         db.commit()
         if is_ajax_verzoek():
             return jsonify({"ok": True})

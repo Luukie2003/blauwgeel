@@ -117,6 +117,51 @@ def test_volgorde_en_spelers_opslaan(ingelogde_client, db):
     assert rij_b["speler"] is None
 
 
+def test_volgorde_opslaan_past_teamnaam_aan(ingelogde_client, db):
+    team_id = _voeg_team_toe(db, "Oude Naam")
+    ingelogde_client.post(
+        "/kiosk/scherm/motm/volgorde",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "volgorde": json.dumps([team_id]),
+            "teamnamen": json.dumps({team_id: "Nieuwe Naam"}),
+        },
+    )
+    rij = db.execute("SELECT team FROM kiosk_motm WHERE id = ?", (team_id,)).fetchone()
+    assert rij["team"] == "Nieuwe Naam"
+
+
+def test_volgorde_opslaan_lege_teamnaam_wordt_genegeerd(ingelogde_client, db):
+    team_id = _voeg_team_toe(db, "Blijft Gelijk")
+    ingelogde_client.post(
+        "/kiosk/scherm/motm/volgorde",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "volgorde": json.dumps([team_id]),
+            "teamnamen": json.dumps({team_id: "   "}),
+        },
+    )
+    rij = db.execute("SELECT team FROM kiosk_motm WHERE id = ?", (team_id,)).fetchone()
+    assert rij["team"] == "Blijft Gelijk"
+
+
+def test_meerdere_namen_komma_gescheiden_worden_samengevoegd_met_en(client, db):
+    _voeg_team_toe(db, "Eigen Team Alpha", speler="Jan Jansen, Piet Pietersen")
+
+    resp = client.get("/kiosk/scherm")
+    tekst = resp.data.decode()
+    assert "Jan Jansen &amp; Piet Pietersen" in tekst or "Jan Jansen & Piet Pietersen" in tekst
+
+
+def test_drie_namen_komma_gescheiden_toont_komma_en_en(client, db):
+    _voeg_team_toe(db, "Eigen Team Alpha", speler="Jan Jansen, Piet Pietersen, Klaas Klaassen")
+
+    resp = client.get("/kiosk/scherm")
+    tekst = resp.data.decode()
+    assert "Jan Jansen, Piet Pietersen" in tekst
+    assert "Klaassen" in tekst
+
+
 def test_motm_instellingen_opslaan(ingelogde_client, db):
     ingelogde_client.post(
         "/kiosk/scherm/instellingen",

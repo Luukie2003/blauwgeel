@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.10"
+HUIDIGE_VERSIE = "1.15.11"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.11",
+        "datum": "29 september 2026",
+        "punten": [
+            "Teamnamen zijn nu ook achteraf aan te passen (standen en Man of the Match), en bij Man of the Match kunnen meerdere namen (komma-gescheiden) per team ingevuld worden",
+        ],
+    },
     {
         "versie": "1.15.10",
         "datum": "28 september 2026",

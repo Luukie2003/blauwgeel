@@ -168,9 +168,9 @@
 <div class="kaart" id="standen-teams">
     <h2 style="margin-top:0">Standen bijwerken</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Sleep de teams in de juiste volgorde (1e plaats bovenaan) en vul W/GL/V bij -- Gespeeld en Punten
-        volgen daar vanzelf uit. Het eigen team staat in het geel. Klik het logo aan om er 1 te
-        uploaden/vervangen (geldt meteen voor elk team van die club, in elke poule).
+        Sleep de teams in de juiste volgorde (1e plaats bovenaan), pas de naam aan waar nodig en vul
+        W/GL/V bij -- Gespeeld en Punten volgen daar vanzelf uit. Het eigen team staat in het geel. Klik
+        het logo aan om er 1 te uploaden/vervangen (geldt meteen voor elk team van die club, in elke poule).
     </p>
     {% for poule, label in stand_poules %}
     <div class="stand-poule">
@@ -192,7 +192,7 @@
                             <input type="file" name="logo" accept="image/*" onchange="this.form.requestSubmit()">
                         </label>
                     </form>
-                    <span class="stand-item-naam">{{ team.naam }}</span>
+                    <input type="text" class="stand-item-naam-veld" value="{{ team.naam }}" title="Teamnaam aanpassen">
                     <div class="stand-item-knoppen">
                         <form method="post" action="{{ url_for('kiosk_stand_team_eigen_wisselen', team_id=team.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -217,6 +217,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="volgorde" class="stand-volgorde-veld">
             <input type="hidden" name="statistieken" class="stand-statistieken-veld">
+            <input type="hidden" name="namen" class="stand-namen-veld">
             <button type="submit" class="btn btn-rand btn-klein">Stand opslaan</button>
         </form>
         <form method="post" action="{{ url_for('kiosk_stand_team_nieuw') }}" enctype="multipart/form-data"
@@ -234,14 +235,15 @@
 <div class="kaart" id="motm-teams">
     <h2 style="margin-top:0">Man of the Match bijwerken</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Sleep in de gewenste volgorde en vul de naam in bij elk team dat deze week een Man of the
-        Match heeft. Leeg laten = dat team wordt overgeslagen op de dia.
+        Sleep in de gewenste volgorde, pas de teamnaam aan waar nodig en vul de naam in bij elk team
+        dat deze week een Man of the Match heeft. Meerdere mensen? Scheid de namen met een komma
+        (bijv. "Jan Jansen, Piet Pietersen"). Leeg laten = dat team wordt overgeslagen op de dia.
     </p>
     <div class="motm-lijst">
         {% for team in motm_teams %}
         <div class="motm-item" draggable="true" data-id="{{ team.id }}">
-            <span class="motm-item-naam">{{ team.team }}</span>
-            <input type="text" class="motm-speler-veld" placeholder="Naam invullen..." value="{{ team.speler or '' }}">
+            <input type="text" class="motm-item-naam-veld" value="{{ team.team }}" title="Teamnaam aanpassen">
+            <input type="text" class="motm-speler-veld" placeholder="Naam/namen invullen..." value="{{ team.speler or '' }}">
             <form method="post" action="{{ url_for('kiosk_motm_team_verwijderen', team_id=team.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="stand-item-knop" title="Team verwijderen">&times;</button>
@@ -254,6 +256,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="volgorde" class="motm-volgorde-veld">
         <input type="hidden" name="spelers" class="motm-spelers-veld">
+        <input type="hidden" name="teamnamen" class="motm-teamnamen-veld">
         <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
     </form>
     <form method="post" action="{{ url_for('kiosk_motm_team_nieuw') }}"
@@ -295,7 +298,18 @@
     .stand-item.wordt-gesleept { opacity: 0.4; }
     .stand-item--eigen { background: rgba(252, 212, 47, 0.15); border-color: var(--geel-donker); font-weight: 700; }
     .stand-item-top { display: flex; align-items: center; gap: 0.5rem; }
-    .stand-item-naam { flex: 1; }
+    .stand-item-naam-veld {
+        flex: 1;
+        min-width: 0;
+        border: 1px solid transparent;
+        background: transparent;
+        font: inherit;
+        font-weight: inherit;
+        color: inherit;
+        padding: 0.15rem 0.3rem;
+        border-radius: 4px;
+    }
+    .stand-item-naam-veld:hover, .stand-item-naam-veld:focus { border-color: #d7dae2; background: #fff; }
     .stand-item-knoppen { display: flex; gap: 0.3rem; flex-shrink: 0; }
     .stand-item-knoppen form, .stand-logo-form { margin: 0; }
     .stand-item-knop {
@@ -356,7 +370,17 @@
         gap: 0.6rem;
     }
     .motm-item.wordt-gesleept { opacity: 0.4; }
-    .motm-item-naam { flex-shrink: 0; min-width: 6rem; font-weight: 700; }
+    .motm-item-naam-veld {
+        flex-shrink: 0;
+        width: 8rem;
+        font: inherit;
+        font-weight: 700;
+        border: 1px solid transparent;
+        background: transparent;
+        padding: 0.15rem 0.3rem;
+        border-radius: 4px;
+    }
+    .motm-item-naam-veld:hover, .motm-item-naam-veld:focus { border-color: #d7dae2; background: #fff; }
     .motm-speler-veld { flex: 1; }
     .motm-item form { margin: 0; }
 </style>
@@ -420,15 +444,18 @@
             var items = Array.prototype.slice.call(lijst.querySelectorAll('.stand-item'));
             var volgorde = items.map(function (item) { return item.dataset.id; });
             var statistieken = {};
+            var namen = {};
             items.forEach(function (item) {
                 var velden = {};
                 item.querySelectorAll('.stand-stat-veld').forEach(function (input) {
                     velden[input.dataset.veld] = input.value;
                 });
                 statistieken[item.dataset.id] = velden;
+                namen[item.dataset.id] = item.querySelector('.stand-item-naam-veld').value;
             });
             form.querySelector('.stand-volgorde-veld').value = JSON.stringify(volgorde);
             form.querySelector('.stand-statistieken-veld').value = JSON.stringify(statistieken);
+            form.querySelector('.stand-namen-veld').value = JSON.stringify(namen);
         });
     });
 })();
@@ -487,11 +514,14 @@
         var items = Array.prototype.slice.call(lijst.querySelectorAll('.motm-item'));
         var volgorde = items.map(function (item) { return item.dataset.id; });
         var spelers = {};
+        var teamnamen = {};
         items.forEach(function (item) {
             spelers[item.dataset.id] = item.querySelector('.motm-speler-veld').value;
+            teamnamen[item.dataset.id] = item.querySelector('.motm-item-naam-veld').value;
         });
         form.querySelector('.motm-volgorde-veld').value = JSON.stringify(volgorde);
         form.querySelector('.motm-spelers-veld').value = JSON.stringify(spelers);
+        form.querySelector('.motm-teamnamen-veld').value = JSON.stringify(teamnamen);
     });
 })();
 </script>

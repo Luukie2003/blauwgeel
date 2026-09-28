@@ -375,6 +375,35 @@ def test_volgorde_opslaan_negatieve_statistiek_wordt_naar_0_geklemd(ingelogde_cl
     assert (rij["gewonnen"], rij["gelijk"], rij["verloren"]) == (0, 0, 2)
 
 
+def test_volgorde_opslaan_past_teamnaam_en_club_aan(ingelogde_client, db):
+    team_id = _voeg_team_toe(db, "za2", "Oude Naam 5")
+    ingelogde_client.post(
+        "/kiosk/scherm/standen/za2/volgorde",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "volgorde": json.dumps([team_id]),
+            "namen": json.dumps({str(team_id): "Nieuwe Naam 6"}),
+        },
+    )
+    rij = db.execute("SELECT naam, club FROM kiosk_stand_teams WHERE id = ?", (team_id,)).fetchone()
+    assert rij["naam"] == "Nieuwe Naam 6"
+    assert rij["club"] == "Nieuwe Naam"
+
+
+def test_volgorde_opslaan_lege_naam_wordt_genegeerd(ingelogde_client, db):
+    team_id = _voeg_team_toe(db, "za2", "Blijft Gelijk 5")
+    ingelogde_client.post(
+        "/kiosk/scherm/standen/za2/volgorde",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "volgorde": json.dumps([team_id]),
+            "namen": json.dumps({str(team_id): "   "}),
+        },
+    )
+    rij = db.execute("SELECT naam FROM kiosk_stand_teams WHERE id = ?", (team_id,)).fetchone()
+    assert rij["naam"] == "Blijft Gelijk 5"
+
+
 def test_stand_dia_toont_afgeleide_gespeeld_en_punten(client, db):
     """Gespeeld en Punten staan nergens los opgeslagen -- G = W+GL+V en
     P = 3*W + GL (hetzelfde 3-1-0-systeem als voetbal.nl), berekend in
