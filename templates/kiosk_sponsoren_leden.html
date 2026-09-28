@@ -180,7 +180,7 @@
             <div class="stand-item{{ ' stand-item--eigen' if team.eigen_team else '' }}" draggable="true" data-id="{{ team.id }}">
                 <div class="stand-item-top">
                     <form method="post" action="{{ url_for('kiosk_club_logo_opslaan') }}" enctype="multipart/form-data"
-                          class="stand-logo-form">
+                          class="stand-logo-form" draggable="false">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="club" value="{{ team.club }}">
                         <label class="stand-logo-label" title="Logo uploaden/vervangen voor '{{ team.club }}'">
@@ -192,8 +192,8 @@
                             <input type="file" name="logo" accept="image/*" onchange="this.form.requestSubmit()">
                         </label>
                     </form>
-                    <input type="text" class="stand-item-naam-veld" value="{{ team.naam }}" title="Teamnaam aanpassen">
-                    <div class="stand-item-knoppen">
+                    <input type="text" class="stand-item-naam-veld" value="{{ team.naam }}" title="Teamnaam aanpassen" draggable="false">
+                    <div class="stand-item-knoppen" draggable="false">
                         <form method="post" action="{{ url_for('kiosk_stand_team_eigen_wisselen', team_id=team.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="stand-item-knop" title="{{ 'Niet meer het eigen team' if team.eigen_team else 'Dit is het eigen team' }}">&#9733;</button>
@@ -204,7 +204,7 @@
                         </form>
                     </div>
                 </div>
-                <div class="stand-item-stats">
+                <div class="stand-item-stats" draggable="false">
                     <label>W<input type="number" min="0" class="stand-stat-veld" data-veld="w" value="{{ team.gewonnen }}"></label>
                     <label>GL<input type="number" min="0" class="stand-stat-veld" data-veld="gl" value="{{ team.gelijk }}"></label>
                     <label>V<input type="number" min="0" class="stand-stat-veld" data-veld="v" value="{{ team.verloren }}"></label>
@@ -242,9 +242,9 @@
     <div class="motm-lijst">
         {% for team in motm_teams %}
         <div class="motm-item" draggable="true" data-id="{{ team.id }}">
-            <input type="text" class="motm-item-naam-veld" value="{{ team.team }}" title="Teamnaam aanpassen">
-            <input type="text" class="motm-speler-veld" placeholder="Naam/namen invullen..." value="{{ team.speler or '' }}">
-            <form method="post" action="{{ url_for('kiosk_motm_team_verwijderen', team_id=team.id) }}">
+            <input type="text" class="motm-item-naam-veld" value="{{ team.team }}" title="Teamnaam aanpassen" draggable="false">
+            <input type="text" class="motm-speler-veld" placeholder="Naam/namen invullen..." value="{{ team.speler or '' }}" draggable="false">
+            <form method="post" action="{{ url_for('kiosk_motm_team_verwijderen', team_id=team.id) }}" draggable="false">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="stand-item-knop" title="Team verwijderen">&times;</button>
             </form>
