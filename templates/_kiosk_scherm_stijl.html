@@ -300,6 +300,36 @@
     animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Man of the Match -- in de stijl van voetbal.nl, maar zonder foto's: een
+   sobere lijst van team + speler, alleen teams met een ingevulde speler (zie
+   kiosk_motm/_bouw_slides). */
+.slide-motm h2 {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--geel);
+    margin: 0 0 2.2rem;
+    text-shadow: 0 0 34px rgba(252, 212, 47, 0.4);
+}
+.motmdia-lijst { width: 100%; max-width: 56rem; display: flex; flex-direction: column; gap: 0.7rem; }
+.motmdia-rij {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.4rem;
+    padding: 0.9rem 1.8rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 14px;
+    text-align: left;
+    opacity: 0;
+}
+.motmdia-team { flex-shrink: 0; font-size: 1.15rem; font-weight: 700; color: var(--tekst-zacht); text-transform: uppercase; letter-spacing: 0.03em; }
+.motmdia-speler { font-size: 1.9rem; font-weight: 800; color: var(--geel); text-align: right; }
+
+.slide-motm.actief .motmdia-rij {
+    animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .leeg-scherm { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 1.2rem; color: var(--tekst-zacht); text-align: center; }
 .leeg-scherm img { height: 5rem; width: auto; }
 .leeg-scherm h1 { color: #fff; font-size: 2.2rem; margin: 0; }

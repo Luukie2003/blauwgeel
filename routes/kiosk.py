@@ -229,6 +229,28 @@ def register_routes(app):
             if stand_slides:
                 blokken.append((instellingen["standen_volgorde"], stand_slides))
 
+        if instellingen["toon_motm"]:
+            # Alleen teams met een ingevulde speler komen op de dia (zie
+            # kiosk_motm_volgorde_opslaan) -- leeg = geen MOTM die week voor
+            # dat team, en heeft geen enkel team een speler dan slaat de hele
+            # dia over, net als de andere blokken hierboven bij lege data.
+            motm_teams = [
+                {"team": t["team"], "speler": t["speler"]}
+                for t in _motm_teams(db)
+                if (t["speler"] or "").strip()
+            ]
+            if motm_teams:
+                blokken.append(
+                    (
+                        instellingen["motm_volgorde"],
+                        [{
+                            "type": "motm",
+                            "duur": instellingen["motm_duur_seconden"],
+                            "teams": motm_teams,
+                        }],
+                    )
+                )
+
         blokken.sort(key=lambda blok: blok[0])
         return [slide for _, slides in blokken for slide in slides]
 
@@ -236,6 +258,9 @@ def register_routes(app):
         return db.execute(
             "SELECT * FROM kiosk_stand_teams WHERE poule = ? ORDER BY volgorde, id", (poule,)
         ).fetchall()
+
+    def _motm_teams(db):
+        return db.execute("SELECT * FROM kiosk_motm ORDER BY volgorde, id").fetchall()
 
     def _club_logo(db, club):
         rij = db.execute(
@@ -1231,6 +1256,7 @@ def register_routes(app):
             club_logos={
                 r["club"]: r["afbeelding"] for r in db.execute("SELECT club, afbeelding FROM kiosk_club_logos").fetchall()
             },
+            motm_teams=_motm_teams(db),
         )
 
     def _sponsor_uit_formulier():
@@ -1714,7 +1740,8 @@ def register_routes(app):
                        club_van_20_looptijd_maanden = ?,
                        toon_wedstrijden = ?, wedstrijden_volgorde = ?,
                        wedstrijden_duur_seconden = ?,
-                       toon_standen = ?, standen_volgorde = ?, standen_duur_seconden = ?
+                       toon_standen = ?, standen_volgorde = ?, standen_duur_seconden = ?,
+                       toon_motm = ?, motm_volgorde = ?, motm_duur_seconden = ?
                    WHERE id = 1""",
                 (
                     1 if request.form.get("toon_sponsoren") else 0,
@@ -1730,6 +1757,9 @@ def register_routes(app):
                     1 if request.form.get("toon_standen") else 0,
                     _getal("standen_volgorde", 4),
                     max(3, _getal("standen_duur_seconden", 10)),
+                    1 if request.form.get("toon_motm") else 0,
+                    _getal("motm_volgorde", 5),
+                    max(3, _getal("motm_duur_seconden", 10)),
                 ),
             )
             db.commit()
@@ -1884,6 +1914,61 @@ def register_routes(app):
         if is_ajax_verzoek():
             return jsonify({"ok": True})
         flash(f"Logo voor '{club}' opgeslagen.", "success")
+        return redirect(url_for("kiosk_sponsoren_leden"))
+
+    @app.route("/kiosk/scherm/motm/team-nieuw", methods=["POST"])
+    def kiosk_motm_team_nieuw():
+        db = get_db()
+        team = request.form.get("team", "").strip()
+        if not team:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Vul een teamnaam in."}), 400
+            flash("Vul een teamnaam in.", "error")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+        volgende = db.execute(
+            "SELECT COALESCE(MAX(volgorde), -1) + 1 AS volgende FROM kiosk_motm"
+        ).fetchone()["volgende"]
+        db.execute("INSERT INTO kiosk_motm (team, volgorde) VALUES (?, ?)", (team, volgende))
+        db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
+        flash(f"'{team}' toegevoegd.", "success")
+        return redirect(url_for("kiosk_sponsoren_leden"))
+
+    @app.route("/kiosk/scherm/motm/team/<int:team_id>/verwijderen", methods=["POST"])
+    def kiosk_motm_team_verwijderen(team_id):
+        db = get_db()
+        db.execute("DELETE FROM kiosk_motm WHERE id = ?", (team_id,))
+        db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
+        flash("Team verwijderd.", "success")
+        return redirect(url_for("kiosk_sponsoren_leden"))
+
+    @app.route("/kiosk/scherm/motm/volgorde", methods=["POST"])
+    def kiosk_motm_volgorde_opslaan():
+        """1 knop voor zowel de volgorde als de bijgewerkte MOTM-namen, zelfde
+        opzet als kiosk_stand_volgorde_opslaan hierboven."""
+        db = get_db()
+        try:
+            volgorde_ids = json.loads(request.form.get("volgorde") or "[]")
+        except ValueError:
+            volgorde_ids = []
+        for index, team_id in enumerate(volgorde_ids):
+            db.execute("UPDATE kiosk_motm SET volgorde = ? WHERE id = ?", (index, team_id))
+        try:
+            spelers = json.loads(request.form.get("spelers") or "{}")
+        except ValueError:
+            spelers = {}
+        for team_id, speler in spelers.items():
+            db.execute(
+                "UPDATE kiosk_motm SET speler = ? WHERE id = ?",
+                ((speler or "").strip() or None, team_id),
+            )
+        db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
+        flash("Man of the Match opgeslagen.", "success")
         return redirect(url_for("kiosk_sponsoren_leden"))
 
     @app.route("/kiosk/scherm")

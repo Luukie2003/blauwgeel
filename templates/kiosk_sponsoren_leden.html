@@ -135,6 +135,32 @@
             </span>
         </fieldset>
 
+        <fieldset class="groupbox">
+            <legend>Man of the Match</legend>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.7rem">
+                <input type="checkbox" name="toon_motm" style="width:auto"
+                       {{ 'checked' if instellingen.toon_motm }}>
+                Man of the Match tonen
+            </label>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="motm_volgorde">Volgorde</label>
+                    <input type="number" id="motm_volgorde" name="motm_volgorde" min="1"
+                           value="{{ instellingen.motm_volgorde }}" style="max-width:8rem">
+                </div>
+                <div class="veld">
+                    <label for="motm_duur_seconden">Weergaveduur (seconden)</label>
+                    <input type="number" id="motm_duur_seconden" name="motm_duur_seconden" min="3"
+                           value="{{ instellingen.motm_duur_seconden }}" style="max-width:8rem">
+                </div>
+            </div>
+            <span class="tekst-zacht">
+                1 dia met alle teams die deze week een Man of the Match hebben. Laat je een team leeg,
+                dan slaat de dia dat team over -- heeft geen enkel team een naam staan, dan slaat de
+                diashow deze dia helemaal over. De teams zelf stel je hieronder in.
+            </span>
+        </fieldset>
+
         <button type="submit" class="btn btn-geel">Opslaan</button>
     </form>
 </div>
@@ -203,6 +229,39 @@
         </form>
     </div>
     {% endfor %}
+</div>
+
+<div class="kaart" id="motm-teams">
+    <h2 style="margin-top:0">Man of the Match bijwerken</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Sleep in de gewenste volgorde en vul de naam in bij elk team dat deze week een Man of the
+        Match heeft. Leeg laten = dat team wordt overgeslagen op de dia.
+    </p>
+    <div class="motm-lijst">
+        {% for team in motm_teams %}
+        <div class="motm-item" draggable="true" data-id="{{ team.id }}">
+            <span class="motm-item-naam">{{ team.team }}</span>
+            <input type="text" class="motm-speler-veld" placeholder="Naam invullen..." value="{{ team.speler or '' }}">
+            <form method="post" action="{{ url_for('kiosk_motm_team_verwijderen', team_id=team.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="stand-item-knop" title="Team verwijderen">&times;</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    <form method="post" action="{{ url_for('kiosk_motm_volgorde_opslaan') }}" class="motm-volgorde-form"
+          style="margin-top:0.6rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="volgorde" class="motm-volgorde-veld">
+        <input type="hidden" name="spelers" class="motm-spelers-veld">
+        <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
+    </form>
+    <form method="post" action="{{ url_for('kiosk_motm_team_nieuw') }}"
+          style="margin-top:0.6rem; display:flex; gap:0.5rem; align-items:center">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="text" name="team" placeholder="Teamnaam toevoegen (bijv. ZA 1)..." style="flex:1">
+        <button type="submit" class="btn btn-rand btn-klein">+ Team</button>
+    </form>
 </div>
 </div>
 
@@ -274,6 +333,32 @@
         color: var(--tekst-zacht, #6b7280);
     }
     .stand-stat-veld { width: 3rem; padding: 0.15rem 0.3rem; }
+
+    .motm-lijst {
+        min-height: 3rem;
+        border: 2px dashed #d7dae2;
+        border-radius: 8px;
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+    .motm-lijst.sleep-over { border-color: #1e3a8a; background: rgba(30, 58, 138, 0.05); }
+    .motm-item {
+        background: #fff;
+        border: 1px solid #d7dae2;
+        border-radius: 6px;
+        padding: 0.4rem 0.6rem;
+        cursor: grab;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .motm-item.wordt-gesleept { opacity: 0.4; }
+    .motm-item-naam { flex-shrink: 0; min-width: 6rem; font-weight: 700; }
+    .motm-speler-veld { flex: 1; }
+    .motm-item form { margin: 0; }
 </style>
 
 <script>
@@ -345,6 +430,68 @@
             form.querySelector('.stand-volgorde-veld').value = JSON.stringify(volgorde);
             form.querySelector('.stand-statistieken-veld').value = JSON.stringify(statistieken);
         });
+    });
+})();
+</script>
+
+<script>
+(function () {
+    // Zelfde vanilla drag-and-drop-opzet als de standen-lijst hierboven, maar
+    // dan 1 platte lijst (geen poules) -- zie kiosk_motm_volgorde_opslaan.
+    var lijst = document.querySelector('.motm-lijst');
+    if (!lijst) return;
+    var gesleeptItem = null;
+
+    lijst.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        if (!gesleeptItem) return;
+        lijst.classList.add('sleep-over');
+        var voorDit = elementOpPositie(e.clientY);
+        if (voorDit) {
+            lijst.insertBefore(gesleeptItem, voorDit);
+        } else {
+            lijst.appendChild(gesleeptItem);
+        }
+    });
+    lijst.addEventListener('dragleave', function (e) {
+        if (e.target === lijst) lijst.classList.remove('sleep-over');
+    });
+    lijst.addEventListener('drop', function (e) {
+        e.preventDefault();
+        lijst.classList.remove('sleep-over');
+    });
+
+    lijst.querySelectorAll('.motm-item').forEach(function (item) {
+        item.addEventListener('dragstart', function () {
+            gesleeptItem = item;
+            setTimeout(function () { item.classList.add('wordt-gesleept'); }, 0);
+        });
+        item.addEventListener('dragend', function () {
+            item.classList.remove('wordt-gesleept');
+            lijst.classList.remove('sleep-over');
+            gesleeptItem = null;
+        });
+    });
+
+    function elementOpPositie(muisY) {
+        var items = Array.prototype.slice.call(lijst.querySelectorAll('.motm-item:not(.wordt-gesleept)'));
+        for (var i = 0; i < items.length; i++) {
+            var rect = items[i].getBoundingClientRect();
+            if (muisY < rect.top + rect.height / 2) return items[i];
+        }
+        return null;
+    }
+
+    var form = document.querySelector('.motm-volgorde-form');
+    form.addEventListener('submit', function () {
+        var items = Array.prototype.slice.call(lijst.querySelectorAll('.motm-item'));
+        var volgorde = items.map(function (item) { return item.dataset.id; });
+        var spelers = {};
+        items.forEach(function (item) {
+            spelers[item.dataset.id] = item.querySelector('.motm-speler-veld').value;
+        });
+        form.querySelector('.motm-volgorde-veld').value = JSON.stringify(volgorde);
+        form.querySelector('.motm-spelers-veld').value = JSON.stringify(spelers);
     });
 })();
 </script>

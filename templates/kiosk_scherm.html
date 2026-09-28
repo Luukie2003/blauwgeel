@@ -144,6 +144,16 @@
                     </div>
                     {% endfor %}
                 </div>
+            {% elif slide.type == 'motm' %}
+                <h2>Man of the Match</h2>
+                <div class="motmdia-lijst">
+                    {% for team in slide.teams %}
+                    <div class="motmdia-rij" style="animation-delay: {{ (loop.index0 * 0.08)|round(3) }}s">
+                        <span class="motmdia-team">{{ team.team }}</span>
+                        <span class="motmdia-speler">{{ team.speler }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
             {% endif %}
         </section>
         {% endfor %}

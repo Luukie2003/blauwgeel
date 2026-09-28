@@ -512,6 +512,19 @@ CREATE TABLE IF NOT EXISTS kiosk_club_logos (
     UNIQUE(club)
 );
 
+-- Man of the Match-dia (kantine scherm), in de stijl van voetbal.nl maar dan
+-- zonder foto's -- elk eigen team staat hier 1x, speler wordt handmatig elke
+-- week bijgewerkt (geen live koppeling). Een lege speler betekent "geen MOTM
+-- deze week"; dat team slaat de dia dan over, en heeft geen enkel team een
+-- speler, dan slaat de hele diashow deze dia over. Zie _bouw_slides en
+-- kiosk_sponsoren_leden.html.
+CREATE TABLE IF NOT EXISTS kiosk_motm (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team TEXT NOT NULL,
+    speler TEXT,
+    volgorde INTEGER NOT NULL DEFAULT 0
+);
+
 -- 1 rij per paginabezoek, voor Club > Gebruiksstatistieken -- puur intern
 -- inzicht in welke onderdelen daadwerkelijk gebruikt worden (en door wie),
 -- geen externe trackingdienst. gebruiker_id is bewust ON DELETE SET NULL

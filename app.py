@@ -286,6 +286,9 @@ SECTIE_ENDPOINTS = {
         "kiosk_stand_team_eigen_wisselen",
         "kiosk_stand_volgorde_opslaan",
         "kiosk_club_logo_opslaan",
+        "kiosk_motm_team_nieuw",
+        "kiosk_motm_team_verwijderen",
+        "kiosk_motm_volgorde_opslaan",
     },
     # Losgemaakt van BEHEERDER_ENDPOINTS voor hetzelfde soort reden --
     # agenda/banner raakt geen accounts, categorieën of back-ups. Alleen

@@ -249,6 +249,11 @@ KOLOM_MIGRATIES = [
     ("kiosk_stand_teams", "gewonnen", "INTEGER NOT NULL DEFAULT 0"),
     ("kiosk_stand_teams", "gelijk", "INTEGER NOT NULL DEFAULT 0"),
     ("kiosk_stand_teams", "verloren", "INTEGER NOT NULL DEFAULT 0"),
+    # Man of the Match-dia (zie kiosk_motm hierboven in schema.sql) -- zelfde
+    # aan/uit + volgorde + duur-opzet als de andere blokken hierboven.
+    ("kiosk_scherm_instellingen", "toon_motm", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "motm_volgorde", "INTEGER NOT NULL DEFAULT 5"),
+    ("kiosk_scherm_instellingen", "motm_duur_seconden", "INTEGER NOT NULL DEFAULT 10"),
 ]
 
 
