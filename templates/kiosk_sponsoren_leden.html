@@ -127,11 +127,27 @@
                     <input type="number" id="standen_duur_seconden" name="standen_duur_seconden" min="3"
                            value="{{ instellingen.standen_duur_seconden }}" style="max-width:8rem">
                 </div>
+                <div class="veld">
+                    <label for="standen_titel_za2">Titel 1e poule</label>
+                    <input type="text" id="standen_titel_za2" name="standen_titel_za2"
+                           value="{{ instellingen.standen_titel_za2 }}">
+                </div>
+                <div class="veld">
+                    <label for="standen_titel_za3">Titel 2e poule</label>
+                    <input type="text" id="standen_titel_za3" name="standen_titel_za3"
+                           value="{{ instellingen.standen_titel_za3 }}">
+                </div>
+                <div class="veld">
+                    <label for="standen_titel_o23">Titel 3e poule</label>
+                    <input type="text" id="standen_titel_o23" name="standen_titel_o23"
+                           value="{{ instellingen.standen_titel_o23 }}">
+                </div>
             </div>
             <span class="tekst-zacht">
-                Voor ZA 2, ZA 3 en O23 een eigen dia met de huidige stand. De teams zelf (en de volgorde)
-                stel je hieronder in -- geen live koppeling met voetbal.nl, dus werk dit zelf 1x per week bij.
-                Een poule zonder teams slaat de diashow vanzelf over.
+                3 eigen dia's met de huidige stand -- de titel hierboven bepaalt wat er op de dia zelf
+                staat (bijv. "Zaterdag 2" i.p.v. "ZA 2"). De teams zelf (en de volgorde) stel je
+                hieronder in bij "Standen bijwerken" -- geen live koppeling met voetbal.nl, dus werk dit
+                zelf 1x per week bij. Een poule zonder teams slaat de diashow vanzelf over.
             </span>
         </fieldset>
 
@@ -174,7 +190,7 @@
     </p>
     {% for poule, label in stand_poules %}
     <div class="stand-poule">
-        <h3>{{ label }}</h3>
+        <h3>{{ standen_titels[poule] }}</h3>
         <div class="stand-lijst" data-poule="{{ poule }}">
             {% for team in stand_teams[poule] %}
             <div class="stand-item{{ ' stand-item--eigen' if team.eigen_team else '' }}" draggable="true" data-id="{{ team.id }}">

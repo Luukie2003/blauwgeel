@@ -254,6 +254,13 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "toon_motm", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "motm_volgorde", "INTEGER NOT NULL DEFAULT 5"),
     ("kiosk_scherm_instellingen", "motm_duur_seconden", "INTEGER NOT NULL DEFAULT 10"),
+    # Zelf gekozen titel per standen-poule op de dia/beheerpagina (bijv. "ZA 2"
+    # aanpassen naar "Zaterdag 2") -- los van de poule-sleutel zelf (za2/za3/
+    # o23), die blijft intern ongewijzigd voor de routes/rijen. Zie
+    # STAND_TITEL_KOLOM in routes/kiosk.py.
+    ("kiosk_scherm_instellingen", "standen_titel_za2", "TEXT NOT NULL DEFAULT 'ZA 2'"),
+    ("kiosk_scherm_instellingen", "standen_titel_za3", "TEXT NOT NULL DEFAULT 'ZA 3'"),
+    ("kiosk_scherm_instellingen", "standen_titel_o23", "TEXT NOT NULL DEFAULT 'O23'"),
 ]
 
 

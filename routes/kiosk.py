@@ -48,6 +48,10 @@ KIOSK_LID_STATUSSEN = {"actief", "inactief", "niet_betaald"}
 # geen dynamische invoer.
 STAND_POULES = [("za2", "ZA 2"), ("za3", "ZA 3"), ("o23", "O23")]
 STAND_POULE_SLEUTELS = {sleutel for sleutel, _ in STAND_POULES}
+# Kolom in kiosk_scherm_instellingen met de zelf gekozen titel per poule (het
+# tweede element van STAND_POULES hierboven is enkel nog de STANDAARDtitel,
+# voor als deze kolom leeg/onbekend is). Zie kiosk_scherm_instellingen hieronder.
+STAND_TITEL_KOLOM = {"za2": "standen_titel_za2", "za3": "standen_titel_za3", "o23": "standen_titel_o23"}
 
 
 def register_routes(app):
@@ -214,7 +218,7 @@ def register_routes(app):
 
         if instellingen["toon_standen"]:
             stand_slides = []
-            for poule, label in STAND_POULES:
+            for poule, _ in STAND_POULES:
                 teams = _stand_teams(db, poule)
                 if not teams:
                     continue
@@ -222,7 +226,7 @@ def register_routes(app):
                     {
                         "type": "stand",
                         "duur": instellingen["standen_duur_seconden"],
-                        "titel": label,
+                        "titel": instellingen[STAND_TITEL_KOLOM[poule]],
                         "teams": [_stand_team_weergave(db, i + 1, t) for i, t in enumerate(teams)],
                     }
                 )
@@ -1251,6 +1255,7 @@ def register_routes(app):
         aantal_elementen_per_sjabloon = {
             s["id"]: len(json.loads(s["elementen"])) for s in sjablonen_custom
         }
+        instellingen = _scherm_instellingen(db)
         return render_template(
             "kiosk_sponsoren_leden.html",
             sponsoren=sponsoren,
@@ -1259,9 +1264,10 @@ def register_routes(app):
             sjablonen_custom=sjablonen_custom,
             aantal_elementen_per_sjabloon=aantal_elementen_per_sjabloon,
             gebruik_per_sjabloon=gebruik_per_sjabloon,
-            instellingen=_scherm_instellingen(db),
+            instellingen=instellingen,
             stand_poules=STAND_POULES,
             stand_teams={poule: _stand_teams(db, poule) for poule, _ in STAND_POULES},
+            standen_titels={poule: instellingen[kolom] for poule, kolom in STAND_TITEL_KOLOM.items()},
             club_logos={
                 r["club"]: r["afbeelding"] for r in db.execute("SELECT club, afbeelding FROM kiosk_club_logos").fetchall()
             },
@@ -1750,6 +1756,7 @@ def register_routes(app):
                        toon_wedstrijden = ?, wedstrijden_volgorde = ?,
                        wedstrijden_duur_seconden = ?,
                        toon_standen = ?, standen_volgorde = ?, standen_duur_seconden = ?,
+                       standen_titel_za2 = ?, standen_titel_za3 = ?, standen_titel_o23 = ?,
                        toon_motm = ?, motm_volgorde = ?, motm_duur_seconden = ?
                    WHERE id = 1""",
                 (
@@ -1766,6 +1773,9 @@ def register_routes(app):
                     1 if request.form.get("toon_standen") else 0,
                     _getal("standen_volgorde", 4),
                     max(3, _getal("standen_duur_seconden", 10)),
+                    request.form.get("standen_titel_za2", "").strip() or "ZA 2",
+                    request.form.get("standen_titel_za3", "").strip() or "ZA 3",
+                    request.form.get("standen_titel_o23", "").strip() or "O23",
                     1 if request.form.get("toon_motm") else 0,
                     _getal("motm_volgorde", 5),
                     max(3, _getal("motm_duur_seconden", 10)),

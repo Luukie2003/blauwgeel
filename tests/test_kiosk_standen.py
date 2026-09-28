@@ -200,6 +200,44 @@ def test_standen_duur_is_instelbaar_op_de_dia(client, ingelogde_client, db):
     assert 'data-duur="18"' in stukje
 
 
+def test_standen_titel_is_standaard_za2(client, db):
+    _voeg_team_toe(db, "za2", "Concurrent A")
+    resp = client.get("/kiosk/scherm")
+    assert "Stand ZA 2" in resp.data.decode()
+
+
+def test_standen_titel_is_aan_te_passen(client, ingelogde_client, db):
+    _voeg_team_toe(db, "za2", "Concurrent A")
+    ingelogde_client.post(
+        "/kiosk/scherm/instellingen",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "toon_standen": "on",
+            "standen_titel_za2": "Zaterdag 2",
+        },
+    )
+
+    resp = client.get("/kiosk/scherm")
+    tekst = resp.data.decode()
+    assert "Stand Zaterdag 2" in tekst
+    assert "Stand ZA 2" not in tekst
+
+    instellingen = db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
+    assert instellingen["standen_titel_za2"] == "Zaterdag 2"
+    # De andere twee poules blijven op hun standaardtitel staan.
+    assert instellingen["standen_titel_za3"] == "ZA 3"
+    assert instellingen["standen_titel_o23"] == "O23"
+
+
+def test_standen_titel_leeg_valt_terug_op_standaard(ingelogde_client, db):
+    ingelogde_client.post(
+        "/kiosk/scherm/instellingen",
+        data={"csrf_token": _csrf(ingelogde_client), "standen_titel_za2": "   "},
+    )
+    instellingen = db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
+    assert instellingen["standen_titel_za2"] == "ZA 2"
+
+
 # ---------- club_van_team_naam ----------
 
 
