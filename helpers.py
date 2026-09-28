@@ -173,8 +173,8 @@ def sla_club_logo_op(bestand):
 
 def bewaar_club_logo(db, club, afbeelding):
     """Zelfde register-idee als bewaar_bier hierboven, maar dan voor
-    clublogo's op de standen-dia's (zie kiosk_stand_teams/STAND_POULES in
-    routes/kiosk.py): 1 keer een logo uploaden voor bijv. "Oranje Nassau",
+    clublogo's op de standen-dia's (zie kiosk_stand_teams/kiosk_stand_poules
+    in routes/kiosk.py): 1 keer een logo uploaden voor bijv. "Oranje Nassau",
     en elk team van die club (welke poule dan ook, dit of een volgend
     seizoen) gebruikt 'm automatisch. Bestond de club al, dan wordt alleen
     het logo bijgewerkt (en enkel als er een nieuwe is)."""
@@ -521,7 +521,7 @@ def bepaal_tegenstander(omschrijving):
 
 def club_van_team_naam(naam):
     """Haalt de clubnaam uit een teamnaam zoals "Oranje Nassau 5" of
-    "Blauw Geel'15 O23-1" (zie kiosk_stand_teams/STAND_POULES in
+    "Blauw Geel'15 O23-1" (zie kiosk_stand_teams/kiosk_stand_poules in
     routes/kiosk.py) door alleen het LAATSTE team-volgnummer te strippen --
     bijv. "5"/"6" of een jeugdcode als "O23-1". Zo blijft een jaartal dat
     toevallig in de clubnaam zelf zit (bijv. "Velocitas 1897", "Be Quick

@@ -254,13 +254,6 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "toon_motm", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "motm_volgorde", "INTEGER NOT NULL DEFAULT 5"),
     ("kiosk_scherm_instellingen", "motm_duur_seconden", "INTEGER NOT NULL DEFAULT 10"),
-    # Zelf gekozen titel per standen-poule op de dia/beheerpagina (bijv. "ZA 2"
-    # aanpassen naar "Zaterdag 2") -- los van de poule-sleutel zelf (za2/za3/
-    # o23), die blijft intern ongewijzigd voor de routes/rijen. Zie
-    # STAND_TITEL_KOLOM in routes/kiosk.py.
-    ("kiosk_scherm_instellingen", "standen_titel_za2", "TEXT NOT NULL DEFAULT 'ZA 2'"),
-    ("kiosk_scherm_instellingen", "standen_titel_za3", "TEXT NOT NULL DEFAULT 'ZA 3'"),
-    ("kiosk_scherm_instellingen", "standen_titel_o23", "TEXT NOT NULL DEFAULT 'O23'"),
 ]
 
 
@@ -441,6 +434,22 @@ def _migreer_stand_club_backfill(db):
         )
 
 
+def _migreer_stand_poules_backfill(db):
+    """kiosk_stand_poules is nieuw: poules waren hiervoor een hardcoded lijst
+    van precies 3 (za2/za3/o23, zie STAND_POULES in routes/kiosk.py) --
+    zolang de tabel nog leeg is (dus alleen de allereerste keer na deze
+    migratie) worden die 3 er eenmalig in gezet. sleutel blijft gelijk aan
+    de oude poule-waarden op kiosk_stand_teams, dus bestaande teams/rijen
+    hoeven zelf niet aangepast te worden."""
+    if db.execute("SELECT COUNT(*) AS n FROM kiosk_stand_poules").fetchone()["n"]:
+        return
+    for i, (sleutel, titel) in enumerate([("za2", "ZA 2"), ("za3", "ZA 3"), ("o23", "O23")]):
+        db.execute(
+            "INSERT INTO kiosk_stand_poules (sleutel, titel, volgorde) VALUES (?, ?, ?)",
+            (sleutel, titel, i),
+        )
+
+
 def _migreer_club_van_20_datums(db):
     """startdatum/einddatum zijn nieuw: vul ze eenmalig voor bestaande leden
     (van vóór deze functie) met hun aanmaakdatum als startdatum en de op
@@ -513,6 +522,7 @@ def get_db():
             _migreer_bieren_backfill(g.db)
             _migreer_club_van_20_datums(g.db)
             _migreer_stand_club_backfill(g.db)
+            _migreer_stand_poules_backfill(g.db)
             g.db.commit()
             _SCHEMA_TOEGEPAST_VOOR.add(db_pad)
     return g.db

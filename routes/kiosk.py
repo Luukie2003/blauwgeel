@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import sqlite3
 from datetime import date, timedelta
 
@@ -42,16 +43,12 @@ from helpers import (
 # beheerder 'm terugzet.
 KIOSK_LID_STATUSSEN = {"actief", "inactief", "niet_betaald"}
 
-# De 3 eigen teams waarvan de standen-dia's op het kantine scherm kunnen
-# draaien (zie kiosk_stand_teams in schema.sql) -- vaste, hardcoded lijst
-# net als Screens in de tv-app: dit zijn de 3 teams van de vereniging zelf,
-# geen dynamische invoer.
-STAND_POULES = [("za2", "ZA 2"), ("za3", "ZA 3"), ("o23", "O23")]
-STAND_POULE_SLEUTELS = {sleutel for sleutel, _ in STAND_POULES}
-# Kolom in kiosk_scherm_instellingen met de zelf gekozen titel per poule (het
-# tweede element van STAND_POULES hierboven is enkel nog de STANDAARDtitel,
-# voor als deze kolom leeg/onbekend is). Zie kiosk_scherm_instellingen hieronder.
-STAND_TITEL_KOLOM = {"za2": "standen_titel_za2", "za3": "standen_titel_za3", "o23": "standen_titel_o23"}
+def _poule_slug(titel):
+    """Maakt van een titel (bijv. "Zaterdag 4") een url-vriendelijke, interne
+    poule-sleutel ("zaterdag-4") -- alleen de titel is zichtbaar voor de
+    gebruiker, de sleutel blijft achter de schermen (zie kiosk_stand_teams.poule)."""
+    sleutel = re.sub(r"[^a-z0-9]+", "-", titel.strip().lower()).strip("-")
+    return sleutel or "poule"
 
 
 def register_routes(app):
@@ -218,15 +215,15 @@ def register_routes(app):
 
         if instellingen["toon_standen"]:
             stand_slides = []
-            for poule, _ in STAND_POULES:
-                teams = _stand_teams(db, poule)
+            for poule in _stand_poules(db):
+                teams = _stand_teams(db, poule["sleutel"])
                 if not teams:
                     continue
                 stand_slides.append(
                     {
                         "type": "stand",
                         "duur": instellingen["standen_duur_seconden"],
-                        "titel": instellingen[STAND_TITEL_KOLOM[poule]],
+                        "titel": poule["titel"],
                         "teams": [_stand_team_weergave(db, i + 1, t) for i, t in enumerate(teams)],
                     }
                 )
@@ -262,6 +259,26 @@ def register_routes(app):
         return db.execute(
             "SELECT * FROM kiosk_stand_teams WHERE poule = ? ORDER BY volgorde, id", (poule,)
         ).fetchall()
+
+    def _stand_poules(db):
+        return db.execute("SELECT * FROM kiosk_stand_poules ORDER BY volgorde, id").fetchall()
+
+    def _stand_poule_sleutels(db):
+        return {p["sleutel"] for p in _stand_poules(db)}
+
+    def _unieke_poule_sleutel(db, titel):
+        """Voegt indien nodig -2, -3, ... toe zodat de sleutel uniek blijft,
+        bijv. als er al een poule "Zaterdag 2" bestaat en je maakt 'm
+        nogmaals aan (of een titel die toevallig tot dezelfde sleutel
+        slugify't)."""
+        basis = _poule_slug(titel)
+        bestaande = _stand_poule_sleutels(db)
+        sleutel = basis
+        i = 2
+        while sleutel in bestaande:
+            sleutel = f"{basis}-{i}"
+            i += 1
+        return sleutel
 
     def _motm_teams(db):
         return db.execute("SELECT * FROM kiosk_motm ORDER BY volgorde, id").fetchall()
@@ -1265,9 +1282,8 @@ def register_routes(app):
             aantal_elementen_per_sjabloon=aantal_elementen_per_sjabloon,
             gebruik_per_sjabloon=gebruik_per_sjabloon,
             instellingen=instellingen,
-            stand_poules=STAND_POULES,
-            stand_teams={poule: _stand_teams(db, poule) for poule, _ in STAND_POULES},
-            standen_titels={poule: instellingen[kolom] for poule, kolom in STAND_TITEL_KOLOM.items()},
+            stand_poules=_stand_poules(db),
+            stand_teams={p["sleutel"]: _stand_teams(db, p["sleutel"]) for p in _stand_poules(db)},
             club_logos={
                 r["club"]: r["afbeelding"] for r in db.execute("SELECT club, afbeelding FROM kiosk_club_logos").fetchall()
             },
@@ -1756,7 +1772,6 @@ def register_routes(app):
                        toon_wedstrijden = ?, wedstrijden_volgorde = ?,
                        wedstrijden_duur_seconden = ?,
                        toon_standen = ?, standen_volgorde = ?, standen_duur_seconden = ?,
-                       standen_titel_za2 = ?, standen_titel_za3 = ?, standen_titel_o23 = ?,
                        toon_motm = ?, motm_volgorde = ?, motm_duur_seconden = ?
                    WHERE id = 1""",
                 (
@@ -1773,9 +1788,6 @@ def register_routes(app):
                     1 if request.form.get("toon_standen") else 0,
                     _getal("standen_volgorde", 4),
                     max(3, _getal("standen_duur_seconden", 10)),
-                    request.form.get("standen_titel_za2", "").strip() or "ZA 2",
-                    request.form.get("standen_titel_za3", "").strip() or "ZA 3",
-                    request.form.get("standen_titel_o23", "").strip() or "O23",
                     1 if request.form.get("toon_motm") else 0,
                     _getal("motm_volgorde", 5),
                     max(3, _getal("motm_duur_seconden", 10)),
@@ -1796,7 +1808,7 @@ def register_routes(app):
     def kiosk_stand_team_nieuw():
         db = get_db()
         poule = request.form.get("poule", "")
-        if poule not in STAND_POULE_SLEUTELS:
+        if poule not in _stand_poule_sleutels(db):
             if is_ajax_verzoek():
                 return jsonify({"ok": False, "fout": "Onbekend team."}), 404
             flash("Onbekend team.", "error")
@@ -1869,11 +1881,18 @@ def register_routes(app):
     @app.route("/kiosk/scherm/standen/<poule>/volgorde", methods=["POST"])
     def kiosk_stand_volgorde_opslaan(poule):
         db = get_db()
-        if poule not in STAND_POULE_SLEUTELS:
+        if poule not in _stand_poule_sleutels(db):
             if is_ajax_verzoek():
                 return jsonify({"ok": False, "fout": "Onbekend team."}), 404
             flash("Onbekend team.", "error")
             return redirect(url_for("kiosk_sponsoren_leden"))
+        # Titel van de poule zelf komt ook in dezelfde submit mee (het kopje
+        # boven de sleeplijst is een tekstveld, zie kiosk_sponsoren_leden.html).
+        poule_titel = request.form.get("poule_titel", "").strip()
+        if poule_titel:
+            db.execute(
+                "UPDATE kiosk_stand_poules SET titel = ? WHERE sleutel = ?", (poule_titel, poule)
+            )
         try:
             volgorde_ids = json.loads(request.form.get("volgorde") or "[]")
         except ValueError:
@@ -1949,6 +1968,40 @@ def register_routes(app):
         if is_ajax_verzoek():
             return jsonify({"ok": True})
         flash(f"Logo voor '{club}' opgeslagen.", "success")
+        return redirect(url_for("kiosk_sponsoren_leden"))
+
+    @app.route("/kiosk/scherm/standen/poule-nieuw", methods=["POST"])
+    def kiosk_stand_poule_nieuw():
+        db = get_db()
+        titel = request.form.get("titel", "").strip()
+        if not titel:
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": "Vul een titel in."}), 400
+            flash("Vul een titel in.", "error")
+            return redirect(url_for("kiosk_sponsoren_leden"))
+        sleutel = _unieke_poule_sleutel(db, titel)
+        volgende = db.execute(
+            "SELECT COALESCE(MAX(volgorde), -1) + 1 AS volgende FROM kiosk_stand_poules"
+        ).fetchone()["volgende"]
+        db.execute(
+            "INSERT INTO kiosk_stand_poules (sleutel, titel, volgorde) VALUES (?, ?, ?)",
+            (sleutel, titel, volgende),
+        )
+        db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
+        flash(f"Poule '{titel}' toegevoegd.", "success")
+        return redirect(url_for("kiosk_sponsoren_leden"))
+
+    @app.route("/kiosk/scherm/standen/poule/<poule>/verwijderen", methods=["POST"])
+    def kiosk_stand_poule_verwijderen(poule):
+        db = get_db()
+        db.execute("DELETE FROM kiosk_stand_teams WHERE poule = ?", (poule,))
+        db.execute("DELETE FROM kiosk_stand_poules WHERE sleutel = ?", (poule,))
+        db.commit()
+        if is_ajax_verzoek():
+            return jsonify({"ok": True})
+        flash("Poule verwijderd.", "success")
         return redirect(url_for("kiosk_sponsoren_leden"))
 
     @app.route("/kiosk/scherm/motm/team-nieuw", methods=["POST"])

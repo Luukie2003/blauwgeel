@@ -495,6 +495,20 @@ CREATE TABLE IF NOT EXISTS kiosk_stand_teams (
 );
 CREATE INDEX IF NOT EXISTS idx_kiosk_stand_teams_poule ON kiosk_stand_teams(poule, volgorde);
 
+-- Zelf toe te voegen/verwijderen poules voor de standen-dia's (was een
+-- hardcoded lijst van precies 3: za2/za3/o23) -- sleutel is de interne,
+-- url-vriendelijke verwijzing waar kiosk_stand_teams.poule hierboven naar
+-- verwijst (zie club_van_team_naam/_poule_slug in routes/kiosk.py), titel is
+-- wat er op de dia/beheerpagina te zien is en vrij aan te passen. Zie
+-- _migreer_stand_poules_backfill in database.py voor het eenmalig vullen
+-- van de 3 vaste poules die er hiervoor al waren.
+CREATE TABLE IF NOT EXISTS kiosk_stand_poules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sleutel TEXT NOT NULL UNIQUE,
+    titel TEXT NOT NULL,
+    volgorde INTEGER NOT NULL DEFAULT 0
+);
+
 -- Herbruikbaar clublogo-register, zelfde opzet als de bieren-bibliotheek
 -- hierboven (zie bewaar_bier/bewaar_club_logo in helpers.py): 1 keer een
 -- logo uploaden voor bijv. "Oranje Nassau", en elk team van die club (in

@@ -25,13 +25,20 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.12"
+HUIDIGE_VERSIE = "1.15.13"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.13",
+        "datum": "29 september 2026",
+        "punten": [
+            "Standen: zelf poules toevoegen en verwijderen bij 'Standen bijwerken' (was een vaste lijst van precies 3)",
+        ],
+    },
     {
         "versie": "1.15.12",
         "datum": "29 september 2026",
         "punten": [
-            "Titel van een standen-dia is nu per poule aan te passen (bijv. 'ZA 2' naar 'Zaterdag 2'), bij Diashow instellen → Standen",
+            "Titel van een standen-dia is nu per poule aan te passen (bijv. 'ZA 2' naar 'Zaterdag 2'), bij 'Standen bijwerken'",
         ],
     },
     {

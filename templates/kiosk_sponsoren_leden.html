@@ -127,26 +127,10 @@
                     <input type="number" id="standen_duur_seconden" name="standen_duur_seconden" min="3"
                            value="{{ instellingen.standen_duur_seconden }}" style="max-width:8rem">
                 </div>
-                <div class="veld">
-                    <label for="standen_titel_za2">Titel 1e poule</label>
-                    <input type="text" id="standen_titel_za2" name="standen_titel_za2"
-                           value="{{ instellingen.standen_titel_za2 }}">
-                </div>
-                <div class="veld">
-                    <label for="standen_titel_za3">Titel 2e poule</label>
-                    <input type="text" id="standen_titel_za3" name="standen_titel_za3"
-                           value="{{ instellingen.standen_titel_za3 }}">
-                </div>
-                <div class="veld">
-                    <label for="standen_titel_o23">Titel 3e poule</label>
-                    <input type="text" id="standen_titel_o23" name="standen_titel_o23"
-                           value="{{ instellingen.standen_titel_o23 }}">
-                </div>
             </div>
             <span class="tekst-zacht">
-                3 eigen dia's met de huidige stand -- de titel hierboven bepaalt wat er op de dia zelf
-                staat (bijv. "Zaterdag 2" i.p.v. "ZA 2"). De teams zelf (en de volgorde) stel je
-                hieronder in bij "Standen bijwerken" -- geen live koppeling met voetbal.nl, dus werk dit
+                Een eigen dia per poule (zelf toe te voegen/verwijderen, en de titel aan te passen bij
+                "Standen bijwerken" hieronder). Geen live koppeling met voetbal.nl -- werk de teams dus
                 zelf 1x per week bij. Een poule zonder teams slaat de diashow vanzelf over.
             </span>
         </fieldset>
@@ -188,11 +172,18 @@
         W/GL/V bij -- Gespeeld en Punten volgen daar vanzelf uit. Het eigen team staat in het geel. Klik
         het logo aan om er 1 te uploaden/vervangen (geldt meteen voor elk team van die club, in elke poule).
     </p>
-    {% for poule, label in stand_poules %}
+    {% for poule in stand_poules %}
     <div class="stand-poule">
-        <h3>{{ standen_titels[poule] }}</h3>
-        <div class="stand-lijst" data-poule="{{ poule }}">
-            {% for team in stand_teams[poule] %}
+        <div class="stand-poule-kop">
+            <input type="text" class="stand-poule-titel-veld" value="{{ poule.titel }}" title="Titel van deze poule aanpassen">
+            <form method="post" action="{{ url_for('kiosk_stand_poule_verwijderen', poule=poule.sleutel) }}"
+                  onsubmit="return bevestigEnVerstuur(this, 'Poule \'{{ poule.titel }}\' en alle teams daarin verwijderen?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="stand-item-knop" title="Poule verwijderen">&times;</button>
+            </form>
+        </div>
+        <div class="stand-lijst" data-poule="{{ poule.sleutel }}">
+            {% for team in stand_teams[poule.sleutel] %}
             <div class="stand-item{{ ' stand-item--eigen' if team.eigen_team else '' }}" draggable="true" data-id="{{ team.id }}">
                 <div class="stand-item-top">
                     <form method="post" action="{{ url_for('kiosk_club_logo_opslaan') }}" enctype="multipart/form-data"
@@ -228,24 +219,31 @@
             </div>
             {% endfor %}
         </div>
-        <form method="post" action="{{ url_for('kiosk_stand_volgorde_opslaan', poule=poule) }}"
-              class="stand-volgorde-form" data-poule="{{ poule }}" style="margin-top:0.6rem">
+        <form method="post" action="{{ url_for('kiosk_stand_volgorde_opslaan', poule=poule.sleutel) }}"
+              class="stand-volgorde-form" data-poule="{{ poule.sleutel }}" style="margin-top:0.6rem">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="volgorde" class="stand-volgorde-veld">
             <input type="hidden" name="statistieken" class="stand-statistieken-veld">
             <input type="hidden" name="namen" class="stand-namen-veld">
+            <input type="hidden" name="poule_titel" class="stand-poule-titel-veld-verborgen">
             <button type="submit" class="btn btn-rand btn-klein">Stand opslaan</button>
         </form>
         <form method="post" action="{{ url_for('kiosk_stand_team_nieuw') }}" enctype="multipart/form-data"
               style="margin-top:0.6rem; display:flex; gap:0.5rem; align-items:center">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="poule" value="{{ poule }}">
+            <input type="hidden" name="poule" value="{{ poule.sleutel }}">
             <input type="text" name="naam" placeholder="Naam club toevoegen..." style="flex:1">
             <input type="file" name="logo" accept="image/*" title="Logo (optioneel)" style="max-width:9rem">
             <button type="submit" class="btn btn-rand btn-klein">+ Team</button>
         </form>
     </div>
     {% endfor %}
+    <form method="post" action="{{ url_for('kiosk_stand_poule_nieuw') }}"
+          style="margin-top:1rem; display:flex; gap:0.5rem; align-items:center">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="text" name="titel" placeholder="Titel nieuwe poule (bijv. Zaterdag 4)..." style="flex:1">
+        <button type="submit" class="btn btn-rand btn-klein">+ Poule</button>
+    </form>
 </div>
 
 <div class="kaart" id="motm-teams">
@@ -286,13 +284,21 @@
 
 <style>
     .stand-poule + .stand-poule { margin-top: 1.5rem; }
-    .stand-poule h3 {
+    .stand-poule-kop { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+    .stand-poule-kop form { margin: 0; }
+    .stand-poule-titel-veld {
+        flex: 1;
         font-size: 0.9rem;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.03em;
         color: var(--tekst-zacht, #6b7280);
-        margin: 0 0 0.4rem;
+        border: 1px solid transparent;
+        background: transparent;
+        padding: 0.15rem 0.3rem;
+        border-radius: 4px;
     }
+    .stand-poule-titel-veld:hover, .stand-poule-titel-veld:focus { border-color: #d7dae2; background: #fff; }
     .stand-lijst {
         min-height: 3rem;
         border: 2px dashed #d7dae2;
@@ -472,6 +478,8 @@
             form.querySelector('.stand-volgorde-veld').value = JSON.stringify(volgorde);
             form.querySelector('.stand-statistieken-veld').value = JSON.stringify(statistieken);
             form.querySelector('.stand-namen-veld').value = JSON.stringify(namen);
+            var titelVeld = form.closest('.stand-poule').querySelector('.stand-poule-titel-veld');
+            form.querySelector('.stand-poule-titel-veld-verborgen').value = titelVeld.value;
         });
     });
 })();

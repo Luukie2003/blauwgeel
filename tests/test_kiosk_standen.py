@@ -1,8 +1,9 @@
-"""Tests voor de standen-dia's op het kantine scherm (ZA 2/ZA 3/O23) -- zie
-kiosk_stand_teams in schema.sql, STAND_POULES in routes/kiosk.py en de
-sleeplijst op kiosk_sponsoren_leden.html. Geen live koppeling met
-voetbal.nl: de volgorde wordt handmatig gesleept en hier dus ook
-handmatig als rijen ingevoerd."""
+"""Tests voor de standen-dia's op het kantine scherm -- zie kiosk_stand_teams
+en kiosk_stand_poules in schema.sql en de sleeplijst op
+kiosk_sponsoren_leden.html. Standaard staan er 3 poules (ZA 2/ZA 3/O23,
+eenmalig gevuld door _migreer_stand_poules_backfill), maar een poule kan er
+zelf bij (of af). Geen live koppeling met voetbal.nl: de volgorde wordt
+handmatig gesleept en hier dus ook handmatig als rijen ingevoerd."""
 import io
 import json
 
@@ -206,14 +207,23 @@ def test_standen_titel_is_standaard_za2(client, db):
     assert "Stand ZA 2" in resp.data.decode()
 
 
-def test_standen_titel_is_aan_te_passen(client, ingelogde_client, db):
-    _voeg_team_toe(db, "za2", "Concurrent A")
+def test_poules_worden_eenmalig_gevuld_met_de_3_vaste_poules(db):
+    poules = db.execute("SELECT sleutel, titel, volgorde FROM kiosk_stand_poules ORDER BY volgorde").fetchall()
+    assert [(p["sleutel"], p["titel"]) for p in poules] == [
+        ("za2", "ZA 2"),
+        ("za3", "ZA 3"),
+        ("o23", "O23"),
+    ]
+
+
+def test_poule_titel_is_aan_te_passen_via_stand_opslaan(client, ingelogde_client, db):
+    team_id = _voeg_team_toe(db, "za2", "Concurrent A")
     ingelogde_client.post(
-        "/kiosk/scherm/instellingen",
+        "/kiosk/scherm/standen/za2/volgorde",
         data={
             "csrf_token": _csrf(ingelogde_client),
-            "toon_standen": "on",
-            "standen_titel_za2": "Zaterdag 2",
+            "volgorde": json.dumps([team_id]),
+            "poule_titel": "Zaterdag 2",
         },
     )
 
@@ -222,20 +232,79 @@ def test_standen_titel_is_aan_te_passen(client, ingelogde_client, db):
     assert "Stand Zaterdag 2" in tekst
     assert "Stand ZA 2" not in tekst
 
-    instellingen = db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
-    assert instellingen["standen_titel_za2"] == "Zaterdag 2"
-    # De andere twee poules blijven op hun standaardtitel staan.
-    assert instellingen["standen_titel_za3"] == "ZA 3"
-    assert instellingen["standen_titel_o23"] == "O23"
+    poule = db.execute("SELECT titel FROM kiosk_stand_poules WHERE sleutel = 'za2'").fetchone()
+    assert poule["titel"] == "Zaterdag 2"
 
 
-def test_standen_titel_leeg_valt_terug_op_standaard(ingelogde_client, db):
+def test_poule_titel_leeg_laat_bestaande_titel_ongemoeid(ingelogde_client, db):
     ingelogde_client.post(
-        "/kiosk/scherm/instellingen",
-        data={"csrf_token": _csrf(ingelogde_client), "standen_titel_za2": "   "},
+        "/kiosk/scherm/standen/za2/volgorde",
+        data={"csrf_token": _csrf(ingelogde_client), "poule_titel": "   "},
     )
-    instellingen = db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
-    assert instellingen["standen_titel_za2"] == "ZA 2"
+    poule = db.execute("SELECT titel FROM kiosk_stand_poules WHERE sleutel = 'za2'").fetchone()
+    assert poule["titel"] == "ZA 2"
+
+
+def test_poule_toevoegen(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/kiosk/scherm/standen/poule-nieuw",
+        data={"csrf_token": _csrf(ingelogde_client), "titel": "Zaterdag 4"},
+    )
+    assert resp.status_code in (302, 303)
+    poule = db.execute("SELECT * FROM kiosk_stand_poules WHERE titel = 'Zaterdag 4'").fetchone()
+    assert poule is not None
+    assert poule["sleutel"] == "zaterdag-4"
+    # Nieuwe poule is meteen bruikbaar voor "team-nieuw" (poule-validatie).
+    team_resp = ingelogde_client.post(
+        "/kiosk/scherm/standen/team-nieuw",
+        data={"csrf_token": _csrf(ingelogde_client), "poule": "zaterdag-4", "naam": "Concurrent Z"},
+    )
+    assert team_resp.status_code in (302, 303)
+    assert db.execute("SELECT * FROM kiosk_stand_teams WHERE poule = 'zaterdag-4'").fetchone() is not None
+
+
+def test_poule_toevoegen_zonder_titel_geeft_fout(ingelogde_client, db):
+    ingelogde_client.post(
+        "/kiosk/scherm/standen/poule-nieuw",
+        data={"csrf_token": _csrf(ingelogde_client), "titel": "   "},
+    )
+    assert db.execute("SELECT COUNT(*) AS n FROM kiosk_stand_poules").fetchone()["n"] == 3
+
+
+def test_poule_toevoegen_met_dubbele_titel_krijgt_unieke_sleutel(ingelogde_client, db):
+    ingelogde_client.post(
+        "/kiosk/scherm/standen/poule-nieuw",
+        data={"csrf_token": _csrf(ingelogde_client), "titel": "Extra"},
+    )
+    ingelogde_client.post(
+        "/kiosk/scherm/standen/poule-nieuw",
+        data={"csrf_token": _csrf(ingelogde_client), "titel": "Extra"},
+    )
+    sleutels = {r["sleutel"] for r in db.execute("SELECT sleutel FROM kiosk_stand_poules WHERE titel = 'Extra'")}
+    assert sleutels == {"extra", "extra-2"}
+
+
+def test_poule_verwijderen_verwijdert_ook_de_teams(ingelogde_client, db):
+    _voeg_team_toe(db, "za2", "Concurrent A")
+    ingelogde_client.post(
+        "/kiosk/scherm/standen/poule/za2/verwijderen",
+        data={"csrf_token": _csrf(ingelogde_client)},
+    )
+    assert db.execute("SELECT * FROM kiosk_stand_poules WHERE sleutel = 'za2'").fetchone() is None
+    assert db.execute("SELECT COUNT(*) AS n FROM kiosk_stand_teams WHERE poule = 'za2'").fetchone()["n"] == 0
+
+
+def test_team_toevoegen_bij_verwijderde_poule_geeft_fout(ingelogde_client, db):
+    ingelogde_client.post(
+        "/kiosk/scherm/standen/poule/za2/verwijderen",
+        data={"csrf_token": _csrf(ingelogde_client)},
+    )
+    resp = ingelogde_client.post(
+        "/kiosk/scherm/standen/team-nieuw",
+        data={"csrf_token": _csrf(ingelogde_client), "poule": "za2", "naam": "Concurrent A"},
+    )
+    assert resp.status_code in (302, 303)
+    assert db.execute("SELECT * FROM kiosk_stand_teams WHERE poule = 'za2'").fetchone() is None
 
 
 # ---------- club_van_team_naam ----------
