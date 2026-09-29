@@ -283,9 +283,34 @@
     font-size: 1.15rem;
 }
 .standdia-logo { flex-shrink: 0; width: 2.6rem; height: 2.6rem; object-fit: contain; }
-.standdia-naam { flex: 1; min-width: 0; font-size: 1.5rem; font-weight: 700; }
+.standdia-naam {
+    flex: 1;
+    /* Bewust geen 0: bij een smal scherm (bijv. de tablet-app) kon de naam
+       hierdoor helemaal verdwijnen -- de andere elementen in deze rij
+       (positie/logo/vorm/punten) hebben allemaal flex-shrink:0 en "wonnen"
+       dus altijd de ruimte van de naam, tot aan letterlijk 0px breed. Een
+       echte minimumbreedte + ellipsis zorgt dat er altijd tenminste een
+       stuk van de naam zichtbaar blijft. */
+    min-width: 4.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
 .standdia-rij--eigen .standdia-naam { font-weight: 800; }
 .standdia-vorm { flex-shrink: 0; font-size: 1.05rem; color: var(--tekst-zacht); }
+
+@media (max-width: 720px) {
+    /* .slide is ontworpen voor een TV (vaste, royale marges) -- op een veel
+       smaller scherm (bijv. de tablet-app) eten die marges een groot deel
+       van de al krappe breedte op, wat de teamnaam hieronder verder in de
+       verdrukking brengt. */
+    .slide { padding: 1.5rem 1rem; }
+    /* W/GL/V is aardig-om-te-weten, maar minder belangrijk dan de teamnaam
+       zelf -- geeft de naam de ruimte die 'm anders werd afgenomen. */
+    .standdia-vorm { display: none; }
+}
 .standdia-punten {
     flex-shrink: 0;
     min-width: 3.4rem;

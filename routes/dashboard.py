@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.13"
+HUIDIGE_VERSIE = "1.15.14"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.14",
+        "datum": "29 september 2026",
+        "punten": [
+            "Fix: teamnamen in de standen-dia op het kantine scherm waren onzichtbaar op een smal scherm (zoals de tablet-app)",
+        ],
+    },
     {
         "versie": "1.15.13",
         "datum": "29 september 2026",
