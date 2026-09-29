@@ -234,14 +234,19 @@ def register_routes(app):
                 blokken.append((instellingen["standen_volgorde"], stand_slides))
 
         if instellingen["toon_motm"]:
-            # Alleen teams met een ingevulde speler komen op de dia (zie
-            # kiosk_motm_volgorde_opslaan) -- leeg = geen MOTM die week voor
-            # dat team, en heeft geen enkel team een speler dan slaat de hele
-            # dia over, net als de andere blokken hierboven bij lege data.
+            # Alleen teams met een ingevulde speler en/of uitslag komen op de
+            # dia (zie kiosk_motm_volgorde_opslaan) -- allebei leeg betekent
+            # dat het team niet heeft gespeeld, en heeft geen enkel team iets
+            # ingevuld dan slaat de hele dia over, net als de andere blokken
+            # hierboven bij lege data.
             motm_teams = [
-                {"team": t["team"], "speler": _motm_namen_weergave(t["speler"])}
+                {
+                    "team": t["team"],
+                    "speler": _motm_namen_weergave(t["speler"]),
+                    "uitslag": (t["uitslag"] or "").strip(),
+                }
                 for t in _motm_teams(db)
-                if (t["speler"] or "").strip()
+                if (t["speler"] or "").strip() or (t["uitslag"] or "").strip()
             ]
             if motm_teams:
                 blokken.append(
@@ -250,6 +255,7 @@ def register_routes(app):
                         [{
                             "type": "motm",
                             "duur": instellingen["motm_duur_seconden"],
+                            "titel": instellingen["motm_titel"],
                             "teams": motm_teams,
                         }],
                     )
@@ -1785,7 +1791,7 @@ def register_routes(app):
                        toon_wedstrijden = ?, wedstrijden_volgorde = ?,
                        wedstrijden_duur_seconden = ?,
                        toon_standen = ?, standen_volgorde = ?, standen_duur_seconden = ?,
-                       toon_motm = ?, motm_volgorde = ?, motm_duur_seconden = ?
+                       toon_motm = ?, motm_volgorde = ?, motm_duur_seconden = ?, motm_titel = ?
                    WHERE id = 1""",
                 (
                     1 if request.form.get("toon_sponsoren") else 0,
@@ -1804,6 +1810,7 @@ def register_routes(app):
                     1 if request.form.get("toon_motm") else 0,
                     _getal("motm_volgorde", 5),
                     max(3, _getal("motm_duur_seconden", 10)),
+                    request.form.get("motm_titel", "").strip() or "Man of de match van vorig weekend!",
                 ),
             )
             db.commit()
@@ -2065,6 +2072,15 @@ def register_routes(app):
             db.execute(
                 "UPDATE kiosk_motm SET speler = ? WHERE id = ?",
                 ((speler or "").strip() or None, team_id),
+            )
+        try:
+            uitslagen = json.loads(request.form.get("uitslagen") or "{}")
+        except ValueError:
+            uitslagen = {}
+        for team_id, uitslag in uitslagen.items():
+            db.execute(
+                "UPDATE kiosk_motm SET uitslag = ? WHERE id = ?",
+                ((uitslag or "").strip() or None, team_id),
             )
         # Teamnaam aanpassen komt in dezelfde submit mee, zelfde opzet als
         # kiosk_stand_volgorde_opslaan hierboven -- leeg laten negeert de

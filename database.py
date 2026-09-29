@@ -260,6 +260,11 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "toon_motm", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "motm_volgorde", "INTEGER NOT NULL DEFAULT 5"),
     ("kiosk_scherm_instellingen", "motm_duur_seconden", "INTEGER NOT NULL DEFAULT 10"),
+    ("kiosk_scherm_instellingen", "motm_titel", "TEXT NOT NULL DEFAULT 'Man of de match van vorig weekend!'"),
+    # Uitslag van de wedstrijd (bijv. "3-1"), los van de gekozen speler -- een
+    # team toont nu op de dia zodra minstens 1 van de 2 is ingevuld (zie
+    # _bouw_slides), dus een uitslag zonder gekozen speler is ook zichtbaar.
+    ("kiosk_motm", "uitslag", "TEXT"),
 ]
 
 

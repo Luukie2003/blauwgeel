@@ -349,6 +349,7 @@
     opacity: 0;
 }
 .motmdia-team { flex-shrink: 0; font-size: 1.15rem; font-weight: 700; color: var(--tekst-zacht); text-transform: uppercase; letter-spacing: 0.03em; }
+.motmdia-uitslag { flex-shrink: 0; font-size: 1.3rem; font-weight: 700; color: #fff; }
 .motmdia-speler { font-size: 1.9rem; font-weight: 800; color: var(--geel); text-align: right; }
 
 .slide-motm.actief .motmdia-rij {

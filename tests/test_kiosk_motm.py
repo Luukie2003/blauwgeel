@@ -1,20 +1,21 @@
 """Tests voor de Man of the Match-dia op het kantine scherm -- zie
 kiosk_motm in schema.sql en de sleeplijst op kiosk_sponsoren_leden.html.
-Geen live koppeling met voetbal.nl: de speler wordt handmatig elke week
-ingevuld, leeg = geen MOTM die week voor dat team."""
+Geen live koppeling met voetbal.nl: uitslag en speler worden handmatig elke
+week ingevuld, allebei leeg = niet gespeeld, geen MOTM die week voor dat
+team."""
 import json
 
 from conftest import stel_csrf_token_in as _csrf
 
 
-def _voeg_team_toe(db, team, speler=None, volgorde=None):
+def _voeg_team_toe(db, team, speler=None, uitslag=None, volgorde=None):
     if volgorde is None:
         volgorde = db.execute(
             "SELECT COALESCE(MAX(volgorde), -1) + 1 AS v FROM kiosk_motm"
         ).fetchone()["v"]
     cur = db.execute(
-        "INSERT INTO kiosk_motm (team, speler, volgorde) VALUES (?, ?, ?)",
-        (team, speler, volgorde),
+        "INSERT INTO kiosk_motm (team, speler, uitslag, volgorde) VALUES (?, ?, ?, ?)",
+        (team, speler, uitslag, volgorde),
     )
     db.commit()
     return cur.lastrowid
@@ -44,6 +45,23 @@ def test_team_met_speler_toont_dia(client, db):
     assert 'class="motmdia-lijst"' in tekst
     assert "Eigen Team Alpha" in tekst
     assert "Jan Jansen" in tekst
+
+
+def test_team_met_alleen_uitslag_toont_dia(client, db):
+    _voeg_team_toe(db, "Eigen Team Alpha", uitslag="3-1")
+
+    resp = client.get("/kiosk/scherm")
+    tekst = resp.data.decode()
+    assert 'class="motmdia-lijst"' in tekst
+    assert "Eigen Team Alpha" in tekst
+    assert "3-1" in tekst
+
+
+def test_team_zonder_uitslag_en_zonder_speler_slaat_dia_over(client, db):
+    _voeg_team_toe(db, "Eigen Team Alpha")
+
+    resp = client.get("/kiosk/scherm")
+    assert b'class="motmdia-lijst"' not in resp.data
 
 
 def test_alleen_teams_met_speler_komen_op_de_dia(client, db):
@@ -117,6 +135,26 @@ def test_volgorde_en_spelers_opslaan(ingelogde_client, db):
     assert rij_b["speler"] is None
 
 
+def test_volgorde_opslaan_slaat_uitslag_op(ingelogde_client, db):
+    id_a = _voeg_team_toe(db, "ZA 1")
+    id_b = _voeg_team_toe(db, "ZA 2", uitslag="0-0")
+
+    ingelogde_client.post(
+        "/kiosk/scherm/motm/volgorde",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "volgorde": json.dumps([id_a, id_b]),
+            "uitslagen": json.dumps({id_a: "2-2", id_b: "  "}),
+        },
+    )
+
+    rij_a = db.execute("SELECT uitslag FROM kiosk_motm WHERE id = ?", (id_a,)).fetchone()
+    rij_b = db.execute("SELECT uitslag FROM kiosk_motm WHERE id = ?", (id_b,)).fetchone()
+    assert rij_a["uitslag"] == "2-2"
+    # Enkel spaties wordt leeggemaakt (None), ook als er al een uitslag stond.
+    assert rij_b["uitslag"] is None
+
+
 def test_volgorde_opslaan_past_teamnaam_aan(ingelogde_client, db):
     team_id = _voeg_team_toe(db, "Oude Naam")
     ingelogde_client.post(
@@ -170,9 +208,36 @@ def test_motm_instellingen_opslaan(ingelogde_client, db):
             "toon_motm": "1",
             "motm_volgorde": "7",
             "motm_duur_seconden": "15",
+            "motm_titel": "Uitslagen van dit weekend",
         },
     )
     instellingen = db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
     assert instellingen["toon_motm"] == 1
     assert instellingen["motm_volgorde"] == 7
     assert instellingen["motm_duur_seconden"] == 15
+    assert instellingen["motm_titel"] == "Uitslagen van dit weekend"
+
+
+def test_motm_titel_heeft_standaardwaarde(db):
+    instellingen = db.execute("SELECT motm_titel FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
+    assert instellingen["motm_titel"] == "Man of de match van vorig weekend!"
+
+
+def test_motm_titel_leeg_valt_terug_op_standaardtekst(ingelogde_client, db):
+    ingelogde_client.post(
+        "/kiosk/scherm/instellingen",
+        data={"csrf_token": _csrf(ingelogde_client), "motm_titel": "   "},
+    )
+    instellingen = db.execute("SELECT motm_titel FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
+    assert instellingen["motm_titel"] == "Man of de match van vorig weekend!"
+
+
+def test_motm_titel_verschijnt_boven_de_dia(client, ingelogde_client, db):
+    _voeg_team_toe(db, "Eigen Team Alpha", speler="Jan Jansen")
+    ingelogde_client.post(
+        "/kiosk/scherm/instellingen",
+        data={"csrf_token": _csrf(ingelogde_client), "toon_motm": "1", "motm_titel": "Weekendresultaten"},
+    )
+
+    resp = client.get("/kiosk/scherm")
+    assert "Weekendresultaten" in resp.data.decode()

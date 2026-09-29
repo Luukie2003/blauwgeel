@@ -142,6 +142,11 @@
                        {{ 'checked' if instellingen.toon_motm }}>
                 Man of the Match tonen
             </label>
+            <div class="veld">
+                <label for="motm_titel">Titel boven de dia</label>
+                <input type="text" id="motm_titel" name="motm_titel"
+                       value="{{ instellingen.motm_titel }}">
+            </div>
             <div class="formgrid">
                 <div class="veld">
                     <label for="motm_volgorde">Volgorde</label>
@@ -155,8 +160,9 @@
                 </div>
             </div>
             <span class="tekst-zacht">
-                1 dia met alle teams die deze week een Man of the Match hebben. Laat je een team leeg,
-                dan slaat de dia dat team over -- heeft geen enkel team een naam staan, dan slaat de
+                1 dia met alle teams die afgelopen weekend hebben gespeeld, met uitslag en (indien
+                gekozen) de Man of the Match. Laat je bij een team zowel de uitslag als de naam leeg,
+                dan slaat de dia dat team over -- heeft geen enkel team iets ingevuld, dan slaat de
                 diashow deze dia helemaal over. De teams zelf stel je hieronder in.
             </span>
         </fieldset>
@@ -249,14 +255,16 @@
 <div class="kaart" id="motm-teams">
     <h2 style="margin-top:0">Man of the Match bijwerken</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Sleep in de gewenste volgorde, pas de teamnaam aan waar nodig en vul de naam in bij elk team
-        dat deze week een Man of the Match heeft. Meerdere mensen? Scheid de namen met een komma
-        (bijv. "Jan Jansen, Piet Pietersen"). Leeg laten = dat team wordt overgeslagen op de dia.
+        Sleep in de gewenste volgorde, pas de teamnaam aan waar nodig en vul de uitslag en de naam in
+        bij elk team dat afgelopen weekend heeft gespeeld. Meerdere mensen? Scheid de namen met een
+        komma (bijv. "Jan Jansen, Piet Pietersen"). Uitslag én naam leeg laten = dat team heeft niet
+        gespeeld en wordt overgeslagen op de dia.
     </p>
     <div class="motm-lijst">
         {% for team in motm_teams %}
         <div class="motm-item" draggable="true" data-id="{{ team.id }}">
             <input type="text" class="motm-item-naam-veld" value="{{ team.team }}" title="Teamnaam aanpassen" draggable="false">
+            <input type="text" class="motm-uitslag-veld" placeholder="Uitslag (bijv. 3-1)..." value="{{ team.uitslag or '' }}" draggable="false">
             <input type="text" class="motm-speler-veld" placeholder="Naam/namen invullen..." value="{{ team.speler or '' }}" draggable="false">
             <form method="post" action="{{ url_for('kiosk_motm_team_verwijderen', team_id=team.id) }}" draggable="false">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -270,6 +278,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="volgorde" class="motm-volgorde-veld">
         <input type="hidden" name="spelers" class="motm-spelers-veld">
+        <input type="hidden" name="uitslagen" class="motm-uitslagen-veld">
         <input type="hidden" name="teamnamen" class="motm-teamnamen-veld">
         <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
     </form>
@@ -403,6 +412,7 @@
         border-radius: 4px;
     }
     .motm-item-naam-veld:hover, .motm-item-naam-veld:focus { border-color: #d7dae2; background: #fff; }
+    .motm-uitslag-veld { flex-shrink: 0; width: 6rem; }
     .motm-speler-veld { flex: 1; }
     .motm-item form { margin: 0; }
 </style>
@@ -538,13 +548,16 @@
         var items = Array.prototype.slice.call(lijst.querySelectorAll('.motm-item'));
         var volgorde = items.map(function (item) { return item.dataset.id; });
         var spelers = {};
+        var uitslagen = {};
         var teamnamen = {};
         items.forEach(function (item) {
             spelers[item.dataset.id] = item.querySelector('.motm-speler-veld').value;
+            uitslagen[item.dataset.id] = item.querySelector('.motm-uitslag-veld').value;
             teamnamen[item.dataset.id] = item.querySelector('.motm-item-naam-veld').value;
         });
         form.querySelector('.motm-volgorde-veld').value = JSON.stringify(volgorde);
         form.querySelector('.motm-spelers-veld').value = JSON.stringify(spelers);
+        form.querySelector('.motm-uitslagen-veld').value = JSON.stringify(uitslagen);
         form.querySelector('.motm-teamnamen-veld').value = JSON.stringify(teamnamen);
     });
 })();
