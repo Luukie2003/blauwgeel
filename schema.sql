@@ -315,6 +315,10 @@ CREATE INDEX IF NOT EXISTS idx_mutaties_product ON mutaties(product_id);
 CREATE INDEX IF NOT EXISTS idx_mutaties_datum ON mutaties(datum);
 CREATE INDEX IF NOT EXISTS idx_bestelregels_bestelling ON bestelregels(bestelling_id);
 CREATE INDEX IF NOT EXISTS idx_telling_regels_telling ON telling_regels(telling_id);
+-- signaleer_afwijkende_telling (routes/tellen.py) filtert bij elke
+-- tellingopslag op product_id, en deze tabel groeit voor altijd (1 rij per
+-- product per telling) -- zonder index wordt die check langzaam trager.
+CREATE INDEX IF NOT EXISTS idx_telling_regels_product ON telling_regels(product_id);
 CREATE INDEX IF NOT EXISTS idx_kassa_tellingen_datum ON kassa_tellingen(datum);
 CREATE INDEX IF NOT EXISTS idx_kassa_mutaties_datum ON kassa_mutaties(datum);
 CREATE INDEX IF NOT EXISTS idx_kluis_tellingen_datum ON kluis_tellingen(datum);

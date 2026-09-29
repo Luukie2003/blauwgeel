@@ -49,10 +49,19 @@ def register_routes(app):
         )
         telling_id = cur.lastrowid
 
+        # Alle geteld producten in 1 keer ophalen i.p.v. per product een losse
+        # SELECT (was een N+1: bij een volledige telling van bijv. 150
+        # producten scheelt dit ~150 queries).
+        plekhouders = ",".join("?" * len(waarden))
+        producten_bij_id = {
+            p["id"]: p
+            for p in db.execute(
+                f"SELECT * FROM producten WHERE id IN ({plekhouders})", tuple(waarden.keys())
+            ).fetchall()
+        }
+
         for product_id, geteld in waarden.items():
-            product = db.execute(
-                "SELECT * FROM producten WHERE id = ?", (product_id,)
-            ).fetchone()
+            product = producten_bij_id.get(product_id)
             if product is None:
                 continue
             verschil = geteld - product["voorraad"]

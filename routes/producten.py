@@ -271,10 +271,13 @@ def register_routes(app):
         db = get_db()
         if request.method == "POST":
             producten = db.execute("SELECT id FROM producten").fetchall()
-            aangepast = 0
+            # Beide soorten wijzigingen verzamelen en pas daarna in 1 executemany
+            # per soort wegschrijven, i.p.v. tot 2 losse UPDATEs per product in
+            # de loop (kan aardig oplopen bij een grote productenlijst).
+            min_updates = []
+            eenheid_updates = []
+            aangepast_ids = set()
             for p in producten:
-                gewijzigd = False
-
                 min_waarde = request.form.get(f"min_{p['id']}", "").strip()
                 if min_waarde != "":
                     try:
@@ -282,11 +285,8 @@ def register_routes(app):
                     except ValueError:
                         nieuw_minimum = None
                     if nieuw_minimum is not None and nieuw_minimum >= 0:
-                        db.execute(
-                            "UPDATE producten SET min_voorraad = ? WHERE id = ?",
-                            (nieuw_minimum, p["id"]),
-                        )
-                        gewijzigd = True
+                        min_updates.append((nieuw_minimum, p["id"]))
+                        aangepast_ids.add(p["id"])
 
                 factor_waarde = request.form.get(f"factor_{p['id']}", "").strip()
                 if factor_waarde != "":
@@ -296,16 +296,18 @@ def register_routes(app):
                         nieuwe_factor = None
                     if nieuwe_factor is not None and nieuwe_factor >= 1:
                         eenheid_waarde = request.form.get(f"eenheid_{p['id']}", "").strip()
-                        db.execute(
-                            "UPDATE producten SET besteleenheid = ?, besteleenheid_factor = ? WHERE id = ?",
-                            (eenheid_waarde or None, nieuwe_factor, p["id"]),
-                        )
-                        gewijzigd = True
+                        eenheid_updates.append((eenheid_waarde or None, nieuwe_factor, p["id"]))
+                        aangepast_ids.add(p["id"])
 
-                if gewijzigd:
-                    aangepast += 1
+            if min_updates:
+                db.executemany("UPDATE producten SET min_voorraad = ? WHERE id = ?", min_updates)
+            if eenheid_updates:
+                db.executemany(
+                    "UPDATE producten SET besteleenheid = ?, besteleenheid_factor = ? WHERE id = ?",
+                    eenheid_updates,
+                )
             db.commit()
-            flash(f"Bulkwijzigingen opgeslagen voor {aangepast} product(en).", "success")
+            flash(f"Bulkwijzigingen opgeslagen voor {len(aangepast_ids)} product(en).", "success")
             return redirect(url_for("producten_bulk_bewerken"))
 
         producten = db.execute(

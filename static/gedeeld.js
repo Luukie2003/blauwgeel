@@ -1,0 +1,360 @@
+document.addEventListener("click", function (e) {
+    var trigger = e.target.closest(".menu-trigger");
+    document.querySelectorAll(".menu-item.open").forEach(function (item) {
+        if (!trigger || item !== trigger.closest(".menu-item")) {
+            item.classList.remove("open");
+        }
+    });
+    if (trigger) {
+        trigger.closest(".menu-item").classList.toggle("open");
+    }
+});
+
+document.addEventListener("click", function (e) {
+    if (e.target.closest("#zijbalk-toggle")) {
+        document.getElementById("app-zijbalk").classList.toggle("open");
+    }
+});
+
+// ---------- Inklapbare zijbalk-groepen ----------
+// De groep met de actieve pagina staat altijd open; voor de andere
+// groepen onthouden we de voorkeur van de gebruiker (welke hij/zij zelf
+// heeft opengeklikt) via localStorage, zelfde patroon als de
+// banner-dismiss hieronder. Standaard (nog niets aangeklikt) staat een
+// groep dicht -- dat is wat de zijbalk in één oogopslag overzichtelijk
+// houdt.
+//
+// Dit script staat vóór de zijbalk in de HTML (zie base.html), dus de
+// groepen bestaan nog niet op het moment dat dit script geparsed wordt --
+// vandaar dat alles hieronder tot na DOMContentLoaded wacht (net als de
+// click-delegatie op #zijbalk-toggle hierboven, die om dezelfde reden pas
+// bij het klikken zelf naar #app-zijbalk zoekt).
+document.addEventListener("DOMContentLoaded", function () {
+    var groepen = document.querySelectorAll(".zijbalk-groep");
+    if (!groepen.length) return;
+
+    var opslagSleutel = "zijbalk-open-groepen";
+    var openGroepen;
+    try {
+        openGroepen = JSON.parse(localStorage.getItem(opslagSleutel) || "[]");
+    } catch (e) {
+        openGroepen = [];
+    }
+
+    groepen.forEach(function (groep) {
+        var heeftActieveLink = !!groep.querySelector("a.actief");
+        var moetOpen = heeftActieveLink || openGroepen.indexOf(groep.dataset.groep) !== -1;
+        groep.classList.toggle("dicht", !moetOpen);
+    });
+
+    document.addEventListener("click", function (e) {
+        var knop = e.target.closest(".zijbalk-groepkop");
+        if (!knop) return;
+        var groep = knop.closest(".zijbalk-groep");
+        var nuDicht = groep.classList.toggle("dicht");
+
+        var lijst;
+        try {
+            lijst = JSON.parse(localStorage.getItem(opslagSleutel) || "[]");
+        } catch (e2) {
+            lijst = [];
+        }
+        var index = lijst.indexOf(groep.dataset.groep);
+        if (nuDicht && index !== -1) {
+            lijst.splice(index, 1);
+        } else if (!nuDicht && index === -1) {
+            lijst.push(groep.dataset.groep);
+        }
+        try {
+            localStorage.setItem(opslagSleutel, JSON.stringify(lijst));
+        } catch (e3) {
+            // localStorage kan geblokkeerd zijn (bijv. privénavigatie) --
+            // de knop blijft dan gewoon werken, alleen zonder onthouden
+            // voorkeur.
+        }
+    });
+});
+
+function modalOpenen(id) {
+    document.getElementById(id).classList.add("open");
+}
+function modalSluiten(id) {
+    document.getElementById(id).classList.remove("open");
+}
+document.addEventListener("click", function (e) {
+    if (e.target.classList.contains("modal-overlay")) {
+        e.target.classList.remove("open");
+    }
+});
+
+// ---------- Bevestigen via pop-up i.p.v. de kale browser-confirm() ----------
+function toonBevestiging(bericht, callback) {
+    var overlay = document.getElementById("bevestig-modal");
+    if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "bevestig-modal";
+        overlay.className = "modal-overlay";
+        overlay.innerHTML =
+            '<div class="modal-venster modal-venster-bevestig">' +
+            '<p id="bevestig-modal-tekst"></p>' +
+            '<div class="modal-knoppen">' +
+            '<button type="button" class="btn btn-rand" data-actie="annuleren">Annuleren</button>' +
+            '<button type="button" class="btn btn-gevaar" data-actie="bevestigen">Bevestigen</button>' +
+            "</div></div>";
+        document.body.appendChild(overlay);
+    }
+    overlay.querySelector("#bevestig-modal-tekst").textContent = bericht;
+    var sluiten = function () {
+        overlay.classList.remove("open");
+    };
+    overlay.querySelector('[data-actie="annuleren"]').onclick = sluiten;
+    overlay.querySelector('[data-actie="bevestigen"]').onclick = function () {
+        sluiten();
+        callback();
+    };
+    overlay.classList.add("open");
+}
+
+// Vervangt onsubmit="return confirm(...)": zelfde bevestig-stap, maar
+// met de pop-up van de site i.p.v. de lelijke kale browserdialoog.
+// De submit zelf blijft daarna een gewone paginaherlaad.
+function bevestigEnVerstuur(form, bericht) {
+    toonBevestiging(bericht, function () {
+        form.submit();
+    });
+    return false;
+}
+
+// ---------- Kleine meldingen (toast) rechtsonder ----------
+function toonToast(tekst) {
+    var stapel = document.getElementById("toast-stapel");
+    if (!stapel) {
+        stapel = document.createElement("div");
+        stapel.id = "toast-stapel";
+        stapel.className = "toast-stapel";
+        document.body.appendChild(stapel);
+    }
+    var toast = document.createElement("div");
+    toast.className = "toast";
+    toast.textContent = tekst;
+    stapel.appendChild(toast);
+    requestAnimationFrame(function () {
+        toast.classList.add("zichtbaar");
+    });
+    setTimeout(function () {
+        toast.classList.remove("zichtbaar");
+        setTimeout(function () {
+            toast.remove();
+        }, 200);
+    }, 3200);
+}
+
+// ---------- Offline-wachtrij voor formulieren die dat aanvragen ----------
+// Formulieren met data-offline-wachtrij="1" (zie boeken.html en
+// product_detail.html) belanden bij een echte netwerkfout niet in een
+// kale mislukte paginaherlaad, maar in een wachtrij op dit toestel
+// (localStorage) die vanzelf leegloopt zodra er weer verbinding is --
+// fijn voor het boeken van voorraad met wisselend bereik in het
+// voorraadhok. Alleen bedoeld voor dit soort "vuur en vergeet"-acties,
+// niet voor elk js-ajax-form: een mislukte beheeractie (bijv. een
+// product verwijderen) moet je gewoon meteen zien mislukken, niet
+// straks stilzwijgend alsnog uitgevoerd worden.
+var OFFLINE_WACHTRIJ_SLEUTEL = "kantine-offline-wachtrij";
+var offlineWachtrijBezig = false;
+
+function offlineWachtrijLezen() {
+    try {
+        return JSON.parse(localStorage.getItem(OFFLINE_WACHTRIJ_SLEUTEL) || "[]");
+    } catch (e) {
+        return [];
+    }
+}
+
+function offlineWachtrijSchrijven(lijst) {
+    try {
+        localStorage.setItem(OFFLINE_WACHTRIJ_SLEUTEL, JSON.stringify(lijst));
+    } catch (e) {
+        // localStorage kan geblokkeerd zijn (bijv. privénavigatie) --
+        // de actie is dan alsnog uitgevoerd zodra er weer bereik is
+        // vanuit dit tabblad, maar overleeft het sluiten ervan niet.
+    }
+}
+
+function offlineWachtrijToevoegen(form) {
+    var data = Array.from(new FormData(form).entries());
+    var lijst = offlineWachtrijLezen();
+    lijst.push({ url: form.action, data: data, ts: Date.now() });
+    offlineWachtrijSchrijven(lijst);
+    toonToast(
+        (form.dataset.offlineWachtrij || "Actie") +
+            " opgeslagen zonder verbinding — wordt verstuurd zodra je weer bereik hebt."
+    );
+    form.reset();
+}
+
+function offlineWachtrijVerwerken() {
+    if (offlineWachtrijBezig) return;
+    var lijst = offlineWachtrijLezen();
+    if (!lijst.length) return;
+    offlineWachtrijBezig = true;
+    var item = lijst[0];
+    // Alleen op resp.ok controleren, bewust geen JSON proberen te lezen:
+    // deze wachtrij bedient zowel gewone formulieren (die uiteindelijk
+    // een HTML-pagina teruggeven na een redirect) als js-ajax-forms (die
+    // JSON teruggeven) -- resp.ok is het enige dat beide gemeen hebben.
+    fetch(item.url, {
+        method: "POST",
+        headers: { "X-Requested-With": "fetch" },
+        body: new URLSearchParams(item.data),
+    })
+        .then(function (resp) {
+            if (!resp.ok) throw new Error("serverfout");
+            var rest = offlineWachtrijLezen();
+            rest.shift();
+            offlineWachtrijSchrijven(rest);
+            toonToast("Eerder opgeslagen actie alsnog verstuurd.");
+        })
+        .catch(function () {
+            // Nog steeds geen verbinding (of alsnog een serverfout) --
+            // laten staan, een volgende 'online'-gebeurtenis of
+            // paginabezoek probeert het opnieuw.
+        })
+        .finally(function () {
+            offlineWachtrijBezig = false;
+            if (offlineWachtrijLezen().length) offlineWachtrijVerwerken();
+        });
+}
+
+window.addEventListener("online", offlineWachtrijVerwerken);
+document.addEventListener("DOMContentLoaded", offlineWachtrijVerwerken);
+
+// ---------- Formulieren die geen volledige paginaherlaad meer nodig hebben ----------
+// Een form met class "js-ajax-form" wordt via fetch() verstuurd i.p.v.
+// een gewone submit; de route herkent dit (zie is_ajax_verzoek() in
+// app.py) en geeft JSON terug in plaats van een redirect. Heeft de
+// form ook data-bevestig, dan verschijnt eerst de bevestigings-pop-up.
+// Lukt het fetch-verzoek niet, dan onderscheiden we twee gevallen: een
+// echte netwerkfout (fetch zelf gooit een TypeError) op een form met
+// data-offline-wachtrij gaat de wachtrij hierboven in; al het andere
+// (serverfout, oude sessie, geen JS-ondersteunde route) valt terug op
+// een gewone submit, zodat de actie hoe dan ook gewoon lukt.
+document.addEventListener("submit", function (e) {
+    var form = e.target.closest(".js-ajax-form");
+    if (!form) return;
+    e.preventDefault();
+    var versturen = function () {
+        fetch(form.action, {
+            method: "POST",
+            headers: { "X-Requested-With": "fetch" },
+            body: new FormData(form),
+        })
+            .then(function (resp) {
+                if (!resp.ok) throw new Error("serverfout");
+                return resp.json();
+            })
+            .then(function (data) {
+                if (!data.ok) throw new Error(data.fout || "mislukt");
+                form.dispatchEvent(
+                    new CustomEvent("ajax-form:success", { detail: data, bubbles: true })
+                );
+            })
+            .catch(function (fout) {
+                if (form.dataset.offlineWachtrij && fout instanceof TypeError) {
+                    offlineWachtrijToevoegen(form);
+                    return;
+                }
+                form.submit();
+            });
+    };
+    if (form.dataset.bevestig) {
+        toonBevestiging(form.dataset.bevestig, versturen);
+    } else {
+        versturen();
+    }
+});
+
+// Standaardgedrag bij succes: gewoon een toast tonen. Pagina's met
+// eigen opmaak (bijv. de stemmenlijst) luisteren zelf ook naar
+// "ajax-form:success" om daarnaast nog iets in de DOM bij te werken.
+document.addEventListener("ajax-form:success", function (e) {
+    if (e.detail && e.detail.melding) {
+        toonToast(e.detail.melding);
+    }
+});
+
+// Cachet alleen de schil (stijl, logo) en toont een nette offline-pagina
+// i.p.v. de kale foutmelding van de browser bij geen verbinding -- zie
+// static/sw.js. Bemoeit zich niet met formulieren/boekingen, dat doet
+// de wachtrij hierboven.
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(function () {
+        // Kan mislukken zonder verbinding (of op een browser die het
+        // niet ondersteunt) -- de rest van de site werkt dan gewoon
+        // door, alleen zonder de offline-schil.
+    });
+}
+
+(function () {
+    var banner = document.getElementById("site-banner");
+    if (!banner) return;
+    var tekst = banner.dataset.bannerTekst;
+    if (localStorage.getItem("banner-weggeklikt") === tekst) {
+        banner.style.display = "none";
+        return;
+    }
+    var sluiten = document.getElementById("site-banner-sluiten");
+    sluiten.addEventListener("click", function () {
+        localStorage.setItem("banner-weggeklikt", tekst);
+        banner.style.display = "none";
+    });
+})();
+
+// ---------- Tabbladen binnen 1 pagina ----------
+// Zie .tab-balk/.tab-knop/.tab-paneel in style.css. Markup: een
+// <div class="tab-balk" data-tab-js> met daarin knoppen
+// data-tab-doel="naam", en ergens op de pagina bijpassende panelen
+// data-tab-paneel="naam". Alleen voor tabbladen die panelen op DEZELFDE
+// pagina tonen/verbergen (bijv. kiosk_sponsoren_leden.html) -- een
+// subnav van gewone links naar andere pagina's (bijv. de sub-navigatie
+// boven Prijzenscherm & acties) heeft deze JS niet nodig, "actief"
+// wordt daar gewoon server-side bepaald. Het huidige tabblad staat in het
+// URL-fragment (#naam), zodat een link van elders (bijv. vanaf de
+// kantine-tv-hub) direct op het juiste tabblad kan uitkomen en
+// verversen niet terugvalt op het eerste tabblad.
+//
+// Dit script staat vóór de pagina-inhoud in de HTML (zie base.html,
+// zelfde reden als de inklapbare zijbalk-groepen hierboven), dus de
+// tabbladen/panelen bestaan nog niet op het moment dat dit script
+// geparsed wordt -- vandaar ook hier tot na DOMContentLoaded wachten.
+document.addEventListener("DOMContentLoaded", function () {
+    var balken = document.querySelectorAll(".tab-balk[data-tab-js]");
+    if (!balken.length) return;
+
+    function activeer(doel) {
+        document.querySelectorAll("[data-tab-doel]").forEach(function (knop) {
+            knop.classList.toggle("actief", knop.dataset.tabDoel === doel);
+        });
+        document.querySelectorAll("[data-tab-paneel]").forEach(function (paneel) {
+            paneel.hidden = paneel.dataset.tabPaneel !== doel;
+        });
+    }
+
+    balken.forEach(function (balk) {
+        balk.addEventListener("click", function (e) {
+            var knop = e.target.closest("[data-tab-doel]");
+            if (!knop) return;
+            e.preventDefault();
+            activeer(knop.dataset.tabDoel);
+            history.replaceState(null, "", "#" + knop.dataset.tabDoel);
+        });
+    });
+
+    var starttab = (location.hash || "").slice(1);
+    var startKnop = starttab && document.querySelector('[data-tab-doel="' + starttab + '"]');
+    var eersteKnop = document.querySelector("[data-tab-doel]");
+    if (startKnop) {
+        activeer(starttab);
+    } else if (eersteKnop) {
+        activeer(eersteKnop.dataset.tabDoel);
+    }
+});

@@ -1,10 +1,10 @@
-{# Gedeelde CSS voor het kantine scherm (kiosk_scherm.html) EN de plekken
+/* Gedeelde CSS voor het kantine scherm (kiosk_scherm.html) EN de plekken
    waar een sponsor-/mededelingslide al vóór het opslaan getoond wordt
    (kiosk_sponsor_form.html, kiosk_sjabloon_bouwer.html) -- zo is het
    live-voorbeeld daar gegarandeerd pixel-voor-pixel gelijk aan de
    uiteindelijke TV-weergave, zonder de opmaak op 2 plekken te onderhouden.
-   Wordt binnen een eigen <style>-tag ge-include't door de gebruikende
-   pagina's. #}
+   Los bestand (i.p.v. een {% include %}) zodat de browser 'm 1x cacht i.p.v.
+   op elke pagina opnieuw inline te downloaden. */
 :root {
     --blauw: #1e3a8a;
     --blauw-donker: #0f1f4d;

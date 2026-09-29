@@ -6,6 +6,7 @@
     <title>Kantine scherm · s.v. Blauw-Geel 1915</title>
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
     <meta name="theme-color" content="#1e3a8a">
+    <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie }}">
     <style>
         html, body { height: 100%; margin: 0; }
         body {
@@ -15,7 +16,6 @@
             overflow: hidden;
         }
         .scherm { position: relative; width: 100vw; height: 100vh; }
-        {% include "_kiosk_scherm_stijl.html" %}
 
         /* Vast clubbeeldmerk rechtsonder op elke dia (sponsor, mededeling,
            Club van 20, wedstrijden -- ongeacht sjabloon) zodat altijd

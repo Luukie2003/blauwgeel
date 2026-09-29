@@ -135,6 +135,44 @@ KASSA_COUPURES = [
 ]
 
 
+AFBEELDING_MAX_AFMETING = 1600  # px, langste zijde
+
+
+def _verkleind(bestand, extensie):
+    """Verkleint/comprimeert een geuploade foto tot een redelijke maximale
+    afmeting, zodat een foto rechtstreeks van een telefooncamera (soms
+    2-3MB per stuk) niet onverkleind op de server belandt -- zie het
+    gebruik/performance-onderzoek. Geeft de nieuwe bytes terug, of None als
+    verkleinen niet lukte/niet van toepassing is (dan valt sla_afbeelding_op
+    hieronder terug op de oorspronkelijke upload i.p.v. te crashen).
+    .gif slaan we bewust over: Pillow bewaart zonder extra werk alleen de
+    eerste frame, en dat zou een geanimeerd logo stilzetten."""
+    if extensie == ".gif":
+        return None
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return None
+    try:
+        afbeelding = ImageOps.exif_transpose(Image.open(bestand))
+        afbeelding.thumbnail((AFBEELDING_MAX_AFMETING, AFBEELDING_MAX_AFMETING), Image.LANCZOS)
+        buffer = io.BytesIO()
+        if extensie in (".jpg", ".jpeg"):
+            if afbeelding.mode not in ("RGB", "L"):
+                afbeelding = afbeelding.convert("RGB")
+            afbeelding.save(buffer, format="JPEG", quality=85, optimize=True)
+        elif extensie == ".webp":
+            afbeelding.save(buffer, format="WEBP", quality=85)
+        else:
+            afbeelding.save(buffer, format="PNG", optimize=True)
+    except Exception:
+        # Onherkenbare/kapotte afbeeldingsdata mag de upload niet laten
+        # crashen -- dan slaat sla_afbeelding_op de oorspronkelijke bytes op,
+        # net als voorheen.
+        return None
+    return buffer.getvalue()
+
+
 def sla_afbeelding_op(bestand, doelmap):
     """Slaat een geuploade afbeelding veilig op in doelmap (een willekeurige
     bestandsnaam, alleen bekende afbeeldingsextensies) en geeft de
@@ -146,7 +184,12 @@ def sla_afbeelding_op(bestand, doelmap):
         return None
     doelmap.mkdir(parents=True, exist_ok=True)
     bestandsnaam = f"{secrets.token_hex(16)}{extensie}"
-    bestand.save(doelmap / bestandsnaam)
+    verkleind = _verkleind(bestand, extensie)
+    if verkleind is not None:
+        (doelmap / bestandsnaam).write_bytes(verkleind)
+    else:
+        bestand.seek(0)
+        bestand.save(doelmap / bestandsnaam)
     return bestandsnaam
 
 
@@ -1159,11 +1202,22 @@ def bereken_bestellijst_meldingen(db):
            GROUP BY product_id
            ORDER BY laatste_melding DESC"""
     ).fetchall()
+    # Alle gemelde producten in 1 keer ophalen i.p.v. per melding een losse
+    # SELECT -- volgorde van product_rijen (laatste_melding DESC) blijft
+    # behouden doordat we daarover blijven itereren, niet over de query hier.
+    producten_bij_id = {}
+    if product_rijen:
+        plekhouders = ",".join("?" * len(product_rijen))
+        producten_bij_id = {
+            p["id"]: p
+            for p in db.execute(
+                f"SELECT * FROM producten WHERE id IN ({plekhouders})",
+                tuple(r["product_id"] for r in product_rijen),
+            ).fetchall()
+        }
     producten_gemeld = []
     for r in product_rijen:
-        product = db.execute(
-            "SELECT * FROM producten WHERE id = ?", (r["product_id"],)
-        ).fetchone()
+        product = producten_bij_id.get(r["product_id"])
         if product is None:
             continue
         producten_gemeld.append(

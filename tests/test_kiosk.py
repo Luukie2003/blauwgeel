@@ -1438,7 +1438,7 @@ def test_kantine_scherm_rendert_eigen_sjabloon_met_sponsorinhoud(client, db):
     tekst = resp.data.decode()
 
     assert resp.status_code == 200
-    assert "slide-aangepast" in tekst
+    assert "sjabloon-aangepast" in tekst
     assert "Canvas Sponsor Titel" in tekst  # titel-element toont de sponsor's eigen titel
     assert "Vast label" in tekst  # vrije_tekst-element toont zijn eigen vaste inhoud
     # 'midden'/'rechts' moeten omgezet zijn naar geldige CSS text-align-waarden,
@@ -1478,6 +1478,7 @@ def test_sponsor_slaat_overgang_tekst_grootte_en_achtergrond_op(ingelogde_client
             "titel": "Kantinedienst gezocht",
             "overgang": "inzoomen",
             "tekst_grootte": "xl",
+            "actief": "1",
             "achtergrond_afbeelding": (io.BytesIO(_KLEINE_PNG), "achtergrond.png"),
         },
         content_type="multipart/form-data",

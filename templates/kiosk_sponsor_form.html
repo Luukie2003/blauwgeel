@@ -17,8 +17,8 @@
     </p>
 </div>
 
+<link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie }}">
 <style>
-    {% include "_kiosk_scherm_stijl.html" %}
     .kiosk-sponsor-layout { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
     .kiosk-sponsor-layout > .kaart { flex: 1 1 420px; margin: 0; }
     .kiosk-voorbeeld { flex: 1 1 360px; min-width: 300px; position: sticky; top: 1rem; }

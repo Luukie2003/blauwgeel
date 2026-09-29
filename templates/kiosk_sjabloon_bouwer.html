@@ -13,8 +13,8 @@
     </p>
 </div>
 
+<link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie }}">
 <style>
-    {% include "_kiosk_scherm_stijl.html" %}
     .bouwer-layout { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
     .bouwer-canvas-kolom { flex: 2 1 560px; min-width: 320px; }
     .bouwer-eigenschappen-kolom { flex: 1 1 260px; min-width: 240px; }

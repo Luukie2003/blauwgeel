@@ -88,7 +88,7 @@ def register_routes(app):
         besteld_door = session.get("gebruiker_naam")
         besteld_door_id = session.get("gebruiker_id")
 
-        regels = []
+        aantallen_per_pid = {}
         for pid in product_ids:
             aantal_besteleenheden = request.form.get(f"aantal_{pid}", "0")
             try:
@@ -96,14 +96,27 @@ def register_routes(app):
             except ValueError:
                 aantal_besteleenheden = 0
             if aantal_besteleenheden > 0:
-                product = db.execute(
-                    "SELECT * FROM producten WHERE id = ?", (int(pid),)
-                ).fetchone()
+                aantallen_per_pid[int(pid)] = aantal_besteleenheden
+
+        # Alle betrokken producten in 1 keer ophalen i.p.v. per productregel
+        # een losse SELECT.
+        regels = []
+        if aantallen_per_pid:
+            plekhouders = ",".join("?" * len(aantallen_per_pid))
+            producten_bij_id = {
+                p["id"]: p
+                for p in db.execute(
+                    f"SELECT * FROM producten WHERE id IN ({plekhouders})",
+                    tuple(aantallen_per_pid.keys()),
+                ).fetchall()
+            }
+            for pid, aantal_besteleenheden in aantallen_per_pid.items():
+                product = producten_bij_id.get(pid)
                 if product is None:
                     continue
                 aantal = naar_voorraadeenheden(aantal_besteleenheden, product)
                 if aantal > 0:
-                    regels.append((int(pid), aantal))
+                    regels.append((pid, aantal))
 
         if not regels:
             flash("Geen producten geselecteerd voor de bestelling.", "error")

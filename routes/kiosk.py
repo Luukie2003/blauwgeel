@@ -215,6 +215,7 @@ def register_routes(app):
 
         if instellingen["toon_standen"]:
             stand_slides = []
+            club_logos = _club_logos(db)
             for poule in _stand_poules(db):
                 teams = _stand_teams(db, poule["sleutel"])
                 if not teams:
@@ -224,7 +225,9 @@ def register_routes(app):
                         "type": "stand",
                         "duur": instellingen["standen_duur_seconden"],
                         "titel": poule["titel"],
-                        "teams": [_stand_team_weergave(db, i + 1, t) for i, t in enumerate(teams)],
+                        "teams": [
+                            _stand_team_weergave(i + 1, t, club_logos) for i, t in enumerate(teams)
+                        ],
                     }
                 )
             if stand_slides:
@@ -292,13 +295,17 @@ def register_routes(app):
             return namen[0] if namen else ""
         return ", ".join(namen[:-1]) + " & " + namen[-1]
 
-    def _club_logo(db, club):
-        rij = db.execute(
-            "SELECT afbeelding FROM kiosk_club_logos WHERE club = ?", (club,)
-        ).fetchone()
-        return rij["afbeelding"] if rij else None
+    def _club_logos(db):
+        """Alle geregistreerde clublogo's in 1 keer, als {club: afbeelding} --
+        zodat _stand_team_weergave hieronder niet per team een eigen query
+        hoeft te doen (was een N+1: 1 query per team op elke paginalading
+        EN elke 10s-poll van het kantine scherm)."""
+        return {
+            r["club"]: r["afbeelding"]
+            for r in db.execute("SELECT club, afbeelding FROM kiosk_club_logos").fetchall()
+        }
 
-    def _stand_team_weergave(db, positie, team):
+    def _stand_team_weergave(positie, team, club_logos):
         """Bouwt 1 team-rij voor de standen-dia (zie kiosk_scherm.html) --
         Gespeeld en Punten worden hier berekend uit W/GL/V (3-1-0-systeem,
         zelfde als voetbal.nl) i.p.v. los opgeslagen, zodat ze nooit uit de
@@ -308,7 +315,7 @@ def register_routes(app):
             "positie": positie,
             "naam": team["naam"],
             "eigen_team": bool(team["eigen_team"]),
-            "logo": _club_logo(db, team["club"]) if team["club"] else None,
+            "logo": club_logos.get(team["club"]) if team["club"] else None,
             "gewonnen": gewonnen,
             "gelijk": gelijk,
             "verloren": verloren,
@@ -358,11 +365,10 @@ def register_routes(app):
             dag = _dag_uit_request(request.form)
             kolom = DAG_KOLOM[dag]
             producten = db.execute("SELECT id FROM producten").fetchall()
-            for p in producten:
-                getoond = 1 if request.form.get(f"toon_{p['id']}") else 0
-                db.execute(
-                    f"UPDATE producten SET {kolom} = ? WHERE id = ?", (getoond, p["id"])
-                )
+            updates = [
+                (1 if request.form.get(f"toon_{p['id']}") else 0, p["id"]) for p in producten
+            ]
+            db.executemany(f"UPDATE producten SET {kolom} = ? WHERE id = ?", updates)
             db.commit()
             flash("Prijzenscherm-selectie opgeslagen.", "success")
             return redirect(url_for("kiosk_prijzen_instellingen", dag=dag))
@@ -378,18 +384,19 @@ def register_routes(app):
                JOIN producten p ON p.id = ka.product_id
                ORDER BY ka.id"""
         ).fetchall()
+        prijzen_instellingen = _prijzen_instellingen(db)
         return render_template(
             "kiosk_prijzen_instellingen.html",
             producten=producten,
             acties=acties,
             instellingen=_scherm_instellingen(db),
-            prijzen_instellingen=_prijzen_instellingen(db),
+            prijzen_instellingen=prijzen_instellingen,
             gekozen_dag=dag,
             categorie_kolommen_namen=_verdeel_namen_over_kolommen(
-                _alle_kiosk_categorie_namen(db), _categorie_kolommen_indeling(db)
+                _alle_kiosk_categorie_namen(db), _categorie_kolommen_indeling(db, prijzen_instellingen)
             ),
             alle_producten=_sjabloon_producten(db),
-            uitgelicht=_uitgelicht_product(db),
+            uitgelicht=_uitgelicht_product(db, prijzen_instellingen),
         )
 
     @app.route("/kiosk/prijzen/trainingsavond-modus", methods=["POST"])
@@ -650,14 +657,17 @@ def register_routes(app):
             lijst.sort(key=lambda p: p["naam"].lower())
         return sorted(per_categorie.items())
 
-    def _uitgelicht_product(db):
+    def _uitgelicht_product(db, instellingen=None):
         """Het door de beheerder gekozen 'uitgelicht'-product (bijv. Snack
         van de week, zie kiosk_prijzen_instellingen.html) -- groot en
         omlijnd getoond op het prijzenscherm, los van zijn eigen categorie.
         None als er niets gekozen is, of het gekozen product inmiddels
         verwijderd/gedeactiveerd is (dan verdwijnt de kaart gewoon, net als
-        de rest van dit scherm bij een leeg blok -- zie _bouw_slides)."""
-        instellingen = _prijzen_instellingen(db)
+        de rest van dit scherm bij een leeg blok -- zie _bouw_slides).
+        instellingen mag al opgehaald zijn meegegeven (zie
+        _prijzen_render_kwargs/kiosk_prijzen_versie) i.p.v. 'm hier nogmaals
+        op te vragen -- dat scheelt een herhaalde losse query per poll."""
+        instellingen = instellingen or _prijzen_instellingen(db)
         product_id = instellingen["uitgelicht_product_id"]
         if product_id is None:
             return None
@@ -727,16 +737,17 @@ def register_routes(app):
             for b in bardiensten
         ]
 
-    def _dag_type_vandaag(db):
+    def _dag_type_vandaag(db, instellingen=None):
         """'trainingsavond' of 'normaal' -- bepaalt welke productselectie het
         prijzenscherm nu toont (zie DAG_KOLOM/_prijzen_categorieen).
         Handmatig ingesteld via de schakelaar op de instellingenpagina (zie
         kiosk_trainingsavond_modus_wisselen), bewust niet meer automatisch
         op de kalenderdag -- de training verschuift weleens (vakantie,
         extra training, calamiteit) en dan klopte de vaste dag niet."""
-        return "trainingsavond" if _prijzen_instellingen(db)["trainingsavond_modus_actief"] else "normaal"
+        instellingen = instellingen or _prijzen_instellingen(db)
+        return "trainingsavond" if instellingen["trainingsavond_modus_actief"] else "normaal"
 
-    def _wedstrijddag_welkom_wedstrijden(db):
+    def _wedstrijddag_welkom_wedstrijden(db, instellingen=None):
         """Eigen thuiswedstrijden vandaag, voor de welkomstbanner/-popup op
         het prijzenscherm (instelling: zie kiosk_wedstrijddag_welkom_instellingen)
         -- lege lijst als de banner uitstaat of er niets gepland staat.
@@ -746,7 +757,7 @@ def register_routes(app):
         welk tijdvak nu actief is (zie werkWedstrijddagWelkomBij() in
         kiosk_prijzen_scherm.html), net als bij de bardienst-balk en om
         dezelfde reden: geen servertijdzone-afhankelijkheid."""
-        instellingen = _prijzen_instellingen(db)
+        instellingen = instellingen or _prijzen_instellingen(db)
         if not instellingen["wedstrijddag_welkom_actief"]:
             return []
         vandaag = vandaag_amsterdam().isoformat()
@@ -788,13 +799,14 @@ def register_routes(app):
                 return naam
         return None
 
-    def _categorie_kolommen_indeling(db):
+    def _categorie_kolommen_indeling(db, instellingen=None):
         """Leest de opgeslagen kolomindeling (zie kiosk_prijzen_instellingen.html,
         de sleep-interface) -- {"1": [...namen], "2": [...], "3": [...]}.
         Onherkenbare/kapotte inhoud (zou hier nooit moeten voorkomen, alleen
         via _categorie_kolommen_opslaan hieronder geschreven) valt terug op
         een lege indeling i.p.v. de pagina te laten crashen."""
-        ruw = _prijzen_instellingen(db)["categorie_kolommen"]
+        instellingen = instellingen or _prijzen_instellingen(db)
+        ruw = instellingen["categorie_kolommen"]
         try:
             data = json.loads(ruw)
         except (TypeError, ValueError):
@@ -886,16 +898,17 @@ def register_routes(app):
         """Gedeelde render-context voor zowel /kiosk/prijzen als de
         prijzen-stand van /kiosk/tv (zie kiosk_tv) -- 1 plek voor de opbouw
         zodat beide altijd exact hetzelfde renderen."""
-        uitgelicht = _uitgelicht_product(db)
+        instellingen = _prijzen_instellingen(db)
+        uitgelicht = _uitgelicht_product(db, instellingen)
         categorieen = _prijzen_categorieen(
             db,
-            _dag_type_vandaag(db),
+            _dag_type_vandaag(db, instellingen),
             uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None,
         )
         acties = _acties_actief(db)
         bardiensten = _bardiensten_vandaag(db)
-        wedstrijden_vandaag = _wedstrijddag_welkom_wedstrijden(db)
-        indeling = _categorie_kolommen_indeling(db)
+        wedstrijden_vandaag = _wedstrijddag_welkom_wedstrijden(db, instellingen)
+        indeling = _categorie_kolommen_indeling(db, instellingen)
         acties_voor_scherm = [
             {
                 "naam": a["product_naam"],
@@ -906,7 +919,6 @@ def register_routes(app):
             for a in acties
         ]
         extra = (extra_versie,) if extra_versie else ()
-        instellingen = _prijzen_instellingen(db)
         return {
             "categorieen_kolommen": _verdeel_over_kolommen(categorieen, indeling),
             "acties": acties_voor_scherm,
@@ -933,10 +945,11 @@ def register_routes(app):
     @app.route("/kiosk/prijzen/versie")
     def kiosk_prijzen_versie():
         db = get_db()
-        uitgelicht = _uitgelicht_product(db)
+        instellingen = _prijzen_instellingen(db)
+        uitgelicht = _uitgelicht_product(db, instellingen)
         categorieen = _prijzen_categorieen(
             db,
-            _dag_type_vandaag(db),
+            _dag_type_vandaag(db, instellingen),
             uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None,
         )
         acties = _acties_actief(db)
@@ -947,12 +960,12 @@ def register_routes(app):
                     categorieen,
                     acties,
                     bardiensten,
-                    _wedstrijddag_welkom_wedstrijden(db),
-                    _categorie_kolommen_indeling(db),
+                    _wedstrijddag_welkom_wedstrijden(db, instellingen),
+                    _categorie_kolommen_indeling(db, instellingen),
                     uitgelicht,
                 ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
-                "wedstrijddag_test": _prijzen_instellingen(db)["wedstrijddag_test_teller"],
+                "wedstrijddag_test": instellingen["wedstrijddag_test_teller"],
                 "wedstrijddag_test_tegenstander": _eerstvolgende_bekende_tegenstander(db),
             }
         )
@@ -2116,10 +2129,11 @@ def register_routes(app):
         instellingen = _scherm_instellingen(db)
         if instellingen["actief_tv_scherm"] == "dias":
             return jsonify({"versie": _versie("tv", _bouw_slides(db))})
-        uitgelicht = _uitgelicht_product(db)
+        prijzen_instellingen = _prijzen_instellingen(db)
+        uitgelicht = _uitgelicht_product(db, prijzen_instellingen)
         categorieen = _prijzen_categorieen(
             db,
-            _dag_type_vandaag(db),
+            _dag_type_vandaag(db, prijzen_instellingen),
             uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None,
         )
         acties = _acties_actief(db)
@@ -2130,13 +2144,13 @@ def register_routes(app):
                     categorieen,
                     acties,
                     bardiensten,
-                    _wedstrijddag_welkom_wedstrijden(db),
-                    _categorie_kolommen_indeling(db),
+                    _wedstrijddag_welkom_wedstrijden(db, prijzen_instellingen),
+                    _categorie_kolommen_indeling(db, prijzen_instellingen),
                     uitgelicht,
                     "tv",
                 ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
-                "wedstrijddag_test": _prijzen_instellingen(db)["wedstrijddag_test_teller"],
+                "wedstrijddag_test": prijzen_instellingen["wedstrijddag_test_teller"],
                 "wedstrijddag_test_tegenstander": _eerstvolgende_bekende_tegenstander(db),
             }
         )

@@ -648,6 +648,13 @@ def create_app(database_path=None):
     # Ruim genoeg voor een paar afbeeldingen bij stemopties, of het
     # terugzetten van een back-up.
     app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
+    # Lang cachen mag: geuploade afbeeldingen krijgen bij het opslaan altijd
+    # een gloednieuwe, willekeurige bestandsnaam (zie sla_afbeelding_op in
+    # helpers.py) -- een vervangen foto overschrijft dus nooit een bestaande
+    # URL, en style.css heeft z'n eigen cache-buster (?v=..., zie css_versie
+    # hieronder). Zonder dit stond hier geen Cache-Control-header op, dus
+    # werd elk statisch bestand bij elk bezoek opnieuw gevalideerd.
+    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 31536000  # 365 dagen
 
     register_db(app)
     init_db(app)
@@ -800,6 +807,8 @@ def create_app(database_path=None):
             "huidige_gebruiker": session.get("gebruiker_naam"),
             "huidige_gebruiker_rol": session.get("gebruiker_rol"),
             "css_versie": int((BASE_DIR / "static" / "style.css").stat().st_mtime),
+            "gedeeld_js_versie": int((BASE_DIR / "static" / "gedeeld.js").stat().st_mtime),
+            "kiosk_stijl_versie": int((BASE_DIR / "static" / "kiosk_scherm_stijl.css").stat().st_mtime),
             "site_banner_tekst": banner_tekst,
             "csrf_token": csrf_token,
             "pda_modus": pda_modus,
