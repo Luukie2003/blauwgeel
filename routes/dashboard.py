@@ -25,8 +25,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.15"
+HUIDIGE_VERSIE = "1.15.16"
 WIJZIGINGEN = [
+    {
+        "versie": "1.15.16",
+        "datum": "29 september 2026",
+        "punten": [
+            "Man of the Match-dia vormgegeven in de stijl van voetbal.nl's wedstrijdpagina (clublogo's + uitslag, zonder foto's) -- tegenstander is nu ook per team in te vullen",
+        ],
+    },
     {
         "versie": "1.15.15",
         "datum": "29 september 2026",

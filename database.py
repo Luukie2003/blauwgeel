@@ -265,6 +265,12 @@ KOLOM_MIGRATIES = [
     # team toont nu op de dia zodra minstens 1 van de 2 is ingevuld (zie
     # _bouw_slides), dus een uitslag zonder gekozen speler is ook zichtbaar.
     ("kiosk_motm", "uitslag", "TEXT"),
+    # Naam van de tegenstander (bijv. "Gruno 6") -- in de stijl van
+    # voetbal.nl's wedstrijdpagina toont de dia hiermee ook het logo van de
+    # tegenstander, via hetzelfde logo-register als de standen-dia's
+    # (club_van_team_naam + kiosk_club_logos in routes/kiosk.py). Het eigen
+    # team toont altijd het eigen clublogo (static/logo.png).
+    ("kiosk_motm", "tegenstander", "TEXT"),
 ]
 
 

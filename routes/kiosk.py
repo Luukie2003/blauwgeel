@@ -213,9 +213,14 @@ def register_routes(app):
                     )
                 )
 
+        # 1 keer opgehaald i.p.v. per blok apart: standen EN Man of the
+        # Match tonen allebei clublogo's via hetzelfde register.
+        club_logos = (
+            _club_logos(db) if instellingen["toon_standen"] or instellingen["toon_motm"] else {}
+        )
+
         if instellingen["toon_standen"]:
             stand_slides = []
-            club_logos = _club_logos(db)
             for poule in _stand_poules(db):
                 teams = _stand_teams(db, poule["sleutel"])
                 if not teams:
@@ -238,12 +243,21 @@ def register_routes(app):
             # dia (zie kiosk_motm_volgorde_opslaan) -- allebei leeg betekent
             # dat het team niet heeft gespeeld, en heeft geen enkel team iets
             # ingevuld dan slaat de hele dia over, net als de andere blokken
-            # hierboven bij lege data.
+            # hierboven bij lege data. Tegenstander-logo komt uit hetzelfde
+            # register als de standen-dia's (club_van_team_naam), dus een
+            # tegenstander die daar al een logo heeft staan (vaak het geval,
+            # zelfde competities) toont 'm hier automatisch mee.
             motm_teams = [
                 {
                     "team": t["team"],
                     "speler": _motm_namen_weergave(t["speler"]),
                     "uitslag": (t["uitslag"] or "").strip(),
+                    "tegenstander": (t["tegenstander"] or "").strip(),
+                    "tegenstander_logo": (
+                        club_logos.get(club_van_team_naam(t["tegenstander"]))
+                        if (t["tegenstander"] or "").strip()
+                        else None
+                    ),
                 }
                 for t in _motm_teams(db)
                 if (t["speler"] or "").strip() or (t["uitslag"] or "").strip()
@@ -2081,6 +2095,15 @@ def register_routes(app):
             db.execute(
                 "UPDATE kiosk_motm SET uitslag = ? WHERE id = ?",
                 ((uitslag or "").strip() or None, team_id),
+            )
+        try:
+            tegenstanders = json.loads(request.form.get("tegenstanders") or "{}")
+        except ValueError:
+            tegenstanders = {}
+        for team_id, tegenstander in tegenstanders.items():
+            db.execute(
+                "UPDATE kiosk_motm SET tegenstander = ? WHERE id = ?",
+                ((tegenstander or "").strip() or None, team_id),
             )
         # Teamnaam aanpassen komt in dezelfde submit mee, zelfde opzet als
         # kiosk_stand_volgorde_opslaan hierboven -- leeg laten negeert de

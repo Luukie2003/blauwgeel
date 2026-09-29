@@ -8,14 +8,14 @@ import json
 from conftest import stel_csrf_token_in as _csrf
 
 
-def _voeg_team_toe(db, team, speler=None, uitslag=None, volgorde=None):
+def _voeg_team_toe(db, team, speler=None, uitslag=None, tegenstander=None, volgorde=None):
     if volgorde is None:
         volgorde = db.execute(
             "SELECT COALESCE(MAX(volgorde), -1) + 1 AS v FROM kiosk_motm"
         ).fetchone()["v"]
     cur = db.execute(
-        "INSERT INTO kiosk_motm (team, speler, uitslag, volgorde) VALUES (?, ?, ?, ?)",
-        (team, speler, uitslag, volgorde),
+        "INSERT INTO kiosk_motm (team, speler, uitslag, tegenstander, volgorde) VALUES (?, ?, ?, ?, ?)",
+        (team, speler, uitslag, tegenstander, volgorde),
     )
     db.commit()
     return cur.lastrowid
@@ -62,6 +62,29 @@ def test_team_zonder_uitslag_en_zonder_speler_slaat_dia_over(client, db):
 
     resp = client.get("/kiosk/scherm")
     assert b'class="motmdia-lijst"' not in resp.data
+
+
+def test_tegenstander_zonder_geregistreerd_logo_toont_alleen_naam(client, db):
+    _voeg_team_toe(db, "Eigen Team Alpha", speler="Jan Jansen", uitslag="3-1", tegenstander="Onbekende SV 4")
+
+    resp = client.get("/kiosk/scherm")
+    tekst = resp.data.decode()
+    assert "Onbekende SV 4" in tekst
+    assert "club_logos/" not in tekst
+
+
+def test_tegenstander_met_geregistreerd_logo_toont_ook_logo(client, db):
+    db.execute(
+        "INSERT INTO kiosk_club_logos (club, afbeelding, aangemaakt_op) VALUES (?, ?, ?)",
+        ("Gruno", "gruno.png", "2026-01-01 10:00"),
+    )
+    db.commit()
+    _voeg_team_toe(db, "Eigen Team Alpha", speler="Jan Jansen", uitslag="3-1", tegenstander="Gruno 6")
+
+    resp = client.get("/kiosk/scherm")
+    tekst = resp.data.decode()
+    assert "Gruno 6" in tekst
+    assert "club_logos/gruno.png" in tekst
 
 
 def test_alleen_teams_met_speler_komen_op_de_dia(client, db):
@@ -153,6 +176,26 @@ def test_volgorde_opslaan_slaat_uitslag_op(ingelogde_client, db):
     assert rij_a["uitslag"] == "2-2"
     # Enkel spaties wordt leeggemaakt (None), ook als er al een uitslag stond.
     assert rij_b["uitslag"] is None
+
+
+def test_volgorde_opslaan_slaat_tegenstander_op(ingelogde_client, db):
+    id_a = _voeg_team_toe(db, "ZA 1")
+    id_b = _voeg_team_toe(db, "ZA 2", tegenstander="Oude Tegenstander")
+
+    ingelogde_client.post(
+        "/kiosk/scherm/motm/volgorde",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "volgorde": json.dumps([id_a, id_b]),
+            "tegenstanders": json.dumps({id_a: "Gruno 6", id_b: "  "}),
+        },
+    )
+
+    rij_a = db.execute("SELECT tegenstander FROM kiosk_motm WHERE id = ?", (id_a,)).fetchone()
+    rij_b = db.execute("SELECT tegenstander FROM kiosk_motm WHERE id = ?", (id_b,)).fetchone()
+    assert rij_a["tegenstander"] == "Gruno 6"
+    # Enkel spaties wordt leeggemaakt (None), ook als er al een tegenstander stond.
+    assert rij_b["tegenstander"] is None
 
 
 def test_volgorde_opslaan_past_teamnaam_aan(ingelogde_client, db):
