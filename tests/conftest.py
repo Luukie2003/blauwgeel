@@ -12,7 +12,10 @@ from database import WACHTWOORD_HASH_METHODE, get_db  # noqa: E402
 
 @pytest.fixture
 def app(tmp_path):
-    flask_app = create_app(database_path=str(tmp_path / "test.db"))
+    # Vast wachtwoord i.p.v. het willekeurig gegenereerde standaardwachtwoord
+    # (zie database.init_db) -- de hele testsuite logt in met dit account en
+    # moet dus weten wat het wachtwoord is.
+    flask_app = create_app(database_path=str(tmp_path / "test.db"), admin_wachtwoord="kantine123")
     flask_app.config["TESTING"] = True
     # In productie staat dit standaard aan (de site draait altijd over https),
     # maar de testclient praat over http -- anders verstuurt de browser het

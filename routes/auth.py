@@ -19,8 +19,18 @@ TABLET_CODE_PATROON = re.compile(r"^\d{6}$")
 
 # Zelfde soort brute-force-bescherming als hierboven, maar dan per IP-adres
 # i.p.v. gebruikersnaam -- zie tablet_code_inloggen onderaan dit bestand.
-TABLET_CODE_MAX_POGINGEN = 10
-TABLET_CODE_LOCKOUT_MINUTEN = 15
+# Strenger dan LOGIN_MAX_POGINGEN/LOGIN_LOCKOUT_MINUTEN hierboven: een
+# 6-cijferige code heeft veel minder mogelijke waarden dan een wachtwoord
+# (1 miljoen combinaties), dus verdient een lagere pogingenlimiet en een
+# langere blokkade om offline/geautomatiseerd doorproberen minder
+# aantrekkelijk te maken. Dit beschermt niet tegen iemand die van IP-adres
+# wisselt -- dat is met een codelengte van 6 cijfers (bewust zo gehouden,
+# voor gebruiksgemak op de kiosk-tablet) niet volledig dicht te timmeren
+# zonder een blokkade die voor alle tablets tegelijk zou gelden, wat een
+# groter risico is (iedereen buitengesloten) dan het beperkte risico van een
+# geraden code (die geeft alleen toegang tot wat dat ene account al mag).
+TABLET_CODE_MAX_POGINGEN = 5
+TABLET_CODE_LOCKOUT_MINUTEN = 30
 
 
 def register_routes(app):

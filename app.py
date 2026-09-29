@@ -635,7 +635,7 @@ def get_secret_key():
     return key
 
 
-def create_app(database_path=None):
+def create_app(database_path=None, admin_wachtwoord=None):
     app = Flask(__name__)
     app.config["DATABASE"] = database_path or str(BASE_DIR / "voorraad.db")
     app.config["SECRET_KEY"] = get_secret_key()
@@ -657,7 +657,7 @@ def create_app(database_path=None):
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 31536000  # 365 dagen
 
     register_db(app)
-    init_db(app)
+    init_db(app, admin_wachtwoord=admin_wachtwoord)
 
     app.jinja_env.filters["datum_nl"] = format_datum
     app.jinja_env.filters["datum_kort"] = format_datum_kort

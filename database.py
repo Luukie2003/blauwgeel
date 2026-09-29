@@ -1,3 +1,4 @@
+import secrets
 import sqlite3
 from datetime import date, datetime
 from pathlib import Path
@@ -10,7 +11,12 @@ from helpers import club_van_team_naam, voeg_maanden_toe
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
 STANDAARD_GEBRUIKER = "admin"
-STANDAARD_WACHTWOORD = "kantine123"
+
+# Waar het willekeurig gegenereerde wachtwoord van het allereerste
+# beheerdersaccount komt te staan (zie init_db) -- zelfde opzet als
+# SECRET_KEY_PATH in app.py: een vast wachtwoord in de broncode ("kantine123")
+# zou voor elke nieuwe installatie hetzelfde en publiek bekend zijn.
+ADMIN_WACHTWOORD_PAD = Path(__file__).parent / "admin_wachtwoord_initieel.txt"
 
 # Expliciet gekozen i.p.v. werkzeug's eigen standaard: die is "scrypt" sinds
 # werkzeug 2.3, wat hashlib.scrypt vereist -- niet overal beschikbaar
@@ -534,7 +540,7 @@ def close_db(e=None):
         db.close()
 
 
-def init_db(app):
+def init_db(app, admin_wachtwoord=None):
     with app.app_context():
         db = get_db()
         count = db.execute("SELECT COUNT(*) AS n FROM producten").fetchone()["n"]
@@ -550,11 +556,28 @@ def init_db(app):
 
         gebruikers_count = db.execute("SELECT COUNT(*) AS n FROM gebruikers").fetchone()["n"]
         if gebruikers_count == 0:
+            # admin_wachtwoord is alleen bedoeld voor de testsuite (zie
+            # tests/conftest.py), die een vast wachtwoord nodig heeft om
+            # voorspelbaar te kunnen inloggen. Bij een echte (nieuwe)
+            # installatie wordt er willekeurig een gegenereerd, zodat er geen
+            # voor iedereen gelijk en publiek bekend standaardwachtwoord
+            # bestaat -- eenmalig weggeschreven zodat degene die de
+            # installatie doet het kan opzoeken.
+            if admin_wachtwoord is None:
+                if ADMIN_WACHTWOORD_PAD.exists():
+                    admin_wachtwoord = ADMIN_WACHTWOORD_PAD.read_text().strip()
+                else:
+                    admin_wachtwoord = secrets.token_urlsafe(9)
+                    ADMIN_WACHTWOORD_PAD.write_text(admin_wachtwoord)
+                print(
+                    f"[setup] Beheerdersaccount '{STANDAARD_GEBRUIKER}' aangemaakt. "
+                    f"Wachtwoord: {admin_wachtwoord} (ook opgeslagen in {ADMIN_WACHTWOORD_PAD.name})"
+                )
             db.execute(
                 "INSERT INTO gebruikers (naam, wachtwoord_hash, aangemaakt_op) VALUES (?, ?, ?)",
                 (
                     STANDAARD_GEBRUIKER,
-                    generate_password_hash(STANDAARD_WACHTWOORD, method=WACHTWOORD_HASH_METHODE),
+                    generate_password_hash(admin_wachtwoord, method=WACHTWOORD_HASH_METHODE),
                     datetime.now().strftime("%Y-%m-%d %H:%M"),
                 ),
             )

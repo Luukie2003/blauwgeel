@@ -1,5 +1,7 @@
+import ipaddress
 import re
 from datetime import date, datetime
+from urllib.parse import urlparse
 
 from flask import current_app, flash, redirect, render_template, request, send_from_directory, url_for
 
@@ -10,6 +12,34 @@ from database import get_db
 BACKUP_BESTANDSNAAM = re.compile(
     r"^voorraad-(\d{4}-\d{2}-\d{2}|voor-herstel-\d{8}-\d{6})\.db$"
 )
+
+
+def _geldige_agenda_url(url):
+    """Voorkomt dat een agenda-link ergens anders naartoe wijst dan een
+    gewone externe http(s)-agenda-feed. Zonder deze check kan iemand met
+    alleen de 'club'-sectie (dus geen volledige beheerder) een adres invullen
+    dat naar de server zelf of het interne netwerk wijst (SSRF) -- de feed
+    wordt immers server-side opgehaald door agenda.py, en een deel van de
+    inhoud/foutmelding komt terug via de 'Controleren'-knop. Bewust een pure
+    tekst-check zonder DNS-lookup (geen netwerkafhankelijkheid in een
+    formulier-validatie); een domeinnaam die via DNS pas naar een intern
+    adres blijkt te wijzen is een aanzienlijk hogere drempel dan de voor de
+    hand liggende truc die dit tegenhoudt: gewoon een lokaal/intern adres
+    intypen."""
+    parsed = urlparse(url)
+    hostname = parsed.hostname
+    if parsed.scheme not in ("http", "https") or not hostname:
+        return False
+    if hostname == "localhost" or hostname.endswith(".localhost") or hostname.endswith(".local"):
+        return False
+    try:
+        adres = ipaddress.ip_address(hostname)
+    except ValueError:
+        return True  # gewone domeinnaam (geen IP-literal), niet verder te controleren zonder DNS
+    return not (
+        adres.is_private or adres.is_loopback or adres.is_link_local
+        or adres.is_reserved or adres.is_unspecified
+    )
 
 
 def register_routes(app):
@@ -56,6 +86,12 @@ def register_routes(app):
         url = request.form.get("url", "").strip()
         if not url:
             flash("Vul een agenda-link in.", "error")
+        elif not _geldige_agenda_url(url):
+            flash(
+                "Deze link is niet toegestaan -- alleen een gewoon http(s)-adres "
+                "naar een externe agenda-feed.",
+                "error",
+            )
         else:
             db = get_db()
             db.execute("INSERT INTO agenda_feeds (url) VALUES (?)", (url,))

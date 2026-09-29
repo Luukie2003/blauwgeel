@@ -3,6 +3,7 @@ voorraad.db
 voorraad.db-shm
 voorraad.db-wal
 secret_key.txt
+admin_wachtwoord_initieel.txt
 backups/
 email_instellingen.py
 __pycache__/

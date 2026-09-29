@@ -263,7 +263,9 @@ def test_te_veel_mislukte_pogingen_blokkeert_tijdelijk(client, db):
 
 def test_geldige_code_ruimt_eigen_mislukte_pogingen_op(client, db):
     _zet_tablet_code(db, "admin", "246813")
-    for _ in range(5):
+    # Eén onder de blokkadedrempel (TABLET_CODE_MAX_POGINGEN), anders zou de
+    # geslaagde poging hierna zelf al geblokkeerd worden.
+    for _ in range(4):
         client.post("/api/tablet-code/inloggen", json={"code": "000000"})
 
     resp = client.post("/api/tablet-code/inloggen", json={"code": "246813"})
@@ -271,7 +273,7 @@ def test_geldige_code_ruimt_eigen_mislukte_pogingen_op(client, db):
 
     # Na een geslaagde poging is de teller voor dit IP-adres helemaal weg --
     # geen enkele rij meer, dus een volgende mislukte poging begint weer bij 0
-    # (dus zeker niet meteen geblokkeerd door de 5 pogingen van hierboven).
+    # (dus zeker niet meteen geblokkeerd door de pogingen van hierboven).
     assert db.execute("SELECT COUNT(*) AS n FROM tablet_code_pogingen").fetchone()["n"] == 0
     resp = client.post("/api/tablet-code/inloggen", json={"code": "000000"})
     assert resp.status_code == 200
