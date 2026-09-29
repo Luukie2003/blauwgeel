@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block titel %}{{ lid.naam if lid else 'Nieuw lid' }} · Club van 20{% endblock %}
+{% block inhoud %}
+<p class="subtitel"><a href="{{ url_for('club_van_20_overzicht') }}">&larr; Terug naar alle leden</a></p>
+
+<div style="display:flex; gap:1.1rem; flex-wrap:wrap; align-items:flex-start">
+<div class="kaart" style="flex:1 1 420px; max-width:620px">
+    <h2 style="margin-top:0">{{ 'Gegevens' if lid else 'Nieuw Club van 20-lid' }}</h2>
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="formgrid">
+            <div class="veld">
+                <label for="voornaam">Voornaam</label>
+                <input type="text" id="voornaam" name="voornaam" value="{{ lid.voornaam or '' if lid else '' }}" autofocus>
+            </div>
+            <div class="veld">
+                <label for="achternaam">Achternaam</label>
+                <input type="text" id="achternaam" name="achternaam" value="{{ lid.achternaam or '' if lid else '' }}">
+            </div>
+        </div>
+        <div class="veld">
+            <label for="naam">Naambordje (zo staat het op het scherm)</label>
+            <input type="text" id="naam" name="naam" value="{{ lid.naam if lid else '' }}" maxlength="40"
+                   placeholder="Leeg = voor- en achternaam">
+            <span class="tekst-zacht">Mag ook een bijnaam, bedrijf of "Stefan &amp; Eelko" zijn.</span>
+        </div>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="team">Team</label>
+                <input type="text" id="team" name="team" list="teams-lijst" value="{{ lid.team or '' if lid else '' }}" placeholder="Bijv. Za1">
+                <datalist id="teams-lijst">
+                    {% for team in teams %}<option value="{{ team }}">{% endfor %}
+                </datalist>
+            </div>
+            <div class="veld">
+                <label for="telefoon">Telefoon</label>
+                <input type="tel" id="telefoon" name="telefoon" value="{{ lid.telefoon or '' if lid else '' }}" placeholder="06...">
+            </div>
+            <div class="veld">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email" value="{{ lid.email or '' if lid else '' }}">
+            </div>
+        </div>
+        <div class="veld">
+            <label for="notitie">Notitie</label>
+            <textarea id="notitie" name="notitie" rows="2">{{ lid.notitie or '' if lid else '' }}</textarea>
+        </div>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="eerdere_seizoenen">Seizoenen lid vóór deze administratie</label>
+                <input type="number" id="eerdere_seizoenen" name="eerdere_seizoenen" min="0" max="50"
+                       value="{{ lid.eerdere_seizoenen or 0 if lid else 0 }}" style="max-width:8rem">
+                <span class="tekst-zacht">Telt mee voor de sterren/het gouden bordje.</span>
+            </div>
+        </div>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.5rem">
+            <input type="checkbox" name="extra_groot" style="width:auto" {{ 'checked' if lid and lid.extra_groot }}>
+            Extra groot bordje op het scherm (neemt 2 vakjes in)
+        </label>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.9rem">
+            <input type="checkbox" name="inactief" style="width:auto" {{ 'checked' if lid and lid.status == 'inactief' }}>
+            Gestopt (niet meer op het scherm, niet meer vragen)
+        </label>
+
+        {% if not lid %}
+        <fieldset class="groupbox">
+            <legend>Seizoen {{ huidig }}</legend>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="status_seizoen">Status</label>
+                    <select id="status_seizoen" name="status_seizoen">
+                        {% for sleutel, label in status_labels.items() %}
+                        <option value="{{ sleutel }}" {{ 'selected' if sleutel == 'betaald' }}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="veld">
+                    <label for="bedrag">Bedrag</label>
+                    <input type="text" id="bedrag" name="bedrag" inputmode="decimal" placeholder="{{ '%g'|format(instellingen.club_van_20_bedrag) }}">
+                </div>
+                <div class="veld">
+                    <label for="betaalwijze">Betaalwijze</label>
+                    <select id="betaalwijze" name="betaalwijze">
+                        <option value="">&mdash;</option>
+                        {% for sleutel, label in betaalwijzen.items() %}<option value="{{ sleutel }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="veld">
+                    <label for="betaald_door">Betaald door</label>
+                    <input type="text" id="betaald_door" name="betaald_door">
+                </div>
+            </div>
+        </fieldset>
+        {% endif %}
+
+        <div class="actiebalk" style="justify-content:flex-start; gap:0.5rem">
+            <button type="submit" class="btn btn-geel">{{ 'Opslaan' if lid else 'Toevoegen' }}</button>
+            {% if not lid %}<button type="submit" name="nog_een" value="1" class="btn btn-rand">Toevoegen &amp; nog een</button>{% endif %}
+        </div>
+    </form>
+</div>
+
+{% if lid %}
+<div style="flex:1 1 360px; max-width:560px">
+    <div class="kaart">
+        <h2 style="margin-top:0">
+            {% if lid.aantal_seizoenen %}<span class="lid-sterren">{{ '★' * lid.aantal_seizoenen if lid.aantal_seizoenen <= 5 else lid.aantal_seizoenen ~ '★' }}</span>{% endif %}{{ lid.naam }}
+        </h2>
+        <p style="margin:0 0 0.4rem">
+            {% if op_scherm %}
+            <span class="badge badge-ok">Staat op het scherm</span>
+            {% if onbetaald %}<span class="tekst-zacht">(nog niet betaald voor {{ huidig }}, telt nog mee door een eerdere betaling)</span>{% endif %}
+            {% else %}
+            <span class="badge badge-neutraal">Niet op het scherm</span>
+            <span class="tekst-zacht">{% if lid.status == 'inactief' %}gestopt{% else %}pas zodra {{ huidig }} betaald is{% endif %}</span>
+            {% endif %}
+        </p>
+        <p class="tekst-zacht" style="margin:0">
+            {{ lid.betaalde_seizoenen|length }} betaalde seizoen{{ 'en' if lid.betaalde_seizoenen|length != 1 }}
+            &middot; totaal {{ lid.totaal_betaald|euro }}
+            {% if lid.eerste_seizoen %}&middot; lid sinds {{ lid.eerste_seizoen }}{% endif %}
+        </p>
+    </div>
+
+    {% if lid.status != 'inactief' and lid.bijdragen.get(huidig, {}).get('status') != 'betaald' %}
+    <div class="kaart">
+        <h2 style="margin-top:0">Betaalverzoek sturen</h2>
+        <textarea id="verzoek-tekst" rows="4" style="width:100%">{{ verzoek }}</textarea>
+        <div class="actiebalk" style="justify-content:flex-start; gap:0.5rem; margin-top:0.5rem">
+            <button type="button" class="btn btn-rand btn-klein" id="verzoek-kopieren">Tekst kopi&euml;ren</button>
+            {% if whatsapp %}
+            <a href="{{ whatsapp }}" class="btn btn-rand btn-klein" id="verzoek-whatsapp" target="_blank" rel="noopener">Open in WhatsApp</a>
+            {% else %}
+            <span class="tekst-zacht">Vul een telefoonnummer in voor een WhatsApp-knop.</span>
+            {% endif %}
+        </div>
+        <p class="tekst-zacht" style="margin-bottom:0">
+            Na het sturen: zet {{ huidig }} hieronder op "Gevraagd". De tekst pas je aan bij
+            <a href="{{ url_for('club_van_20_instellingen') }}">Scherm &amp; werving</a>.
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="kaart">
+        <h2 style="margin-top:0">Betalingen per seizoen</h2>
+        {% set lijst = ([volgend] if volgend not in seizoenen else []) + seizoenen %}
+        {% for s in lijst %}
+        {% set b = lid.bijdragen.get(s, {}) %}
+        <form method="post" action="{{ url_for('club_van_20_bijdrage_opslaan', lid_id=lid.id) }}" class="js-ajax-form"
+              style="border-top:1px solid var(--rand-licht); padding:0.6rem 0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="seizoen" value="{{ s }}">
+            <div class="c20-seizoensregel">
+                <strong>{{ s }}{% if s == huidig %} <span class="badge badge-in">nu</span>{% endif %}</strong>
+                <select name="status" class="c20-status-select c20-status-{{ b.status or 'niet_gevraagd' }}"
+                        onchange="this.className = 'c20-status-select c20-status-' + this.value">
+                    {% for sleutel, label in status_labels.items() %}
+                    <option value="{{ sleutel }}" {{ 'selected' if sleutel == (b.status or 'niet_gevraagd') }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="bedrag" inputmode="decimal" title="Bedrag"
+                       value="{{ '%g'|format(b.bedrag) if b.status == 'betaald' else '' }}" placeholder="€">
+                <select name="betaalwijze" title="Betaalwijze">
+                    <option value="">Betaalwijze</option>
+                    {% for sleutel, label in betaalwijzen.items() %}
+                    <option value="{{ sleutel }}" {{ 'selected' if b.betaalwijze == sleutel }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
+                <input type="text" name="betaald_door" value="{{ b.betaald_door or '' }}" placeholder="Betaald door">
+                <input type="text" name="notitie" value="{{ b.notitie or '' }}" placeholder="Notitie" class="c20-seizoensregel-notitie">
+            </div>
+            {% if b.bijgewerkt_op %}
+            <div class="tekst-zacht" style="font-size:0.78rem; margin-top:0.2rem">
+                {% if b.betaald_op %}Betaald op {{ b.betaald_op|datum_kort }} &middot; {% endif %}bijgewerkt {{ b.bijgewerkt_op|datum_nl }}{% if b.bijgewerkt_door %} door {{ b.bijgewerkt_door }}{% endif %}
+            </div>
+            {% endif %}
+        </form>
+        {% endfor %}
+    </div>
+
+    <form method="post" action="{{ url_for('club_van_20_lid_verwijderen', lid_id=lid.id) }}"
+          onsubmit="return bevestigEnVerstuur(this, '\'{{ lid.naam }}\' en alle betalingen verwijderen? Gestopt? Vink dan liever \'Gestopt\' aan, dan blijft de historie bewaard.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-gevaar btn-klein">Lid verwijderen</button>
+    </form>
+</div>
+
+<script>
+(function () {
+    var knop = document.getElementById('verzoek-kopieren');
+    if (!knop) return;
+    var veld = document.getElementById('verzoek-tekst');
+    var whatsapp = document.getElementById('verzoek-whatsapp');
+    knop.addEventListener('click', function () {
+        (navigator.clipboard ? navigator.clipboard.writeText(veld.value) : Promise.reject())
+            .then(function () { toonToast('Tekst gekopieerd.'); })
+            .catch(function () { veld.select(); document.execCommand('copy'); toonToast('Tekst gekopieerd.'); });
+    });
+    if (whatsapp) {
+        veld.addEventListener('input', function () {
+            whatsapp.href = whatsapp.href.split('?')[0] + '?text=' + encodeURIComponent(veld.value);
+        });
+    }
+})();
+</script>
+{% endif %}
+</div>
+{% endblock %}

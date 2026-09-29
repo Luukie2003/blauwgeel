@@ -271,6 +271,33 @@ KOLOM_MIGRATIES = [
     # (club_van_team_naam + kiosk_club_logos in routes/kiosk.py). Het eigen
     # team toont altijd het eigen clublogo (static/logo.png).
     ("kiosk_motm", "tegenstander", "TEXT"),
+    # Club van 20-module (zie club_van_20.py en routes/club_van_20.py): de
+    # weergave op het kantine scherm en de publieke pagina. zichtbaar_seizoenen
+    # = hoeveel seizoenen terug een betaling nog "telt" voor het scherm (1 =
+    # alleen dit seizoen, 2 = dit of vorig seizoen, 0 = elk actief lid).
+    ("kiosk_scherm_instellingen", "club_van_20_kolommen", "INTEGER NOT NULL DEFAULT 4"),
+    ("kiosk_scherm_instellingen", "club_van_20_duur_seconden", "INTEGER NOT NULL DEFAULT 12"),
+    ("kiosk_scherm_instellingen", "club_van_20_zichtbaar_seizoenen", "INTEGER NOT NULL DEFAULT 2"),
+    ("kiosk_scherm_instellingen", "club_van_20_markeer_onbetaald", "INTEGER NOT NULL DEFAULT 0"),
+    ("kiosk_scherm_instellingen", "club_van_20_lege_vakjes", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "club_van_20_bedrag", "REAL NOT NULL DEFAULT 20"),
+    ("kiosk_scherm_instellingen", "club_van_20_achtergrond", "TEXT"),
+    ("kiosk_scherm_instellingen", "club_van_20_toon_teller", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "club_van_20_toon_teams", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "club_van_20_toon_nieuw", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "club_van_20_toon_werving", "INTEGER NOT NULL DEFAULT 1"),
+    (
+        "kiosk_scherm_instellingen",
+        "club_van_20_werving_tekst",
+        "TEXT NOT NULL DEFAULT 'Vraag naar de mogelijkheden bij de bar'",
+    ),
+    ("kiosk_scherm_instellingen", "club_van_20_betaallink", "TEXT"),
+    (
+        "kiosk_scherm_instellingen",
+        "club_van_20_verzoek_tekst",
+        "TEXT NOT NULL DEFAULT 'Hoi {voornaam}! Het nieuwe seizoen ({seizoen}) van de Club van 20 is begonnen. "
+        "Doe je weer mee voor €{bedrag}? Dan komt \"{naambordje}\" weer op het scherm in de kantine. {betaallink}'",
+    ),
 ]
 
 
@@ -491,6 +518,52 @@ def _migreer_club_van_20_datums(db):
         )
 
 
+def _migreer_club_van_20_administratie(db):
+    """De Club van 20 kreeg een echte administratie: per lid voornaam/
+    achternaam/team los van het naambordje (club_van_20_leden.naam), en de
+    betalingen per seizoen in club_van_20_bijdragen i.p.v. 1 status + start/
+    einddatum. Bewust GEEN gewone kolom-migratie: precies op het moment dat
+    de nieuwe kolommen voor het eerst worden aangemaakt, zetten we eenmalig
+    de oude gegevens om -- een 'actief' lid krijgt een betaalde bijdrage in
+    het seizoen van zijn startdatum, een 'niet betaald'-lid een openstaand
+    verzoek ('gevraagd') voor het huidige seizoen en weer status 'actief'
+    (niet betaald is nu een eigenschap van het seizoen, niet van het lid).
+    Draait daarna nooit meer, ook niet als iemand alle bijdragen wist."""
+    from club_van_20 import seizoen_van_datum, huidig_seizoen
+
+    bestaande = {row["name"] for row in db.execute("PRAGMA table_info(club_van_20_leden)")}
+    if "voornaam" in bestaande:
+        return
+    for kolom, definitie in [
+        ("voornaam", "TEXT"),
+        ("achternaam", "TEXT"),
+        ("team", "TEXT"),
+        ("telefoon", "TEXT"),
+        ("email", "TEXT"),
+        ("notitie", "TEXT"),
+        ("eerdere_seizoenen", "INTEGER NOT NULL DEFAULT 0"),
+    ]:
+        db.execute(f"ALTER TABLE club_van_20_leden ADD COLUMN {kolom} {definitie}")
+    nu = datetime.now().strftime("%Y-%m-%d %H:%M")
+    for lid in db.execute("SELECT * FROM club_van_20_leden").fetchall():
+        if lid["status"] == "actief":
+            seizoen = seizoen_van_datum(lid["startdatum"] or (lid["aangemaakt_op"] or "")[:10] or None)
+            db.execute(
+                """INSERT OR IGNORE INTO club_van_20_bijdragen
+                   (lid_id, seizoen, status, bedrag, betaald_op, bijgewerkt_door, bijgewerkt_op)
+                   VALUES (?, ?, 'betaald', 20, ?, 'omzetting', ?)""",
+                (lid["id"], seizoen, lid["startdatum"], nu),
+            )
+        elif lid["status"] == "niet_betaald":
+            db.execute(
+                """INSERT OR IGNORE INTO club_van_20_bijdragen
+                   (lid_id, seizoen, status, bedrag, bijgewerkt_door, bijgewerkt_op)
+                   VALUES (?, ?, 'gevraagd', 0, 'omzetting', ?)""",
+                (lid["id"], huidig_seizoen(), nu),
+            )
+    db.execute("UPDATE club_van_20_leden SET status = 'actief' WHERE status = 'niet_betaald'")
+
+
 # Databasepaden waarvoor het schema al is toegepast in dit proces -- zie
 # get_db() hieronder.
 _SCHEMA_TOEGEPAST_VOOR = set()
@@ -538,6 +611,7 @@ def get_db():
             _migreer_kassa_afgesloten(g.db)
             _migreer_bieren_backfill(g.db)
             _migreer_club_van_20_datums(g.db)
+            _migreer_club_van_20_administratie(g.db)
             _migreer_stand_club_backfill(g.db)
             _migreer_stand_poules_backfill(g.db)
             g.db.commit()

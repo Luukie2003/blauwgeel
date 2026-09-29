@@ -128,52 +128,169 @@
 .canvas-lettergrootte-groot { font-size: 2.4rem; }
 .canvas-lettergrootte-xl { font-size: 3.3rem; }
 
-/* Club van 20 -- groot, pakkend, met een zachte gele gloed achter de titel
-   en een binnenkomst-animatie per naam. De animatie zit vast aan
-   ".actief" (i.p.v. gewoon op .naam-chip) zodat 'm ELKE keer opnieuw
-   afspeelt zodra deze dia weer aan de beurt is in de diashow, niet alleen
-   bij het laden van de pagina. */
-.slide-club_van_20 {
-    background: radial-gradient(ellipse 60% 55% at 50% 38%, rgba(252, 212, 47, 0.16) 0%, transparent 70%);
+/* Club van 20 -- in de stijl van de oude Canva-dia's: blauwe achtergrond
+   (optioneel met clubfoto + blauwe waas), gele smalle koppen en witte
+   naambordjes in een vast raster. Gouden/zilveren bordjes voor trouwe
+   leden (aantal betaalde seizoenen, zie club_van_20.py), een "Nieuw"-label
+   voor wie dit seizoen voor het eerst meedoet, en lege vakjes ("Jouw naam
+   hier?") om de laatste dia te vullen. De binnenkomst-animaties hangen aan
+   ".actief", zodat ze bij elke ronde van de diashow opnieuw afspelen.
+   Geen webfont (de schermen laden niets van buiten): Oswald/Bebas als die
+   er toevallig zijn, anders de smalle Roboto van de Chromecast. */
+.c20 {
+    --c20-font: "Oswald", "Bebas Neue", "Roboto Condensed", "sans-serif-condensed", "Arial Narrow", sans-serif;
+    padding: 2.6rem 3.2rem 4.6rem;
+    justify-content: flex-start;
+    gap: 0;
+    background: var(--blauw);
 }
-.slide-club_van_20 h2 {
-    font-size: 4.2rem;
-    font-weight: 800;
+.c20 > * { position: relative; z-index: 1; }
+.c20 > .c20-achtergrond {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;
+}
+.c20 > .c20-overlay { position: absolute; inset: 0; background: rgba(30, 58, 138, 0.8); z-index: 0; }
+.c20 h2, .c20 h3 {
+    font-family: var(--c20-font);
+    font-weight: 700;
     color: var(--geel);
-    margin: 0 0 2.2rem;
-    text-shadow: 0 0 34px rgba(252, 212, 47, 0.45);
+    margin: 0;
+    letter-spacing: 0.01em;
+    line-height: 1.05;
 }
-.slide-club_van_20 h2::before, .slide-club_van_20 h2::after {
-    content: "\2605";
-    display: inline-block;
-    color: var(--geel);
-    opacity: 0.75;
-    font-size: 0.6em;
-    margin: 0 0.7rem;
-    vertical-align: middle;
+.c20-kop { display: flex; flex-direction: column; align-items: center; margin-bottom: 1.4rem; }
+.c20-kop h2 { font-size: 4rem; }
+.c20-seizoen { font-family: var(--c20-font); color: #fff; opacity: 0.85; font-size: 1.35rem; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.3rem; }
+
+.c20-muur {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(var(--kolommen), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--rijen), minmax(0, 1fr));
+    gap: 0.9rem 1rem;
+    /* Lettergrootte schaalt mee met de hoogte van een rij (minder rijen =
+       grotere namen), maar nooit breder dan een kolom toelaat. */
+    font-size: min(calc((100vh - 13rem) / var(--rijen) * 0.34), calc((100vw - 8rem) / var(--kolommen) * 0.085), 3.4rem);
 }
-.namen-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.1rem 1.7rem; max-width: 76rem; }
-.naam-chip {
-    background: rgba(255, 255, 255, 0.09);
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    border-radius: 999px;
-    padding: 0.75rem 1.9rem;
-    font-size: 1.85rem;
-    font-weight: 600;
+.c20-bordje {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: var(--blauw);
+    border: 0.18em solid #dfe5f5;
+    border-radius: 6px;
+    padding: 0.15em 0.5em;
+    font-family: var(--c20-font);
+    font-weight: 700;
+    min-width: 0;
     opacity: 0;
 }
-.naam-chip--groot { font-size: 2.5rem; font-weight: 800; padding: 0.85rem 2.2rem; border-color: var(--geel); background: rgba(252, 212, 47, 0.14); box-shadow: 0 0 22px rgba(252, 212, 47, 0.25); }
-.naam-chip--niet-betaald { border-color: #e05a5a; background: rgba(224, 90, 90, 0.16); color: #ffb8b8; }
-.naam-sterren { color: var(--geel); letter-spacing: 0.05em; margin-right: 0.3rem; }
+.c20-naam { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.15; }
+.c20-bordje--lang .c20-naam {
+    white-space: normal;
+    font-size: 0.78em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.c20-bordje .c20-sterren {
+    position: absolute;
+    top: 0.12em;
+    right: 0.35em;
+    font-size: 0.42em;
+    letter-spacing: 0.04em;
+}
+.c20-sterren { color: var(--geel-donker); }
+.c20-bordje--zilver { border-color: #b9c4dd; background: linear-gradient(160deg, #ffffff 0%, #e7ecf6 100%); }
+.c20-bordje--goud { background: var(--geel); border-color: #fff3b0; color: #1a2f6e; }
+.c20-bordje--goud .c20-sterren { color: #1a2f6e; }
+.c20-bordje--groot { grid-column: span 2; font-size: 1.25em; }
+.c20-bordje--niet-betaald { background: #ffd9d9; border-color: #f2a7a7; color: #8a1f1f; }
+.c20-bordje--leeg { background: rgba(255, 255, 255, 0.9); border-style: dashed; border-color: rgba(30, 58, 138, 0.25); color: rgba(30, 58, 138, 0.35); font-size: 0.72em; font-weight: 400; }
+.c20-label-nieuw {
+    position: absolute;
+    top: -0.55em;
+    left: 0.4em;
+    background: var(--geel);
+    color: #1a2f6e;
+    border: 2px solid #fff;
+    font-size: 0.4em;
+    padding: 0.1em 0.5em;
+    border-radius: 999px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.c20-voet {
+    position: absolute;
+    left: 3.2rem;
+    right: 18rem;
+    bottom: 1.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #dfe5f5;
+    font-size: 1.05rem;
+}
+.c20-voet .pagina-indicator { margin: 0; }
+.c20-legenda { display: inline-block; width: 0.9em; height: 0.9em; border-radius: 3px; vertical-align: -0.1em; margin-left: 0.3rem; }
+.c20-legenda--goud { background: var(--geel); }
+.c20-legenda--zilver { background: #e7ecf6; }
 .pagina-indicator { margin-top: 1.8rem; color: var(--tekst-zacht); font-size: 1.2rem; }
 
-.slide-club_van_20.actief .naam-chip {
-    animation: chip-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+.slide.c20.actief .c20-bordje { animation: bordje-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes bordje-in {
+    from { opacity: 0; transform: translateY(16px) scale(0.9); }
+    to { opacity: 1; transform: none; }
 }
-@keyframes chip-in {
-    from { opacity: 0; transform: translateY(18px) scale(0.85); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
+
+/* Teller: "samen opgehaald" + balk naar het volgende project + lijst van
+   wat er al van het geld gerealiseerd is. */
+.c20-teller { flex: 1; width: 100%; display: grid; grid-template-columns: 1.15fr 1fr; gap: 4rem; align-items: center; text-align: left; }
+.c20-teller h2 { font-size: 3.6rem; }
+.c20-bedrag { font-family: var(--c20-font); font-weight: 700; font-size: 9rem; line-height: 1; color: #fff; margin: 0.6rem 0 0.4rem; }
+.c20-sub { color: #dfe5f5; font-size: 1.45rem; }
+.c20-doel { margin-top: 2.6rem; }
+.c20-doel-kop { font-size: 1.7rem; margin-bottom: 0.7rem; }
+.c20-doel-kop strong { color: var(--geel); }
+.c20-balk { height: 2.4rem; border-radius: 999px; background: rgba(15, 31, 77, 0.65); border: 2px solid rgba(255, 255, 255, 0.35); overflow: hidden; margin-bottom: 0.6rem; }
+.c20-balk-vulling { height: 100%; width: 0; background: var(--geel); border-radius: 999px; }
+.slide.c20.actief .c20-balk-vulling { animation: balk-vullen 1.8s 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes balk-vullen { from { width: 0; } to { width: var(--procent); } }
+.c20-teller-rechts h3 { font-size: 2.4rem; margin-bottom: 1rem; }
+.c20-projecten { list-style: none; margin: 0; padding: 0; font-size: 1.9rem; }
+.c20-projecten li { display: flex; align-items: baseline; gap: 0.7rem; padding: 0.45rem 0; border-bottom: 1px solid rgba(255, 255, 255, 0.15); opacity: 0; }
+.c20-projecten li small { color: var(--tekst-zacht); font-size: 0.7em; }
+.c20-projecten li.bezig { color: #dfe5f5; }
+.c20-vink { color: var(--geel); font-weight: 800; width: 1.4rem; }
+.slide.c20.actief .c20-projecten li { animation: bordje-in 0.5s ease both; }
+
+/* Teamstrijd */
+.c20-teams { flex: 1; width: 100%; max-width: 80rem; display: flex; flex-direction: column; justify-content: center; gap: 1.6rem; }
+.c20-team { display: grid; grid-template-columns: 10rem 1fr 6rem; align-items: center; gap: 1.6rem; font-family: var(--c20-font); font-weight: 700; font-size: 3.2rem; opacity: 0; }
+.c20-team-naam { text-align: right; }
+.c20-team-aantal { text-align: left; color: var(--geel); }
+.c20-team-balk { height: 4.2rem; border-radius: 6px; background: rgba(15, 31, 77, 0.55); overflow: hidden; }
+.c20-team-vulling { height: 100%; width: 0; background: #fff; border-radius: 6px; }
+.c20-team--eerste .c20-team-vulling { background: var(--geel); }
+.slide.c20.actief .c20-team { animation: bordje-in 0.5s ease both; }
+.slide.c20.actief .c20-team-vulling { animation: balk-vullen 1.4s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.c20-teams-onder { margin: 1.5rem 0 1rem; font-family: var(--c20-font); font-size: 2.6rem; color: var(--geel); }
+
+/* Welkom nieuwe leden */
+.c20-nieuw-namen { flex: 1; align-content: center; display: flex; flex-wrap: wrap; justify-content: center; gap: 1.4rem; max-width: 80rem; margin-top: 1.5rem; font-size: 3.2rem; }
+.c20-nieuw-namen .c20-bordje { padding: 0.35em 1em; }
+
+/* Werving + QR-code naar de publieke Club van 20-pagina */
+.c20-werving { flex: 1; width: 100%; display: flex; align-items: center; justify-content: center; gap: 5rem; text-align: left; }
+.c20-werving h2 { font-size: 5.2rem; margin-bottom: 1.4rem; }
+.c20-werving p { font-size: 2rem; margin: 0 0 1rem; color: #fff; }
+.c20-werving .c20-werving-groot { font-family: var(--c20-font); font-weight: 700; font-size: 2.7rem; color: var(--geel); }
+.c20-qr { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; font-family: var(--c20-font); font-size: 1.8rem; color: var(--geel); }
+.c20-qr-code { background: #fff; padding: 1rem; border-radius: 14px; width: 19rem; height: 19rem; }
+.c20-qr-code svg { width: 100%; height: 100%; display: block; }
 
 /* Wedstrijden -- visuele kaarten met een datumbadge i.p.v. een kale
    regel-per-regel lijst, de eerstvolgende wedstrijd extra uitgelicht, en

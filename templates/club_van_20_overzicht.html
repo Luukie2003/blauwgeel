@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block titel %}Club van 20{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Alle Club van 20-leden met hun betalingen per seizoen (een seizoen loopt van 1 juli t/m 30 juni).
+    Zet de status per lid direct in de tabel; wie betaald heeft komt vanzelf op het kantine scherm.
+</p>
+
+<div class="actiebalk" style="justify-content:flex-start; gap:0.5rem; margin-bottom:1rem">
+    <a href="{{ url_for('club_van_20_lid_nieuw') }}" class="btn btn-geel">+ Nieuw lid</a>
+    <a href="{{ url_for('club_van_20_exporteren') }}" class="btn btn-rand">Exporteren (CSV)</a>
+    <a href="{{ url_for('club_van_20_importeren') }}" class="btn btn-rand">Importeren</a>
+    <a href="{{ url_for('club_van_20_publiek') }}" class="btn btn-rand" target="_blank" rel="noopener">Publieke pagina &nearr;</a>
+</div>
+
+{% set t = totalen.get(seizoen, {}) %}
+<div class="statgrid c20-kpi">
+    <div class="stat">
+        <div class="getal">{{ tellers.betaald }} <small>&middot; {{ (t.bedrag or 0)|euro }}</small></div>
+        <div class="label">Betaald in {{ seizoen }}</div>
+    </div>
+    <div class="stat{{ ' waarschuwing' if tellers.gevraagd + tellers.toegezegd }}">
+        <div class="getal">{{ tellers.gevraagd + tellers.toegezegd }}</div>
+        <div class="label">Gevraagd / toegezegd, nog niet betaald</div>
+    </div>
+    <div class="stat">
+        <div class="getal">{{ tellers.niet_gevraagd }}</div>
+        <div class="label">Nog niet gevraagd</div>
+    </div>
+    <div class="stat">
+        <div class="getal">{{ geld.opgehaald|euro }}</div>
+        <div class="label">Totaal opgehaald &middot; {{ geld.beschikbaar|euro }} nog te besteden</div>
+        {% if geld.doel %}
+        <div class="c20-balk" title="{{ geld.doel.procent }}%"><div style="width: {{ geld.doel.procent }}%"></div></div>
+        <div class="tekst-zacht" style="font-size:0.8rem">Doel: {{ geld.doel.naam }} ({{ geld.doel.procent }}%)</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="kaart">
+    <form method="get" class="filterbalk">
+        <input type="text" name="q" value="{{ filters.q }}" placeholder="Zoek op naam of naambordje...">
+        <select name="seizoen" title="Seizoen waarvan je de status wilt zien/wijzigen">
+            {% for s in seizoenen|reverse %}
+            <option value="{{ s }}" {{ 'selected' if s == seizoen }}>{{ s }}{{ ' (huidig)' if s == huidig }}</option>
+            {% endfor %}
+            <option value="{{ seizoenen[-1][:4]|int + 1 }}-{{ seizoenen[-1][:4]|int + 2 }}">{{ seizoenen[-1][:4]|int + 1 }}-{{ seizoenen[-1][:4]|int + 2 }} (volgend)</option>
+        </select>
+        <select name="status">
+            <option value="">Alle statussen</option>
+            {% for sleutel, label in status_labels.items() %}
+            <option value="{{ sleutel }}" {{ 'selected' if filters.status == sleutel }}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        {% if teams %}
+        <select name="team">
+            <option value="">Alle teams</option>
+            {% for team in teams %}
+            <option value="{{ team }}" {{ 'selected' if filters.team == team }}>{{ team }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        <select name="weergave">
+            <option value="actief" {{ 'selected' if filters.weergave == 'actief' }}>Actieve leden</option>
+            <option value="alle" {{ 'selected' if filters.weergave == 'alle' }}>Alle leden</option>
+            <option value="inactief" {{ 'selected' if filters.weergave == 'inactief' }}>Gestopte leden</option>
+        </select>
+        <button type="submit" class="btn btn-rand">Filteren</button>
+        <span class="tekst-zacht">{{ leden|length }} van {{ aantal_totaal }}</span>
+    </form>
+
+    <form method="post" action="{{ url_for('club_van_20_bulk') }}" id="bulk-form" class="c20-bulkbalk" hidden>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="seizoen" value="{{ seizoen }}">
+        <strong><span id="bulk-aantal">0</span> geselecteerd</strong>
+        <span>&rarr; zet {{ seizoen }} op</span>
+        <select name="status">
+            {% for sleutel, label in status_labels.items() %}
+            <option value="{{ sleutel }}" {{ 'selected' if sleutel == 'gevraagd' }}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-geel btn-klein">Toepassen</button>
+    </form>
+
+    {% if leden %}
+    <div class="tabel-wrap">
+        <table class="c20-tabel">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="alles-selecteren" style="width:auto" title="Alles selecteren"></th>
+                    <th>Naambordje</th>
+                    <th>Team</th>
+                    {% for s in seizoenen %}
+                    <th class="c20-seizoenscel" title="{{ s }}">{{ s|seizoen_kort }}<br><span class="c20-totaal" style="font-weight:400">{{ (totalen.get(s, {}).bedrag or 0)|euro }}</span></th>
+                    {% endfor %}
+                    <th>Status {{ seizoen }}</th>
+                    <th>Betaald door</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lid in leden %}
+                {% set b = lid.bijdragen.get(seizoen, {}) %}
+                <tr class="{{ 'inactief' if lid.status == 'inactief' }}" data-lid="{{ lid.id }}">
+                    <td><input type="checkbox" class="bulk-rij" name="lid_ids" value="{{ lid.id }}" form="bulk-form" style="width:auto"></td>
+                    <td>
+                        <a href="{{ url_for('club_van_20_lid_bewerken', lid_id=lid.id) }}" class="lid-naam">
+                            {% if lid.aantal_seizoenen %}<span class="lid-sterren" title="{{ lid.aantal_seizoenen }} seizoen(en) lid">{{ '★' * lid.aantal_seizoenen if lid.aantal_seizoenen <= 5 else lid.aantal_seizoenen ~ '★' }}</span>{% endif %}{{ lid.naam }}</a>
+                        {% if lid.op_scherm %}<span class="c20-scherm-stip" title="Staat nu op het kantine scherm"></span>{% endif %}
+                        {% if lid.volledige_naam and lid.volledige_naam != lid.naam %}<br><span class="tekst-zacht">{{ lid.volledige_naam }}</span>{% endif %}
+                        {% if lid.status == 'inactief' %}<br><span class="badge badge-neutraal">Gestopt</span>{% endif %}
+                    </td>
+                    <td>{{ lid.team or '' }}</td>
+                    {% for s in seizoenen %}
+                    {% set bs = lid.bijdragen.get(s) %}
+                    <td class="c20-seizoenscel {{ bs.status if bs else '' }}" data-seizoen="{{ s }}" title="{{ status_labels[bs.status] if bs else 'Niet gevraagd' }}{% if bs and bs.betaald_door %} &middot; {{ bs.betaald_door }}{% endif %}">
+                        {%- if bs and bs.status == 'betaald' %}{{ '%g'|format(bs.bedrag) }}{% elif bs and bs.status == 'afgezegd' %}stopt{% elif bs and bs.status in ('gevraagd', 'toegezegd') %}{{ status_labels[bs.status]|lower }}{% endif -%}
+                    </td>
+                    {% endfor %}
+                    <td>
+                        <select name="status" form="rij-{{ lid.id }}" class="c20-status-select c20-status-{{ lid.status_seizoen }}"
+                                onchange="this.form.requestSubmit()">
+                            {% for sleutel, label in status_labels.items() %}
+                            <option value="{{ sleutel }}" {{ 'selected' if sleutel == lid.status_seizoen }}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" name="betaald_door" form="rij-{{ lid.id }}" value="{{ b.betaald_door or '' }}"
+                               placeholder="&mdash;" style="width:9rem" onchange="this.form.requestSubmit()">
+                    </td>
+                    <td class="tabel-acties">
+                        <form method="post" action="{{ url_for('club_van_20_bijdrage_opslaan', lid_id=lid.id) }}" id="rij-{{ lid.id }}" class="js-ajax-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="seizoen" value="{{ seizoen }}">
+                        </form>
+                        <a href="{{ url_for('club_van_20_lid_bewerken', lid_id=lid.id) }}" class="btn btn-rand btn-klein">Details</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% elif aantal_totaal == 0 %}
+    <p class="leeg">
+        Nog geen leden. Voeg ze &eacute;&eacute;n voor &eacute;&eacute;n toe met "+ Nieuw lid", of
+        <a href="{{ url_for('club_van_20_importeren') }}">importeer de oude spreadsheet</a> in &eacute;&eacute;n keer.
+    </p>
+    {% else %}
+    <p class="leeg">Geen leden gevonden met deze filters.</p>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    var alles = document.getElementById('alles-selecteren');
+    var bulk = document.getElementById('bulk-form');
+    var teller = document.getElementById('bulk-aantal');
+    function bijwerken() {
+        var n = document.querySelectorAll('.bulk-rij:checked').length;
+        teller.textContent = n;
+        bulk.hidden = n === 0;
+    }
+    if (alles) {
+        alles.addEventListener('change', function () {
+            document.querySelectorAll('.bulk-rij').forEach(function (cb) { cb.checked = alles.checked; });
+            bijwerken();
+        });
+    }
+    document.querySelectorAll('.bulk-rij').forEach(function (cb) { cb.addEventListener('change', bijwerken); });
+
+    // Na opslaan: de seizoenscel en de kleur van het statusvakje meteen
+    // bijwerken, zonder de hele pagina te herladen.
+    var labels = {{ status_labels|tojson }};
+    document.addEventListener('ajax-form:success', function (e) {
+        var form = e.target;
+        if (!form.id || form.id.indexOf('rij-') !== 0 || !e.detail.status) return;
+        var rij = form.closest('tr');
+        var seizoen = form.querySelector('[name=seizoen]').value;
+        var select = rij.querySelector('select[name=status]');
+        select.className = 'c20-status-select c20-status-' + e.detail.status;
+        var cel = rij.querySelector('.c20-seizoenscel[data-seizoen="' + seizoen + '"]');
+        if (cel) {
+            cel.className = 'c20-seizoenscel ' + (e.detail.status === 'niet_gevraagd' ? '' : e.detail.status);
+            cel.textContent = e.detail.status === 'betaald' ? String(e.detail.bedrag).replace('.', ',')
+                : e.detail.status === 'afgezegd' ? 'stopt'
+                : (e.detail.status === 'niet_gevraagd' ? '' : labels[e.detail.status].toLowerCase());
+        }
+    });
+})();
+</script>
+{% endblock %}

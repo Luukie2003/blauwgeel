@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block titel %}Scherm &amp; werving · Club van 20{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Hoe de Club van 20 op het kantine scherm en op de publieke pagina verschijnt. Waar het blok in de diashow
+    staat, stel je in bij <a href="{{ url_for('kiosk_sponsoren_leden') }}">Kantine-tv &rarr; Dia's</a>.
+</p>
+
+<style>
+    .c20-instellingen-layout { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
+    .c20-instellingen-layout > form { flex: 1 1 440px; min-width: 0; max-width: 680px; }
+    .c20-voorbeeld { flex: 1 1 380px; min-width: 300px; position: sticky; top: 1rem; }
+    .c20-voorbeeld-venster { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 12px; background: #0f1f4d; }
+    .c20-voorbeeld-venster iframe { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; border: 0; transform-origin: top left; pointer-events: none; }
+    .c20-qr-klein svg { width: 140px; height: 140px; display: block; }
+</style>
+
+<div class="c20-instellingen-layout">
+<form method="post" enctype="multipart/form-data" class="kaart" id="c20-instellingen-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <fieldset class="groupbox">
+        <legend>Naammuur</legend>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.7rem">
+            <input type="checkbox" name="toon_club_van_20" style="width:auto" {{ 'checked' if instellingen.toon_club_van_20 }}>
+            Club van 20-dia's tonen in de diashow
+        </label>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="club_van_20_titel">Titel</label>
+                <input type="text" id="club_van_20_titel" name="club_van_20_titel" value="{{ instellingen.club_van_20_titel }}">
+            </div>
+            <div class="veld">
+                <label for="club_van_20_namen_per_slide">Vakjes per dia</label>
+                <input type="number" id="club_van_20_namen_per_slide" name="club_van_20_namen_per_slide" min="1" max="80"
+                       value="{{ instellingen.club_van_20_namen_per_slide }}">
+            </div>
+            <div class="veld">
+                <label for="club_van_20_kolommen">Kolommen</label>
+                <input type="number" id="club_van_20_kolommen" name="club_van_20_kolommen" min="1" max="8"
+                       value="{{ instellingen.club_van_20_kolommen }}">
+            </div>
+            <div class="veld">
+                <label for="club_van_20_duur_seconden">Seconden per dia</label>
+                <input type="number" id="club_van_20_duur_seconden" name="club_van_20_duur_seconden" min="3"
+                       value="{{ instellingen.club_van_20_duur_seconden }}">
+            </div>
+        </div>
+        <p class="tekst-zacht" style="margin-top:-0.4rem">Zoals de oude dia's: 24 vakjes in 4 kolommen. Bij meer namen komen er vanzelf extra dia's bij.</p>
+        <div class="veld">
+            <label for="club_van_20_zichtbaar_seizoenen">Wie staat er op het scherm?</label>
+            <select id="club_van_20_zichtbaar_seizoenen" name="club_van_20_zichtbaar_seizoenen">
+                <option value="1" {{ 'selected' if instellingen.club_van_20_zichtbaar_seizoenen == 1 }}>Alleen wie dit seizoen betaald heeft</option>
+                <option value="2" {{ 'selected' if instellingen.club_van_20_zichtbaar_seizoenen == 2 }}>Betaald dit of vorig seizoen</option>
+                <option value="3" {{ 'selected' if instellingen.club_van_20_zichtbaar_seizoenen == 3 }}>Betaald in een van de laatste 3 seizoenen</option>
+                <option value="0" {{ 'selected' if instellingen.club_van_20_zichtbaar_seizoenen == 0 }}>Alle actieve leden</option>
+            </select>
+            <span class="tekst-zacht">Nu {{ aantal_op_scherm }} naambordjes op het scherm. Wie stopt of gestopt is, staat er nooit op.</span>
+        </div>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.5rem">
+            <input type="checkbox" name="club_van_20_markeer_onbetaald" style="width:auto" {{ 'checked' if instellingen.club_van_20_markeer_onbetaald }}>
+            Wie dit seizoen nog niet betaald heeft lichtrood tonen (als herinnering)
+        </label>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.9rem">
+            <input type="checkbox" name="club_van_20_lege_vakjes" style="width:auto" {{ 'checked' if instellingen.club_van_20_lege_vakjes }}>
+            Laatste dia aanvullen met lege vakjes ("Jouw naam hier?")
+        </label>
+        <div class="veld">
+            <label for="achtergrond">Achtergrondfoto (optioneel, bijv. de clubvlag)</label>
+            {% if instellingen.club_van_20_achtergrond %}
+            <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + instellingen.club_van_20_achtergrond) }}" alt="" style="max-width:220px; border-radius:6px">
+            <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400">
+                <input type="checkbox" name="achtergrond_verwijderen" style="width:auto"> Foto verwijderen
+            </label>
+            {% endif %}
+            <input type="file" id="achtergrond" name="achtergrond" accept="image/*">
+            <span class="tekst-zacht">Krijgt automatisch een blauwe waas, zodat de tekst leesbaar blijft.</span>
+        </div>
+    </fieldset>
+
+    <fieldset class="groupbox">
+        <legend>Extra dia's</legend>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.5rem">
+            <input type="checkbox" name="club_van_20_toon_teller" style="width:auto" {{ 'checked' if instellingen.club_van_20_toon_teller }}>
+            "Samen opgehaald" + het volgende doel + wat er al gerealiseerd is
+        </label>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.5rem">
+            <input type="checkbox" name="club_van_20_toon_teams" style="width:auto" {{ 'checked' if instellingen.club_van_20_toon_teams }}>
+            Teamstrijd: welk team heeft de meeste naambordjes (vanaf 2 teams)
+        </label>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.5rem">
+            <input type="checkbox" name="club_van_20_toon_nieuw" style="width:auto" {{ 'checked' if instellingen.club_van_20_toon_nieuw }}>
+            Welkom nieuwe leden (eerste betaling in de afgelopen 30 dagen)
+        </label>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.5rem">
+            <input type="checkbox" name="club_van_20_toon_werving" style="width:auto" {{ 'checked' if instellingen.club_van_20_toon_werving }}>
+            "Ook bij de Club van 20?" met QR-code naar de publieke pagina
+        </label>
+    </fieldset>
+
+    <fieldset class="groupbox">
+        <legend>Werving &amp; betalen</legend>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="club_van_20_bedrag">Bedrag per seizoen (&euro;)</label>
+                <input type="text" id="club_van_20_bedrag" name="club_van_20_bedrag" inputmode="decimal"
+                       value="{{ '%g'|format(instellingen.club_van_20_bedrag) }}">
+            </div>
+            <div class="veld">
+                <label for="club_van_20_betaallink">Betaallink (optioneel)</label>
+                <input type="url" id="club_van_20_betaallink" name="club_van_20_betaallink"
+                       value="{{ instellingen.club_van_20_betaallink or '' }}" placeholder="https://tikkie.me/...">
+            </div>
+        </div>
+        <div class="veld">
+            <label for="club_van_20_werving_tekst">Tekst op de wervingsdia en de publieke pagina</label>
+            <input type="text" id="club_van_20_werving_tekst" name="club_van_20_werving_tekst" value="{{ instellingen.club_van_20_werving_tekst }}">
+        </div>
+        <div class="veld">
+            <label for="club_van_20_verzoek_tekst">Tekst voor een betaalverzoek (WhatsApp)</label>
+            <textarea id="club_van_20_verzoek_tekst" name="club_van_20_verzoek_tekst" rows="3">{{ instellingen.club_van_20_verzoek_tekst }}</textarea>
+            <span class="tekst-zacht">Invullers: {voornaam} {naambordje} {seizoen} {bedrag} {betaallink}</span>
+        </div>
+    </fieldset>
+
+    <button type="submit" class="btn btn-geel">Opslaan</button>
+</form>
+
+<div class="c20-voorbeeld">
+    <div class="actiebalk" style="margin-bottom:0.6rem">
+        <h2 style="margin:0">Live voorbeeld</h2>
+        <button type="button" class="btn btn-rand btn-klein" id="voorbeeld-verversen">&#8635; Ververs</button>
+    </div>
+    <div class="c20-voorbeeld-venster">
+        <iframe id="c20-preview" src="{{ url_for('kiosk_scherm') }}" title="Voorbeeld kantine scherm"></iframe>
+    </div>
+    <p class="tekst-zacht">Toont de hele diashow; de Club van 20-dia's komen vanzelf voorbij.</p>
+
+    <div class="kaart" style="display:flex; gap:1rem; align-items:center">
+        <div class="c20-qr-klein">{{ publiek_qr_svg|safe }}</div>
+        <div>
+            <strong>Publieke pagina</strong>
+            <p class="tekst-zacht" style="margin:0.3rem 0">Hier komt de QR-code op de wervingsdia uit. Ook handig voor een poster of de groepsapp.</p>
+            <a href="{{ url_for('club_van_20_publiek') }}" target="_blank" rel="noopener" style="word-break:break-all">{{ publiek_url }}</a>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+(function () {
+    var iframe = document.getElementById('c20-preview');
+    var buiten = document.querySelector('.c20-voorbeeld-venster');
+    function schaal() { iframe.style.transform = 'scale(' + (buiten.clientWidth / 1920) + ')'; }
+    document.getElementById('voorbeeld-verversen').addEventListener('click', function () {
+        iframe.contentWindow.location.reload();
+    });
+    window.addEventListener('resize', schaal);
+    schaal();
+})();
+</script>
+{% endblock %}

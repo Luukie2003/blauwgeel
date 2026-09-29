@@ -42,7 +42,7 @@
     {% if slides %}
     <div class="scherm">
         {% for slide in slides %}
-        <section class="slide slide-{{ slide.type }}{% if slide.type == 'sponsor' %} sjabloon-{{ slide.sjabloon }} overgang-{{ slide.overgang }} tekst-{{ slide.tekst_grootte }}{% endif %}{% if loop.first %} actief{% endif %}"
+        <section class="slide slide-{{ slide.type }}{% if slide.type.startswith('club_van_20') %} c20{% endif %}{% if slide.type == 'sponsor' %} sjabloon-{{ slide.sjabloon }} overgang-{{ slide.overgang }} tekst-{{ slide.tekst_grootte }}{% endif %}{% if loop.first %} actief{% endif %}"
                  data-duur="{{ slide.duur }}"
                  {% if slide.sjabloon == 'aangepast' and slide.custom_achtergrond_kleur %}style="background: {{ slide.custom_achtergrond_kleur }};"{% endif %}>
             {% if slide.type == 'sponsor' %}
@@ -91,17 +91,102 @@
                     {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
                     {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
                 {% endif %}
-            {% elif slide.type == 'club_van_20' %}
-                <h2>{{ slide.titel }}</h2>
-                <div class="namen-grid">
+            {% elif slide.type.startswith('club_van_20') %}
+                {% if slide.achtergrond %}
+                <img class="c20-achtergrond" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.achtergrond) }}" alt="">
+                <div class="c20-overlay"></div>
+                {% endif %}
+                {% if slide.type == 'club_van_20' %}
+                <div class="c20-kop">
+                    <h2>{{ slide.titel }}</h2>
+                    <span class="c20-seizoen">Seizoen {{ slide.seizoen }}</span>
+                </div>
+                <div class="c20-muur" style="--kolommen: {{ slide.kolommen }}; --rijen: {{ slide.rijen }};">
                     {% for lid in slide.namen %}
-                    <span class="naam-chip{{ ' naam-chip--groot' if lid.extra_groot else '' }}{{ ' naam-chip--niet-betaald' if lid.niet_betaald else '' }}"
-                          style="animation-delay: {{ (loop.index0 * 0.06)|round(3) }}s">
-                        {% if lid.sterren %}<span class="naam-sterren">{{ '★' * lid.sterren }}</span>{% endif %}{{ lid.naam }}
-                    </span>
+                    <div class="c20-bordje{{ ' c20-bordje--' ~ lid.niveau if lid.niveau else '' }}{{ ' c20-bordje--groot' if lid.extra_groot else '' }}{{ ' c20-bordje--nieuw' if lid.nieuw else '' }}{{ ' c20-bordje--niet-betaald' if lid.niet_betaald else '' }}{{ ' c20-bordje--lang' if lid.lang else '' }}"
+                         style="animation-delay: {{ (loop.index0 * 0.035)|round(3) }}s">
+                        {% if lid.sterren %}<span class="c20-sterren">{{ '★' * lid.sterren if lid.sterren <= 5 else lid.sterren ~ '★' }}</span>{% endif %}
+                        <span class="c20-naam">{{ lid.naam }}</span>
+                        {% if lid.nieuw %}<span class="c20-label-nieuw">Nieuw</span>{% endif %}
+                    </div>
+                    {% endfor %}
+                    {% for _ in range(slide.lege_vakjes) %}
+                    <div class="c20-bordje c20-bordje--leeg" style="animation-delay: {{ ((slide.namen|length + loop.index0) * 0.035)|round(3) }}s"><span class="c20-naam">Jouw naam hier?</span></div>
                     {% endfor %}
                 </div>
-                {% if slide.pagina %}<div class="pagina-indicator">{{ slide.pagina }}</div>{% endif %}
+                <div class="c20-voet">
+                    <span><span class="c20-sterren">★</span> = seizoen lid &middot; <span class="c20-legenda c20-legenda--goud"></span> 3+ seizoenen &middot; <span class="c20-legenda c20-legenda--zilver"></span> 2 seizoenen</span>
+                    {% if slide.pagina %}<span class="pagina-indicator">{{ slide.pagina }}</span>{% endif %}
+                </div>
+                {% elif slide.type == 'club_van_20_teller' %}
+                <div class="c20-teller">
+                    <div class="c20-teller-links">
+                        <h2>Samen opgehaald</h2>
+                        <div class="c20-bedrag" data-telop="{{ slide.opgehaald }}">{{ slide.opgehaald|euro }}</div>
+                        <div class="c20-sub">{{ slide.aantal_leden }} naambordjes &middot; {{ slide.bedrag|euro }} per seizoen</div>
+                        {% if slide.doel %}
+                        <div class="c20-doel">
+                            <div class="c20-doel-kop">Volgende doel: <strong>{{ slide.doel.naam }}</strong></div>
+                            <div class="c20-balk"><div class="c20-balk-vulling" style="--procent: {{ slide.doel.procent }}%"></div></div>
+                            <div class="c20-sub">
+                                {{ slide.doel.gespaard|euro }} van {{ slide.doel.raming|euro }}
+                                {% if slide.doel.nog_bordjes %}&middot; nog {{ slide.doel.nog_bordjes }} naambordjes nodig{% else %}&middot; bij elkaar!{% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if slide.gerealiseerd %}
+                    <div class="c20-teller-rechts">
+                        <h3>Dankzij jullie</h3>
+                        <ul class="c20-projecten">
+                            {% for p in slide.gerealiseerd %}
+                            <li class="{{ 'klaar' if p.klaar else 'bezig' }}" style="animation-delay: {{ (0.4 + loop.index0 * 0.15)|round(2) }}s">
+                                <span class="c20-vink">{{ '✓' if p.klaar else '…' }}</span>{{ p.naam }}{% if not p.klaar %} <small>(bijna klaar)</small>{% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+                {% elif slide.type == 'club_van_20_teams' %}
+                <div class="c20-kop"><h2>Welk team steunt het meest?</h2><span class="c20-seizoen">Club van 20-leden per team</span></div>
+                <div class="c20-teams">
+                    {% for t in slide.teams %}
+                    <div class="c20-team{{ ' c20-team--eerste' if loop.first else '' }}" style="animation-delay: {{ (loop.index0 * 0.12)|round(2) }}s">
+                        <span class="c20-team-naam">{{ t.team }}</span>
+                        <div class="c20-team-balk"><div class="c20-team-vulling" style="--procent: {{ t.procent }}%"></div></div>
+                        <span class="c20-team-aantal">{{ t.aantal }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="c20-teams-onder">
+                    {% if slide.verschil > 0 %}{{ slide.teams[0].team }} leidt met {{ slide.verschil }} naambordje{{ 's' if slide.verschil != 1 }} voorsprong!
+                    {% else %}Gelijk op tussen {{ slide.teams[0].team }} en {{ slide.teams[1].team }}!{% endif %}
+                </div>
+                {% elif slide.type == 'club_van_20_nieuw' %}
+                <div class="c20-kop"><h2>Welkom in de Club van 20!</h2></div>
+                <div class="c20-nieuw-namen">
+                    {% for naam in slide.namen %}
+                    <div class="c20-bordje c20-bordje--goud" style="animation-delay: {{ (loop.index0 * 0.15)|round(2) }}s"><span class="c20-naam">{{ naam }}</span></div>
+                    {% endfor %}
+                </div>
+                <div class="c20-teams-onder">Bedankt voor jullie steun!</div>
+                {% elif slide.type == 'club_van_20_werving' %}
+                <div class="c20-werving">
+                    <div class="c20-werving-tekst">
+                        <h2>Ook bij de Club van 20?</h2>
+                        <p class="c20-werving-groot">Voor {{ slide.bedrag|euro }} per seizoen staat jouw naam hier op het scherm</p>
+                        {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
+                        {% if slide.aantal_leden %}<p class="c20-sub">Al {{ slide.aantal_leden }} leden gingen je voor</p>{% endif %}
+                    </div>
+                    {% if slide.qr_svg %}
+                    <div class="c20-qr">
+                        <div class="c20-qr-code">{{ slide.qr_svg|safe }}</div>
+                        <span>Scan &amp; doe mee</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
             {% elif slide.type == 'wedstrijden' %}
                 <h2>Komende thuiswedstrijden</h2>
                 <div class="wedstrijden-lijst">
@@ -190,6 +275,25 @@
     {% endif %}
 
     <script>
+    // Club van 20-teller: het opgehaalde bedrag "telt op" vanaf 0 zodra de
+    // dia in beeld komt (ook bij elke volgende ronde van de diashow).
+    function telOp(slide) {
+        if (!slide) return;
+        slide.querySelectorAll('[data-telop]').forEach(function (el) {
+            var doel = parseInt(el.dataset.telop, 10) || 0;
+            var start = null;
+            function stap(t) {
+                if (start === null) start = t;
+                var voortgang = Math.min(1, (t - start) / 1800);
+                var waarde = Math.round(doel * (1 - Math.pow(1 - voortgang, 3)));
+                el.textContent = '€ ' + waarde.toLocaleString('nl-NL');
+                if (voortgang < 1) requestAnimationFrame(stap);
+            }
+            requestAnimationFrame(stap);
+        });
+    }
+    telOp(document.querySelector('.slide.actief'));
+
     (function () {
         var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
         if (slides.length < 2) return;
@@ -197,6 +301,7 @@
 
         function toon(index) {
             slides.forEach(function (s, i) { s.classList.toggle('actief', i === index); });
+            telOp(slides[index]);
         }
 
         function plan() {

@@ -442,6 +442,44 @@ CREATE TABLE IF NOT EXISTS club_van_20_leden (
     aangemaakt_op TEXT NOT NULL
 );
 
+-- Club van 20-administratie: 1 rij per lid per seizoen ("2026-2027", loopt
+-- van 1 juli t/m 30 juni, zie club_van_20.py). Geen rij voor een seizoen =
+-- "niet gevraagd". club_van_20_leden.naam is het naambordje (wat op het
+-- scherm staat); voornaam/achternaam/team staan er los naast, zie
+-- _migreer_club_van_20_administratie in database.py.
+CREATE TABLE IF NOT EXISTS club_van_20_bijdragen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lid_id INTEGER NOT NULL REFERENCES club_van_20_leden(id) ON DELETE CASCADE,
+    seizoen TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'niet_gevraagd',
+    bedrag REAL NOT NULL DEFAULT 0,
+    betaald_door TEXT,
+    betaalwijze TEXT,
+    betaald_op TEXT,
+    notitie TEXT,
+    bijgewerkt_door TEXT,
+    bijgewerkt_op TEXT,
+    UNIQUE(lid_id, seizoen)
+);
+CREATE INDEX IF NOT EXISTS idx_club_van_20_bijdragen_seizoen ON club_van_20_bijdragen(seizoen);
+
+-- Waar het Club van 20-geld aan besteed wordt (bartafels, sfeerverlichting,
+-- ...) -- voor de administratie én de "waar gaat jouw €20 heen"-dia.
+-- kosten = werkelijk uitgegeven (NULL = nog niet bekend, dan telt de raming).
+CREATE TABLE IF NOT EXISTS club_van_20_projecten (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    naam TEXT NOT NULL,
+    omschrijving TEXT,
+    raming REAL NOT NULL DEFAULT 0,
+    kosten REAL,
+    status TEXT NOT NULL DEFAULT 'gepland',
+    afbeelding TEXT,
+    volgorde INTEGER NOT NULL DEFAULT 0,
+    toon_op_scherm INTEGER NOT NULL DEFAULT 1,
+    afgerond_op TEXT,
+    aangemaakt_op TEXT NOT NULL
+);
+
 -- Vooraf ingeplande bardiensten per specifieke dag (geen wekelijks
 -- terugkerend rooster -- de bezetting wisselt elke week). Het prijzenscherm
 -- toont de bijpassende rij vanzelf in een gele balk zodra de klok tussen

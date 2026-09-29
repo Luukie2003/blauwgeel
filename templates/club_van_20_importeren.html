@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block titel %}Importeren · Club van 20{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Zet de oude Club van 20-spreadsheet in &eacute;&eacute;n keer over. In Google Sheets: <em>Bestand &rarr; Downloaden &rarr;
+    Door komma's gescheiden waarden (.csv)</em>, of selecteer alle cellen (inclusief de kopregel) en plak ze hieronder.
+    Herkende kolommen: Voornaam, Achternaam, Team, Naambordje, een kolom per seizoen (bijv. "2023-2024") met het
+    betaalde bedrag, "Status 2026-2027", "Betaald door", Telefoon en E-mail.
+</p>
+
+<div class="kaart" style="max-width:900px">
+    <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="bestand">CSV-bestand</label>
+            <input type="file" id="bestand" name="bestand" accept=".csv,.tsv,.txt,text/csv">
+        </div>
+        <div class="veld">
+            <label for="tekst">&hellip;of plak hier de cellen</label>
+            <textarea id="tekst" name="tekst" rows="8" style="font-family:monospace; font-size:0.8rem">{{ tekst }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-geel">Voorbeeld bekijken</button>
+        <span class="tekst-zacht">Er wordt nog niets opgeslagen.</span>
+    </form>
+</div>
+
+{% if voorbeeld %}
+<div class="kaart">
+    <h2 style="margin-top:0">Voorbeeld: {{ voorbeeld.rijen|length }} leden</h2>
+    <p>
+        {{ voorbeeld.rijen|selectattr('bestaat')|list|length }} bestaan al (worden bijgewerkt op naambordje),
+        {{ voorbeeld.rijen|rejectattr('bestaat')|list|length }} zijn nieuw.
+        {% for s in voorbeeld.seizoenen %}
+        <span class="badge badge-neutraal">{{ s }}: {{ voorbeeld.totalen[s]|euro }}</span>
+        {% endfor %}
+    </p>
+    {% if voorbeeld.waarschuwingen %}
+    <details style="margin-bottom:0.8rem">
+        <summary>{{ voorbeeld.waarschuwingen|length }} opmerking(en)</summary>
+        <ul class="tekst-zacht">{% for w in voorbeeld.waarschuwingen %}<li>{{ w }}</li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+    <div class="tabel-wrap" style="max-height:420px; overflow:auto">
+        <table class="c20-tabel">
+            <thead>
+                <tr><th></th><th>Naambordje</th><th>Naam</th><th>Team</th>
+                    {% for s in voorbeeld.seizoenen %}<th class="c20-seizoenscel">{{ s|seizoen_kort }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for rij in voorbeeld.rijen %}
+                <tr>
+                    <td>{% if rij.bestaat %}<span class="badge badge-neutraal">bijwerken</span>{% else %}<span class="badge badge-in">nieuw</span>{% endif %}</td>
+                    <td><strong>{{ rij.naam }}</strong></td>
+                    <td>{{ rij.voornaam }} {{ rij.achternaam }}</td>
+                    <td>{{ rij.team }}</td>
+                    {% for s in voorbeeld.seizoenen %}
+                    {% set b = rij.bijdragen.get(s) %}
+                    <td class="c20-seizoenscel {{ b.status if b else '' }}">
+                        {%- if b and b.status == 'betaald' %}{{ '%g'|format(b.bedrag) }}{% elif b and b.status != 'niet_gevraagd' %}{{ status_labels[b.status]|lower }}{% endif -%}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <form method="post" style="margin-top:1rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <textarea name="tekst" hidden>{{ tekst }}</textarea>
+        <input type="hidden" name="bevestig" value="1">
+        <button type="submit" class="btn btn-geel">Importeren</button>
+        <span class="tekst-zacht">Seizoenen uit de import overschrijven wat er voor die seizoenen al stond; de rest blijft staan.</span>
+    </form>
+</div>
+{% endif %}
+
+<div class="kaart" style="max-width:900px">
+    <h2 style="margin-top:0">Exporteren</h2>
+    <p>Download de complete administratie in hetzelfde formaat (opent direct in Excel/Google Sheets, en kan hier ook weer ge&iuml;mporteerd worden).</p>
+    <a href="{{ url_for('club_van_20_exporteren') }}" class="btn btn-rand">Download CSV</a>
+</div>
+{% endblock %}

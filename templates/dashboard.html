@@ -76,17 +76,18 @@
         <div class="statuskaart-body">
             {% if club_van_20_status.leden %}
             <div class="statuskaart-vak">
-                {{ club_van_20_status.aantal }} lid{{ '' if club_van_20_status.aantal == 1 else 'en' }} loopt af
+                {{ club_van_20_status.aantal }} nog niet betaald
             </div>
             <p class="statuskaart-opmerking">
                 {% for lid in club_van_20_status.leden[:3] %}{{ lid.naam }}{% if not loop.last %}, {% endif %}{% endfor %}
                 {% if club_van_20_status.aantal > 3 %}e.a.{% endif %}
-                &mdash; binnen 30 dagen
+                &mdash; seizoen {{ club_van_20_status.seizoen }}{% if club_van_20_status.niet_gevraagd %}, {{ club_van_20_status.niet_gevraagd }} nog niet gevraagd{% endif %}
             </p>
             {% else %}
-            <div class="statuskaart-vak">Niemand loopt binnenkort af</div>
+            <div class="statuskaart-vak">Iedereen heeft betaald</div>
+            <p class="statuskaart-opmerking">{{ club_van_20_status.betaald }} leden in {{ club_van_20_status.seizoen }}</p>
             {% endif %}
-            <a href="{{ url_for('kiosk_sponsoren_leden') }}" class="btn btn-rand btn-klein">Naar Sponsoren &amp; leden</a>
+            <a href="{{ url_for('club_van_20_overzicht') }}" class="btn btn-rand btn-klein">Naar Club van 20</a>
         </div>
     </div>
     {% endif %}

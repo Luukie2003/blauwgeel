@@ -275,22 +275,6 @@ def voeg_maanden_toe(datum_iso, aantal_maanden):
     return date(nieuw_jaar, nieuwe_maand, min(dag, laatste_dag)).isoformat()
 
 
-def bereken_jaren_lid(startdatum_iso, vandaag=None):
-    """Aantal volledige jaren sinds startdatum -- 1 ster per jaar bij een
-    Club van 20-lid op het kantine scherm. Telt pas mee zodra de 'verjaardag'
-    van de startdatum dit jaar al geweest is. vandaag is alleen om dit
-    testbaar te maken zonder van de systeemklok afhankelijk te zijn -- in de
-    praktijk altijd date.today()."""
-    if not startdatum_iso:
-        return 0
-    jaar, maand, dag = (int(deel) for deel in startdatum_iso.split("-"))
-    vandaag = vandaag or date.today()
-    jaren = vandaag.year - jaar
-    if (vandaag.month, vandaag.day) < (maand, dag):
-        jaren -= 1
-    return max(0, jaren)
-
-
 def now_str():
     return datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -373,13 +357,14 @@ def is_ajax_verzoek():
 # overal toegang, ongeacht wat er in hun secties-kolom staat -- die kolom doet
 # er voor hen simpelweg niet toe. "Algemeen" (dashboard, bijzonderheden e.d.)
 # heeft bewust geen sectie: dat blijft voor iedereen zichtbaar, zoals nu.
-SECTIES = ["voorraad", "kassa", "keuken", "stemmen", "kantine_tv", "club"]
+SECTIES = ["voorraad", "kassa", "keuken", "stemmen", "kantine_tv", "club_van_20", "club"]
 SECTIE_LABELS = {
     "voorraad": "Voorraad",
     "kassa": "Kassa",
     "keuken": "Keuken",
     "stemmen": "Stemmen",
     "kantine_tv": "Kantine-tv",
+    "club_van_20": "Club van 20",
     "club": "Club instellingen",
 }
 
@@ -1365,23 +1350,6 @@ def bereken_frituurvet_status(db):
         "interval": interval,
         "ok": dagen_geleden <= interval,
     }
-
-
-def bereken_club_van_20_status(db, dagen_vooruit=30):
-    """Status van het statusblokje 'Club van 20': telt actieve leden wier
-    lidmaatschap binnen 'dagen_vooruit' dagen afloopt (of al verlopen is),
-    als herinnering om te verlengen of op 'niet betaald' te zetten (zie
-    kiosk_lid_status_wisselen in routes/kiosk.py). Groen zolang niemand
-    binnenkort afloopt, oranje zodra er 1 of meer zijn -- net als bij
-    Kassa/Bestelling hierboven is dit 'moet nog gebeuren', geen fout."""
-    grens = (date.today() + timedelta(days=dagen_vooruit)).isoformat()
-    aflopend = db.execute(
-        """SELECT * FROM club_van_20_leden
-           WHERE status = 'actief' AND einddatum IS NOT NULL AND einddatum <= ?
-           ORDER BY einddatum""",
-        (grens,),
-    ).fetchall()
-    return {"leden": aflopend, "aantal": len(aflopend), "ok": len(aflopend) == 0}
 
 
 def vind_getagde_gebruikers(db, tekst):

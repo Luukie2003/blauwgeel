@@ -3,14 +3,13 @@ from pathlib import Path
 
 from flask import Flask, flash, g, redirect, render_template, request, send_from_directory, session, url_for
 
+from club_van_20 import bereken_club_van_20_status  # noqa: F401 (tests importeren 'm via app)
 from database import get_db, init_db, register_db
 from helpers import (
     PRODUCT_AFBEELDINGEN_MAP,
     STEM_AFBEELDINGEN_MAP,
     bepaal_weergave_modus,
     bereken_bestelling_status,
-    bereken_club_van_20_status,
-    bereken_jaren_lid,
     bereken_frituurvet_status,
     bereken_kassa_coupure_bedrag,
     bereken_kassa_telling_status,
@@ -87,6 +86,9 @@ OPEN_ENDPOINTS = {
     "kiosk_prijzen_versie",
     "kiosk_scherm_versie",
     "kiosk_tv_versie",
+    # Publieke Club van 20-pagina: waar de QR-code op de wervingsdia van het
+    # kantine scherm naartoe wijst -- bezoekers hebben geen account.
+    "club_van_20_publiek",
 }
 
 # Iedereen moet bij de eerste keer inloggen een eigen 6-cijferige tablet-code
@@ -276,10 +278,6 @@ SECTIE_ENDPOINTS = {
         "kiosk_sjabloon_nieuw",
         "kiosk_sjabloon_bewerken",
         "kiosk_sjabloon_verwijderen",
-        "kiosk_lid_nieuw",
-        "kiosk_lid_bewerken",
-        "kiosk_lid_status_wisselen",
-        "kiosk_lid_verwijderen",
         "kiosk_scherm_instellingen",
         "kiosk_stand_team_nieuw",
         "kiosk_stand_team_verwijderen",
@@ -291,6 +289,25 @@ SECTIE_ENDPOINTS = {
         "kiosk_motm_team_nieuw",
         "kiosk_motm_team_verwijderen",
         "kiosk_motm_volgorde_opslaan",
+    },
+    # Club van 20: ledenadministratie + betalingen + projecten + de
+    # Club van 20-dia's. Eigen sectie (los van Kantine-tv) zodat bijv. de
+    # penningmeester/coördinator van de Club van 20 hier wel bij kan zonder
+    # de rest van de kantine-tv te beheren -- en andersom.
+    "club_van_20": {
+        "club_van_20_overzicht",
+        "club_van_20_bijdrage_opslaan",
+        "club_van_20_bulk",
+        "club_van_20_lid_nieuw",
+        "club_van_20_lid_bewerken",
+        "club_van_20_lid_verwijderen",
+        "club_van_20_projecten",
+        "club_van_20_project_bewerken",
+        "club_van_20_project_status",
+        "club_van_20_project_verwijderen",
+        "club_van_20_importeren",
+        "club_van_20_exporteren",
+        "club_van_20_instellingen",
     },
     # Losgemaakt van BEHEERDER_ENDPOINTS voor hetzelfde soort reden --
     # agenda/banner raakt geen accounts, categorieën of back-ups. Alleen
@@ -323,6 +340,7 @@ NAV_GROEP_SECTIE = {
     "Keuken": "keuken",
     "Stemmen": "stemmen",
     "Kantine-tv": "kantine_tv",
+    "Club van 20": "club_van_20",
 }
 # Uitzondering per los NAV-item (i.p.v. de hele groep) op NAV_GROEP_SECTIE/
 # NAV_GROEP_ALLEEN_BEHEERDER hieronder -- voor een item dat wél sectie-
@@ -503,10 +521,37 @@ NAV_ITEMS = [
             "kiosk_sponsor_bewerken",
             "kiosk_sjabloon_nieuw",
             "kiosk_sjabloon_bewerken",
-            "kiosk_lid_bewerken",
         ],
         "url_endpoint": "kiosk_sponsoren_leden",
         "label": "Dia's",
+    },
+    {
+        "groep": "Club van 20",
+        "endpoints": [
+            "club_van_20_overzicht",
+            "club_van_20_lid_nieuw",
+            "club_van_20_lid_bewerken",
+        ],
+        "url_endpoint": "club_van_20_overzicht",
+        "label": "Leden & betalingen",
+    },
+    {
+        "groep": "Club van 20",
+        "endpoints": ["club_van_20_projecten", "club_van_20_project_bewerken"],
+        "url_endpoint": "club_van_20_projecten",
+        "label": "Projecten",
+    },
+    {
+        "groep": "Club van 20",
+        "endpoints": ["club_van_20_instellingen"],
+        "url_endpoint": "club_van_20_instellingen",
+        "label": "Scherm & werving",
+    },
+    {
+        "groep": "Club van 20",
+        "endpoints": ["club_van_20_importeren"],
+        "url_endpoint": "club_van_20_importeren",
+        "label": "Importeren / exporteren",
     },
     {
         "groep": "Stemmen",
@@ -597,6 +642,7 @@ NAV_GROEP_VOLGORDE = [
     "Kluis",
     "Keuken",
     "Kantine-tv",
+    "Club van 20",
     "Stemmen",
     "Rapporten",
     "Club",
@@ -667,7 +713,6 @@ def create_app(database_path=None, admin_wachtwoord=None):
     app.jinja_env.filters["css_uitlijning"] = css_uitlijning
     app.jinja_env.globals["stemming_is_open"] = stemming_is_open
     app.jinja_env.globals["secties_lijst"] = secties_lijst
-    app.jinja_env.globals["jaren_lid"] = bereken_jaren_lid
 
     @app.before_request
     def zet_weergave_modus():
@@ -931,6 +976,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
         bestellijst,
         boeken,
         boodschappenlijst,
+        club_van_20,
         dashboard,
         fusten,
         gebruik,
@@ -950,6 +996,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
     bestellijst.register_routes(app)
     boeken.register_routes(app)
     boodschappenlijst.register_routes(app)
+    club_van_20.register_routes(app)
     dashboard.register_routes(app)
     fusten.register_routes(app)
     gebruik.register_routes(app)

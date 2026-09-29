@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Club van 20 · s.v. Blauw-Geel 1915</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <meta name="theme-color" content="#1e3a8a">
+    <style>
+        :root { --blauw: #1e3a8a; --blauw-donker: #0f1f4d; --geel: #fcd42f; --tekst-zacht: #b9c2e0; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Calibri, sans-serif;
+            background: linear-gradient(160deg, var(--blauw) 0%, var(--blauw-donker) 100%) fixed;
+            color: #fff;
+        }
+        .pagina { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+        .smal { font-family: "Oswald", "Bebas Neue", "Roboto Condensed", "Arial Narrow", sans-serif; font-weight: 700; }
+        header { text-align: center; margin-bottom: 1.5rem; }
+        header img { width: 4.2rem; height: auto; }
+        header .club { color: var(--tekst-zacht); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; margin: 0.5rem 0 0.2rem; }
+        h1 { color: var(--geel); font-size: 2.6rem; margin: 0; line-height: 1.05; }
+        h2 { color: var(--geel); font-size: 1.5rem; margin: 0 0 0.8rem; }
+        .kaart { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 16px; padding: 1.2rem; margin-bottom: 1rem; }
+        .doe-mee { background: #fff; color: var(--blauw-donker); text-align: center; }
+        .doe-mee h2 { color: var(--blauw); font-size: 1.9rem; }
+        .doe-mee p { margin: 0 0 0.8rem; font-size: 1.05rem; line-height: 1.45; }
+        .knop { display: inline-block; background: var(--geel); color: var(--blauw-donker); font-weight: 800; text-decoration: none; border-radius: 999px; padding: 0.85rem 1.8rem; font-size: 1.1rem; }
+        .cijfers { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; }
+        .cijfer { background: rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 1rem; text-align: center; }
+        .cijfer .getal { font-size: 2.2rem; color: var(--geel); }
+        .cijfer .label { font-size: 0.85rem; color: var(--tekst-zacht); }
+        .balk { height: 1.1rem; background: rgba(0, 0, 0, 0.25); border-radius: 999px; overflow: hidden; margin: 0.5rem 0 0.3rem; }
+        .balk > div { height: 100%; background: var(--geel); border-radius: 999px; }
+        .zacht { color: var(--tekst-zacht); font-size: 0.9rem; }
+        ul.projecten { list-style: none; margin: 0; padding: 0; }
+        ul.projecten li { display: flex; gap: 0.7rem; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+        ul.projecten li:last-child { border-bottom: 0; }
+        ul.projecten img { width: 3.2rem; height: 3.2rem; object-fit: cover; border-radius: 8px; }
+        .vink { color: var(--geel); font-weight: 800; width: 1.2rem; text-align: center; }
+        .team { display: grid; grid-template-columns: 3.5rem 1fr 2rem; gap: 0.6rem; align-items: center; margin-bottom: 0.45rem; }
+        .team .balk { margin: 0; height: 1.3rem; }
+        .team .balk > div { background: #fff; }
+        .team.eerste .balk > div { background: var(--geel); }
+        .muur { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: 0.5rem; }
+        .bordje { background: #fff; color: var(--blauw); border-radius: 6px; padding: 0.55rem 0.4rem; text-align: center; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bordje.goud { background: var(--geel); color: var(--blauw-donker); }
+        .bordje .sterren { display: block; font-size: 0.7rem; color: #c9a100; letter-spacing: 0.04em; }
+        .bordje.goud .sterren { color: var(--blauw-donker); }
+        footer { text-align: center; color: var(--tekst-zacht); font-size: 0.8rem; margin-top: 2rem; }
+    </style>
+</head>
+<body>
+<div class="pagina">
+    <header>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915">
+        <p class="club">s.v. Blauw-Geel 1915</p>
+        <h1 class="smal">{{ instellingen.club_van_20_titel }}</h1>
+    </header>
+
+    <div class="kaart doe-mee">
+        <h2 class="smal">Ook bij de Club van 20?</h2>
+        <p>Voor <strong>{{ instellingen.club_van_20_bedrag|euro }} per seizoen</strong> staat jouw naam (of die van je bedrijf, team of vriendengroep)
+            op het scherm in de kantine &mdash; en help je de kantine mooier te maken.</p>
+        {% if instellingen.club_van_20_werving_tekst %}<p>{{ instellingen.club_van_20_werving_tekst }}</p>{% endif %}
+        {% if instellingen.club_van_20_betaallink %}
+        <a class="knop" href="{{ instellingen.club_van_20_betaallink }}" rel="noopener">Doe mee &rarr;</a>
+        {% endif %}
+    </div>
+
+    <div class="cijfers">
+        <div class="cijfer"><div class="getal smal">{{ namen|length }}</div><div class="label">naambordjes dit seizoen</div></div>
+        <div class="cijfer"><div class="getal smal">{{ geld.opgehaald|euro }}</div><div class="label">samen opgehaald</div></div>
+    </div>
+
+    {% if geld.doel %}
+    <div class="kaart">
+        <h2 class="smal">Waar we nu voor sparen</h2>
+        <strong>{{ geld.doel.naam }}</strong>
+        <div class="balk"><div style="width: {{ geld.doel.procent }}%"></div></div>
+        <div class="zacht">{{ geld.doel.gespaard|euro }} van {{ geld.doel.raming|euro }}{% if geld.doel.nog_bordjes %} &middot; nog {{ geld.doel.nog_bordjes }} naambordjes nodig{% endif %}</div>
+    </div>
+    {% endif %}
+
+    {% if geld.gerealiseerd %}
+    <div class="kaart">
+        <h2 class="smal">Dit hebben jullie mogelijk gemaakt</h2>
+        <ul class="projecten">
+            {% for p in geld.gerealiseerd %}
+            <li>
+                {% if p.afbeelding %}<img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + p.afbeelding) }}" alt="">{% else %}<span class="vink">{{ '✓' if p.status == 'klaar' else '…' }}</span>{% endif %}
+                <span>{{ p.naam }}{% if p.status != 'klaar' %} <span class="zacht">(bijna klaar)</span>{% endif %}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if teams|length >= 2 %}
+    <div class="kaart">
+        <h2 class="smal">Welk team steunt het meest?</h2>
+        {% for t in teams %}
+        <div class="team{{ ' eerste' if loop.first }}"><strong>{{ t.team }}</strong><div class="balk"><div style="width: {{ t.procent }}%"></div></div><span>{{ t.aantal }}</span></div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if namen %}
+    <div class="kaart">
+        <h2 class="smal">De Club van 20 &middot; {{ seizoen }}</h2>
+        <div class="muur">
+            {% for lid in namen %}
+            <div class="bordje smal{{ ' goud' if lid.niveau == 'goud' }}">
+                {% if lid.sterren %}<span class="sterren">{{ '★' * lid.sterren if lid.sterren <= 5 else lid.sterren ~ '★' }}</span>{% endif %}{{ lid.naam }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <footer>Bedankt voor jullie steun! &middot; s.v. Blauw-Geel 1915</footer>
+</div>
+</body>
+</html>

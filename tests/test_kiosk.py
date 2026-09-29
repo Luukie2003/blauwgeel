@@ -4,10 +4,8 @@ import re
 from datetime import date, timedelta
 
 from conftest import stel_csrf_token_in as _csrf
-from helpers import voeg_maanden_toe
 from test_secties_rechten import _login, _maak_vrijwilliger
 
-from app import bereken_club_van_20_status
 
 _KLEINE_PNG = (
     b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00"
@@ -69,15 +67,6 @@ def _voeg_sjabloon_custom_toe(db, naam, elementen=None, achtergrond_kleur="#0f1f
     ).fetchone()["id"]
 
 
-def _voeg_lid_toe(db, naam, status="actief", startdatum="2026-01-01", einddatum="2027-01-01", extra_groot=0):
-    db.execute(
-        """INSERT INTO club_van_20_leden
-               (naam, status, startdatum, einddatum, extra_groot, aangemaakt_op)
-           VALUES (?, ?, ?, ?, ?, '2026-01-01 10:00')""",
-        (naam, status, startdatum, einddatum, extra_groot),
-    )
-    db.commit()
-    return db.execute("SELECT id FROM club_van_20_leden WHERE naam = ?", (naam,)).fetchone()["id"]
 
 
 # ---------- Onderdeel 1: Prijzenscherm ----------
@@ -744,257 +733,18 @@ def test_kantine_scherm_toont_mededeling_label(client, db):
     assert b">Mededeling<" in resp.data
 
 
-def test_lid_toevoegen_en_verwijderen(ingelogde_client, db):
-    resp = ingelogde_client.post(
-        "/kiosk/sponsoren-leden/leden/nieuw",
-        data={"csrf_token": _csrf(ingelogde_client), "naam": "Jan Jansen"},
-    )
-    assert resp.status_code == 302
-    lid = db.execute("SELECT * FROM club_van_20_leden WHERE naam = 'Jan Jansen'").fetchone()
-    assert lid is not None
-
-    overzicht = ingelogde_client.get("/kiosk/sponsoren-leden")
-    assert b"Jan Jansen" in overzicht.data
-
-    resp = ingelogde_client.post(
-        f"/kiosk/sponsoren-leden/leden/{lid['id']}/verwijderen",
-        data={"csrf_token": _csrf(ingelogde_client)},
-    )
-    assert resp.status_code == 302
-    assert db.execute("SELECT * FROM club_van_20_leden WHERE id = ?", (lid["id"],)).fetchone() is None
 
 
-def test_lid_nieuw_krijgt_automatisch_start_en_einddatum(ingelogde_client, db):
-    """Startdatum = vandaag, einddatum = vandaag + de ingestelde standaard
-    looptijd (12 maanden, zie kiosk_scherm_instellingen)."""
-    resp = ingelogde_client.post(
-        "/kiosk/sponsoren-leden/leden/nieuw",
-        data={"csrf_token": _csrf(ingelogde_client), "naam": "Piet Pietersen"},
-    )
-    assert resp.status_code == 302
-
-    lid = db.execute(
-        "SELECT * FROM club_van_20_leden WHERE naam = 'Piet Pietersen'"
-    ).fetchone()
-    vandaag = date.today().isoformat()
-    assert lid["status"] == "actief"
-    assert lid["startdatum"] == vandaag
-    assert lid["einddatum"] == voeg_maanden_toe(vandaag, 12)
 
 
-def test_lid_status_wisselen_via_ajax(ingelogde_client, db):
-    ingelogde_client.post(
-        "/kiosk/sponsoren-leden/leden/nieuw",
-        data={"csrf_token": _csrf(ingelogde_client), "naam": "Nog Niet Betaald"},
-    )
-    lid = db.execute(
-        "SELECT * FROM club_van_20_leden WHERE naam = 'Nog Niet Betaald'"
-    ).fetchone()
-
-    resp = ingelogde_client.post(
-        f"/kiosk/sponsoren-leden/leden/{lid['id']}/status",
-        data={"csrf_token": _csrf(ingelogde_client), "status": "niet_betaald"},
-        headers={"X-Requested-With": "fetch"},
-    )
-    assert resp.status_code == 200
-    data = resp.get_json()
-    assert data["ok"] is True
-    assert data["status"] == "niet_betaald"
-
-    rij = db.execute(
-        "SELECT status FROM club_van_20_leden WHERE id = ?", (lid["id"],)
-    ).fetchone()
-    assert rij["status"] == "niet_betaald"
 
 
-def test_lid_status_wisselen_vereist_beheerder(client, db):
-    _maak_vrijwilliger(db, "vrijwilliger_lidstatus", "voorraad")
-    db.execute(
-        "INSERT INTO club_van_20_leden (naam, status, startdatum, einddatum, aangemaakt_op) "
-        "VALUES ('Test Lid', 'actief', '2026-01-01', '2027-01-01', '2026-01-01 10:00')"
-    )
-    db.commit()
-    lid_id = db.execute(
-        "SELECT id FROM club_van_20_leden WHERE naam = 'Test Lid'"
-    ).fetchone()["id"]
-    _login(client, "vrijwilliger_lidstatus")
-
-    resp = client.post(
-        f"/kiosk/sponsoren-leden/leden/{lid_id}/status",
-        data={"csrf_token": _csrf(client), "status": "inactief"},
-    )
-    assert resp.status_code == 302
-    rij = db.execute("SELECT status FROM club_van_20_leden WHERE id = ?", (lid_id,)).fetchone()
-    assert rij["status"] == "actief"
 
 
-def test_club_van_20_status_telt_alleen_actieve_leden_die_binnenkort_aflopen(db):
-    over_10_dagen = (date.today() + timedelta(days=10)).isoformat()
-    over_1_jaar = (date.today() + timedelta(days=365)).isoformat()
-    _voeg_lid_toe(db, "Loopt Binnenkort Af", status="actief", einddatum=over_10_dagen)
-    _voeg_lid_toe(db, "Loopt Nog Lang Niet Af", status="actief", einddatum=over_1_jaar)
-    _voeg_lid_toe(db, "Al Gestopt (inactief)", status="inactief", einddatum=over_10_dagen)
-    _voeg_lid_toe(db, "Niet Betaald Telt Niet Mee", status="niet_betaald", einddatum=over_10_dagen)
-
-    status = bereken_club_van_20_status(db)
-
-    assert status["aantal"] == 1
-    assert status["leden"][0]["naam"] == "Loopt Binnenkort Af"
-    assert status["ok"] is False
 
 
-def test_club_van_20_status_is_ok_zonder_aflopende_leden(db):
-    over_1_jaar = (date.today() + timedelta(days=365)).isoformat()
-    _voeg_lid_toe(db, "Ruim Op Tijd", status="actief", einddatum=over_1_jaar)
-
-    status = bereken_club_van_20_status(db)
-
-    assert status["aantal"] == 0
-    assert status["ok"] is True
 
 
-def test_dashboard_toont_club_van_20_tegel_alleen_voor_beheerder(client, db):
-    over_10_dagen = (date.today() + timedelta(days=10)).isoformat()
-    _voeg_lid_toe(db, "Bijna Verlopen", status="actief", einddatum=over_10_dagen)
-
-    csrf = _csrf(client)
-    client.post("/login", data={"naam": "admin", "wachtwoord": "kantine123", "csrf_token": csrf})
-    resp = client.get("/")
-    assert b"Club van 20" in resp.data
-    assert b"Bijna Verlopen" in resp.data
-    client.get("/logout")
-
-    _maak_vrijwilliger(db, "vrijwilliger_dashboard", "voorraad")
-    _login(client, "vrijwilliger_dashboard")
-    resp = client.get("/")
-    assert b"Club van 20" not in resp.data
-
-
-def test_kantine_scherm_verbergt_inactieve_leden_maar_toont_niet_betaald(client, db):
-    db.executemany(
-        "INSERT INTO club_van_20_leden (naam, status, startdatum, einddatum, aangemaakt_op) "
-        "VALUES (?, ?, '2026-01-01', '2027-01-01', '2026-01-01 10:00')",
-        [
-            ("Actief Lid", "actief"),
-            ("Inactief Lid", "inactief"),
-            ("Wanbetaler", "niet_betaald"),
-        ],
-    )
-    db.commit()
-
-    resp = client.get("/kiosk/scherm")
-    tekst = resp.data.decode()
-
-    assert resp.status_code == 200
-    assert "Actief Lid" in tekst
-    assert "Inactief Lid" not in tekst
-    # Niet betaald blijft zichtbaar (als herinnering om te betalen), maar
-    # dan met de lichtrode waarschuwingsklasse i.p.v. de gewone chip-stijl.
-    assert "Wanbetaler" in tekst
-    positie = tekst.find("Wanbetaler")
-    fragment = tekst[max(0, positie - 200) : positie]
-    assert "naam-chip--niet-betaald" in fragment
-
-
-def test_sponsoren_leden_pagina_toont_status_en_looptijd(ingelogde_client, db):
-    ingelogde_client.post(
-        "/kiosk/sponsoren-leden/leden/nieuw",
-        data={"csrf_token": _csrf(ingelogde_client), "naam": "Weergave Test"},
-    )
-
-    resp = ingelogde_client.get("/kiosk/sponsoren-leden")
-
-    assert resp.status_code == 200
-    assert b"lid-status-select" in resp.data
-    assert b"lid-naam" in resp.data
-    assert b"Niet betaald" in resp.data
-
-
-def test_lid_bewerken_wijzigt_naam_looptijd_en_extra_groot(ingelogde_client, db):
-    lid_id = _voeg_lid_toe(db, "Oud Lid", startdatum="2020-01-01", einddatum="2021-01-01")
-
-    formulier = ingelogde_client.get(f"/kiosk/sponsoren-leden/leden/{lid_id}/bewerken")
-    assert formulier.status_code == 200
-    assert b"Oud Lid" in formulier.data
-
-    resp = ingelogde_client.post(
-        f"/kiosk/sponsoren-leden/leden/{lid_id}/bewerken",
-        data={
-            "csrf_token": _csrf(ingelogde_client),
-            "naam": "Nieuwe Naam",
-            "status": "inactief",
-            "startdatum": "2022-06-15",
-            "einddatum": "2028-06-15",
-            "extra_groot": "on",
-        },
-    )
-    assert resp.status_code == 302
-
-    lid = db.execute("SELECT * FROM club_van_20_leden WHERE id = ?", (lid_id,)).fetchone()
-    assert lid["naam"] == "Nieuwe Naam"
-    assert lid["status"] == "inactief"
-    assert lid["startdatum"] == "2022-06-15"
-    assert lid["einddatum"] == "2028-06-15"
-    assert lid["extra_groot"] == 1
-
-
-def test_lid_bewerken_vereist_beheerder(client, db):
-    _maak_vrijwilliger(db, "vrijwilliger_lidbewerken", "voorraad")
-    lid_id = _voeg_lid_toe(db, "Beschermd Lid")
-    _login(client, "vrijwilliger_lidbewerken")
-
-    resp = client.post(
-        f"/kiosk/sponsoren-leden/leden/{lid_id}/bewerken",
-        data={
-            "csrf_token": _csrf(client),
-            "naam": "Gehackte Naam",
-            "status": "actief",
-            "startdatum": "2026-01-01",
-            "einddatum": "2027-01-01",
-        },
-    )
-    assert resp.status_code == 302
-    lid = db.execute("SELECT naam FROM club_van_20_leden WHERE id = ?", (lid_id,)).fetchone()
-    assert lid["naam"] == "Beschermd Lid"
-
-
-def test_jaren_lid_berekent_volledige_jaren():
-    from helpers import bereken_jaren_lid
-
-    vaste_vandaag = date(2026, 6, 15)
-    assert bereken_jaren_lid(None, vandaag=vaste_vandaag) == 0
-    assert bereken_jaren_lid("2026-06-15", vandaag=vaste_vandaag) == 0
-    # Verjaardag van de startdatum (10 juni) is dit jaar al geweest -> vol 10 jaar.
-    assert bereken_jaren_lid("2016-06-10", vandaag=vaste_vandaag) == 10
-    # Verjaardag (20 juni) moet dit jaar nog komen -> nog geen 5 volle jaren.
-    assert bereken_jaren_lid("2021-06-20", vandaag=vaste_vandaag) == 4
-
-
-def test_kantine_scherm_toont_sterren_per_jaar_lid(client, db):
-    tien_jaar_geleden = date(date.today().year - 10, 1, 1).isoformat()
-    _voeg_lid_toe(db, "Trouw Lid", startdatum=tien_jaar_geleden, einddatum="2099-01-01")
-
-    resp = client.get("/kiosk/scherm")
-
-    assert resp.status_code == 200
-    assert "★" * 10 in resp.data.decode("utf-8")
-    assert b"Trouw Lid" in resp.data
-
-
-def test_kantine_scherm_toont_extra_grote_naam(client, db):
-    _voeg_lid_toe(db, "Grote Naam", extra_groot=1)
-    _voeg_lid_toe(db, "Gewone Naam", extra_groot=0)
-
-    resp = client.get("/kiosk/scherm")
-
-    assert resp.status_code == 200
-    html = resp.data.decode("utf-8")
-    # De extra-grote klasse hoort bij het kaartje van "Grote Naam", niet bij "Gewone Naam".
-    groot_klasse = 'class="naam-chip naam-chip--groot"'
-    assert groot_klasse in html
-    groot_positie = html.index(groot_klasse)
-    assert "Grote Naam" in html[groot_positie : groot_positie + 200]
-    assert "Gewone Naam" not in html[groot_positie : groot_positie + 200]
 
 
 # ---------- Onderdeel 3: Kantine scherm ----------
@@ -1008,10 +758,7 @@ def test_scherm_instellingen_opslaan(ingelogde_client, db):
             # toon_sponsoren bewust niet meegestuurd -> uit
             "sponsoren_volgorde": "1",
             "toon_club_van_20": "on",
-            "club_van_20_volgorde": "1",
-            "club_van_20_titel": "Onze Club van 20",
-            "club_van_20_namen_per_slide": "2",
-            "club_van_20_looptijd_maanden": "6",
+            "club_van_20_volgorde": "4",
             # toon_wedstrijden bewust niet meegestuurd -> uit
             "wedstrijden_volgorde": "3",
             "wedstrijden_duur_seconden": "20",
@@ -1022,23 +769,9 @@ def test_scherm_instellingen_opslaan(ingelogde_client, db):
     instellingen = db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
     assert instellingen["toon_sponsoren"] == 0
     assert instellingen["toon_club_van_20"] == 1
-    assert instellingen["club_van_20_titel"] == "Onze Club van 20"
-    assert instellingen["club_van_20_namen_per_slide"] == 2
-    assert instellingen["club_van_20_looptijd_maanden"] == 6
+    assert instellingen["club_van_20_volgorde"] == 4
     assert instellingen["toon_wedstrijden"] == 0
     assert instellingen["wedstrijden_duur_seconden"] == 20
-
-    # Een nieuw lid gebruikt meteen de zojuist opgeslagen looptijd.
-    ingelogde_client.post(
-        "/kiosk/sponsoren-leden/leden/nieuw",
-        data={"csrf_token": _csrf(ingelogde_client), "naam": "Looptijd Test"},
-    )
-    lid = db.execute(
-        "SELECT * FROM club_van_20_leden WHERE naam = 'Looptijd Test'"
-    ).fetchone()
-    vandaag = date.today().isoformat()
-    assert lid["startdatum"] == vandaag
-    assert lid["einddatum"] == voeg_maanden_toe(vandaag, 6)
 
 
 def test_kantine_scherm_is_publiek_en_toont_alleen_actieve_sponsoren(client, db):
@@ -1064,25 +797,6 @@ def test_kantine_scherm_toont_vast_clubbeeldmerk_op_elke_dia(client, db):
     assert b"club-badge" in resp.data
     assert b"S.V. BLAUW-GEEL 1915" in resp.data
 
-
-def test_kantine_scherm_verdeelt_leden_over_meerdere_slides(client, db):
-    db.execute(
-        "UPDATE kiosk_scherm_instellingen SET club_van_20_namen_per_slide = 2 WHERE id = 1"
-    )
-    for naam in ["Aad", "Bram", "Cor"]:
-        db.execute(
-            "INSERT INTO club_van_20_leden (naam, aangemaakt_op) VALUES (?, '2026-01-01 10:00')",
-            (naam,),
-        )
-    db.commit()
-
-    resp = client.get("/kiosk/scherm")
-
-    assert resp.status_code == 200
-    for naam in ["Aad", "Bram", "Cor"]:
-        assert naam.encode() in resp.data
-    assert b"1/2" in resp.data
-    assert b"2/2" in resp.data
 
 
 def test_kantine_scherm_verbergt_wedstrijden_blok_zonder_wedstrijden(client, db):
@@ -1124,14 +838,6 @@ def test_kantine_scherm_wedstrijden_duur_is_instelbaar(client, db):
     assert resp.status_code == 200
     assert b'data-duur="25"' in resp.data
 
-
-def test_kantine_scherm_toont_club_van_20_animatie_klassen(client, db):
-    _voeg_lid_toe(db, "Animatie Test")
-
-    resp = client.get("/kiosk/scherm")
-
-    assert resp.status_code == 200
-    assert b"animation-delay" in resp.data
 
 
 def test_kantine_scherm_toont_lege_staat_als_alles_uit_staat(client, db):
@@ -1529,9 +1235,6 @@ def test_scherm_instellingen_accepteert_ajax_en_geeft_json(ingelogde_client, db)
             "sponsoren_volgorde": "1",
             "toon_club_van_20": "on",
             "club_van_20_volgorde": "2",
-            "club_van_20_titel": "Club van 20",
-            "club_van_20_namen_per_slide": "40",
-            "club_van_20_looptijd_maanden": "12",
             "toon_wedstrijden": "on",
             "wedstrijden_volgorde": "3",
         },
@@ -1794,4 +1497,4 @@ def test_hub_pagina_toont_drie_schermen_en_instellen_snelkoppelingen(ingelogde_c
     # De beknopte "Instellen"-snelkoppelingen naar Acties/Sponsoren/Club van 20.
     assert b'href="/kiosk/prijzen/acties"' in resp.data
     assert b"#dias-tabel" in resp.data
-    assert b"#club-van-20" in resp.data
+    assert b'href="/club-van-20"' in resp.data

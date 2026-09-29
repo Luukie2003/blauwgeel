@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block titel %}{{ project.naam }} · Projecten{% endblock %}
+{% block inhoud %}
+<p class="subtitel"><a href="{{ url_for('club_van_20_projecten') }}">&larr; Terug naar projecten</a></p>
+
+<div class="kaart" style="max-width:560px">
+    <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="naam">Project</label>
+            <input type="text" id="naam" name="naam" required value="{{ project.naam }}">
+        </div>
+        <div class="veld">
+            <label for="omschrijving">Omschrijving (optioneel)</label>
+            <textarea id="omschrijving" name="omschrijving" rows="2">{{ project.omschrijving or '' }}</textarea>
+        </div>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="raming">Raming (&euro;)</label>
+                <input type="text" id="raming" name="raming" inputmode="decimal" value="{{ '%g'|format(project.raming) }}">
+            </div>
+            <div class="veld">
+                <label for="kosten">Werkelijke kosten (&euro;)</label>
+                <input type="text" id="kosten" name="kosten" inputmode="decimal"
+                       value="{{ '%g'|format(project.kosten) if project.kosten is not none else '' }}" placeholder="Leeg = raming">
+            </div>
+            <div class="veld">
+                <label for="status">Status</label>
+                <select id="status" name="status">
+                    {% for sleutel, label in project_statussen.items() %}
+                    <option value="{{ sleutel }}" {{ 'selected' if project.status == sleutel }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="veld">
+                <label for="volgorde">Volgorde</label>
+                <input type="number" id="volgorde" name="volgorde" value="{{ project.volgorde }}">
+            </div>
+        </div>
+        <div class="veld">
+            <label for="afbeelding">Foto (optioneel, voor de publieke pagina)</label>
+            {% if project.afbeelding %}
+            <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + project.afbeelding) }}" alt="" style="max-width:220px; border-radius:6px">
+            <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400">
+                <input type="checkbox" name="afbeelding_verwijderen" style="width:auto"> Foto verwijderen
+            </label>
+            {% endif %}
+            <input type="file" id="afbeelding" name="afbeelding" accept="image/*">
+        </div>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.9rem">
+            <input type="checkbox" name="toon_op_scherm" style="width:auto" {{ 'checked' if project.toon_op_scherm }}>
+            Tonen op het kantine scherm en de publieke pagina
+        </label>
+        {% if project.afgerond_op %}<p class="tekst-zacht">Afgerond op {{ project.afgerond_op|datum_kort }}.</p>{% endif %}
+        <button type="submit" class="btn btn-geel">Opslaan</button>
+    </form>
+</div>
+{% endblock %}

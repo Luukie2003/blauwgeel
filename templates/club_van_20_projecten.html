@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block titel %}Projecten · Club van 20{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Waar het Club van 20-geld aan besteed wordt. Projecten die klaar zijn of waar aan gewerkt wordt komen op de
+    "Samen opgehaald"-dia; het eerste geplande project (in volgorde) is het doel waar de balk naartoe spaart.
+</p>
+
+<div class="statgrid c20-kpi">
+    <div class="stat">
+        <div class="getal">{{ geld.opgehaald|euro }}</div>
+        <div class="label">Totaal opgehaald</div>
+    </div>
+    <div class="stat">
+        <div class="getal">{{ geld.besteed|euro }}</div>
+        <div class="label">Besteed (klaar + mee bezig)</div>
+    </div>
+    <div class="stat{{ ' waarschuwing' if geld.beschikbaar < 0 }}">
+        <div class="getal">{{ geld.beschikbaar|euro }}</div>
+        <div class="label">Nog te besteden</div>
+    </div>
+    <div class="stat">
+        {% if geld.doel %}
+        <div class="getal">{{ geld.doel.procent }}%</div>
+        <div class="label">Doel: {{ geld.doel.naam }} ({{ geld.doel.gespaard|euro }} van {{ geld.doel.raming|euro }})</div>
+        <div class="c20-balk"><div style="width: {{ geld.doel.procent }}%"></div></div>
+        {% else %}
+        <div class="getal">&mdash;</div>
+        <div class="label">Geen gepland project als doel</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="kaart">
+    <h2 style="margin-top:0">Nieuw project</h2>
+    <form method="post" enctype="multipart/form-data" class="formgrid">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="naam">Project</label>
+            <input type="text" id="naam" name="naam" required placeholder="Bijv. Openslaande deuren terras">
+        </div>
+        <div class="veld">
+            <label for="raming">Raming (&euro;)</label>
+            <input type="text" id="raming" name="raming" inputmode="decimal" placeholder="0">
+        </div>
+        <div class="veld">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                {% for sleutel, label in project_statussen.items() %}<option value="{{ sleutel }}">{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="veld" style="justify-content:flex-end">
+            <button type="submit" class="btn btn-geel">Toevoegen</button>
+        </div>
+    </form>
+</div>
+
+<div class="kaart">
+    {% if geld.projecten %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>#</th><th>Project</th><th style="text-align:right">Raming</th><th style="text-align:right">Werkelijk</th><th>Status</th><th>Op scherm</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for p in geld.projecten %}
+                <tr>
+                    <td class="tekst-zacht">{{ p.volgorde }}</td>
+                    <td>
+                        <strong>{{ p.naam }}</strong>
+                        {% if p.status == 'gepland' and p.gespaard %} <span class="badge badge-ok">Geld is er</span>{% elif geld.doel and geld.doel.naam == p.naam and p.status == 'gepland' %} <span class="badge badge-uit">Volgende doel</span>{% endif %}
+                        {% if p.omschrijving %}<br><span class="tekst-zacht">{{ p.omschrijving }}</span>{% endif %}
+                    </td>
+                    <td style="text-align:right">{{ p.raming|euro }}</td>
+                    <td style="text-align:right">{{ p.kosten|euro if p.kosten is not none else '—' }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('club_van_20_project_status', project_id=p.id) }}" class="inline js-ajax-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <select name="status" class="c20-status-select c20-status-{{ {'klaar': 'betaald', 'bezig': 'gevraagd'}.get(p.status, 'niet_gevraagd') }}"
+                                    onchange="this.className = 'c20-status-select c20-status-' + ({klaar: 'betaald', bezig: 'gevraagd'}[this.value] || 'niet_gevraagd'); this.form.requestSubmit();">
+                                {% for sleutel, label in project_statussen.items() %}
+                                <option value="{{ sleutel }}" {{ 'selected' if p.status == sleutel }}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </td>
+                    <td>{{ 'Ja' if p.toon_op_scherm else 'Nee' }}</td>
+                    <td class="tabel-acties">
+                        <a href="{{ url_for('club_van_20_project_bewerken', project_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                        <form method="post" action="{{ url_for('club_van_20_project_verwijderen', project_id=p.id) }}"
+                              onsubmit="return bevestigEnVerstuur(this, 'Project \'{{ p.naam }}\' verwijderen?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen projecten. Voeg hierboven toe waar het geld aan besteed wordt (bijv. bartafels, sfeerverlichting).</p>
+    {% endif %}
+</div>
+{% endblock %}

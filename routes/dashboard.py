@@ -2,10 +2,10 @@ from datetime import datetime, timedelta
 
 from flask import Response, flash, g, jsonify, redirect, render_template, request, session, url_for
 
+from club_van_20 import bereken_club_van_20_status
 from database import get_db
 from helpers import (
     bereken_bestelling_status,
-    bereken_club_van_20_status,
     bereken_frituurvet_status,
     bereken_kassa_telling_status,
     bereken_komende_thuiswedstrijden,
@@ -16,6 +16,7 @@ from helpers import (
     csv_response,
     dagdeel_groet,
     format_datum,
+    heeft_sectie_toegang,
     is_ajax_verzoek,
     now_str,
     stuur_tag_notificaties,
@@ -25,8 +26,20 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.15.16"
+HUIDIGE_VERSIE = "1.16.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.16.0",
+        "datum": "29 september 2026",
+        "punten": [
+            "Club van 20 heeft een eigen onderdeel in het menu: leden met naambordje, team en contactgegevens, en per seizoen of ze betaald hebben (net als de oude spreadsheet)",
+            "Betalingen per lid direct in de tabel bijwerken, meerdere leden tegelijk op 'gevraagd' zetten, en een kant-en-klaar WhatsApp-betaalverzoek",
+            "Projecten bijhouden waar het Club van 20-geld aan besteed wordt",
+            "Nieuwe Club van 20-dia's in de stijl van de oude dia's: naammuur met gouden/zilveren bordjes voor trouwe leden, 'Samen opgehaald' met het volgende doel, teamstrijd, welkom nieuwe leden en een wervingsdia met QR-code",
+            "Openbare Club van 20-pagina (via de QR-code) met alle namen, opbrengst en projecten",
+            "De oude Club van 20-spreadsheet importeren (en de administratie exporteren) als CSV",
+        ],
+    },
     {
         "versie": "1.15.16",
         "datum": "29 september 2026",
@@ -520,11 +533,14 @@ def register_routes(app):
             kassa_telling_status=bereken_kassa_telling_status(db),
             bestelling_status=bereken_bestelling_status(db),
             frituurvet_status=bereken_frituurvet_status(db),
-            # Club van 20-beheer is beheerder-only (zie NAV_GROEP_ALLEEN_BEHEERDER
-            # in app.py) -- deze query overslaan voor vrijwilligers die de
-            # tegel toch niet te zien krijgen (zie dashboard.html).
+            # Alleen voor wie de Club van 20-sectie heeft (beheerders altijd) --
+            # deze query overslaan voor wie de tegel toch niet te zien krijgt.
             club_van_20_status=(
-                bereken_club_van_20_status(db) if session.get("gebruiker_rol") == "beheerder" else None
+                bereken_club_van_20_status(db)
+                if heeft_sectie_toegang(
+                    session.get("gebruiker_rol"), session.get("gebruiker_secties"), "club_van_20"
+                )
+                else None
             ),
         )
 
