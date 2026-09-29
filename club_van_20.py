@@ -273,16 +273,23 @@ def zichtbare_leden(db, instellingen, seizoen=None, leden=None):
     return resultaat
 
 
-def team_stand(zichtbaar):
-    """Aantal naambordjes per team (alleen leden met een team), meeste
-    eerst -- voor de 'welk team steunt het meest'-dia."""
-    tellers = {}
+def team_stand(zichtbaar, leden=()):
+    """Aantal naambordjes op het scherm per team, meeste eerst -- voor de
+    'welk team steunt het meest'-dia. Elk team dat bij een (niet
+    gearchiveerd) lid in de administratie staat doet mee, ook als daar nog
+    niemand van betaald heeft (dan met 0): zo verschijnt een nieuw team
+    meteen op de dia, en werkt die 0 juist als aansporing."""
+    tellers = {
+        (lid.get("team") or "").strip(): 0
+        for lid in leden
+        if lid["status"] != "inactief" and (lid.get("team") or "").strip()
+    }
     for lid in zichtbaar:
         if lid["team"]:
             tellers[lid["team"]] = tellers.get(lid["team"], 0) + 1
     if not tellers:
         return []
-    hoogste = max(tellers.values())
+    hoogste = max(tellers.values()) or 1
     return [
         {"team": team, "aantal": n, "procent": round(n / hoogste * 100)}
         for team, n in sorted(tellers.items(), key=lambda kv: (-kv[1], kv[0].lower()))
@@ -512,14 +519,14 @@ def bouw_slides(db, instellingen, qr_svg=None):
             )
 
     if instellingen["club_van_20_toon_teams"]:
-        stand = team_stand(zichtbaar)
-        if len(stand) >= 2:
+        stand = team_stand(zichtbaar, leden)
+        if len(stand) >= 2 and stand[0]["aantal"] > 0:
             slides.append(
                 {
                     "type": "club_van_20_teams",
                     "duur": duur,
                     "achtergrond": achtergrond,
-                    "teams": stand[:6],
+                    "teams": stand[:8],
                     "verschil": stand[0]["aantal"] - stand[1]["aantal"],
                 }
             )

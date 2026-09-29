@@ -150,7 +150,7 @@
                 </div>
                 {% elif slide.type == 'club_van_20_teams' %}
                 <div class="c20-kop"><h2>Welk team steunt het meest?</h2><span class="c20-seizoen">Club van 20-leden per team</span></div>
-                <div class="c20-teams">
+                <div class="c20-teams{{ ' c20-teams--veel' if slide.teams|length > 5 else '' }}">
                     {% for t in slide.teams %}
                     <div class="c20-team{{ ' c20-team--eerste' if loop.first else '' }}" style="animation-delay: {{ (loop.index0 * 0.12)|round(2) }}s">
                         <span class="c20-team-naam">{{ t.team }}</span>

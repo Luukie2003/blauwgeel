@@ -196,6 +196,44 @@ def test_scherm_teller_teams_nieuw_en_werving(client, db):
     assert "<svg" in tekst  # QR-code naar de publieke pagina
 
 
+def test_teamstrijd_toont_ook_teams_zonder_betalers(client, db):
+    """Een team waarvan nog niemand (recent) betaald heeft, staat er toch
+    op met 0 -- anders verschijnt een nieuw team (zoals O23) nooit."""
+    _alleen_club_van_20(db)
+    _bijdrage(db, _lid(db, "Za1 Betaler", team="Za1"), HUIDIG)
+    _bijdrage(db, _lid(db, "Za2 Betaler", team="Za2"), HUIDIG)
+    _lid(db, "Nieuw O23 Lid", team="O23")
+    _bijdrage(db, _lid(db, "Oud O23 Lid", team="O23"), TWEE_TERUG)
+    _lid(db, "Gearchiveerd", team="Za5", status="inactief")
+
+    tekst = client.get("/kiosk/scherm").data.decode()
+    teams = tekst[tekst.index("slide-club_van_20_teams") :]
+    assert '<span class="c20-team-naam">O23</span>' in teams
+    assert "Za5" not in teams
+    assert "Gelijk op tussen Za1 en Za2!" in teams
+
+
+def test_scherm_meldt_nieuwe_versie_na_wijziging(client, db):
+    """Het kantine scherm pollt /kiosk/scherm/versie en herlaadt zichzelf
+    zodra die verandert -- een wijziging die op een dia zichtbaar is, moet
+    dus altijd een andere versie opleveren."""
+    _alleen_club_van_20(db)
+    lid_id = _lid(db, "Teamwissel", team="Za1")
+    _bijdrage(db, lid_id, HUIDIG)
+    _bijdrage(db, _lid(db, "Ander", team="Za2"), HUIDIG)
+
+    versie = client.get("/kiosk/scherm/versie").get_json()["versie"]
+    assert client.get("/kiosk/scherm/versie").get_json()["versie"] == versie
+
+    db.execute("UPDATE club_van_20_leden SET team = 'O23' WHERE id = ?", (lid_id,))
+    db.commit()
+    na_team = client.get("/kiosk/scherm/versie").get_json()["versie"]
+    assert na_team != versie
+
+    _bijdrage(db, _lid(db, "Nieuwe Betaler"), HUIDIG)
+    assert client.get("/kiosk/scherm/versie").get_json()["versie"] != na_team
+
+
 def test_scherm_geen_werving_zonder_leden(client, db):
     _alleen_club_van_20(db)
     tekst = client.get("/kiosk/scherm").data.decode()

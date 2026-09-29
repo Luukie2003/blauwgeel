@@ -275,6 +275,10 @@
 .c20-team-balk { height: 4.2rem; border-radius: 6px; background: rgba(15, 31, 77, 0.55); overflow: hidden; }
 .c20-team-vulling { height: 100%; width: 0; background: #fff; border-radius: 6px; }
 .c20-team--eerste .c20-team-vulling { background: var(--geel); }
+/* Meer dan 5 teams: alles wat compacter, zodat 8 teams nog op 1 dia passen. */
+.c20-teams--veel { gap: 1rem; }
+.c20-teams--veel .c20-team { font-size: 2.4rem; }
+.c20-teams--veel .c20-team-balk { height: 3rem; }
 .slide.c20.actief .c20-team { animation: bordje-in 0.5s ease both; }
 .slide.c20.actief .c20-team-vulling { animation: balk-vullen 1.4s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .c20-teams-onder { margin: 1.5rem 0 1rem; font-family: var(--c20-font); font-size: 2.6rem; color: var(--geel); }

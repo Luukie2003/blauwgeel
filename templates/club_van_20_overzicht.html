@@ -102,13 +102,11 @@
                     <th class="c20-seizoenscel" title="{{ s }}">{{ s|seizoen_kort }}<br><span class="c20-totaal" style="font-weight:400">{{ (totalen.get(s, {}).bedrag or 0)|euro }}</span></th>
                     {% endfor %}
                     <th>Status {{ seizoen }}</th>
-                    <th title="Wie het geld heeft betaald of aangenomen, als dat niet het lid zelf is (bijv. een ouder, het bedrijf achter het naambordje, of de barvrijwilliger die het contant kreeg). Mag leeg blijven.">Betaald door <span class="tekst-zacht" style="cursor:help">&#9432;</span></th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for lid in leden %}
-                {% set b = lid.bijdragen.get(seizoen, {}) %}
                 <tr class="{{ 'inactief' if lid.status == 'inactief' }}" data-lid="{{ lid.id }}">
                     <td><input type="checkbox" class="bulk-rij" name="lid_ids" value="{{ lid.id }}" form="bulk-form" style="width:auto"></td>
                     <td>
@@ -132,10 +130,6 @@
                             <option value="{{ sleutel }}" {{ 'selected' if sleutel == lid.status_seizoen }}>{{ label }}</option>
                             {% endfor %}
                         </select>
-                    </td>
-                    <td>
-                        <input type="text" name="betaald_door" form="rij-{{ lid.id }}" value="{{ b.betaald_door or '' }}"
-                               placeholder="bijv. ouder, bedrijf" title="Wie betaalde of het geld aannam, als dat niet het lid zelf is" style="width:9rem" onchange="this.form.requestSubmit()">
                     </td>
                     <td class="tabel-acties">
                         <form method="post" action="{{ url_for('club_van_20_bijdrage_opslaan', lid_id=lid.id) }}" id="rij-{{ lid.id }}" class="js-ajax-form">

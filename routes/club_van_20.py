@@ -703,7 +703,7 @@ def register_routes(app):
             "club_van_20_publiek.html",
             instellingen=instellingen,
             namen=zichtbaar,
-            teams=team_stand(zichtbaar),
+            teams=team_stand(zichtbaar, leden_met_bijdragen(db, alleen_actief=True)),
             geld=financien(db, instellingen["club_van_20_bedrag"]),
             seizoen=huidig_seizoen(),
         )
