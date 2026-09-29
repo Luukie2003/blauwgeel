@@ -63,7 +63,7 @@
         <select name="weergave">
             <option value="actief" {{ 'selected' if filters.weergave == 'actief' }}>Actieve leden</option>
             <option value="alle" {{ 'selected' if filters.weergave == 'alle' }}>Alle leden</option>
-            <option value="inactief" {{ 'selected' if filters.weergave == 'inactief' }}>Gestopte leden</option>
+            <option value="gearchiveerd" {{ 'selected' if filters.weergave == 'gearchiveerd' }}>Gearchiveerde leden</option>
         </select>
         <button type="submit" class="btn btn-rand">Filteren</button>
         <span class="tekst-zacht">{{ leden|length }} van {{ aantal_totaal }}</span>
@@ -80,6 +80,14 @@
             {% endfor %}
         </select>
         <button type="submit" class="btn btn-geel btn-klein">Toepassen</button>
+        <span class="tekst-zacht">of</span>
+        {% if filters.weergave != 'gearchiveerd' %}
+        <button type="submit" name="actie" value="archiveren" class="btn btn-rand btn-klein"
+                title="Van het scherm en uit de lijst halen; de betaalhistorie blijft bewaard">Archiveren</button>
+        {% endif %}
+        {% if filters.weergave != 'actief' %}
+        <button type="submit" name="actie" value="terugzetten" class="btn btn-rand btn-klein">Terugzetten</button>
+        {% endif %}
     </form>
 
     {% if leden %}
@@ -94,7 +102,7 @@
                     <th class="c20-seizoenscel" title="{{ s }}">{{ s|seizoen_kort }}<br><span class="c20-totaal" style="font-weight:400">{{ (totalen.get(s, {}).bedrag or 0)|euro }}</span></th>
                     {% endfor %}
                     <th>Status {{ seizoen }}</th>
-                    <th>Betaald door</th>
+                    <th title="Wie het geld heeft betaald of aangenomen, als dat niet het lid zelf is (bijv. een ouder, het bedrijf achter het naambordje, of de barvrijwilliger die het contant kreeg). Mag leeg blijven.">Betaald door <span class="tekst-zacht" style="cursor:help">&#9432;</span></th>
                     <th></th>
                 </tr>
             </thead>
@@ -108,7 +116,7 @@
                             {% if lid.aantal_seizoenen %}<span class="lid-sterren" title="{{ lid.aantal_seizoenen }} seizoen(en) lid">{{ '★' * lid.aantal_seizoenen if lid.aantal_seizoenen <= 5 else lid.aantal_seizoenen ~ '★' }}</span>{% endif %}{{ lid.naam }}</a>
                         {% if lid.op_scherm %}<span class="c20-scherm-stip" title="Staat nu op het kantine scherm"></span>{% endif %}
                         {% if lid.volledige_naam and lid.volledige_naam != lid.naam %}<br><span class="tekst-zacht">{{ lid.volledige_naam }}</span>{% endif %}
-                        {% if lid.status == 'inactief' %}<br><span class="badge badge-neutraal">Gestopt</span>{% endif %}
+                        {% if lid.status == 'inactief' %}<br><span class="badge badge-neutraal">Gearchiveerd{% if lid.gearchiveerd_op %} {{ lid.gearchiveerd_op|datum_kort }}{% endif %}</span>{% endif %}
                     </td>
                     <td>{{ lid.team or '' }}</td>
                     {% for s in seizoenen %}
@@ -127,7 +135,7 @@
                     </td>
                     <td>
                         <input type="text" name="betaald_door" form="rij-{{ lid.id }}" value="{{ b.betaald_door or '' }}"
-                               placeholder="&mdash;" style="width:9rem" onchange="this.form.requestSubmit()">
+                               placeholder="bijv. ouder, bedrijf" title="Wie betaalde of het geld aannam, als dat niet het lid zelf is" style="width:9rem" onchange="this.form.requestSubmit()">
                     </td>
                     <td class="tabel-acties">
                         <form method="post" action="{{ url_for('club_van_20_bijdrage_opslaan', lid_id=lid.id) }}" id="rij-{{ lid.id }}" class="js-ajax-form">
@@ -135,6 +143,16 @@
                             <input type="hidden" name="seizoen" value="{{ seizoen }}">
                         </form>
                         <a href="{{ url_for('club_van_20_lid_bewerken', lid_id=lid.id) }}" class="btn btn-rand btn-klein">Details</a>
+                        <form method="post" action="{{ url_for('club_van_20_lid_archiveren', lid_id=lid.id) }}" class="js-ajax-form c20-archiveer-form"
+                              {% if lid.status != 'inactief' %}data-bevestig="'{{ lid.naam }}' archiveren? Het naambordje gaat van het scherm; de betaalhistorie blijft bewaard en je kunt het lid later terugzetten."{% endif %}>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            {% if lid.status == 'inactief' %}
+                            <input type="hidden" name="actie" value="terugzetten">
+                            <button type="submit" class="btn btn-rand btn-klein">Terugzetten</button>
+                            {% else %}
+                            <button type="submit" class="btn btn-rand btn-klein">Archiveren</button>
+                            {% endif %}
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}
@@ -171,6 +189,18 @@
 
     // Na opslaan: de seizoenscel en de kleur van het statusvakje meteen
     // bijwerken, zonder de hele pagina te herladen.
+    // Archiveren/terugzetten: de rij verdwijnt uit de actieve/gearchiveerde
+    // lijst; in "Alle leden" herladen we even voor de juiste badge.
+    var weergave = {{ filters.weergave|tojson }};
+    document.addEventListener('ajax-form:success', function (e) {
+        if (!e.target.classList.contains('c20-archiveer-form')) return;
+        if (weergave === 'alle') { window.location.reload(); return; }
+        var rij = e.target.closest('tr');
+        rij.style.transition = 'opacity 0.3s';
+        rij.style.opacity = '0';
+        setTimeout(function () { rij.remove(); }, 300);
+    });
+
     var labels = {{ status_labels|tojson }};
     document.addEventListener('ajax-form:success', function (e) {
         var form = e.target;

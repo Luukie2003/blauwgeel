@@ -55,7 +55,7 @@
                 <option value="3" {{ 'selected' if instellingen.club_van_20_zichtbaar_seizoenen == 3 }}>Betaald in een van de laatste 3 seizoenen</option>
                 <option value="0" {{ 'selected' if instellingen.club_van_20_zichtbaar_seizoenen == 0 }}>Alle actieve leden</option>
             </select>
-            <span class="tekst-zacht">Nu {{ aantal_op_scherm }} naambordjes op het scherm. Wie stopt of gestopt is, staat er nooit op.</span>
+            <span class="tekst-zacht">Nu {{ aantal_op_scherm }} naambordjes op het scherm. Wie stopt of gearchiveerd is, staat er nooit op.</span>
         </div>
         <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.5rem">
             <input type="checkbox" name="club_van_20_markeer_onbetaald" style="width:auto" {{ 'checked' if instellingen.club_van_20_markeer_onbetaald }}>
@@ -64,6 +64,10 @@
         <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.9rem">
             <input type="checkbox" name="club_van_20_lege_vakjes" style="width:auto" {{ 'checked' if instellingen.club_van_20_lege_vakjes }}>
             Laatste dia aanvullen met lege vakjes ("Jouw naam hier?")
+        </label>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin:-0.4rem 0 0.9rem">
+            <input type="checkbox" name="club_van_20_laatste_dia_vullen" style="width:auto" {{ 'checked' if instellingen.club_van_20_laatste_dia_vullen }}>
+            Laatste dia met weinig namen vullen met grotere bordjes (anders zijn alle bordjes even groot)
         </label>
         <div class="veld">
             <label for="achtergrond">Achtergrondfoto (optioneel, bijv. de clubvlag)</label>

@@ -152,6 +152,24 @@ def test_scherm_verdeelt_namen_en_vult_laatste_dia_met_lege_vakjes(client, db):
     assert "Jouw naam hier?" in tekst
 
 
+def test_laatste_dia_houdt_even_grote_bordjes(client, db):
+    """Zonder lege vakjes heeft de laatste dia minder namen; standaard houdt
+    die toch het raster van een volle dia (dus even grote bordjes). Alleen
+    met "laatste dia vullen" worden de bordjes daar groter."""
+    _alleen_club_van_20(db)
+    _zet(db, club_van_20_namen_per_slide=8, club_van_20_kolommen=4, club_van_20_lege_vakjes=0)
+    for i in range(10):
+        _bijdrage(db, _lid(db, f"Lid {i:02d}"), HUIDIG)
+
+    tekst = client.get("/kiosk/scherm").data.decode()
+    assert tekst.count("--kolommen: 4; --rijen: 2;") == 2
+    assert "c20-bordje--leeg" not in tekst
+
+    _zet(db, club_van_20_laatste_dia_vullen=1)
+    tekst = client.get("/kiosk/scherm").data.decode()
+    assert "--kolommen: 4; --rijen: 2;" in tekst and "--kolommen: 4; --rijen: 1;" in tekst
+
+
 def test_scherm_teller_teams_nieuw_en_werving(client, db):
     _alleen_club_van_20(db)
     vandaag = date.today().isoformat()
@@ -271,10 +289,68 @@ def test_lid_bewerken_toont_verzoek_en_slaat_op(ingelogde_client, db):
 
     resp = ingelogde_client.post(
         f"/club-van-20/leden/{lid_id}",
-        data={"csrf_token": _csrf(ingelogde_client), "naam": "Bonkie", "voornaam": "Mark", "inactief": "on"},
+        data={"csrf_token": _csrf(ingelogde_client), "naam": "Bonkie", "voornaam": "Mark", "team": "Za1"},
     )
     assert resp.status_code == 302
+    assert db.execute("SELECT team FROM club_van_20_leden WHERE id = ?", (lid_id,)).fetchone()["team"] == "Za1"
+
+
+def test_archiveren_haalt_lid_van_scherm_en_bewaart_historie(ingelogde_client, client, db):
+    _alleen_club_van_20(db)
+    lid_id = _lid(db, "Stopper")
+    _bijdrage(db, lid_id, HUIDIG)
+    _bijdrage(db, _lid(db, "Blijver"), HUIDIG)
+
+    resp = ingelogde_client.post(
+        f"/club-van-20/leden/{lid_id}/archiveren",
+        data={"csrf_token": _csrf(ingelogde_client)},
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert resp.get_json()["gearchiveerd"] is True
+    lid = db.execute("SELECT * FROM club_van_20_leden WHERE id = ?", (lid_id,)).fetchone()
+    assert lid["status"] == "inactief" and lid["gearchiveerd_op"]
+    # Historie blijft, maar het lid staat niet meer op het scherm of in de actieve lijst.
+    assert db.execute("SELECT COUNT(*) AS n FROM club_van_20_bijdragen WHERE lid_id = ?", (lid_id,)).fetchone()["n"] == 1
+    scherm = client.get("/kiosk/scherm").data.decode()
+    assert "Stopper" not in scherm and "Blijver" in scherm
+    assert "Stopper" not in ingelogde_client.get("/club-van-20").data.decode()
+    archief = ingelogde_client.get("/club-van-20?weergave=gearchiveerd").data.decode()
+    assert "Stopper" in archief and "Gearchiveerd" in archief and "Blijver" not in archief
+
+    # Gegevens bewerken zet een gearchiveerd lid niet stilletjes terug.
+    ingelogde_client.post(
+        f"/club-van-20/leden/{lid_id}",
+        data={"csrf_token": _csrf(ingelogde_client), "naam": "Stopper", "notitie": "wil van het bord"},
+    )
     assert db.execute("SELECT status FROM club_van_20_leden WHERE id = ?", (lid_id,)).fetchone()["status"] == "inactief"
+
+    ingelogde_client.post(
+        f"/club-van-20/leden/{lid_id}/archiveren",
+        data={"csrf_token": _csrf(ingelogde_client), "actie": "terugzetten"},
+    )
+    lid = db.execute("SELECT * FROM club_van_20_leden WHERE id = ?", (lid_id,)).fetchone()
+    assert lid["status"] == "actief" and lid["gearchiveerd_op"] is None
+    assert "Stopper" in client.get("/kiosk/scherm").data.decode()
+
+
+def test_bulk_archiveren_en_terugzetten(ingelogde_client, db):
+    ids = [_lid(db, "Een"), _lid(db, "Twee"), _lid(db, "Drie")]
+    ingelogde_client.post(
+        "/club-van-20/bulk",
+        data={"csrf_token": _csrf(ingelogde_client), "seizoen": HUIDIG, "status": "gevraagd",
+              "actie": "archiveren", "lid_ids": [str(i) for i in ids[:2]]},
+    )
+    statussen = {r["naam"]: r["status"] for r in db.execute("SELECT naam, status FROM club_van_20_leden")}
+    assert statussen == {"Een": "inactief", "Twee": "inactief", "Drie": "actief"}
+    # Archiveren raakt de seizoensstatus niet.
+    assert db.execute("SELECT COUNT(*) AS n FROM club_van_20_bijdragen").fetchone()["n"] == 0
+
+    ingelogde_client.post(
+        "/club-van-20/bulk",
+        data={"csrf_token": _csrf(ingelogde_client), "seizoen": HUIDIG, "status": "gevraagd",
+              "actie": "terugzetten", "lid_ids": [str(ids[0])]},
+    )
+    assert db.execute("SELECT status FROM club_van_20_leden WHERE id = ?", (ids[0],)).fetchone()["status"] == "actief"
 
 
 def test_lid_verwijderen_verwijdert_ook_betalingen(ingelogde_client, db):

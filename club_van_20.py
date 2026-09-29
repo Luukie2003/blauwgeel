@@ -231,7 +231,7 @@ def seizoen_totalen(db):
 def is_zichtbaar(lid, seizoen, zichtbaar_seizoenen):
     """(zichtbaar, onbetaald) voor 1 lid in het gegeven seizoen. Een lid dat
     dit seizoen betaald heeft, staat er altijd op; wie stopt (afgezegd) of
-    inactief is nooit. Daartussen bepaalt zichtbaar_seizoenen hoe lang een
+    gearchiveerd is (status 'inactief') nooit. Daartussen bepaalt zichtbaar_seizoenen hoe lang een
     oudere betaling nog meetelt (0 = elk actief lid)."""
     if lid["status"] == "inactief":
         return False, False
@@ -456,6 +456,10 @@ def bouw_slides(db, instellingen, qr_svg=None):
     duur = max(3, instellingen["club_van_20_duur_seconden"])
     kolommen = max(1, instellingen["club_van_20_kolommen"])
     per_slide = max(1, instellingen["club_van_20_namen_per_slide"])
+    # Zoveel rijen heeft een volle dia; de laatste dia houdt standaard
+    # hetzelfde raster (dus even grote bordjes), tenzij "laatste dia vullen"
+    # aan staat.
+    vaste_rijen = -(-per_slide // kolommen)
     achtergrond = instellingen["club_van_20_achtergrond"]
     bedrag = instellingen["club_van_20_bedrag"] or 20
     slides = []
@@ -471,6 +475,8 @@ def bouw_slides(db, instellingen, qr_svg=None):
         if instellingen["club_van_20_lege_vakjes"] and idx == len(groepen) - 1:
             lege = max(0, per_slide - bezet)
         rijen = -(-(bezet + lege) // kolommen)
+        if not instellingen["club_van_20_laatste_dia_vullen"]:
+            rijen = max(rijen, vaste_rijen)
         slides.append(
             {
                 "type": "club_van_20",

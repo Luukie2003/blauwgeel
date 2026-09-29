@@ -301,6 +301,7 @@ SECTIE_ENDPOINTS = {
         "club_van_20_lid_nieuw",
         "club_van_20_lid_bewerken",
         "club_van_20_lid_verwijderen",
+        "club_van_20_lid_archiveren",
         "club_van_20_projecten",
         "club_van_20_project_bewerken",
         "club_van_20_project_status",

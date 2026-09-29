@@ -280,6 +280,13 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "club_van_20_zichtbaar_seizoenen", "INTEGER NOT NULL DEFAULT 2"),
     ("kiosk_scherm_instellingen", "club_van_20_markeer_onbetaald", "INTEGER NOT NULL DEFAULT 0"),
     ("kiosk_scherm_instellingen", "club_van_20_lege_vakjes", "INTEGER NOT NULL DEFAULT 1"),
+    # Standaard houden de bordjes op elke dia dezelfde grootte (die van een
+    # volle dia), ook op een laatste dia met maar een paar namen. Aan = die
+    # laatste dia vullen met minder, maar grotere bordjes (zie bouw_slides).
+    ("kiosk_scherm_instellingen", "club_van_20_laatste_dia_vullen", "INTEGER NOT NULL DEFAULT 0"),
+    # Wanneer een lid gearchiveerd is (status 'inactief': niet meer op het
+    # scherm, betaalhistorie blijft bewaard), zie club_van_20_lid_archiveren.
+    ("club_van_20_leden", "gearchiveerd_op", "TEXT"),
     ("kiosk_scherm_instellingen", "club_van_20_bedrag", "REAL NOT NULL DEFAULT 20"),
     ("kiosk_scherm_instellingen", "club_van_20_achtergrond", "TEXT"),
     ("kiosk_scherm_instellingen", "club_van_20_toon_teller", "INTEGER NOT NULL DEFAULT 1"),

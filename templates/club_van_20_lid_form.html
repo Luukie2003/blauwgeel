@@ -57,10 +57,7 @@
             <input type="checkbox" name="extra_groot" style="width:auto" {{ 'checked' if lid and lid.extra_groot }}>
             Extra groot bordje op het scherm (neemt 2 vakjes in)
         </label>
-        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.9rem">
-            <input type="checkbox" name="inactief" style="width:auto" {{ 'checked' if lid and lid.status == 'inactief' }}>
-            Gestopt (niet meer op het scherm, niet meer vragen)
-        </label>
+<div style="margin-bottom:0.9rem"></div>
 
         {% if not lid %}
         <fieldset class="groupbox">
@@ -112,7 +109,7 @@
             {% if onbetaald %}<span class="tekst-zacht">(nog niet betaald voor {{ huidig }}, telt nog mee door een eerdere betaling)</span>{% endif %}
             {% else %}
             <span class="badge badge-neutraal">Niet op het scherm</span>
-            <span class="tekst-zacht">{% if lid.status == 'inactief' %}gestopt{% else %}pas zodra {{ huidig }} betaald is{% endif %}</span>
+            <span class="tekst-zacht">{% if lid.status == 'inactief' %}gearchiveerd{% else %}pas zodra {{ huidig }} betaald is{% endif %}</span>
             {% endif %}
         </p>
         <p class="tekst-zacht" style="margin:0">
@@ -120,6 +117,18 @@
             &middot; totaal {{ lid.totaal_betaald|euro }}
             {% if lid.eerste_seizoen %}&middot; lid sinds {{ lid.eerste_seizoen }}{% endif %}
         </p>
+        <form method="post" action="{{ url_for('club_van_20_lid_archiveren', lid_id=lid.id) }}" style="margin-top:0.8rem"
+              {% if lid.status != 'inactief' %}onsubmit="return bevestigEnVerstuur(this, '\'{{ lid.naam }}\' archiveren? Het naambordje gaat van het scherm; de betaalhistorie blijft bewaard.');"{% endif %}>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if lid.status == 'inactief' %}
+            <input type="hidden" name="actie" value="terugzetten">
+            <span class="badge badge-neutraal">Gearchiveerd{% if lid.gearchiveerd_op %} op {{ lid.gearchiveerd_op|datum_kort }}{% endif %}</span>
+            <button type="submit" class="btn btn-rand btn-klein">Terugzetten</button>
+            {% else %}
+            <button type="submit" class="btn btn-rand btn-klein">Archiveren</button>
+            <span class="tekst-zacht">Betaalt niet meer / wil van het bord? Archiveer het lid, dan blijft de historie bewaard.</span>
+            {% endif %}
+        </form>
     </div>
 
     {% if lid.status != 'inactief' and lid.bijdragen.get(huidig, {}).get('status') != 'betaald' %}
@@ -180,7 +189,7 @@
     </div>
 
     <form method="post" action="{{ url_for('club_van_20_lid_verwijderen', lid_id=lid.id) }}"
-          onsubmit="return bevestigEnVerstuur(this, '\'{{ lid.naam }}\' en alle betalingen verwijderen? Gestopt? Vink dan liever \'Gestopt\' aan, dan blijft de historie bewaard.');">
+          onsubmit="return bevestigEnVerstuur(this, '\'{{ lid.naam }}\' en alle betalingen definitief verwijderen? Gestopt? Archiveer het lid dan liever, dan blijft de historie bewaard.');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-gevaar btn-klein">Lid verwijderen</button>
     </form>

@@ -97,6 +97,8 @@ def register_routes(app):
         team = request.args.get("team") or ""
         status_filter = request.args.get("status") or ""
         weergave = request.args.get("weergave") or "actief"
+        if weergave == "inactief":
+            weergave = "gearchiveerd"
 
         alle_leden = leden_met_bijdragen(db)
         tellers = {s: 0 for s in BIJDRAGE_STATUS_LABELS}
@@ -110,7 +112,7 @@ def register_routes(app):
                 tellers[lid["status_seizoen"]] += 1
             if weergave == "actief" and lid["status"] == "inactief":
                 continue
-            if weergave == "inactief" and lid["status"] != "inactief":
+            if weergave == "gearchiveerd" and lid["status"] != "inactief":
                 continue
             if zoek and zoek not in f"{lid['naam']} {lid['volledige_naam']}".lower():
                 continue
@@ -196,12 +198,55 @@ def register_routes(app):
         flash(melding, "success")
         return redirect(request.referrer or url_for("club_van_20_overzicht"))
 
+    def _archiveer(db, ids, archiveren):
+        """Archiveren = van het scherm en uit de lijsten (status 'inactief'),
+        maar met behoud van de betaalhistorie -- i.t.t. verwijderen. Terugzetten
+        maakt een lid weer gewoon actief."""
+        if archiveren:
+            db.executemany(
+                """UPDATE club_van_20_leden SET status = 'inactief', gearchiveerd_op = ?
+                   WHERE id = ? AND status != 'inactief'""",
+                [(vandaag_amsterdam().isoformat(), lid_id) for lid_id in ids],
+            )
+        else:
+            db.executemany(
+                "UPDATE club_van_20_leden SET status = 'actief', gearchiveerd_op = NULL WHERE id = ?",
+                [(lid_id,) for lid_id in ids],
+            )
+
+    @app.route("/club-van-20/leden/<int:lid_id>/archiveren", methods=["POST"])
+    def club_van_20_lid_archiveren(lid_id):
+        db = get_db()
+        lid = _lid_of_404(db, lid_id)
+        if lid is None:
+            flash("Lid niet gevonden.", "error")
+            return redirect(url_for("club_van_20_overzicht"))
+        archiveren = request.form.get("actie") != "terugzetten"
+        _archiveer(db, [lid_id], archiveren)
+        db.commit()
+        melding = (
+            f"'{lid['naam']}' is gearchiveerd en staat niet meer op het scherm."
+            if archiveren
+            else f"'{lid['naam']}' is teruggezet bij de actieve leden."
+        )
+        if is_ajax_verzoek():
+            return jsonify({"ok": True, "melding": melding, "gearchiveerd": archiveren})
+        flash(melding, "success")
+        return redirect(request.referrer or url_for("club_van_20_overzicht"))
+
     @app.route("/club-van-20/bulk", methods=["POST"])
     def club_van_20_bulk():
         db = get_db()
         seizoen = normaliseer_seizoen(request.form.get("seizoen", ""))
         status = request.form.get("status", "")
         ids = [int(i) for i in request.form.getlist("lid_ids") if i.isdigit()]
+        actie = request.form.get("actie")
+        if actie in ("archiveren", "terugzetten") and ids:
+            _archiveer(db, ids, actie == "archiveren")
+            db.commit()
+            woord = "gearchiveerd" if actie == "archiveren" else "teruggezet"
+            flash(f"{len(ids)} {'lid' if len(ids) == 1 else 'leden'} {woord}.", "success")
+            return redirect(request.referrer or url_for("club_van_20_overzicht"))
         if seizoen is None or status not in BIJDRAGE_STATUS_LABELS or not ids:
             flash("Selecteer eerst een of meer leden en een status.", "error")
             return redirect(request.referrer or url_for("club_van_20_overzicht"))
@@ -239,7 +284,6 @@ def register_routes(app):
                 d for d in (gegevens["voornaam"], gegevens["achternaam"]) if d
             )
         gegevens["extra_groot"] = 1 if request.form.get("extra_groot") else 0
-        gegevens["status"] = "inactief" if request.form.get("inactief") else "actief"
         try:
             gegevens["eerdere_seizoenen"] = max(0, int(request.form.get("eerdere_seizoenen") or 0))
         except ValueError:
@@ -272,7 +316,7 @@ def register_routes(app):
                         gegevens["naam"],
                         *(gegevens[v] for v in LID_VELDEN),
                         gegevens["extra_groot"],
-                        gegevens["status"],
+                        "actief",
                         gegevens["eerdere_seizoenen"],
                         vandaag_amsterdam().isoformat(),
                         now_str(),
@@ -322,13 +366,12 @@ def register_routes(app):
                 db.execute(
                     """UPDATE club_van_20_leden
                        SET naam = ?, voornaam = ?, achternaam = ?, team = ?, telefoon = ?,
-                           email = ?, notitie = ?, extra_groot = ?, status = ?, eerdere_seizoenen = ?
+                           email = ?, notitie = ?, extra_groot = ?, eerdere_seizoenen = ?
                        WHERE id = ?""",
                     (
                         gegevens["naam"],
                         *(gegevens[v] for v in LID_VELDEN),
                         gegevens["extra_groot"],
-                        gegevens["status"],
                         gegevens["eerdere_seizoenen"],
                         lid_id,
                     ),
@@ -607,7 +650,8 @@ def register_routes(app):
                    SET toon_club_van_20 = ?, club_van_20_titel = ?, club_van_20_namen_per_slide = ?,
                        club_van_20_kolommen = ?, club_van_20_duur_seconden = ?,
                        club_van_20_zichtbaar_seizoenen = ?, club_van_20_markeer_onbetaald = ?,
-                       club_van_20_lege_vakjes = ?, club_van_20_bedrag = ?, club_van_20_achtergrond = ?,
+                       club_van_20_lege_vakjes = ?, club_van_20_laatste_dia_vullen = ?,
+                       club_van_20_bedrag = ?, club_van_20_achtergrond = ?,
                        club_van_20_toon_teller = ?, club_van_20_toon_teams = ?,
                        club_van_20_toon_nieuw = ?, club_van_20_toon_werving = ?,
                        club_van_20_werving_tekst = ?, club_van_20_betaallink = ?,
@@ -622,6 +666,7 @@ def register_routes(app):
                     max(0, _getal("club_van_20_zichtbaar_seizoenen", 2)),
                     1 if request.form.get("club_van_20_markeer_onbetaald") else 0,
                     1 if request.form.get("club_van_20_lege_vakjes") else 0,
+                    1 if request.form.get("club_van_20_laatste_dia_vullen") else 0,
                     _bedrag(request.form.get("club_van_20_bedrag")) or 20,
                     achtergrond,
                     1 if request.form.get("club_van_20_toon_teller") else 0,
