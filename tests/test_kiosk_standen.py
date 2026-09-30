@@ -338,6 +338,16 @@ def test_club_van_team_naam_laat_jaartal_in_clubnaam_intact():
     assert club_van_team_naam("LSC 1890 O23-1") == "LSC 1890"
 
 
+def test_club_van_team_naam_strip_leeftijdsteam_code():
+    """Teams in een leeftijdscategorie heten op voetbal.nl bijv. "HSC 18+1" of
+    "FVV 18+2" -- de code erachter hoort niet bij de clubnaam, zodat ons eigen
+    "Blauw Geel'15 18+1" hetzelfde logo krijgt als "Blauw Geel'15 2"."""
+    assert club_van_team_naam("HSC 18+1") == "HSC"
+    assert club_van_team_naam("Harkstede 18+1") == "Harkstede"
+    assert club_van_team_naam("FVV 18+2") == "FVV"
+    assert club_van_team_naam("Blauw Geel'15 18+1") == club_van_team_naam("Blauw Geel'15 2") == "Blauw Geel'15"
+
+
 def test_club_van_team_naam_zonder_volgnummer_blijft_gelijk():
     assert club_van_team_naam("Marum") == "Marum"
 

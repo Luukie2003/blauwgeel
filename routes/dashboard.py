@@ -26,8 +26,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.17.2"
+HUIDIGE_VERSIE = "1.17.3"
 WIJZIGINGEN = [
+    {
+        "versie": "1.17.3",
+        "datum": "30 september 2026",
+        "punten": [
+            "Standen-dia: teams in een leeftijdscategorie (bijv. 'HSC 18+1' of 'FVV 18+2') worden nu ook herkend als team van een club, zodat ze het clublogo delen met de andere teams van die club",
+        ],
+    },
     {
         "versie": "1.17.2",
         "datum": "30 september 2026",

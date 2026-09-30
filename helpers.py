@@ -551,13 +551,13 @@ def club_van_team_naam(naam):
     """Haalt de clubnaam uit een teamnaam zoals "Oranje Nassau 5" of
     "Blauw Geel'15 O23-1" (zie kiosk_stand_teams/kiosk_stand_poules in
     routes/kiosk.py) door alleen het LAATSTE team-volgnummer te strippen --
-    bijv. "5"/"6" of een jeugdcode als "O23-1". Zo blijft een jaartal dat
+    bijv. "5"/"6" of een jeugdcode als "O23-1" of "18+1". Zo blijft een jaartal dat
     toevallig in de clubnaam zelf zit (bijv. "Velocitas 1897", "Be Quick
     1887") intact, want dat wordt nooit als laatste woord nogmaals herhaald.
     Meerdere teams van dezelfde club (bijv. "Oranje Nassau 5" en "Oranje
     Nassau 6") leveren zo dezelfde clubnaam op, en delen dus 1 logo (zie
     kiosk_club_logos)."""
-    return re.sub(r"\s+(?:O\d+-\d+|\d+)$", "", naam).strip()
+    return re.sub(r"\s+(?:O\d+-\d+|\d+\+\d+|\d+)$", "", naam).strip()
 
 
 def bereken_omzet_trend_periode(db, van, tot):
