@@ -474,6 +474,68 @@ def test_publieke_pagina_zonder_login(client, db):
     assert b"Ook bij de Club van 20?" in resp.data
 
 
+def test_aankondiging_telt_af_en_wisselt_na_afloop():
+    from datetime import datetime, timezone
+
+    from club_van_20 import AMSTERDAM, aankondiging
+
+    instellingen = {
+        "club_van_20_aankondiging_tekst": "Vanaf maandag kun jij verlengen!",
+        "club_van_20_aankondiging_aftellen_tot": "2026-10-05T00:00",
+        "club_van_20_aankondiging_na_tekst": "",
+    }
+    voor = aankondiging(instellingen, nu=datetime(2026, 9, 30, 21, 30, 15, tzinfo=AMSTERDAM))
+    assert voor["aftellen"] is True
+    assert (voor["dagen"], voor["uren"], voor["minuten"], voor["seconden"]) == (4, 2, 29, 45)
+    assert voor["doel_label"] == "maandag 5 oktober, 00:00"
+    # Amsterdamse tijd (zomertijd, UTC+2) -> 4 okt 22:00 UTC.
+    assert voor["doel_ms"] == int(datetime(2026, 10, 4, 22, 0, tzinfo=timezone.utc).timestamp() * 1000)
+
+    na = datetime(2026, 10, 5, 0, 0, 1, tzinfo=AMSTERDAM)
+    assert aankondiging(instellingen, nu=na) is None
+    instellingen["club_van_20_aankondiging_na_tekst"] = "Het is zover!"
+    assert aankondiging(instellingen, nu=na) == {"tekst": "Het is zover!", "aftellen": False}
+
+    zonder_tekst = dict(instellingen, club_van_20_aankondiging_tekst="", club_van_20_aankondiging_aftellen_tot=None)
+    assert aankondiging(zonder_tekst) is None
+    alleen_tekst = dict(instellingen, club_van_20_aankondiging_aftellen_tot=None)
+    assert aankondiging(alleen_tekst)["aftellen"] is False
+
+
+def test_aankondiging_opslaan_en_op_publieke_pagina(ingelogde_client, client, db):
+    resp = ingelogde_client.post(
+        "/club-van-20/instellingen",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "toon_club_van_20": "on",
+            "club_van_20_titel": "Club van 20",
+            "club_van_20_zichtbaar_seizoenen": "2",
+            "club_van_20_aankondiging_tekst": "Vanaf maandag kun jij verlengen of je opgeven!",
+            "club_van_20_aankondiging_aftellen_tot": "2099-10-05T00:00",
+            "club_van_20_aankondiging_na_tekst": "Het is zover!",
+        },
+    )
+    assert resp.status_code == 302
+    rij = db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
+    assert rij["club_van_20_aankondiging_aftellen_tot"] == "2099-10-05T00:00"
+
+    tekst = client.get("/club-van-20/doe-mee").data.decode()
+    assert "Vanaf maandag kun jij verlengen of je opgeven!" in tekst
+    assert 'class="aftelklok' in tekst and 'data-na-tekst="Het is zover!"' in tekst
+    # De aankondiging staat bovenaan, vóór het "Ook bij de Club van 20?"-blok.
+    assert tekst.index("aankondiging-in") < tekst.index('id="aankondiging"') < tekst.index("Ook bij de Club van 20?")
+
+    # Een onleesbaar moment wordt gewoon leeg (dan alleen de tekst, zonder klok).
+    ingelogde_client.post(
+        "/club-van-20/instellingen",
+        data={"csrf_token": _csrf(ingelogde_client), "club_van_20_aankondiging_tekst": "Hallo",
+              "club_van_20_aankondiging_aftellen_tot": "morgen"},
+    )
+    assert db.execute("SELECT club_van_20_aankondiging_aftellen_tot AS t FROM kiosk_scherm_instellingen").fetchone()["t"] is None
+    tekst = client.get("/club-van-20/doe-mee").data.decode()
+    assert "Hallo" in tekst and 'class="aftelklok' not in tekst
+
+
 def test_dashboard_status_telt_verwachte_leden(db):
     _bijdrage(db, _lid(db, "Al Betaald"), HUIDIG)
     _bijdrage(db, _lid(db, "Moet Nog"), VORIG)

@@ -284,6 +284,14 @@ KOLOM_MIGRATIES = [
     # volle dia), ook op een laatste dia met maar een paar namen. Aan = die
     # laatste dia vullen met minder, maar grotere bordjes (zie bouw_slides).
     ("kiosk_scherm_instellingen", "club_van_20_laatste_dia_vullen", "INTEGER NOT NULL DEFAULT 0"),
+    # Aankondiging met aftelklok bovenaan de publieke Club van 20-pagina (waar
+    # de QR-code van de wervingsdia heen wijst), bijv. "Vanaf woensdag kun
+    # je verlengen!". aftellen_tot is een lokale Amsterdamse tijd
+    # ("2026-10-05T00:00"); na dat moment verschijnt na_tekst, of verdwijnt
+    # de aankondiging als die leeg is. Zie aankondiging() in club_van_20.py.
+    ("kiosk_scherm_instellingen", "club_van_20_aankondiging_tekst", "TEXT"),
+    ("kiosk_scherm_instellingen", "club_van_20_aankondiging_aftellen_tot", "TEXT"),
+    ("kiosk_scherm_instellingen", "club_van_20_aankondiging_na_tekst", "TEXT"),
     # Wanneer een lid gearchiveerd is (status 'inactief': niet meer op het
     # scherm, betaalhistorie blijft bewaard), zie club_van_20_lid_archiveren.
     ("club_van_20_leden", "gearchiveerd_op", "TEXT"),

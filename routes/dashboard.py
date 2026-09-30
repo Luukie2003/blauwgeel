@@ -26,8 +26,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.16.2"
+HUIDIGE_VERSIE = "1.16.3"
 WIJZIGINGEN = [
+    {
+        "versie": "1.16.3",
+        "datum": "30 september 2026",
+        "punten": [
+            "Aankondiging met aftelklok bovenaan de publieke Club van 20-pagina (waar de QR-code heen gaat), in te stellen bij Scherm & werving",
+        ],
+    },
     {
         "versie": "1.16.2",
         "datum": "30 september 2026",

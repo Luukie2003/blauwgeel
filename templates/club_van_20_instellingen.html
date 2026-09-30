@@ -127,6 +127,32 @@
         </div>
     </fieldset>
 
+    <fieldset class="groupbox">
+        <legend>Aankondiging op de publieke pagina</legend>
+        <p class="tekst-zacht" style="margin-top:0">
+            Verschijnt bovenaan de pagina waar de QR-code heen gaat, met een aftelklok tot het gekozen moment.
+            Leeg laten = geen aankondiging.
+        </p>
+        <div class="veld">
+            <label for="club_van_20_aankondiging_tekst">Tekst</label>
+            <input type="text" id="club_van_20_aankondiging_tekst" name="club_van_20_aankondiging_tekst" maxlength="120"
+                   value="{{ instellingen.club_van_20_aankondiging_tekst or '' }}" placeholder="Vanaf maandag kun jij verlengen of je opgeven!">
+        </div>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="club_van_20_aankondiging_aftellen_tot">Aftellen tot</label>
+                <input type="datetime-local" id="club_van_20_aankondiging_aftellen_tot" name="club_van_20_aankondiging_aftellen_tot"
+                       value="{{ instellingen.club_van_20_aankondiging_aftellen_tot or '' }}">
+            </div>
+            <div class="veld">
+                <label for="club_van_20_aankondiging_na_tekst">Tekst na afloop (optioneel)</label>
+                <input type="text" id="club_van_20_aankondiging_na_tekst" name="club_van_20_aankondiging_na_tekst" maxlength="120"
+                       value="{{ instellingen.club_van_20_aankondiging_na_tekst or '' }}" placeholder="Het is zover: verlengen en opgeven kan nu!">
+            </div>
+        </div>
+        <span class="tekst-zacht">Zonder tekst na afloop verdwijnt de aankondiging vanzelf zodra de klok op nul staat.</span>
+    </fieldset>
+
     <button type="submit" class="btn btn-geel">Opslaan</button>
 </form>
 

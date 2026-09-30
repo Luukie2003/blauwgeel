@@ -51,6 +51,17 @@
         .bordje .sterren { display: block; font-size: 0.7rem; color: #c9a100; letter-spacing: 0.04em; }
         .bordje.goud .sterren { color: var(--blauw-donker); }
         footer { text-align: center; color: var(--tekst-zacht); font-size: 0.8rem; margin-top: 2rem; }
+        /* Aankondiging met aftelklok (zie aankondiging() in club_van_20.py). */
+        .aankondiging { background: var(--geel); color: var(--blauw-donker); border-radius: 16px; padding: 1.2rem 1rem 1.3rem; text-align: center; margin-bottom: 1.2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: aankondiging-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .aankondiging .kop { color: var(--blauw-donker); font-size: 1.55rem; line-height: 1.15; margin: 0 0 0.9rem; }
+        .aftelklok { display: flex; justify-content: center; gap: 0.5rem; }
+        .aftelvak { background: var(--blauw-donker); color: var(--geel); border-radius: 10px; min-width: 4.1rem; padding: 0.45rem 0.3rem 0.35rem; }
+        .aftelvak .getal { display: block; font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; }
+        .aftelvak .eenheid { display: block; font-size: 0.68rem; color: #fff; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.25rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 700; }
+        .aftelvak .getal.tik { animation: tik 0.35s ease; }
+        .aankondiging .wanneer { font-size: 0.8rem; margin-top: 0.7rem; font-weight: 700; opacity: 0.75; }
+        @keyframes tik { 0% { transform: translateY(-0.35em); opacity: 0.2; } 100% { transform: none; opacity: 1; } }
+        @keyframes aankondiging-in { from { transform: translateY(-12px) scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
     </style>
 </head>
 <body>
@@ -60,6 +71,22 @@
         <p class="club">s.v. Blauw-Geel 1915</p>
         <h1 class="smal">{{ instellingen.club_van_20_titel }}</h1>
     </header>
+
+    {% if aankondiging %}
+    <div class="aankondiging" id="aankondiging"
+         {% if aankondiging.aftellen %}data-doel="{{ aankondiging.doel_ms }}" data-na-tekst="{{ aankondiging.na_tekst }}"{% endif %}>
+        <h2 class="kop smal">{{ aankondiging.tekst }}</h2>
+        {% if aankondiging.aftellen %}
+        <div class="aftelklok smal" aria-label="Aftelklok">
+            <span class="aftelvak"><span class="getal" data-deel="dagen">{{ aankondiging.dagen }}</span><span class="eenheid">dagen</span></span>
+            <span class="aftelvak"><span class="getal" data-deel="uren">{{ '%02d'|format(aankondiging.uren) }}</span><span class="eenheid">uur</span></span>
+            <span class="aftelvak"><span class="getal" data-deel="minuten">{{ '%02d'|format(aankondiging.minuten) }}</span><span class="eenheid">min</span></span>
+            <span class="aftelvak"><span class="getal" data-deel="seconden">{{ '%02d'|format(aankondiging.seconden) }}</span><span class="eenheid">sec</span></span>
+        </div>
+        <div class="wanneer">{{ aankondiging.doel_label }}</div>
+        {% endif %}
+    </div>
+    {% endif %}
 
     <div class="kaart doe-mee">
         <h2 class="smal">Ook bij de Club van 20?</h2>
@@ -123,5 +150,44 @@
 
     <footer>Bedankt voor jullie steun! &middot; s.v. Blauw-Geel 1915</footer>
 </div>
+<script>
+// Aftelklok: telt elke seconde af naar het ingestelde moment (in UTC-ms van
+// de server, dus ongeacht de tijdzone van de telefoon). Op nul: de "na
+// afloop"-tekst tonen, of de aankondiging weghalen als die er niet is.
+(function () {
+    var blok = document.getElementById('aankondiging');
+    if (!blok || !blok.dataset.doel) return;
+    var doel = parseInt(blok.dataset.doel, 10);
+    var delen = {};
+    blok.querySelectorAll('[data-deel]').forEach(function (el) { delen[el.dataset.deel] = el; });
+    function zet(el, waarde) {
+        if (el.textContent === waarde) return;
+        el.textContent = waarde;
+        el.classList.remove('tik');
+        void el.offsetWidth;
+        el.classList.add('tik');
+    }
+    function twee(n) { return (n < 10 ? '0' : '') + n; }
+    function stap() {
+        var rest = Math.max(0, Math.floor((doel - Date.now()) / 1000));
+        if (rest === 0) {
+            var na = blok.dataset.naTekst;
+            if (na) {
+                blok.querySelector('.kop').textContent = na;
+                blok.querySelectorAll('.aftelklok, .wanneer').forEach(function (el) { el.remove(); });
+            } else {
+                blok.remove();
+            }
+            return;
+        }
+        zet(delen.dagen, String(Math.floor(rest / 86400)));
+        zet(delen.uren, twee(Math.floor(rest % 86400 / 3600)));
+        zet(delen.minuten, twee(Math.floor(rest % 3600 / 60)));
+        zet(delen.seconden, twee(rest % 60));
+        setTimeout(stap, 1000 - (Date.now() % 1000));
+    }
+    stap();
+})();
+</script>
 </body>
 </html>

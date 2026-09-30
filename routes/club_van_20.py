@@ -4,10 +4,14 @@ spreadsheet, de scherminstellingen voor de Club van 20-dia's, en een
 publieke pagina (QR-code op de wervingsdia). De rekenregels zelf staan in
 club_van_20.py."""
 
+from datetime import datetime
+
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
 
 import qr
 from club_van_20 import (
+    AFTEL_FORMAAT,
+    aankondiging,
     BETAALWIJZEN,
     BIJDRAGE_STATUS_LABELS,
     PROJECT_STATUS_LABELS,
@@ -67,6 +71,14 @@ def register_routes(app):
         pagina, dus geen javascript:- of andere vreemde schema's."""
         waarde = (waarde or "").strip()
         return waarde if waarde.lower().startswith(("https://", "http://")) else None
+
+    def _aftelmoment(waarde):
+        """datetime-local uit het formulier ("2026-10-05T00:00"), of None als
+        het leeg of onleesbaar is."""
+        try:
+            return datetime.strptime((waarde or "").strip(), AFTEL_FORMAAT).strftime(AFTEL_FORMAAT)
+        except ValueError:
+            return None
 
     def _gekozen_seizoen(waarde):
         return normaliseer_seizoen(waarde or "") or huidig_seizoen()
@@ -655,7 +667,9 @@ def register_routes(app):
                        club_van_20_toon_teller = ?, club_van_20_toon_teams = ?,
                        club_van_20_toon_nieuw = ?, club_van_20_toon_werving = ?,
                        club_van_20_werving_tekst = ?, club_van_20_betaallink = ?,
-                       club_van_20_verzoek_tekst = ?
+                       club_van_20_verzoek_tekst = ?,
+                       club_van_20_aankondiging_tekst = ?, club_van_20_aankondiging_aftellen_tot = ?,
+                       club_van_20_aankondiging_na_tekst = ?
                    WHERE id = 1""",
                 (
                     1 if request.form.get("toon_club_van_20") else 0,
@@ -676,6 +690,9 @@ def register_routes(app):
                     (request.form.get("club_van_20_werving_tekst") or "").strip(),
                     _veilige_link(request.form.get("club_van_20_betaallink")),
                     (request.form.get("club_van_20_verzoek_tekst") or "").strip(),
+                    (request.form.get("club_van_20_aankondiging_tekst") or "").strip() or None,
+                    _aftelmoment(request.form.get("club_van_20_aankondiging_aftellen_tot")),
+                    (request.form.get("club_van_20_aankondiging_na_tekst") or "").strip() or None,
                 ),
             )
             db.commit()
@@ -702,6 +719,7 @@ def register_routes(app):
         return render_template(
             "club_van_20_publiek.html",
             instellingen=instellingen,
+            aankondiging=aankondiging(instellingen),
             namen=zichtbaar,
             teams=team_stand(zichtbaar, leden_met_bijdragen(db, alleen_actief=True)),
             geld=financien(db, instellingen["club_van_20_bedrag"]),

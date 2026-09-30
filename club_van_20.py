@@ -14,8 +14,9 @@ nergens "gestart" te worden, het staat vanzelf klaar zodra 1 juli voorbij is.
 import csv
 import io
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 from helpers import now_str, vandaag_amsterdam
 
@@ -412,6 +413,51 @@ def bereken_club_van_20_status(db):
         "niet_gevraagd": niet_gevraagd,
         "betaald": betaald,
         "ok": not open_leden,
+    }
+
+
+# ---------- Aankondiging op de publieke pagina ----------
+
+AMSTERDAM = ZoneInfo("Europe/Amsterdam")
+AFTEL_FORMAAT = "%Y-%m-%dT%H:%M"
+DAGNAMEN = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
+MAANDNAMEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus",
+              "september", "oktober", "november", "december"]
+
+
+def aankondiging(instellingen, nu=None):
+    """De aankondiging bovenaan de publieke pagina, of None als er niets te
+    tonen is. Vóór het aftelmoment: de tekst + een aftelklok (doel_ms voor de
+    JS, plus de resterende tijd voor wie geen JS heeft); daarna de "na
+    afloop"-tekst, of niets als die leeg is. Zonder aftelmoment gewoon
+    alleen de tekst."""
+    tekst = (instellingen["club_van_20_aankondiging_tekst"] or "").strip()
+    na_tekst = (instellingen["club_van_20_aankondiging_na_tekst"] or "").strip()
+    moment = None
+    try:
+        moment = datetime.strptime(
+            instellingen["club_van_20_aankondiging_aftellen_tot"] or "", AFTEL_FORMAAT
+        ).replace(tzinfo=AMSTERDAM)
+    except ValueError:
+        pass
+    nu = nu or datetime.now(AMSTERDAM)
+    if moment is None:
+        return {"tekst": tekst, "aftellen": False} if tekst else None
+    if nu >= moment:
+        return {"tekst": na_tekst, "aftellen": False} if na_tekst else None
+    if not tekst:
+        return None
+    rest = int((moment - nu).total_seconds())
+    return {
+        "tekst": tekst,
+        "na_tekst": na_tekst,
+        "aftellen": True,
+        "doel_ms": int(moment.timestamp() * 1000),
+        "doel_label": f"{DAGNAMEN[moment.weekday()]} {moment.day} {MAANDNAMEN[moment.month - 1]}, {moment:%H:%M}",
+        "dagen": rest // 86400,
+        "uren": rest % 86400 // 3600,
+        "minuten": rest % 3600 // 60,
+        "seconden": rest % 60,
     }
 
 
