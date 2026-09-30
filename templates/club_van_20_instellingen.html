@@ -151,6 +151,10 @@
             </div>
         </div>
         <span class="tekst-zacht">Zonder tekst na afloop verdwijnt de aankondiging vanzelf zodra de klok op nul staat.</span>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-top:0.7rem">
+            <input type="checkbox" name="club_van_20_aankondiging_op_dia" style="width:auto" {{ 'checked' if instellingen.club_van_20_aankondiging_op_dia }}>
+            Aankondiging met aftelklok ook op de wervingsdia van het kantine scherm
+        </label>
     </fieldset>
 
     <button type="submit" class="btn btn-geel">Opslaan</button>

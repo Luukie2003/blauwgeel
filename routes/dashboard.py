@@ -26,8 +26,16 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.16.3"
+HUIDIGE_VERSIE = "1.17.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.17.0",
+        "datum": "30 september 2026",
+        "punten": [
+            "Nieuw: Sponsoren met logo (Kantine-tv > Sponsoren) -- 'Mede mogelijk gemaakt door'-dia's die tussen alle dia's van het kantine scherm door komen en af en toe over de prijzenlijst heen; per groep (bijv. 'Zaterdag 1') samen op 1 dia, en alles zelf in te stellen (hoe vaak, hoe lang, koptekst, achtergrond)",
+            "De aftelklok van de Club van 20-aankondiging staat nu ook op de wervingsdia van het kantine scherm",
+        ],
+    },
     {
         "versie": "1.16.3",
         "datum": "30 september 2026",

@@ -6,6 +6,10 @@
     <title>Prijslijst · s.v. Blauw-Geel 1915</title>
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
     <meta name="theme-color" content="#1e3a8a">
+    {% if sponsoren %}
+    {# Voor de sponsordia's (zelfde opmaak als op het kantine scherm). #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie }}">
+    {% endif %}
     <style>
         :root {
             --blauw: #1e3a8a;
@@ -236,6 +240,19 @@
 
     <div id="kiosk-popup" class="kiosk-popup"></div>
 
+    {% if sponsoren %}
+    {# Sponsordia's: om de {{ sponsoren.interval }}s even over de prijzen heen,
+       zie de JS hieronder en _prijzen_sponsoren in routes/kiosk.py. #}
+    <div id="sponsor-overlay" class="sponsor-overlay">
+        {% for dia in sponsoren.dias %}
+        <section class="slide slide-sponsorlogos c20">{% include "_sponsor_dia.html" %}</section>
+        {% endfor %}
+    </div>
+    <style>
+        .sponsor-overlay { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+    </style>
+    {% endif %}
+
     <script>
         function werkKlokBij() {
             var el = document.getElementById('klok');
@@ -388,6 +405,29 @@
                 setTimeout(function () { overlayBezig = false; }, 600);
             }, duurMs);
         }
+
+        // ---------- Sponsoren: om de zoveel seconden even in beeld ----------
+        // Steeds de volgende sponsordia; wacht als er net een andere pop-up
+        // (actie, uitverkocht, welkom) in beeld is.
+        {% if sponsoren %}
+        (function () {
+            var dias = Array.prototype.slice.call(document.querySelectorAll('#sponsor-overlay .slide'));
+            var index = 0;
+            var duurMs = {{ sponsoren.duur|int }} * 1000;
+            function toonSponsor() {
+                if (!dias.length) return;
+                if (overlayBezig) { setTimeout(toonSponsor, 5000); return; }
+                overlayBezig = true;
+                var dia = dias[index++ % dias.length];
+                dia.classList.add('actief');
+                setTimeout(function () {
+                    dia.classList.remove('actief');
+                    setTimeout(function () { overlayBezig = false; }, 1000);
+                }, duurMs);
+            }
+            setInterval(toonSponsor, {{ sponsoren.interval|int }} * 1000);
+        })();
+        {% endif %}
 
         // ---------- Acties: af en toe kort prominent in beeld ----------
         var acties = {{ acties|default([])|tojson }};

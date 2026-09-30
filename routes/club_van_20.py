@@ -669,7 +669,7 @@ def register_routes(app):
                        club_van_20_werving_tekst = ?, club_van_20_betaallink = ?,
                        club_van_20_verzoek_tekst = ?,
                        club_van_20_aankondiging_tekst = ?, club_van_20_aankondiging_aftellen_tot = ?,
-                       club_van_20_aankondiging_na_tekst = ?
+                       club_van_20_aankondiging_na_tekst = ?, club_van_20_aankondiging_op_dia = ?
                    WHERE id = 1""",
                 (
                     1 if request.form.get("toon_club_van_20") else 0,
@@ -693,6 +693,7 @@ def register_routes(app):
                     (request.form.get("club_van_20_aankondiging_tekst") or "").strip() or None,
                     _aftelmoment(request.form.get("club_van_20_aankondiging_aftellen_tot")),
                     (request.form.get("club_van_20_aankondiging_na_tekst") or "").strip() or None,
+                    1 if request.form.get("club_van_20_aankondiging_op_dia") else 0,
                 ),
             )
             db.commit()

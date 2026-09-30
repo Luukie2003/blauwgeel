@@ -42,7 +42,7 @@
     {% if slides %}
     <div class="scherm">
         {% for slide in slides %}
-        <section class="slide slide-{{ slide.type }}{% if slide.type.startswith('club_van_20') %} c20{% endif %}{% if slide.type == 'sponsor' %} sjabloon-{{ slide.sjabloon }} overgang-{{ slide.overgang }} tekst-{{ slide.tekst_grootte }}{% endif %}{% if loop.first %} actief{% endif %}"
+        <section class="slide slide-{{ slide.type }}{% if slide.type.startswith('club_van_20') or slide.type == 'sponsorlogos' %} c20{% endif %}{% if slide.type == 'sponsor' %} sjabloon-{{ slide.sjabloon }} overgang-{{ slide.overgang }} tekst-{{ slide.tekst_grootte }}{% endif %}{% if loop.first %} actief{% endif %}"
                  data-duur="{{ slide.duur }}"
                  {% if slide.sjabloon == 'aangepast' and slide.custom_achtergrond_kleur %}style="background: {{ slide.custom_achtergrond_kleur }};"{% endif %}>
             {% if slide.type == 'sponsor' %}
@@ -172,6 +172,19 @@
                 </div>
                 <div class="c20-teams-onder">Bedankt voor jullie steun!</div>
                 {% elif slide.type == 'club_van_20_werving' %}
+                {% if slide.aankondiging %}
+                <div class="c20-aftel"{% if slide.aankondiging.doel_ms %} data-aftel-doel="{{ slide.aankondiging.doel_ms }}"{% endif %}>
+                    <h3>{{ slide.aankondiging.tekst }}</h3>
+                    {% if slide.aankondiging.doel_ms %}
+                    <div class="c20-aftelklok">
+                        <span class="c20-aftelvak"><span class="getal" data-deel="dagen">&ndash;</span><span class="eenheid">dagen</span></span>
+                        <span class="c20-aftelvak"><span class="getal" data-deel="uren">&ndash;</span><span class="eenheid">uur</span></span>
+                        <span class="c20-aftelvak"><span class="getal" data-deel="minuten">&ndash;</span><span class="eenheid">min</span></span>
+                        <span class="c20-aftelvak"><span class="getal" data-deel="seconden">&ndash;</span><span class="eenheid">sec</span></span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
                 <div class="c20-werving">
                     <div class="c20-werving-tekst">
                         <h2>Ook bij de Club van 20?</h2>
@@ -187,6 +200,8 @@
                     {% endif %}
                 </div>
                 {% endif %}
+            {% elif slide.type == 'sponsorlogos' %}
+                {% with dia = slide %}{% include "_sponsor_dia.html" %}{% endwith %}
             {% elif slide.type == 'wedstrijden' %}
                 <h2>Komende thuiswedstrijden</h2>
                 <div class="wedstrijden-lijst">
@@ -294,25 +309,77 @@
     }
     telOp(document.querySelector('.slide.actief'));
 
+    // Aftelklok op de wervingsdia: tikt elke seconde, los van de diashow.
+    // Op nul verdwijnt de klok (de server geeft na dat moment de "na
+    // afloop"-tekst of niets meer mee; de versiepoll hieronder herlaadt
+    // het scherm dan vanzelf).
+    (function () {
+        var blokken = document.querySelectorAll('[data-aftel-doel]');
+        if (!blokken.length) return;
+        function twee(n) { return (n < 10 ? '0' : '') + n; }
+        function zet(el, waarde) {
+            if (!el || el.textContent === waarde) return;
+            el.textContent = waarde;
+            el.classList.remove('tik');
+            void el.offsetWidth;
+            el.classList.add('tik');
+        }
+        function stap() {
+            blokken.forEach(function (blok) {
+                var rest = Math.max(0, Math.floor((parseInt(blok.dataset.aftelDoel, 10) - Date.now()) / 1000));
+                if (rest === 0) {
+                    var klok = blok.querySelector('.c20-aftelklok');
+                    if (klok) klok.remove();
+                    return;
+                }
+                zet(blok.querySelector('[data-deel=dagen]'), String(Math.floor(rest / 86400)));
+                zet(blok.querySelector('[data-deel=uren]'), twee(Math.floor(rest % 86400 / 3600)));
+                zet(blok.querySelector('[data-deel=minuten]'), twee(Math.floor(rest % 3600 / 60)));
+                zet(blok.querySelector('[data-deel=seconden]'), twee(rest % 60));
+            });
+            setTimeout(stap, 1000 - (Date.now() % 1000));
+        }
+        stap();
+    })();
+
     (function () {
         var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
         if (slides.length < 2) return;
-        var huidige = 0;
+        // Sponsordia's draaien niet mee in de gewone volgorde, maar komen na
+        // elke 'sponsorsElke' gewone dia's tussendoor -- steeds de volgende
+        // sponsor, ook over de rondes heen, zodat elke sponsor evenveel in
+        // beeld komt (zie bouw_sponsor_dias in sponsoren.py).
+        var gewoon = slides.filter(function (s) { return !s.classList.contains('slide-sponsorlogos'); });
+        var sponsors = slides.filter(function (s) { return s.classList.contains('slide-sponsorlogos'); });
+        var sponsorsElke = Math.max(1, {{ sponsors_elke|default(2)|int }});
+        var gewoonIndex = 0, sponsorIndex = 0, sindsSponsor = 1;
+        var huidige = gewoon.length ? gewoon[0] : sponsors[0];
 
-        function toon(index) {
-            slides.forEach(function (s, i) { s.classList.toggle('actief', i === index); });
-            telOp(slides[index]);
+        function toon(slide) {
+            slides.forEach(function (s) { s.classList.toggle('actief', s === slide); });
+            telOp(slide);
+        }
+
+        function volgende() {
+            if (sponsors.length && (!gewoon.length || sindsSponsor >= sponsorsElke)) {
+                sindsSponsor = 0;
+                return sponsors[sponsorIndex++ % sponsors.length];
+            }
+            gewoonIndex = (gewoonIndex + 1) % gewoon.length;
+            sindsSponsor++;
+            return gewoon[gewoonIndex];
         }
 
         function plan() {
-            var duur = (parseFloat(slides[huidige].dataset.duur) || 8) * 1000;
+            var duur = (parseFloat(huidige.dataset.duur) || 8) * 1000;
             setTimeout(function () {
-                huidige = (huidige + 1) % slides.length;
+                huidige = volgende();
                 toon(huidige);
                 plan();
             }, duur);
         }
 
+        toon(huidige);
         plan();
     })();
 

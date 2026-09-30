@@ -1,0 +1,28 @@
+{# Eén sponsordia ("Mede mogelijk gemaakt door" + logo's), gedeeld door het
+   kantine scherm (kiosk_scherm.html), de prijzenlijst (kiosk_prijzen_scherm.html)
+   en het voorbeeld op de beheerpagina (kiosk_sponsorlogos.html). Verwacht
+   'dia' uit sponsoren.bouw_sponsor_dias; de opmaak staat in
+   kiosk_scherm_stijl.css (.sponsordia). #}
+{% if dia.achtergrond %}
+<img class="c20-achtergrond" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + dia.achtergrond) }}" alt="">
+<div class="c20-overlay"></div>
+{% endif %}
+<div class="sponsordia">
+    {% if dia.titel %}
+    <h2 class="sponsordia-titel">{{ dia.titel }}</h2>
+    <div class="sponsordia-kop">{{ dia.kop }}</div>
+    {% else %}
+    <h2 class="sponsordia-titel">{{ dia.kop }}</h2>
+    {% endif %}
+    <div class="sponsordia-logos sponsordia-logos--{{ dia.logos|length }}">
+        {% for l in dia.logos %}
+        <div class="sponsordia-logo{{ ' sponsordia-logo--wit' if l.wit else '' }}" style="animation-delay: {{ (0.15 + loop.index0 * 0.15)|round(2) }}s">
+            {% if l.logo %}
+            <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + l.logo) }}" alt="{{ l.naam }}">
+            {% else %}
+            <span class="sponsordia-naam">{{ l.naam }}</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>

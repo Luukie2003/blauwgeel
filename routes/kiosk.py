@@ -9,6 +9,7 @@ from flask import flash, jsonify, redirect, render_template, request, url_for
 import qr
 from club_van_20 import bereken_club_van_20_status
 from club_van_20 import bouw_slides as club_van_20_slides
+from sponsoren import bouw_sponsor_dias
 from database import get_db
 from helpers import (
     HEX_KLEUR_PATROON,
@@ -250,7 +251,13 @@ def register_routes(app):
                 )
 
         blokken.sort(key=lambda blok: blok[0])
-        return [slide for _, slides in blokken for slide in slides]
+        alle = [slide for _, slides in blokken for slide in slides]
+        # Sponsordia's komen niet als blok, maar tussen de andere dia's door:
+        # de JS in kiosk_scherm.html haalt ze uit de gewone volgorde en toont
+        # na elke N dia's de volgende sponsor (zie sponsors_elke_dias).
+        if instellingen["sponsors_toon_dias"]:
+            alle.extend(bouw_sponsor_dias(db, instellingen))
+        return alle
 
     def _stand_teams(db, poule):
         return db.execute(
@@ -854,7 +861,25 @@ def register_routes(app):
         )
         return [[(naam, bij_naam[naam]) for naam in namen] for namen in namen_per_kolom]
 
-    def _prijzen_versie(categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, uitgelicht, *extra):
+    def _prijzen_sponsoren(db):
+        """Sponsordia's voor de prijzenlijst (om de 'interval' seconden
+        'duur' seconden over de prijzen heen), of None als dat uit staat of
+        er geen sponsoren zijn."""
+        instellingen = _scherm_instellingen(db)
+        if not instellingen["sponsors_toon_prijzen"]:
+            return None
+        dias = bouw_sponsor_dias(db, instellingen)
+        if not dias:
+            return None
+        return {
+            "dias": dias,
+            "interval": max(10, instellingen["sponsors_prijzen_interval"]),
+            "duur": max(3, instellingen["sponsors_prijzen_duur"]),
+        }
+
+    def _prijzen_versie(
+        categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, uitgelicht, *extra, sponsoren=None
+    ):
         # Alleen de velden die daadwerkelijk op het scherm staan -- zo
         # triggert bijv. een gewijzigde voorraad (niet zichtbaar hier) geen
         # onnodige herlaadbeurt. Acties, de bardiensten van vandaag, de
@@ -885,6 +910,7 @@ def register_routes(app):
             )
             if uitgelicht
             else None,
+            sponsoren,
             *extra,
         )
 
@@ -913,12 +939,15 @@ def register_routes(app):
             for a in acties
         ]
         extra = (extra_versie,) if extra_versie else ()
+        sponsoren = _prijzen_sponsoren(db)
         return {
+            "sponsoren": sponsoren,
             "categorieen_kolommen": _verdeel_over_kolommen(categorieen, indeling),
             "acties": acties_voor_scherm,
             "uitgelicht": uitgelicht,
             "versie": _prijzen_versie(
-                categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, uitgelicht, *extra
+                categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, uitgelicht, *extra,
+                sponsoren=sponsoren,
             ),
             "versie_url": versie_url,
             "uitverkocht_namen": _uitverkocht_namen(categorieen),
@@ -957,6 +986,7 @@ def register_routes(app):
                     _wedstrijddag_welkom_wedstrijden(db, instellingen),
                     _categorie_kolommen_indeling(db, instellingen),
                     uitgelicht,
+                    sponsoren=_prijzen_sponsoren(db),
                 ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
                 "wedstrijddag_test": instellingen["wedstrijddag_test_teller"],
@@ -1998,6 +2028,7 @@ def register_routes(app):
         return render_template(
             "kiosk_scherm.html",
             slides=slides,
+            sponsors_elke=_scherm_instellingen(db)["sponsors_elke_dias"],
             versie=_versie(slides),
             versie_url=url_for("kiosk_scherm_versie"),
         )
@@ -2022,6 +2053,7 @@ def register_routes(app):
             return render_template(
                 "kiosk_scherm.html",
                 slides=slides,
+                sponsors_elke=instellingen["sponsors_elke_dias"],
                 versie=_versie("tv", slides),
                 versie_url=url_for("kiosk_tv_versie"),
             )
@@ -2055,6 +2087,7 @@ def register_routes(app):
                     _categorie_kolommen_indeling(db, prijzen_instellingen),
                     uitgelicht,
                     "tv",
+                    sponsoren=_prijzen_sponsoren(db),
                 ),
                 "uitverkocht": _uitverkocht_namen(categorieen),
                 "wedstrijddag_test": prijzen_instellingen["wedstrijddag_test_teller"],

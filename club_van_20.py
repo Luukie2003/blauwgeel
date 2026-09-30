@@ -461,6 +461,20 @@ def aankondiging(instellingen, nu=None):
     }
 
 
+def _aankondiging_voor_dia(instellingen):
+    """De aankondiging voor op de wervingsdia: alleen tekst + doelmoment,
+    bewust NIET de resterende dagen/uren/seconden -- die veranderen elke
+    seconde, en alles in een dia telt mee voor de versie waarop het scherm
+    zichzelf herlaadt (dat zou dan elke 10s gebeuren). Het aftellen zelf
+    doet de JS op het scherm."""
+    if not instellingen["club_van_20_aankondiging_op_dia"]:
+        return None
+    a = aankondiging(instellingen)
+    if not a:
+        return None
+    return {"tekst": a["tekst"], "doel_ms": a.get("doel_ms")}
+
+
 # ---------- Betaalverzoek ----------
 
 
@@ -593,6 +607,7 @@ def bouw_slides(db, instellingen, qr_svg=None):
                 "type": "club_van_20_werving",
                 "duur": duur,
                 "achtergrond": achtergrond,
+                "aankondiging": _aankondiging_voor_dia(instellingen),
                 "tekst": instellingen["club_van_20_werving_tekst"],
                 "bedrag": bedrag,
                 "aantal_leden": len(zichtbaar),

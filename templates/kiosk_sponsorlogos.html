@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block titel %}Sponsoren{% endblock %}
+{% block inhoud %}
+<link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie }}">
+<p class="subtitel">
+    Sponsoren met hun logo ("Mede mogelijk gemaakt door"). Ze komen tussen alle dia's van het kantine scherm
+    door, en om de zoveel tijd over de prijzenlijst heen. Sponsoren met dezelfde groep (bijv. "Zaterdag 1")
+    komen samen op &eacute;&eacute;n dia, zoals een teamsponsor.
+    <a href="{{ url_for('kiosk_hub') }}">&larr; Terug naar Kantine Kiosk</a>
+</p>
+
+<style>
+    /* kiosk_scherm_stijl.css (voor het voorbeeld) zet een paar kleuren voor
+       het donkere tv-scherm; op deze beheerpagina gelden weer de gewone. */
+    :root { --tekst-zacht: #5b6270; --blauw-donker: #142a63; }
+    .dia-voorbeeld { --tekst-zacht: #b9c2e0; --blauw-donker: #0f1f4d; }
+    .sponsor-layout { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
+    .sponsor-layout > .links { flex: 1 1 480px; min-width: 0; }
+    .sponsor-layout > .rechts { flex: 1 1 380px; min-width: 300px; }
+    .sponsor-logo-mini { width: 110px; height: 56px; object-fit: contain; background: #f4f4f4; border-radius: 4px; display: block; }
+    .sponsor-logo-mini--donker { background: #1e3a8a; }
+    .dia-voorbeeld { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: #1e3a8a; margin-bottom: 0.8rem; }
+    .dia-voorbeeld .slide { width: 1920px; height: 1080px; inset: auto; top: 0; left: 0; transform-origin: top left; opacity: 1; }
+    .dia-voorbeeld .sponsordia-logo { opacity: 1; }
+    tr.uit td { opacity: 0.5; }
+</style>
+
+<div class="sponsor-layout">
+<div class="links">
+
+<div class="kaart">
+    <h2 style="margin-top:0">Sponsor toevoegen</h2>
+    <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="formgrid">
+            <div class="veld">
+                <label for="naam">Naam</label>
+                <input type="text" id="naam" name="naam" required placeholder="Bijv. Escape Hunt Groningen">
+            </div>
+            <div class="veld">
+                <label for="groep">Groep (optioneel)</label>
+                <input type="text" id="groep" name="groep" list="groepen-lijst" placeholder="Bijv. Zaterdag 1">
+                <datalist id="groepen-lijst">{% for g in groepen %}<option value="{{ g }}">{% endfor %}</datalist>
+            </div>
+        </div>
+        <div class="veld">
+            <label for="logo">Logo (png met transparante achtergrond werkt het mooist)</label>
+            <input type="file" id="logo" name="logo" accept="image/png,image/jpeg,image/webp,image/gif">
+        </div>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.9rem">
+            <input type="checkbox" name="witte_achtergrond" style="width:auto" checked>
+            Wit vlak achter het logo (uitzetten voor logo's met een eigen achtergrond of lichte kleuren)
+        </label>
+        <button type="submit" class="btn btn-geel">Toevoegen</button>
+    </form>
+</div>
+
+<div class="kaart">
+    <h2 style="margin-top:0">Sponsoren</h2>
+    {% if sponsoren %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>#</th><th>Logo</th><th>Naam</th><th>Groep</th><th>Aan</th><th></th></tr></thead>
+            <tbody>
+                {% for s in sponsoren %}
+                <tr class="{{ '' if s.actief else 'uit' }}">
+                    <td class="tekst-zacht">{{ s.volgorde }}</td>
+                    <td>
+                        {% if s.logo %}
+                        <img class="sponsor-logo-mini{{ '' if s.witte_achtergrond else ' sponsor-logo-mini--donker' }}"
+                             src="{{ url_for('static', filename='kiosk_afbeeldingen/' + s.logo) }}" alt="">
+                        {% else %}<span class="tekst-zacht">geen logo</span>{% endif %}
+                    </td>
+                    <td><strong>{{ s.naam }}</strong></td>
+                    <td>{{ s.groep or '' }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('kiosk_sponsorlogo_actief_wisselen', sponsor_id=s.id) }}" class="inline js-ajax-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="checkbox" style="width:auto" {{ 'checked' if s.actief }}
+                                   onchange="this.form.requestSubmit(); this.closest('tr').classList.toggle('uit', !this.checked);"
+                                   title="Aan/uit op de schermen">
+                        </form>
+                    </td>
+                    <td class="tabel-acties">
+                        <a href="{{ url_for('kiosk_sponsorlogo_bewerken', sponsor_id=s.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                        <form method="post" action="{{ url_for('kiosk_sponsorlogo_verwijderen', sponsor_id=s.id) }}"
+                              onsubmit="return bevestigEnVerstuur(this, 'Sponsor \'{{ s.naam }}\' verwijderen?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="tekst-zacht" style="margin-bottom:0">De volgorde (#) pas je aan bij Bewerken; een groep komt in beeld op de plek van zijn eerste sponsor.</p>
+    {% else %}
+    <p class="leeg">Nog geen sponsoren. Voeg hierboven de eerste toe.</p>
+    {% endif %}
+</div>
+
+<form method="post" action="{{ url_for('kiosk_sponsorlogos_instellingen') }}" enctype="multipart/form-data" class="kaart">
+    <h2 style="margin-top:0">Instellingen</h2>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <fieldset class="groupbox">
+        <legend>Kantine scherm (dia's)</legend>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.7rem">
+            <input type="checkbox" name="sponsors_toon_dias" style="width:auto" {{ 'checked' if instellingen.sponsors_toon_dias }}>
+            Sponsoren tussen de dia's door tonen
+        </label>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="sponsors_elke_dias">Na elke hoeveel dia's een sponsor</label>
+                <input type="number" id="sponsors_elke_dias" name="sponsors_elke_dias" min="1" value="{{ instellingen.sponsors_elke_dias }}">
+            </div>
+            <div class="veld">
+                <label for="sponsors_duur_seconden">Seconden per sponsordia</label>
+                <input type="number" id="sponsors_duur_seconden" name="sponsors_duur_seconden" min="3" value="{{ instellingen.sponsors_duur_seconden }}">
+            </div>
+        </div>
+        <span class="tekst-zacht">De sponsoren wisselen elkaar af: elke keer komt de volgende in beeld.</span>
+    </fieldset>
+
+    <fieldset class="groupbox">
+        <legend>Prijzenlijst</legend>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.7rem">
+            <input type="checkbox" name="sponsors_toon_prijzen" style="width:auto" {{ 'checked' if instellingen.sponsors_toon_prijzen }}>
+            Sponsoren af en toe over de prijzenlijst heen tonen
+        </label>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="sponsors_prijzen_interval">Elke hoeveel seconden</label>
+                <input type="number" id="sponsors_prijzen_interval" name="sponsors_prijzen_interval" min="10" value="{{ instellingen.sponsors_prijzen_interval }}">
+            </div>
+            <div class="veld">
+                <label for="sponsors_prijzen_duur">Hoe lang in beeld (seconden)</label>
+                <input type="number" id="sponsors_prijzen_duur" name="sponsors_prijzen_duur" min="3" value="{{ instellingen.sponsors_prijzen_duur }}">
+            </div>
+        </div>
+        <span class="tekst-zacht">Geldt ook voor het wisselscherm als dat de prijzenlijst toont.</span>
+    </fieldset>
+
+    <fieldset class="groupbox">
+        <legend>Opmaak</legend>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="sponsors_kop">Koptekst</label>
+                <input type="text" id="sponsors_kop" name="sponsors_kop" value="{{ instellingen.sponsors_kop }}">
+            </div>
+            <div class="veld">
+                <label for="sponsors_logos_per_dia">Max. logo's per dia (bij een groep)</label>
+                <input type="number" id="sponsors_logos_per_dia" name="sponsors_logos_per_dia" min="1" max="6" value="{{ instellingen.sponsors_logos_per_dia }}">
+            </div>
+        </div>
+        <div class="veld">
+            <label for="sponsors_achtergrond">Achtergrondfoto (optioneel, bijv. de clubvlag)</label>
+            {% if instellingen.sponsors_achtergrond %}
+            <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + instellingen.sponsors_achtergrond) }}" alt="" style="max-width:220px; border-radius:6px">
+            <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400">
+                <input type="checkbox" name="achtergrond_verwijderen" style="width:auto"> Foto verwijderen
+            </label>
+            {% endif %}
+            <input type="file" id="sponsors_achtergrond" name="sponsors_achtergrond" accept="image/*">
+            <span class="tekst-zacht">Krijgt automatisch een blauwe waas, zodat de tekst leesbaar blijft.</span>
+        </div>
+    </fieldset>
+    <button type="submit" class="btn btn-geel">Opslaan</button>
+</form>
+</div>
+
+<div class="rechts">
+    <div class="kaart">
+        <h2 style="margin-top:0">Zo ziet het eruit</h2>
+        {% for dia in voorbeeld_dias %}
+        <div class="dia-voorbeeld">
+            <section class="slide slide-sponsorlogos c20 actief">{% include "_sponsor_dia.html" %}</section>
+        </div>
+        {% else %}
+        <p class="leeg">Zodra er actieve sponsoren zijn, zie je hier de dia's.</p>
+        {% endfor %}
+    </div>
+</div>
+</div>
+
+<script>
+(function () {
+    function schaal() {
+        document.querySelectorAll('.dia-voorbeeld').forEach(function (vak) {
+            vak.querySelector('.slide').style.transform = 'scale(' + (vak.clientWidth / 1920) + ')';
+        });
+    }
+    window.addEventListener('resize', schaal);
+    schaal();
+})();
+</script>
+{% endblock %}

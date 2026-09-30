@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block titel %}{{ sponsor.naam }} · Sponsoren{% endblock %}
+{% block inhoud %}
+<link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie }}">
+<p class="subtitel"><a href="{{ url_for('kiosk_sponsorlogos') }}">&larr; Terug naar sponsoren</a></p>
+
+<style>
+    /* kiosk_scherm_stijl.css (voor het voorbeeld) zet een paar kleuren voor
+       het donkere tv-scherm; op deze beheerpagina gelden weer de gewone. */
+    :root { --tekst-zacht: #5b6270; --blauw-donker: #142a63; }
+    .dia-voorbeeld { --tekst-zacht: #b9c2e0; --blauw-donker: #0f1f4d; }
+    .dia-voorbeeld { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: #1e3a8a; }
+    .dia-voorbeeld .slide { width: 1920px; height: 1080px; inset: auto; top: 0; left: 0; transform-origin: top left; opacity: 1; }
+    .dia-voorbeeld .sponsordia-logo { opacity: 1; }
+</style>
+
+<div style="display:flex; gap:1.5rem; flex-wrap:wrap; align-items:flex-start">
+<form method="post" enctype="multipart/form-data" class="kaart" style="flex:1 1 420px; max-width:560px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="veld">
+        <label for="naam">Naam</label>
+        <input type="text" id="naam" name="naam" required value="{{ sponsor.naam }}">
+    </div>
+    <div class="formgrid">
+        <div class="veld">
+            <label for="groep">Groep (optioneel)</label>
+            <input type="text" id="groep" name="groep" list="groepen-lijst" value="{{ sponsor.groep or '' }}" placeholder="Bijv. Zaterdag 1">
+            <datalist id="groepen-lijst">{% for g in groepen %}<option value="{{ g }}">{% endfor %}</datalist>
+        </div>
+        <div class="veld">
+            <label for="volgorde">Volgorde</label>
+            <input type="number" id="volgorde" name="volgorde" value="{{ sponsor.volgorde }}">
+        </div>
+    </div>
+    <div class="veld">
+        <label for="logo">Logo</label>
+        {% if sponsor.logo %}
+        <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + sponsor.logo) }}" alt=""
+             style="max-width:240px; max-height:120px; object-fit:contain; background:{{ '#f4f4f4' if sponsor.witte_achtergrond else '#1e3a8a' }}; border-radius:6px; padding:0.4rem">
+        <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400">
+            <input type="checkbox" name="logo_verwijderen" style="width:auto"> Logo verwijderen (dan komt de naam als tekst in beeld)
+        </label>
+        {% endif %}
+        <input type="file" id="logo" name="logo" accept="image/png,image/jpeg,image/webp,image/gif">
+    </div>
+    <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.5rem">
+        <input type="checkbox" name="witte_achtergrond" style="width:auto" {{ 'checked' if sponsor.witte_achtergrond }}>
+        Wit vlak achter het logo
+    </label>
+    <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.9rem">
+        <input type="checkbox" name="actief" style="width:auto" {{ 'checked' if sponsor.actief }}>
+        Aan (op de schermen)
+    </label>
+    <button type="submit" class="btn btn-geel">Opslaan</button>
+</form>
+
+<div class="kaart" style="flex:1 1 380px">
+    <h2 style="margin-top:0">Voorbeeld (alleen deze sponsor)</h2>
+    <div class="dia-voorbeeld">
+        {% with dia = voorbeeld_dia %}
+        <section class="slide slide-sponsorlogos c20 actief">{% include "_sponsor_dia.html" %}</section>
+        {% endwith %}
+    </div>
+    <p class="tekst-zacht" style="margin-bottom:0">Het voorbeeld toont de opgeslagen versie; sla eerst op om een wijziging te zien.</p>
+</div>
+</div>
+
+<script>
+(function () {
+    var vak = document.querySelector('.dia-voorbeeld');
+    function schaal() { vak.querySelector('.slide').style.transform = 'scale(' + (vak.clientWidth / 1920) + ')'; }
+    window.addEventListener('resize', schaal);
+    schaal();
+})();
+</script>
+{% endblock %}

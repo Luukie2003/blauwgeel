@@ -292,6 +292,20 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "club_van_20_aankondiging_tekst", "TEXT"),
     ("kiosk_scherm_instellingen", "club_van_20_aankondiging_aftellen_tot", "TEXT"),
     ("kiosk_scherm_instellingen", "club_van_20_aankondiging_na_tekst", "TEXT"),
+    # De aftelklok van de aankondiging hierboven ook op de wervingsdia van
+    # het kantine scherm tonen (zie bouw_slides in club_van_20.py).
+    ("kiosk_scherm_instellingen", "club_van_20_aankondiging_op_dia", "INTEGER NOT NULL DEFAULT 1"),
+    # Sponsoren met logo (kiosk_sponsorlogos): hoe ze tussen de dia's van het
+    # kantine scherm en over de prijzenlijst heen komen. Zie sponsoren.py.
+    ("kiosk_scherm_instellingen", "sponsors_kop", "TEXT NOT NULL DEFAULT 'Mede mogelijk gemaakt door'"),
+    ("kiosk_scherm_instellingen", "sponsors_achtergrond", "TEXT"),
+    ("kiosk_scherm_instellingen", "sponsors_logos_per_dia", "INTEGER NOT NULL DEFAULT 4"),
+    ("kiosk_scherm_instellingen", "sponsors_toon_dias", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "sponsors_elke_dias", "INTEGER NOT NULL DEFAULT 2"),
+    ("kiosk_scherm_instellingen", "sponsors_duur_seconden", "INTEGER NOT NULL DEFAULT 8"),
+    ("kiosk_scherm_instellingen", "sponsors_toon_prijzen", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "sponsors_prijzen_interval", "INTEGER NOT NULL DEFAULT 60"),
+    ("kiosk_scherm_instellingen", "sponsors_prijzen_duur", "INTEGER NOT NULL DEFAULT 8"),
     # Wanneer een lid gearchiveerd is (status 'inactief': niet meer op het
     # scherm, betaalhistorie blijft bewaard), zie club_van_20_lid_archiveren.
     ("club_van_20_leden", "gearchiveerd_op", "TEXT"),

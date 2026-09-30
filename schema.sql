@@ -480,6 +480,21 @@ CREATE TABLE IF NOT EXISTS club_van_20_projecten (
     aangemaakt_op TEXT NOT NULL
 );
 
+-- Sponsoren met logo voor het kantine scherm en de prijzenlijst ("Mede
+-- mogelijk gemaakt door"), los van de algemene dia's in kiosk_sponsoren.
+-- Sponsoren met dezelfde groep (bijv. "Zaterdag 1") komen samen op 1 dia;
+-- zie sponsoren.py (bouw_sponsor_dias) en routes/sponsoren.py.
+CREATE TABLE IF NOT EXISTS kiosk_sponsorlogos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    naam TEXT NOT NULL,
+    logo TEXT,
+    groep TEXT,
+    witte_achtergrond INTEGER NOT NULL DEFAULT 1,
+    actief INTEGER NOT NULL DEFAULT 1,
+    volgorde INTEGER NOT NULL DEFAULT 0,
+    aangemaakt_op TEXT NOT NULL
+);
+
 -- Vooraf ingeplande bardiensten per specifieke dag (geen wekelijks
 -- terugkerend rooster -- de bezetting wisselt elke week). Het prijzenscherm
 -- toont de bijpassende rij vanzelf in een gele balk zodra de klok tussen

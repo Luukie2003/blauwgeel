@@ -275,6 +275,11 @@ SECTIE_ENDPOINTS = {
         "kiosk_sponsor_nieuw",
         "kiosk_sponsor_bewerken",
         "kiosk_sponsor_verwijderen",
+        "kiosk_sponsorlogos",
+        "kiosk_sponsorlogos_instellingen",
+        "kiosk_sponsorlogo_bewerken",
+        "kiosk_sponsorlogo_actief_wisselen",
+        "kiosk_sponsorlogo_verwijderen",
         "kiosk_sjabloon_nieuw",
         "kiosk_sjabloon_bewerken",
         "kiosk_sjabloon_verwijderen",
@@ -525,6 +530,12 @@ NAV_ITEMS = [
         ],
         "url_endpoint": "kiosk_sponsoren_leden",
         "label": "Dia's",
+    },
+    {
+        "groep": "Kantine-tv",
+        "endpoints": ["kiosk_sponsorlogos", "kiosk_sponsorlogo_bewerken"],
+        "url_endpoint": "kiosk_sponsorlogos",
+        "label": "Sponsoren",
     },
     {
         "groep": "Club van 20",
@@ -987,6 +998,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
         kiosk,
         kluis,
         producten,
+        sponsoren,
         stemmen,
         tellen,
         verbruiksvoorwerpen,
@@ -1007,6 +1019,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
     kiosk.register_routes(app)
     kluis.register_routes(app)
     producten.register_routes(app)
+    sponsoren.register_routes(app)
     stemmen.register_routes(app)
     tellen.register_routes(app)
     verbruiksvoorwerpen.register_routes(app)
