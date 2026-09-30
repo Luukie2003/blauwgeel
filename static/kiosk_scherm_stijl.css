@@ -314,22 +314,22 @@
 .c20-nieuw-namen .c20-bordje { padding: 0.35em 1em; }
 
 /* Werving + QR-code naar de publieke Club van 20-pagina */
-.c20-werving { flex: 0 0 auto; width: 100%; display: flex; align-items: center; justify-content: center; gap: calc(80 * var(--u)); text-align: left; }
-.c20-werving h2 { font-size: calc(83 * var(--u)); margin-bottom: calc(22 * var(--u)); }
-.c20-werving p { font-size: calc(32 * var(--u)); margin: 0 0 calc(16 * var(--u)); color: #fff; }
-.c20-werving .c20-werving-groot { font-family: var(--c20-font); font-weight: 700; font-size: calc(43 * var(--u)); color: var(--geel); }
-.c20-qr { display: flex; flex-direction: column; align-items: center; gap: calc(13 * var(--u)); font-family: var(--c20-font); font-size: calc(29 * var(--u)); color: var(--geel); }
-.c20-qr-code { background: #fff; padding: calc(16 * var(--u)); border-radius: calc(14 * var(--u)); width: calc(304 * var(--u)); height: calc(304 * var(--u)); }
+.c20-werving { flex: 0 0 auto; width: 100%; display: flex; align-items: center; justify-content: center; gap: calc(100 * var(--u)); text-align: left; }
+.c20-werving h2 { font-size: calc(104 * var(--u)); margin-bottom: calc(28 * var(--u)); }
+.c20-werving p { font-size: calc(40 * var(--u)); margin: 0 0 calc(20 * var(--u)); color: #fff; }
+.c20-werving .c20-werving-groot { font-family: var(--c20-font); font-weight: 700; font-size: calc(54 * var(--u)); color: var(--geel); }
+.c20-qr { display: flex; flex-direction: column; align-items: center; gap: calc(16 * var(--u)); font-family: var(--c20-font); font-size: calc(36 * var(--u)); color: var(--geel); }
+.c20-qr-code { background: #fff; padding: calc(20 * var(--u)); border-radius: calc(18 * var(--u)); width: calc(380 * var(--u)); height: calc(380 * var(--u)); }
 .c20-qr-code svg { width: 100%; height: 100%; display: block; }
 
 /* Aftelklok op de wervingsdia (zelfde aankondiging als bovenaan de
    publieke Club van 20-pagina, zie aankondiging() in club_van_20.py). */
-.c20-aftel { background: var(--geel); color: var(--blauw-donker); border-radius: calc(18 * var(--u)); padding: calc(24 * var(--u)) calc(44 * var(--u)) calc(28 * var(--u)); text-align: center; margin-bottom: calc(24 * var(--u)); }
-.c20-aftel h3 { color: var(--blauw-donker); font-size: calc(52 * var(--u)); margin-bottom: calc(18 * var(--u)); }
-.c20-aftelklok { display: flex; justify-content: center; gap: calc(14 * var(--u)); font-family: var(--c20-font); font-weight: 700; }
-.c20-aftelvak { background: var(--blauw-donker); color: var(--geel); border-radius: calc(12 * var(--u)); min-width: calc(128 * var(--u)); padding: calc(10 * var(--u)) calc(10 * var(--u)) calc(8 * var(--u)); }
-.c20-aftelvak .getal { display: block; font-size: calc(64 * var(--u)); line-height: 1; font-variant-numeric: tabular-nums; }
-.c20-aftelvak .eenheid { display: block; font-size: calc(18 * var(--u)); color: #fff; text-transform: uppercase; letter-spacing: 0.08em; margin-top: calc(5 * var(--u)); }
+.c20-aftel { background: var(--geel); color: var(--blauw-donker); border-radius: calc(22 * var(--u)); padding: calc(30 * var(--u)) calc(55 * var(--u)) calc(35 * var(--u)); text-align: center; margin-bottom: calc(30 * var(--u)); }
+.c20-aftel h3 { color: var(--blauw-donker); font-size: calc(65 * var(--u)); margin-bottom: calc(22 * var(--u)); }
+.c20-aftelklok { display: flex; justify-content: center; gap: calc(18 * var(--u)); font-family: var(--c20-font); font-weight: 700; }
+.c20-aftelvak { background: var(--blauw-donker); color: var(--geel); border-radius: calc(15 * var(--u)); min-width: calc(160 * var(--u)); padding: calc(12 * var(--u)) calc(12 * var(--u)) calc(10 * var(--u)); }
+.c20-aftelvak .getal { display: block; font-size: calc(80 * var(--u)); line-height: 1; font-variant-numeric: tabular-nums; }
+.c20-aftelvak .eenheid { display: block; font-size: calc(22 * var(--u)); color: #fff; text-transform: uppercase; letter-spacing: 0.08em; margin-top: calc(6 * var(--u)); }
 .c20-aftelvak .getal.tik { animation: aftel-tik 0.35s ease; }
 @keyframes aftel-tik { from { transform: translateY(-0.3em); opacity: 0.2; } to { transform: none; opacity: 1; } }
 

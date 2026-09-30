@@ -26,8 +26,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.17.1"
+HUIDIGE_VERSIE = "1.17.2"
 WIJZIGINGEN = [
+    {
+        "versie": "1.17.2",
+        "datum": "30 september 2026",
+        "punten": [
+            "De Club van 20-wervingsdia (met QR-code en aftelklok) is ongeveer een kwart groter, en blijft ook met een lange aankondigingstekst helemaal in beeld",
+        ],
+    },
     {
         "versie": "1.17.1",
         "datum": "30 september 2026",
