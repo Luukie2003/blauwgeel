@@ -13,6 +13,12 @@
     --tekst-zacht: #b9c2e0;
 }
 * { box-sizing: border-box; }
+/* 1 "ontwerp-pixel" van een 1920x1080-scherm, op de huidige schermgrootte.
+   De dia's die hiermee zijn opgemaakt (standen, teamstrijd, welkom, werving)
+   zien er op elk scherm hetzelfde uit: op een TV-app met een kleine
+   WebView-viewport (bijv. 961x541 CSS-px op een 720p-Google TV) krimpt alles
+   mee, in plaats van -- zoals bij rem -- op die schaal uit beeld te lopen. */
+:root { --u: min(100vw / 1920, 100vh / 1080); }
 .slide {
     position: absolute;
     inset: 0;
@@ -268,42 +274,62 @@
 .slide.c20.actief .c20-projecten li { animation: bordje-in 0.5s ease both; }
 
 /* Teamstrijd */
-.c20-teams { flex: 1; width: 100%; max-width: 80rem; display: flex; flex-direction: column; justify-content: center; gap: 1.6rem; }
-.c20-team { display: grid; grid-template-columns: 10rem 1fr 6rem; align-items: center; gap: 1.6rem; font-family: var(--c20-font); font-weight: 700; font-size: 3.2rem; opacity: 0; }
+.slide.slide-club_van_20_teams, .slide.slide-club_van_20_nieuw, .slide.slide-club_van_20_werving {
+    padding: calc(40 * var(--u)) calc(80 * var(--u)) calc(100 * var(--u));
+    /* Kop, inhoud en onderregel als 1 groep in het midden, i.p.v. aan de
+       boven- en onderrand uit elkaar getrokken. */
+    justify-content: center;
+    gap: calc(28 * var(--u));
+}
+.slide-club_van_20_teams .c20-kop, .slide-club_van_20_nieuw .c20-kop { margin-bottom: calc(22 * var(--u)); }
+.slide-club_van_20_teams .c20-kop h2, .slide-club_van_20_nieuw .c20-kop h2 { font-size: calc(64 * var(--u)); }
+.slide-club_van_20_teams .c20-seizoen { font-size: calc(22 * var(--u)); }
+/* Rijhoogte uit het aantal teams (--n), net als bij de standen: 4 teams = ruime
+   balken, 8 teams = alles compacter, altijd op 1 dia. 700 = beschikbare hoogte. */
+.c20-teams {
+    --rij: min(calc(96 * var(--u)), calc((700 - 16 * (var(--n, 4) - 1)) * var(--u) / var(--n, 4)));
+    flex: 0 0 auto; width: 100%; max-width: calc(1280 * var(--u)); display: flex; flex-direction: column;
+    justify-content: center; gap: calc(16 * var(--u));
+}
+.c20-team {
+    display: grid; grid-template-columns: calc(var(--rij) * 1.9) 1fr calc(var(--rij) * 1.1); align-items: center;
+    gap: calc(var(--rij) * 0.3); font-family: var(--c20-font); font-weight: 700;
+    font-size: calc(var(--rij) * 0.55); opacity: 0;
+}
 .c20-team-naam { text-align: right; }
 .c20-team-aantal { text-align: left; color: var(--geel); }
-.c20-team-balk { height: 4.2rem; border-radius: 6px; background: rgba(15, 31, 77, 0.55); overflow: hidden; }
+.c20-team-balk { height: calc(var(--rij) * 0.72); border-radius: 6px; background: rgba(15, 31, 77, 0.55); overflow: hidden; }
 .c20-team-vulling { height: 100%; width: 0; background: #fff; border-radius: 6px; }
 .c20-team--eerste .c20-team-vulling { background: var(--geel); }
-/* Meer dan 5 teams: alles wat compacter, zodat 8 teams nog op 1 dia passen. */
-.c20-teams--veel { gap: 1rem; }
-.c20-teams--veel .c20-team { font-size: 2.4rem; }
-.c20-teams--veel .c20-team-balk { height: 3rem; }
 .slide.c20.actief .c20-team { animation: bordje-in 0.5s ease both; }
 .slide.c20.actief .c20-team-vulling { animation: balk-vullen 1.4s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.c20-teams-onder { margin: 1.5rem 0 1rem; font-family: var(--c20-font); font-size: 2.6rem; color: var(--geel); }
+.c20-teams-onder { margin: calc(24 * var(--u)) 0 calc(16 * var(--u)); font-family: var(--c20-font); font-size: calc(42 * var(--u)); color: var(--geel); }
 
 /* Welkom nieuwe leden */
-.c20-nieuw-namen { flex: 1; align-content: center; display: flex; flex-wrap: wrap; justify-content: center; gap: 1.4rem; max-width: 80rem; margin-top: 1.5rem; font-size: 3.2rem; }
+.c20-nieuw-namen {
+    flex: 0 0 auto; align-content: center; display: flex; flex-wrap: wrap; justify-content: center;
+    gap: calc(22 * var(--u)); max-width: calc(1280 * var(--u)); margin-top: calc(24 * var(--u));
+    font-size: calc(51 * var(--u));
+}
 .c20-nieuw-namen .c20-bordje { padding: 0.35em 1em; }
 
 /* Werving + QR-code naar de publieke Club van 20-pagina */
-.c20-werving { flex: 1; width: 100%; display: flex; align-items: center; justify-content: center; gap: 5rem; text-align: left; }
-.c20-werving h2 { font-size: 5.2rem; margin-bottom: 1.4rem; }
-.c20-werving p { font-size: 2rem; margin: 0 0 1rem; color: #fff; }
-.c20-werving .c20-werving-groot { font-family: var(--c20-font); font-weight: 700; font-size: 2.7rem; color: var(--geel); }
-.c20-qr { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; font-family: var(--c20-font); font-size: 1.8rem; color: var(--geel); }
-.c20-qr-code { background: #fff; padding: 1rem; border-radius: 14px; width: 19rem; height: 19rem; }
+.c20-werving { flex: 0 0 auto; width: 100%; display: flex; align-items: center; justify-content: center; gap: calc(80 * var(--u)); text-align: left; }
+.c20-werving h2 { font-size: calc(83 * var(--u)); margin-bottom: calc(22 * var(--u)); }
+.c20-werving p { font-size: calc(32 * var(--u)); margin: 0 0 calc(16 * var(--u)); color: #fff; }
+.c20-werving .c20-werving-groot { font-family: var(--c20-font); font-weight: 700; font-size: calc(43 * var(--u)); color: var(--geel); }
+.c20-qr { display: flex; flex-direction: column; align-items: center; gap: calc(13 * var(--u)); font-family: var(--c20-font); font-size: calc(29 * var(--u)); color: var(--geel); }
+.c20-qr-code { background: #fff; padding: calc(16 * var(--u)); border-radius: calc(14 * var(--u)); width: calc(304 * var(--u)); height: calc(304 * var(--u)); }
 .c20-qr-code svg { width: 100%; height: 100%; display: block; }
 
 /* Aftelklok op de wervingsdia (zelfde aankondiging als bovenaan de
    publieke Club van 20-pagina, zie aankondiging() in club_van_20.py). */
-.c20-aftel { background: var(--geel); color: var(--blauw-donker); border-radius: 18px; padding: 1.3rem 2.4rem 1.5rem; text-align: center; margin-top: 0.5rem; }
-.c20-aftel h3 { color: var(--blauw-donker); font-size: 2.6rem; margin-bottom: 0.9rem; }
-.c20-aftelklok { display: flex; justify-content: center; gap: 0.9rem; font-family: var(--c20-font); font-weight: 700; }
-.c20-aftelvak { background: var(--blauw-donker); color: var(--geel); border-radius: 12px; min-width: 8rem; padding: 0.6rem 0.6rem 0.5rem; }
-.c20-aftelvak .getal { display: block; font-size: 4rem; line-height: 1; font-variant-numeric: tabular-nums; }
-.c20-aftelvak .eenheid { display: block; font-size: 1.1rem; color: #fff; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.3rem; }
+.c20-aftel { background: var(--geel); color: var(--blauw-donker); border-radius: calc(18 * var(--u)); padding: calc(24 * var(--u)) calc(44 * var(--u)) calc(28 * var(--u)); text-align: center; margin-bottom: calc(24 * var(--u)); }
+.c20-aftel h3 { color: var(--blauw-donker); font-size: calc(52 * var(--u)); margin-bottom: calc(18 * var(--u)); }
+.c20-aftelklok { display: flex; justify-content: center; gap: calc(14 * var(--u)); font-family: var(--c20-font); font-weight: 700; }
+.c20-aftelvak { background: var(--blauw-donker); color: var(--geel); border-radius: calc(12 * var(--u)); min-width: calc(128 * var(--u)); padding: calc(10 * var(--u)) calc(10 * var(--u)) calc(8 * var(--u)); }
+.c20-aftelvak .getal { display: block; font-size: calc(64 * var(--u)); line-height: 1; font-variant-numeric: tabular-nums; }
+.c20-aftelvak .eenheid { display: block; font-size: calc(18 * var(--u)); color: #fff; text-transform: uppercase; letter-spacing: 0.08em; margin-top: calc(5 * var(--u)); }
 .c20-aftelvak .getal.tik { animation: aftel-tik 0.35s ease; }
 @keyframes aftel-tik { from { transform: translateY(-0.3em); opacity: 0.2; } to { transform: none; opacity: 1; } }
 
@@ -402,22 +428,35 @@
 /* Standen -- eenvoudige gerangschikte lijst per eigen team (ZA 2/ZA 3/O23),
    handmatig bijgehouden (zie kiosk_stand_teams/kiosk_sponsoren_leden.html),
    het eigen team springt eruit net als de eerstvolgende wedstrijd hierboven. */
+.slide.slide-stand { padding: calc(40 * var(--u)) calc(80 * var(--u)) calc(100 * var(--u)); }
 .slide-stand h2 {
-    font-size: 4rem;
+    font-size: calc(64 * var(--u));
     font-weight: 800;
     color: var(--geel);
-    margin: 0 0 2.2rem;
+    margin: 0 0 calc(24 * var(--u));
     text-shadow: 0 0 34px rgba(252, 212, 47, 0.4);
 }
-.standdia-lijst { width: 100%; max-width: 64rem; display: flex; flex-direction: column; gap: 0.55rem; }
+/* De rijhoogte volgt uit het aantal teams (--n, gezet in kiosk_scherm.html):
+   tot ~10 teams een vaste, ruime rij; meer teams = automatisch kleinere rijen,
+   zodat de hele poule altijd op 1 dia past (en niet onder het clubbadge
+   rechtsonder of boven uit beeld loopt). 850 = beschikbare hoogte, 9 = tussenruimte. */
+.standdia-lijst {
+    --rij: min(calc(72 * var(--u)), calc((850 - 9 * (var(--n, 10) - 1)) * var(--u) / var(--n, 10)));
+    width: 100%;
+    max-width: calc(1100 * var(--u));
+    display: flex;
+    flex-direction: column;
+    gap: calc(9 * var(--u));
+}
 .standdia-rij {
     display: flex;
     align-items: center;
-    gap: 1.1rem;
-    padding: 0.6rem 1.4rem;
+    gap: calc(var(--rij) * 0.25);
+    height: var(--rij);
+    padding: 0 calc(var(--rij) * 0.3);
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 14px;
+    border-radius: calc(var(--rij) * 0.2);
     text-align: left;
     opacity: 0;
 }
@@ -428,8 +467,8 @@
 }
 .standdia-positie {
     flex-shrink: 0;
-    width: 2.3rem;
-    height: 2.3rem;
+    width: calc(var(--rij) * 0.62);
+    height: calc(var(--rij) * 0.62);
     border-radius: 50%;
     background: var(--blauw);
     border: 2px solid var(--geel);
@@ -437,9 +476,9 @@
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    font-size: 1.15rem;
+    font-size: calc(var(--rij) * 0.3);
 }
-.standdia-logo { flex-shrink: 0; width: 2.6rem; height: 2.6rem; object-fit: contain; }
+.standdia-logo { flex-shrink: 0; width: calc(var(--rij) * 0.72); height: calc(var(--rij) * 0.72); object-fit: contain; }
 .standdia-naam {
     flex: 1;
     /* Bewust geen 0: bij een smal scherm (bijv. de tablet-app) kon de naam
@@ -448,35 +487,31 @@
        dus altijd de ruimte van de naam, tot aan letterlijk 0px breed. Een
        echte minimumbreedte + ellipsis zorgt dat er altijd tenminste een
        stuk van de naam zichtbaar blijft. */
-    min-width: 4.5rem;
+    min-width: calc(var(--rij) * 2);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 1.5rem;
+    font-size: calc(var(--rij) * 0.42);
     font-weight: 700;
 }
 .standdia-rij--eigen .standdia-naam { font-weight: 800; }
-.standdia-vorm { flex-shrink: 0; font-size: 1.05rem; color: var(--tekst-zacht); }
+.standdia-vorm { flex-shrink: 0; font-size: calc(var(--rij) * 0.27); color: var(--tekst-zacht); }
 
 @media (max-width: 720px) {
-    /* .slide is ontworpen voor een TV (vaste, royale marges) -- op een veel
-       smaller scherm (bijv. de tablet-app) eten die marges een groot deel
-       van de al krappe breedte op, wat de teamnaam hieronder verder in de
-       verdrukking brengt. */
-    .slide { padding: 1.5rem 1rem; }
     /* W/GL/V is aardig-om-te-weten, maar minder belangrijk dan de teamnaam
-       zelf -- geeft de naam de ruimte die 'm anders werd afgenomen. */
+       zelf -- geeft de naam de ruimte die 'm anders werd afgenomen. (De rest
+       van de dia schaalt nu met het scherm mee, zie --u.) */
     .standdia-vorm { display: none; }
 }
 .standdia-punten {
     flex-shrink: 0;
-    min-width: 3.4rem;
+    min-width: calc(var(--rij) * 0.9);
     text-align: center;
-    font-size: 1.6rem;
+    font-size: calc(var(--rij) * 0.42);
     font-weight: 800;
     color: var(--geel);
 }
-.standdia-punten small { font-size: 0.55em; font-weight: 700; margin-left: 0.15rem; }
+.standdia-punten small { font-size: 0.55em; font-weight: 700; margin-left: 0.15em; }
 
 .slide-stand.actief .standdia-rij {
     animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;

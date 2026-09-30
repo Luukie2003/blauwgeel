@@ -191,6 +191,8 @@ def test_scherm_teller_teams_nieuw_en_werving(client, db):
     assert "Terrasdeuren" in tekst and "--procent: 30%" in tekst
     assert "slide-club_van_20_teams" in tekst
     assert "Za1 leidt met 2 naambordjes voorsprong!" in tekst
+    # Aantal teams voor de schaal op kleine tv-viewports (zie .c20-teams in de css).
+    assert '<div class="c20-teams" style="--n: 2">' in tekst
     assert "Welkom in de Club van 20!" in tekst
     assert "Ook bij de Club van 20?" in tekst
     assert "<svg" in tekst  # QR-code naar de publieke pagina

@@ -26,8 +26,16 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.17.0"
+HUIDIGE_VERSIE = "1.17.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.17.1",
+        "datum": "30 september 2026",
+        "punten": [
+            "Standen-, teamstrijd-, welkom- en wervingsdia passen nu ook op het scherm van de tv-app (ze liepen daar boven en onder uit beeld); ze schalen nu mee met de schermgrootte, en een stand met veel teams past altijd op één dia",
+            "Het clubbadge rechtsonder schaalt mee met het scherm",
+        ],
+    },
     {
         "versie": "1.17.0",
         "datum": "30 september 2026",

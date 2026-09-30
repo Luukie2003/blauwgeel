@@ -23,19 +23,21 @@
            tijdens een sponsor-slide met een eigen foto. */
         .club-badge {
             position: fixed;
-            right: 1.4rem;
-            bottom: 1.4rem;
+            right: calc(22 * var(--u));
+            bottom: calc(22 * var(--u));
             display: flex;
             align-items: center;
-            gap: 0.7rem;
+            gap: calc(11 * var(--u));
             background: rgba(15, 31, 77, 0.7);
             border: 1px solid rgba(252, 212, 47, 0.55);
             border-radius: 999px;
-            padding: 0.45rem 1.1rem 0.45rem 0.45rem;
+            padding: calc(7 * var(--u)) calc(18 * var(--u)) calc(7 * var(--u)) calc(7 * var(--u));
             z-index: 10;
         }
-        .club-badge img { height: 2.1rem; width: auto; display: block; }
-        .club-badge span { font-size: 0.95rem; font-weight: 800; letter-spacing: 0.04em; color: var(--geel); white-space: nowrap; }
+        /* Schaalt mee met het scherm (zie --u in kiosk_scherm_stijl.css), maar
+           blijft leesbaar op een kleine tv-viewport -- vandaar de ondergrenzen. */
+        .club-badge img { height: max(1.5rem, calc(34 * var(--u))); width: auto; display: block; }
+        .club-badge span { font-size: max(0.7rem, calc(15 * var(--u))); font-weight: 800; letter-spacing: 0.04em; color: var(--geel); white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -150,7 +152,7 @@
                 </div>
                 {% elif slide.type == 'club_van_20_teams' %}
                 <div class="c20-kop"><h2>Welk team steunt het meest?</h2><span class="c20-seizoen">Club van 20-leden per team</span></div>
-                <div class="c20-teams{{ ' c20-teams--veel' if slide.teams|length > 5 else '' }}">
+                <div class="c20-teams" style="--n: {{ slide.teams|length }}">
                     {% for t in slide.teams %}
                     <div class="c20-team{{ ' c20-team--eerste' if loop.first else '' }}" style="animation-delay: {{ (loop.index0 * 0.12)|round(2) }}s">
                         <span class="c20-team-naam">{{ t.team }}</span>
@@ -230,7 +232,7 @@
                 </div>
             {% elif slide.type == 'stand' %}
                 <h2>Stand {{ slide.titel }}</h2>
-                <div class="standdia-lijst">
+                <div class="standdia-lijst" style="--n: {{ slide.teams|length }}">
                     {% for team in slide.teams %}
                     <div class="standdia-rij{{ ' standdia-rij--eigen' if team.eigen_team else '' }}"
                          style="animation-delay: {{ (loop.index0 * 0.06)|round(3) }}s">

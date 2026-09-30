@@ -26,6 +26,19 @@ def _voeg_team_toe(db, poule, naam, eigen_team=0, volgorde=None, club=None, gewo
     return cur.lastrowid
 
 
+def test_stand_dia_geeft_aantal_teams_mee_voor_de_schaal(client, db):
+    """De rijhoogte op de dia volgt uit het aantal teams (--n), zodat een hele
+    poule ook op een kleine tv-viewport (bijv. 961x541 CSS-px in de tv-app)
+    altijd op 1 dia past -- zie .standdia-lijst in kiosk_scherm_stijl.css."""
+    for i in range(11):
+        _voeg_team_toe(db, "za2", f"Team {i}")
+
+    tekst = client.get("/kiosk/scherm").data.decode()
+
+    assert '<div class="standdia-lijst" style="--n: 11">' in tekst
+    assert tekst.count('class="standdia-rij') == 11
+
+
 def test_zonder_teams_geen_stand_dia(client, db):
     resp = client.get("/kiosk/scherm")
     assert resp.status_code == 200
