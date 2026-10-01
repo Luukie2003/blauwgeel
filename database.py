@@ -304,6 +304,7 @@ KOLOM_MIGRATIES = [
     # Sponsoren met logo (kiosk_sponsorlogos): hoe ze tussen de dia's van het
     # kantine scherm en over de prijzenlijst heen komen. Zie sponsoren.py.
     ("kiosk_scherm_instellingen", "sponsors_kop", "TEXT NOT NULL DEFAULT 'Mede mogelijk gemaakt door'"),
+    ("kiosk_scherm_instellingen", "sponsors_kop_meervoud", "TEXT NOT NULL DEFAULT ''"),
     ("kiosk_scherm_instellingen", "sponsors_achtergrond", "TEXT"),
     ("kiosk_scherm_instellingen", "sponsors_logos_per_dia", "INTEGER NOT NULL DEFAULT 4"),
     ("kiosk_scherm_instellingen", "sponsors_toon_dias", "INTEGER NOT NULL DEFAULT 1"),

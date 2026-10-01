@@ -7,7 +7,7 @@ from flask import flash, jsonify, redirect, render_template, request, url_for
 
 from database import get_db
 from helpers import KIOSK_AFBEELDINGEN_MAP, is_ajax_verzoek, now_str, sla_afbeelding_op
-from sponsoren import bouw_sponsor_dias
+from sponsoren import bouw_sponsor_dias, kop_meervoud
 
 
 def register_routes(app):
@@ -69,6 +69,7 @@ def register_routes(app):
             ).fetchall(),
             groepen=_groepen(db),
             instellingen=instellingen,
+            kop_meervoud_automatisch=kop_meervoud(instellingen["sponsors_kop"]),
             voorbeeld_dias=bouw_sponsor_dias(db, instellingen),
         )
 
@@ -84,12 +85,13 @@ def register_routes(app):
             achtergrond = None
         db.execute(
             """UPDATE kiosk_scherm_instellingen
-               SET sponsors_kop = ?, sponsors_achtergrond = ?, sponsors_logos_per_dia = ?,
+               SET sponsors_kop = ?, sponsors_kop_meervoud = ?, sponsors_achtergrond = ?, sponsors_logos_per_dia = ?,
                    sponsors_toon_dias = ?, sponsors_elke_dias = ?, sponsors_duur_seconden = ?,
                    sponsors_toon_prijzen = ?, sponsors_prijzen_interval = ?, sponsors_prijzen_duur = ?
                WHERE id = 1""",
             (
                 (request.form.get("sponsors_kop") or "").strip() or "Mede mogelijk gemaakt door",
+                (request.form.get("sponsors_kop_meervoud") or "").strip(),
                 achtergrond,
                 min(6, _getal("sponsors_logos_per_dia", 4, 1)),
                 1 if request.form.get("sponsors_toon_dias") else 0,

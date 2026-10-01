@@ -4,7 +4,7 @@ from conftest import stel_csrf_token_in as _csrf
 from test_secties_rechten import _login, _maak_vrijwilliger
 
 from club_van_20 import huidig_seizoen
-from sponsoren import bouw_sponsor_dias
+from sponsoren import bouw_sponsor_dias, kop_meervoud
 
 
 def _sponsor(db, naam, groep=None, logo=None, actief=1, volgorde=0, wit=1):
@@ -50,6 +50,32 @@ def test_grote_groep_wordt_over_meerdere_dias_verdeeld(db):
         _sponsor(db, f"Sponsor {i}", groep="Zaterdag 2", volgorde=i)
     dias = bouw_sponsor_dias(db, _instellingen(db))
     assert [len(d["logos"]) for d in dias] == [2, 2, 1]
+
+
+def test_kop_meervoud_alleen_voor_het_woord_sponsor():
+    assert kop_meervoud("Wij bedanken onze sponsor:") == "Wij bedanken onze sponsoren:"
+    assert kop_meervoud("Onze Sponsor") == "Onze Sponsoren"
+    assert kop_meervoud("ONZE SPONSOR") == "ONZE SPONSOREN"
+    assert kop_meervoud("Wij bedanken onze sponsoren") == "Wij bedanken onze sponsoren"
+    assert kop_meervoud("Mede mogelijk gemaakt door") == "Mede mogelijk gemaakt door"
+
+
+def test_dia_met_meerdere_logos_krijgt_kop_in_het_meervoud(db):
+    _zet(db, sponsors_kop="Wij bedanken onze sponsor", sponsors_logos_per_dia=2)
+    _sponsor(db, "Los", volgorde=1)
+    for i in range(3):
+        _sponsor(db, f"Groepslid {i}", groep="Hoofdsponsors", volgorde=10 + i)
+
+    dias = bouw_sponsor_dias(db, _instellingen(db))
+    assert [(len(d["logos"]), d["kop"]) for d in dias] == [
+        (1, "Wij bedanken onze sponsor"),
+        (2, "Wij bedanken onze sponsoren"),
+        (1, "Wij bedanken onze sponsor"),  # rest van de groep: weer enkelvoud
+    ]
+
+    _zet(db, sponsors_kop_meervoud="Dank aan onze partners")
+    dias = bouw_sponsor_dias(db, _instellingen(db))
+    assert [d["kop"] for d in dias] == ["Wij bedanken onze sponsor", "Dank aan onze partners", "Wij bedanken onze sponsor"]
 
 
 def test_logos_in_een_groep_krijgen_een_aandeel_naar_hun_vorm(db, tmp_path, monkeypatch):
@@ -159,6 +185,7 @@ def test_instellingen_opslaan(ingelogde_client, db):
             "sponsors_prijzen_interval": "5",
             "sponsors_prijzen_duur": "7",
             "sponsors_kop": "Dankzij",
+            "sponsors_kop_meervoud": "  Dankzij allemaal ",
             "sponsors_logos_per_dia": "9",
         },
     )
@@ -168,6 +195,7 @@ def test_instellingen_opslaan(ingelogde_client, db):
     # Prijzenlijst bewust uitgevinkt; interval heeft een ondergrens van 10s, max 6 logo's per dia.
     assert (i["sponsors_toon_prijzen"], i["sponsors_prijzen_interval"], i["sponsors_prijzen_duur"]) == (0, 10, 7)
     assert i["sponsors_kop"] == "Dankzij" and i["sponsors_logos_per_dia"] == 6
+    assert i["sponsors_kop_meervoud"] == "Dankzij allemaal"
 
 
 def test_beheer_vereist_kantine_tv_sectie(client, db):

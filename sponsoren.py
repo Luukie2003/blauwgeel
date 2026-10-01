@@ -10,6 +10,7 @@ staat in routes/sponsoren.py.
 """
 
 import math
+import re
 
 from helpers import KIOSK_AFBEELDINGEN_MAP
 
@@ -34,6 +35,19 @@ def logo_verhouding(bestandsnaam):
     return _VERHOUDING_CACHE[bestandsnaam]
 
 
+def kop_meervoud(kop):
+    """"Wij bedanken onze sponsor:" -> "Wij bedanken onze sponsoren:". Alleen
+    het losse woord "sponsor" wordt meervoud (hoofdletters blijven zoals ze
+    stonden); een kop zonder dat woord, zoals "Mede mogelijk gemaakt door",
+    past bij één én meer sponsors en blijft hetzelfde."""
+    return re.sub(
+        r"\bsponsor\b",
+        lambda m: m.group(0) + ("EN" if m.group(0).isupper() else "en"),
+        kop,
+        flags=re.IGNORECASE,
+    )
+
+
 def actieve_sponsoren(db):
     return db.execute(
         "SELECT * FROM kiosk_sponsorlogos WHERE actief = 1 ORDER BY volgorde, naam COLLATE NOCASE"
@@ -43,9 +57,13 @@ def actieve_sponsoren(db):
 def bouw_sponsor_dias(db, instellingen, sponsoren=None):
     """De sponsordia's in volgorde: een groep neemt de plek in van zijn
     eerste sponsor (op volgorde) en krijgt alle logo's van die groep, in
-    stukken van 'logos per dia'. Zonder actieve sponsoren een lege lijst."""
+    stukken van 'logos per dia'. Staan er meerdere logo's op een dia, dan
+    krijgt die de koptekst in het meervoud (zelf in te stellen, anders
+    automatisch). Zonder actieve sponsoren een lege lijst."""
     sponsoren = actieve_sponsoren(db) if sponsoren is None else sponsoren
     per_dia = max(1, instellingen["sponsors_logos_per_dia"])
+    kop = instellingen["sponsors_kop"]
+    kop_meer = (instellingen["sponsors_kop_meervoud"] or "").strip() or kop_meervoud(kop)
     groepen = {}
     volgorde = []
     for s in sponsoren:
@@ -66,14 +84,15 @@ def bouw_sponsor_dias(db, instellingen, sponsoren=None):
     for sleutel in volgorde:
         groep = groepen[sleutel]
         for i in range(0, len(groep["logos"]), per_dia):
+            logos = groep["logos"][i : i + per_dia]
             dias.append(
                 {
                     "type": "sponsorlogos",
                     "duur": max(3, instellingen["sponsors_duur_seconden"]),
                     "titel": groep["titel"],
-                    "kop": instellingen["sponsors_kop"],
+                    "kop": kop_meer if len(logos) > 1 else kop,
                     "achtergrond": instellingen["sponsors_achtergrond"],
-                    "logos": _met_aandeel(groep["logos"][i : i + per_dia]),
+                    "logos": _met_aandeel(logos),
                 }
             )
     return dias

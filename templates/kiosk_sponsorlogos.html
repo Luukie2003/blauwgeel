@@ -150,6 +150,11 @@
                 <input type="text" id="sponsors_kop" name="sponsors_kop" value="{{ instellingen.sponsors_kop }}">
             </div>
             <div class="veld">
+                <label for="sponsors_kop_meervoud">Koptekst bij meerdere logo's op een dia</label>
+                <input type="text" id="sponsors_kop_meervoud" name="sponsors_kop_meervoud" value="{{ instellingen.sponsors_kop_meervoud }}" placeholder="{{ kop_meervoud_automatisch }}">
+                <span class="tekst-zacht">Leeg laten = automatisch ("sponsor" wordt "sponsoren").</span>
+            </div>
+            <div class="veld">
                 <label for="sponsors_logos_per_dia">Max. logo's per dia (bij een groep)</label>
                 <input type="number" id="sponsors_logos_per_dia" name="sponsors_logos_per_dia" min="1" max="6" value="{{ instellingen.sponsors_logos_per_dia }}">
             </div>
