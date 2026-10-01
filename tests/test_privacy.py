@@ -47,6 +47,8 @@ def test_privacyverklaring_zonder_streepjes_en_zonder_mollie_gedeelte(client):
     # Het aparte stukje over Mollie bij "Met wie delen we gegevens?" is weg.
     assert "Mollie-dashboard" not in tekst and "privacyverklaring van Mollie" not in tekst
     assert "PythonAnywhere" in tekst
+    # De hostinglocatie staat er expliciet in (www.pythonanywhere.com = Verenigde Staten).
+    assert "staat in de Verenigde Staten" in tekst and "buiten de Europese Unie" in tekst
 
 
 def test_contactadres_is_instelbaar(client, db):

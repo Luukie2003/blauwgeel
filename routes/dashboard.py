@@ -26,8 +26,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.19.2"
+HUIDIGE_VERSIE = "1.19.3"
 WIJZIGINGEN = [
+    {
+        "versie": "1.19.3",
+        "datum": "1 oktober 2026",
+        "punten": [
+            "Privacyverklaring: vermeld dat de server van de hostingpartij (PythonAnywhere) in de Verenigde Staten staat",
+        ],
+    },
     {
         "versie": "1.19.2",
         "datum": "1 oktober 2026",
