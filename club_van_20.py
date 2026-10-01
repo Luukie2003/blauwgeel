@@ -14,6 +14,8 @@ nergens "gestart" te worden, het staat vanzelf klaar zodra 1 juli voorbij is.
 import csv
 import io
 import re
+import zipfile
+import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -44,10 +46,11 @@ PROJECT_STATUS_LABELS = {
     "klaar": "Klaar",
 }
 
-# Vanaf zoveel betaalde seizoenen krijgt een naambordje op het scherm een
-# gouden resp. zilveren vakje (zie zichtbare_leden).
-GOUD_VANAF = 3
-ZILVER_VANAF = 2
+# Een naambordje op het scherm is glanzend metaalgoud vanaf zoveel STERREN (zie
+# zichtbare_leden); instelbaar via club_van_20_glans_vanaf_sterren.
+STANDAARD_GLANS_VANAF_STERREN = 2
+
+STANDAARD_SEIZOENEN_PER_STER = 3
 
 SEIZOEN_PATROON = re.compile(r"^\s*(\d{4})\s*[-/]\s*(\d{2}|\d{4})\s*$")
 
@@ -249,22 +252,35 @@ def is_zichtbaar(lid, seizoen, zichtbaar_seizoenen):
     return False, False
 
 
+def sterren_voor(aantal_seizoenen, per_ster=STANDAARD_SEIZOENEN_PER_STER):
+    """Aantal sterren bij een bordje: 1 per 'per_ster' betaalde seizoenen
+    (standaard 3: bij 3 seizoenen lid de eerste ster, bij 6 de tweede, ...).
+    Onder de drempel geen ster. per_ster=1 geeft het oude gedrag (1 ster per
+    seizoen)."""
+    per = max(1, int(per_ster or STANDAARD_SEIZOENEN_PER_STER))
+    return max(0, int(aantal_seizoenen or 0)) // per
+
+
 def zichtbare_leden(db, instellingen, seizoen=None, leden=None):
     seizoen = seizoen or huidig_seizoen()
     leden = leden if leden is not None else leden_met_bijdragen(db, alleen_actief=True)
     markeer = bool(instellingen["club_van_20_markeer_onbetaald"])
+    per_ster = instellingen["club_van_20_seizoenen_per_ster"]
+    glans_vanaf = max(1, instellingen["club_van_20_glans_vanaf_sterren"] or STANDAARD_GLANS_VANAF_STERREN)
     resultaat = []
     for lid in leden:
         zichtbaar, onbetaald = is_zichtbaar(lid, seizoen, instellingen["club_van_20_zichtbaar_seizoenen"])
         if not zichtbaar:
             continue
         n = lid["aantal_seizoenen"]
+        sterren = sterren_voor(n, per_ster)
         resultaat.append(
             {
                 "naam": lid["naam"],
                 "team": (lid.get("team") or "").strip(),
-                "sterren": n,
-                "niveau": "goud" if n >= GOUD_VANAF else ("zilver" if n >= ZILVER_VANAF else ""),
+                "sterren": sterren,
+                "seizoenen": n,
+                "niveau": "glans" if sterren >= glans_vanaf else "",
                 "nieuw": is_nieuw_lid(lid, seizoen),
                 "niet_betaald": onbetaald and markeer,
                 "extra_groot": bool(lid.get("extra_groot")),
@@ -548,6 +564,9 @@ def bouw_slides(db, instellingen, qr_svg=None):
             {
                 "type": "club_van_20",
                 "duur": duur,
+                "seizoenen_per_ster": max(1, instellingen["club_van_20_seizoenen_per_ster"]),
+                "glans_vanaf_seizoenen": max(1, instellingen["club_van_20_glans_vanaf_sterren"])
+                * max(1, instellingen["club_van_20_seizoenen_per_ster"]),
                 "titel": instellingen["club_van_20_titel"],
                 "seizoen": seizoen,
                 "namen": groep,
@@ -679,6 +698,100 @@ def _lees_csv(tekst):
     return list(csv.reader(io.StringIO(tekst.lstrip("﻿")), delimiter=scheiding))
 
 
+MAX_XLSX_XML_BYTES = 30 * 1024 * 1024
+_XLSX_NS = {
+    "m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+    "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+}
+
+
+def _xlsx_xml(z, pad):
+    """Een XML-onderdeel uit het xlsx-zipbestand, met een grens aan de
+    uitgepakte grootte (zipbom) en zonder DTD/entiteiten (een bewust
+    kwaadaardig bestand kan met geneste entiteiten de server vastzetten)."""
+    if z.getinfo(pad).file_size > MAX_XLSX_XML_BYTES:
+        raise ValueError("Het Excel-bestand is te groot.")
+    data = z.read(pad)
+    if b"<!DOCTYPE" in data or b"<!ENTITY" in data:
+        raise ValueError("Dit Excel-bestand bevat niet-ondersteunde onderdelen.")
+    return ET.fromstring(data)
+
+
+def rijen_uit_xlsx(data):
+    """Leest het ledenblad uit een .xlsx (zonder extra bibliotheek, een xlsx is
+    een zipbestand met XML). Kiest het blad "Ledenlijst" als dat er is, anders
+    het eerste zichtbare blad met een kolom "Naambordje" of "Voornaam"; een
+    verborgen blad (bijv. een oude versie van de lijst) telt nooit mee. Geeft
+    de rijen als lijst van lijsten tekst, net als de CSV-lezer. ValueError met
+    een leesbare melding als het geen bruikbaar Excel-bestand is."""
+    try:
+        z = zipfile.ZipFile(io.BytesIO(data))
+        wb = _xlsx_xml(z, "xl/workbook.xml")
+        rels = _xlsx_xml(z, "xl/_rels/workbook.xml.rels")
+    except (zipfile.BadZipFile, KeyError, ET.ParseError):
+        raise ValueError("Dit lijkt geen geldig Excel-bestand (.xlsx).")
+    doel = {r.get("Id"): r.get("Target") for r in rels}
+    gedeeld = []
+    if "xl/sharedStrings.xml" in z.namelist():
+        for si in _xlsx_xml(z, "xl/sharedStrings.xml").findall("m:si", _XLSX_NS):
+            gedeeld.append("".join(t.text or "" for t in si.iter("{%s}t" % _XLSX_NS["m"])))
+
+    def kolom(ref):
+        n = 0
+        for ch in re.match(r"[A-Z]+", ref).group(0):
+            n = n * 26 + ord(ch) - 64
+        return n - 1
+
+    def blad_rijen(pad):
+        rijen = []
+        for row in _xlsx_xml(z, pad).iter("{%s}row" % _XLSX_NS["m"]):
+            cellen = {}
+            for c in row.findall("m:c", _XLSX_NS):
+                v = c.find("m:v", _XLSX_NS)
+                soort = c.get("t")
+                if soort == "s" and v is not None:
+                    waarde = gedeeld[int(v.text)]
+                elif soort == "inlineStr":
+                    waarde = "".join(x.text or "" for x in c.iter("{%s}t" % _XLSX_NS["m"]))
+                elif v is not None and v.text is not None:
+                    waarde = v.text
+                else:
+                    continue
+                cellen[kolom(c.get("r"))] = waarde
+            rijen.append([cellen.get(i, "") for i in range(max(cellen) + 1)] if cellen else [])
+        return rijen
+
+    kandidaten = []
+    for sh in wb.find("m:sheets", _XLSX_NS):
+        if sh.get("state") in ("hidden", "veryHidden"):
+            continue
+        doelpad = doel.get(sh.get("{%s}id" % _XLSX_NS["r"]), "")
+        pad = "xl/" + doelpad.lstrip("/").replace("xl/", "", 1)
+        if pad not in z.namelist():
+            continue
+        kandidaten.append((sh.get("name", ""), pad))
+    # "Ledenlijst" eerst, daarna de rest in bladvolgorde.
+    kandidaten.sort(key=lambda k: k[0].strip().lower() != "ledenlijst")
+    for _, pad in kandidaten:
+        rijen = blad_rijen(pad)
+        for rij in rijen[:15]:
+            cellen = {c.strip().lower() for c in rij}
+            if "naambordje" in cellen or "voornaam" in cellen:
+                return rijen
+    raise ValueError("Geen blad met een kolom 'Naambordje' of 'Voornaam' gevonden in dit Excel-bestand.")
+
+
+def rijen_naar_csv(rijen):
+    """Zet rijen om naar puntkomma-gescheiden tekst -- zo gaat een Excel-
+    bestand door dezelfde voorbeeld- en bevestigstappen als een plak- of
+    CSV-import."""
+    buffer = io.StringIO()
+    schrijver = csv.writer(buffer, delimiter=";", lineterminator="\n")
+    for rij in rijen:
+        schrijver.writerow(rij)
+    return buffer.getvalue()
+
+
 def parse_import(tekst, standaard_bedrag=20):
     """Leest een export van de Club van 20-spreadsheet (CSV, of rechtstreeks
     geplakt uit Google Sheets/Excel = tab-gescheiden). Herkent de kolommen op
@@ -787,12 +900,62 @@ def parse_import(tekst, standaard_bedrag=20):
     return {"rijen": rijen, "seizoenen": alle, "waarschuwingen": waarschuwingen, "fout": None}
 
 
+def _bijdrage_ongewijzigd(bestaande, b):
+    """True als de import voor dit seizoen niets verandert aan wat er al staat
+    (zelfde status en bedrag) -- dan blijft de bestaande bijdrage met al haar
+    details (betaalwijze, notitie) ongemoeid."""
+    return (
+        bestaande is not None
+        and bestaande["status"] == b["status"]
+        and (b["status"] != "betaald" or abs((bestaande["bedrag"] or 0) - (b.get("bedrag") or 0)) < 0.005)
+        and not b.get("betaald_door")
+    )
+
+
+def import_samenvatting(db, rijen):
+    """Wat de import zou doen, voor het voorbeeld: nieuwe leden, en per
+    bijdrage of die nieuw, gewijzigd of ongewijzigd is -- zodat je vooraf ziet
+    of een grote import (bijv. met jaren historie erbij) alleen aanvult of
+    ook bestaande betalingen aanpast."""
+    bestaand = {
+        r["naam"].lower(): r["id"] for r in db.execute("SELECT id, naam FROM club_van_20_leden").fetchall()
+    }
+    huidige = {
+        (r["lid_id"], r["seizoen"]): r for r in db.execute("SELECT * FROM club_van_20_bijdragen").fetchall()
+    }
+    samenvatting = {"nieuwe_leden": 0, "bestaande_leden": 0, "nieuw": 0, "gewijzigd": 0, "ongewijzigd": 0, "wijzigingen": []}
+    for rij in rijen:
+        lid_id = bestaand.get(rij["naam"].lower())
+        samenvatting["bestaande_leden" if lid_id else "nieuwe_leden"] += 1
+        for seizoen, b in rij["bijdragen"].items():
+            if b["status"] == "niet_gevraagd" and not b.get("betaald_door"):
+                continue
+            huidig = huidige.get((lid_id, seizoen)) if lid_id else None
+            if huidig is None:
+                samenvatting["nieuw"] += 1
+            elif _bijdrage_ongewijzigd(huidig, b):
+                samenvatting["ongewijzigd"] += 1
+            else:
+                samenvatting["gewijzigd"] += 1
+                samenvatting["wijzigingen"].append(
+                    f"{rij['naam']} {seizoen}: {BIJDRAGE_STATUS_LABELS[huidig['status']].lower()}"
+                    f"{' €%g' % huidig['bedrag'] if huidig['status'] == 'betaald' else ''} → "
+                    f"{BIJDRAGE_STATUS_LABELS[b['status']].lower()}"
+                    f"{' €%g' % b['bedrag'] if b['status'] == 'betaald' else ''}"
+                )
+    return samenvatting
+
+
 def voer_import_uit(db, rijen, gebruiker=None, standaard_bedrag=20):
     """Zet geparste rijen (zie parse_import) in de database. Een lid met
     hetzelfde naambordje (hoofdletterongevoelig) wordt bijgewerkt i.p.v.
-    dubbel aangemaakt; de seizoenen uit de import overschrijven wat er voor
-    die seizoenen al stond, andere seizoenen blijven ongemoeid. Geeft
-    (aantal nieuw, aantal bijgewerkt)."""
+    dubbel aangemaakt. Bij zo'n bestaand lid worden alleen LEGE velden
+    (team, telefoon, ...) aangevuld: wat in de app is aangepast (bijv. een
+    team dat inmiddels O23 heet) blijft staan. De seizoenen uit de import
+    overschrijven wat er voor die seizoenen stond, behalve een bijdrage die
+    al dezelfde status en hetzelfde bedrag heeft (die blijft met al haar
+    details -- betaalwijze, notitie -- ongemoeid); andere seizoenen blijven
+    ongemoeid. Geeft (aantal nieuw, aantal bijgewerkt)."""
     bestaand = {
         r["naam"].lower(): r["id"]
         for r in db.execute("SELECT id, naam FROM club_van_20_leden").fetchall()
@@ -823,15 +986,22 @@ def voer_import_uit(db, rijen, gebruiker=None, standaard_bedrag=20):
             bestaand[rij["naam"].lower()] = lid_id
             nieuw += 1
         else:
-            # Alleen invullen wat de import ook echt heeft -- een lege cel
-            # wist niet wat er al in de administratie stond.
+            # Alleen lege velden aanvullen: de app is leidend, de import
+            # vult gaten.
+            huidig = db.execute("SELECT * FROM club_van_20_leden WHERE id = ?", (lid_id,)).fetchone()
             for veld in ("voornaam", "achternaam", "team", "telefoon", "email", "notitie"):
-                if rij[veld]:
+                if rij[veld] and not (huidig[veld] or "").strip():
                     db.execute(
                         f"UPDATE club_van_20_leden SET {veld} = ? WHERE id = ?", (rij[veld], lid_id)
                     )
             bijgewerkt += 1
         for seizoen, b in rij["bijdragen"].items():
+            bestaande = db.execute(
+                "SELECT status, bedrag FROM club_van_20_bijdragen WHERE lid_id = ? AND seizoen = ?",
+                (lid_id, seizoen),
+            ).fetchone()
+            if _bijdrage_ongewijzigd(bestaande, b):
+                continue
             sla_bijdrage_op(
                 db,
                 lid_id,

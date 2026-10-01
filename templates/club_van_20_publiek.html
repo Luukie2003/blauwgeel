@@ -47,9 +47,9 @@
         .team.eerste .balk > div { background: var(--geel); }
         .muur { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: 0.5rem; }
         .bordje { background: #fff; color: var(--blauw); border-radius: 6px; padding: 0.55rem 0.4rem; text-align: center; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .bordje.goud { background: var(--geel); color: var(--blauw-donker); }
-        .bordje .sterren { display: block; font-size: 0.7rem; color: #c9a100; letter-spacing: 0.04em; }
-        .bordje.goud .sterren { color: var(--blauw-donker); }
+        .bordje.glans { background: linear-gradient(135deg, #f3c623 0%, #ffe9a0 22%, #f0b90b 48%, #ffe58a 74%, #e3a600 100%); color: var(--blauw-donker); }
+        .bordje .sterren { display: block; font-size: 1.25rem; line-height: 1.1; color: #c9a100; letter-spacing: 0.05em; }
+        .bordje.glans .sterren { color: var(--blauw-donker); }
         footer { text-align: center; color: var(--tekst-zacht); font-size: 0.8rem; margin-top: 2rem; }
         /* Aankondiging met aftelklok (zie aankondiging() in club_van_20.py). */
         .aankondiging { background: var(--geel); color: var(--blauw-donker); border-radius: 16px; padding: 1.2rem 1rem 1.3rem; text-align: center; margin-bottom: 1.2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: aankondiging-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -140,7 +140,7 @@
         <h2 class="smal">De Club van 20 &middot; {{ seizoen }}</h2>
         <div class="muur">
             {% for lid in namen %}
-            <div class="bordje smal{{ ' goud' if lid.niveau == 'goud' }}">
+            <div class="bordje smal{{ ' glans' if lid.niveau == 'glans' }}">
                 {% if lid.sterren %}<span class="sterren">{{ '★' * lid.sterren if lid.sterren <= 5 else lid.sterren ~ '★' }}</span>{% endif %}{{ lid.naam }}
             </div>
             {% endfor %}

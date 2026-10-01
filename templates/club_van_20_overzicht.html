@@ -111,7 +111,7 @@
                     <td><input type="checkbox" class="bulk-rij" name="lid_ids" value="{{ lid.id }}" form="bulk-form" style="width:auto"></td>
                     <td>
                         <a href="{{ url_for('club_van_20_lid_bewerken', lid_id=lid.id) }}" class="lid-naam">
-                            {% if lid.aantal_seizoenen %}<span class="lid-sterren" title="{{ lid.aantal_seizoenen }} seizoen(en) lid">{{ '★' * lid.aantal_seizoenen if lid.aantal_seizoenen <= 5 else lid.aantal_seizoenen ~ '★' }}</span>{% endif %}{{ lid.naam }}</a>
+                            {% if lid.sterren %}<span class="lid-sterren" title="{{ lid.aantal_seizoenen }} seizoenen lid">{{ '★' * lid.sterren if lid.sterren <= 5 else lid.sterren ~ '★' }}</span>{% endif %}{{ lid.naam }}</a>
                         {% if lid.op_scherm %}<span class="c20-scherm-stip" title="Staat nu op het kantine scherm"></span>{% endif %}
                         {% if lid.volledige_naam and lid.volledige_naam != lid.naam %}<br><span class="tekst-zacht">{{ lid.volledige_naam }}</span>{% endif %}
                         {% if lid.status == 'inactief' %}<br><span class="badge badge-neutraal">Gearchiveerd{% if lid.gearchiveerd_op %} {{ lid.gearchiveerd_op|datum_kort }}{% endif %}</span>{% endif %}

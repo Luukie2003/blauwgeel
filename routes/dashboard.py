@@ -26,8 +26,17 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.17.3"
+HUIDIGE_VERSIE = "1.18.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.18.0",
+        "datum": "1 oktober 2026",
+        "punten": [
+            "Club van 20: een ster is er nu voor elke 3 betaalde seizoenen (in te stellen onder Scherm & werving) en staat groter, als label op de hoek van het bordje, op het kantine scherm, de publieke pagina en het ledenoverzicht",
+            "Club van 20: bordjes zijn gewoon wit tot 2 sterren; vanaf 2 sterren (6 seizoenen) zijn ze glanzend metaalgoud met af en toe een lichtstreep (ook instelbaar). Het oude zilver/goud op basis van het aantal seizoenen is vervangen",
+            "Club van 20 importeren: je kunt nu het Excel-bestand (.xlsx) zelf uploaden, met alle jaren historie; bestaande leden worden alleen aangevuld (een aangepast team blijft staan) en je ziet vooraf welke bestaande betalingen zouden wijzigen",
+        ],
+    },
     {
         "versie": "1.17.3",
         "datum": "30 september 2026",

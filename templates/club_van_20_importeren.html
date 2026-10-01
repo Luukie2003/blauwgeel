@@ -2,8 +2,10 @@
 {% block titel %}Importeren · Club van 20{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
-    Zet de oude Club van 20-spreadsheet in &eacute;&eacute;n keer over. In Google Sheets: <em>Bestand &rarr; Downloaden &rarr;
-    Door komma's gescheiden waarden (.csv)</em>, of selecteer alle cellen (inclusief de kopregel) en plak ze hieronder.
+    Zet de Club van 20-spreadsheet in &eacute;&eacute;n keer over: upload het Excel-bestand (.xlsx) of een CSV, of selecteer alle
+    cellen (inclusief de kopregel) en plak ze hieronder. Bij een Excel-bestand wordt het blad "Ledenlijst" gebruikt (verborgen bladen
+    tellen niet mee). Is een lid al aanwezig (zelfde naambordje), dan worden alleen lege velden aangevuld &mdash; wat je in de app
+    hebt aangepast, zoals een team, blijft staan. De seizoenen die je erin zet komen erbij; betalingen die al hetzelfde zijn blijven ongemoeid.
     Herkende kolommen: Voornaam, Achternaam, Team, Naambordje, een kolom per seizoen (bijv. "2023-2024") met het
     betaalde bedrag, "Status 2026-2027", "Betaald door", Telefoon en E-mail.
 </p>
@@ -12,8 +14,8 @@
     <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="veld">
-            <label for="bestand">CSV-bestand</label>
-            <input type="file" id="bestand" name="bestand" accept=".csv,.tsv,.txt,text/csv">
+            <label for="bestand">Excel- of CSV-bestand</label>
+            <input type="file" id="bestand" name="bestand" accept=".xlsx,.xlsm,.csv,.tsv,.txt,text/csv">
         </div>
         <div class="veld">
             <label for="tekst">&hellip;of plak hier de cellen</label>
@@ -28,12 +30,22 @@
 <div class="kaart">
     <h2 style="margin-top:0">Voorbeeld: {{ voorbeeld.rijen|length }} leden</h2>
     <p>
-        {{ voorbeeld.rijen|selectattr('bestaat')|list|length }} bestaan al (worden bijgewerkt op naambordje),
+        {{ voorbeeld.rijen|selectattr('bestaat')|list|length }} bestaan al (worden aangevuld op naambordje),
         {{ voorbeeld.rijen|rejectattr('bestaat')|list|length }} zijn nieuw.
+        Betalingen: <strong>{{ voorbeeld.samenvatting.nieuw }} nieuw</strong>,
+        <strong>{{ voorbeeld.samenvatting.gewijzigd }} gewijzigd</strong>,
+        {{ voorbeeld.samenvatting.ongewijzigd }} ongewijzigd.
         {% for s in voorbeeld.seizoenen %}
         <span class="badge badge-neutraal">{{ s }}: {{ voorbeeld.totalen[s]|euro }}</span>
         {% endfor %}
     </p>
+    {% if voorbeeld.samenvatting.wijzigingen %}
+    <details open style="margin-bottom:0.8rem">
+        <summary><strong>{{ voorbeeld.samenvatting.wijzigingen|length }} bestaande betaling(en) worden aangepast</strong></summary>
+        <ul class="tekst-zacht">{% for w in voorbeeld.samenvatting.wijzigingen[:40] %}<li>{{ w }}</li>{% endfor %}
+        {% if voorbeeld.samenvatting.wijzigingen|length > 40 %}<li>&hellip; en {{ voorbeeld.samenvatting.wijzigingen|length - 40 }} meer</li>{% endif %}</ul>
+    </details>
+    {% endif %}
     {% if voorbeeld.waarschuwingen %}
     <details style="margin-bottom:0.8rem">
         <summary>{{ voorbeeld.waarschuwingen|length }} opmerking(en)</summary>

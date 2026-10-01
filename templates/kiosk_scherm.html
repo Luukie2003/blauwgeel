@@ -107,6 +107,7 @@
                     {% for lid in slide.namen %}
                     <div class="c20-bordje{{ ' c20-bordje--' ~ lid.niveau if lid.niveau else '' }}{{ ' c20-bordje--groot' if lid.extra_groot else '' }}{{ ' c20-bordje--nieuw' if lid.nieuw else '' }}{{ ' c20-bordje--niet-betaald' if lid.niet_betaald else '' }}{{ ' c20-bordje--lang' if lid.lang else '' }}"
                          style="animation-delay: {{ (loop.index0 * 0.035)|round(3) }}s">
+                        {% if lid.niveau == 'glans' %}<span class="c20-glans" style="--gd: {{ ((loop.index0 * 7) % 11 * 0.7)|round(1) }}s"></span>{% endif %}
                         {% if lid.sterren %}<span class="c20-sterren">{{ '★' * lid.sterren if lid.sterren <= 5 else lid.sterren ~ '★' }}</span>{% endif %}
                         <span class="c20-naam">{{ lid.naam }}</span>
                         {% if lid.nieuw %}<span class="c20-label-nieuw">Nieuw</span>{% endif %}
@@ -117,7 +118,7 @@
                     {% endfor %}
                 </div>
                 <div class="c20-voet">
-                    <span><span class="c20-sterren">★</span> = seizoen lid &middot; <span class="c20-legenda c20-legenda--goud"></span> 3+ seizoenen &middot; <span class="c20-legenda c20-legenda--zilver"></span> 2 seizoenen</span>
+                    <span><span class="c20-ster-legenda">★</span> = elke {{ slide.seizoenen_per_ster }} seizoenen lid &middot; <span class="c20-legenda c20-legenda--glans"></span> glanzend vanaf {{ slide.glans_vanaf_seizoenen }} seizoenen</span>
                     {% if slide.pagina %}<span class="pagina-indicator">{{ slide.pagina }}</span>{% endif %}
                 </div>
                 {% elif slide.type == 'club_van_20_teller' %}

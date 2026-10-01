@@ -48,6 +48,18 @@
         </div>
         <p class="tekst-zacht" style="margin-top:-0.4rem">Zoals de oude dia's: 24 vakjes in 4 kolommen. Bij meer namen komen er vanzelf extra dia's bij.</p>
         <div class="veld">
+            <label for="club_van_20_seizoenen_per_ster">Seizoenen per ster</label>
+            <input type="number" id="club_van_20_seizoenen_per_ster" name="club_van_20_seizoenen_per_ster" min="1" max="20"
+                   value="{{ instellingen.club_van_20_seizoenen_per_ster }}" style="max-width:8rem">
+            <span class="tekst-zacht">Bij {{ instellingen.club_van_20_seizoenen_per_ster }} betaalde seizoenen krijgt een bordje de eerste ster, bij {{ instellingen.club_van_20_seizoenen_per_ster * 2 }} de tweede, enzovoort. Zet je dit op 1, dan krijgt elk betaald seizoen een ster.</span>
+        </div>
+        <div class="veld">
+            <label for="club_van_20_glans_vanaf_sterren">Glanzend goud vanaf (sterren)</label>
+            <input type="number" id="club_van_20_glans_vanaf_sterren" name="club_van_20_glans_vanaf_sterren" min="1" max="20"
+                   value="{{ instellingen.club_van_20_glans_vanaf_sterren }}" style="max-width:8rem">
+            <span class="tekst-zacht">Bordjes met zoveel sterren of meer zijn glanzend metaalgoud, met af en toe een lichtstreep. Daaronder zijn ze gewoon wit (nu: vanaf {{ instellingen.club_van_20_glans_vanaf_sterren * instellingen.club_van_20_seizoenen_per_ster }} seizoenen).</span>
+        </div>
+        <div class="veld">
             <label for="club_van_20_zichtbaar_seizoenen">Wie staat er op het scherm?</label>
             <select id="club_van_20_zichtbaar_seizoenen" name="club_van_20_zichtbaar_seizoenen">
                 <option value="1" {{ 'selected' if instellingen.club_van_20_zichtbaar_seizoenen == 1 }}>Alleen wie dit seizoen betaald heeft</option>

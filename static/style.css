@@ -647,7 +647,7 @@ form.inline { display: inline; }
    de status staat als gekleurd select-vakje (zelfde kleuren als de
    badge-klassen hierboven) direct in de tabel. */
 .lid-naam { font-size: 1.02rem; font-weight: 700; }
-.lid-sterren { color: var(--geel-donker); margin-right: 0.3rem; letter-spacing: 0.03em; }
+.lid-sterren { color: var(--geel-donker); margin-right: 0.3rem; letter-spacing: 0.03em; font-size: 1.3em; line-height: 1; vertical-align: -0.08em; }
 .c20-tabel td { vertical-align: middle; }
 .c20-tabel .c20-seizoenscel { text-align: center; width: 3.6rem; font-variant-numeric: tabular-nums; }
 .c20-seizoenscel.betaald { background: #cdebd6; color: var(--groen); font-weight: 700; }

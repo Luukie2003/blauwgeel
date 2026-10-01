@@ -284,6 +284,12 @@ KOLOM_MIGRATIES = [
     # volle dia), ook op een laatste dia met maar een paar namen. Aan = die
     # laatste dia vullen met minder, maar grotere bordjes (zie bouw_slides).
     ("kiosk_scherm_instellingen", "club_van_20_laatste_dia_vullen", "INTEGER NOT NULL DEFAULT 0"),
+    # Hoeveel betaalde seizoenen een ster opleveren (3 = elke 3 seizoenen lid
+    # 1 ster, zie sterren_voor in club_van_20.py). 1 = een ster per seizoen.
+    ("kiosk_scherm_instellingen", "club_van_20_seizoenen_per_ster", "INTEGER NOT NULL DEFAULT 3"),
+    # Vanaf hoeveel sterren een bordje glanzend metaalgoud is (met een lichtstreep
+    # die af en toe over het bordje glijdt). Daaronder gewoon wit.
+    ("kiosk_scherm_instellingen", "club_van_20_glans_vanaf_sterren", "INTEGER NOT NULL DEFAULT 2"),
     # Aankondiging met aftelklok bovenaan de publieke Club van 20-pagina (waar
     # de QR-code van de wervingsdia heen wijst), bijv. "Vanaf woensdag kun
     # je verlengen!". aftellen_tot is een lokale Amsterdamse tijd

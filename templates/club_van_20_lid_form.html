@@ -50,7 +50,7 @@
                 <label for="eerdere_seizoenen">Seizoenen lid vóór deze administratie</label>
                 <input type="number" id="eerdere_seizoenen" name="eerdere_seizoenen" min="0" max="50"
                        value="{{ lid.eerdere_seizoenen or 0 if lid else 0 }}" style="max-width:8rem">
-                <span class="tekst-zacht">Telt mee voor de sterren/het gouden bordje.</span>
+                <span class="tekst-zacht">Telt mee voor de ster(ren) en het glanzende bordje.</span>
             </div>
         </div>
         <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.5rem">
@@ -101,7 +101,7 @@
 <div style="flex:1 1 360px; max-width:560px">
     <div class="kaart">
         <h2 style="margin-top:0">
-            {% if lid.aantal_seizoenen %}<span class="lid-sterren">{{ '★' * lid.aantal_seizoenen if lid.aantal_seizoenen <= 5 else lid.aantal_seizoenen ~ '★' }}</span>{% endif %}{{ lid.naam }}
+            {% if lid.sterren %}<span class="lid-sterren" title="{{ lid.aantal_seizoenen }} seizoenen lid">{{ '★' * lid.sterren if lid.sterren <= 5 else lid.sterren ~ '★' }}</span>{% endif %}{{ lid.naam }}
         </h2>
         <p style="margin:0 0 0.4rem">
             {% if op_scherm %}

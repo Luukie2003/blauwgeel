@@ -1,4 +1,6 @@
+import io
 import sqlite3
+import zipfile
 from datetime import date
 
 from conftest import stel_csrf_token_in as _csrf
@@ -6,6 +8,9 @@ from test_secties_rechten import _login, _maak_vrijwilliger
 
 from club_van_20 import (
     bereken_club_van_20_status,
+    rijen_naar_csv,
+    rijen_uit_xlsx,
+    sterren_voor,
     financien,
     huidig_seizoen,
     normaliseer_seizoen,
@@ -18,6 +23,7 @@ from club_van_20 import (
 )
 
 HUIDIG = huidig_seizoen()
+HUIDIG_JAAR = int(HUIDIG[:4])
 VORIG = verschuif_seizoen(HUIDIG, -1)
 TWEE_TERUG = verschuif_seizoen(HUIDIG, -2)
 
@@ -112,16 +118,24 @@ def test_scherm_alleen_dit_seizoen_en_markeer_onbetaald(client, db):
     assert "c20-bordje--niet-betaald" not in tekst[max(0, positie - 400) : positie]
 
 
-def test_scherm_goud_zilver_nieuw_en_sterren(client, db):
+def test_scherm_glans_vanaf_twee_sterren_nieuw_en_oude_seizoenen(client, db):
     _alleen_club_van_20(db)
-    trouw = _lid(db, "Trouw Lid")
+    # 1 ster (3 seizoenen): nog een gewoon wit bordje, wel met het sterlabel.
+    een_ster = _lid(db, "Een Ster")
     for s in (TWEE_TERUG, VORIG, HUIDIG):
-        _bijdrage(db, trouw, s)
-    zilver = _lid(db, "Tweede Jaar")
-    _bijdrage(db, zilver, VORIG)
-    _bijdrage(db, zilver, HUIDIG)
+        _bijdrage(db, een_ster, s)
+    # 2 sterren (6 seizoenen): glanzend metaalgoud.
+    twee_sterren = _lid(db, "Twee Sterren")
+    for jaar in range(HUIDIG_JAAR - 5, HUIDIG_JAAR + 1):
+        _bijdrage(db, twee_sterren, f"{jaar}-{jaar + 1}")
+    # Geen ster (2 seizoenen): wit, geen label -- het oude zilver bestaat niet meer.
+    twee_jaar = _lid(db, "Twee Jaar")
+    _bijdrage(db, twee_jaar, VORIG)
+    _bijdrage(db, twee_jaar, HUIDIG)
     _bijdrage(db, _lid(db, "Nieuwkomer"), HUIDIG)
-    _bijdrage(db, _lid(db, "Oud Lid Zonder Historie", eerdere_seizoenen=4), HUIDIG)
+    # Eerdere seizoenen (van vóór de administratie) tellen mee voor de sterren,
+    # en maken iemand geen "nieuw" lid.
+    _bijdrage(db, _lid(db, "Oud Lid Zonder Historie", eerdere_seizoenen=9), HUIDIG)
 
     tekst = client.get("/kiosk/scherm").data.decode()
 
@@ -130,13 +144,29 @@ def test_scherm_goud_zilver_nieuw_en_sterren(client, db):
         begin = tekst.rindex('<div class="c20-bordje', 0, positie)
         return tekst[begin:positie]
 
-    assert "c20-bordje--goud" in klassen("Trouw Lid") and "★★★" in klassen("Trouw Lid")
-    assert "c20-bordje--zilver" in klassen("Tweede Jaar")
+    assert 'class="c20-sterren">★</span>' in klassen("Een Ster") and "c20-bordje--glans" not in klassen("Een Ster")
+    assert "c20-bordje--glans" in klassen("Twee Sterren") and "c20-glans" in klassen("Twee Sterren")
+    assert 'class="c20-sterren">★★</span>' in klassen("Twee Sterren")
+    assert "c20-sterren" not in klassen("Twee Jaar") and "c20-bordje--glans" not in klassen("Twee Jaar")
     assert "c20-bordje--nieuw" in klassen("Nieuwkomer")
-    # Eerdere seizoenen (van vóór de administratie) tellen mee voor goud,
-    # en maken iemand geen "nieuw" lid.
-    assert "c20-bordje--goud" in klassen("Oud Lid Zonder Historie")
+    assert "c20-bordje--glans" in klassen("Oud Lid Zonder Historie")  # 10 seizoenen = 3 sterren
     assert "c20-bordje--nieuw" not in klassen("Oud Lid Zonder Historie")
+    assert "glanzend vanaf 6 seizoenen" in tekst
+
+    # Instelbaar: glans al vanaf 1 ster.
+    _zet(db, club_van_20_glans_vanaf_sterren=1)
+    tekst = client.get("/kiosk/scherm").data.decode()
+    assert "c20-bordje--glans" in klassen("Een Ster") and "glanzend vanaf 3 seizoenen" in tekst
+
+
+def test_glans_instelling_opslaan(ingelogde_client, db):
+    ingelogde_client.post(
+        "/club-van-20/instellingen",
+        data={"csrf_token": _csrf(ingelogde_client), "club_van_20_glans_vanaf_sterren": "3"},
+    )
+    assert db.execute("SELECT club_van_20_glans_vanaf_sterren AS n FROM kiosk_scherm_instellingen").fetchone()["n"] == 3
+    pagina = ingelogde_client.get("/club-van-20/instellingen").data.decode()
+    assert 'name="club_van_20_glans_vanaf_sterren"' in pagina and 'value="3"' in pagina
 
 
 def test_scherm_verdeelt_namen_en_vult_laatste_dia_met_lege_vakjes(client, db):
@@ -567,6 +597,239 @@ def test_dashboard_tegel_alleen_met_sectie(client, db):
     _maak_vrijwilliger(db, "vrijwilliger_dashboard", "voorraad")
     _login(client, "vrijwilliger_dashboard")
     assert b"Moet Nog" not in client.get("/").data
+
+
+# ---------- Sterren: 1 per 3 seizoenen ----------
+
+
+def test_sterren_voor_per_drie_seizoenen():
+    assert [sterren_voor(n) for n in range(0, 10)] == [0, 0, 0, 1, 1, 1, 2, 2, 2, 3]
+    assert sterren_voor(5, per_ster=1) == 5  # oud gedrag: 1 ster per seizoen
+    assert sterren_voor(7, per_ster=0) == 2  # onzinnige waarde valt terug op 3
+
+
+def test_scherm_toont_ster_per_drie_seizoenen_en_legenda(client, db):
+    _alleen_club_van_20(db)
+    zes = _lid(db, "Zes Jaar")
+    for jaar in range(HUIDIG_JAAR - 5, HUIDIG_JAAR + 1):
+        _bijdrage(db, zes, f"{jaar}-{jaar + 1}")
+    twee = _lid(db, "Twee Jaar")
+    _bijdrage(db, twee, VORIG)
+    _bijdrage(db, twee, HUIDIG)
+
+    tekst = client.get("/kiosk/scherm").data.decode()
+
+    def sterren(naam):
+        positie = tekst.index(f'<span class="c20-naam">{naam}</span>')
+        begin = tekst.rindex('<div class="c20-bordje', 0, positie)
+        stuk = tekst[begin:positie]
+        return stuk.count("★") if "c20-sterren" in stuk else 0
+
+    assert sterren("Zes Jaar") == 2
+    assert sterren("Twee Jaar") == 0
+    assert "elke 3 seizoenen lid" in tekst
+
+    _zet(db, club_van_20_seizoenen_per_ster=1)
+    tekst = client.get("/kiosk/scherm").data.decode()
+    # Meer dan 5 sterren worden compact als "6★" getoond i.p.v. zes losse sterren.
+    assert 'class="c20-sterren">6★</span>' in tekst
+    assert "elke 1 seizoenen lid" in tekst
+
+
+def test_seizoenen_per_ster_instelbaar(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/club-van-20/instellingen",
+        data={"csrf_token": _csrf(ingelogde_client), "club_van_20_seizoenen_per_ster": "4"},
+    )
+    assert resp.status_code == 302
+    assert db.execute("SELECT club_van_20_seizoenen_per_ster AS n FROM kiosk_scherm_instellingen").fetchone()["n"] == 4
+    ingelogde_client.post(
+        "/club-van-20/instellingen",
+        data={"csrf_token": _csrf(ingelogde_client), "club_van_20_seizoenen_per_ster": "0"},
+    )
+    # Een onzinnige waarde (0) wordt 1: nooit een deling door nul of "geen enkele ster".
+    assert db.execute("SELECT club_van_20_seizoenen_per_ster AS n FROM kiosk_scherm_instellingen").fetchone()["n"] == 1
+
+
+def test_overzicht_en_publiek_gebruiken_dezelfde_sterrenregel(ingelogde_client, client, db):
+    zes = _lid(db, "Zes Jaar")
+    for jaar in range(HUIDIG_JAAR - 5, HUIDIG_JAAR + 1):
+        _bijdrage(db, zes, f"{jaar}-{jaar + 1}")
+    overzicht = ingelogde_client.get("/club-van-20").data.decode()
+    assert 'title="6 seizoenen lid">★★</span>' in overzicht
+    publiek = client.get("/club-van-20/doe-mee").data.decode()
+    assert '<span class="sterren">★★</span>' in publiek
+
+
+# ---------- Importeren: Excel ----------
+
+
+def _maak_xlsx(bladen):
+    """Bouwt een minimaal .xlsx-bestand. bladen: lijst van (naam, rijen, verborgen)."""
+    gedeeld, index = [], {}
+
+    def s_idx(tekst):
+        if tekst not in index:
+            index[tekst] = len(gedeeld)
+            gedeeld.append(tekst)
+        return index[tekst]
+
+    sheet_xml = []
+    for _, rijen, _ in bladen:
+        regels = []
+        for r, rij in enumerate(rijen, start=1):
+            cellen = []
+            for c, waarde in enumerate(rij):
+                if waarde in ("", None):
+                    continue
+                ref = f"{chr(65 + c)}{r}"
+                if isinstance(waarde, (int, float)):
+                    cellen.append(f'<c r="{ref}"><v>{waarde}</v></c>')
+                else:
+                    cellen.append(f'<c r="{ref}" t="s"><v>{s_idx(waarde)}</v></c>')
+            regels.append(f'<row r="{r}">{"".join(cellen)}</row>')
+        sheet_xml.append(
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            f'<sheetData>{"".join(regels)}</sheetData></worksheet>'
+        )
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as z:
+        verborgen_attr = {True: ' state="hidden"', False: ""}
+        sheets = "".join(
+            f'<sheet name="{naam}" sheetId="{i}" r:id="rId{i}"{verborgen_attr[verborgen]}/>'
+            for i, (naam, _, verborgen) in enumerate(bladen, start=1)
+        )
+        z.writestr(
+            "xl/workbook.xml",
+            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+            f'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>{sheets}</sheets></workbook>',
+        )
+        rels = "".join(
+            f'<Relationship Id="rId{i}" Target="worksheets/sheet{i}.xml"/>' for i in range(1, len(bladen) + 1)
+        )
+        z.writestr(
+            "xl/_rels/workbook.xml.rels",
+            f'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">{rels}</Relationships>',
+        )
+        z.writestr(
+            "xl/sharedStrings.xml",
+            '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            + "".join(f"<si><t>{t}</t></si>" for t in gedeeld)
+            + "</sst>",
+        )
+        for i, xml in enumerate(sheet_xml, start=1):
+            z.writestr(f"xl/worksheets/sheet{i}.xml", xml)
+    return buffer.getvalue()
+
+
+KOP = ["Voornaam", "Achternaam", "Team", "Naambordje", "2018-2019", "2025-2026", "2026-2027", "Status 2026-2027"]
+
+
+def test_xlsx_kiest_het_ledenblad_en_slaat_verborgen_bladen_over():
+    data = _maak_xlsx(
+        [
+            ("Oude lijst", [["Voornaam", "Naambordje"], ["Oud", "Verouderd Lid"]], True),
+            ("Projecten", [["Project", "Raming"], ["Bartafels", 1000]], False),
+            ("Ledenlijst", [["Totale opbrengst", "", "", "", 20], KOP, ["Jan", "Jansen", "Za1", "Jantje", 20, "", "", "Niet gevraagd"]], False),
+        ]
+    )
+    rijen = rijen_uit_xlsx(data)
+    assert rijen[1] == KOP and rijen[2][3] == "Jantje" and rijen[2][4] == "20"
+    resultaat = parse_import(rijen_naar_csv(rijen))
+    assert [r["naam"] for r in resultaat["rijen"]] == ["Jantje"]
+    assert resultaat["rijen"][0]["bijdragen"]["2018-2019"] == {"status": "betaald", "bedrag": 20.0}
+
+
+def test_xlsx_weigert_onzin_en_gevaarlijke_bestanden():
+    import pytest
+
+    with pytest.raises(ValueError, match="geldig Excel"):
+        rijen_uit_xlsx(b"dit is geen zipbestand")
+    with pytest.raises(ValueError, match="Naambordje"):
+        rijen_uit_xlsx(_maak_xlsx([("Blad1", [["Iets", "Anders"], ["a", "b"]], False)]))
+    kwaad = io.BytesIO()
+    with zipfile.ZipFile(kwaad, "w") as z:
+        z.writestr("xl/workbook.xml", '<!DOCTYPE x [<!ENTITY a "aaaa">]><workbook/>')
+        z.writestr("xl/_rels/workbook.xml.rels", "<Relationships/>")
+    with pytest.raises(ValueError, match="niet-ondersteunde"):
+        rijen_uit_xlsx(kwaad.getvalue())
+
+
+def test_import_xlsx_via_pagina_vult_alleen_gaten_en_laat_bestaande_details_staan(ingelogde_client, db):
+    # Bestaand lid: team inmiddels in de app aangepast naar O23, betaling met details.
+    lid = _lid(db, "Jantje", team="O23")
+    db.execute(
+        "INSERT INTO club_van_20_bijdragen (lid_id, seizoen, status, bedrag, betaalwijze, notitie) "
+        "VALUES (?, '2025-2026', 'betaald', 20, 'contant', 'bij de bar')",
+        (lid,),
+    )
+    db.commit()
+    data = _maak_xlsx(
+        [
+            (
+                "Ledenlijst",
+                [
+                    KOP,
+                    ["Jan", "Jansen", "Za1", "Jantje", 20, 20, 20, "Betaald"],
+                    ["Piet", "Pieters", "Za2", "Pietje", 20, "", "", "Niet gevraagd"],
+                ],
+                False,
+            )
+        ]
+    )
+
+    voorbeeld = ingelogde_client.post(
+        "/club-van-20/importeren",
+        data={"csrf_token": _csrf(ingelogde_client), "bestand": (io.BytesIO(data), "Club van 20.xlsx")},
+        content_type="multipart/form-data",
+    )
+    tekst = voorbeeld.data.decode()
+    assert voorbeeld.status_code == 200
+    assert "1 bestaan al" in tekst and "1 zijn nieuw" in tekst
+    # 2018-19 nieuw (Jantje), 2026-27 nieuw, 2025-26 ongewijzigd, Pietje 2018-19 nieuw.
+    assert "3 nieuw" in tekst and "0 gewijzigd" in tekst and "1 ongewijzigd" in tekst
+    assert db.execute("SELECT COUNT(*) AS n FROM club_van_20_leden").fetchone()["n"] == 1  # nog niets opgeslagen
+
+    csv_tekst = rijen_naar_csv(rijen_uit_xlsx(data))
+    resp = ingelogde_client.post(
+        "/club-van-20/importeren", data={"csrf_token": _csrf(ingelogde_client), "tekst": csv_tekst, "bevestig": "1"}
+    )
+    assert resp.status_code == 302
+
+    jantje = db.execute("SELECT * FROM club_van_20_leden WHERE naam = 'Jantje'").fetchone()
+    assert jantje["team"] == "O23"  # niet teruggezet naar Za1
+    assert jantje["voornaam"] == "Jan" and jantje["achternaam"] == "Jansen"  # lege velden wel aangevuld
+    behouden = db.execute(
+        "SELECT * FROM club_van_20_bijdragen WHERE lid_id = ? AND seizoen = '2025-2026'", (lid,)
+    ).fetchone()
+    assert behouden["betaalwijze"] == "contant" and behouden["notitie"] == "bij de bar"
+    seizoenen = {
+        r["seizoen"] for r in db.execute("SELECT seizoen FROM club_van_20_bijdragen WHERE lid_id = ?", (lid,))
+    }
+    assert seizoenen == {"2018-2019", "2025-2026", "2026-2027"}
+    assert db.execute("SELECT team FROM club_van_20_leden WHERE naam = 'Pietje'").fetchone()["team"] == "Za2"
+
+
+def test_import_toont_welke_bestaande_betalingen_wijzigen(ingelogde_client, db):
+    lid = _lid(db, "Jantje")
+    _bijdrage(db, lid, "2025-2026", bedrag=10)
+    data = _maak_xlsx([("Ledenlijst", [KOP, ["Jan", "Jansen", "", "Jantje", "", 20, "", ""]], False)])
+    tekst = ingelogde_client.post(
+        "/club-van-20/importeren",
+        data={"csrf_token": _csrf(ingelogde_client), "bestand": (io.BytesIO(data), "x.xlsx")},
+        content_type="multipart/form-data",
+    ).data.decode()
+    assert "1 gewijzigd" in tekst and "Jantje 2025-2026: betaald €10 → betaald €20" in tekst
+
+
+def test_import_met_kapot_excelbestand_geeft_melding(ingelogde_client, db):
+    resp = ingelogde_client.post(
+        "/club-van-20/importeren",
+        data={"csrf_token": _csrf(ingelogde_client), "bestand": (io.BytesIO(b"geen excel"), "kapot.xlsx")},
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200 and b"geldig Excel" in resp.data
 
 
 # ---------- Importeren / exporteren ----------

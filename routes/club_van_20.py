@@ -23,7 +23,11 @@ from club_van_20 import (
     is_zichtbaar,
     leden_met_bijdragen,
     normaliseer_seizoen,
+    import_samenvatting,
     parse_import,
+    rijen_naar_csv,
+    rijen_uit_xlsx,
+    sterren_voor,
     seizoen_kort,
     seizoen_totalen,
     sla_bijdrage_op,
@@ -115,7 +119,9 @@ def register_routes(app):
         alle_leden = leden_met_bijdragen(db)
         tellers = {s: 0 for s in BIJDRAGE_STATUS_LABELS}
         leden = []
+        per_ster = instellingen["club_van_20_seizoenen_per_ster"]
         for lid in alle_leden:
+            lid["sterren"] = sterren_voor(lid["aantal_seizoenen"], per_ster)
             lid["status_seizoen"] = bijdrage_status(lid, seizoen)
             lid["op_scherm"], _ = is_zichtbaar(
                 lid, huidig_seizoen(), instellingen["club_van_20_zichtbaar_seizoenen"]
@@ -394,6 +400,7 @@ def register_routes(app):
 
         instellingen = _instellingen(db)
         lid = next(l for l in leden_met_bijdragen(db) if l["id"] == lid_id)
+        lid["sterren"] = sterren_voor(lid["aantal_seizoenen"], instellingen["club_van_20_seizoenen_per_ster"])
         seizoenen = sorted(set(alle_seizoenen(db)) | set(lid["bijdragen"]), reverse=True)
         huidig = huidig_seizoen()
         tekst = verzoek_tekst(
@@ -572,15 +579,26 @@ def register_routes(app):
         voorbeeld = None
         if request.method == "POST":
             bestand = request.files.get("bestand")
+            xlsx_fout = None
             if bestand and bestand.filename:
                 ruw = bestand.read()
-                try:
-                    tekst = ruw.decode("utf-8-sig")
-                except UnicodeDecodeError:
-                    tekst = ruw.decode("latin-1")
+                if bestand.filename.lower().endswith((".xlsx", ".xlsm")):
+                    # Excel-bestand: omzetten naar dezelfde tekst als een
+                    # CSV-import, zodat voorbeeld en bevestigen identiek werken.
+                    try:
+                        tekst = rijen_naar_csv(rijen_uit_xlsx(ruw))
+                    except ValueError as fout:
+                        xlsx_fout = str(fout)
+                else:
+                    try:
+                        tekst = ruw.decode("utf-8-sig")
+                    except UnicodeDecodeError:
+                        tekst = ruw.decode("latin-1")
             else:
                 tekst = request.form.get("tekst", "")
             voorbeeld = parse_import(tekst, instellingen["club_van_20_bedrag"])
+            if xlsx_fout:
+                voorbeeld["fout"] = xlsx_fout
             if voorbeeld["fout"]:
                 flash(voorbeeld["fout"], "error")
                 voorbeeld = None
@@ -601,6 +619,7 @@ def register_routes(app):
                 }
                 for rij in voorbeeld["rijen"]:
                     rij["bestaat"] = rij["naam"].lower() in bestaande
+                voorbeeld["samenvatting"] = import_samenvatting(db, voorbeeld["rijen"])
                 voorbeeld["totalen"] = {
                     s: sum(
                         r["bijdragen"][s]["bedrag"]
@@ -669,7 +688,8 @@ def register_routes(app):
                        club_van_20_werving_tekst = ?, club_van_20_betaallink = ?,
                        club_van_20_verzoek_tekst = ?,
                        club_van_20_aankondiging_tekst = ?, club_van_20_aankondiging_aftellen_tot = ?,
-                       club_van_20_aankondiging_na_tekst = ?, club_van_20_aankondiging_op_dia = ?
+                       club_van_20_aankondiging_na_tekst = ?, club_van_20_aankondiging_op_dia = ?,
+                       club_van_20_seizoenen_per_ster = ?, club_van_20_glans_vanaf_sterren = ?
                    WHERE id = 1""",
                 (
                     1 if request.form.get("toon_club_van_20") else 0,
@@ -694,6 +714,8 @@ def register_routes(app):
                     _aftelmoment(request.form.get("club_van_20_aankondiging_aftellen_tot")),
                     (request.form.get("club_van_20_aankondiging_na_tekst") or "").strip() or None,
                     1 if request.form.get("club_van_20_aankondiging_op_dia") else 0,
+                    max(1, min(20, _getal("club_van_20_seizoenen_per_ster", 3))),
+                    max(1, min(20, _getal("club_van_20_glans_vanaf_sterren", 2))),
                 ),
             )
             db.commit()
