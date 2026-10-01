@@ -27,7 +27,21 @@ def _instellingen(db):
     return db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
 
 
+def test_groepsnaam_staat_alleen_als_titel_als_dat_is_ingesteld(db):
+    _sponsor(db, "Gelkinge9", groep="Hoofdsponsors", volgorde=1)
+    _sponsor(db, "Robertus", groep="Hoofdsponsors", volgorde=2)
+
+    (dia,) = bouw_sponsor_dias(db, _instellingen(db))
+    assert dia["titel"] is None  # standaard: alleen de koptekst boven in beeld
+    assert dia["kop"] == "Mede mogelijk gemaakt door"
+
+    _zet(db, sponsors_toon_groepsnaam=1)
+    (dia,) = bouw_sponsor_dias(db, _instellingen(db))
+    assert dia["titel"] == "Hoofdsponsors"
+
+
 def test_dias_per_sponsor_en_per_groep(db):
+    _zet(db, sponsors_toon_groepsnaam=1)
     _sponsor(db, "Escape Hunt", volgorde=1)
     _sponsor(db, "Gelkinge9", groep="Zaterdag 1", volgorde=2)
     _sponsor(db, "Robertus", volgorde=3)
@@ -186,6 +200,7 @@ def test_instellingen_opslaan(ingelogde_client, db):
             "sponsors_prijzen_duur": "7",
             "sponsors_kop": "Dankzij",
             "sponsors_kop_meervoud": "  Dankzij allemaal ",
+            "sponsors_toon_groepsnaam": "on",
             "sponsors_logos_per_dia": "9",
         },
     )
@@ -195,7 +210,7 @@ def test_instellingen_opslaan(ingelogde_client, db):
     # Prijzenlijst bewust uitgevinkt; interval heeft een ondergrens van 10s, max 6 logo's per dia.
     assert (i["sponsors_toon_prijzen"], i["sponsors_prijzen_interval"], i["sponsors_prijzen_duur"]) == (0, 10, 7)
     assert i["sponsors_kop"] == "Dankzij" and i["sponsors_logos_per_dia"] == 6
-    assert i["sponsors_kop_meervoud"] == "Dankzij allemaal"
+    assert i["sponsors_kop_meervoud"] == "Dankzij allemaal" and i["sponsors_toon_groepsnaam"] == 1
 
 
 def test_beheer_vereist_kantine_tv_sectie(client, db):

@@ -26,13 +26,20 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.18.2"
+HUIDIGE_VERSIE = "1.18.3"
 WIJZIGINGEN = [
+    {
+        "versie": "1.18.3",
+        "datum": "1 oktober 2026",
+        "punten": [
+            "Sponsordia's: bij een groep sponsoren staat nu standaard alleen de koptekst (bijv. \"Wij bedanken onze sponsoren\") boven in beeld, zonder de groepsnaam; wil je de groepsnaam (bijv. \"Zaterdag 1\") toch als titel, dan zet je dat aan onder Sponsoren → Opmaak",
+        ],
+    },
     {
         "versie": "1.18.2",
         "datum": "1 oktober 2026",
         "punten": [
-            "Sponsordia's: staan er meerdere logo's op een dia, dan staat de koptekst automatisch in het meervoud (\"Wij bedanken onze sponsoren\"); zelf aan te passen onder Sponsoren \u2192 Opmaak",
+            "Sponsordia's: staan er meerdere logo's op een dia, dan staat de koptekst automatisch in het meervoud (\"Wij bedanken onze sponsoren\"); zelf aan te passen onder Sponsoren → Opmaak",
         ],
     },
     {

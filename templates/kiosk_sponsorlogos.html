@@ -159,6 +159,10 @@
                 <input type="number" id="sponsors_logos_per_dia" name="sponsors_logos_per_dia" min="1" max="6" value="{{ instellingen.sponsors_logos_per_dia }}">
             </div>
         </div>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.7rem">
+            <input type="checkbox" name="sponsors_toon_groepsnaam" style="width:auto" {{ 'checked' if instellingen.sponsors_toon_groepsnaam }}>
+            Groepsnaam (bijv. "Zaterdag 1") als titel boven de logo's tonen &mdash; uit: alleen de koptekst staat boven in beeld
+        </label>
         <div class="veld">
             <label for="sponsors_achtergrond">Achtergrondfoto (optioneel, bijv. de clubvlag)</label>
             {% if instellingen.sponsors_achtergrond %}

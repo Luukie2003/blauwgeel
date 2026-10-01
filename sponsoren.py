@@ -59,11 +59,14 @@ def bouw_sponsor_dias(db, instellingen, sponsoren=None):
     eerste sponsor (op volgorde) en krijgt alle logo's van die groep, in
     stukken van 'logos per dia'. Staan er meerdere logo's op een dia, dan
     krijgt die de koptekst in het meervoud (zelf in te stellen, anders
-    automatisch). Zonder actieve sponsoren een lege lijst."""
+    automatisch). De groepsnaam zelf staat alleen als titel boven de logo's
+    als dat is ingesteld; anders staat daar alleen de koptekst. Zonder actieve
+    sponsoren een lege lijst."""
     sponsoren = actieve_sponsoren(db) if sponsoren is None else sponsoren
     per_dia = max(1, instellingen["sponsors_logos_per_dia"])
     kop = instellingen["sponsors_kop"]
     kop_meer = (instellingen["sponsors_kop_meervoud"] or "").strip() or kop_meervoud(kop)
+    toon_groepsnaam = bool(instellingen["sponsors_toon_groepsnaam"])
     groepen = {}
     volgorde = []
     for s in sponsoren:
@@ -89,7 +92,7 @@ def bouw_sponsor_dias(db, instellingen, sponsoren=None):
                 {
                     "type": "sponsorlogos",
                     "duur": max(3, instellingen["sponsors_duur_seconden"]),
-                    "titel": groep["titel"],
+                    "titel": groep["titel"] if toon_groepsnaam else None,
                     "kop": kop_meer if len(logos) > 1 else kop,
                     "achtergrond": instellingen["sponsors_achtergrond"],
                     "logos": _met_aandeel(logos),

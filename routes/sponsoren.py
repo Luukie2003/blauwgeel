@@ -85,13 +85,14 @@ def register_routes(app):
             achtergrond = None
         db.execute(
             """UPDATE kiosk_scherm_instellingen
-               SET sponsors_kop = ?, sponsors_kop_meervoud = ?, sponsors_achtergrond = ?, sponsors_logos_per_dia = ?,
+               SET sponsors_kop = ?, sponsors_kop_meervoud = ?, sponsors_toon_groepsnaam = ?, sponsors_achtergrond = ?, sponsors_logos_per_dia = ?,
                    sponsors_toon_dias = ?, sponsors_elke_dias = ?, sponsors_duur_seconden = ?,
                    sponsors_toon_prijzen = ?, sponsors_prijzen_interval = ?, sponsors_prijzen_duur = ?
                WHERE id = 1""",
             (
                 (request.form.get("sponsors_kop") or "").strip() or "Mede mogelijk gemaakt door",
                 (request.form.get("sponsors_kop_meervoud") or "").strip(),
+                1 if request.form.get("sponsors_toon_groepsnaam") else 0,
                 achtergrond,
                 min(6, _getal("sponsors_logos_per_dia", 4, 1)),
                 1 if request.form.get("sponsors_toon_dias") else 0,
