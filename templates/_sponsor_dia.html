@@ -16,7 +16,7 @@
     {% endif %}
     <div class="sponsordia-logos sponsordia-logos--{{ dia.logos|length }}">
         {% for l in dia.logos %}
-        <div class="sponsordia-logo{{ ' sponsordia-logo--wit' if l.wit else '' }}" style="animation-delay: {{ (0.15 + loop.index0 * 0.15)|round(2) }}s">
+        <div class="sponsordia-logo{{ ' sponsordia-logo--wit' if l.wit else '' }}" style="animation-delay: {{ (0.15 + loop.index0 * 0.15)|round(2) }}s; --r: {{ l.verhouding }}; --deel: {{ l.aandeel }}">
             {% if l.logo %}
             <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + l.logo) }}" alt="{{ l.naam }}">
             {% else %}

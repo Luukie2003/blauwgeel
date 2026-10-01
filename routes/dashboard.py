@@ -26,8 +26,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.18.0"
+HUIDIGE_VERSIE = "1.18.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.18.1",
+        "datum": "1 oktober 2026",
+        "punten": [
+            "Sponsordia's: staan 2 of 3 sponsoren in dezelfde groep, dan komen hun logo's veel groter naast elkaar in beeld, elk in een breedte die past bij de vorm van het logo (een breed logo krijgt meer ruimte dan een vierkant)",
+        ],
+    },
     {
         "versie": "1.18.0",
         "datum": "1 oktober 2026",

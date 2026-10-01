@@ -52,6 +52,27 @@ def test_grote_groep_wordt_over_meerdere_dias_verdeeld(db):
     assert [len(d["logos"]) for d in dias] == [2, 2, 1]
 
 
+def test_logos_in_een_groep_krijgen_een_aandeel_naar_hun_vorm(db, tmp_path, monkeypatch):
+    from PIL import Image
+
+    import sponsoren
+
+    monkeypatch.setattr(sponsoren, "KIOSK_AFBEELDINGEN_MAP", tmp_path)
+    Image.new("RGB", (400, 400)).save(tmp_path / "vierkant.png")
+    Image.new("RGB", (1600, 400)).save(tmp_path / "breed.png")
+    _sponsor(db, "Gelkinge", groep="Hoofdsponsors", logo="vierkant.png", volgorde=1)
+    _sponsor(db, "Robertus", groep="Hoofdsponsors", logo="breed.png", volgorde=2)
+    _sponsor(db, "Zonder bestand", groep="Hoofdsponsors", logo="bestaat-niet.png", volgorde=3)
+
+    (dia,) = bouw_sponsor_dias(db, _instellingen(db))
+
+    vierkant, breed, onbekend = dia["logos"]
+    assert (vierkant["verhouding"], breed["verhouding"], onbekend["verhouding"]) == (1.0, 4.0, 1.0)
+    # Breed logo: tweemaal zoveel ruimte als vierkant (wortel van 4), samen de hele rij.
+    assert breed["aandeel"] == 2 * vierkant["aandeel"] == 2 * onbekend["aandeel"]
+    assert round(sum(l["aandeel"] for l in dia["logos"]), 3) == 1.0
+
+
 def test_kantine_scherm_zet_sponsoren_tussen_de_dias(client, db):
     _sponsor(db, "Escape Hunt", logo="escape.png")
     _zet(db, sponsors_elke_dias=3)

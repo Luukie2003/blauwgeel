@@ -378,16 +378,20 @@
 .sponsordia-kop { font-family: var(--c20-font); font-weight: 700; color: var(--geel); font-size: 2.1rem; margin-top: 0.3rem; }
 .sponsordia-logos { flex: 1; width: 100%; min-height: 0; display: grid; gap: 2.4rem; align-items: center; justify-items: center; align-content: center; padding: 2.5rem 4rem 1rem; }
 .sponsordia-logos--1 { grid-template-columns: 1fr; }
-.sponsordia-logos--2 { grid-template-columns: 1fr 1fr; }
-.sponsordia-logos--3, .sponsordia-logos--4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+/* 2 en 3 logo's staan in één rij, elk met een breedte naar zijn vorm (--deel,
+   --r uit sponsoren.py): zo wordt een vierkant logo net zo groot in beeld als
+   een breed logo, en wordt alles zo groot mogelijk. */
+.sponsordia-logos--2, .sponsordia-logos--3 { --rij-b: 88vw; --rij-h: 46vh; display: flex; justify-content: center; gap: 2vw; padding: 1.5rem 3vw 1rem; }
+.sponsordia-logos--2 { --rij-b: 86vw; }
+.sponsordia-logos--4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
 .sponsordia-logos--5, .sponsordia-logos--6 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
-.sponsordia-logos--3 > :last-child { grid-column: span 2; }
 .sponsordia-logo { display: flex; align-items: center; justify-content: center; max-width: 100%; max-height: 100%; min-height: 0; opacity: 0; }
-.sponsordia-logo--wit { background: #fff; border-radius: 14px; padding: 1.6rem 2.4rem; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3); }
+.sponsordia-logo--wit { --pad: 4.8rem; background: #fff; border-radius: 14px; padding: 1.6rem 2.4rem; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3); }
 .sponsordia-logo img { display: block; max-width: 100%; object-fit: contain; }
 .sponsordia-logos--1 .sponsordia-logo img { max-width: 62vw; max-height: 56vh; }
-.sponsordia-logos--2 .sponsordia-logo img { max-width: 38vw; max-height: 48vh; }
-.sponsordia-logos--3 .sponsordia-logo img, .sponsordia-logos--4 .sponsordia-logo img { max-width: 34vw; max-height: 24vh; }
+.sponsordia-logos--2 .sponsordia-logo, .sponsordia-logos--3 .sponsordia-logo { flex: none; max-width: none; max-height: none; }
+.sponsordia-logos--2 .sponsordia-logo img, .sponsordia-logos--3 .sponsordia-logo img { max-width: none; height: auto; width: calc(min(var(--rij-b) * var(--deel), var(--rij-h) * var(--r)) - var(--pad, 0px)); }
+.sponsordia-logos--4 .sponsordia-logo img { max-width: 34vw; max-height: 24vh; }
 .sponsordia-logos--5 .sponsordia-logo img, .sponsordia-logos--6 .sponsordia-logo img { max-width: 24vw; max-height: 22vh; }
 .sponsordia-naam { font-family: var(--c20-font); font-weight: 700; font-size: 3.4rem; color: var(--blauw); padding: 0.4rem 1rem; }
 .sponsordia-logo:not(.sponsordia-logo--wit) .sponsordia-naam { color: #fff; }

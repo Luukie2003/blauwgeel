@@ -9,6 +9,30 @@ even over de prijzen heen (zie kiosk_prijzen_scherm.html). De beheerpagina
 staat in routes/sponsoren.py.
 """
 
+import math
+
+from helpers import KIOSK_AFBEELDINGEN_MAP
+
+_VERHOUDING_CACHE = {}
+
+
+def logo_verhouding(bestandsnaam):
+    """Breedte : hoogte van een logo (1.0 = vierkant), uit het bestand zelf.
+    Zonder (leesbaar) bestand 1.0. Onthouden per bestandsnaam: uploads krijgen
+    altijd een nieuwe, willekeurige naam."""
+    if not bestandsnaam:
+        return 1.0
+    if bestandsnaam not in _VERHOUDING_CACHE:
+        try:
+            from PIL import Image
+
+            with Image.open(KIOSK_AFBEELDINGEN_MAP / bestandsnaam) as plaatje:
+                breed, hoog = plaatje.size
+            _VERHOUDING_CACHE[bestandsnaam] = round(breed / hoog, 3) if breed and hoog else 1.0
+        except Exception:
+            return 1.0
+    return _VERHOUDING_CACHE[bestandsnaam]
+
 
 def actieve_sponsoren(db):
     return db.execute(
@@ -31,7 +55,12 @@ def bouw_sponsor_dias(db, instellingen, sponsoren=None):
             groepen[sleutel] = {"titel": groep or None, "logos": []}
             volgorde.append(sleutel)
         groepen[sleutel]["logos"].append(
-            {"naam": s["naam"], "logo": s["logo"], "wit": bool(s["witte_achtergrond"])}
+            {
+                "naam": s["naam"],
+                "logo": s["logo"],
+                "wit": bool(s["witte_achtergrond"]),
+                "verhouding": logo_verhouding(s["logo"]),
+            }
         )
     dias = []
     for sleutel in volgorde:
@@ -44,7 +73,18 @@ def bouw_sponsor_dias(db, instellingen, sponsoren=None):
                     "titel": groep["titel"],
                     "kop": instellingen["sponsors_kop"],
                     "achtergrond": instellingen["sponsors_achtergrond"],
-                    "logos": groep["logos"][i : i + per_dia],
+                    "logos": _met_aandeel(groep["logos"][i : i + per_dia]),
                 }
             )
     return dias
+
+
+def _met_aandeel(logos):
+    """Geeft elk logo een 'aandeel' van de rijbreedte (som = 1) voor dia's
+    waarop de logo's naast elkaar staan: evenredig met de wortel van de
+    verhouding, zodat een breed logo (Robertus) meer ruimte krijgt dan een
+    vierkant (Gelkinge), maar niet zoveel dat het vierkante piepklein wordt.
+    Het oppervlak van de logo's blijft zo ongeveer gelijk."""
+    gewichten = [math.sqrt(l["verhouding"]) for l in logos]
+    totaal = sum(gewichten) or 1.0
+    return [dict(l, aandeel=round(g / totaal, 4)) for l, g in zip(logos, gewichten)]
