@@ -16,6 +16,7 @@ from aanmeldingen import (
     maak_aanmelding,
     max_tekens,
     splits_naam,
+    stuur_melding_nieuwe_aanmelding,
     te_veel_aanmeldingen,
     valideer_aanmelding,
     wijs_af,
@@ -72,7 +73,13 @@ def register_routes(app):
             if fouten:
                 context.update(waarden=waarden, fouten=fouten)
                 return render_template("club_van_20_aanmelden.html", **context), 400
-            maak_aanmelding(db, waarden, huidig_seizoen(), instellingen["club_van_20_bedrag"], ip_h)
+            _, is_nieuw = maak_aanmelding(
+                db, waarden, huidig_seizoen(), instellingen["club_van_20_bedrag"], ip_h
+            )
+            if is_nieuw:
+                stuur_melding_nieuwe_aanmelding(
+                    db, waarden, url_for("club_van_20_aanmeldingen", _external=True)
+                )
             session["aanmelding_klaar"] = {
                 "bordje": waarden["bordje"],
                 "betaalwijze": waarden["betaalwijze"],

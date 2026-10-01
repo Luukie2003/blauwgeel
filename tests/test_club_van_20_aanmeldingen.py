@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+import mail
 from conftest import stel_csrf_token_in as _csrf
 from test_secties_rechten import _login, _maak_vrijwilliger
 
@@ -436,3 +437,88 @@ def test_instellingen_voor_aanmelden_opslaan(ingelogde_client, db):
     ingelogde_client.post("/club-van-20/instellingen", data={**veld_data, "club_van_20_aanmelden_aan": "on", "club_van_20_bordje_max_tekens": "3"})
     i = db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
     assert i["club_van_20_aanmelden_aan"] == 1 and i["club_van_20_bordje_max_tekens"] == 5  # ondergrens
+
+
+# ---------- Melding per mail ----------
+
+
+def _gebruiker(db, naam, email, rol="beheerder", secties="voorraad", mail_aan=1, actief=1):
+    db.execute(
+        """INSERT INTO gebruikers (naam, wachtwoord_hash, rol, secties, email, mail_club_aanmelding, actief, aangemaakt_op)
+           VALUES (?, 'x', ?, ?, ?, ?, ?, '2026-01-01 10:00')""",
+        (naam, rol, secties, email, mail_aan, actief),
+    )
+    db.commit()
+
+
+def _vang_mails(monkeypatch):
+    verstuurd = []
+    monkeypatch.setattr(
+        mail, "stuur_mail", lambda onderwerp, tekst, naar=None, **kw: verstuurd.append((naar, onderwerp, tekst))
+    )
+    return verstuurd
+
+
+def test_nieuwe_aanmelding_mailt_wie_dat_heeft_aangevinkt(client, db, monkeypatch):
+    _open(db)
+    _gebruiker(db, "luuk", "luuk@example.com")
+    _gebruiker(db, "club_vrijwilliger", "club@example.com", rol="vrijwilliger", secties="club_van_20")
+    # Krijgen geen mail: niet aangevinkt, geen adres, geen toegang tot de Club van 20, geblokkeerd.
+    _gebruiker(db, "niet_aangevinkt", "nee@example.com", mail_aan=0)
+    _gebruiker(db, "zonder_adres", "", mail_aan=1)
+    _gebruiker(db, "kassa_vrijwilliger", "kassa@example.com", rol="vrijwilliger", secties="kassa")
+    _gebruiker(db, "geblokkeerd", "weg@example.com", actief=0)
+    verstuurd = _vang_mails(monkeypatch)
+
+    _formulier(client)
+
+    assert sorted(v[0] for v in verstuurd) == ["club@example.com", "luuk@example.com"]
+    _, onderwerp, tekst = verstuurd[0]
+    assert onderwerp == "Nieuwe Club van 20-aanmelding: Jan & Co"
+    assert "Naam: Jan de Vries" in tekst and "Betaling: Contant aan de bar" in tekst and "Bardienst: Piet" in tekst
+    assert "/club-van-20/aanmeldingen" in tekst and "wacht nu 1 aanmelding op goedkeuring" in tekst
+
+
+def test_melding_valt_terug_op_het_meldingsadres(client, db, monkeypatch):
+    _open(db)
+    db.execute("UPDATE instellingen SET notificatie_email = 'bestuur@example.com' WHERE id = 1")
+    db.commit()
+    verstuurd = _vang_mails(monkeypatch)
+    _formulier(client, betaalwijze="mollie")
+    assert [v[0] for v in verstuurd] == ["bestuur@example.com"]
+    assert "Betaling: Online betalen" in verstuurd[0][2] and "Bardienst" not in verstuurd[0][2]
+
+
+def test_dubbele_aanmelding_en_mislukte_validatie_mailen_niet(client, db, monkeypatch):
+    _open(db)
+    _gebruiker(db, "luuk", "luuk@example.com")
+    verstuurd = _vang_mails(monkeypatch)
+    _formulier(client, bordje="")  # ongeldig
+    _formulier(client)
+    _formulier(client)  # dubbel
+    assert len(verstuurd) == 1
+
+
+def test_mislukte_mail_laat_de_aanmelding_niet_mislukken(client, db, monkeypatch):
+    _open(db)
+    _gebruiker(db, "luuk", "luuk@example.com")
+
+    def kapot(*args, **kwargs):
+        raise RuntimeError("smtp is stuk")
+
+    monkeypatch.setattr(mail, "stuur_mail", kapot)
+    resp = _formulier(client)
+    assert resp.status_code == 302
+    assert len(_aanmeldingen(db)) == 1
+
+
+def test_voorkeur_mail_bij_aanmelding_opslaan(ingelogde_client, db):
+    pagina = ingelogde_client.get("/account/voorkeuren").data.decode()
+    assert "Mail ontvangen bij een nieuwe Club van 20-aanmelding" in pagina
+
+    ingelogde_client.post(
+        "/account/voorkeuren", data={"csrf_token": _csrf(ingelogde_client), "mail_club_aanmelding": "on"}
+    )
+    assert db.execute("SELECT mail_club_aanmelding FROM gebruikers WHERE naam = 'admin'").fetchone()[0] == 1
+    ingelogde_client.post("/account/voorkeuren", data={"csrf_token": _csrf(ingelogde_client)})
+    assert db.execute("SELECT mail_club_aanmelding FROM gebruikers WHERE naam = 'admin'").fetchone()[0] == 0

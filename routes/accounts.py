@@ -295,10 +295,13 @@ def register_routes(app):
         gebruiker_id = session["gebruiker_id"]
         if request.method == "POST":
             db.execute(
-                "UPDATE gebruikers SET mail_factuur = ?, mail_week_overzicht = ? WHERE id = ?",
+                """UPDATE gebruikers
+                   SET mail_factuur = ?, mail_week_overzicht = ?, mail_club_aanmelding = ?
+                   WHERE id = ?""",
                 (
                     1 if request.form.get("mail_factuur") else 0,
                     1 if request.form.get("mail_week_overzicht") else 0,
+                    1 if request.form.get("mail_club_aanmelding") else 0,
                     gebruiker_id,
                 ),
             )

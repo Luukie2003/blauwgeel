@@ -26,8 +26,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.19.0"
+HUIDIGE_VERSIE = "1.19.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.19.1",
+        "datum": "1 oktober 2026",
+        "punten": [
+            "Club van 20: je kunt bij Mijn voorkeuren aanvinken dat je een mail krijgt bij elke nieuwe aanmelding (naar het e-mailadres van je account)",
+        ],
+    },
     {
         "versie": "1.19.0",
         "datum": "1 oktober 2026",

@@ -18,7 +18,9 @@ import re
 import unicodedata
 from datetime import datetime, timedelta
 
+import mail
 from club_van_20 import AMSTERDAM, DAGNAMEN, MAANDNAMEN, aftelmoment, sla_bijdrage_op
+from helpers import heeft_sectie_toegang
 
 # Naambordjes in de administratie zijn nu hooguit 22 tekens ("Van Dort & Bos
 # Incasso"), de helft blijft onder de 12. Tot 16 tekens past een bordje op het
@@ -307,3 +309,61 @@ def wijs_af(db, aanmelding_id, reden, gebruiker):
         (schoon_tekst(reden) or None, gebruiker, nu_amsterdam().strftime("%Y-%m-%d %H:%M"), aanmelding_id),
     )
     db.commit()
+
+
+# ---------- Melding aan de beheerders ----------
+
+
+def melding_ontvangers(db):
+    """E-mailadressen die een melding krijgen bij een nieuwe aanmelding:
+    accounts die dat bij Mijn voorkeuren hebben aangevinkt (en bij de Club
+    van 20 mogen), anders -- net als bij een ingeboekte levering -- het
+    algemene meldingsadres uit de instellingen."""
+    ontvangers = [
+        r["email"]
+        for r in db.execute(
+            """SELECT email, rol, secties FROM gebruikers
+               WHERE mail_club_aanmelding = 1 AND actief = 1
+                 AND email IS NOT NULL AND email != ''"""
+        ).fetchall()
+        if heeft_sectie_toegang(r["rol"], r["secties"], "club_van_20")
+    ]
+    if not ontvangers:
+        instelling = db.execute("SELECT notificatie_email FROM instellingen WHERE id = 1").fetchone()
+        if instelling and instelling["notificatie_email"]:
+            ontvangers = [instelling["notificatie_email"]]
+    return ontvangers
+
+
+def stuur_melding_nieuwe_aanmelding(db, waarden, link):
+    """Mailt de beheerders dat er een aanmelding wacht. Mag een aanmelding
+    nooit laten mislukken: wie zich aanmeldt heeft daar niets aan te merken
+    als de mail niet aankomt, de aanmelding staat dan gewoon in de lijst."""
+    try:
+        ontvangers = melding_ontvangers(db)
+        if not ontvangers:
+            return
+        wachtend = aantal_openstaand(db)
+        betaling = AANMELD_BETAALWIJZEN.get(waarden["betaalwijze"], waarden["betaalwijze"])
+        regels = [
+            "Er is een nieuwe aanmelding voor de Club van 20.",
+            "",
+            f"Bordje: {waarden['bordje']}",
+            f"Naam: {waarden['naam']}",
+            f"Betaling: {betaling}",
+        ]
+        if waarden.get("bardienst"):
+            regels.append(f"Bardienst: {waarden['bardienst']}")
+        regels += [
+            "",
+            "Controleer de betaling en keur de aanmelding goed (of wijs af):",
+            link,
+            "",
+            f"Er {'wacht' if wachtend == 1 else 'wachten'} nu {wachtend} "
+            f"{'aanmelding' if wachtend == 1 else 'aanmeldingen'} op goedkeuring.",
+        ]
+        onderwerp = f"Nieuwe Club van 20-aanmelding: {waarden['bordje']}"
+        for ontvanger in ontvangers:
+            mail.stuur_mail(onderwerp, "\n".join(regels), naar=ontvanger)
+    except Exception as fout:  # noqa: BLE001 -- zie docstring
+        print(f"[aanmelding] Melding versturen mislukt: {fout}")
