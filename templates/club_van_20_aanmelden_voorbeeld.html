@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Voorbeeld · Club van 20 · s.v. Blauw-Geel 1915</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <meta name="theme-color" content="#1e3a8a">
+    <style>
+        :root { --blauw: #1e3a8a; --blauw-donker: #0f1f4d; --geel: #fcd42f; --tekst-zacht: #b9c2e0; --rood: #ffb4b4; }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Calibri, sans-serif; background: linear-gradient(160deg, var(--blauw) 0%, var(--blauw-donker) 100%) fixed; color: #fff; }
+        .pagina { max-width: 26rem; margin: 0 auto; padding: 2.5rem 1rem 3rem; }
+        .smal { font-family: "Oswald", "Bebas Neue", "Roboto Condensed", "Arial Narrow", sans-serif; font-weight: 700; }
+        h1 { color: var(--geel); font-size: 1.9rem; margin: 0 0 0.8rem; text-align: center; }
+        .kaart { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 16px; padding: 1.2rem; }
+        .kaart p { margin: 0 0 0.9rem; line-height: 1.45; }
+        input[type=password], input[type=text] { width: 100%; font: inherit; font-size: 1.05rem; padding: 0.75rem 0.85rem; border-radius: 10px; border: 2px solid transparent; background: #fff; color: var(--blauw-donker); }
+        input:focus { outline: none; border-color: var(--geel); }
+        .fout { color: var(--rood); font-weight: 700; margin: 0.5rem 0 0; }
+        .knop { display: block; width: 100%; margin-top: 0.9rem; background: var(--geel); color: var(--blauw-donker); font: inherit; font-weight: 800; font-size: 1.1rem; border: 0; border-radius: 999px; padding: 0.85rem; cursor: pointer; }
+        .terug { display: inline-block; color: var(--tekst-zacht); font-size: 0.9rem; margin-top: 1rem; }
+        .zacht { color: var(--tekst-zacht); font-size: 0.88rem; }
+    </style>
+</head>
+<body>
+<div class="pagina">
+    <h1 class="smal">Voorbeeld</h1>
+    <div class="kaart">
+        {% if beschikbaar %}
+        <p>Vul de code in om het aanmeldformulier te bekijken voordat het opengaat.</p>
+        <form method="post" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="password" name="code" autocomplete="off" autofocus required aria-label="Code">
+            {% if fout %}<p class="fout" role="alert">{{ fout }}</p>{% endif %}
+            <button type="submit" class="knop">Bekijken</button>
+        </form>
+        {% else %}
+        <p>Er is op dit moment geen voorbeeld beschikbaar.</p>
+        {% endif %}
+    </div>
+    <a class="terug" href="{{ url_for('club_van_20_publiek') }}">&larr; Terug naar de Club van 20</a>
+</div>
+</body>
+</html>

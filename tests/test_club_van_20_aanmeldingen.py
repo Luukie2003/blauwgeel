@@ -522,3 +522,153 @@ def test_voorkeur_mail_bij_aanmelding_opslaan(ingelogde_client, db):
     assert db.execute("SELECT mail_club_aanmelding FROM gebruikers WHERE naam = 'admin'").fetchone()[0] == 1
     ingelogde_client.post("/account/voorkeuren", data={"csrf_token": _csrf(ingelogde_client)})
     assert db.execute("SELECT mail_club_aanmelding FROM gebruikers WHERE naam = 'admin'").fetchone()[0] == 0
+
+
+# ---------- Voorbeeld met een code (geheime knop) ----------
+
+CODE = "geheim-2026"
+
+
+def _toekomst(db, code=CODE):
+    """Het formulier is nog niet open; er is een voorbeeldcode ingesteld."""
+    _zet(db, club_van_20_aankondiging_aftellen_tot=_moment(2), club_van_20_betaallink=MOLLIE, club_van_20_voorbeeldcode=code)
+
+
+def _code_invoeren(client, code=CODE):
+    return client.post("/club-van-20/aanmelden/voorbeeld", data={"csrf_token": _csrf(client), "code": code})
+
+
+def test_geheime_knop_staat_op_de_publieke_pagina_en_de_nog_niet_open_pagina(client, db):
+    _zet(db, club_van_20_aankondiging_aftellen_tot=_moment(2))
+    assert "/club-van-20/aanmelden/voorbeeld" in client.get("/club-van-20/doe-mee").data.decode()
+    assert "/club-van-20/aanmelden/voorbeeld" in client.get("/club-van-20/aanmelden").data.decode()
+
+
+def test_voorbeeld_zonder_ingestelde_code_bestaat_niet(client, db):
+    _zet(db, club_van_20_aankondiging_aftellen_tot=_moment(2))
+    tekst = client.get("/club-van-20/aanmelden/voorbeeld").data.decode()
+    assert "geen voorbeeld beschikbaar" in tekst and 'name="code"' not in tekst
+    # Ook een te korte code telt niet.
+    _zet(db, club_van_20_voorbeeldcode="abc")
+    resp = _code_invoeren(client, "abc")
+    assert resp.status_code == 200 and "geen voorbeeld beschikbaar" in resp.data.decode()
+    assert "Voorbeeld." not in client.get("/club-van-20/aanmelden").data.decode()
+
+
+def test_juiste_code_toont_het_formulier_voor_de_opening(client, db):
+    _toekomst(db)
+    assert 'name="bordje"' not in client.get("/club-van-20/aanmelden").data.decode()
+
+    resp = _code_invoeren(client)
+    assert resp.status_code == 302 and resp.headers["Location"].endswith("/club-van-20/aanmelden")
+
+    tekst = client.get("/club-van-20/aanmelden").data.decode()
+    assert 'name="bordje"' in tekst and "Voorbeeld." in tekst and "Voorbeeld stoppen" in tekst
+    assert MOLLIE in tekst
+    # De publieke pagina laat de knop dan ook zien (niet verborgen), met een voorbeeldtekst.
+    publiek = client.get("/club-van-20/doe-mee").data.decode()
+    knop = publiek[publiek.index('id="aanmeldknop"') : publiek.index('id="aanmeldknop"') + 200]
+    assert "hidden" not in knop and "Voorbeeld, nog niet open" in publiek
+
+
+def test_in_het_voorbeeld_kun_je_echt_aanmelden_en_dat_komt_in_de_lijst(client, db, monkeypatch):
+    _toekomst(db)
+    _gebruiker(db, "luuk", "luuk@example.com")
+    verstuurd = _vang_mails(monkeypatch)
+    _code_invoeren(client)
+    resp = _formulier(client)
+    assert resp.status_code == 302
+    (a,) = _aanmeldingen(db)
+    assert a["status"] == "nieuw" and a["bordje"] == "Jan & Co"
+    assert [v[0] for v in verstuurd] == ["luuk@example.com"]  # de mail kan dus ook uitgeprobeerd worden
+
+
+def test_zonder_code_blijft_het_formulier_dicht_voor_anderen(client, app, db):
+    _toekomst(db)
+    _code_invoeren(client)  # deze bezoeker zit in het voorbeeld
+    andere = app.test_client()
+    resp = _formulier(andere)
+    assert "Voorbeeld." not in andere.get("/club-van-20/aanmelden").data.decode()
+    assert _aanmeldingen(db) == []
+    assert resp.status_code in (200, 302)
+
+
+def test_foute_code_en_limiet_op_pogingen(client, db):
+    _toekomst(db)
+    for _ in range(5):
+        resp = _code_invoeren(client, "verkeerd-verkeerd")
+        assert resp.status_code == 400 and "niet de juiste code" in resp.data.decode()
+    # Na 5 foute pogingen werkt zelfs de juiste code niet meer in deze sessie.
+    resp = _code_invoeren(client)
+    assert resp.status_code == 429 and "Te veel pogingen" in resp.data.decode()
+    assert 'name="bordje"' not in client.get("/club-van-20/aanmelden").data.decode()
+
+
+def test_voorbeeld_vervalt_bij_andere_code_of_zonder_code_of_uitgezet(client, db):
+    _toekomst(db)
+    _code_invoeren(client)
+    assert 'name="bordje"' in client.get("/club-van-20/aanmelden").data.decode()
+
+    _zet(db, club_van_20_voorbeeldcode="nieuwe-code-123")
+    assert 'name="bordje"' not in client.get("/club-van-20/aanmelden").data.decode()
+
+    _zet(db, club_van_20_voorbeeldcode=CODE)
+    assert 'name="bordje"' in client.get("/club-van-20/aanmelden").data.decode()  # zelfde code = weer geldig
+
+    _zet(db, club_van_20_voorbeeldcode=None)
+    assert 'name="bordje"' not in client.get("/club-van-20/aanmelden").data.decode()
+
+    _zet(db, club_van_20_voorbeeldcode=CODE, club_van_20_aanmelden_aan=0)
+    assert 'name="bordje"' not in client.get("/club-van-20/aanmelden").data.decode()
+
+
+def test_voorbeeld_stoppen(client, db):
+    _toekomst(db)
+    _code_invoeren(client)
+    resp = client.get("/club-van-20/aanmelden/voorbeeld/stop")
+    assert resp.status_code == 302 and resp.headers["Location"].endswith("/club-van-20/doe-mee")
+    assert 'name="bordje"' not in client.get("/club-van-20/aanmelden").data.decode()
+
+
+def test_voorbeeldcode_opslaan_bij_scherm_en_werving(ingelogde_client, db):
+    pagina = ingelogde_client.get("/club-van-20/instellingen").data.decode()
+    assert "club_van_20_voorbeeldcode" in pagina
+
+    basis = {"csrf_token": _csrf(ingelogde_client), "club_van_20_aanmelden_aan": "on"}
+    ingelogde_client.post("/club-van-20/instellingen", data={**basis, "club_van_20_voorbeeldcode": "  mijn-code-2026 "})
+    assert db.execute("SELECT club_van_20_voorbeeldcode FROM kiosk_scherm_instellingen").fetchone()[0] == "mijn-code-2026"
+
+    # Te kort: niet opgeslagen, de oude blijft staan, en er is een melding.
+    resp = ingelogde_client.post("/club-van-20/instellingen", data={**basis, "club_van_20_voorbeeldcode": "abc"}, follow_redirects=True)
+    assert "minstens 4 tekens" in resp.data.decode()
+    assert db.execute("SELECT club_van_20_voorbeeldcode FROM kiosk_scherm_instellingen").fetchone()[0] == "mijn-code-2026"
+
+    # Leeg = uit.
+    ingelogde_client.post("/club-van-20/instellingen", data={**basis, "club_van_20_voorbeeldcode": ""})
+    assert db.execute("SELECT club_van_20_voorbeeldcode FROM kiosk_scherm_instellingen").fetchone()[0] is None
+
+
+def test_korte_code_van_vier_cijfers_werkt(client, db):
+    _toekomst(db, code="0201")
+    assert _code_invoeren(client, "0201").status_code == 302
+    assert 'name="bordje"' in client.get("/club-van-20/aanmelden").data.decode()
+
+
+def test_korte_code_is_niet_te_raden_door_veel_te_proberen(app, db):
+    """Ook wie na elke poging een nieuwe sessie begint (geen cookies), wordt
+    per IP-adres afgekapt, dus 4 cijfers zijn niet in een paar minuten te raden."""
+    from aanmeldingen import VOORBEELD_MAX_PER_UUR_PER_IP
+
+    _toekomst(db, code="0201")
+    for i in range(VOORBEELD_MAX_PER_UUR_PER_IP):
+        verse_sessie = app.test_client()
+        assert _code_invoeren(verse_sessie, f"{i:04d}" if i != 201 else "9999").status_code == 400
+    nog_een = app.test_client()
+    resp = _code_invoeren(nog_een, "0201")  # zelfs de goede code wordt nu even geweigerd
+    assert resp.status_code == 429 and "Te veel pogingen" in resp.data.decode()
+    assert 'name="bordje"' not in nog_een.get("/club-van-20/aanmelden").data.decode()
+
+    # Na een uur is het weer toegestaan.
+    db.execute("UPDATE club_van_20_voorbeeld_pogingen SET sinds = '2020-01-01 10:00'")
+    db.commit()
+    assert _code_invoeren(app.test_client(), "0201").status_code == 302

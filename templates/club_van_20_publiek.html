@@ -80,7 +80,7 @@
     <a class="aanmeldknop smal" id="aanmeldknop" href="{{ url_for('club_van_20_aanmelden') }}"
        {% if not aanmelden.open %}hidden data-opent="{{ aanmelden.opent_ms }}"{% endif %}>
         Word lid van de Club van 20&nbsp;&rarr;
-        <small>Aanmelden en betalen &middot; ook om te verlengen</small>
+        <small>{% if aanmelden.voorbeeld %}Voorbeeld, nog niet open voor bezoekers{% else %}Aanmelden en betalen &middot; ook om te verlengen{% endif %}</small>
     </a>
     {% endif %}
 
@@ -103,7 +103,7 @@
     <div class="kaart doe-mee">
         <h2 class="smal">Ook bij de Club van 20?</h2>
         <p>Voor <strong>{{ instellingen.club_van_20_bedrag|euro }} per seizoen</strong> staat jouw naam (of die van je bedrijf, team of vriendengroep)
-            op het scherm in de kantine &mdash; en help je de kantine mooier te maken.</p>
+            op het scherm in de kantine. Zo help je de kantine mooier te maken.</p>
         {% if instellingen.club_van_20_werving_tekst %}<p>{{ instellingen.club_van_20_werving_tekst }}</p>{% endif %}
         {% if instellingen.club_van_20_betaallink and not aanmelden.aan %}
         <a class="knop" href="{{ instellingen.club_van_20_betaallink }}" rel="noopener">Doe mee &rarr;</a>
@@ -149,7 +149,7 @@
 
     {% if namen %}
     <div class="kaart">
-        <h2 class="smal">De Club van 20 &middot; {{ seizoen }}</h2>
+        <h2 class="smal">De Club van 20 &middot; seizoen {{ seizoen|replace('-', '/') }}</h2>
         <div class="muur">
             {% for lid in namen %}
             <div class="bordje smal{{ ' glans' if lid.niveau == 'glans' }}">
@@ -160,7 +160,8 @@
     </div>
     {% endif %}
 
-    <footer>Bedankt voor jullie steun! &middot; s.v. Blauw-Geel 1915 &middot; <a href="{{ url_for('privacyverklaring') }}" style="color:inherit">Privacy</a></footer>
+    <footer>Bedankt voor jullie steun! &middot; s.v. Blauw-Geel 1915 &middot; <a href="{{ url_for('privacyverklaring') }}" style="color:inherit">Privacy</a>
+        <a href="{{ url_for('club_van_20_aanmelden_voorbeeld') }}" style="color:inherit; opacity:0.18; text-decoration:none; margin-left:0.4rem" aria-label="Voorbeeld voor beheerders">&middot;</a></footer>
 </div>
 <script>
 // Aanmeldknop: verschijnt op het moment dat aanmelden opengaat (UTC-ms van

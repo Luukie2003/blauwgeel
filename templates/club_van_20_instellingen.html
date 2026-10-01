@@ -159,6 +159,12 @@
                    value="{{ instellingen.club_van_20_bordje_max_tekens }}">
             <span class="tekst-zacht">Tot 16 tekens past een naam op één regel; langere namen worden kleiner getoond. De langste bestaande naam is 22 tekens.</span>
         </div>
+        <div class="veld" style="max-width:24rem">
+            <label for="club_van_20_voorbeeldcode">Code voor het voorbeeld (geheime knop)</label>
+            <input type="text" id="club_van_20_voorbeeldcode" name="club_van_20_voorbeeldcode" maxlength="60" autocomplete="off"
+                   value="{{ instellingen.club_van_20_voorbeeldcode or '' }}" placeholder="minstens {{ voorbeeld_min_tekens }} tekens, leeg = uit">
+            <span class="tekst-zacht">Onderaan de openbare pagina staat een bijna onzichtbaar puntje. Wie daarop klikt en deze code invoert, ziet het aanmeldformulier al vóór het openingsmoment. Een aanmelding die je dan verstuurt komt gewoon in de lijst bij Aanmeldingen, zodat je alles kunt uitproberen. Verander je de code, dan vervalt het voorbeeld voor iedereen die het nu open heeft.</span>
+        </div>
     </fieldset>
 
     <fieldset class="groupbox">

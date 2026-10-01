@@ -7,7 +7,10 @@ from flask import current_app, flash, redirect, render_template, request, sessio
 
 from aanmeldingen import (
     AANMELD_BETAALWIJZEN,
+    VOORBEELD_MAX_POGINGEN,
+    VOORBEELD_MIN_TEKENS,
     aanmelden_status,
+    aanmelden_status_voor,
     aantal_openstaand,
     bardienst_suggesties,
     bestaand_lid_voor,
@@ -20,7 +23,13 @@ from aanmeldingen import (
     stuur_melding_nieuwe_aanmelding,
     te_veel_aanmeldingen,
     valideer_aanmelding,
+    voorbeeld_geblokkeerd,
+    voorbeeld_gelukt,
+    voorbeeld_mislukt,
+    voorbeeldcode,
+    voorbeeldcode_klopt,
     wijs_af,
+    zet_voorbeeld,
 )
 from club_van_20 import BETAALWIJZEN, huidig_seizoen
 from database import get_db
@@ -52,7 +61,7 @@ def register_routes(app):
         db = get_db()
         instellingen = _instellingen(db)
         mollie = _mollie_link(instellingen)
-        status = aanmelden_status(instellingen)
+        status = aanmelden_status_voor(instellingen, session)
         context = {
             "instellingen": instellingen,
             "status": status,
@@ -89,6 +98,47 @@ def register_routes(app):
             }
             return redirect(url_for("club_van_20_aanmelden_bedankt"))
         return render_template("club_van_20_aanmelden.html", **context)
+
+    @app.route("/club-van-20/aanmelden/voorbeeld", methods=["GET", "POST"])
+    def club_van_20_aanmelden_voorbeeld():
+        """De geheime knop: met de ingestelde code (Scherm & werving) zie je het
+        aanmeldformulier al vóór het openingsmoment, als voorbeeld. Een
+        aanmelding die je dan verstuurt, komt gewoon in de lijst bij
+        Aanmeldingen (en je kunt 'm afwijzen), zodat je alles kunt uitproberen."""
+        db = get_db()
+        instellingen = _instellingen(db)
+        beschikbaar = bool(voorbeeldcode(instellingen))
+        fout = None
+        status = 200
+        if request.method == "POST" and beschikbaar:
+            pogingen = session.get("voorbeeld_pogingen", 0)
+            ip_h = ip_hash(_client_ip(), current_app.secret_key)
+            if pogingen >= VOORBEELD_MAX_POGINGEN or voorbeeld_geblokkeerd(db, ip_h):
+                fout, status = "Te veel pogingen. Probeer het later nog eens.", 429
+            elif voorbeeldcode_klopt(instellingen, request.form.get("code")):
+                session.pop("voorbeeld_pogingen", None)
+                voorbeeld_gelukt(db, ip_h)
+                zet_voorbeeld(session, instellingen)
+                return redirect(url_for("club_van_20_aanmelden"))
+            else:
+                session["voorbeeld_pogingen"] = pogingen + 1
+                voorbeeld_mislukt(db, ip_h)
+                fout, status = "Dat is niet de juiste code.", 400
+        return (
+            render_template(
+                "club_van_20_aanmelden_voorbeeld.html",
+                instellingen=instellingen,
+                beschikbaar=beschikbaar,
+                fout=fout,
+                min_tekens=VOORBEELD_MIN_TEKENS,
+            ),
+            status,
+        )
+
+    @app.route("/club-van-20/aanmelden/voorbeeld/stop")
+    def club_van_20_aanmelden_voorbeeld_stop():
+        session.pop("aanmelden_voorbeeld", None)
+        return redirect(url_for("club_van_20_publiek"))
 
     @app.route("/club-van-20/aanmelden/bedankt")
     def club_van_20_aanmelden_bedankt():

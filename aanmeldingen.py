@@ -15,6 +15,7 @@ dat lid gekoppeld in plaats van een dubbel lid aan te maken.
 
 import hashlib
 import re
+import secrets
 import unicodedata
 from datetime import datetime, timedelta
 
@@ -42,6 +43,12 @@ AANMELD_BETAALWIJZEN = {
 MAX_PER_UUR_PER_IP = 30
 MAX_OPENSTAAND = 300
 DUBBEL_BINNEN_DAGEN = 7
+
+# Voorbeeldmodus: wie via de geheime knop de juiste code invoert, ziet het
+# aanmeldformulier al vóór het openingsmoment (en kan het proberen).
+VOORBEELD_MIN_TEKENS = 4
+VOORBEELD_MAX_POGINGEN = 5  # per sessie
+VOORBEELD_MAX_PER_UUR_PER_IP = 10  # per IP-code, ook zonder sessie/cookies
 
 # Bewaartermijnen uit de privacyverklaring (templates/privacy.html).
 IP_HASH_BEWAAR_DAGEN = 30
@@ -78,6 +85,76 @@ def aanmelden_status(instellingen, nu=None):
         status["opent_label"] = (
             f"{DAGNAMEN[moment.weekday()]} {moment.day} {MAANDNAMEN[moment.month - 1]}, {moment:%H:%M}"
         )
+    return status
+
+
+def _voorbeeld_sleutel(code):
+    return hashlib.sha256(f"voorbeeld|{code}".encode()).hexdigest()[:20]
+
+
+def voorbeeldcode(instellingen):
+    """De ingestelde code, of None als er geen (bruikbare) is: dan bestaat de
+    voorbeeldmodus niet."""
+    code = (instellingen["club_van_20_voorbeeldcode"] or "").strip()
+    return code if len(code) >= VOORBEELD_MIN_TEKENS and instellingen["club_van_20_aanmelden_aan"] else None
+
+
+def voorbeeldcode_klopt(instellingen, ingevoerd):
+    code = voorbeeldcode(instellingen)
+    return bool(code) and secrets.compare_digest(code.encode(), (ingevoerd or "").strip().encode())
+
+
+def voorbeeld_geblokkeerd(db, ip_h):
+    """Te veel foute codes vanaf dit IP in het laatste uur?"""
+    rij = db.execute(
+        "SELECT mislukt, sinds FROM club_van_20_voorbeeld_pogingen WHERE ip_hash = ?", (ip_h,)
+    ).fetchone()
+    if rij is None:
+        return False
+    uur_geleden = (nu_amsterdam() - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M")
+    return rij["sinds"] >= uur_geleden and rij["mislukt"] >= VOORBEELD_MAX_PER_UUR_PER_IP
+
+
+def voorbeeld_mislukt(db, ip_h):
+    nu = nu_amsterdam().strftime("%Y-%m-%d %H:%M")
+    uur_geleden = (nu_amsterdam() - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M")
+    db.execute(
+        """INSERT INTO club_van_20_voorbeeld_pogingen (ip_hash, mislukt, sinds) VALUES (?, 1, ?)
+           ON CONFLICT(ip_hash) DO UPDATE SET
+               mislukt = CASE WHEN sinds < ? THEN 1 ELSE mislukt + 1 END,
+               sinds = CASE WHEN sinds < ? THEN excluded.sinds ELSE sinds END""",
+        (ip_h, nu, uur_geleden, uur_geleden),
+    )
+    db.commit()
+
+
+def voorbeeld_gelukt(db, ip_h):
+    db.execute("DELETE FROM club_van_20_voorbeeld_pogingen WHERE ip_hash = ?", (ip_h,))
+    db.commit()
+
+
+def zet_voorbeeld(sessie, instellingen):
+    """Onthoudt in de sessie dat deze bezoeker de code kent. Er staat een
+    afgeleide sleutel in (niet de code zelf): verandert de code, dan is
+    meteen elke eerder geopende voorbeeldsessie ongeldig."""
+    sessie["aanmelden_voorbeeld"] = _voorbeeld_sleutel(voorbeeldcode(instellingen))
+
+
+def voorbeeld_actief(instellingen, sessie):
+    code = voorbeeldcode(instellingen)
+    return bool(code) and secrets.compare_digest(
+        str(sessie.get("aanmelden_voorbeeld", "")).encode(), _voorbeeld_sleutel(code).encode()
+    )
+
+
+def aanmelden_status_voor(instellingen, sessie, nu=None):
+    """Zoals aanmelden_status, maar open (met 'voorbeeld': True) voor wie in
+    de voorbeeldmodus zit, ook al is het openingsmoment nog niet bereikt."""
+    status = aanmelden_status(instellingen, nu)
+    status["voorbeeld"] = False
+    if status["aan"] and not status["open"] and voorbeeld_actief(instellingen, sessie):
+        status["open"] = True
+        status["voorbeeld"] = True
     return status
 
 
@@ -397,4 +474,5 @@ def ruim_op(db):
         (grens(AFGEWEZEN_BEWAAR_DAGEN),),
     )
     db.execute("DELETE FROM paginabezoeken WHERE datum < ?", (grens(PAGINABEZOEKEN_BEWAAR_DAGEN),))
+    db.execute("DELETE FROM club_van_20_voorbeeld_pogingen WHERE sinds < ?", (grens(1),))
     db.commit()

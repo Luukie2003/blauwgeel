@@ -489,6 +489,15 @@ CREATE TABLE IF NOT EXISTS club_van_20_aanmeldingen (
 );
 CREATE INDEX IF NOT EXISTS idx_club_van_20_aanmeldingen_status ON club_van_20_aanmeldingen(status);
 
+-- Mislukte pogingen om de voorbeeldcode van het aanmeldformulier in te voeren
+-- (geheime knop), per afgeleide IP-code, zodat een korte code niet te raden
+-- is door veel te proberen. Rijen ouder dan een dag worden opgeruimd.
+CREATE TABLE IF NOT EXISTS club_van_20_voorbeeld_pogingen (
+    ip_hash TEXT PRIMARY KEY,
+    mislukt INTEGER NOT NULL DEFAULT 0,
+    sinds TEXT NOT NULL
+);
+
 -- Waar het Club van 20-geld aan besteed wordt (bartafels, sfeerverlichting,
 -- ...) -- voor de administratie én de "waar gaat jouw €20 heen"-dia.
 -- kosten = werkelijk uitgegeven (NULL = nog niet bekend, dan telt de raming).

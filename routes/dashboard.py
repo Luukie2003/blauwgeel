@@ -26,8 +26,16 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.19.3"
+HUIDIGE_VERSIE = "1.19.4"
 WIJZIGINGEN = [
+    {
+        "versie": "1.19.4",
+        "datum": "1 oktober 2026",
+        "punten": [
+            "Club van 20: met een geheime knop (bijna onzichtbaar puntje onderaan de openbare pagina) en een zelf in te stellen code kun je het aanmeldformulier al vóór het openingsmoment bekijken en uitproberen",
+            "Club van 20: de openbare pagina heeft geen lange streepjes meer in de tekst en toont het seizoen als 2026/2027",
+        ],
+    },
     {
         "versie": "1.19.3",
         "datum": "1 oktober 2026",

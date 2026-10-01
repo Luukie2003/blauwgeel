@@ -95,6 +95,8 @@ OPEN_ENDPOINTS = {
     # aanmeldingen daarna goed (Club van 20 > Aanmeldingen).
     "club_van_20_aanmelden",
     "club_van_20_aanmelden_bedankt",
+    "club_van_20_aanmelden_voorbeeld",
+    "club_van_20_aanmelden_voorbeeld_stop",
     # De privacyverklaring moet voor iedereen te lezen zijn, ook zonder account.
     "privacyverklaring",
 }

@@ -52,6 +52,9 @@
         .voorbeeld .bordje.leeg { color: rgba(30, 58, 138, 0.35); font-size: 1rem; font-weight: 400; font-family: inherit; }
         .honing { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
         .verbergen[hidden] { display: none; }
+        .voorbeeldbalk { background: var(--geel); color: var(--blauw-donker); border-radius: 12px; padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.92rem; line-height: 1.4; }
+        .voorbeeldbalk a { color: var(--blauw-donker); font-weight: 700; margin-left: 0.3rem; }
+        .geheim { display: block; width: 2rem; margin: 2rem auto 0; text-align: center; color: inherit; opacity: 0.18; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -64,6 +67,13 @@
 
     <a class="terug" href="{{ url_for('club_van_20_publiek') }}">&larr; Terug naar de Club van 20</a>
 
+    {% if status.voorbeeld %}
+    <div class="voorbeeldbalk" role="status">
+        <strong>Voorbeeld.</strong> Het formulier is nog niet open voor bezoekers. Een aanmelding die je nu verstuurt komt gewoon in de lijst bij Aanmeldingen; wijs 'm daar daarna af.
+        <a href="{{ url_for('club_van_20_aanmelden_voorbeeld_stop') }}">Voorbeeld stoppen</a>
+    </div>
+    {% endif %}
+
     {% if not status.aan %}
     <div class="kaart">
         <h2 class="smal">Aanmelden kan nu niet via de site</h2>
@@ -75,6 +85,7 @@
         <h2 class="smal">Aanmelden is nog niet open</h2>
         <p>Je kunt je aanmelden vanaf <strong>{{ status.opent_label }}</strong>. Kom dan hier terug!</p>
     </div>
+    <a class="geheim" href="{{ url_for('club_van_20_aanmelden_voorbeeld') }}" aria-label="Voorbeeld voor beheerders">&middot;</a>
     <script>
     (function () {
         var wacht = parseInt(document.getElementById('nog-niet-open').dataset.opent, 10) - Date.now();

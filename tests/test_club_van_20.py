@@ -968,3 +968,22 @@ def test_omzetting_van_oude_leden_naar_seizoenen(tmp_path):
     assert db.execute("SELECT status FROM club_van_20_leden WHERE id = 2").fetchone()["status"] == "actief"
     kolommen = {r["name"] for r in db.execute("PRAGMA table_info(club_van_20_leden)")}
     assert {"voornaam", "achternaam", "team", "telefoon", "eerdere_seizoenen"} <= kolommen
+
+
+def test_publieke_pagina_heeft_geen_streepjes_als_leesteken(client, db):
+    import html
+    import re
+
+    def zichtbare_tekst():
+        pagina = client.get("/club-van-20/doe-mee").data.decode()
+        pagina = re.sub(r"<style.*?</style>", "", pagina, flags=re.S)
+        pagina = re.sub(r"<script.*?</script>", "", pagina, flags=re.S)
+        return html.unescape(re.sub(r"<[^>]+>", " ", pagina))
+
+    # Er moet een naam op de pagina staan, anders ontbreekt de seizoenskop.
+    lid_id = _lid(db, "Test")
+    _bijdrage(db, lid_id, HUIDIG)
+    tekst = zichtbare_tekst()
+    assert "\u2014" not in tekst and "\u2013" not in tekst and " - " not in tekst
+    # Het seizoen staat als 2026/2027; de clubnaam houdt zijn streepje.
+    assert f"seizoen {HUIDIG.replace('-', '/')}" in tekst and f"seizoen {HUIDIG}" not in tekst
