@@ -15,6 +15,7 @@ from aanmeldingen import (
     keur_goed,
     maak_aanmelding,
     max_tekens,
+    ruim_op,
     splits_naam,
     stuur_melding_nieuwe_aanmelding,
     te_veel_aanmeldingen,
@@ -76,6 +77,7 @@ def register_routes(app):
             _, is_nieuw = maak_aanmelding(
                 db, waarden, huidig_seizoen(), instellingen["club_van_20_bedrag"], ip_h
             )
+            ruim_op(db)
             if is_nieuw:
                 stuur_melding_nieuwe_aanmelding(
                     db, waarden, url_for("club_van_20_aanmeldingen", _external=True)
@@ -105,6 +107,7 @@ def register_routes(app):
     def club_van_20_aanmeldingen():
         db = get_db()
         instellingen = _instellingen(db)
+        ruim_op(db)
         rijen = db.execute(
             "SELECT * FROM club_van_20_aanmeldingen WHERE status = 'nieuw' ORDER BY aangemaakt_op, id"
         ).fetchall()

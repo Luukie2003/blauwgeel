@@ -95,6 +95,8 @@ OPEN_ENDPOINTS = {
     # aanmeldingen daarna goed (Club van 20 > Aanmeldingen).
     "club_van_20_aanmelden",
     "club_van_20_aanmelden_bedankt",
+    # De privacyverklaring moet voor iedereen te lezen zijn, ook zonder account.
+    "privacyverklaring",
 }
 
 # Iedereen moet bij de eerste keer inloggen een eigen 6-cijferige tablet-code
@@ -1020,6 +1022,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
         keuken,
         kiosk,
         kluis,
+        privacy,
         producten,
         sponsoren,
         stemmen,
@@ -1028,6 +1031,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
     )
 
     aanmeldingen.register_routes(app)
+    privacy.register_routes(app)
     accounts.register_routes(app)
     auth.register_routes(app)
     bestellijst.register_routes(app)

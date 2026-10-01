@@ -32,6 +32,20 @@
                        value="{{ banner_tekst or '' }}">
             </div>
         </fieldset>
+        <fieldset class="groupbox">
+            <legend>Privacyverklaring</legend>
+            <p class="tekst-zacht" style="margin-top:0">
+                Het contactadres voor privacyvragen op de <a href="{{ url_for('privacyverklaring') }}" target="_blank" rel="noopener">privacyverklaring</a>
+                (bijv. een e-mailadres van het bestuur). Laat je dit leeg, dan staat er dat mensen een bestuurslid
+                kunnen aanspreken of het aan de bar kunnen vragen.
+            </p>
+            <div class="veld">
+                <label for="privacy_contact">Contactadres voor privacyvragen</label>
+                <input type="text" id="privacy_contact" name="privacy_contact" maxlength="120"
+                       placeholder="bijv. bestuur@blauwgeel1915.nl"
+                       value="{{ privacy_contact or '' }}">
+            </div>
+        </fieldset>
         <button type="submit" class="btn btn-geel">Opslaan</button>
     </form>
 </div>

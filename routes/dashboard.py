@@ -26,8 +26,16 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.19.1"
+HUIDIGE_VERSIE = "1.19.2"
 WIJZIGINGEN = [
+    {
+        "versie": "1.19.2",
+        "datum": "1 oktober 2026",
+        "punten": [
+            "Nieuw: privacyverklaring op /privacy (openbaar, met links op het aanmeldformulier, de Club van 20-pagina, de stempagina's en onderaan de beheersite); het contactadres stel je in bij Club → Instellingen",
+            "Oude gegevens ruimen zichzelf op volgens die verklaring: afgewezen aanmeldingen na een jaar, de afgeleide IP-code bij aanmeldingen na 30 dagen en paginatellingen na twee jaar",
+        ],
+    },
     {
         "versie": "1.19.1",
         "datum": "1 oktober 2026",

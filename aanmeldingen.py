@@ -43,6 +43,11 @@ MAX_PER_UUR_PER_IP = 30
 MAX_OPENSTAAND = 300
 DUBBEL_BINNEN_DAGEN = 7
 
+# Bewaartermijnen uit de privacyverklaring (templates/privacy.html).
+IP_HASH_BEWAAR_DAGEN = 30
+AFGEWEZEN_BEWAAR_DAGEN = 365
+PAGINABEZOEKEN_BEWAAR_DAGEN = 730
+
 
 def nu_amsterdam():
     return datetime.now(AMSTERDAM)
@@ -367,3 +372,29 @@ def stuur_melding_nieuwe_aanmelding(db, waarden, link):
             mail.stuur_mail(onderwerp, "\n".join(regels), naar=ontvanger)
     except Exception as fout:  # noqa: BLE001 -- zie docstring
         print(f"[aanmelding] Melding versturen mislukt: {fout}")
+
+
+# ---------- Bewaartermijnen ----------
+
+
+def ruim_op(db):
+    """Haalt weg wat volgens de privacyverklaring niet langer bewaard mag
+    blijven: de afgeleide IP-code van aanmeldingen na 30 dagen, afgewezen
+    aanmeldingen na een jaar en paginatellingen na twee jaar. Wordt
+    onderweg meegenomen bij het aanmelden en het bekijken van de
+    aanmeldingen, dus er is geen aparte geplande taak voor nodig."""
+    nu = nu_amsterdam()
+
+    def grens(dagen):
+        return (nu - timedelta(days=dagen)).strftime("%Y-%m-%d %H:%M")
+
+    db.execute(
+        "UPDATE club_van_20_aanmeldingen SET ip_hash = NULL WHERE ip_hash IS NOT NULL AND aangemaakt_op < ?",
+        (grens(IP_HASH_BEWAAR_DAGEN),),
+    )
+    db.execute(
+        "DELETE FROM club_van_20_aanmeldingen WHERE status = 'afgewezen' AND behandeld_op < ?",
+        (grens(AFGEWEZEN_BEWAAR_DAGEN),),
+    )
+    db.execute("DELETE FROM paginabezoeken WHERE datum < ?", (grens(PAGINABEZOEKEN_BEWAAR_DAGEN),))
+    db.commit()

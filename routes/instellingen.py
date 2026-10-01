@@ -49,21 +49,23 @@ def register_routes(app):
         if request.method == "POST":
             notificatie_email = request.form.get("notificatie_email", "").strip()
             banner_tekst = request.form.get("banner_tekst", "").strip()
+            privacy_contact = request.form.get("privacy_contact", "").strip()[:120]
             db.execute(
-                "UPDATE instellingen SET notificatie_email = ?, banner_tekst = ? WHERE id = 1",
-                (notificatie_email or None, banner_tekst or None),
+                "UPDATE instellingen SET notificatie_email = ?, banner_tekst = ?, privacy_contact = ? WHERE id = 1",
+                (notificatie_email or None, banner_tekst or None, privacy_contact or None),
             )
             db.commit()
             flash("Instellingen opgeslagen.", "success")
             return redirect(url_for("instellingen_pagina"))
 
         rij = db.execute(
-            "SELECT notificatie_email, banner_tekst FROM instellingen WHERE id = 1"
+            "SELECT notificatie_email, banner_tekst, privacy_contact FROM instellingen WHERE id = 1"
         ).fetchone()
         return render_template(
             "instellingen.html",
             notificatie_email=rij["notificatie_email"] if rij else None,
             banner_tekst=rij["banner_tekst"] if rij else None,
+            privacy_contact=rij["privacy_contact"] if rij else None,
         )
 
     # ---------- Club instellingen (teamagenda's) ----------

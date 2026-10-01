@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacyverklaring · s.v. Blauw-Geel 1915</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <meta name="theme-color" content="#1e3a8a">
+    <style>
+        :root { --blauw: #1e3a8a; --blauw-donker: #0f1f4d; --geel: #fcd42f; --tekst-zacht: #b9c2e0; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Calibri, sans-serif;
+            background: linear-gradient(160deg, var(--blauw) 0%, var(--blauw-donker) 100%) fixed;
+            color: #fff;
+        }
+        .pagina { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+        .smal { font-family: "Oswald", "Bebas Neue", "Roboto Condensed", "Arial Narrow", sans-serif; font-weight: 700; }
+        header { text-align: center; margin-bottom: 1.2rem; }
+        header img { width: 4rem; height: auto; }
+        header .club { color: var(--tekst-zacht); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; margin: 0.5rem 0 0.2rem; }
+        h1 { color: var(--geel); font-size: 2.3rem; margin: 0; line-height: 1.05; }
+        .bijgewerkt { color: var(--tekst-zacht); font-size: 0.9rem; margin: 0.4rem 0 0; }
+        .terug { display: inline-block; color: var(--tekst-zacht); font-size: 0.9rem; margin-bottom: 1rem; }
+        .tekst { background: #fff; color: var(--blauw-donker); border-radius: 16px; padding: 1.3rem 1.3rem 1.1rem; line-height: 1.55; }
+        .tekst h2 { color: var(--blauw); font-size: 1.35rem; margin: 1.6rem 0 0.5rem; }
+        .tekst h2:first-child { margin-top: 0; }
+        .tekst h3 { color: var(--blauw); font-size: 1.05rem; margin: 1rem 0 0.2rem; }
+        .tekst p { margin: 0 0 0.7rem; }
+        .tekst ul { margin: 0 0 0.8rem; padding-left: 1.2rem; }
+        .tekst li { margin-bottom: 0.3rem; }
+        .tekst a { color: var(--blauw); }
+        dl.gegevens { margin: 0 0 0.9rem; border-left: 4px solid var(--geel); padding-left: 0.9rem; }
+        dl.gegevens dt { font-weight: 700; margin-top: 0.5rem; }
+        dl.gegevens dt:first-child { margin-top: 0; }
+        dl.gegevens dd { margin: 0.05rem 0 0; }
+        .samenvatting { background: #eef2ff; border-radius: 12px; padding: 0.9rem 1rem 0.3rem; margin-bottom: 1.3rem; }
+        footer { text-align: center; color: var(--tekst-zacht); font-size: 0.8rem; margin-top: 2rem; }
+    </style>
+</head>
+<body>
+<div class="pagina">
+    <header>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915">
+        <p class="club">s.v. Blauw-Geel 1915</p>
+        <h1 class="smal">Privacyverklaring</h1>
+        <p class="bijgewerkt">Kantinesysteem en Club van 20 &middot; laatst bijgewerkt op {{ bijgewerkt }}</p>
+    </header>
+
+    <a class="terug" href="{{ url_for('club_van_20_publiek') }}">&larr; Naar de Club van 20</a>
+
+    <div class="tekst">
+        <div class="samenvatting">
+            <p><strong>Kort samengevat</strong></p>
+            <ul>
+                <li>We vragen alleen de gegevens die we nodig hebben, en gebruiken ze alleen voor de kantine en de Club van 20.</li>
+                <li>Openbaar wordt alleen het <strong>naambordje</strong> dat jij zelf kiest, hoeveel sterren je hebt (dus hoeveel seizoenen je meedoet) en wat bij een wedstrijd hoort, zoals standen en de Man of the Match.</li>
+                <li>We verkopen niets door, tonen geen advertenties en volgen je niet.</li>
+                <li>Je kunt altijd vragen wat we van je hebben, of om je gegevens aan te laten passen of te verwijderen.</li>
+            </ul>
+        </div>
+
+        <h2>1. Wie is verantwoordelijk?</h2>
+        <p>s.v. Blauw-Geel 1915 (&ldquo;de club&rdquo;, &ldquo;wij&rdquo;) is verantwoordelijk voor de persoonsgegevens die worden verwerkt via deze website en het kantinesysteem.</p>
+        <p>Vragen over privacy, of wil je gebruikmaken van je rechten (zie punt 10)?
+        {% if contact_email %}Mail naar <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.
+        {% elif contact %}Neem contact op via {{ contact }}.
+        {% else %}Spreek een bestuurslid aan of vraag het aan de bar.{% endif %}</p>
+
+        <h2>2. Aanmelden voor de Club van 20</h2>
+        <dl class="gegevens">
+            <dt>Welke gegevens</dt>
+            <dd>Je naam; de naam die op het bordje moet komen; hoe je betaalt (Mollie of contant); bij contant betalen de naam van de vrijwilliger die bardienst had; en het moment van aanmelden. Daarnaast bewaren we kort een versleutelde code die uit je IP-adres is afgeleid. Je IP-adres is daar niet uit terug te rekenen.</dd>
+            <dt>Waarvoor</dt>
+            <dd>Je aanmelding verwerken, je betaling terugvinden en controleren, en je bordje op het scherm zetten. De code uit je IP-adres gebruiken we alleen om te veel aanmeldingen vanaf &eacute;&eacute;n plek (spam) te beperken.</dd>
+            <dt>Op grond waarvan</dt>
+            <dd>Het uitvoeren van de afspraak die je met de club maakt als je meedoet met de Club van 20. Voor de spambeveiliging: ons gerechtvaardigd belang om het formulier werkend te houden.</dd>
+            <dt>Hoe lang</dt>
+            <dd>Een goedgekeurde aanmelding wordt onderdeel van de ledenlijst (punt 3). Een afgewezen aanmelding bewaren we hooguit een jaar. De afgeleide IP-code verwijderen we na 30 dagen.</dd>
+        </dl>
+
+        <h2>3. De ledenlijst van de Club van 20</h2>
+        <dl class="gegevens">
+            <dt>Welke gegevens</dt>
+            <dd>De naam op het bordje; voornaam en achternaam; team; telefoonnummer en e-mailadres (niet bij iedereen ingevuld); notities; per seizoen of er is betaald, hoeveel, wanneer, hoe en door wie; sinds wanneer je meedoet en of je bent gestopt (gearchiveerd).</dd>
+            <dt>Wie ziet dit</dt>
+            <dd>Alleen vrijwilligers met toegang tot de administratie van de Club van 20.</dd>
+            <dt>Waarvoor</dt>
+            <dd>De ledenadministratie, betaalverzoeken en herinneringen (soms via WhatsApp, met je telefoonnummer), de bordjes op het scherm, het bijhouden van het aantal seizoenen (de sterren) en laten zien hoeveel er voor de club is opgehaald.</dd>
+            <dt>Op grond waarvan</dt>
+            <dd>De afspraak die je met de club hebt als lid van de Club van 20, en ons gerechtvaardigd belang om een nette administratie te voeren.</dd>
+            <dt>Hoe lang</dt>
+            <dd>Zolang je meedoet. Daarna bewaren we je naam en betalingen nog 7 jaar, omdat de club haar administratie wettelijk zo lang moet bewaren. Je telefoonnummer en e-mailadres verwijderen we eerder als je daarom vraagt of als je bent gestopt.</dd>
+            <dt>Wat is openbaar</dt>
+            <dd>Op het scherm in de kantine en op de openbare pagina van de Club van 20 staan je naam op het bordje, je sterren, en per team het aantal bordjes. Verder niets uit de ledenlijst. Wil je niet (meer) op het scherm staan? Laat het weten, dan halen we je bordje weg.</dd>
+        </dl>
+
+        <h2>4. Het scherm in de kantine en de openbare pagina&rsquo;s</h2>
+        <p>Op de schermen staan sponsorlogo&rsquo;s, wedstrijden, standen en uitslagen, en als dat is ingevuld de naam van de Man of the Match per team. Dat zijn gegevens die een vereniging gewoonlijk deelt; we doen dat vanuit ons gerechtvaardigd belang om de betrokkenheid bij de club te vergroten. Wil je niet genoemd worden, laat het weten, dan passen we het aan.</p>
+
+        <h2>5. Accounts van vrijwilligers</h2>
+        <dl class="gegevens">
+            <dt>Welke gegevens</dt>
+            <dd>Je naam voor het inloggen; je e-mailadres; je wachtwoord en tabletcode (alleen onleesbaar versleuteld opgeslagen, wij kunnen ze zelf niet zien); je rol en rechten; wanneer je voor het laatst hebt ingelogd; je mailvoorkeuren. Bij handelingen in het systeem, zoals een telling, boeking, kassamutatie of bericht op het prikbord, wordt je naam bewaard. Voor gebruiksstatistieken tellen we welke pagina&rsquo;s worden gebruikt: welke pagina, wanneer en met welk account.</dd>
+            <dt>Waarvoor</dt>
+            <dd>Veilig inloggen, kunnen terugzoeken wie wat heeft gedaan (voorraad en kas controleren), mailen over bijvoorbeeld leveringen, het weekoverzicht en nieuwe aanmeldingen, en zien hoe het systeem wordt gebruikt.</dd>
+            <dt>Op grond waarvan</dt>
+            <dd>Ons gerechtvaardigd belang om de kantine veilig en controleerbaar te beheren.</dd>
+            <dt>Hoe lang</dt>
+            <dd>Zolang je account bestaat. Als je account wordt verwijderd, verdwijnen je inloggegevens; je naam kan als tekst bij oude tellingen en boekingen blijven staan. Paginatellingen bewaren we 2 jaar.</dd>
+        </dl>
+
+        <h2>6. Stemmen en peilingen</h2>
+        <p>Als je meestemt, bewaren we je keuze, en alleen als je dat zelf invult ook je naam en opmerking. Ook zetten we een willekeurige code in een cookie (<code>stem_kiezer</code>, 1 jaar) zodat je niet twee keer kunt stemmen. Je geeft je naam en opmerking vrijwillig; daarmee geef je toestemming om ze te gebruiken voor de uitslag. De gegevens blijven bewaard zolang de stemming in het systeem staat; een beheerder kan een stemming verwijderen.</p>
+
+        <h2>7. Cookies en tracking</h2>
+        <p>We gebruiken alleen cookies die nodig zijn om de site te laten werken: een sessiecookie (om in te loggen en formulieren te beveiligen), een cookie dat onthoudt of je de desktopweergave of de handterminalweergave gebruikt (1 jaar) en het stemcookie uit punt 6. Daarom vragen we geen toestemming met een cookiebanner. We gebruiken <strong>geen</strong> advertentiecookies, analysecookies of volgcookies, en laden geen externe scripts, lettertypen of socialemediaknoppen.</p>
+
+        <h2>8. Met wie delen we gegevens?</h2>
+        <ul>
+            <li><strong>PythonAnywhere</strong> (hosting): de server waarop de website en de database staan, inclusief de back-ups.</li>
+            <li><strong>E-mail</strong>: meldingen sturen we via een e-mailaccount van de club, alleen naar vrijwilligers en nooit als reclame.</li>
+            <li><strong>WhatsApp</strong>: stuurt een vrijwilliger je een betaalverzoek via WhatsApp, dan gaat je telefoonnummer samen met het bericht via WhatsApp.</li>
+            <li><strong>Back-ups</strong>: elke dag wordt een back-up van de database gemaakt en 90 dagen bewaard; elke week gaat een kopie per e-mail naar een mailbox van de club.</li>
+        </ul>
+        <p>We verkopen je gegevens niet en geven ze niet door voor reclame. Verder delen we gegevens alleen als de wet dat van ons vraagt.</p>
+
+        <h2>9. Beveiliging</h2>
+        <p>De site werkt via een beveiligde verbinding (https). Wachtwoorden en tabletcodes slaan we versleuteld op. Vrijwilligers zien alleen de onderdelen waar ze toegang toe hebben, en de ledenlijst is alleen voor beheerders van de Club van 20. Te veel foute inlogpogingen worden geblokkeerd. Geen enkel systeem is helemaal waterdicht; gaat er toch iets mis met jouw gegevens, dan melden we dat zoals de wet voorschrijft.</p>
+
+        <h2>10. Jouw rechten</h2>
+        <p>Je mag ons vragen om:</p>
+        <ul>
+            <li>te laten zien welke gegevens we van je hebben (inzage);</li>
+            <li>onjuiste gegevens te verbeteren;</li>
+            <li>je gegevens te verwijderen, voor zover we ze niet wettelijk moeten bewaren;</li>
+            <li>de verwerking te beperken, of bezwaar te maken tegen gebruik op grond van ons gerechtvaardigd belang;</li>
+            <li>je gegevens in een gangbaar bestand aan jou mee te geven (overdraagbaarheid);</li>
+            <li>een eerder gegeven toestemming in te trekken.</li>
+        </ul>
+        <p>Stuur je verzoek via het contactadres bij punt 1. We reageren binnen een maand en vragen soms eerst om te bevestigen dat jij het bent. Ben je het niet eens met hoe we omgaan met je gegevens? Dan kun je een klacht indienen bij de <a href="https://autoriteitpersoonsgegevens.nl" rel="noopener">Autoriteit Persoonsgegevens</a>. Maar we horen het graag eerst van je.</p>
+
+        <h2>11. Wijzigingen</h2>
+        <p>Als er iets verandert in hoe we met gegevens omgaan, passen we deze verklaring aan. De datum bovenaan laat zien wanneer dat voor het laatst is gebeurd.</p>
+    </div>
+
+    <footer>s.v. Blauw-Geel 1915</footer>
+</div>
+</body>
+</html>

@@ -98,6 +98,7 @@ KOLOM_MIGRATIES = [
     ("gebruikers", "mail_week_overzicht", "INTEGER NOT NULL DEFAULT 0"),
     ("gebruikers", "mail_club_aanmelding", "INTEGER NOT NULL DEFAULT 0"),
     ("instellingen", "banner_tekst", "TEXT"),
+    ("instellingen", "privacy_contact", "TEXT"),
     ("instellingen", "kassalade_stand", "REAL NOT NULL DEFAULT 0"),
     ("instellingen", "kluis_stand", "REAL NOT NULL DEFAULT 0"),
     ("mutaties", "gebruiker_id", "INTEGER REFERENCES gebruikers(id)"),

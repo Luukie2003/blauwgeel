@@ -145,6 +145,7 @@ CREATE TABLE IF NOT EXISTS instellingen (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     notificatie_email TEXT,
     banner_tekst TEXT,
+    privacy_contact TEXT,
     kassalade_stand REAL NOT NULL DEFAULT 0,
     kluis_stand REAL NOT NULL DEFAULT 0
 );
