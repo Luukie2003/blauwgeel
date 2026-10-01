@@ -105,7 +105,7 @@
                 </div>
                 <div class="c20-muur" style="--kolommen: {{ slide.kolommen }}; --rijen: {{ slide.rijen }};">
                     {% for lid in slide.namen %}
-                    <div class="c20-bordje{{ ' c20-bordje--' ~ lid.niveau if lid.niveau else '' }}{{ ' c20-bordje--groot' if lid.extra_groot else '' }}{{ ' c20-bordje--nieuw' if lid.nieuw else '' }}{{ ' c20-bordje--niet-betaald' if lid.niet_betaald else '' }}{{ ' c20-bordje--lang' if lid.lang else '' }}"
+                    <div class="c20-bordje{{ ' c20-bordje--' ~ lid.niveau if lid.niveau else '' }}{{ ' c20-bordje--groot' if lid.extra_groot and slide.kolommen >= 2 else '' }}{{ ' c20-bordje--nieuw' if lid.nieuw else '' }}{{ ' c20-bordje--niet-betaald' if lid.niet_betaald else '' }}{{ ' c20-bordje--lang' if lid.lang else '' }}"
                          style="animation-delay: {{ (loop.index0 * 0.035)|round(3) }}s">
                         {% if lid.niveau == 'glans' %}<span class="c20-glans" style="--gd: {{ ((loop.index0 * 7) % 11 * 0.7)|round(1) }}s"></span>{% endif %}
                         {% if lid.sterren %}<span class="c20-sterren">{{ '★' * lid.sterren if lid.sterren <= 5 else lid.sterren ~ '★' }}</span>{% endif %}

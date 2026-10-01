@@ -534,6 +534,53 @@ def whatsapp_link(telefoon, tekst):
 # ---------- Kantine scherm ----------
 
 
+def vakjes_breedte(lid, kolommen):
+    """Hoeveel kolommen een bordje breed is: een extra groot bordje neemt er
+    2 in, maar alleen als de dia minstens 2 kolommen heeft (anders zou het
+    raster een extra kolom erbij maken)."""
+    return 2 if lid["extra_groot"] and kolommen >= 2 else 1
+
+
+def raster_rijen(breedtes, kolommen):
+    """Aantal rijen dat nodig is voor bordjes met deze breedtes in een raster
+    met 'kolommen' kolommen, geplaatst zoals CSS grid met 'row dense' dat
+    doet (elk bordje op de eerste plek vanaf linksboven waar het past, dus
+    een gat naast een breed bordje wordt door een later bordje opgevuld)."""
+    rijen = []
+    for breedte in breedtes:
+        breedte = max(1, min(breedte, kolommen))
+        rij = 0
+        while True:
+            if rij == len(rijen):
+                rijen.append([False] * kolommen)
+            plek = next(
+                (c for c in range(kolommen - breedte + 1) if not any(rijen[rij][c : c + breedte])),
+                None,
+            )
+            if plek is not None:
+                for c in range(plek, plek + breedte):
+                    rijen[rij][c] = True
+                break
+            rij += 1
+    return len(rijen)
+
+
+def verdeel_over_dias(zichtbaar, per_slide, kolommen):
+    """Verdeelt de namen over dia's van hooguit 'per_slide' vakjes; een extra
+    groot bordje telt voor 2 vakjes."""
+    groepen, huidig, bezet = [], [], 0
+    for lid in zichtbaar:
+        breedte = vakjes_breedte(lid, kolommen)
+        if huidig and bezet + breedte > per_slide:
+            groepen.append(huidig)
+            huidig, bezet = [], 0
+        huidig.append(lid)
+        bezet += breedte
+    if huidig:
+        groepen.append(huidig)
+    return groepen
+
+
 def bouw_slides(db, instellingen, qr_svg=None):
     """Alle Club van 20-dia's voor het kantine scherm, in vaste volgorde:
     naammuur (verdeeld over meerdere dia's bij veel namen), opbrengst/doel,
@@ -553,17 +600,20 @@ def bouw_slides(db, instellingen, qr_svg=None):
     bedrag = instellingen["club_van_20_bedrag"] or 20
     slides = []
 
-    groepen = [zichtbaar[i : i + per_slide] for i in range(0, len(zichtbaar), per_slide)]
+    # Een extra groot bordje neemt 2 vakjes in en telt dus dubbel mee voor het
+    # aantal namen dat op een dia past.
+    groepen = verdeel_over_dias(zichtbaar, per_slide, kolommen)
     for idx, groep in enumerate(groepen):
-        # extra_groot neemt 2 vakjes in, dus tellen die dubbel mee voor het
-        # aantal lege vakjes dat de dia "vol" maakt.
         # Net als de oude Canva-dia's wordt de laatste dia aangevuld met lege
         # vakjes ("hier kan jouw naam staan") tot de dia vol is.
-        bezet = sum(2 if lid["extra_groot"] else 1 for lid in groep)
+        breedtes = [vakjes_breedte(lid, kolommen) for lid in groep]
+        bezet = sum(breedtes)
         lege = 0
         if instellingen["club_van_20_lege_vakjes"] and idx == len(groepen) - 1:
             lege = max(0, per_slide - bezet)
-        rijen = -(-(bezet + lege) // kolommen)
+        # Aantal rijen volgens de echte plaatsing, dus ook als een breed bordje
+        # een gat laat dat niet helemaal gevuld wordt.
+        rijen = raster_rijen(breedtes + [1] * lege, kolommen)
         if not instellingen["club_van_20_laatste_dia_vullen"]:
             rijen = max(rijen, vaste_rijen)
         slides.append(

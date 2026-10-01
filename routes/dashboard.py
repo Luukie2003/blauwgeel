@@ -26,8 +26,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.19.4"
+HUIDIGE_VERSIE = "1.19.5"
 WIJZIGINGEN = [
+    {
+        "versie": "1.19.5",
+        "datum": "1 oktober 2026",
+        "punten": [
+            "Club van 20: een extra groot bordje telt nu voor twee vakjes mee bij het verdelen van de namen over de dia's, en er blijven geen gaten meer naast een breed bordje (de volgende namen vullen ze op). Het aantal rijen per dia klopt nu ook bij 3 of 5 kolommen",
+        ],
+    },
     {
         "versie": "1.19.4",
         "datum": "1 oktober 2026",

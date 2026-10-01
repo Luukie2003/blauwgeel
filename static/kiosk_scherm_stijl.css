@@ -174,6 +174,10 @@
     display: grid;
     grid-template-columns: repeat(var(--kolommen), minmax(0, 1fr));
     grid-template-rows: repeat(var(--rijen), minmax(0, 1fr));
+    /* "dense": een gat naast een breed (extra groot) bordje wordt door het
+       volgende bordje opgevuld. Hoeveel rijen dat kost rekent
+       raster_rijen() in club_van_20.py na. */
+    grid-auto-flow: row dense;
     gap: 0.9rem 1rem;
     /* Lettergrootte schaalt mee met de hoogte van een rij (minder rijen =
        grotere namen), maar nooit breder dan een kolom toelaat. */

@@ -987,3 +987,70 @@ def test_publieke_pagina_heeft_geen_streepjes_als_leesteken(client, db):
     assert "\u2014" not in tekst and "\u2013" not in tekst and " - " not in tekst
     # Het seizoen staat als 2026/2027; de clubnaam houdt zijn streepje.
     assert f"seizoen {HUIDIG.replace('-', '/')}" in tekst and f"seizoen {HUIDIG}" not in tekst
+
+
+# ---------- Extra groot bordje ----------
+
+
+def test_extra_groot_vinkje_wordt_opgeslagen_en_weer_uitgezet(ingelogde_client, db):
+    basis = {"csrf_token": _csrf(ingelogde_client), "naam": "Ten Boer On Tour", "status_seizoen": "betaald"}
+    ingelogde_client.post("/club-van-20/leden/nieuw", data={**basis, "extra_groot": "on"})
+    lid = db.execute("SELECT * FROM club_van_20_leden WHERE naam = 'Ten Boer On Tour'").fetchone()
+    assert lid["extra_groot"] == 1
+    assert "checked" in ingelogde_client.get(f"/club-van-20/leden/{lid['id']}").data.decode().split('name="extra_groot"')[1][:80]
+
+    ingelogde_client.post(f"/club-van-20/leden/{lid['id']}", data=basis)  # vinkje niet meegestuurd = uit
+    assert db.execute("SELECT extra_groot FROM club_van_20_leden WHERE id = ?", (lid["id"],)).fetchone()[0] == 0
+
+
+def test_extra_groot_bordje_is_breed_op_het_scherm(client, db):
+    _alleen_club_van_20(db)
+    _zet(db, club_van_20_kolommen=4, club_van_20_namen_per_slide=8)
+    _bijdrage(db, _lid(db, "Gewoon Lid"), HUIDIG)
+    _bijdrage(db, _lid(db, "Ten Boer On Tour", extra_groot=1), HUIDIG)
+
+    tekst = client.get("/kiosk/scherm").data.decode()
+    assert tekst.count("c20-bordje--groot") == 1
+    groot = tekst[tekst.index("c20-bordje--groot") :][:400]
+    assert "Ten Boer On Tour" in groot and "Gewoon Lid" not in groot
+    # Een gat naast een breed bordje wordt opgevuld door het volgende bordje.
+    assert "grid-auto-flow: row dense" in open("static/kiosk_scherm_stijl.css").read()
+
+
+def test_extra_groot_met_een_kolom_wordt_niet_breed(client, db):
+    _alleen_club_van_20(db)
+    _zet(db, club_van_20_kolommen=1, club_van_20_namen_per_slide=4)
+    _bijdrage(db, _lid(db, "Ten Boer On Tour", extra_groot=1), HUIDIG)
+    assert "c20-bordje--groot" not in client.get("/kiosk/scherm").data.decode()
+
+
+def test_raster_rijen_plaatst_zoals_css_grid_dense():
+    from club_van_20 import raster_rijen
+
+    assert raster_rijen([], 4) == 0
+    assert raster_rijen([1] * 8, 4) == 2
+    assert raster_rijen([2, 2, 2], 3) == 3  # elk breed bordje houdt een rij voor zich
+    assert raster_rijen([1, 1, 1, 2], 4) == 2  # past niet op rij 1 (nog 1 kolom vrij)
+    assert raster_rijen([1, 1, 2, 1], 3) == 2  # het gat op rij 1 wordt door het laatste bordje gevuld
+    assert raster_rijen([2, 1, 1, 2, 1, 1, 2], 4) == 3
+    assert raster_rijen([2], 1) == 1  # nooit breder dan het raster
+
+
+def test_extra_groot_telt_dubbel_voor_het_aantal_namen_per_dia(client, db):
+    from club_van_20 import verdeel_over_dias
+
+    leden = [{"naam": "A", "extra_groot": True}] + [{"naam": n, "extra_groot": False} for n in "BCDE"]
+    assert [[l["naam"] for l in g] for g in verdeel_over_dias(leden, 4, 4)] == [["A", "B", "C"], ["D", "E"]]
+    # Zonder extra groot: gewoon 4 per dia.
+    gewoon = [{"naam": n, "extra_groot": False} for n in "ABCDE"]
+    assert [len(g) for g in verdeel_over_dias(gewoon, 4, 4)] == [4, 1]
+
+    _alleen_club_van_20(db)
+    _zet(db, club_van_20_kolommen=4, club_van_20_namen_per_slide=8, club_van_20_lege_vakjes=0)
+    for i in range(7):
+        _bijdrage(db, _lid(db, f"Lid {i}", extra_groot=1 if i < 3 else 0), HUIDIG)
+    tekst = client.get("/kiosk/scherm").data.decode()
+    # 3 brede (6 vakjes) + 5 gewone = 11 vakjes: 2 dia's, elk met precies 2 rijen
+    # of meer, nooit minder rijen dan het echte raster nodig heeft.
+    assert tekst.count("c20-bordje--groot") == 3
+    assert "1/2" in tekst and "2/2" in tekst
