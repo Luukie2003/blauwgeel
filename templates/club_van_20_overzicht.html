@@ -6,6 +6,13 @@
     Zet de status per lid direct in de tabel; wie betaald heeft komt vanzelf op het kantine scherm.
 </p>
 
+{% if aanmeldingen_open %}
+<div class="flash flash-success" style="display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap">
+    <span><strong>{{ aanmeldingen_open }}</strong> {{ 'aanmelding wacht' if aanmeldingen_open == 1 else 'aanmeldingen wachten' }} op goedkeuring.</span>
+    <a href="{{ url_for('club_van_20_aanmeldingen') }}" class="btn btn-geel btn-klein">Bekijken</a>
+</div>
+{% endif %}
+
 <div class="actiebalk" style="justify-content:flex-start; gap:0.5rem; margin-bottom:1rem">
     <a href="{{ url_for('club_van_20_lid_nieuw') }}" class="btn btn-geel">+ Nieuw lid</a>
     <a href="{{ url_for('club_van_20_exporteren') }}" class="btn btn-rand">Exporteren (CSV)</a>

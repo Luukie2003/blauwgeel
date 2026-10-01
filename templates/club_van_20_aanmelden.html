@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aanmelden · Club van 20 · s.v. Blauw-Geel 1915</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <meta name="theme-color" content="#1e3a8a">
+    <style>
+        :root { --blauw: #1e3a8a; --blauw-donker: #0f1f4d; --geel: #fcd42f; --tekst-zacht: #b9c2e0; --rood: #ffb4b4; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Calibri, sans-serif;
+            background: linear-gradient(160deg, var(--blauw) 0%, var(--blauw-donker) 100%) fixed;
+            color: #fff;
+        }
+        .pagina { max-width: 34rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+        .smal { font-family: "Oswald", "Bebas Neue", "Roboto Condensed", "Arial Narrow", sans-serif; font-weight: 700; }
+        header { text-align: center; margin-bottom: 1.2rem; }
+        header img { width: 4rem; height: auto; }
+        header .club { color: var(--tekst-zacht); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; margin: 0.5rem 0 0.2rem; }
+        h1 { color: var(--geel); font-size: 2.3rem; margin: 0; line-height: 1.05; }
+        h2 { color: var(--geel); font-size: 1.3rem; margin: 0 0 0.7rem; }
+        .kaart { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 16px; padding: 1.1rem; margin-bottom: 1rem; }
+        .kaart p { margin: 0 0 0.7rem; line-height: 1.45; }
+        .zacht { color: var(--tekst-zacht); font-size: 0.88rem; }
+        .terug { display: inline-block; color: var(--tekst-zacht); font-size: 0.9rem; margin-bottom: 1rem; }
+        label.veldlabel { display: block; font-weight: 700; margin: 0 0 0.3rem; }
+        input[type=text] { width: 100%; font: inherit; font-size: 1.05rem; padding: 0.75rem 0.85rem; border-radius: 10px; border: 2px solid transparent; background: #fff; color: var(--blauw-donker); }
+        input[type=text]:focus { outline: none; border-color: var(--geel); }
+        .veld { margin-bottom: 1.1rem; }
+        .fout { color: var(--rood); font-weight: 700; font-size: 0.92rem; margin-top: 0.35rem; }
+        .foutbalk { background: rgba(255, 90, 90, 0.18); border: 1px solid var(--rood); border-radius: 12px; padding: 0.8rem 1rem; margin-bottom: 1rem; font-weight: 700; }
+        .keuze { display: block; position: relative; margin-bottom: 0.6rem; }
+        .keuze input { position: absolute; opacity: 0; pointer-events: none; }
+        .keuze span.kaartje { display: block; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.25); border-radius: 12px; padding: 0.85rem 1rem; font-weight: 700; font-size: 1.05rem; cursor: pointer; }
+        .keuze input:checked + span.kaartje { background: var(--geel); border-color: var(--geel); color: var(--blauw-donker); }
+        .keuze input:focus-visible + span.kaartje { outline: 3px solid #fff; outline-offset: 2px; }
+        .keuze small { display: block; font-weight: 400; font-size: 0.85rem; opacity: 0.85; margin-top: 0.15rem; }
+        .uitleg { background: rgba(0, 0, 0, 0.18); border-radius: 12px; padding: 0.9rem 1rem; margin: 0.2rem 0 1.1rem; }
+        .uitleg[hidden] { display: none; }
+        .knop { display: inline-block; background: var(--geel); color: var(--blauw-donker); font-weight: 800; text-decoration: none; border: 0; border-radius: 999px; padding: 0.85rem 1.8rem; font-size: 1.1rem; font: inherit; font-weight: 800; cursor: pointer; }
+        .knop.groot { display: block; width: 100%; text-align: center; font-size: 1.25rem; padding: 1rem; }
+        .knop[disabled] { opacity: 0.6; cursor: wait; }
+        .teller { text-align: right; font-size: 0.82rem; color: var(--tekst-zacht); margin-top: 0.25rem; }
+        .teller.vol { color: var(--geel); font-weight: 700; }
+        .voorbeeld { margin-top: 0.7rem; }
+        .voorbeeld .bordje { background: #fff; color: var(--blauw); border: 3px solid #dfe5f5; border-radius: 6px; padding: 0.45rem 0.8rem; text-align: center; font-size: 1.5rem; min-height: 2.6rem; display: flex; align-items: center; justify-content: center; overflow-wrap: anywhere; }
+        .voorbeeld .bordje.leeg { color: rgba(30, 58, 138, 0.35); font-size: 1rem; font-weight: 400; font-family: inherit; }
+        .honing { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+        .verbergen[hidden] { display: none; }
+    </style>
+</head>
+<body>
+<div class="pagina">
+    <header>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915">
+        <p class="club">s.v. Blauw-Geel 1915</p>
+        <h1 class="smal">{{ instellingen.club_van_20_titel }}</h1>
+    </header>
+
+    <a class="terug" href="{{ url_for('club_van_20_publiek') }}">&larr; Terug naar de Club van 20</a>
+
+    {% if not status.aan %}
+    <div class="kaart">
+        <h2 class="smal">Aanmelden kan nu niet via de site</h2>
+        <p>Vraag naar de mogelijkheden bij de bar, dan regelen we het daar.</p>
+    </div>
+
+    {% elif not status.open %}
+    <div class="kaart" id="nog-niet-open" data-opent="{{ status.opent_ms }}">
+        <h2 class="smal">Aanmelden is nog niet open</h2>
+        <p>Je kunt je aanmelden vanaf <strong>{{ status.opent_label }}</strong>. Kom dan hier terug!</p>
+    </div>
+    <script>
+    (function () {
+        var wacht = parseInt(document.getElementById('nog-niet-open').dataset.opent, 10) - Date.now();
+        if (wacht > 0 && wacht < 2147483000) setTimeout(function () { location.reload(); }, wacht + 500);
+    })();
+    </script>
+
+    {% else %}
+    <form method="post" id="aanmeldform" class="kaart">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <h2 class="smal">Meld je aan</h2>
+        <p>Voor <strong>{{ instellingen.club_van_20_bedrag|euro }} per seizoen</strong> komt jouw naam (of die van je bedrijf, team of vriendengroep) op het scherm. Vul onderstaande in, dan controleren we je betaling en zetten we je erbij.</p>
+
+        {% if fouten %}
+        <div class="foutbalk" role="alert">{{ fouten.get('algemeen') or 'Er klopt nog iets niet, kijk even naar de rode meldingen.' }}</div>
+        {% endif %}
+
+        <div class="veld">
+            <span class="veldlabel" style="display:block; font-weight:700; margin-bottom:0.5rem">1. Hoe betaal je?</span>
+            {% for sleutel, label in betaalwijzen.items() %}
+            <label class="keuze">
+                <input type="radio" name="betaalwijze" value="{{ sleutel }}" {{ 'checked' if waarden.get('betaalwijze') == sleutel or (betaalwijzen|length == 1) }} required>
+                <span class="kaartje">{{ label }}
+                    {% if sleutel == 'mollie' %}<small>Betaal nu online, daarna vul je hieronder je gegevens in</small>{% else %}<small>Betaal aan de bar, en zeg wie bardienst had</small>{% endif %}
+                </span>
+            </label>
+            {% endfor %}
+            {% if fouten.betaalwijze %}<div class="fout">{{ fouten.betaalwijze }}</div>{% endif %}
+        </div>
+
+        {% if mollie_link %}
+        <div class="uitleg" id="uitleg-mollie" hidden>
+            <p style="margin-bottom:0.8rem"><strong>Stap 1:</strong> betaal {{ instellingen.club_van_20_bedrag|euro }} via Mollie. De betaalpagina opent in een nieuw tabblad.</p>
+            <a class="knop" href="{{ mollie_link }}" target="_blank" rel="noopener">Betaal {{ instellingen.club_van_20_bedrag|euro }} via Mollie &rarr;</a>
+            <p class="zacht" style="margin:0.8rem 0 0"><strong>Stap 2:</strong> kom hierna terug naar deze pagina en vul hieronder je naam en bordje in. Gebruik bij Mollie dezelfde naam als hieronder, dan kunnen we je betaling terugvinden.</p>
+        </div>
+        {% endif %}
+
+        <div class="uitleg" id="uitleg-contant" hidden>
+            <p style="margin-bottom:0.8rem">Betaal {{ instellingen.club_van_20_bedrag|euro }} contant aan de bar. Geef hier aan wie er bardienst had, dan kunnen we de betaling nakijken.</p>
+            <label class="veldlabel" for="bardienst">Wie had er bardienst?</label>
+            <input type="text" id="bardienst" name="bardienst" maxlength="60" value="{{ waarden.get('bardienst', '') }}" list="bardienst-lijst" autocomplete="off" placeholder="Naam van de barvrijwilliger">
+            <datalist id="bardienst-lijst">{% for naam in bardiensten %}<option value="{{ naam }}">{% endfor %}</datalist>
+            {% if fouten.bardienst %}<div class="fout">{{ fouten.bardienst }}</div>{% endif %}
+        </div>
+
+        <div class="veld">
+            <label class="veldlabel" for="naam">2. Jouw naam</label>
+            <input type="text" id="naam" name="naam" maxlength="60" value="{{ waarden.get('naam', '') }}" autocomplete="name" required placeholder="Voor- en achternaam">
+            <div class="zacht" style="margin-top:0.3rem">Zoals die bij je betaling staat, zodat we je betaling kunnen terugvinden.</div>
+            {% if fouten.naam %}<div class="fout">{{ fouten.naam }}</div>{% endif %}
+        </div>
+
+        <div class="veld">
+            <label class="veldlabel" for="bordje">3. Wat moet er op het bordje?</label>
+            <input type="text" id="bordje" name="bordje" maxlength="{{ max_tekens }}" value="{{ waarden.get('bordje', '') }}" autocomplete="off" required placeholder="Bijv. je naam, bedrijf of team">
+            <div class="teller" id="teller"><span id="aantal">0</span> / {{ max_tekens }} tekens</div>
+            {% if fouten.bordje %}<div class="fout">{{ fouten.bordje }}</div>{% endif %}
+            <div class="voorbeeld" aria-live="polite">
+                <div class="zacht" style="margin-bottom:0.3rem">Zo komt het op het scherm:</div>
+                <div class="bordje smal leeg" id="voorbeeld">Je bordje</div>
+            </div>
+        </div>
+
+        <div class="honing" aria-hidden="true">
+            <label>Laat dit leeg <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+        </div>
+
+        <button type="submit" class="knop groot" id="versturen">Versturen</button>
+        <p class="zacht" style="margin:0.8rem 0 0; text-align:center">Je bordje verschijnt zodra we je betaling hebben gecontroleerd.</p>
+    </form>
+    <script>
+    (function () {
+        var form = document.getElementById('aanmeldform');
+        var mollie = document.getElementById('uitleg-mollie');
+        var contant = document.getElementById('uitleg-contant');
+        var bardienst = document.getElementById('bardienst');
+        var bordje = document.getElementById('bordje');
+        var voorbeeld = document.getElementById('voorbeeld');
+        var aantal = document.getElementById('aantal');
+        var teller = document.getElementById('teller');
+        var max = parseInt(bordje.getAttribute('maxlength'), 10);
+
+        function wijze() {
+            var gekozen = form.querySelector('input[name=betaalwijze]:checked');
+            return gekozen ? gekozen.value : '';
+        }
+        function toon() {
+            var w = wijze();
+            if (mollie) mollie.hidden = w !== 'mollie';
+            contant.hidden = w !== 'contant';
+            bardienst.required = w === 'contant';
+        }
+        function bordjeBijwerken() {
+            var tekst = bordje.value.replace(/\s+/g, ' ').trim();
+            aantal.textContent = bordje.value.length;
+            teller.classList.toggle('vol', bordje.value.length >= max);
+            voorbeeld.textContent = tekst || 'Je bordje';
+            voorbeeld.classList.toggle('leeg', !tekst);
+        }
+        form.addEventListener('change', toon);
+        bordje.addEventListener('input', bordjeBijwerken);
+        form.addEventListener('submit', function () {
+            var knop = document.getElementById('versturen');
+            knop.disabled = true;
+            knop.textContent = 'Bezig met versturen…';
+        });
+        toon();
+        bordjeBijwerken();
+    })();
+    </script>
+    {% endif %}
+</div>
+</body>
+</html>

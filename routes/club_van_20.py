@@ -9,6 +9,7 @@ from datetime import datetime
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
 
 import qr
+from aanmeldingen import STANDAARD_MAX_TEKENS, aanmelden_status, aantal_openstaand
 from club_van_20 import (
     AFTEL_FORMAAT,
     aankondiging,
@@ -155,6 +156,7 @@ def register_routes(app):
             status_labels=BIJDRAGE_STATUS_LABELS,
             betaalwijzen=BETAALWIJZEN,
             instellingen=instellingen,
+            aanmeldingen_open=aantal_openstaand(db),
         )
 
     @app.route("/club-van-20/leden/<int:lid_id>/bijdrage", methods=["POST"])
@@ -689,7 +691,8 @@ def register_routes(app):
                        club_van_20_verzoek_tekst = ?,
                        club_van_20_aankondiging_tekst = ?, club_van_20_aankondiging_aftellen_tot = ?,
                        club_van_20_aankondiging_na_tekst = ?, club_van_20_aankondiging_op_dia = ?,
-                       club_van_20_seizoenen_per_ster = ?, club_van_20_glans_vanaf_sterren = ?
+                       club_van_20_seizoenen_per_ster = ?, club_van_20_glans_vanaf_sterren = ?,
+                       club_van_20_aanmelden_aan = ?, club_van_20_bordje_max_tekens = ?
                    WHERE id = 1""",
                 (
                     1 if request.form.get("toon_club_van_20") else 0,
@@ -716,6 +719,8 @@ def register_routes(app):
                     1 if request.form.get("club_van_20_aankondiging_op_dia") else 0,
                     max(1, min(20, _getal("club_van_20_seizoenen_per_ster", 3))),
                     max(1, min(20, _getal("club_van_20_glans_vanaf_sterren", 2))),
+                    1 if request.form.get("club_van_20_aanmelden_aan") else 0,
+                    max(5, min(60, _getal("club_van_20_bordje_max_tekens", STANDAARD_MAX_TEKENS))),
                 ),
             )
             db.commit()
@@ -730,6 +735,7 @@ def register_routes(app):
             publiek_url=publiek_url,
             publiek_qr_svg=qr.qr_svg(publiek_url),
             aantal_op_scherm=len(zichtbare_leden(db, instellingen)),
+            aanmelden=aanmelden_status(instellingen),
         )
 
     # ---------- Publieke pagina (QR-code op de wervingsdia) ----------
@@ -743,6 +749,7 @@ def register_routes(app):
             "club_van_20_publiek.html",
             instellingen=instellingen,
             aankondiging=aankondiging(instellingen),
+            aanmelden=aanmelden_status(instellingen),
             namen=zichtbaar,
             teams=team_stand(zichtbaar, leden_met_bijdragen(db, alleen_actief=True)),
             geld=financien(db, instellingen["club_van_20_bedrag"]),

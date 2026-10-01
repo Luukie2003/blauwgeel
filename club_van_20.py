@@ -35,6 +35,7 @@ BIJDRAGE_STATUSSEN = list(BIJDRAGE_STATUS_LABELS)
 
 BETAALWIJZEN = {
     "contant": "Contant",
+    "mollie": "Mollie (online)",
     "tikkie": "Tikkie / betaalverzoek",
     "bank": "Overschrijving",
     "anders": "Anders",
@@ -441,6 +442,17 @@ MAANDNAMEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "a
               "september", "oktober", "november", "december"]
 
 
+def aftelmoment(instellingen):
+    """Het ingestelde aftelmoment (Amsterdamse tijd), of None als dat leeg of
+    onleesbaar is. Ook het moment waarop aanmelden via de site opengaat."""
+    try:
+        return datetime.strptime(
+            instellingen["club_van_20_aankondiging_aftellen_tot"] or "", AFTEL_FORMAAT
+        ).replace(tzinfo=AMSTERDAM)
+    except ValueError:
+        return None
+
+
 def aankondiging(instellingen, nu=None):
     """De aankondiging bovenaan de publieke pagina, of None als er niets te
     tonen is. Vóór het aftelmoment: de tekst + een aftelklok (doel_ms voor de
@@ -449,13 +461,7 @@ def aankondiging(instellingen, nu=None):
     alleen de tekst."""
     tekst = (instellingen["club_van_20_aankondiging_tekst"] or "").strip()
     na_tekst = (instellingen["club_van_20_aankondiging_na_tekst"] or "").strip()
-    moment = None
-    try:
-        moment = datetime.strptime(
-            instellingen["club_van_20_aankondiging_aftellen_tot"] or "", AFTEL_FORMAAT
-        ).replace(tzinfo=AMSTERDAM)
-    except ValueError:
-        pass
+    moment = aftelmoment(instellingen)
     nu = nu or datetime.now(AMSTERDAM)
     if moment is None:
         return {"tekst": tekst, "aftellen": False} if tekst else None

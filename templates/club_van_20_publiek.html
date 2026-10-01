@@ -60,6 +60,10 @@
         .aftelvak .eenheid { display: block; font-size: 0.68rem; color: #fff; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.25rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 700; }
         .aftelvak .getal.tik { animation: tik 0.35s ease; }
         .aankondiging .wanneer { font-size: 0.8rem; margin-top: 0.7rem; font-weight: 700; opacity: 0.75; }
+        /* Aanmeldknop bovenaan: verschijnt op het aftelmoment (zie aanmeldingen.py). */
+        .aanmeldknop { display: block; background: var(--geel); color: var(--blauw-donker); text-decoration: none; text-align: center; border-radius: 16px; padding: 1.1rem 1rem; margin-bottom: 1.2rem; font-weight: 800; font-size: clamp(1.25rem, 5.6vw, 1.6rem); line-height: 1.1; box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: aankondiging-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .aanmeldknop[hidden] { display: none; }
+        .aanmeldknop small { display: block; font-size: 0.9rem; font-weight: 700; opacity: 0.75; margin-top: 0.3rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         @keyframes tik { 0% { transform: translateY(-0.35em); opacity: 0.2; } 100% { transform: none; opacity: 1; } }
         @keyframes aankondiging-in { from { transform: translateY(-12px) scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
     </style>
@@ -71,6 +75,14 @@
         <p class="club">s.v. Blauw-Geel 1915</p>
         <h1 class="smal">{{ instellingen.club_van_20_titel }}</h1>
     </header>
+
+    {% if aanmelden.aan %}
+    <a class="aanmeldknop smal" id="aanmeldknop" href="{{ url_for('club_van_20_aanmelden') }}"
+       {% if not aanmelden.open %}hidden data-opent="{{ aanmelden.opent_ms }}"{% endif %}>
+        Word lid van de Club van 20&nbsp;&rarr;
+        <small>Aanmelden en betalen &middot; ook om te verlengen</small>
+    </a>
+    {% endif %}
 
     {% if aankondiging %}
     <div class="aankondiging" id="aankondiging"
@@ -93,7 +105,7 @@
         <p>Voor <strong>{{ instellingen.club_van_20_bedrag|euro }} per seizoen</strong> staat jouw naam (of die van je bedrijf, team of vriendengroep)
             op het scherm in de kantine &mdash; en help je de kantine mooier te maken.</p>
         {% if instellingen.club_van_20_werving_tekst %}<p>{{ instellingen.club_van_20_werving_tekst }}</p>{% endif %}
-        {% if instellingen.club_van_20_betaallink %}
+        {% if instellingen.club_van_20_betaallink and not aanmelden.aan %}
         <a class="knop" href="{{ instellingen.club_van_20_betaallink }}" rel="noopener">Doe mee &rarr;</a>
         {% endif %}
     </div>
@@ -150,6 +162,17 @@
 
     <footer>Bedankt voor jullie steun! &middot; s.v. Blauw-Geel 1915</footer>
 </div>
+<script>
+// Aanmeldknop: verschijnt op het moment dat aanmelden opengaat (UTC-ms van
+// de server), ook als er geen aftelklok op de pagina staat.
+(function () {
+    var knop = document.getElementById('aanmeldknop');
+    if (!knop || !knop.dataset.opent) return;
+    var wacht = parseInt(knop.dataset.opent, 10) - Date.now();
+    if (wacht <= 0) { knop.hidden = false; return; }
+    if (wacht < 2147483000) setTimeout(function () { knop.hidden = false; }, wacht);
+})();
+</script>
 <script>
 // Aftelklok: telt elke seconde af naar het ingestelde moment (in UTC-ms van
 // de server, dus ongeacht de tijdzone van de telefoon). Op nul: de "na

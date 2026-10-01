@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block titel %}Aanmeldingen · Club van 20{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Nieuwe aanmeldingen via de website staan hier als <strong>concept</strong>. Controleer eerst de betaling
+    (Mollie: zoek de naam en het bedrag in je Mollie-dashboard; contant: vraag het na bij de genoemde bardienst) en
+    keur dan goed. Pas dan wordt de aanmelder een lid en komt het bordje op het scherm.
+</p>
+
+<div class="actiebalk" style="justify-content:flex-start; gap:0.5rem; margin-bottom:1rem">
+    <a href="{{ url_for('club_van_20_overzicht') }}" class="btn btn-rand">&larr; Alle leden</a>
+    <a href="{{ url_for('club_van_20_instellingen') }}" class="btn btn-rand">Instellingen aanmelden</a>
+    <a href="{{ url_for('club_van_20_aanmelden') }}" class="btn btn-rand" target="_blank" rel="noopener">Aanmeldformulier &nearr;</a>
+</div>
+
+{% if not status.aan %}
+<div class="flash flash-error">Aanmelden via de website staat uit (Instellingen aanmelden).</div>
+{% elif not status.open %}
+<div class="flash flash-warning">Het formulier opent op {{ status.opent_label }}; tot dan kan niemand zich aanmelden.</div>
+{% endif %}
+
+<div class="kaart">
+    <h3 style="margin-top:0">Wachten op goedkeuring ({{ openstaand|length }})</h3>
+    {% if openstaand %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Ontvangen</th><th>Bordje</th><th>Naam aanmelder</th><th>Betaling</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for a in openstaand %}
+                <tr>
+                    <td>{{ a.aangemaakt_op[8:10] }}-{{ a.aangemaakt_op[5:7] }} {{ a.aangemaakt_op[11:16] }}</td>
+                    <td><strong>{{ a.bordje }}</strong>
+                        {% if a.lid %}<br><span class="badge badge-uit" title="Er is al een lid met dit bordje of deze naam">bestaand lid: {{ a.lid.naam }}</span>{% endif %}
+                    </td>
+                    <td>{{ a.naam }}</td>
+                    <td>
+                        {% if a.betaalwijze == 'mollie' %}Mollie{% else %}Contant{% endif %} &middot; {{ a.bedrag|euro }}
+                        {% if a.bardienst %}<br><span class="tekst-zacht">Bardienst: {{ a.bardienst }}</span>{% endif %}
+                    </td>
+                    <td class="tabel-acties" style="white-space:nowrap">
+                        <button type="button" class="btn btn-geel btn-klein js-keur"
+                                data-id="{{ a.id }}"
+                                data-bordje="{{ a.bordje }}"
+                                data-naam="{{ a.naam }}"
+                                data-betaalwijze="{{ a.betaalwijze }}"
+                                data-bardienst="{{ a.bardienst or '' }}"
+                                data-bedrag="{{ '%g'|format(a.bedrag) }}"
+                                data-datum="{{ a.datum }}"
+                                data-voornaam="{{ a.voornaam }}"
+                                data-achternaam="{{ a.achternaam }}"
+                                data-lid-id="{{ a.lid.id if a.lid else '' }}"
+                                data-lid-naam="{{ a.lid.naam if a.lid else '' }}"
+                                data-lid-team="{{ (a.lid.team or '') if a.lid else '' }}"
+                                data-lid-telefoon="{{ (a.lid.telefoon or '') if a.lid else '' }}"
+                                data-lid-email="{{ (a.lid.email or '') if a.lid else '' }}">Goedkeuren&hellip;</button>
+                        <button type="button" class="btn btn-rand btn-klein js-afwijs" data-id="{{ a.id }}" data-bordje="{{ a.bordje }}">Afwijzen</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="tekst-zacht" style="margin:0">Geen openstaande aanmeldingen.</p>
+    {% endif %}
+</div>
+
+{% if behandeld %}
+<div class="kaart">
+    <h3 style="margin-top:0">Eerder behandeld</h3>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Behandeld</th><th>Bordje</th><th>Naam aanmelder</th><th>Betaling</th><th>Uitkomst</th></tr></thead>
+            <tbody>
+                {% for a in behandeld %}
+                <tr>
+                    <td>{{ (a.behandeld_op or '')[8:10] }}-{{ (a.behandeld_op or '')[5:7] }} {{ (a.behandeld_op or '')[11:16] }}<br><span class="tekst-zacht">{{ a.behandeld_door or '' }}</span></td>
+                    <td>{{ a.bordje }}</td>
+                    <td>{{ a.naam }}</td>
+                    <td>{% if a.betaalwijze == 'mollie' %}Mollie{% else %}Contant{% endif %} &middot; {{ a.bedrag|euro }}{% if a.bardienst %}<br><span class="tekst-zacht">Bardienst: {{ a.bardienst }}</span>{% endif %}</td>
+                    <td>
+                        {% if a.status == 'goedgekeurd' %}
+                        <span class="badge badge-ok">goedgekeurd</span>
+                        {% if a.lid_id %}<a href="{{ url_for('club_van_20_lid_bewerken', lid_id=a.lid_id) }}">{{ a.lid_naam }}</a>{% endif %}
+                        {% else %}
+                        <span class="badge badge-neutraal">afgewezen</span>{% if a.opmerking %} <span class="tekst-zacht">{{ a.opmerking }}</span>{% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<dialog id="keur-dialog" class="aanmeld-dialog">
+    <form method="post" id="keur-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <h3 style="margin-top:0">Aanmelding goedkeuren</h3>
+        <p class="tekst-zacht" id="keur-samenvatting" style="margin-top:0"></p>
+
+        <div id="keur-bestaand" hidden style="margin-bottom:0.9rem">
+            <label style="display:flex; gap:0.5rem; align-items:flex-start; font-weight:400">
+                <input type="radio" name="modus" value="bestaand" style="width:auto; margin-top:0.25rem">
+                <span><strong>Bestaand lid verlengen</strong>: <span id="keur-lid-naam"></span> &mdash; de betaling komt bij dit lid, er komt geen nieuw lid bij.</span>
+            </label>
+            <label style="display:flex; gap:0.5rem; align-items:flex-start; font-weight:400">
+                <input type="radio" name="modus" value="nieuw" style="width:auto; margin-top:0.25rem">
+                <span>Toch een nieuw lid aanmaken</span>
+            </label>
+            <input type="hidden" name="lid_id" id="keur-lid-id">
+            <label id="keur-bordje-aanpassen" style="display:flex; gap:0.5rem; align-items:center; font-weight:400; margin-top:0.5rem" hidden>
+                <input type="checkbox" name="bordje_aanpassen" style="width:auto"> Bordje van het lid aanpassen naar het nieuwe bordje
+            </label>
+        </div>
+        <input type="hidden" name="modus" value="nieuw" id="keur-modus-vast" disabled>
+
+        <div class="formgrid">
+            <div class="veld">
+                <label for="keur-bordje">Naam op het bordje</label>
+                <input type="text" id="keur-bordje" name="bordje" maxlength="{{ max_tekens }}" required>
+            </div>
+            <div class="veld">
+                <label for="keur-team">Team <span class="keur-mist tekst-zacht" data-voor="team"></span></label>
+                <input type="text" id="keur-team" name="team" list="keur-teams">
+                <datalist id="keur-teams">{% for t in teams %}<option value="{{ t }}">{% endfor %}</datalist>
+            </div>
+            <div class="veld">
+                <label for="keur-voornaam">Voornaam <span class="keur-mist tekst-zacht" data-voor="voornaam"></span></label>
+                <input type="text" id="keur-voornaam" name="voornaam">
+            </div>
+            <div class="veld">
+                <label for="keur-achternaam">Achternaam <span class="keur-mist tekst-zacht" data-voor="achternaam"></span></label>
+                <input type="text" id="keur-achternaam" name="achternaam">
+            </div>
+            <div class="veld">
+                <label for="keur-telefoon">Telefoon <span class="keur-mist tekst-zacht" data-voor="telefoon"></span></label>
+                <input type="text" id="keur-telefoon" name="telefoon" inputmode="tel">
+            </div>
+            <div class="veld">
+                <label for="keur-email">E-mail <span class="keur-mist tekst-zacht" data-voor="email"></span></label>
+                <input type="text" id="keur-email" name="email" inputmode="email">
+            </div>
+            <div class="veld">
+                <label for="keur-bedrag">Bedrag (&euro;)</label>
+                <input type="text" id="keur-bedrag" name="bedrag" inputmode="decimal">
+            </div>
+            <div class="veld">
+                <label for="keur-betaalwijze">Betaalwijze</label>
+                <select id="keur-betaalwijze" name="betaalwijze">
+                    {% for sleutel, label in betaalwijzen.items() %}<option value="{{ sleutel }}">{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="veld">
+                <label for="keur-betaald-op">Betaald op</label>
+                <input type="date" id="keur-betaald-op" name="betaald_op">
+            </div>
+        </div>
+        <p class="tekst-zacht" style="margin-top:0">Lege velden mogen leeg blijven; je kunt ze later altijd nog aanvullen bij de leden.</p>
+
+        <label style="display:flex; gap:0.5rem; align-items:center; font-weight:700; margin:0.6rem 0 1rem">
+            <input type="checkbox" name="betaling_gecontroleerd" value="1" required style="width:auto">
+            Ik heb de betaling gecontroleerd
+        </label>
+        <div style="display:flex; gap:0.5rem; justify-content:flex-end">
+            <button type="button" class="btn btn-rand" id="keur-annuleren">Annuleren</button>
+            <button type="submit" class="btn btn-geel">Goedkeuren &amp; bij de leden zetten</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="afwijs-dialog" class="aanmeld-dialog aanmeld-dialog-klein">
+    <form method="post" id="afwijs-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <h3 style="margin-top:0">Aanmelding afwijzen</h3>
+        <p id="afwijs-tekst" style="margin-top:0"></p>
+        <div class="veld">
+            <label for="afwijs-reden">Reden (optioneel, alleen voor jullie zelf)</label>
+            <input type="text" id="afwijs-reden" name="reden" maxlength="120" placeholder="Bijv. geen betaling gevonden / dubbel / grap">
+        </div>
+        <div style="display:flex; gap:0.5rem; justify-content:flex-end">
+            <button type="button" class="btn btn-rand" id="afwijs-annuleren">Annuleren</button>
+            <button type="submit" class="btn btn-gevaar">Afwijzen</button>
+        </div>
+    </form>
+</dialog>
+
+<style>
+    .aanmeld-dialog { border: 0; border-radius: 12px; padding: 1.2rem 1.4rem; width: min(40rem, 94vw); max-height: 92vh; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .aanmeld-dialog-klein { width: min(26rem, 94vw); }
+    .aanmeld-dialog::backdrop { background: rgba(10, 20, 50, 0.55); }
+    .aanmeld-dialog .formgrid { grid-template-columns: 1fr 1fr; }
+    .aanmeld-dialog .keur-mist { font-weight: 400; color: #b45309; font-size: 0.75rem; }
+    @media (max-width: 560px) { .aanmeld-dialog .formgrid { grid-template-columns: 1fr; } }
+</style>
+
+<script>
+(function () {
+    var basis = {{ url_for('club_van_20_aanmeldingen')|tojson }};
+    var keurDialog = document.getElementById('keur-dialog');
+    var keurForm = document.getElementById('keur-form');
+    var afwijsDialog = document.getElementById('afwijs-dialog');
+    var afwijsForm = document.getElementById('afwijs-form');
+    var bestaandBlok = document.getElementById('keur-bestaand');
+    var veld = function (n) { return keurForm.elements[n]; };
+    var wijzenLabel = { mollie: 'Mollie', contant: 'contant' };
+
+    function zetMist(d, waarden) {
+        keurForm.querySelectorAll('.keur-mist').forEach(function (el) {
+            var naam = el.dataset.voor;
+            el.textContent = (waarden[naam] || '').trim() ? '' : '(ontbreekt nog)';
+        });
+    }
+
+    document.querySelectorAll('.js-keur').forEach(function (knop) {
+        knop.addEventListener('click', function () {
+            var d = knop.dataset;
+            keurForm.action = basis + '/' + d.id + '/goedkeuren';
+            keurForm.reset();
+            document.getElementById('keur-samenvatting').textContent =
+                d.naam + ' betaalt ' + (wijzenLabel[d.betaalwijze] || d.betaalwijze) + ' €' + d.bedrag +
+                (d.bardienst ? ' (bardienst: ' + d.bardienst + ')' : '') + '.';
+            var bestaand = !!d.lidId;
+            bestaandBlok.hidden = !bestaand;
+            document.getElementById('keur-modus-vast').disabled = bestaand;
+            keurForm.querySelectorAll('input[name=modus][type=radio]').forEach(function (r) {
+                r.disabled = !bestaand;
+                r.checked = bestaand && r.value === 'bestaand';
+            });
+            document.getElementById('keur-lid-id').value = d.lidId || '';
+            document.getElementById('keur-lid-naam').textContent = d.lidNaam || '';
+            var aanpassen = document.getElementById('keur-bordje-aanpassen');
+            aanpassen.hidden = !(bestaand && d.lidNaam.toLowerCase() !== d.bordje.toLowerCase());
+            // Bij een bestaand lid: wat er al is blijft staan, we tonen wat nog ontbreekt.
+            var huidig = {
+                team: bestaand ? d.lidTeam : '', voornaam: d.voornaam, achternaam: d.achternaam,
+                telefoon: bestaand ? d.lidTelefoon : '', email: bestaand ? d.lidEmail : ''
+            };
+            veld('bordje').value = d.bordje;
+            veld('voornaam').value = huidig.voornaam;
+            veld('achternaam').value = huidig.achternaam;
+            veld('team').value = huidig.team;
+            veld('telefoon').value = huidig.telefoon;
+            veld('email').value = huidig.email;
+            veld('bedrag').value = d.bedrag;
+            veld('betaalwijze').value = d.betaalwijze;
+            veld('betaald_op').value = d.datum;
+            zetMist(d, huidig);
+            keurDialog.showModal();
+        });
+    });
+    document.getElementById('keur-annuleren').addEventListener('click', function () { keurDialog.close(); });
+
+    document.querySelectorAll('.js-afwijs').forEach(function (knop) {
+        knop.addEventListener('click', function () {
+            afwijsForm.action = basis + '/' + knop.dataset.id + '/afwijzen';
+            afwijsForm.reset();
+            document.getElementById('afwijs-tekst').textContent =
+                '‘' + knop.dataset.bordje + '’ wordt niet toegevoegd aan de Club van 20.';
+            afwijsDialog.showModal();
+        });
+    });
+    document.getElementById('afwijs-annuleren').addEventListener('click', function () { afwijsDialog.close(); });
+})();
+</script>
+{% endblock %}

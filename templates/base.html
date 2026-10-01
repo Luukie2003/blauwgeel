@@ -73,7 +73,7 @@
             {% endif %}
                     <li>
                         <a href="{{ url_for(item.url_endpoint) }}"
-                           class="{{ 'actief' if item == actieve_nav else '' }}">{{ item.label }}</a>
+                           class="{{ 'actief' if item == actieve_nav else '' }}">{{ item.label }}{% if item.url_endpoint == 'club_van_20_aanmeldingen' and club_aanmeldingen_open %} <span class="nav-badge" title="Wachten op goedkeuring">{{ club_aanmeldingen_open }}</span>{% endif %}</a>
                     </li>
             {% endfor %}
                 </ul>

@@ -463,6 +463,30 @@ CREATE TABLE IF NOT EXISTS club_van_20_bijdragen (
 );
 CREATE INDEX IF NOT EXISTS idx_club_van_20_bijdragen_seizoen ON club_van_20_bijdragen(seizoen);
 
+-- Aanmeldingen via de publieke pagina (/club-van-20/aanmelden): een concept
+-- dat pas een lid + betaling wordt als een beheerder de betaling heeft
+-- gecontroleerd en goedkeurt (zie aanmeldingen.py). naam = wie de aanmelder
+-- is (ter controle van de betaling), bordje = wat er op het scherm moet
+-- staan, bardienst = bij contant: wie er toen achter de bar stond.
+CREATE TABLE IF NOT EXISTS club_van_20_aanmeldingen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    seizoen TEXT NOT NULL,
+    naam TEXT NOT NULL,
+    bordje TEXT NOT NULL,
+    betaalwijze TEXT NOT NULL,
+    bardienst TEXT,
+    bedrag REAL NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'nieuw',
+    datum TEXT NOT NULL,
+    aangemaakt_op TEXT NOT NULL,
+    ip_hash TEXT,
+    behandeld_door TEXT,
+    behandeld_op TEXT,
+    opmerking TEXT,
+    lid_id INTEGER REFERENCES club_van_20_leden(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_club_van_20_aanmeldingen_status ON club_van_20_aanmeldingen(status);
+
 -- Waar het Club van 20-geld aan besteed wordt (bartafels, sfeerverlichting,
 -- ...) -- voor de administratie én de "waar gaat jouw €20 heen"-dia.
 -- kosten = werkelijk uitgegeven (NULL = nog niet bekend, dan telt de raming).

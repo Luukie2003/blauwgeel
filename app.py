@@ -3,6 +3,7 @@ from pathlib import Path
 
 from flask import Flask, flash, g, redirect, render_template, request, send_from_directory, session, url_for
 
+from aanmeldingen import aantal_openstaand
 from club_van_20 import bereken_club_van_20_status  # noqa: F401 (tests importeren 'm via app)
 from database import get_db, init_db, register_db
 from helpers import (
@@ -89,6 +90,11 @@ OPEN_ENDPOINTS = {
     # Publieke Club van 20-pagina: waar de QR-code op de wervingsdia van het
     # kantine scherm naartoe wijst -- bezoekers hebben geen account.
     "club_van_20_publiek",
+    # Aanmeldformulier (en bedankpagina) voor nieuwe leden, bereikbaar via de
+    # knop bovenaan die pagina -- ook zonder account; beheerders keuren de
+    # aanmeldingen daarna goed (Club van 20 > Aanmeldingen).
+    "club_van_20_aanmelden",
+    "club_van_20_aanmelden_bedankt",
 }
 
 # Iedereen moet bij de eerste keer inloggen een eigen 6-cijferige tablet-code
@@ -313,6 +319,9 @@ SECTIE_ENDPOINTS = {
         "club_van_20_project_verwijderen",
         "club_van_20_importeren",
         "club_van_20_exporteren",
+        "club_van_20_aanmeldingen",
+        "club_van_20_aanmelding_goedkeuren",
+        "club_van_20_aanmelding_afwijzen",
         "club_van_20_instellingen",
     },
     # Losgemaakt van BEHEERDER_ENDPOINTS voor hetzelfde soort reden --
@@ -546,6 +555,12 @@ NAV_ITEMS = [
         ],
         "url_endpoint": "club_van_20_overzicht",
         "label": "Leden & betalingen",
+    },
+    {
+        "groep": "Club van 20",
+        "endpoints": ["club_van_20_aanmeldingen"],
+        "url_endpoint": "club_van_20_aanmeldingen",
+        "label": "Aanmeldingen",
     },
     {
         "groep": "Club van 20",
@@ -843,6 +858,12 @@ def create_app(database_path=None, admin_wachtwoord=None):
                 "SELECT banner_tekst FROM instellingen WHERE id = 1"
             ).fetchone()
             banner_tekst = rij["banner_tekst"] if rij else None
+        # Aantal aanmeldingen dat op goedkeuring wacht, als badge in de zijbalk.
+        club_aanmeldingen_open = 0
+        if "gebruiker_id" in session and heeft_sectie_toegang(
+            gebruiker_rol, gebruiker_secties, "club_van_20"
+        ):
+            club_aanmeldingen_open = aantal_openstaand(get_db())
         pda_modus = g.get("weergave_modus") == "pda"
         pda_actieve_item = next(
             (
@@ -859,6 +880,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
             "nav_items": zichtbare_nav_items,
             "pda_nav_items": zichtbare_pda_items,
             "sectie_toegang": sectie_toegang,
+            "club_aanmeldingen_open": club_aanmeldingen_open,
             "actieve_nav": actieve_nav,
             "pda_actieve_label": pda_actieve_item["pda_label"] if pda_actieve_item else None,
             "huidige_gebruiker": session.get("gebruiker_naam"),
@@ -983,6 +1005,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
         return render_template("500.html"), 500
 
     from routes import (
+        aanmeldingen,
         accounts,
         auth,
         bestellijst,
@@ -1004,6 +1027,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
         verbruiksvoorwerpen,
     )
 
+    aanmeldingen.register_routes(app)
     accounts.register_routes(app)
     auth.register_routes(app)
     bestellijst.register_routes(app)

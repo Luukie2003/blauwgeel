@@ -26,8 +26,17 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.18.3"
+HUIDIGE_VERSIE = "1.19.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.19.0",
+        "datum": "1 oktober 2026",
+        "punten": [
+            "Club van 20: nieuwe leden kunnen zich zelf aanmelden. Bovenaan de QR-pagina verschijnt op het aftelmoment een knop; daarna kiezen ze Mollie of contant aan de bar (met de naam van de bardienst), vullen hun naam in en wat er op het bordje moet komen (maximaal 24 tekens, instelbaar)",
+            "Club van 20 > Aanmeldingen: elke aanmelding is eerst een concept. Na het controleren van de betaling keur je goed (met een pop-up om ontbrekende gegevens aan te vullen) of wijs je af; een bestaand lid wordt verlengd in plaats van dubbel aangemaakt. In het menu staat een teller met het aantal wachtende aanmeldingen",
+            "Club van 20 > Scherm & werving: de betaallink is nu de Mollie-link voor het aanmeldformulier, en je kunt aanmelden aan/uit zetten",
+        ],
+    },
     {
         "versie": "1.18.3",
         "datum": "1 oktober 2026",

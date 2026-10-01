@@ -123,9 +123,10 @@
                        value="{{ '%g'|format(instellingen.club_van_20_bedrag) }}">
             </div>
             <div class="veld">
-                <label for="club_van_20_betaallink">Betaallink (optioneel)</label>
+                <label for="club_van_20_betaallink">Betaallink (Mollie)</label>
                 <input type="url" id="club_van_20_betaallink" name="club_van_20_betaallink"
-                       value="{{ instellingen.club_van_20_betaallink or '' }}" placeholder="https://tikkie.me/...">
+                       value="{{ instellingen.club_van_20_betaallink or '' }}" placeholder="https://payment-links.mollie.com/...">
+                <span class="tekst-zacht">Komt op het aanmeldformulier als "Online betalen" en in de betaalverzoeken.</span>
             </div>
         </div>
         <div class="veld">
@@ -136,6 +137,27 @@
             <label for="club_van_20_verzoek_tekst">Tekst voor een betaalverzoek (WhatsApp)</label>
             <textarea id="club_van_20_verzoek_tekst" name="club_van_20_verzoek_tekst" rows="3">{{ instellingen.club_van_20_verzoek_tekst }}</textarea>
             <span class="tekst-zacht">Invullers: {voornaam} {naambordje} {seizoen} {bedrag} {betaallink}</span>
+        </div>
+    </fieldset>
+
+    <fieldset class="groupbox">
+        <legend>Aanmelden via de website</legend>
+        <p class="tekst-zacht" style="margin-top:0">
+            Nieuwe leden melden zich aan via een knop bovenaan de publieke pagina: online betalen via de
+            Mollie-link of contant aan de bar, hun naam en het bordje. Elke aanmelding wordt pas lid nadat jullie
+            de betaling hebben gecontroleerd, zie <a href="{{ url_for('club_van_20_aanmeldingen') }}">Aanmeldingen</a>.
+            De knop verschijnt op het aftelmoment hieronder{% if aanmelden.opent_label %} (nu: {{ aanmelden.opent_label }}){% endif %};
+            is er geen aftelmoment ingesteld, dan staat de knop er meteen.
+        </p>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.7rem">
+            <input type="checkbox" name="club_van_20_aanmelden_aan" style="width:auto" {{ 'checked' if instellingen.club_van_20_aanmelden_aan }}>
+            Aanmelden via de website aan
+        </label>
+        <div class="veld" style="max-width:16rem">
+            <label for="club_van_20_bordje_max_tekens">Maximale lengte van een bordje (tekens)</label>
+            <input type="number" id="club_van_20_bordje_max_tekens" name="club_van_20_bordje_max_tekens" min="5" max="60"
+                   value="{{ instellingen.club_van_20_bordje_max_tekens }}">
+            <span class="tekst-zacht">Tot 16 tekens past een naam op één regel; langere namen worden kleiner getoond. De langste bestaande naam is 22 tekens.</span>
         </div>
     </fieldset>
 

@@ -305,6 +305,8 @@ KOLOM_MIGRATIES = [
     # kantine scherm en over de prijzenlijst heen komen. Zie sponsoren.py.
     ("kiosk_scherm_instellingen", "sponsors_kop", "TEXT NOT NULL DEFAULT 'Mede mogelijk gemaakt door'"),
     ("kiosk_scherm_instellingen", "sponsors_kop_meervoud", "TEXT NOT NULL DEFAULT ''"),
+    ("kiosk_scherm_instellingen", "club_van_20_aanmelden_aan", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "club_van_20_bordje_max_tekens", "INTEGER NOT NULL DEFAULT 24"),
     ("kiosk_scherm_instellingen", "sponsors_toon_groepsnaam", "INTEGER NOT NULL DEFAULT 0"),
     ("kiosk_scherm_instellingen", "sponsors_achtergrond", "TEXT"),
     ("kiosk_scherm_instellingen", "sponsors_logos_per_dia", "INTEGER NOT NULL DEFAULT 4"),
