@@ -1091,84 +1091,39 @@ def bereken_komende_thuiswedstrijden(db, dagen=14):
 
 
 def bereken_voorspelde_tekorten(db, dagen_vooruit=7):
-    """Schat welke producten waarschijnlijk uitverkocht raken in de komende
-    `dagen_vooruit` dagen, ook als de voorraad nu nog boven het minimum
-    zit -- in tegenstelling tot bestel_suggesties(), dat pas waarschuwt als
-    het al te laat is. Combineert de gemiddelde historische verkoop per week
-    met het aantal thuiswedstrijden, trainingsavonden en de weersverwachting
-    in die periode.
+    """Producten die waarschijnlijk uitverkocht raken in de komende
+    `dagen_vooruit` dagen, ook als de voorraad nu nog boven het minimum zit --
+    in tegenstelling tot bestel_suggesties(), dat pas waarschuwt als het al te
+    laat is. Gebruikt het voorspelmodel in voorspelling.py (leert uit de eigen
+    tellingen hoeveel een thuiswedstrijd, trainingsavond en het weer
+    uitmaken). Een product dat al onder het minimum zit en dus op de
+    bestellijst staat, of waarvan de vraag al gedekt is door een bestelling die
+    onderweg is, komt hier niet nog eens in."""
+    from voorspelling import maak_prognose
 
-    Dit is een eerste, simpele versie: met weinig telling-geschiedenis is de
-    schatting grof. Hoe meer tellingen er bijkomen, hoe betrouwbaarder het
-    gemiddelde per week wordt."""
-    eerste_telling = db.execute("SELECT MIN(datum) AS datum FROM tellingen").fetchone()["datum"]
-    if not eerste_telling:
+    try:
+        prognose = maak_prognose(db, dagen=dagen_vooruit)
+    except Exception as fout:  # de bestellijst mag nooit stuk gaan door de voorspelling
+        print(f"[voorspelling] mislukt: {fout}")
         return []
-    verstreken_weken = max(
-        1.0,
-        (datetime.now() - datetime.strptime(eerste_telling, "%Y-%m-%d %H:%M")).days / 7,
-    )
-
-    verkoop_per_product = {
-        r["product_id"]: r["totaal_verkocht"]
-        for r in db.execute(
-            "SELECT product_id, SUM(verkocht) AS totaal_verkocht FROM telling_regels GROUP BY product_id"
-        ).fetchall()
-    }
-
-    vandaag = date.today()
-    grens = vandaag + timedelta(days=dagen_vooruit)
-    aantal_wedstrijddagen = db.execute(
-        """SELECT COUNT(DISTINCT datum) AS n FROM wedstrijden
-           WHERE thuis = 1 AND datum >= ? AND datum <= ?""",
-        (vandaag.isoformat(), grens.isoformat()),
-    ).fetchone()["n"]
-    aantal_trainingsavonden = _aantal_dagen_met_weekdag(
-        vandaag.isoformat(), grens.isoformat(), TRAININGSDAG
-    )
-
-    weer_rijen = db.execute(
-        "SELECT * FROM weer_voorspelling WHERE datum >= ? AND datum <= ?",
-        (vandaag.isoformat(), grens.isoformat()),
-    ).fetchall()
-    weer_factor = 1.0
-    if weer_rijen:
-        gem_neerslag = sum(w["neerslag_kans"] for w in weer_rijen) / len(weer_rijen)
-        gem_temp = sum(w["max_temp"] for w in weer_rijen) / len(weer_rijen)
-        if gem_neerslag < 30 and gem_temp > 18:
-            weer_factor = 1.15
-        elif gem_neerslag > 60:
-            weer_factor = 0.9
-
-    # Elke thuiswedstrijddag telt als een fikse boost bovenop een gemiddelde
-    # dag -- een ruwe aanname (30% meer verkoop per wedstrijddag), niet
-    # afgeleid uit eigen historie omdat daar simpelweg nog te weinig
-    # gekoppelde agenda- en omzetgegevens voor zijn. Een trainingsavond
-    # krijgt een kleinere boost (20%) dan een wedstrijddag -- minder bezoek
-    # dan een thuiswedstrijd, maar wel duidelijk drukker dan een gewone dag.
-    wedstrijd_factor = 1 + 0.3 * aantal_wedstrijddagen
-    training_factor = 1 + 0.2 * aantal_trainingsavonden
-    periode_factor = dagen_vooruit / 7
-
-    reeds_gesignaleerd = {p["id"] for p in bestel_suggesties(db)}
-
+    if not prognose["beschikbaar"]:
+        return []
     resultaat = []
-    for p in db.execute("SELECT * FROM producten WHERE actief = 1").fetchall():
-        if p["id"] in reeds_gesignaleerd:
+    for p in prognose["producten"]:
+        tekort = p["verwacht"] - p["voorraad"] - p["onderweg"]
+        if p["al_op_bestellijst"] or tekort <= 0:
             continue
-        gem_per_week = verkoop_per_product.get(p["id"], 0) / verstreken_weken
-        verwacht_verbruik = (
-            gem_per_week * periode_factor * wedstrijd_factor * training_factor * weer_factor
+        resultaat.append(
+            {
+                "product": p["product"],
+                "verwacht_verbruik": round(p["verwacht"]),
+                "verwacht_tekort": round(tekort),
+                "kans_tekort": p["kans_tekort"],
+                "advies_stuks": p["advies_stuks"],
+                "advies_eenheden": p["advies_eenheden"],
+                "besteleenheid": p["besteleenheid"],
+            }
         )
-        verwachte_voorraad = p["voorraad"] - verwacht_verbruik
-        if verwacht_verbruik > 0 and verwachte_voorraad < 0:
-            resultaat.append(
-                {
-                    "product": p,
-                    "verwacht_verbruik": round(verwacht_verbruik),
-                    "verwacht_tekort": round(-verwachte_voorraad),
-                }
-            )
     resultaat.sort(key=lambda x: x["verwacht_tekort"], reverse=True)
     return resultaat
 

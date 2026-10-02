@@ -8,6 +8,23 @@
 
 <div class="kaart">
     <h2>Verwachting &amp; trend</h2>
+    {% if prognose and prognose.beschikbaar %}
+    <div class="statgrid">
+        <div class="stat">
+            <div class="getal">&euro; {{ '%.0f'|format(prognose.totaal.omzet) }}</div>
+            <div class="label">Verwachte omzet komende 7 dagen<br>
+                <span class="tekst-zacht">(waarschijnlijk tussen &euro; {{ '%.0f'|format(prognose.totaal.laag) }} en &euro; {{ '%.0f'|format(prognose.totaal.hoog) }})</span></div>
+        </div>
+        <div class="stat {{ 'waarschuwing' if prognose.samenvatting.urgent else '' }}">
+            <div class="getal">{{ prognose.samenvatting.urgent }}</div>
+            <div class="label">Producten die waarschijnlijk opraken</div>
+        </div>
+    </div>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Rekent per dag, met de thuiswedstrijden, de trainingsavond en het weer, en werkt ook als er niet
+        elke week op dezelfde dag geteld is. <a href="{{ url_for('prognose_pagina') }}">Bekijk de volledige prognose</a>.
+    </p>
+    {% endif %}
     {% if trend %}
     <div class="statgrid">
         <div class="stat">
@@ -29,7 +46,9 @@
         weken met tellingen, hoe betrouwbaarder dit wordt.
     </p>
     {% else %}
+    {% if not (prognose and prognose.beschikbaar) %}
     <p class="leeg">Nog te weinig volledig afgesloten weken met tellingen voor een trend (minimaal 2 nodig).</p>
+    {% endif %}
     {% endif %}
 </div>
 

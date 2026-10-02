@@ -26,8 +26,17 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.19.5"
+HUIDIGE_VERSIE = "1.20.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.20.0",
+        "datum": "2 oktober 2026",
+        "punten": [
+            "Nieuw: Bestellen → Prognose. Wat er de komende 3, 7 of 14 dagen waarschijnlijk verkocht wordt: verwachte omzet met bandbreedte, dag voor dag (met thuiswedstrijden, training en weer), en per product de kans op een tekort, hoe lang de voorraad reikt en een bestel-advies in hele kratten",
+            "Het voorspelmodel is vervangen: het rekent per dag in plaats van per week (dus ook met tellingen op wisselende dagen), houdt rekening met uitverkochte producten en met wat al onderweg is, en leert uit de eigen tellingen hoeveel een thuiswedstrijd, de trainingsavond en het weer uitmaken. Onderaan de pagina staat wat het geleerd heeft en hoe nauwkeurig het de laatste tellingen voorspelde",
+            "De voorspelde tekorten op de bestellijst tonen nu de kans op een tekort en een bestel-advies; het tellingenoverzicht toont de verwachte omzet voor de komende 7 dagen. Het weer wordt voortaan ook bewaard, zodat het model het weereffect kan leren",
+        ],
+    },
     {
         "versie": "1.19.5",
         "datum": "1 oktober 2026",

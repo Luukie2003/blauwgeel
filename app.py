@@ -202,6 +202,7 @@ SECTIE_ENDPOINTS = {
         "telling_regel_corrigeren",
         "telling_pdf",
         "bestellijst",
+        "prognose_pagina",
         "bestellijst_pdf_route",
         "bestelling_aanmaken",
         "bestelling_nieuw",
@@ -423,6 +424,12 @@ NAV_ITEMS = [
         "endpoints": ["bestellijst", "bestelling_aanmaken", "bestelling_nieuw", "bestelling_inboeken"],
         "url_endpoint": "bestellijst",
         "label": "Bestellijst",
+    },
+    {
+        "groep": "Bestellen",
+        "endpoints": ["prognose_pagina"],
+        "url_endpoint": "prognose_pagina",
+        "label": "Prognose",
     },
     {
         "groep": "Bestellen",
@@ -1026,6 +1033,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
         kluis,
         privacy,
         producten,
+        prognose,
         sponsoren,
         stemmen,
         tellen,
@@ -1034,6 +1042,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
 
     aanmeldingen.register_routes(app)
     privacy.register_routes(app)
+    prognose.register_routes(app)
     accounts.register_routes(app)
     auth.register_routes(app)
     bestellijst.register_routes(app)

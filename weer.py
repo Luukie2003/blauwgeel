@@ -12,6 +12,7 @@ als agenda.py en backup.py:
 Gebruikt alleen de standaardbibliotheek -- geen virtualenv nodig."""
 
 import json
+from datetime import datetime
 import sqlite3
 from pathlib import Path
 from urllib.request import urlopen
@@ -127,6 +128,20 @@ def ververs_weer(db_pad=None):
         return None
 
     conn = sqlite3.connect(db_pad)
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS weer_historie (
+               datum TEXT PRIMARY KEY, max_temp REAL, neerslag_kans INTEGER, bijgewerkt_op TEXT)"""
+    )
+    nu = datetime.now().strftime("%Y-%m-%d %H:%M")
+    for dag in voorspelling:
+        # Per dag de laatst bekende verwachting bewaren, ook als de dag voorbij is.
+        conn.execute(
+            """INSERT INTO weer_historie (datum, max_temp, neerslag_kans, bijgewerkt_op)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(datum) DO UPDATE SET max_temp = excluded.max_temp,
+                   neerslag_kans = excluded.neerslag_kans, bijgewerkt_op = excluded.bijgewerkt_op""",
+            (dag["datum"], dag["max_temp"], dag["neerslag_kans"], nu),
+        )
     conn.execute("DELETE FROM weer_voorspelling")
     for dag in voorspelling:
         conn.execute(

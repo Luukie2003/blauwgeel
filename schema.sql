@@ -280,6 +280,16 @@ CREATE TABLE IF NOT EXISTS weer_voorspelling (
     weercode INTEGER
 );
 
+-- Laatst bekende verwachting per dag, ook voor dagen die voorbij zijn (de
+-- tabel hierboven wordt elke keer leeggemaakt). Zo kan het voorspelmodel
+-- (voorspelling.py) leren hoeveel het weer uitmaakt voor de verkoop.
+CREATE TABLE IF NOT EXISTS weer_historie (
+    datum TEXT PRIMARY KEY,
+    max_temp REAL,
+    neerslag_kans INTEGER,
+    bijgewerkt_op TEXT
+);
+
 CREATE TABLE IF NOT EXISTS prijs_geschiedenis (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id INTEGER NOT NULL REFERENCES producten(id) ON DELETE CASCADE,

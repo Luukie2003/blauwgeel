@@ -1,0 +1,183 @@
+{% extends basis_template %}
+{% block titel %}Prognose{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Wat er de komende dagen waarschijnlijk verkocht wordt, welke producten kunnen opraken en wat je
+    daarvoor kunt bestellen. Het systeem leert van jullie eigen tellingen, de thuiswedstrijden, de
+    trainingsavond en het weer, en wordt dus slimmer naarmate er meer tellingen bijkomen.
+</p>
+
+<div class="actiebalk" style="justify-content:flex-start; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap">
+    {% for h in horizonnen %}
+    <a href="{{ url_for('prognose_pagina', dagen=h, categorie=categorie or None) }}"
+       class="btn {{ 'btn-geel' if h == dagen else 'btn-rand' }}">Komende {{ h }} dagen</a>
+    {% endfor %}
+    {% if categorieen %}
+    <form method="get" style="margin:0; display:flex; gap:0.4rem">
+        <input type="hidden" name="dagen" value="{{ dagen }}">
+        <select name="categorie" onchange="this.form.submit()" aria-label="Categorie">
+            <option value="">Alle categorieën</option>
+            {% for c in categorieen %}<option value="{{ c }}" {{ 'selected' if c == categorie }}>{{ c }}</option>{% endfor %}
+        </select>
+    </form>
+    {% endif %}
+    <a href="{{ url_for('bestellijst') }}" class="btn btn-rand">Naar de bestellijst</a>
+</div>
+
+{% if not prognose.beschikbaar %}
+<div class="kaart"><p class="leeg">{{ prognose.reden }}</p></div>
+{% else %}
+{% set t = prognose.totaal %}
+{% set s = prognose.samenvatting %}
+{% set m = prognose.model %}
+
+<div class="statgrid">
+    <div class="stat">
+        <div class="getal">&euro; {{ '%.0f'|format(t.omzet) }}</div>
+        <div class="label">Verwachte omzet komende {{ prognose.dagen }} dagen<br>
+            <span class="tekst-zacht">(waarschijnlijk tussen &euro; {{ '%.0f'|format(t.laag) }} en &euro; {{ '%.0f'|format(t.hoog) }})</span></div>
+    </div>
+    <div class="stat">
+        {% set d = prognose.drukste_dag %}
+        <div class="getal">{% if d %}{{ d.weekdag_kort|capitalize }} {{ d.datum.day }}-{{ d.datum.month }}{% else %}&ndash;{% endif %}</div>
+        <div class="label">Drukste dag{% if d %}: ongeveer &euro; {{ '%.0f'|format(d.omzet) }}{% endif %}</div>
+    </div>
+    <div class="stat {{ 'waarschuwing' if s.urgent else '' }}">
+        <div class="getal">{{ s.urgent }}</div>
+        <div class="label">Producten die waarschijnlijk opraken<br><span class="tekst-zacht">+ {{ s.let_op }} met een kleine kans</span></div>
+    </div>
+    <div class="stat">
+        {% if m.nauwkeurigheid %}
+        <div class="getal">&plusmn; {{ '%.0f'|format(m.nauwkeurigheid.mape_model * 100) }}%</div>
+        <div class="label">Gemiddelde afwijking van de omzet<br><span class="tekst-zacht">in de laatste {{ m.nauwkeurigheid.aantal }} tellingen getoetst</span></div>
+        {% else %}
+        <div class="getal">&ndash;</div>
+        <div class="label">Nauwkeurigheid<br><span class="tekst-zacht">kan na ongeveer 5 tellingen getoetst worden</span></div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="kaart">
+    <h2>Dag voor dag</h2>
+    {% set maximum = (prognose.dagen_overzicht|map(attribute='omzet')|max) or 1 %}
+    <div class="omzet-trend-grafiek">
+        {% for dag in prognose.dagen_overzicht %}
+        <div class="omzet-bar-kolom">
+            <span class="omzet-bar-waarde">&euro;{{ '%.0f'|format(dag.omzet) }}</span>
+            <div class="omzet-bar" style="height: {{ (dag.omzet / maximum * 100)|round|int }}%"
+                 title="{{ dag.weekdag }} {{ dag.datum.day }}-{{ dag.datum.month }}: ongeveer &euro; {{ '%.0f'|format(dag.omzet) }}"></div>
+            <span class="omzet-bar-label">{{ dag.weekdag_kort }} {{ dag.datum.day }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Dag</th><th>Wat speelt er?</th><th>Drukte</th><th>Verwachte omzet</th></tr></thead>
+            <tbody>
+                {% for dag in prognose.dagen_overzicht %}
+                <tr>
+                    <td>{{ dag.weekdag|capitalize }} {{ dag.datum.day }}-{{ dag.datum.month }}{% if dag.deel < 0.95 %} <span class="tekst-zacht">(rest van de dag)</span>{% endif %}</td>
+                    <td>
+                        {% if dag.wedstrijden %}<span class="badge badge-ok">&#9917; {{ dag.wedstrijden }}x thuis</span>{% endif %}
+                        {% if dag.training %}<span class="badge badge-neutraal">Training</span>{% endif %}
+                        {% if dag.weer_score == 1 %}<span class="badge badge-in" title="Warm en droog">&#9728;&#65039; mooi weer</span>
+                        {% elif dag.weer_score == -1 %}<span class="badge badge-uit" title="Veel kans op regen">&#127783;&#65039; regen</span>{% endif %}
+                        {% if not dag.wedstrijden and not dag.training and dag.weer_score in (none, 0) %}<span class="tekst-zacht">gewone dag</span>{% endif %}
+                    </td>
+                    <td>{{ '%+.0f'|format((dag.drukte - 1) * 100) }}%</td>
+                    <td>&euro; {{ '%.0f'|format(dag.omzet) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="kaart">
+    <h2>Producten{% if categorie %} &middot; {{ categorie }}{% endif %}</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Op volgorde van kans dat het product opraakt voordat de komende {{ prognose.dagen }} dagen om zijn.
+        Het advies dekt de vraag in 9 van de 10 gevallen, rekening houdend met wat er al onderweg is.
+    </p>
+    {% if prognose.producten %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Product</th><th>Voorraad</th><th>Verwachte verkoop</th><th>Voorraad reikt nog</th><th>Kans op tekort</th><th>Advies</th></tr>
+            </thead>
+            <tbody>
+                {% for p in prognose.producten %}
+                <tr>
+                    <td><a href="{{ url_for('product_detail', product_id=p.product.id) }}">{{ p.product.naam }}</a>
+                        {% if p.weinig_data %}<span class="tekst-zacht" title="Nog weinig tellingen van dit product, dus een grove schatting">*</span>{% endif %}</td>
+                    <td>{{ p.voorraad }} {{ p.product.eenheid }}{% if p.onderweg %} <span class="tekst-zacht">(+{{ p.onderweg }} onderweg)</span>{% endif %}</td>
+                    <td>{{ '%.0f'|format(p.verwacht) }} <span class="tekst-zacht">({{ p.laag }} tot {{ p.hoog }})</span></td>
+                    <td>{% if p.dekking_dagen is none %}&ndash;{% elif p.dekking_dagen >= 28 %}28+ dagen{% else %}{{ '%.1f'|format(p.dekking_dagen) }} dagen{% endif %}</td>
+                    <td>
+                        {% set pct = (p.kans_tekort * 100)|round|int %}
+                        <span class="badge {{ 'badge-laag' if p.status == 'urgent' else 'badge-uit' if p.status == 'let_op' else 'badge-ok' }}">
+                            {% if p.kans_tekort < 0.01 %}&lt; 1%{% elif p.kans_tekort > 0.99 %}&gt; 99%{% else %}{{ pct }}%{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        {% if p.advies_stuks > 0 %}
+                        <strong>Bestel {% if p.advies_eenheden %}{{ p.advies_eenheden }} {{ p.besteleenheid }}{% else %}{{ p.advies_stuks }} {{ p.product.eenheid }}{% endif %}</strong>
+                        {% if p.advies_eenheden %}<span class="tekst-zacht">({{ p.advies_stuks }} {{ p.product.eenheid }})</span>{% endif %}
+                        {% if p.al_op_bestellijst %}<span class="tekst-zacht">staat al op de bestellijst</span>{% endif %}
+                        {% else %}<span class="tekst-zacht">voldoende</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Geen producten met genoeg verkoopgeschiedenis om te voorspellen.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Wat het systeem heeft geleerd</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Gebaseerd op {{ m.aantal_tellingen }} tellingen sinds {{ m.eerste_datum.strftime('%d-%m-%Y') }}
+        ({{ '%.1f'|format(m.weken_data) }} weken), voor {{ m.aantal_producten_in_model }} producten.
+        Zolang er te weinig data is, houdt het systeem de standaard aanname aan en leert het stap voor stap bij.
+    </p>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Wat</th><th>Aanname</th><th>Nu geschat</th><th>Hoe zeker?</th></tr></thead>
+            <tbody>
+                {% for e in m.effecten %}
+                <tr>
+                    <td>{{ e.naam }}</td>
+                    <td>{{ '%+.0f'|format(e.aanname * 100) }}% omzet</td>
+                    <td><strong>{{ '%+.0f'|format(e.waarde * 100) }}%</strong> omzet</td>
+                    <td>
+                        {% if e.status == 'geleerd' %}<span class="badge badge-ok">bijgeleerd</span>
+                        {% elif e.status == 'deels' %}<span class="badge badge-uit">deels bijgeleerd</span>
+                        {% else %}<span class="badge badge-neutraal">nog aanname</span>{% endif %}
+                        <span class="tekst-zacht">
+                            {% if e.waargenomen_dagen %}{{ e.waargenomen_dagen }} dag{{ 'en' if e.waargenomen_dagen != 1 else '' }} in de tellingen{% else %}nog niet waargenomen{% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if m.nauwkeurigheid %}
+    <p style="margin-bottom:0.4rem">
+        <strong>Nauwkeurigheid:</strong> in de laatste {{ m.nauwkeurigheid.aantal }} tellingen zat de omzetvoorspelling er gemiddeld
+        <strong>{{ '%.0f'|format(m.nauwkeurigheid.mape_model * 100) }}%</strong> naast, op basis van alleen wat toen al bekend was.
+        Een simpele schatting op basis van de gemiddelde dagverkoop zat er {{ '%.0f'|format(m.nauwkeurigheid.mape_naief * 100) }}% naast{% if m.nauwkeurigheid.verbetering > 0.02 %},
+        dus de slimmere aanpak is ongeveer {{ '%.0f'|format(m.nauwkeurigheid.verbetering * 100) }}% nauwkeuriger{% endif %}.
+    </p>
+    {% endif %}
+    <ul class="tekst-zacht" style="margin-top:0.6rem">
+        <li>Is een product uitverkocht geraakt, dan is de echte vraag hoger dan wat er verkocht is. Die periodes tellen daarom niet mee.</li>
+        <li>Het weer wordt pas vanaf nu bewaard, dus het weereffect blijft nog even een aanname.</li>
+        <li>Een vergelijkbare dag blijft onzeker: een uitzonderlijk druk of stil weekend kan het systeem niet voorzien.</li>
+    </ul>
+</div>
+{% endif %}
+{% endblock %}

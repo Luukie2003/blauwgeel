@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from flask import Response, flash, redirect, render_template, request, session, url_for
 
 from database import get_db
+from voorspelling import maak_prognose
 from helpers import (
     bereken_trend,
     bestel_suggesties,
@@ -409,6 +410,11 @@ def register_routes(app):
         )
         huidige_jaar, huidige_week, _ = datetime.now().isocalendar()
         trend = bereken_trend(omzet_per_week, huidige_jaar, huidige_week)
+        try:
+            prognose = maak_prognose(db, dagen=7)
+        except Exception as fout:  # het tellingenoverzicht mag nooit stuk gaan door de voorspelling
+            print(f"[voorspelling] mislukt: {fout}")
+            prognose = None
 
         return render_template(
             "tellingen_overzicht.html",
@@ -418,6 +424,7 @@ def register_routes(app):
             huidige_jaar=huidige_jaar,
             huidige_week=huidige_week,
             trend=trend,
+            prognose=prognose,
         )
 
     @app.route("/tellingen/gecombineerd/pdf")
