@@ -56,9 +56,8 @@ def bouw_mailtekst(overzicht):
     waarschuwing = ""
     if overzicht["afwijkende_periode"]:
         waarschuwing = (
-            "Let op: deze of de vorige week bevat een telling met een ongebruikelijk korte "
-            "of lange periode sinds de telling ervoor -- de omzetvergelijking hieronder kan "
-            "daardoor vertekend zijn.\n\n"
+            "Let op: er is nog niet t/m zondag geteld, dus wat daarna verkocht is staat hier "
+            "nog niet in -- de omzetvergelijking hieronder kan daardoor vertekend zijn.\n\n"
         )
 
     return (

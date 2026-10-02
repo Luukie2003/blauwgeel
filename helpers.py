@@ -805,6 +805,30 @@ def bereken_week_overzicht(db, vandaag=None):
     vorige = bereken_omzet_trend_periode(
         db, vorige_week_van.isoformat(), vorige_week_tot.isoformat()
     )
+    afwijkende_periode = huidige["bevat_afwijkende_periode"] or vorige["bevat_afwijkende_periode"]
+    geteld_tot = None
+
+    # Liever de omzet van de week zelf dan de som van de tellingen die in die
+    # week gedaan zijn: wie niet op vaste dagen telt (bijv. woensdag, vrijdag en
+    # soms maandag) krijgt anders een week die een andere periode beslaat.
+    # voorspelling.week_samenvatting verdeelt de omzet van elke telling over de
+    # dagen waarin die verkocht is.
+    from voorspelling import verdeling, week_samenvatting
+
+    try:
+        nu = datetime.combine(vandaag, datetime.min.time()).replace(hour=12)
+        data = verdeling(db, nu)
+        deze = week_samenvatting(db, week_van, data=data) if data else None
+        eerdere = week_samenvatting(db, vorige_week_van, data=data) if data else None
+    except Exception as fout:  # het weekoverzicht mag nooit stuk gaan door de verdeling
+        print(f"[weekoverzicht] verdeling mislukt, terugval op tellingdatums: {fout}")
+        deze = eerdere = None
+    if deze is not None and eerdere is not None and deze["omzet"] + eerdere["omzet"] > 0:
+        huidige = dict(huidige, totale_omzet=deze["omzet"], top_verkopers=deze["top_verkopers"])
+        vorige = dict(vorige, totale_omzet=eerdere["omzet"])
+        # Alleen waarschuwen als de tellingen de week niet helemaal dekken.
+        afwijkende_periode = deze["status"] != "compleet" or eerdere["status"] == "loopt_nog"
+        geteld_tot = deze["geteld_tot"]
 
     verschil_percentage = None
     if vorige["totale_omzet"] > 0:
@@ -838,11 +862,12 @@ def bereken_week_overzicht(db, vandaag=None):
         "totale_omzet": huidige["totale_omzet"],
         "vorige_omzet": vorige["totale_omzet"],
         "verschil_percentage": verschil_percentage,
-        # True als deze of de vorige week een telling bevat met een
-        # ongebruikelijk korte/lange periode (bijv. een keer op vrijdag
-        # geteld i.p.v. de gebruikelijke dag) -- de omzetvergelijking
-        # hierboven kan daardoor vertekend zijn.
-        "afwijkende_periode": huidige["bevat_afwijkende_periode"] or vorige["bevat_afwijkende_periode"],
+        # True als de tellingen de week niet helemaal dekken (bijv. de laatste
+        # telling was vóór zondag) -- de omzetvergelijking kan daardoor
+        # vertekend zijn.
+        "afwijkende_periode": afwijkende_periode,
+        # Wanneer er voor het laatst geteld is, als de week niet helemaal gedekt is.
+        "geteld_tot": geteld_tot,
         "top_verkopers": huidige["top_verkopers"],
         "onder_minimum": bestel_suggesties(db),
         "open_bestellingen": open_bestellingen,

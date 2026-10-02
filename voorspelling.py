@@ -168,18 +168,23 @@ def _parse(datum):
     return datetime.strptime(datum, "%Y-%m-%d %H:%M")
 
 
-def lees_rijen(db, nu):
+def lees_rijen(db, nu, weken=MAX_WEKEN_GESCHIEDENIS, eerste_meenemen=False):
     """Eén rij per product per telling: wat is er verkocht in de periode sinds
     het vorige keer dat dit product geteld werd. De eerste telling van een
     product is alleen een nulmeting. Periodes zonder enige verkoop in die hele
-    telling (bijv. een nulmeting of een dag waarop alles dicht was) tellen niet mee."""
-    sinds = (nu - timedelta(weeks=MAX_WEKEN_GESCHIEDENIS)).strftime("%Y-%m-%d %H:%M")
+    telling (bijv. een nulmeting of een dag waarop alles dicht was) tellen niet mee.
+    Met eerste_meenemen=True (voor het verdelen van omzet over dagen) telt de
+    eerste telling van een product met verkoop ook mee, als periode vanaf de
+    telling ervoor; dat is voor de weekomzet nodig om niets te missen, niet voor
+    het leren van snelheden."""
+    sinds = (nu - timedelta(weeks=weken)).strftime("%Y-%m-%d %H:%M")
     tellingen = db.execute(
         "SELECT id, datum FROM tellingen WHERE datum >= ? ORDER BY datum, id", (sinds,)
     ).fetchall()
     if len(tellingen) < 2:
         return [], tellingen
     datum_van = {t["id"]: _parse(t["datum"]) for t in tellingen}
+    positie = {t["id"]: i for i, t in enumerate(tellingen)}
     regels = db.execute(
         f"""SELECT telling_id, product_id, verkocht, geteld_aantal, verkoopprijs
             FROM telling_regels
@@ -196,6 +201,24 @@ def lees_rijen(db, nu):
     rijen = []
     for pid, lijst in per_product.items():
         lijst.sort(key=lambda r: (datum_van[r["telling_id"]], r["telling_id"]))
+        if eerste_meenemen:
+            eerste = lijst[0]
+            i = positie[eerste["telling_id"]]
+            if i > 0 and eerste["verkocht"] > 0:
+                start, einde = datum_van[tellingen[i - 1]["id"]], datum_van[eerste["telling_id"]]
+                if einde > start and totaal_per_telling.get(eerste["telling_id"], 0) > 0:
+                    rijen.append(
+                        {
+                            "pid": pid,
+                            "tid": eerste["telling_id"],
+                            "start": start,
+                            "einde": einde,
+                            "V": max(0, eerste["verkocht"]),
+                            "afgekapt": eerste["geteld_aantal"] <= 0,
+                            "prijs": eerste["verkoopprijs"] or 0.0,
+                            "eerste": True,
+                        }
+                    )
         for vorige, huidige in zip(lijst, lijst[1:]):
             start, einde = datum_van[vorige["telling_id"]], datum_van[huidige["telling_id"]]
             if einde <= start or totaal_per_telling.get(huidige["telling_id"], 0) <= 0:
@@ -761,4 +784,175 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
             "nauwkeurigheid": nauwkeurigheid,
             "betrouwbaarheid": betrouwbaarheid,
         },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Omzet per week, ook als je niet elke week op dezelfde dag telt
+# ---------------------------------------------------------------------------
+
+
+def _dagdrukte(dag, kalender, effecten):
+    kenmerken = kalender.get(dag) or {"wedstrijden": 0, "training": dag.weekday() == TRAININGSDAG, "weer": None}
+    return (
+        1.0
+        + effecten["wedstrijd"] * wedstrijd_gewicht(kenmerken["wedstrijden"])
+        + effecten["training"] * (1.0 if kenmerken["training"] else 0.0)
+        + effecten["weer"] * (kenmerken["weer"] or 0.0)
+    )
+
+
+def verdeling(db, nu=None):
+    """Verdeelt de verkoop van elke periode tussen twee tellingen over de dagen
+    waarin die verkocht is, waarbij een drukke dag (thuiswedstrijd, training,
+    mooi weer) zwaarder weegt dan een gewone. Zo is de verkoop van een telling
+    van vrijdag tot woensdag netjes over dat weekend en de dagen erna verdeeld,
+    ongeacht op welke dagen je telt. Binnen een periode is dat een schatting,
+    maar de som klopt altijd met de tellingen.
+
+    Geeft {"omzet": {datum: euro}, "producten": {datum: {product_id: [aantal,
+    euro]}}, "eerste": datetime, "laatste": datetime} (eerste/laatste = de
+    eerste en laatste telling), of None als er nog geen telling is."""
+    nu = nu or datetime.now()
+    rijen, tellingen = lees_rijen(db, nu, weken=520, eerste_meenemen=True)
+    if not tellingen:
+        return None
+    eerste, laatste = _parse(tellingen[0]["datum"]), _parse(tellingen[-1]["datum"])
+    uitkomst = {"omzet": {}, "producten": {}, "eerste": eerste, "laatste": laatste}
+    if not rijen:
+        return uitkomst
+    kalender = lees_kalender(
+        db, min(r["start"] for r in rijen).date() - timedelta(days=2), laatste.date() + timedelta(days=2)
+    )
+    # De effecten komen uit de recente tellingen (zoals de prognose); oudere perioden
+    # worden daarmee verdeeld.
+    recent = [
+        r for r in rijen if r["einde"] >= nu - timedelta(weeks=MAX_WEKEN_GESCHIEDENIS) and not r.get("eerste")
+    ]
+    _voeg_blootstelling_toe(recent, kalender, nu)
+    effecten = pas_model_aan(recent)[0] if recent else dict(PRIOR)
+
+    gewichten_per_periode = {}
+    for r in rijen:
+        sleutel = (r["start"], r["einde"])
+        if sleutel not in gewichten_per_periode:
+            gewichten = {}
+            dag = (r["start"] - timedelta(hours=DAG_BEGIN_UUR)).date()
+            while _dag_venster(dag)[0] < r["einde"]:
+                d_begin, d_eind = _dag_venster(dag)
+                deel = (min(r["einde"], d_eind) - max(r["start"], d_begin)).total_seconds() / 86400
+                if deel > 0:
+                    gewichten[dag] = deel * _dagdrukte(dag, kalender, effecten)
+                dag += timedelta(days=1)
+            totaal = sum(gewichten.values())
+            gewichten_per_periode[sleutel] = {d: g / totaal for d, g in gewichten.items()} if totaal > 0 else {}
+        for dag, aandeel in gewichten_per_periode[sleutel].items():
+            omzet = r["V"] * r["prijs"] * aandeel
+            uitkomst["omzet"][dag] = uitkomst["omzet"].get(dag, 0.0) + omzet
+            regel = uitkomst["producten"].setdefault(dag, {}).setdefault(r["pid"], [0.0, 0.0])
+            regel[0] += r["V"] * aandeel
+            regel[1] += omzet
+    return uitkomst
+
+
+def omzet_per_dag(db, nu=None):
+    """({datum: omzet}, eerste telling, laatste telling), zie verdeling()."""
+    data = verdeling(db, nu)
+    if data is None:
+        return {}, None, None
+    return data["omzet"], data["eerste"], data["laatste"]
+
+
+def _week_status(maandag, eerste, laatste):
+    """'compleet' als de tellingen de hele week dekken, 'begin' als de eerste
+    telling pas midden in de week viel en 'loopt_nog' als de laatste telling
+    vóór het einde van de week ligt. Een week loopt in de kantine van maandag
+    12.00 uur tot maandag 12.00 uur; een telling na maandag 00.00 uur telt als
+    'tot en met zondag', want daartussen verkoopt niemand meer iets."""
+    venster_begin = datetime.combine(maandag, time(DAG_BEGIN_UUR, 0))
+    venster_eind = venster_begin + timedelta(days=7)
+    if eerste > venster_begin:
+        return "begin"
+    if laatste < venster_eind - timedelta(hours=DAG_BEGIN_UUR):
+        return "loopt_nog"
+    return "compleet"
+
+
+def omzet_per_week(db, nu=None):
+    """Omzet per kalenderweek (maandag t/m zondag), nieuwste week eerst, uit
+    verdeling(). Per week staat erbij of alle dagen gedekt zijn door tellingen
+    (zie _week_status). Alleen complete weken zijn bruikbaar voor een trend."""
+    data = verdeling(db, nu)
+    if data is None:
+        return []
+    eerste, laatste = data["eerste"], data["laatste"]
+    weken = {}
+    for dag, omzet in data["omzet"].items():
+        jaar, week, _ = dag.isocalendar()
+        weken[(jaar, week)] = weken.get((jaar, week), 0.0) + omzet
+    # Ook de weken waarin wel geteld is maar niets verkocht (bijv. alleen de nulmeting).
+    dag = eerste.date()
+    while dag <= laatste.date():
+        jaar, week, _ = dag.isocalendar()
+        weken.setdefault((jaar, week), 0.0)
+        dag += timedelta(days=7)
+    resultaat = []
+    for (jaar, week), omzet in weken.items():
+        maandag = date.fromisocalendar(jaar, week, 1)
+        status = _week_status(maandag, eerste, laatste)
+        resultaat.append(
+            {
+                "jaar": jaar,
+                "week": week,
+                "van": maandag.isoformat(),
+                "tot": (maandag + timedelta(days=6)).isoformat(),
+                "omzet": omzet,
+                "status": status,
+                # Voor bereken_trend: alleen volledig gedekte weken tellen mee.
+                "afwijkende_periode": status != "compleet",
+                "geteld_tot": laatste,
+            }
+        )
+    resultaat.sort(key=lambda w: (w["jaar"], w["week"]), reverse=True)
+    return resultaat
+
+
+def week_samenvatting(db, maandag, nu=None, data=None):
+    """Omzet en best verkopende producten van de week die begint op 'maandag'
+    (een date), uit verdeling(): dus de verkoop van die week zelf, ook als er
+    op andere dagen geteld is. Geeft None als er geen tellingen zijn."""
+    data = data or verdeling(db, nu)
+    if data is None:
+        return None
+    dagen = [maandag + timedelta(days=i) for i in range(7)]
+    omzet = sum(data["omzet"].get(d, 0.0) for d in dagen)
+    per_product = {}
+    for d in dagen:
+        for pid, (aantal, euro) in data["producten"].get(d, {}).items():
+            regel = per_product.setdefault(pid, [0.0, 0.0])
+            regel[0] += aantal
+            regel[1] += euro
+    top = []
+    for pid, (aantal, euro) in sorted(per_product.items(), key=lambda x: -x[1][1])[:6]:
+        if aantal < 0.5:
+            continue
+        p = db.execute(
+            "SELECT naam, eenheid, categorie, subcategorie FROM producten WHERE id = ?", (pid,)
+        ).fetchone()
+        if p:
+            top.append(
+                {
+                    "product_naam": p["naam"],
+                    "eenheid": p["eenheid"],
+                    "categorie": p["categorie"],
+                    "subcategorie": p["subcategorie"],
+                    "verkocht": int(round(aantal)),
+                    "omzet": euro,
+                }
+            )
+    return {
+        "omzet": omzet,
+        "top_verkopers": top,
+        "status": _week_status(maandag, data["eerste"], data["laatste"]),
+        "geteld_tot": data["laatste"],
     }

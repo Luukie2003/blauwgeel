@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from app import bereken_komende_thuiswedstrijden, bereken_voorspelde_tekorten
+from helpers import bereken_week_overzicht
 from voorspelling import (
     blootstelling,
     drukte,
@@ -12,6 +13,7 @@ from voorspelling import (
     lees_kalender,
     lees_rijen,
     maak_prognose,
+    omzet_per_week,
     wedstrijd_gewicht,
     weer_score,
 )
@@ -565,3 +567,134 @@ def test_komende_thuiswedstrijden_zonder_weer_data(db):
     resultaat = bereken_komende_thuiswedstrijden(db)
     dag = next(d for d in resultaat if d["datum"] == morgen)
     assert dag["weer"] is None
+
+
+# ---------------------------------------------------------------------------
+# Omzet per week bij tellen op woensdag, vrijdag en soms maandag
+# ---------------------------------------------------------------------------
+
+WAAR = {"wedstrijd": 0.9, "training": 0.2, "weer": 0.0}
+
+
+def _woensdag_vrijdag_maandag(weken):
+    """Wo, vr en (om de week) ma van de week erna, steeds om 15.00 uur."""
+    tijden = []
+    for w in range(weken):
+        maandag = MAANDAG + timedelta(days=7 * w)
+        tijden += [maandag + timedelta(days=2), maandag + timedelta(days=4)]
+        if w % 2 == 0:
+            tijden.append(maandag + timedelta(days=7))
+    return sorted(set(tijden))
+
+
+def _echte_weekomzet(db, tijden, maandag, snelheid, prijs, effecten=WAAR):
+    """Wat er in die week echt omging, volgens dezelfde 'waarheid' als waarmee de tellingen gemaakt zijn."""
+    kalender = lees_kalender(db, maandag.date() - timedelta(days=2), maandag.date() + timedelta(days=9))
+    begin = datetime.combine(maandag.date(), datetime.min.time()).replace(hour=12)
+    return snelheid * prijs * drukte(blootstelling(begin, begin + timedelta(days=7), kalender), effecten)
+
+
+def test_weekomzet_klopt_ook_als_je_op_wo_vr_en_ma_telt(db):
+    a = _product(db, "A", prijs=2.0)
+    tijden = _woensdag_vrijdag_maandag(9)
+    laatste = _bouw_geschiedenis(
+        db, {a: 40}, effecten=WAAR, tijdstippen=tijden, wedstrijddagen=_zaterdagen(9, uit=(0, 2, 5, 7))
+    )
+    nu = laatste + timedelta(hours=2)
+    weken = omzet_per_week(db, nu)
+
+    compleet = [w for w in weken if w["status"] == "compleet"]
+    assert len(compleet) >= 5
+    for w in compleet:
+        maandag = datetime.combine(date.fromisoformat(w["van"]), datetime.min.time()).replace(hour=15)
+        echt = _echte_weekomzet(db, tijden, maandag, 40, 2.0)
+        assert w["omzet"] == pytest.approx(echt, rel=0.08), (w["van"], w["omzet"], echt)
+    # Het totaal over alle weken is precies wat de tellingen opleveren.
+    totaal_tellingen = db.execute("SELECT SUM(verkocht * verkoopprijs) FROM telling_regels").fetchone()[0]
+    assert sum(w["omzet"] for w in weken) == pytest.approx(totaal_tellingen, rel=1e-6)
+    # Een week met thuiswedstrijd is flink drukker dan een zonder.
+    met = next(w for w in compleet if w["van"] == (MAANDAG + timedelta(days=7)).date().isoformat())
+    zonder = next(w for w in compleet if w["van"] == (MAANDAG + timedelta(days=7 * 2)).date().isoformat())
+    assert met["omzet"] > zonder["omzet"] * 1.07  # echt: 8,1 tegen 7,2 "normale dagen"
+
+
+def test_weekstatus_begin_compleet_en_loopt_nog(db):
+    a = _product(db, "A")
+    tijden = _woensdag_vrijdag_maandag(5)
+    laatste = _bouw_geschiedenis(db, {a: 40}, tijdstippen=tijden)
+    weken = {w["van"]: w for w in omzet_per_week(db, laatste + timedelta(hours=2))}
+    eerste_maandag = MAANDAG.date().isoformat()
+    assert weken[eerste_maandag]["status"] == "begin"  # eerste telling woensdag: maandag/dinsdag niet gemeten
+    tussen = weken[(MAANDAG + timedelta(days=14)).date().isoformat()]
+    assert tussen["status"] == "compleet" and tussen["afwijkende_periode"] is False
+    laatste_week = max(weken)
+    assert weken[laatste_week]["status"] == "loopt_nog" and weken[laatste_week]["afwijkende_periode"] is True
+
+
+def test_telling_op_maandagochtend_telt_als_tot_en_met_zondag(db):
+    a = _product(db, "A")
+    tijden = [datetime(2026, 7, 6, 9, 0) + timedelta(days=7 * i) for i in range(5)]  # elke maandag 09.00
+    laatste = _bouw_geschiedenis(db, {a: 30}, tijdstippen=tijden)
+    weken = {w["van"]: w for w in omzet_per_week(db, laatste + timedelta(hours=1))}
+    assert weken["2026-07-27"]["status"] == "compleet"  # de week die op de laatste maandag eindigt
+    assert weken["2026-08-03"]["status"] == "loopt_nog"  # de week die op die maandag begint
+
+
+def test_eerste_telling_van_een_nieuw_product_telt_mee_in_de_weekomzet(db):
+    a, b = _product(db, "A"), _product(db, "Nieuw")
+    tijden = [MAANDAG + timedelta(days=7 * i) for i in range(5)]
+    _bouw_geschiedenis(db, {a: 30}, tijdstippen=tijden)
+    # B komt pas bij de derde telling in het systeem, met meteen verkoop.
+    derde = db.execute("SELECT id FROM tellingen ORDER BY datum LIMIT 1 OFFSET 2").fetchone()[0]
+    db.execute(
+        """INSERT INTO telling_regels (telling_id, product_id, voorraad_voor, geteld_aantal, verkocht, verkoopprijs)
+           VALUES (?, ?, 80, 20, 60, 3.0)""",
+        (derde, b),
+    )
+    db.commit()
+    totaal = db.execute("SELECT SUM(verkocht * verkoopprijs) FROM telling_regels").fetchone()[0]
+    weken = omzet_per_week(db, tijden[-1] + timedelta(hours=1))
+    assert sum(w["omzet"] for w in weken) == pytest.approx(totaal, rel=1e-6)
+
+
+def test_tellingenpagina_toont_geen_afwijkende_periode_meer_en_wel_een_trend(ingelogde_client, db):
+    a = _product(db, "A", prijs=2.0)
+    nu = datetime.now().replace(minute=0, second=0, microsecond=0)
+    maandag_deze_week = (nu - timedelta(days=nu.weekday())).replace(hour=15)
+    begin = maandag_deze_week - timedelta(days=7 * 7)
+    tijden = [t for t in (begin + (_t - MAANDAG) for _t in _woensdag_vrijdag_maandag(8)) if t < nu - timedelta(hours=3)]
+    _bouw_geschiedenis(db, {a: 40}, tijdstippen=tijden)
+    pagina = ingelogde_client.get("/tellingen").data.decode()
+    assert "afwijkende periode" not in pagina
+    assert "Omzet per week" in pagina and "verdeeld over de dagen" in pagina
+    assert "Trend over de afgesloten weken" in pagina  # eerder: "te weinig volledige weken"
+    assert "Nog te weinig volledig afgesloten weken" not in pagina
+
+
+def test_weekoverzicht_gebruikt_de_omzet_van_de_week_zelf(db):
+    a = _product(db, "Pils", prijs=2.0)
+    # Telt woensdag en vrijdag; het weekend (met 2 thuiswedstrijden) valt in de periode vrijdag > woensdag.
+    tijden = _woensdag_vrijdag_maandag(8)
+    laatste = _bouw_geschiedenis(
+        db, {a: 40}, effecten=WAAR, tijdstippen=tijden, wedstrijddagen=_zaterdagen(8, uit=(0, 2, 5))
+    )
+    week_van = date.fromisoformat((MAANDAG + timedelta(days=7 * 4)).date().isoformat())
+    vandaag = week_van + timedelta(days=9)  # woensdag na afloop van de week
+    overzicht = bereken_week_overzicht(db, vandaag=vandaag)
+    assert overzicht["week_van"] == week_van
+    echt = _echte_weekomzet(db, tijden, datetime.combine(week_van, datetime.min.time()), 40, 2.0)
+    assert overzicht["totale_omzet"] == pytest.approx(echt, rel=0.1)
+    assert overzicht["top_verkopers"] and overzicht["top_verkopers"][0]["product_naam"] == "Pils"
+    assert overzicht["afwijkende_periode"] is False  # alles gedekt door tellingen
+    assert overzicht["verschil_percentage"] is not None
+
+
+def test_weekoverzicht_waarschuwt_als_de_tellingen_de_week_niet_dekken(db):
+    a = _product(db, "Pils")
+    tijden = [MAANDAG + timedelta(days=7 * i) for i in range(4)]
+    _bouw_geschiedenis(db, {a: 40}, tijdstippen=tijden)
+    # De laatste telling was op de maandag; 'vandaag' is een week later, zonder nieuwe telling.
+    vandaag = (tijden[-1] + timedelta(days=14)).date()
+    overzicht = bereken_week_overzicht(db, vandaag=vandaag)
+    assert overzicht["afwijkende_periode"] is True
+    assert overzicht["geteld_tot"] == tijden[-1]

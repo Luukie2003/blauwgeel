@@ -10,9 +10,8 @@
 
 {% if overzicht.afwijkende_periode %}
 <div class="flash flash-warning">
-    Let op: deze of de vorige week bevat een telling met een ongebruikelijk korte of lange
-    periode sinds de telling ervoor (bijv. geteld op een andere dag dan gebruikelijk).
-    De omzetvergelijking hieronder kan daardoor vertekend zijn.
+    Let op: er is nog niet t/m zondag geteld{% if overzicht.geteld_tot %} (laatste telling: {{ overzicht.geteld_tot.strftime('%d-%m-%Y %H:%M') }}){% endif %},
+    dus wat daarna verkocht is staat hier nog niet in. De omzetvergelijking hieronder kan daardoor vertekend zijn.
 </div>
 {% endif %}
 

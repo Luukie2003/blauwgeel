@@ -4,6 +4,7 @@ from flask import Response, flash, redirect, render_template, request, session, 
 
 from database import get_db
 from voorspelling import maak_prognose
+from voorspelling import omzet_per_week as omzet_per_week_berekend
 from helpers import (
     bereken_trend,
     bestel_suggesties,
@@ -373,41 +374,11 @@ def register_routes(app):
             for t in tellingen
         }
 
-        # Per week groeperen op basis van de tellingen zelf (al opgehaald
-        # hierboven, inclusief de omzet per telling) i.p.v. een aparte query
-        # over telling_regels -- scheelt een dubbele berekening van dezelfde
-        # som. Elke telling representeert de periode sinds de vórige telling;
-        # als die periode fors afwijkt van een week (bijv. een keer op
-        # vrijdag geteld i.p.v. de gebruikelijke dag) wordt de betreffende
-        # week als 'afwijkend' gemarkeerd, zodat bereken_trend() 'm kan
-        # negeren en de pagina het kan laten zien.
-        weken = {}
-        vorige_datum = None
-        for t in sorted(tellingen, key=lambda t: t["datum"]):
-            dt = datetime.strptime(t["datum"], "%Y-%m-%d %H:%M")
-            jaar, week, _ = dt.isocalendar()
-            sleutel = (jaar, week)
-            if sleutel not in weken:
-                maandag = dt - timedelta(days=dt.weekday())
-                zondag = maandag + timedelta(days=6)
-                weken[sleutel] = {
-                    "jaar": jaar,
-                    "week": week,
-                    "van": maandag.strftime("%Y-%m-%d"),
-                    "tot": zondag.strftime("%Y-%m-%d"),
-                    "omzet": 0.0,
-                    "afwijkende_periode": False,
-                }
-            if vorige_datum is not None:
-                aantal_dagen = (dt.date() - vorige_datum.date()).days
-                if aantal_dagen < 5 or aantal_dagen > 9:
-                    weken[sleutel]["afwijkende_periode"] = True
-            weken[sleutel]["omzet"] += t["omzet"]
-            vorige_datum = dt
-
-        omzet_per_week = sorted(
-            weken.values(), key=lambda w: (w["jaar"], w["week"]), reverse=True
-        )
+        # Omzet per week: de omzet van elke telling wordt verdeeld over de dagen die
+        # erbij horen (zie voorspelling.omzet_per_week), dus het maakt niet uit
+        # op welke dagen je telt. Alleen volledig gedekte weken tellen mee voor
+        # de trend.
+        omzet_per_week = omzet_per_week_berekend(db)
         huidige_jaar, huidige_week, _ = datetime.now().isocalendar()
         trend = bereken_trend(omzet_per_week, huidige_jaar, huidige_week)
         try:

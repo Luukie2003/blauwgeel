@@ -26,8 +26,16 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.20.1"
+HUIDIGE_VERSIE = "1.21.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.21.0",
+        "datum": "2 oktober 2026",
+        "punten": [
+            "Tellingen: de omzet per week is nu de omzet van de week zelf. De omzet van elke telling wordt verdeeld over de dagen die erbij horen (drukke dagen zoals een thuiswedstrijd tellen zwaarder), dus het maakt niet meer uit op welke dagen je telt, bijv. woensdag, vrijdag en soms maandag. Het label \"afwijkende periode\" is weg; een week die nog niet helemaal door tellingen gedekt is krijgt een eigen label (\"loopt nog\", \"geteld t/m ...\" of \"begin meting\")",
+            "Daardoor werkt de trendkaart op het tellingenoverzicht nu ook voor jullie telritme, en rekent het Weekoverzicht (pagina en maandagmail) met de omzet en de topverkopers van de week zelf in plaats van met de tellingen die in die week gedaan zijn. De waarschuwing staat er alleen nog als er niet t/m zondag geteld is",
+        ],
+    },
     {
         "versie": "1.20.1",
         "datum": "2 oktober 2026",
