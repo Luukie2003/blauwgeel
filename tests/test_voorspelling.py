@@ -123,7 +123,7 @@ def test_signaleert_product_boven_minimum_met_hoge_verkoop(db):
     assert [r["product"]["naam"] for r in resultaat] == ["Pils"]
     r = resultaat[0]
     assert r["verwacht_verbruik"] > 200 and r["verwacht_tekort"] > 100
-    assert r["kans_tekort"] > 0.99 and r["advies_stuks"] > 0
+    assert r["kans_tekort"] > 0.9 and r["advies_stuks"] > 0
 
 
 def test_sluit_producten_die_al_onder_minimum_zitten_uit(db):
@@ -382,7 +382,7 @@ def test_terugtoetsen_geeft_nauwkeurigheid_en_slaat_de_naieve_maatstaf(db):
     assert n["mape_model"] <= n["mape_naief"]  # en is niet slechter dan alleen het gemiddelde
 
 
-def test_dispersie_is_hoger_bij_rommelige_verkoop(db):
+def test_overspreiding_is_hoger_bij_rommelige_verkoop(db):
     import random
 
     rng = random.Random(7)
@@ -391,8 +391,8 @@ def test_dispersie_is_hoger_bij_rommelige_verkoop(db):
     for r in db.execute("SELECT id, verkocht FROM telling_regels").fetchall():
         db.execute("UPDATE telling_regels SET verkocht = ? WHERE id = ?", (int(r[1] * rng.uniform(0.5, 1.6)), r[0]))
     db.commit()
-    rommelig = maak_prognose(db, nu=laatste + timedelta(hours=1))["model"]["dispersie"]
-    assert rommelig > 1.5
+    prog = maak_prognose(db, nu=laatste + timedelta(hours=1))
+    assert prog["model"]["overspreiding"] > 0.05
 
 
 # ---------------------------------------------------------------------------

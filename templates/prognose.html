@@ -46,16 +46,23 @@
         <div class="getal">{{ s.urgent }}</div>
         <div class="label">Producten die waarschijnlijk opraken<br><span class="tekst-zacht">+ {{ s.let_op }} met een kleine kans</span></div>
     </div>
-    <div class="stat">
+    <div class="stat {{ 'waarschuwing' if m.betrouwbaarheid == 'laag' else '' }}">
         {% if m.nauwkeurigheid %}
-        <div class="getal">&plusmn; {{ '%.0f'|format(m.nauwkeurigheid.mape_model * 100) }}%</div>
-        <div class="label">Gemiddelde afwijking van de omzet<br><span class="tekst-zacht">in de laatste {{ m.nauwkeurigheid.aantal }} tellingen getoetst</span></div>
+        <div class="getal">{{ {'laag': 'Nog grof', 'redelijk': 'Redelijk', 'goed': 'Goed'}[m.betrouwbaarheid] }}</div>
+        <div class="label">Betrouwbaarheid<br><span class="tekst-zacht">typisch &plusmn; {{ '%.0f'|format(m.nauwkeurigheid.mape_model * 100) }}% per telling in de laatste {{ m.nauwkeurigheid.aantal }} tellingen</span></div>
         {% else %}
         <div class="getal">&ndash;</div>
         <div class="label">Nauwkeurigheid<br><span class="tekst-zacht">kan na ongeveer 5 tellingen getoetst worden</span></div>
         {% endif %}
     </div>
 </div>
+
+{% if m.betrouwbaarheid == 'laag' %}
+<div class="flash flash-warning">
+    Het systeem heeft nog maar {{ m.aantal_tellingen }} tellingen ({{ '%.0f'|format(m.weken_data) }} weken) om van te leren, en de verkoop schommelt flink van week tot week.
+    Zie de cijfers als richting, niet als belofte: de bandbreedtes zijn bewust ruim.
+</div>
+{% endif %}
 
 <div class="kaart">
     <h2>Dag voor dag</h2>
@@ -109,6 +116,7 @@
                 {% for p in prognose.producten %}
                 <tr>
                     <td><a href="{{ url_for('product_detail', product_id=p.product.id) }}">{{ p.product.naam }}</a>
+                        {% if p.nu_op %}<span class="badge badge-laag">nu op</span>{% endif %}
                         {% if p.weinig_data %}<span class="tekst-zacht" title="Nog weinig tellingen van dit product, dus een grove schatting">*</span>{% endif %}</td>
                     <td>{{ p.voorraad }} {{ p.product.eenheid }}{% if p.onderweg %} <span class="tekst-zacht">(+{{ p.onderweg }} onderweg)</span>{% endif %}</td>
                     <td>{{ '%.0f'|format(p.verwacht) }} <span class="tekst-zacht">({{ p.laag }} tot {{ p.hoog }})</span></td>
@@ -167,10 +175,11 @@
     </div>
     {% if m.nauwkeurigheid %}
     <p style="margin-bottom:0.4rem">
-        <strong>Nauwkeurigheid:</strong> in de laatste {{ m.nauwkeurigheid.aantal }} tellingen zat de omzetvoorspelling er gemiddeld
-        <strong>{{ '%.0f'|format(m.nauwkeurigheid.mape_model * 100) }}%</strong> naast, op basis van alleen wat toen al bekend was.
+        <strong>Nauwkeurigheid:</strong> in de laatste {{ m.nauwkeurigheid.aantal }} tellingen zat de omzetvoorspelling er
+        meestal <strong>{{ '%.0f'|format(m.nauwkeurigheid.mape_model * 100) }}%</strong> naast (de middelste afwijking), op basis van alleen wat toen al bekend was.
         Een simpele schatting op basis van de gemiddelde dagverkoop zat er {{ '%.0f'|format(m.nauwkeurigheid.mape_naief * 100) }}% naast{% if m.nauwkeurigheid.verbetering > 0.02 %},
         dus de slimmere aanpak is ongeveer {{ '%.0f'|format(m.nauwkeurigheid.verbetering * 100) }}% nauwkeuriger{% endif %}.
+        Dat het niet beter gaat komt vooral door grote verschillen tussen weken die niemand kan voorzien; met meer tellingen worden vooral de effecten van wedstrijden en weer scherper.
     </p>
     {% endif %}
     <ul class="tekst-zacht" style="margin-top:0.6rem">

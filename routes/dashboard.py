@@ -26,8 +26,16 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.20.0"
+HUIDIGE_VERSIE = "1.20.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.20.1",
+        "datum": "2 oktober 2026",
+        "punten": [
+            "Prognose: gecontroleerd op de echte tellingen en bijgesteld. De bandbreedtes zijn nu eerlijk ruim, omdat de verkoop van week tot week flink schommelt (nu: ongeveer een factor 2 omhoog of omlaag); de kans op een tekort rekent mee met wat al besteld is; en er staat alleen een bestel-advies bij producten met een echt risico",
+            "Prognose: een product dat nu op is krijgt een rood label \"nu op\", en in plaats van een foutpercentage staat er een betrouwbaarheid (nog grof / redelijk / goed) met een waarschuwing zolang er minder dan 15 tellingen zijn",
+        ],
+    },
     {
         "versie": "1.20.0",
         "datum": "2 oktober 2026",

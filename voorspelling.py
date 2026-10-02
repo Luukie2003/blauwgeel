@@ -272,9 +272,23 @@ def _voorbewerk(rijen):
     ]
 
 
-def _doelfunctie(voorbewerkt, effecten, dispersie):
-    """Gewogen Poisson-afwijking van alle producten (gedeeld door de
-    dispersie) plus de strafterm voor het afwijken van de aannames."""
+def _halve_afwijking(v, mu, k):
+    """Halve negatief-binomiale afwijking tussen waargenomen v en verwacht mu,
+    met relatieve overspreiding k (variantie = mu + k*mu^2). Voor grote
+    aantallen telt een gemiste voorspelling zo veel minder zwaar dan bij een
+    gewone Poisson, want daar is de dag-tot-dag-schommeling groter dan wat
+    Poisson aanneemt."""
+    if mu <= 1e-9:
+        return v * 10.0  # voorspeld 0 maar toch verkocht: flink straffen
+    if k < 1e-6:
+        return (v * math.log(v / mu) if v > 0 else 0.0) - v + mu
+    eerste = v * math.log(v / mu) if v > 0 else 0.0
+    return eerste - (v + 1.0 / k) * math.log((1 + k * v) / (1 + k * mu))
+
+
+def _doelfunctie(voorbewerkt, effecten, k):
+    """Gewogen afwijking van alle producten plus de strafterm voor het
+    afwijken van de aannames."""
     a, b, c = effecten["wedstrijd"], effecten["training"], effecten["weer"]
     afwijking = 0.0
     for ws, vs, ds, ms, ts, ss in voorbewerkt:
@@ -284,25 +298,19 @@ def _doelfunctie(voorbewerkt, effecten, dispersie):
             continue
         r = sum(w * v for w, v in zip(ws, vs)) / noemer
         for w, v, e in zip(ws, vs, es):
-            mu = r * e
-            if mu <= 1e-9:
-                afwijking += w * v * 10.0
-            elif v > 0:
-                afwijking += w * (v * math.log(v / mu) - v + mu)
-            else:
-                afwijking += w * mu
-    straf = sum(0.5 * ((effecten[k] - PRIOR[k]) / ONZEKERHEID[k]) ** 2 for k in PRIOR)
-    return afwijking / dispersie + straf
+            afwijking += w * _halve_afwijking(v, r * e, k)
+    straf = sum(0.5 * ((effecten[n] - PRIOR[n]) / ONZEKERHEID[n]) ** 2 for n in PRIOR)
+    return afwijking + straf
 
 
-def _leer_effecten(rijen, dispersie, vrij, ronden=4):
+def _leer_effecten(rijen, k, vrij, ronden=4):
     """Coordinate descent per effect, met de aannames als startpunt: eerst een
     grof raster over het hele toegestane bereik, daarna steeds fijner rond de
     beste waarde. 'vrij' bepaalt welke effecten data hebben om van te leren;
     de rest blijft bij de aanname."""
     voorbewerkt = _voorbewerk(rijen)
     effecten = dict(PRIOR)
-    beste = _doelfunctie(voorbewerkt, effecten, dispersie)
+    beste = _doelfunctie(voorbewerkt, effecten, k)
     for ronde in range(ronden):
         veranderd = False
         for naam in PRIOR:
@@ -317,7 +325,7 @@ def _leer_effecten(rijen, dispersie, vrij, ronden=4):
             for waarde in kandidaten:
                 waarde = min(hoog, max(laag, waarde))
                 proef = dict(effecten, **{naam: waarde})
-                score = _doelfunctie(voorbewerkt, proef, dispersie)
+                score = _doelfunctie(voorbewerkt, proef, k)
                 if score < beste - 1e-9:
                     beste, effecten, veranderd = score, proef, True
         if not veranderd and ronde >= 1:
@@ -325,23 +333,29 @@ def _leer_effecten(rijen, dispersie, vrij, ronden=4):
     return effecten
 
 
-def _schat_dispersie(rijen, effecten, snelheid):
-    """Hoeveel meer de verkoop schommelt dan een zuivere Poisson (>= 1)."""
-    pearson, n = 0.0, 0
+START_OVERSPREIDING = 0.15
+
+
+def _schat_overspreiding(rijen, effecten, snelheid):
+    """Hoeveel meer de verkoop schommelt dan een zuivere Poisson, uitgedrukt
+    als relatieve overspreiding k (variantie = mu + k*mu^2), via de
+    momentenmethode. Een kantine heeft rustige en drukke weken die je niet
+    kunt voorspellen; dat zit hierin. Staat tussen 0,002 en 1,5."""
+    teller = noemer = 0.0
+    n = 0
     for r in rijen:
         mu = snelheid.get(r["pid"], 0.0) * drukte(r["b"], effecten)
-        if mu >= 1.0:
-            pearson += (r["V"] - mu) ** 2 / mu
+        if mu > 1e-9:
+            teller += r["w"] * ((r["V"] - mu) ** 2 - mu)
+            noemer += r["w"] * mu ** 2
             n += 1
-    aantal_producten = len(snelheid)
-    vrijheidsgraden = n - aantal_producten - len(PRIOR)
-    if vrijheidsgraden < 5:
-        return 2.0
-    return min(8.0, max(1.0, pearson / vrijheidsgraden))
+    if n < 15 or noemer <= 1e-9:
+        return START_OVERSPREIDING
+    return min(1.5, max(0.002, teller / noemer))
 
 
 def pas_model_aan(rijen, licht=False):
-    """Leert de drie effecten + de dispersie uit de rijen. Geeft ook terug
+    """Leert de drie effecten + de overspreiding uit de rijen. Geeft ook terug
     hoeveel er per effect te leren viel (voor de uitleg). 'licht' = sneller en
     minder precies (voor de terugtoetsing, die het vaak achter elkaar doet)."""
     # Alleen de best verkopende producten sturen het leren (sneller, en de
@@ -349,28 +363,32 @@ def pas_model_aan(rijen, licht=False):
     totaal = {}
     for r in rijen:
         totaal[r["pid"]] = totaal.get(r["pid"], 0.0) + r["w"] * r["V"]
-    kandidaten = [
-        pid for pid, t in sorted(totaal.items(), key=lambda x: -x[1])
-        if sum(1 for r in rijen if r["pid"] == pid and not r["afgekapt"]) >= MIN_RIJEN_PER_PRODUCT
-    ][:MODEL_MAX_PRODUCTEN]
-    leer_rijen = [r for r in rijen if r["pid"] in set(kandidaten) and not r["afgekapt"]]
+    rijen_per_product = {}
+    for r in rijen:
+        if not r["afgekapt"]:
+            rijen_per_product[r["pid"]] = rijen_per_product.get(r["pid"], 0) + 1
+    kandidaten = {
+        pid
+        for pid, _ in sorted(totaal.items(), key=lambda x: -x[1])
+        if rijen_per_product.get(pid, 0) >= MIN_RIJEN_PER_PRODUCT
+    }
+    kandidaten = set(list(sorted(kandidaten, key=lambda pid: -totaal[pid]))[:MODEL_MAX_PRODUCTEN])
+    leer_rijen = [r for r in rijen if r["pid"] in kandidaten and not r["afgekapt"]]
 
     informatie = {
         "wedstrijd": sum(r["w"] * r["b"]["M"] for r in leer_rijen),
         "training": sum(r["w"] * r["b"]["T"] for r in leer_rijen),
         "weer": sum(r["w"] * abs(r["b"]["S"]) for r in leer_rijen),
     }
-    vrij = {k: informatie[k] > 0.3 for k in PRIOR}
+    vrij = {n: informatie[n] > 0.3 for n in PRIOR}
     effecten = dict(PRIOR)
-    dispersie = 2.0
-    if leer_rijen and any(vrij.values()):
-        for _ in range(1 if licht else 2):
-            effecten = _leer_effecten(leer_rijen, dispersie, vrij, ronden=3 if licht else 4)
-            if not licht:
-                dispersie = _schat_dispersie(leer_rijen, effecten, _snelheden(leer_rijen, effecten))
-    elif leer_rijen:
-        dispersie = _schat_dispersie(leer_rijen, effecten, _snelheden(leer_rijen, effecten))
-    return effecten, dispersie, informatie
+    k = START_OVERSPREIDING
+    if leer_rijen:
+        for _ in range(2 if licht else 3):
+            if any(vrij.values()):
+                effecten = _leer_effecten(leer_rijen, k, vrij, ronden=3 if licht else 4)
+            k = _schat_overspreiding(leer_rijen, effecten, _snelheden(leer_rijen, effecten))
+    return effecten, k, informatie
 
 
 # ---------------------------------------------------------------------------
@@ -484,12 +502,19 @@ def terugtoetsen(rijen, nu):
             r["w"] = _gewicht(r["einde"], nu)  # gewichten terugzetten
     if not afwijkingen_model:
         return None
-    mape_model = sum(afwijkingen_model) / len(afwijkingen_model)
-    mape_naief = sum(afwijkingen_naief) / len(afwijkingen_naief)
+    def mediaan(waarden):
+        gesorteerd = sorted(waarden)
+        midden = len(gesorteerd) // 2
+        return gesorteerd[midden] if len(gesorteerd) % 2 else (gesorteerd[midden - 1] + gesorteerd[midden]) / 2
+
+    # De mediaan is eerlijker dan het gemiddelde: een enkele uitschieter (een
+    # uitzonderlijk stille of drukke week) trekt het gemiddelde anders omhoog.
+    mape_model, mape_naief = mediaan(afwijkingen_model), mediaan(afwijkingen_naief)
     return {
         "aantal": len(afwijkingen_model),
         "mape_model": mape_model,
         "mape_naief": mape_naief,
+        "gemiddeld_model": sum(afwijkingen_model) / len(afwijkingen_model),
         "verbetering": (mape_naief - mape_model) / mape_naief if mape_naief > 1e-9 else 0.0,
     }
 
@@ -523,6 +548,30 @@ def _waargenomen_dagen(rijen, kalender, soort):
     return len(dagen)
 
 
+def _gemeenschappelijke_schommeling(rijen, effecten, snelheid):
+    """Hoe ver de totale omzet van een telling gemiddeld van de verwachting
+    zit, als fractie. Dat is de schommeling die alle producten tegelijk raakt
+    (een stille of een drukke week) en die je niet per product kunt wegmiddelen.
+    Staat tussen 0,10 en 0,70; zonder genoeg tellingen 0,30."""
+    per_telling = {}
+    for r in rijen:
+        mu = snelheid.get(r["pid"], 0.0) * drukte(r["b"], effecten) * r["prijs"]
+        groep = per_telling.setdefault(r["tid"], [0.0, 0.0, 0, 0.0])
+        groep[0] += r["V"] * r["prijs"]
+        groep[1] += mu
+        groep[2] += 1
+        groep[3] = max(groep[3], r["w"])
+    afwijkingen = [
+        (((waar - verwacht) / verwacht) ** 2, w)
+        for waar, verwacht, n, w in per_telling.values()
+        if n >= 5 and verwacht > 1e-9
+    ]
+    if len(afwijkingen) < 3:
+        return 0.30
+    gemiddeld = sum(a * w for a, w in afwijkingen) / sum(w for _, w in afwijkingen)
+    return min(0.70, max(0.10, math.sqrt(gemiddeld) * 1.15))
+
+
 def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
     """De complete prognose voor de komende 'dagen' dagen vanaf 'nu'. Zie de
     moduledocstring voor hoe het werkt. Geeft {"beschikbaar": False, ...} als er
@@ -545,8 +594,9 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
         eind.date() + timedelta(days=2),
     )
     _voeg_blootstelling_toe(rijen, kalender, nu)
-    effecten, dispersie, informatie = pas_model_aan(rijen)
+    effecten, overspreiding, informatie = pas_model_aan(rijen)
     snelheid = _snelheden(rijen, effecten)
+    sigma_gemeenschappelijk = _gemeenschappelijke_schommeling(rijen, effecten, snelheid)
 
     # --- blootstelling in het voorspelvenster, ook per dag voor het overzicht
     venster = blootstelling(nu, eind, kalender)
@@ -557,19 +607,19 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
         d_begin, d_eind = _dag_venster(dag)
         deel = (min(eind, d_eind) - max(nu, d_begin)).total_seconds() / 86400
         if deel > 0.05:
-            k = kalender.get(dag) or {"wedstrijden": 0, "training": False, "weer": None}
-            m = 1 + effecten["wedstrijd"] * wedstrijd_gewicht(k["wedstrijden"]) + effecten["training"] * (
-                1.0 if k["training"] else 0.0
-            ) + effecten["weer"] * (k["weer"] or 0.0)
+            kenmerken = kalender.get(dag) or {"wedstrijden": 0, "training": False, "weer": None}
+            m = 1 + effecten["wedstrijd"] * wedstrijd_gewicht(kenmerken["wedstrijden"]) + effecten["training"] * (
+                1.0 if kenmerken["training"] else 0.0
+            ) + effecten["weer"] * (kenmerken["weer"] or 0.0)
             dagen_overzicht.append(
                 {
                     "datum": dag,
                     "weekdag": _WEEKDAG[dag.weekday()],
                     "weekdag_kort": _WEEKDAG_KORT[dag.weekday()],
                     "deel": min(1.0, deel),
-                    "wedstrijden": k["wedstrijden"],
-                    "training": k["training"],
-                    "weer_score": k["weer"],
+                    "wedstrijden": kenmerken["wedstrijden"],
+                    "training": kenmerken["training"],
+                    "weer_score": kenmerken["weer"],
                     "drukte": m,
                     "weekend": dag.weekday() >= 5,
                 }
@@ -590,30 +640,39 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
     rijen_per_product = {}
     for r in rijen:
         rijen_per_product.setdefault(r["pid"], []).append(r)
+    gewicht_som = {
+        pid: sum(r["w"] for r in lijst if not r["afgekapt"]) or sum(r["w"] for r in lijst)
+        for pid, lijst in rijen_per_product.items()
+    }
     gewicht_blootstelling = {
         pid: sum(r["w"] * drukte(r["b"], effecten) for r in lijst if not r["afgekapt"]) or
         sum(r["w"] * drukte(r["b"], effecten) for r in lijst)
         for pid, lijst in rijen_per_product.items()
     }
 
-    uitkomst, omzet_gem, omzet_var = [], 0.0, 0.0
+    uitkomst, omzet_gem, omzet_toeval = [], 0.0, 0.0
     for pid, snel in snelheid.items():
         product = producten.get(pid)
         if product is None or snel <= 0:
             continue
         mu = snel * E_h
-        rel_snelheid_var = dispersie / max(snel * gewicht_blootstelling[pid], 1e-9)
-        var = dispersie * mu + (mu ** 2) * (rel_snelheid_var + MODEL_ONZEKERHEID_DAG ** 2 / dagen + 0.05 ** 2)
+        # Onzekerheid: gewone toevalsspreiding (Poisson) + de extra schommeling
+        # tussen periodes (overspreiding) + onzekerheid over de snelheid zelf.
+        rel_snelheid_var = 1.0 / max(snel * gewicht_blootstelling[pid], 1e-9) + overspreiding / max(gewicht_som[pid], 1.0)
+        var = mu + (mu ** 2) * (overspreiding + rel_snelheid_var + 0.03 ** 2)
         voorraad = max(0, product["voorraad"])
-        kans = kans_meer_dan(mu, var, voorraad)
+        aanwezig = voorraad + onderweg.get(pid, 0)  # voorraad plus wat al besteld is
+        kans = kans_meer_dan(mu, var, aanwezig)
+        status = "urgent" if kans >= 0.5 else "let_op" if kans >= 0.2 else "ok"
         q90 = kwantiel(mu, var, serviceniveau)
         q10 = kwantiel(mu, var, 0.1)
-        tekort_na_dekking = max(0, q90 - voorraad - onderweg.get(pid, 0))
+        # Alleen adviseren als er echt een risico is; voor de rest "voldoende".
+        tekort_na_dekking = max(0, q90 - aanwezig) if status != "ok" else 0
         factor = max(1, product["besteleenheid_factor"] or 1)
         eenheden = -(-tekort_na_dekking // factor) if tekort_na_dekking else 0
         per_dag = mu / dagen if dagen else 0
         omzet_gem += mu * product["verkoopprijs"]
-        omzet_var += (product["verkoopprijs"] ** 2) * var
+        omzet_toeval += (product["verkoopprijs"] ** 2) * mu
         aantal_waarnemingen = len(rijen_per_product[pid])
         uitkomst.append(
             {
@@ -624,7 +683,8 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
                 "hoog": q90,
                 "kans_tekort": kans,
                 "dekking_dagen": (voorraad / per_dag) if per_dag > 1e-9 else None,
-                "status": "urgent" if kans >= 0.5 else "let_op" if kans >= 0.2 else "ok",
+                "status": status,
+                "nu_op": voorraad == 0,
                 "advies_stuks": eenheden * factor if factor > 1 else tekort_na_dekking,
                 "advies_eenheden": eenheden if factor > 1 else None,
                 "besteleenheid": product["besteleenheid"] if factor > 1 else None,
@@ -639,11 +699,14 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
     volgorde = {"urgent": 0, "let_op": 1, "ok": 2}
     uitkomst.sort(key=lambda x: (volgorde[x["status"]], -x["kans_tekort"], x["product"]["categorie"], x["product"]["naam"]))
 
-    sigma_totaal = math.sqrt(omzet_var + (0.1 * omzet_gem) ** 2)
+    # Totale omzet: toeval per product + de schommeling die alle producten
+    # tegelijk raakt (een stille of drukke week), die uit de eigen tellingen komt.
+    relatief = math.sqrt((omzet_toeval / omzet_gem ** 2 if omzet_gem > 0 else 0.0) + sigma_gemeenschappelijk ** 2)
+    sigma_ln = math.sqrt(math.log(1 + relatief ** 2))  # log-normaal: nooit onder nul
     totaal = {
         "omzet": omzet_gem,
-        "laag": max(0.0, omzet_gem - 1.2816 * sigma_totaal),
-        "hoog": omzet_gem + 1.2816 * sigma_totaal,
+        "laag": omzet_gem * math.exp(-1.2816 * sigma_ln),
+        "hoog": omzet_gem * math.exp(1.2816 * sigma_ln),
         "gewone_dag": (omzet_gem / E_h) if E_h > 1e-9 else 0.0,
     }
     for d in dagen_overzicht:
@@ -664,6 +727,16 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
             }
         )
     eerste = min(r["start"] for r in rijen)
+    nauwkeurigheid = terugtoetsen(rijen, nu)
+    weken_data = (nu - eerste).total_seconds() / (7 * 86400)
+    if len(tellingen) < 15 or weken_data < 8 or nauwkeurigheid is None:
+        betrouwbaarheid = "laag"
+    elif nauwkeurigheid["mape_model"] < 0.25:
+        betrouwbaarheid = "goed"
+    elif nauwkeurigheid["mape_model"] < 0.45:
+        betrouwbaarheid = "redelijk"
+    else:
+        betrouwbaarheid = "laag"
     return {
         "beschikbaar": True,
         "nu": nu,
@@ -679,11 +752,13 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
         },
         "model": {
             "effecten": effect_lijst,
-            "dispersie": dispersie,
+            "overspreiding": overspreiding,
+            "sigma_gemeenschappelijk": sigma_gemeenschappelijk,
             "aantal_tellingen": len(tellingen),
             "aantal_producten_in_model": len(snelheid),
             "eerste_datum": eerste,
-            "weken_data": (nu - eerste).total_seconds() / (7 * 86400),
-            "nauwkeurigheid": terugtoetsen(rijen, nu),
+            "weken_data": weken_data,
+            "nauwkeurigheid": nauwkeurigheid,
+            "betrouwbaarheid": betrouwbaarheid,
         },
     }
