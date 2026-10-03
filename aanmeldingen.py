@@ -37,6 +37,10 @@ from helpers import heeft_sectie_toegang
 # verdeeld (zie "lang" in zichtbare_leden). 24 is dus ruim genoeg voor elke
 # bestaande naam en houdt het leesbaar; zelf aan te passen bij de instellingen.
 STANDAARD_MAX_TEKENS = 24
+# Hoeveel seizoenen terug iemand zijn bordje nog kan kiezen om te verlengen
+# (dit seizoen meegeteld). Wie langer weg was, meldt zich aan als nieuw bordje;
+# bestaand_lid_voor koppelt dat aan het bestaande lid als de naam klopt.
+VERLENG_SEIZOENEN = 3
 MAX_NAAM_TEKENS = 60
 MAX_BARDIENST_TEKENS = 60
 
@@ -178,11 +182,17 @@ def schoon_tekst(waarde):
 
 
 def verlengbare_leden(db, instellingen, seizoen=None):
-    """De bordjes die iemand kan kiezen om te verlengen: wat nu (of recent) op
-    de ledenmuur staat, dus alleen namen die al openbaar zijn. Per bordje:
-    'betaald' (dit seizoen al betaald) en 'wacht' (er ligt al een verlenging
-    van dit bordje ter goedkeuring), zodat niemand dubbel betaalt."""
+    """De bordjes die iemand kan kiezen om te verlengen: elk bordje dat in de
+    laatste VERLENG_SEIZOENEN seizoenen betaald is, dus alleen namen die ooit
+    op het scherm stonden. Dat staat los van 'Wie staat er op het scherm?':
+    ook al toont het scherm alleen wie dit seizoen betaald heeft, wie vorig
+    seizoen betaalde moet zijn bordje kunnen kiezen. Staat die instelling op
+    alle actieve leden, dan geldt dat ook hier. Per bordje: 'betaald' (dit
+    seizoen al betaald) en 'wacht' (er ligt al een verlenging van dit bordje
+    ter goedkeuring), zodat niemand dubbel betaalt."""
     seizoen = seizoen or huidig_seizoen()
+    ingesteld = instellingen["club_van_20_zichtbaar_seizoenen"]
+    bereik = 0 if ingesteld <= 0 else max(ingesteld, VERLENG_SEIZOENEN)
     wachtend = {
         r["verlengt_lid_id"]
         for r in db.execute(
@@ -191,7 +201,7 @@ def verlengbare_leden(db, instellingen, seizoen=None):
     }
     leden = [
         {"id": l["id"], "naam": l["naam"], "sterren": l["sterren"], "betaald": l["betaald"], "wacht": l["id"] in wachtend}
-        for l in zichtbare_leden(db, instellingen, seizoen)
+        for l in zichtbare_leden(db, instellingen, seizoen, zichtbaar_seizoenen=bereik)
     ]
     return sorted(leden, key=lambda l: l["naam"].lower())
 

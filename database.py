@@ -281,6 +281,12 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "club_van_20_duur_seconden", "INTEGER NOT NULL DEFAULT 12"),
     ("kiosk_scherm_instellingen", "club_van_20_zichtbaar_seizoenen", "INTEGER NOT NULL DEFAULT 2"),
     ("kiosk_scherm_instellingen", "club_van_20_markeer_onbetaald", "INTEGER NOT NULL DEFAULT 0"),
+    # Tijdelijke herinnering: t/m onbetaald_tot ("2026-10-18") staan ook leden
+    # die dit seizoen nog niet betaald hebben lichtrood op het scherm, uit de
+    # laatste onbetaald_seizoenen seizoenen (0 = elk actief lid). Daarna valt
+    # het scherm vanzelf terug op zichtbaar_seizoenen. Zie onbetaald_actie().
+    ("kiosk_scherm_instellingen", "club_van_20_onbetaald_tot", "TEXT"),
+    ("kiosk_scherm_instellingen", "club_van_20_onbetaald_seizoenen", "INTEGER NOT NULL DEFAULT 3"),
     ("kiosk_scherm_instellingen", "club_van_20_lege_vakjes", "INTEGER NOT NULL DEFAULT 1"),
     # Standaard houden de bordjes op elke dia dezelfde grootte (die van een
     # volle dia), ook op een laatste dia met maar een paar namen. Aan = die

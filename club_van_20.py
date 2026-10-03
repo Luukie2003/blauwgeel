@@ -262,15 +262,51 @@ def sterren_voor(aantal_seizoenen, per_ster=STANDAARD_SEIZOENEN_PER_STER):
     return max(0, int(aantal_seizoenen or 0)) // per
 
 
-def zichtbare_leden(db, instellingen, seizoen=None, leden=None):
-    seizoen = seizoen or huidig_seizoen()
-    leden = leden if leden is not None else leden_met_bijdragen(db, alleen_actief=True)
+def _ruimste_bereik(a, b):
+    """Het ruimste van twee 'aantal seizoenen terug'-bereiken (0 = elk lid)."""
+    return 0 if a <= 0 or b <= 0 else max(a, b)
+
+
+def onbetaald_actie(instellingen, vandaag=None):
+    """De tijdelijke herinnering ("de komende 2 weken staat iedereen die nog
+    niet betaald heeft lichtrood op het scherm"): {'tot': date, 'seizoenen': n}
+    zolang die loopt (t/m de ingestelde dag), anders None."""
+    try:
+        tot = date.fromisoformat((instellingen["club_van_20_onbetaald_tot"] or "").strip())
+    except ValueError:
+        return None
+    if (vandaag or vandaag_amsterdam()) > tot:
+        return None
+    return {"tot": tot, "seizoenen": max(0, instellingen["club_van_20_onbetaald_seizoenen"])}
+
+
+def scherm_bereik(instellingen, vandaag=None):
+    """(zichtbaar_seizoenen, markeer_onbetaald) zoals het scherm ze nu gebruikt:
+    de gewone instellingen, of tijdens de tijdelijke herinnering een ruimer
+    bereik met alle onbetaalden lichtrood."""
+    bereik = instellingen["club_van_20_zichtbaar_seizoenen"]
     markeer = bool(instellingen["club_van_20_markeer_onbetaald"])
+    actie = onbetaald_actie(instellingen, vandaag)
+    if actie:
+        return _ruimste_bereik(bereik, actie["seizoenen"]), True
+    return bereik, markeer
+
+
+def zichtbare_leden(db, instellingen, seizoen=None, leden=None, zichtbaar_seizoenen=None):
+    """De leden die (volgens 'Wie staat er op het scherm?', zie scherm_bereik)
+    zichtbaar zijn. zichtbaar_seizoenen overschrijft dat bereik, voor wie een
+    ruimer bereik nodig heeft (bijvoorbeeld de verleng-lijst, zie
+    aanmeldingen.py)."""
+    seizoen = seizoen or huidig_seizoen()
+    bereik, markeer = scherm_bereik(instellingen)
+    if zichtbaar_seizoenen is None:
+        zichtbaar_seizoenen = bereik
+    leden = leden if leden is not None else leden_met_bijdragen(db, alleen_actief=True)
     per_ster = instellingen["club_van_20_seizoenen_per_ster"]
     glans_vanaf = max(1, instellingen["club_van_20_glans_vanaf_sterren"] or STANDAARD_GLANS_VANAF_STERREN)
     resultaat = []
     for lid in leden:
-        zichtbaar, onbetaald = is_zichtbaar(lid, seizoen, instellingen["club_van_20_zichtbaar_seizoenen"])
+        zichtbaar, onbetaald = is_zichtbaar(lid, seizoen, zichtbaar_seizoenen)
         if not zichtbaar:
             continue
         n = lid["aantal_seizoenen"]
@@ -591,6 +627,9 @@ def bouw_slides(db, instellingen, qr_svg=None):
     seizoen = huidig_seizoen()
     leden = leden_met_bijdragen(db, alleen_actief=True)
     zichtbaar = zichtbare_leden(db, instellingen, seizoen, leden)
+    # Op het scherm kunnen ook onbetaalde (lichtrode) bordjes staan; tellers en
+    # de teamstrijd gaan alleen over wie dit seizoen echt meedoet.
+    betaald = [lid for lid in zichtbaar if lid["betaald"]]
     duur = max(3, instellingen["club_van_20_duur_seconden"])
     kolommen = max(1, instellingen["club_van_20_kolommen"])
     per_slide = max(1, instellingen["club_van_20_namen_per_slide"])
@@ -645,7 +684,7 @@ def bouw_slides(db, instellingen, qr_svg=None):
                     "duur": duur,
                     "achtergrond": achtergrond,
                     "opgehaald": round(geld["opgehaald"]),
-                    "aantal_leden": len(zichtbaar),
+                    "aantal_leden": len(betaald),
                     "bedrag": bedrag,
                     "doel": geld["doel"],
                     "gerealiseerd": [
@@ -656,7 +695,7 @@ def bouw_slides(db, instellingen, qr_svg=None):
             )
 
     if instellingen["club_van_20_toon_teams"]:
-        stand = team_stand(zichtbaar, leden)
+        stand = team_stand(betaald, leden)
         if len(stand) >= 2 and stand[0]["aantal"] > 0:
             slides.append(
                 {
@@ -687,7 +726,7 @@ def bouw_slides(db, instellingen, qr_svg=None):
                 "aankondiging": _aankondiging_voor_dia(instellingen),
                 "tekst": instellingen["club_van_20_werving_tekst"],
                 "bedrag": bedrag,
-                "aantal_leden": len(zichtbaar),
+                "aantal_leden": len(betaald),
                 "qr_svg": qr_svg,
             }
         )

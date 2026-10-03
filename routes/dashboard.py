@@ -26,8 +26,23 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.22.0"
+HUIDIGE_VERSIE = "1.23.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.23.0",
+        "datum": "4 oktober 2026",
+        "punten": [
+            "Club van 20: tijdelijke herinnering. Bij Scherm & werving kies je een einddatum; tot en met die dag staan ook leden die dit seizoen nog niet betaald hebben lichtrood op het kantine scherm (de laatste 2, 3 of 4 seizoenen, of alle actieve leden). Daarna is het scherm vanzelf weer normaal",
+            "Club van 20: de publieke pagina en de tellers (aantal leden, teamstrijd) tellen alleen wie dit seizoen betaald heeft, ook als er onbetaalde bordjes op het scherm staan",
+        ],
+    },
+    {
+        "versie": "1.22.1",
+        "datum": "4 oktober 2026",
+        "punten": [
+            "Club van 20: bij verlengen staan nu alle bordjes die in de laatste 3 seizoenen betaald zijn in de lijst, ook als het scherm alleen laat zien wie dit seizoen betaald heeft. Wie vorig seizoen betaalde kan zo zijn eigen bordje kiezen",
+        ],
+    },
     {
         "versie": "1.22.0",
         "datum": "3 oktober 2026",

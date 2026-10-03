@@ -704,6 +704,31 @@ def test_formulier_biedt_verlengen_met_een_lijst_van_bordjes(client, db):
     assert "al betaald dit seizoen" in tekst
 
 
+def test_verlengen_toont_ook_vorig_seizoen_als_het_scherm_alleen_betaalden_toont(client, db):
+    """Het scherm mag op 'alleen wie dit seizoen betaald heeft' staan: wie
+    vorig seizoen betaalde moet zijn bordje toch kunnen kiezen om te verlengen."""
+    _open(db)
+    _zet(db, club_van_20_zichtbaar_seizoenen=1)
+    _bestaand_lid(db, "Vorig Seizoen")
+    twee_terug = _lid(db, "Twee Terug")
+    _bijdrage(db, twee_terug, verschuif_seizoen(huidig_seizoen(), -2))
+    drie_terug = _lid(db, "Drie Terug")
+    _bijdrage(db, drie_terug, verschuif_seizoen(huidig_seizoen(), -3))
+    tekst = client.get("/club-van-20/aanmelden").data.decode()
+    assert "Vorig Seizoen" in tekst and "Twee Terug" in tekst
+    assert "Drie Terug" not in tekst  # te lang geleden: meldt zich aan als nieuw bordje
+    lid_id = db.execute("SELECT id FROM club_van_20_leden WHERE naam = 'Vorig Seizoen'").fetchone()["id"]
+    assert _verlengen(client, lid_id).status_code == 302
+
+
+def test_verlengen_toont_alle_actieve_leden_als_het_scherm_dat_ook_doet(client, db):
+    _open(db)
+    _zet(db, club_van_20_zichtbaar_seizoenen=0)
+    lang_weg = _lid(db, "Lang Weg")
+    _bijdrage(db, lang_weg, verschuif_seizoen(huidig_seizoen(), -8))
+    assert "Lang Weg" in client.get("/club-van-20/aanmelden").data.decode()
+
+
 def test_zonder_bordjes_geen_verlengkeuze(client, db):
     _open(db)
     tekst = client.get("/club-van-20/aanmelden").data.decode()

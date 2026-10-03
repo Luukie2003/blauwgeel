@@ -4,7 +4,7 @@ spreadsheet, de scherminstellingen voor de Club van 20-dia's, en een
 publieke pagina (QR-code op de wervingsdia). De rekenregels zelf staan in
 club_van_20.py."""
 
-from datetime import datetime
+from datetime import date, datetime
 
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
 
@@ -30,6 +30,7 @@ from club_van_20 import (
     is_zichtbaar,
     leden_met_bijdragen,
     normaliseer_seizoen,
+    onbetaald_actie,
     import_samenvatting,
     parse_import,
     rijen_naar_csv,
@@ -37,6 +38,7 @@ from club_van_20 import (
     sterren_voor,
     seizoen_kort,
     seizoen_totalen,
+    scherm_bereik,
     sla_bijdrage_op,
     team_stand,
     verschuif_seizoen,
@@ -91,6 +93,14 @@ def register_routes(app):
         except ValueError:
             return None
 
+    def _datum(waarde):
+        """date-veld uit het formulier ("2026-10-18"), of None als het leeg of
+        onleesbaar is."""
+        try:
+            return date.fromisoformat((waarde or "").strip()).isoformat()
+        except ValueError:
+            return None
+
     def _gekozen_seizoen(waarde):
         return normaliseer_seizoen(waarde or "") or huidig_seizoen()
 
@@ -130,9 +140,7 @@ def register_routes(app):
         for lid in alle_leden:
             lid["sterren"] = sterren_voor(lid["aantal_seizoenen"], per_ster)
             lid["status_seizoen"] = bijdrage_status(lid, seizoen)
-            lid["op_scherm"], _ = is_zichtbaar(
-                lid, huidig_seizoen(), instellingen["club_van_20_zichtbaar_seizoenen"]
-            )
+            lid["op_scherm"], _ = is_zichtbaar(lid, huidig_seizoen(), scherm_bereik(instellingen)[0])
             if lid["status"] != "inactief":
                 tellers[lid["status_seizoen"]] += 1
             if weergave == "actief" and lid["status"] == "inactief":
@@ -418,7 +426,7 @@ def register_routes(app):
             instellingen["club_van_20_bedrag"],
             instellingen["club_van_20_betaallink"],
         )
-        op_scherm, onbetaald = is_zichtbaar(lid, huidig, instellingen["club_van_20_zichtbaar_seizoenen"])
+        op_scherm, onbetaald = is_zichtbaar(lid, huidig, scherm_bereik(instellingen)[0])
         return render_template(
             "club_van_20_lid_form.html",
             lid=lid,
@@ -706,7 +714,8 @@ def register_routes(app):
                        club_van_20_aankondiging_na_tekst = ?, club_van_20_aankondiging_op_dia = ?,
                        club_van_20_seizoenen_per_ster = ?, club_van_20_glans_vanaf_sterren = ?,
                        club_van_20_aanmelden_aan = ?, club_van_20_bordje_max_tekens = ?,
-                       club_van_20_voorbeeldcode = ?
+                       club_van_20_voorbeeldcode = ?,
+                       club_van_20_onbetaald_tot = ?, club_van_20_onbetaald_seizoenen = ?
                    WHERE id = 1""",
                 (
                     1 if request.form.get("toon_club_van_20") else 0,
@@ -736,6 +745,8 @@ def register_routes(app):
                     1 if request.form.get("club_van_20_aanmelden_aan") else 0,
                     max(5, min(60, _getal("club_van_20_bordje_max_tekens", STANDAARD_MAX_TEKENS))),
                     voorbeeldcode_nieuw,
+                    _datum(request.form.get("club_van_20_onbetaald_tot")),
+                    max(0, min(20, _getal("club_van_20_onbetaald_seizoenen", 3))),
                 ),
             )
             db.commit()
@@ -747,12 +758,15 @@ def register_routes(app):
             flash(melding, "warning" if code_te_kort else "success")
             return redirect(url_for("club_van_20_instellingen"))
         publiek_url = url_for("club_van_20_publiek", _external=True)
+        op_scherm = zichtbare_leden(db, instellingen)
         return render_template(
             "club_van_20_instellingen.html",
             instellingen=instellingen,
             publiek_url=publiek_url,
             publiek_qr_svg=qr.qr_svg(publiek_url),
-            aantal_op_scherm=len(zichtbare_leden(db, instellingen)),
+            aantal_op_scherm=len(op_scherm),
+            aantal_onbetaald_op_scherm=sum(1 for lid in op_scherm if not lid["betaald"]),
+            onbetaald_actie=onbetaald_actie(instellingen),
             aanmelden=aanmelden_status(instellingen),
             voorbeeld_min_tekens=VOORBEELD_MIN_TEKENS,
         )
@@ -763,7 +777,9 @@ def register_routes(app):
     def club_van_20_publiek():
         db = get_db()
         instellingen = _instellingen(db)
-        zichtbaar = zichtbare_leden(db, instellingen)
+        # Ook tijdens de tijdelijke herinnering (onbetaalden lichtrood op het
+        # scherm) staan hier alleen wie dit seizoen echt meedoet.
+        zichtbaar = [lid for lid in zichtbare_leden(db, instellingen) if lid["betaald"]]
         return render_template(
             "club_van_20_publiek.html",
             instellingen=instellingen,

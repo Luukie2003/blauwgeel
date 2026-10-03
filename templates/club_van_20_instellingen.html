@@ -73,6 +73,21 @@
             <input type="checkbox" name="club_van_20_markeer_onbetaald" style="width:auto" {{ 'checked' if instellingen.club_van_20_markeer_onbetaald }}>
             Wie dit seizoen nog niet betaald heeft lichtrood tonen (als herinnering)
         </label>
+        <div class="veld">
+            <label for="club_van_20_onbetaald_tot">Tijdelijke herinnering: ook wie nog niet betaald heeft lichtrood tonen, t/m</label>
+            <input type="date" id="club_van_20_onbetaald_tot" name="club_van_20_onbetaald_tot"
+                   value="{{ instellingen.club_van_20_onbetaald_tot or '' }}" style="max-width:12rem">
+            <select name="club_van_20_onbetaald_seizoenen" aria-label="Wie erbij tijdens de herinnering" style="margin-top:0.4rem">
+                <option value="2" {{ 'selected' if instellingen.club_van_20_onbetaald_seizoenen == 2 }}>Wie dit of vorig seizoen betaald heeft</option>
+                <option value="3" {{ 'selected' if instellingen.club_van_20_onbetaald_seizoenen == 3 }}>Wie in een van de laatste 3 seizoenen betaald heeft</option>
+                <option value="4" {{ 'selected' if instellingen.club_van_20_onbetaald_seizoenen == 4 }}>Wie in een van de laatste 4 seizoenen betaald heeft</option>
+                <option value="0" {{ 'selected' if instellingen.club_van_20_onbetaald_seizoenen == 0 }}>Alle actieve leden</option>
+            </select>
+            <span class="tekst-zacht">Tot en met die dag staan al die leden op het scherm, wie dit seizoen nog niet betaald heeft lichtrood. De dag erna valt het scherm vanzelf terug op de instelling hierboven. Leeg laten = geen herinnering. De publieke pagina en de tellers tellen alleen wie betaald heeft.</span>
+            {% if onbetaald_actie %}
+            <span class="tekst-zacht" style="display:block; margin-top:0.3rem"><strong>Loopt nu:</strong> t/m {{ onbetaald_actie.tot.strftime('%d-%m-%Y') }} staan er {{ aantal_onbetaald_op_scherm }} lichtrode bordjes op het scherm.</span>
+            {% endif %}
+        </div>
         <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.9rem">
             <input type="checkbox" name="club_van_20_lege_vakjes" style="width:auto" {{ 'checked' if instellingen.club_van_20_lege_vakjes }}>
             Laatste dia aanvullen met lege vakjes ("Jouw naam hier?")
