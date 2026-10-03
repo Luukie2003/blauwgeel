@@ -23,6 +23,7 @@ from aanmeldingen import (
     stuur_melding_nieuwe_aanmelding,
     te_veel_aanmeldingen,
     valideer_aanmelding,
+    verlengbare_leden,
     voorbeeld_geblokkeerd,
     voorbeeld_gelukt,
     voorbeeld_mislukt,
@@ -62,6 +63,7 @@ def register_routes(app):
         instellingen = _instellingen(db)
         mollie = _mollie_link(instellingen)
         status = aanmelden_status_voor(instellingen, session)
+        verlengbaar = verlengbare_leden(db, instellingen) if status["open"] else []
         context = {
             "instellingen": instellingen,
             "status": status,
@@ -69,6 +71,7 @@ def register_routes(app):
             "betaalwijzen": {k: v for k, v in AANMELD_BETAALWIJZEN.items() if k != "mollie" or mollie},
             "max_tekens": max_tekens(instellingen),
             "bardiensten": bardienst_suggesties(db),
+            "verlengbaar": verlengbaar,
             "waarden": {},
             "fouten": {},
         }
@@ -76,7 +79,7 @@ def register_routes(app):
             # Honeypot: een veld dat mensen niet zien en bots wel invullen.
             if request.form.get("website"):
                 return redirect(url_for("club_van_20_aanmelden_bedankt"))
-            waarden, fouten = valideer_aanmelding(request.form, instellingen, bool(mollie))
+            waarden, fouten = valideer_aanmelding(request.form, instellingen, bool(mollie), verlengbaar)
             ip_h = ip_hash(_client_ip(), current_app.secret_key)
             if not fouten and te_veel_aanmeldingen(db, ip_h):
                 fouten["algemeen"] = "Er zijn nu even te veel aanmeldingen. Probeer het over een uur nog eens, of vraag het aan de bar."
@@ -92,6 +95,7 @@ def register_routes(app):
                     db, waarden, url_for("club_van_20_aanmeldingen", _external=True)
                 )
             session["aanmelding_klaar"] = {
+                "soort": waarden["soort"],
                 "bordje": waarden["bordje"],
                 "betaalwijze": waarden["betaalwijze"],
                 "bardienst": waarden["bardienst"],
@@ -168,6 +172,7 @@ def register_routes(app):
             openstaand.append(
                 {
                     **dict(r),
+                    "verlenging": bool(r["verlengt_lid_id"]),
                     "lid": dict(lid) if lid else None,
                     "voornaam": lid["voornaam"] if lid and lid["voornaam"] else voornaam,
                     "achternaam": lid["achternaam"] if lid and lid["achternaam"] else achternaam,

@@ -9,7 +9,7 @@ from flask import render_template
 
 from database import get_db
 
-BIJGEWERKT_OP = "1 oktober 2026"
+BIJGEWERKT_OP = "3 oktober 2026"
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 

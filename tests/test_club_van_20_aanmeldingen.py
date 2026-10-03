@@ -13,7 +13,8 @@ from aanmeldingen import (
     splits_naam,
     valideer_aanmelding,
 )
-from club_van_20 import huidig_seizoen
+from club_van_20 import huidig_seizoen, verschuif_seizoen
+from test_club_van_20 import _bijdrage, _lid
 
 MOLLIE = "https://payment-links.mollie.com/payment/test123"
 
@@ -672,3 +673,144 @@ def test_korte_code_is_niet_te_raden_door_veel_te_proberen(app, db):
     db.execute("UPDATE club_van_20_voorbeeld_pogingen SET sinds = '2020-01-01 10:00'")
     db.commit()
     assert _code_invoeren(app.test_client(), "0201").status_code == 302
+
+
+# ---------- Verlengen ----------
+
+VORIG_SEIZOEN = verschuif_seizoen(huidig_seizoen(), -1)
+
+
+def _bestaand_lid(db, naam, betaald_dit_seizoen=False):
+    """Een lid dat vorig seizoen betaalde (staat dus nog op het scherm), eventueel ook dit seizoen al."""
+    lid_id = _lid(db, naam)
+    _bijdrage(db, lid_id, VORIG_SEIZOEN)
+    if betaald_dit_seizoen:
+        _bijdrage(db, lid_id, huidig_seizoen())
+    return lid_id
+
+
+def _verlengen(client, lid_id, **veranderd):
+    return _formulier(client, soort="verlenging", lid_id=str(lid_id), bordje="", **veranderd)
+
+
+def test_formulier_biedt_verlengen_met_een_lijst_van_bordjes(client, db):
+    _open(db)
+    _bestaand_lid(db, "Bert Zwart")
+    _bestaand_lid(db, "Al Betaald", betaald_dit_seizoen=True)
+    _lid(db, "Nooit Betaald")  # staat niet op het scherm, dus niet in de lijst
+    tekst = client.get("/club-van-20/aanmelden").data.decode()
+    assert 'value="verlenging"' in tekst and "Mijn bordje verlengen" in tekst
+    assert "Bert Zwart" in tekst and "Al Betaald" in tekst and "Nooit Betaald" not in tekst
+    assert "al betaald dit seizoen" in tekst
+
+
+def test_zonder_bordjes_geen_verlengkeuze(client, db):
+    _open(db)
+    tekst = client.get("/club-van-20/aanmelden").data.decode()
+    assert 'value="verlenging"' not in tekst and 'name="soort" value="nieuw"' in tekst
+
+
+def test_verlengen_legt_de_keuze_vast_en_bordje_blijft_gelijk(client, db):
+    _open(db)
+    lid_id = _bestaand_lid(db, "Bert Zwart")
+    resp = _verlengen(client, lid_id)
+    assert resp.status_code == 302
+    (a,) = _aanmeldingen(db)
+    assert a["verlengt_lid_id"] == lid_id and a["bordje"] == "Bert Zwart" and a["status"] == "nieuw"
+    assert a["naam"] == "Jan de Vries" and a["betaalwijze"] == "contant"
+    bedankt = client.get("/club-van-20/aanmelden/bedankt").data.decode()
+    assert "Bedankt voor het verlengen" in bedankt and "Bert Zwart" in bedankt
+
+
+def test_verlengen_met_een_nieuw_bordje(client, db):
+    _open(db)
+    lid_id = _bestaand_lid(db, "Bert Zwart")
+    resp = _formulier(client, soort="verlenging", lid_id=str(lid_id), bordje="Bert & Els")
+    assert resp.status_code == 302
+    (a,) = _aanmeldingen(db)
+    assert a["verlengt_lid_id"] == lid_id and a["bordje"] == "Bert & Els"
+    # De maximale lengte geldt ook hier.
+    _zet(db, club_van_20_bordje_max_tekens=8)
+    resp = _formulier(client, soort="verlenging", lid_id=str(lid_id), bordje="Veel te lang bordje", naam="Ander")
+    assert resp.status_code == 400 and "hooguit 8 tekens" in resp.data.decode()
+
+
+def test_verlengen_zonder_keuze_of_met_ongeldige_keuze(client, db):
+    _open(db)
+    _bestaand_lid(db, "Bert Zwart")
+    onzichtbaar = _lid(db, "Stille Reserve")  # nooit betaald: niet in de lijst
+    for lid in ("", "abc", "99999", str(onzichtbaar)):
+        resp = _formulier(client, soort="verlenging", lid_id=lid, bordje="")
+        assert resp.status_code == 400 and "Kies het bordje dat je wilt verlengen" in resp.data.decode(), lid
+    assert _aanmeldingen(db) == []
+
+
+def test_verlengen_van_een_al_betaald_bordje_mag_niet(client, db):
+    _open(db)
+    lid_id = _bestaand_lid(db, "Al Betaald", betaald_dit_seizoen=True)
+    resp = _verlengen(client, lid_id)
+    assert resp.status_code == 400 and "al betaald" in resp.data.decode()
+    assert _aanmeldingen(db) == []
+
+
+def test_tweede_verlenging_van_hetzelfde_bordje_wordt_geweigerd_zolang_de_eerste_wacht(client, db):
+    _open(db)
+    lid_id = _bestaand_lid(db, "Bert Zwart")
+    assert _verlengen(client, lid_id).status_code == 302
+    resp = _verlengen(client, lid_id, naam="Iemand Anders")
+    assert resp.status_code == 400 and "ligt al een verlenging" in resp.data.decode()
+    assert len(_aanmeldingen(db)) == 1
+    tekst = client.get("/club-van-20/aanmelden").data.decode()
+    assert "wordt al gecontroleerd" in tekst
+
+
+def test_verlenging_mailt_met_eigen_onderwerp(client, db, monkeypatch):
+    _open(db)
+    _gebruiker(db, "luuk", "luuk@example.com")
+    lid_id = _bestaand_lid(db, "Bert Zwart")
+    verstuurd = _vang_mails(monkeypatch)
+    _verlengen(client, lid_id)
+    assert verstuurd and verstuurd[0][1] == "Club van 20-verlenging: Bert Zwart"
+    assert "verlenging van een bestaand bordje" in verstuurd[0][2]
+
+
+def test_verlenging_in_de_concepttabel_en_goedkeuren_zet_de_betaling_bij_het_gekozen_lid(ingelogde_client, client, db):
+    _open(db)
+    lid_id = _bestaand_lid(db, "Bert Zwart")
+    _lid(db, "Jan de Vries")  # een ander lid met de naam van de aanmelder mag niets verstoren
+    _verlengen(client, lid_id)
+    tekst = ingelogde_client.get("/club-van-20/aanmeldingen").data.decode()
+    assert "verlenging" in tekst and f'data-lid-id="{lid_id}"' in tekst
+    aanmelding_id = _aanmeldingen(db)[0]["id"]
+    ingelogde_client.post(
+        f"/club-van-20/aanmeldingen/{aanmelding_id}/goedkeuren",
+        data={"csrf_token": _csrf(ingelogde_client), "betaling_gecontroleerd": "1", "modus": "bestaand",
+              "lid_id": str(lid_id), "bordje": "Bert Zwart"},
+    )
+    b = db.execute("SELECT * FROM club_van_20_bijdragen WHERE lid_id = ? AND seizoen = ?", (lid_id, huidig_seizoen())).fetchone()
+    assert b["status"] == "betaald" and b["bedrag"] == 20 and b["betaald_door"] == "Jan de Vries"
+    assert db.execute("SELECT COUNT(*) FROM club_van_20_leden WHERE naam = 'Bert Zwart'").fetchone()[0] == 1  # geen dubbel lid
+    assert db.execute("SELECT lid_id FROM club_van_20_aanmeldingen").fetchone()[0] == lid_id
+    # Nu is het bordje betaald: het kan niet nog eens verlengd worden.
+    assert "al betaald dit seizoen" in client.get("/club-van-20/aanmelden").data.decode()
+
+
+def test_verlenging_met_nieuw_bordje_herkent_het_gekozen_lid_ook_zonder_naamovereenkomst(ingelogde_client, client, db):
+    _open(db)
+    lid_id = _bestaand_lid(db, "Bert Zwart")
+    _formulier(client, soort="verlenging", lid_id=str(lid_id), bordje="Bert & Els", naam="Bert Zwart")
+    tekst = ingelogde_client.get("/club-van-20/aanmeldingen").data.decode()
+    assert "nu: Bert Zwart" in tekst  # het huidige bordje staat erbij naast het nieuwe
+    aanmelding_id = _aanmeldingen(db)[0]["id"]
+    ingelogde_client.post(
+        f"/club-van-20/aanmeldingen/{aanmelding_id}/goedkeuren",
+        data={"csrf_token": _csrf(ingelogde_client), "betaling_gecontroleerd": "1", "modus": "bestaand",
+              "lid_id": str(lid_id), "bordje": "Bert & Els", "bordje_aanpassen": "1"},
+    )
+    assert db.execute("SELECT naam FROM club_van_20_leden WHERE id = ?", (lid_id,)).fetchone()[0] == "Bert & Els"
+
+
+def test_publieke_pagina_noemt_verlengen(client, db):
+    _zet(db, club_van_20_aankondiging_aftellen_tot=_moment(-1))
+    tekst = client.get("/club-van-20/doe-mee").data.decode()
+    assert "Word lid of verleng je bordje" in tekst

@@ -277,6 +277,8 @@ def zichtbare_leden(db, instellingen, seizoen=None, leden=None):
         sterren = sterren_voor(n, per_ster)
         resultaat.append(
             {
+                "id": lid["id"],
+                "betaald": not onbetaald,
                 "naam": lid["naam"],
                 "team": (lid.get("team") or "").strip(),
                 "sterren": sterren,

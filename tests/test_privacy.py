@@ -30,7 +30,7 @@ def test_privacyverklaring_is_openbaar_en_compleet(client):
         "PythonAnywhere",
     ):
         assert onderdeel in tekst, onderdeel
-    assert "laatst bijgewerkt op 1 oktober 2026" in tekst
+    assert "laatst bijgewerkt op 3 oktober 2026" in tekst
 
 
 def test_privacyverklaring_zonder_streepjes_en_zonder_mollie_gedeelte(client):

@@ -20,7 +20,15 @@ import unicodedata
 from datetime import datetime, timedelta
 
 import mail
-from club_van_20 import AMSTERDAM, DAGNAMEN, MAANDNAMEN, aftelmoment, sla_bijdrage_op
+from club_van_20 import (
+    AMSTERDAM,
+    DAGNAMEN,
+    MAANDNAMEN,
+    aftelmoment,
+    huidig_seizoen,
+    sla_bijdrage_op,
+    zichtbare_leden,
+)
 from helpers import heeft_sectie_toegang
 
 # Naambordjes in de administratie zijn nu hooguit 22 tekens ("Van Dort & Bos
@@ -169,16 +177,42 @@ def schoon_tekst(waarde):
     return re.sub(r" +", " ", waarde).strip()
 
 
-def valideer_aanmelding(form, instellingen, mollie_beschikbaar):
+def verlengbare_leden(db, instellingen, seizoen=None):
+    """De bordjes die iemand kan kiezen om te verlengen: wat nu (of recent) op
+    de ledenmuur staat, dus alleen namen die al openbaar zijn. Per bordje:
+    'betaald' (dit seizoen al betaald) en 'wacht' (er ligt al een verlenging
+    van dit bordje ter goedkeuring), zodat niemand dubbel betaalt."""
+    seizoen = seizoen or huidig_seizoen()
+    wachtend = {
+        r["verlengt_lid_id"]
+        for r in db.execute(
+            "SELECT verlengt_lid_id FROM club_van_20_aanmeldingen WHERE status = 'nieuw' AND verlengt_lid_id IS NOT NULL"
+        ).fetchall()
+    }
+    leden = [
+        {"id": l["id"], "naam": l["naam"], "sterren": l["sterren"], "betaald": l["betaald"], "wacht": l["id"] in wachtend}
+        for l in zichtbare_leden(db, instellingen, seizoen)
+    ]
+    return sorted(leden, key=lambda l: l["naam"].lower())
+
+
+def valideer_aanmelding(form, instellingen, mollie_beschikbaar, verlengbaar=()):
     """(waarden, fouten): de schoongemaakte invoer en per veld een foutmelding
-    in gewoon Nederlands. fouten is leeg als alles klopt."""
+    in gewoon Nederlands. fouten is leeg als alles klopt. 'soort' is 'nieuw' of
+    'verlenging'; bij een verlenging kiest de aanmelder een bestaand bordje uit
+    'verlengbaar' (zie verlengbare_leden) en is een nieuwe tekst voor het
+    bordje optioneel (leeg = het bordje blijft zoals het is)."""
     maximum = max_tekens(instellingen)
+    soort = "verlenging" if form.get("soort") == "verlenging" else "nieuw"
     waarden = {
+        "soort": soort,
+        "lid_id": None,
         "betaalwijze": (form.get("betaalwijze") or "").strip(),
         "naam": schoon_tekst(form.get("naam")),
         "bordje": schoon_tekst(form.get("bordje")),
         "bardienst": schoon_tekst(form.get("bardienst")),
     }
+    waarden["bordje_ingevuld"] = waarden["bordje"]  # wat de aanmelder zelf typte (voor het formulier terug te tonen)
     fouten = {}
     toegestaan = ["contant"] + (["mollie"] if mollie_beschikbaar else [])
     if waarden["betaalwijze"] not in toegestaan:
@@ -188,6 +222,23 @@ def valideer_aanmelding(form, instellingen, mollie_beschikbaar):
         fouten["naam"] = "Vul je naam in."
     elif len(waarden["naam"]) > MAX_NAAM_TEKENS:
         fouten["naam"] = f"Je naam mag hooguit {MAX_NAAM_TEKENS} tekens zijn."
+
+    if soort == "verlenging":
+        try:
+            lid_id = int(form.get("lid_id") or 0)
+        except ValueError:
+            lid_id = 0
+        lid = next((l for l in verlengbaar if l["id"] == lid_id), None)
+        if lid is None:
+            fouten["lid_id"] = "Kies het bordje dat je wilt verlengen."
+        elif lid["betaald"]:
+            fouten["lid_id"] = f"'{lid['naam']}' is dit seizoen al betaald. Je hoeft niet nog eens te betalen."
+        elif lid["wacht"]:
+            fouten["lid_id"] = f"Voor '{lid['naam']}' ligt al een verlenging ter controle. Dat duurt even, je hoeft niets meer te doen."
+        else:
+            waarden["lid_id"] = lid["id"]
+            if not waarden["bordje"]:
+                waarden["bordje"] = lid["naam"]
     if not waarden["bordje"]:
         fouten["bordje"] = "Vul in wat er op het bordje moet komen."
     elif len(waarden["bordje"]) > maximum:
@@ -228,8 +279,8 @@ def maak_aanmelding(db, waarden, seizoen, bedrag, ip_h):
     bestaand = db.execute(
         """SELECT id FROM club_van_20_aanmeldingen
            WHERE status = 'nieuw' AND lower(naam) = lower(?) AND lower(bordje) = lower(?)
-             AND aangemaakt_op >= ?""",
-        (waarden["naam"], waarden["bordje"], sinds),
+             AND coalesce(verlengt_lid_id, 0) = coalesce(?, 0) AND aangemaakt_op >= ?""",
+        (waarden["naam"], waarden["bordje"], waarden.get("lid_id"), sinds),
     ).fetchone()
     if bestaand:
         return bestaand["id"], False
@@ -237,8 +288,8 @@ def maak_aanmelding(db, waarden, seizoen, bedrag, ip_h):
     cursor = db.execute(
         """INSERT INTO club_van_20_aanmeldingen
                (seizoen, naam, bordje, betaalwijze, bardienst, bedrag, status, datum,
-                aangemaakt_op, ip_hash)
-           VALUES (?, ?, ?, ?, ?, ?, 'nieuw', ?, ?, ?)""",
+                aangemaakt_op, ip_hash, verlengt_lid_id)
+           VALUES (?, ?, ?, ?, ?, ?, 'nieuw', ?, ?, ?, ?)""",
         (
             seizoen,
             waarden["naam"],
@@ -249,6 +300,7 @@ def maak_aanmelding(db, waarden, seizoen, bedrag, ip_h):
             nu.date().isoformat(),
             nu.strftime("%Y-%m-%d %H:%M"),
             ip_h,
+            waarden.get("lid_id"),
         ),
     )
     db.commit()
@@ -291,7 +343,14 @@ def splits_naam(naam):
 
 def bestaand_lid_voor(db, aanmelding):
     """Het lid dat deze aanmelding waarschijnlijk is (verlengen): zelfde
-    naambordje, of dezelfde voor- en achternaam. Anders None."""
+    naambordje, of dezelfde voor- en achternaam. Bij een verlenging is dat
+    het bordje dat de aanmelder zelf koos. Anders None."""
+    if aanmelding["verlengt_lid_id"]:
+        gekozen = db.execute(
+            "SELECT * FROM club_van_20_leden WHERE id = ?", (aanmelding["verlengt_lid_id"],)
+        ).fetchone()
+        if gekozen is not None:
+            return gekozen
     lid = db.execute(
         "SELECT * FROM club_van_20_leden WHERE lower(naam) = lower(?) ORDER BY status = 'inactief', id LIMIT 1",
         (aanmelding["bordje"],),
@@ -427,10 +486,11 @@ def stuur_melding_nieuwe_aanmelding(db, waarden, link):
             return
         wachtend = aantal_openstaand(db)
         betaling = AANMELD_BETAALWIJZEN.get(waarden["betaalwijze"], waarden["betaalwijze"])
+        verlenging = waarden.get("soort") == "verlenging"
         regels = [
-            "Er is een nieuwe aanmelding voor de Club van 20.",
+            "Er is een verlenging voor de Club van 20." if verlenging else "Er is een nieuwe aanmelding voor de Club van 20.",
             "",
-            f"Bordje: {waarden['bordje']}",
+            f"Bordje: {waarden['bordje']}" + (" (verlenging van een bestaand bordje)" if verlenging else ""),
             f"Naam: {waarden['naam']}",
             f"Betaling: {betaling}",
         ]
@@ -444,7 +504,11 @@ def stuur_melding_nieuwe_aanmelding(db, waarden, link):
             f"Er {'wacht' if wachtend == 1 else 'wachten'} nu {wachtend} "
             f"{'aanmelding' if wachtend == 1 else 'aanmeldingen'} op goedkeuring.",
         ]
-        onderwerp = f"Nieuwe Club van 20-aanmelding: {waarden['bordje']}"
+        onderwerp = (
+            f"Club van 20-verlenging: {waarden['bordje']}"
+            if verlenging
+            else f"Nieuwe Club van 20-aanmelding: {waarden['bordje']}"
+        )
         for ontvanger in ontvangers:
             mail.stuur_mail(onderwerp, "\n".join(regels), naar=ontvanger)
     except Exception as fout:  # noqa: BLE001 -- zie docstring

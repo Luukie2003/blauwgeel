@@ -32,7 +32,9 @@
                 <tr>
                     <td>{{ a.aangemaakt_op[8:10] }}-{{ a.aangemaakt_op[5:7] }} {{ a.aangemaakt_op[11:16] }}</td>
                     <td><strong>{{ a.bordje }}</strong>
-                        {% if a.lid %}<br><span class="badge badge-uit" title="Er is al een lid met dit bordje of deze naam">bestaand lid: {{ a.lid.naam }}</span>{% endif %}
+                        {% if a.verlenging %}<br><span class="badge badge-in" title="De aanmelder koos zelf een bestaand bordje om te verlengen">verlenging</span>
+                            {% if a.lid and a.lid.naam|lower != a.bordje|lower %}<span class="tekst-zacht">nu: {{ a.lid.naam }}</span>{% endif %}
+                        {% elif a.lid %}<br><span class="badge badge-uit" title="Er is al een lid met dit bordje of deze naam">bestaand lid: {{ a.lid.naam }}</span>{% endif %}
                     </td>
                     <td>{{ a.naam }}</td>
                     <td>
@@ -77,7 +79,7 @@
                 {% for a in behandeld %}
                 <tr>
                     <td>{{ (a.behandeld_op or '')[8:10] }}-{{ (a.behandeld_op or '')[5:7] }} {{ (a.behandeld_op or '')[11:16] }}<br><span class="tekst-zacht">{{ a.behandeld_door or '' }}</span></td>
-                    <td>{{ a.bordje }}</td>
+                    <td>{{ a.bordje }}{% if a.verlengt_lid_id %} <span class="badge badge-in">verlenging</span>{% endif %}</td>
                     <td>{{ a.naam }}</td>
                     <td>{% if a.betaalwijze == 'mollie' %}Mollie{% else %}Contant{% endif %} &middot; {{ a.bedrag|euro }}{% if a.bardienst %}<br><span class="tekst-zacht">Bardienst: {{ a.bardienst }}</span>{% endif %}</td>
                     <td>

@@ -26,8 +26,16 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.21.0"
+HUIDIGE_VERSIE = "1.22.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.22.0",
+        "datum": "3 oktober 2026",
+        "punten": [
+            "Club van 20: verlengen via de QR-code. Op het aanmeldformulier kies je nu \"Een nieuw bordje\" of \"Mijn bordje verlengen\": bij verlengen zoek je je eigen bordje in de lijst, betaal je online of aan de bar, en kun je eventueel de tekst van het bordje aanpassen. Bordjes die dit seizoen al betaald zijn, kun je niet nog eens verlengen",
+            "Aanmeldingen: een verlenging staat met het label \"verlenging\" in de concepttabel en bij goedkeuren komt de betaling automatisch bij het gekozen bordje, zonder dubbel lid. De mail bij een nieuwe aanmelding laat ook weten of het een verlenging is",
+        ],
+    },
     {
         "versie": "1.21.0",
         "datum": "2 oktober 2026",

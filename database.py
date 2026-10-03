@@ -309,6 +309,7 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "sponsors_kop_meervoud", "TEXT NOT NULL DEFAULT ''"),
     ("kiosk_scherm_instellingen", "club_van_20_aanmelden_aan", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "club_van_20_voorbeeldcode", "TEXT"),
+    ("club_van_20_aanmeldingen", "verlengt_lid_id", "INTEGER REFERENCES club_van_20_leden(id) ON DELETE SET NULL"),
     ("kiosk_scherm_instellingen", "club_van_20_bordje_max_tekens", "INTEGER NOT NULL DEFAULT 24"),
     ("kiosk_scherm_instellingen", "sponsors_toon_groepsnaam", "INTEGER NOT NULL DEFAULT 0"),
     ("kiosk_scherm_instellingen", "sponsors_achtergrond", "TEXT"),

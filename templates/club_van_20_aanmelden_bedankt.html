@@ -39,10 +39,14 @@
     </header>
 
     <div class="kaart">
-        <h2 class="smal">Bedankt voor je aanmelding!</h2>
+        <h2 class="smal">{% if klaar and klaar.soort == 'verlenging' %}Bedankt voor het verlengen!{% else %}Bedankt voor je aanmelding!{% endif %}</h2>
         {% if klaar %}
         <div class="bordje smal">{{ klaar.bordje }}</div>
+        {% if klaar.soort == 'verlenging' %}
+        <p>We controleren je betaling. Zodra die is goedgekeurd, is je bordje verlengd en blijft het op het scherm in de kantine staan.</p>
+        {% else %}
         <p>We controleren je betaling. Zodra die is goedgekeurd, staat je bordje op het scherm in de kantine.</p>
+        {% endif %}
         {% if klaar.betaalwijze == 'contant' %}
         <p class="zacht">Nog niet contant betaald? Reken {{ instellingen.club_van_20_bedrag|euro }} af aan de bar{% if klaar.bardienst %} (bij {{ klaar.bardienst }}){% endif %}.</p>
         {% elif mollie_link %}

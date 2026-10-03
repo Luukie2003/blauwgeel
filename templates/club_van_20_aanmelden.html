@@ -50,6 +50,17 @@
         .voorbeeld { margin-top: 0.7rem; }
         .voorbeeld .bordje { background: #fff; color: var(--blauw); border: 3px solid #dfe5f5; border-radius: 6px; padding: 0.45rem 0.8rem; text-align: center; font-size: 1.5rem; min-height: 2.6rem; display: flex; align-items: center; justify-content: center; overflow-wrap: anywhere; }
         .voorbeeld .bordje.leeg { color: rgba(30, 58, 138, 0.35); font-size: 1rem; font-weight: 400; font-family: inherit; }
+        input[type=search] { width: 100%; font: inherit; font-size: 1.05rem; padding: 0.75rem 0.85rem; border-radius: 10px; border: 2px solid transparent; background: #fff; color: var(--blauw-donker); }
+        input[type=search]:focus { outline: none; border-color: var(--geel); }
+        .lid-lijst { max-height: 15rem; overflow-y: auto; border-radius: 12px; background: rgba(0, 0, 0, 0.18); padding: 0.3rem; }
+        .lid-keuze { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.8rem; border-radius: 9px; cursor: pointer; font-weight: 700; }
+        .lid-keuze[hidden] { display: none; }
+        .lid-keuze input { width: 1.2rem; height: 1.2rem; flex: none; accent-color: var(--geel); }
+        .lid-keuze:has(input:checked) { background: var(--geel); color: var(--blauw-donker); }
+        .lid-keuze.uit { opacity: 0.5; cursor: not-allowed; }
+        .lid-keuze small { margin-left: auto; font-weight: 400; font-size: 0.78rem; text-align: right; }
+        .lid-sterren { color: var(--geel); font-weight: 400; }
+        .lid-keuze:has(input:checked) .lid-sterren { color: var(--blauw-donker); }
         .honing { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
         .verbergen[hidden] { display: none; }
         .voorbeeldbalk { background: var(--geel); color: var(--blauw-donker); border-radius: 12px; padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.92rem; line-height: 1.4; }
@@ -96,15 +107,49 @@
     {% else %}
     <form method="post" id="aanmeldform" class="kaart">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <h2 class="smal">Meld je aan</h2>
+        {% set soort = waarden.get('soort', 'nieuw') if verlengbaar else 'nieuw' %}
+        <h2 class="smal">{% if verlengbaar %}Aanmelden of verlengen{% else %}Meld je aan{% endif %}</h2>
         <p>Voor <strong>{{ instellingen.club_van_20_bedrag|euro }} per seizoen</strong> komt jouw naam (of die van je bedrijf, team of vriendengroep) op het scherm. Vul onderstaande in, dan controleren we je betaling en zetten we je erbij.</p>
 
         {% if fouten %}
         <div class="foutbalk" role="alert">{{ fouten.get('algemeen') or 'Er klopt nog iets niet, kijk even naar de rode meldingen.' }}</div>
         {% endif %}
 
+        {% if verlengbaar %}
         <div class="veld">
-            <span class="veldlabel" style="display:block; font-weight:700; margin-bottom:0.5rem">1. Hoe betaal je?</span>
+            <span class="veldlabel" style="display:block; font-weight:700; margin-bottom:0.5rem">Wat wil je?</span>
+            <label class="keuze">
+                <input type="radio" name="soort" value="nieuw" {{ 'checked' if soort == 'nieuw' }}>
+                <span class="kaartje">Een nieuw bordje<small>Ik sta er nog niet op</small></span>
+            </label>
+            <label class="keuze">
+                <input type="radio" name="soort" value="verlenging" {{ 'checked' if soort == 'verlenging' }}>
+                <span class="kaartje">Mijn bordje verlengen<small>Ik sta er al op en doe dit seizoen weer mee</small></span>
+            </label>
+        </div>
+
+        <div class="veld" id="blok-verlengen" {{ 'hidden' if soort != 'verlenging' }}>
+            <span class="veldlabel" style="display:block; font-weight:700; margin-bottom:0.5rem">Kies jouw bordje</span>
+            <input type="search" id="zoek" placeholder="Zoek je bordje" autocomplete="off" aria-label="Zoek je bordje" style="margin-bottom:0.5rem">
+            <div class="lid-lijst" role="radiogroup" aria-label="Bordjes">
+                {% for l in verlengbaar %}
+                <label class="lid-keuze{{ ' uit' if l.betaald or l.wacht }}" data-zoek="{{ l.naam|lower }}">
+                    <input type="radio" name="lid_id" value="{{ l.id }}" data-naam="{{ l.naam }}"
+                           {{ 'checked' if waarden.get('lid_id') == l.id }} {{ 'disabled' if l.betaald or l.wacht }}>
+                    <span class="lid-naam">{{ l.naam }}{% if l.sterren %} <span class="lid-sterren">{{ '&#9733;'|safe * l.sterren if l.sterren <= 5 else (l.sterren|string ~ ' &#9733;')|safe }}</span>{% endif %}</span>
+                    {% if l.betaald %}<small>al betaald dit seizoen</small>{% elif l.wacht %}<small>wordt al gecontroleerd</small>{% endif %}
+                </label>
+                {% endfor %}
+                <div class="zacht" id="niets-gevonden" hidden>Niets gevonden. Staat je bordje er niet bij? Kies dan "Een nieuw bordje".</div>
+            </div>
+            {% if fouten.lid_id %}<div class="fout">{{ fouten.lid_id }}</div>{% endif %}
+        </div>
+        {% else %}
+        <input type="hidden" name="soort" value="nieuw">
+        {% endif %}
+
+        <div class="veld">
+            <span class="veldlabel" style="display:block; font-weight:700; margin-bottom:0.5rem">Hoe betaal je?</span>
             {% for sleutel, label in betaalwijzen.items() %}
             <label class="keuze">
                 <input type="radio" name="betaalwijze" value="{{ sleutel }}" {{ 'checked' if waarden.get('betaalwijze') == sleutel or (betaalwijzen|length == 1) }} required>
@@ -120,7 +165,7 @@
         <div class="uitleg" id="uitleg-mollie" hidden>
             <p style="margin-bottom:0.8rem"><strong>Stap 1:</strong> betaal {{ instellingen.club_van_20_bedrag|euro }} via Mollie. De betaalpagina opent in een nieuw tabblad.</p>
             <a class="knop" href="{{ mollie_link }}" target="_blank" rel="noopener">Betaal {{ instellingen.club_van_20_bedrag|euro }} via Mollie &rarr;</a>
-            <p class="zacht" style="margin:0.8rem 0 0"><strong>Stap 2:</strong> kom hierna terug naar deze pagina en vul hieronder je naam en bordje in. Gebruik bij Mollie dezelfde naam als hieronder, dan kunnen we je betaling terugvinden.</p>
+            <p class="zacht" style="margin:0.8rem 0 0"><strong>Stap 2:</strong> kom hierna terug naar deze pagina en vul hieronder je naam in en verstuur. Gebruik bij Mollie dezelfde naam als hieronder, dan kunnen we je betaling terugvinden.</p>
         </div>
         {% endif %}
 
@@ -133,15 +178,15 @@
         </div>
 
         <div class="veld">
-            <label class="veldlabel" for="naam">2. Jouw naam</label>
+            <label class="veldlabel" for="naam">Jouw naam</label>
             <input type="text" id="naam" name="naam" maxlength="60" value="{{ waarden.get('naam', '') }}" autocomplete="name" required placeholder="Voor- en achternaam">
             <div class="zacht" style="margin-top:0.3rem">Zoals die bij je betaling staat, zodat we je betaling kunnen terugvinden.</div>
             {% if fouten.naam %}<div class="fout">{{ fouten.naam }}</div>{% endif %}
         </div>
 
         <div class="veld">
-            <label class="veldlabel" for="bordje">3. Wat moet er op het bordje?</label>
-            <input type="text" id="bordje" name="bordje" maxlength="{{ max_tekens }}" value="{{ waarden.get('bordje', '') }}" autocomplete="off" required placeholder="Bijv. je naam, bedrijf of team">
+            <label class="veldlabel" for="bordje" id="bordje-label">{% if soort == 'verlenging' %}Wil je het bordje anders hebben? (niet verplicht){% else %}Wat moet er op het bordje?{% endif %}</label>
+            <input type="text" id="bordje" name="bordje" maxlength="{{ max_tekens }}" value="{{ waarden.get('bordje_ingevuld', '') }}" autocomplete="off" placeholder="{% if soort == 'verlenging' %}Leeg laten = zoals het nu is{% else %}Bijv. je naam, bedrijf of team{% endif %}">
             <div class="teller" id="teller"><span id="aantal">0</span> / {{ max_tekens }} tekens</div>
             {% if fouten.bordje %}<div class="fout">{{ fouten.bordje }}</div>{% endif %}
             <div class="voorbeeld" aria-live="polite">
@@ -155,7 +200,7 @@
         </div>
 
         <button type="submit" class="knop groot" id="versturen">Versturen</button>
-        <p class="zacht" style="margin:0.8rem 0 0; text-align:center">Je bordje verschijnt zodra we je betaling hebben gecontroleerd.</p>
+        <p class="zacht" style="margin:0.8rem 0 0; text-align:center">Je bordje verschijnt (of blijft staan) zodra we je betaling hebben gecontroleerd.</p>
         <p class="zacht" style="margin:0.5rem 0 0; text-align:center; font-size:0.8rem">Je bordje komt op het scherm in de kantine en op de website; je naam blijft intern. Lees hoe we met je gegevens omgaan in de <a href="{{ url_for('privacyverklaring') }}" style="color:inherit">privacyverklaring</a>.</p>
     </form>
     <script>
@@ -165,37 +210,65 @@
         var contant = document.getElementById('uitleg-contant');
         var bardienst = document.getElementById('bardienst');
         var bordje = document.getElementById('bordje');
+        var bordjeLabel = document.getElementById('bordje-label');
         var voorbeeld = document.getElementById('voorbeeld');
         var aantal = document.getElementById('aantal');
         var teller = document.getElementById('teller');
+        var blokVerlengen = document.getElementById('blok-verlengen');
+        var zoek = document.getElementById('zoek');
         var max = parseInt(bordje.getAttribute('maxlength'), 10);
 
         function wijze() {
             var gekozen = form.querySelector('input[name=betaalwijze]:checked');
             return gekozen ? gekozen.value : '';
         }
+        function soort() {
+            var gekozen = form.querySelector('input[name=soort]:checked');
+            return gekozen ? gekozen.value : (form.querySelector('input[name=soort]') || {}).value;
+        }
+        function gekozenNaam() {
+            var r = form.querySelector('input[name=lid_id]:checked');
+            return r ? r.dataset.naam : '';
+        }
         function toon() {
             var w = wijze();
             if (mollie) mollie.hidden = w !== 'mollie';
             contant.hidden = w !== 'contant';
             bardienst.required = w === 'contant';
+            var verlengen = soort() === 'verlenging';
+            if (blokVerlengen) blokVerlengen.hidden = !verlengen;
+            bordje.required = !verlengen;
+            bordjeLabel.textContent = verlengen ? 'Wil je het bordje anders hebben? (niet verplicht)' : 'Wat moet er op het bordje?';
+            bordje.placeholder = verlengen ? 'Leeg laten = zoals het nu is' : 'Bijv. je naam, bedrijf of team';
+            bordjeBijwerken();
         }
         function bordjeBijwerken() {
             var tekst = bordje.value.replace(/\s+/g, ' ').trim();
+            if (!tekst && soort() === 'verlenging') tekst = gekozenNaam();
             aantal.textContent = bordje.value.length;
             teller.classList.toggle('vol', bordje.value.length >= max);
             voorbeeld.textContent = tekst || 'Je bordje';
             voorbeeld.classList.toggle('leeg', !tekst);
         }
+        function filter() {
+            var q = zoek.value.trim().toLowerCase();
+            var gevonden = 0;
+            form.querySelectorAll('.lid-keuze').forEach(function (el) {
+                var zichtbaar = !q || el.dataset.zoek.indexOf(q) !== -1;
+                el.hidden = !zichtbaar;
+                if (zichtbaar) gevonden++;
+            });
+            document.getElementById('niets-gevonden').hidden = gevonden > 0;
+        }
         form.addEventListener('change', toon);
         bordje.addEventListener('input', bordjeBijwerken);
+        if (zoek) zoek.addEventListener('input', filter);
         form.addEventListener('submit', function () {
             var knop = document.getElementById('versturen');
             knop.disabled = true;
             knop.textContent = 'Bezig met versturen…';
         });
         toon();
-        bordjeBijwerken();
     })();
     </script>
     {% endif %}

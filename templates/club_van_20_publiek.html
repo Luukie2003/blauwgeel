@@ -79,8 +79,8 @@
     {% if aanmelden.aan %}
     <a class="aanmeldknop smal" id="aanmeldknop" href="{{ url_for('club_van_20_aanmelden') }}"
        {% if not aanmelden.open %}hidden data-opent="{{ aanmelden.opent_ms }}"{% endif %}>
-        Word lid van de Club van 20&nbsp;&rarr;
-        <small>{% if aanmelden.voorbeeld %}Voorbeeld, nog niet open voor bezoekers{% else %}Aanmelden en betalen &middot; ook om te verlengen{% endif %}</small>
+        Word lid of verleng je bordje&nbsp;&rarr;
+        <small>{% if aanmelden.voorbeeld %}Voorbeeld, nog niet open voor bezoekers{% else %}Kies je eigen bordje en betaal online of aan de bar{% endif %}</small>
     </a>
     {% endif %}
 

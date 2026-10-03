@@ -480,6 +480,8 @@ CREATE INDEX IF NOT EXISTS idx_club_van_20_bijdragen_seizoen ON club_van_20_bijd
 -- gecontroleerd en goedkeurt (zie aanmeldingen.py). naam = wie de aanmelder
 -- is (ter controle van de betaling), bordje = wat er op het scherm moet
 -- staan, bardienst = bij contant: wie er toen achter de bar stond.
+-- verlengt_lid_id = bij een verlenging het bestaande lid (bordje) dat de
+-- aanmelder koos; leeg bij een nieuw bordje.
 CREATE TABLE IF NOT EXISTS club_van_20_aanmeldingen (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     seizoen TEXT NOT NULL,
@@ -495,7 +497,8 @@ CREATE TABLE IF NOT EXISTS club_van_20_aanmeldingen (
     behandeld_door TEXT,
     behandeld_op TEXT,
     opmerking TEXT,
-    lid_id INTEGER REFERENCES club_van_20_leden(id) ON DELETE SET NULL
+    lid_id INTEGER REFERENCES club_van_20_leden(id) ON DELETE SET NULL,
+    verlengt_lid_id INTEGER REFERENCES club_van_20_leden(id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS idx_club_van_20_aanmeldingen_status ON club_van_20_aanmeldingen(status);
 
