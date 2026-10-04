@@ -345,40 +345,21 @@ def register_routes(app):
 
     # ---------- Onderdeel 1: Prijzenscherm ----------
 
-    # De kolom die de zichtbaarheid van een product op het prijzenscherm
-    # bepaalt hangt af van het dagtype (zie DAG_KOLOM hieronder) -- normaal
-    # blijft het bestaande toon_op_kiosk, trainingsavond heeft z'n eigen
-    # kolom zodat een club op trainingsavonden een kleinere/andere selectie
-    # kan tonen zonder de normale instelling te verliezen.
-    DAG_KOLOM = {
-        "normaal": "toon_op_kiosk",
-        "trainingsavond": "toon_op_kiosk_trainingsavond",
-    }
-
-    def _dag_uit_request(bron):
-        dag = bron.get("dag", "normaal")
-        return dag if dag in DAG_KOLOM else "normaal"
-
     @app.route("/kiosk/prijzen/instellingen", methods=["GET", "POST"])
     def kiosk_prijzen_instellingen():
         db = get_db()
         if request.method == "POST":
-            dag = _dag_uit_request(request.form)
-            kolom = DAG_KOLOM[dag]
             producten = db.execute("SELECT id FROM producten").fetchall()
             updates = [
                 (1 if request.form.get(f"toon_{p['id']}") else 0, p["id"]) for p in producten
             ]
-            db.executemany(f"UPDATE producten SET {kolom} = ? WHERE id = ?", updates)
+            db.executemany("UPDATE producten SET toon_op_kiosk = ? WHERE id = ?", updates)
             db.commit()
             flash("Prijzenscherm-selectie opgeslagen.", "success")
-            return redirect(url_for("kiosk_prijzen_instellingen", dag=dag))
+            return redirect(url_for("kiosk_prijzen_instellingen"))
 
-        dag = _dag_uit_request(request.args)
-        kolom = DAG_KOLOM[dag]
         producten = db.execute(
-            f"SELECT *, {kolom} AS toon_op_kiosk_huidig FROM producten "
-            "WHERE actief = 1 ORDER BY categorie, naam"
+            "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
         ).fetchall()
         acties = db.execute(
             """SELECT ka.*, p.naam AS product_naam FROM kiosk_acties ka
@@ -392,38 +373,12 @@ def register_routes(app):
             acties=acties,
             instellingen=_scherm_instellingen(db),
             prijzen_instellingen=prijzen_instellingen,
-            gekozen_dag=dag,
             categorie_kolommen_namen=_verdeel_namen_over_kolommen(
                 _alle_kiosk_categorie_namen(db), _categorie_kolommen_indeling(db, prijzen_instellingen)
             ),
             alle_producten=_sjabloon_producten(db),
             uitgelicht=_uitgelicht_product(db, prijzen_instellingen),
         )
-
-    @app.route("/kiosk/prijzen/trainingsavond-modus", methods=["POST"])
-    def kiosk_trainingsavond_modus_wisselen():
-        """Handmatige schakelaar: bepaalt of het prijzenscherm nu de
-        trainingsavond-productselectie toont i.p.v. de normale -- zie
-        _dag_type_vandaag hierboven. Bewust een losse knop i.p.v. automatisch
-        op de kalenderdag, want de vaste trainingsavond klopt niet altijd
-        (vakantie, extra training, calamiteit)."""
-        db = get_db()
-        instellingen = _prijzen_instellingen(db)
-        nieuwe_status = 0 if instellingen["trainingsavond_modus_actief"] else 1
-        db.execute(
-            "UPDATE kiosk_prijzen_instellingen SET trainingsavond_modus_actief = ? WHERE id = 1",
-            (nieuwe_status,),
-        )
-        db.commit()
-        if is_ajax_verzoek():
-            return jsonify({"ok": True, "trainingsavond_modus_actief": nieuwe_status})
-        flash(
-            "Prijzenscherm toont nu de trainingsavond-selectie."
-            if nieuwe_status
-            else "Prijzenscherm toont nu de normale selectie.",
-            "success",
-        )
-        return redirect(url_for("kiosk_prijzen_instellingen"))
 
     @app.route("/kiosk/prijzen/wedstrijddag-welkom", methods=["POST"])
     def kiosk_wedstrijddag_welkom_instellingen():
@@ -595,16 +550,12 @@ def register_routes(app):
             )
         return redirect(url_for("kiosk_prijzen_instellingen"))
 
-    def _prijzen_categorieen(db, dag="normaal", uitgelicht_product_id=None):
-        # dag bepaalt welke zichtbaarheidskolom geldt (zie DAG_KOLOM
-        # hierboven) -- dag komt hier nooit rechtstreeks van een gebruiker,
-        # alleen via _dag_uit_request (die 'm al tegen DAG_KOLOM valideert)
-        # of via _dag_type_vandaag() hieronder (de handmatige schakelaar),
-        # dus de kolomnaam is altijd één van de twee vaste, hardcoded namen.
-        kolom = DAG_KOLOM.get(dag, "toon_op_kiosk")
+    def _prijzen_categorieen(db, uitgelicht_product_id=None):
+        # Eén algemene prijslijst voor elke dag: de producten met
+        # toon_op_kiosk aan.
         producten = db.execute(
-            f"""SELECT * FROM producten
-               WHERE actief = 1 AND {kolom} = 1
+            """SELECT * FROM producten
+               WHERE actief = 1 AND toon_op_kiosk = 1
                ORDER BY categorie, naam"""
         ).fetchall()
         opties_per_product = {}
@@ -738,16 +689,6 @@ def register_routes(app):
             for b in bardiensten
         ]
 
-    def _dag_type_vandaag(db, instellingen=None):
-        """'trainingsavond' of 'normaal' -- bepaalt welke productselectie het
-        prijzenscherm nu toont (zie DAG_KOLOM/_prijzen_categorieen).
-        Handmatig ingesteld via de schakelaar op de instellingenpagina (zie
-        kiosk_trainingsavond_modus_wisselen), bewust niet meer automatisch
-        op de kalenderdag -- de training verschuift weleens (vakantie,
-        extra training, calamiteit) en dan klopte de vaste dag niet."""
-        instellingen = instellingen or _prijzen_instellingen(db)
-        return "trainingsavond" if instellingen["trainingsavond_modus_actief"] else "normaal"
-
     def _wedstrijddag_welkom_wedstrijden(db, instellingen=None):
         """Eigen thuiswedstrijden vandaag, voor de welkomstbanner/-popup op
         het prijzenscherm (instelling: zie kiosk_wedstrijddag_welkom_instellingen)
@@ -818,16 +759,9 @@ def register_routes(app):
         }
 
     def _alle_kiosk_categorie_namen(db):
-        """Alle categorie-koppen die op het prijzenscherm kunnen voorkomen,
-        op normale dagen én trainingsavonden samen -- zodat de sleep-indeling
-        ook categorieën toont die vandaag toevallig niet in beeld zijn (bijv.
-        een trainingsavond-only categorie), en die niet pas verschijnen op
-        het moment dat ze voor het eerst zichtbaar worden."""
-        namen = set()
-        for dag in DAG_KOLOM:
-            for naam, _ in _prijzen_categorieen(db, dag):
-                namen.add(naam)
-        return sorted(namen, key=str.lower)
+        """Alle categorie-koppen die op het prijzenscherm voorkomen, voor de
+        sleep-indeling."""
+        return sorted({naam for naam, _ in _prijzen_categorieen(db)}, key=str.lower)
 
     def _verdeel_namen_over_kolommen(namen, indeling):
         """Kern van de kolomindeling: verdeelt een lijst categorienamen over
@@ -921,9 +855,7 @@ def register_routes(app):
         instellingen = _prijzen_instellingen(db)
         uitgelicht = _uitgelicht_product(db, instellingen)
         categorieen = _prijzen_categorieen(
-            db,
-            _dag_type_vandaag(db, instellingen),
-            uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None,
+            db, uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None
         )
         acties = _acties_actief(db)
         bardiensten = _bardiensten_vandaag(db)
@@ -971,9 +903,7 @@ def register_routes(app):
         instellingen = _prijzen_instellingen(db)
         uitgelicht = _uitgelicht_product(db, instellingen)
         categorieen = _prijzen_categorieen(
-            db,
-            _dag_type_vandaag(db, instellingen),
-            uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None,
+            db, uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None
         )
         acties = _acties_actief(db)
         bardiensten = _bardiensten_vandaag(db)
@@ -2071,9 +2001,7 @@ def register_routes(app):
         prijzen_instellingen = _prijzen_instellingen(db)
         uitgelicht = _uitgelicht_product(db, prijzen_instellingen)
         categorieen = _prijzen_categorieen(
-            db,
-            _dag_type_vandaag(db, prijzen_instellingen),
-            uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None,
+            db, uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None
         )
         acties = _acties_actief(db)
         bardiensten = _bardiensten_vandaag(db)

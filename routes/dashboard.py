@@ -26,8 +26,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.23.0"
+HUIDIGE_VERSIE = "1.24.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.24.0",
+        "datum": "5 oktober 2026",
+        "punten": [
+            "Prijzenscherm: één algemene prijslijst voor elke dag. De aparte trainingsavond-selectie en de knop om tussen selecties te wisselen zijn weggehaald; wat je bij Producten aanvinkt, staat altijd op het scherm",
+        ],
+    },
     {
         "versie": "1.23.0",
         "datum": "4 oktober 2026",

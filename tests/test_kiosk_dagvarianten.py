@@ -1,9 +1,7 @@
 import json
 import re
-import sqlite3
 from datetime import date, timedelta
 
-import database
 from conftest import stel_csrf_token_in as _csrf
 from helpers import bepaal_tegenstander, vandaag_amsterdam
 from test_kiosk import _voeg_product_toe
@@ -21,135 +19,47 @@ def test_bepaal_tegenstander_zonder_clubnaam_geeft_none():
     assert bepaal_tegenstander("Potetos 4-VEV'67 6") is None
 
 
-def test_migratie_trainingsavond_kopieert_bestaande_toon_op_kiosk_waarde(tmp_path):
-    """Geen gewone kolom-migratie (die zou toon_op_kiosk_trainingsavond op 0
-    laten staan) -- bij het aanmaken van de kolom moet de dan geldende
-    toon_op_kiosk-waarde gekopieerd worden, zodat de trainingsavond-selectie
-    er in eerste instantie hetzelfde uitziet als normaal."""
-    conn = sqlite3.connect(tmp_path / "migratie_test.db")
-    conn.row_factory = sqlite3.Row
-    conn.execute(
-        """CREATE TABLE producten (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            naam TEXT NOT NULL,
-            toon_op_kiosk INTEGER NOT NULL DEFAULT 0
-        )"""
-    )
-    conn.execute("INSERT INTO producten (naam, toon_op_kiosk) VALUES ('Bier', 1)")
-    conn.execute("INSERT INTO producten (naam, toon_op_kiosk) VALUES ('Wijn', 0)")
-    conn.commit()
+def test_prijzenscherm_toont_de_algemene_selectie_op_elke_dag(client, db):
+    """Eén algemene prijslijst: geen aparte selectie voor een trainingsavond
+    of een wedstrijddag, dus altijd precies de producten met toon_op_kiosk aan."""
+    _voeg_product_toe(db, "Staat op de lijst", toon_op_kiosk=1)
+    _voeg_product_toe(db, "Staat er niet op", toon_op_kiosk=0)
 
-    database._migreer_kiosk_trainingsavond(conn)
+    tekst = client.get("/kiosk/prijzen").data.decode()
 
-    waarden = dict(
-        conn.execute("SELECT naam, toon_op_kiosk_trainingsavond FROM producten").fetchall()
-    )
-    assert waarden == {"Bier": 1, "Wijn": 0}
+    assert "Staat op de lijst" in tekst
+    assert "Staat er niet op" not in tekst
 
 
-def test_trainingsavond_tab_toont_eigen_selectie(ingelogde_client, db):
+def test_instellingen_hebben_geen_dagschakelaar_meer(ingelogde_client, db):
     product_id = _voeg_product_toe(db, "Speciaalbier", toon_op_kiosk=1)
-    db.execute(
-        "UPDATE producten SET toon_op_kiosk_trainingsavond = 0 WHERE id = ?", (product_id,)
+
+    tekst = ingelogde_client.get("/kiosk/prijzen/instellingen").data.decode()
+
+    assert f'name="toon_{product_id}" checked' in tekst
+    assert "Trainingsavond" not in tekst and "trainingsavond" not in tekst
+    # Een oude link of bladwijzer met ?dag=... werkt gewoon, maar toont dezelfde lijst.
+    oud = ingelogde_client.get("/kiosk/prijzen/instellingen?dag=trainingsavond")
+    assert oud.status_code == 200 and f'name="toon_{product_id}" checked' in oud.data.decode()
+    # De wisselknop bestaat niet meer.
+    weg = ingelogde_client.post(
+        "/kiosk/prijzen/trainingsavond-modus", data={"csrf_token": _csrf(ingelogde_client)}
     )
-    db.commit()
-
-    normaal = ingelogde_client.get("/kiosk/prijzen/instellingen?dag=normaal")
-    training = ingelogde_client.get("/kiosk/prijzen/instellingen?dag=trainingsavond")
-
-    assert f'name="toon_{product_id}" checked' in normaal.data.decode()
-    assert f'name="toon_{product_id}" checked' not in training.data.decode()
+    assert weg.status_code in (404, 405)
 
 
-def test_opslaan_op_trainingsavond_tab_raakt_normale_kolom_niet(ingelogde_client, db):
-    product_id = _voeg_product_toe(db, "Speciaalbier", toon_op_kiosk=1)
-    db.execute(
-        "UPDATE producten SET toon_op_kiosk_trainingsavond = 0 WHERE id = ?", (product_id,)
-    )
-    db.commit()
+def test_selectie_opslaan_wijzigt_de_algemene_lijst(ingelogde_client, db):
+    blijft = _voeg_product_toe(db, "Blijft", toon_op_kiosk=1)
+    erbij = _voeg_product_toe(db, "Komt erbij", toon_op_kiosk=0)
 
     resp = ingelogde_client.post(
         "/kiosk/prijzen/instellingen",
-        data={"csrf_token": _csrf(ingelogde_client), "dag": "trainingsavond"},
+        data={"csrf_token": _csrf(ingelogde_client), f"toon_{blijft}": "on", f"toon_{erbij}": "on"},
     )
+
     assert resp.status_code == 302
-
-    rij = db.execute(
-        "SELECT toon_op_kiosk, toon_op_kiosk_trainingsavond FROM producten WHERE id = ?",
-        (product_id,),
-    ).fetchone()
-    assert rij["toon_op_kiosk"] == 1
-    assert rij["toon_op_kiosk_trainingsavond"] == 0
-
-
-def test_prijzenscherm_toont_trainingsavond_selectie_als_modus_handmatig_aan_staat(client, db):
-    db.execute("UPDATE kiosk_prijzen_instellingen SET trainingsavond_modus_actief = 1 WHERE id = 1")
-    alleen_normaal = _voeg_product_toe(db, "Alleen normaal", toon_op_kiosk=1)
-    db.execute(
-        "UPDATE producten SET toon_op_kiosk_trainingsavond = 0 WHERE id = ?", (alleen_normaal,)
-    )
-    alleen_training = _voeg_product_toe(db, "Alleen trainingsavond", toon_op_kiosk=0)
-    db.execute(
-        "UPDATE producten SET toon_op_kiosk_trainingsavond = 1 WHERE id = ?", (alleen_training,)
-    )
-    db.commit()
-
-    resp = client.get("/kiosk/prijzen")
-    tekst = resp.data.decode()
-
-    assert "Alleen trainingsavond" in tekst
-    assert "Alleen normaal" not in tekst
-
-
-def test_prijzenscherm_toont_normale_selectie_als_modus_uit_staat_ongeacht_kalenderdag(client, db):
-    """Kern van de wijziging: geen automatische koppeling meer aan de
-    kalenderdag -- ook al zou vandaag toevallig de vaste trainingsavond
-    (woensdag) zijn, zonder de handmatige schakelaar blijft de normale
-    selectie gelden."""
-    alleen_normaal = _voeg_product_toe(db, "Alleen normaal", toon_op_kiosk=1)
-    db.execute(
-        "UPDATE producten SET toon_op_kiosk_trainingsavond = 0 WHERE id = ?", (alleen_normaal,)
-    )
-    alleen_training = _voeg_product_toe(db, "Alleen trainingsavond", toon_op_kiosk=0)
-    db.execute(
-        "UPDATE producten SET toon_op_kiosk_trainingsavond = 1 WHERE id = ?", (alleen_training,)
-    )
-    db.commit()
-
-    resp = client.get("/kiosk/prijzen")
-    tekst = resp.data.decode()
-
-    assert "Alleen normaal" in tekst
-    assert "Alleen trainingsavond" not in tekst
-
-
-def test_trainingsavond_modus_wisselen_zet_aan_en_weer_uit(ingelogde_client, db):
-    voor = db.execute(
-        "SELECT trainingsavond_modus_actief FROM kiosk_prijzen_instellingen WHERE id = 1"
-    ).fetchone()["trainingsavond_modus_actief"]
-    assert voor == 0
-
-    resp = ingelogde_client.post(
-        "/kiosk/prijzen/trainingsavond-modus",
-        data={"csrf_token": _csrf(ingelogde_client)},
-        headers={"X-Requested-With": "fetch"},
-    )
-    assert resp.get_json() == {"ok": True, "trainingsavond_modus_actief": 1}
-    aan = db.execute(
-        "SELECT trainingsavond_modus_actief FROM kiosk_prijzen_instellingen WHERE id = 1"
-    ).fetchone()["trainingsavond_modus_actief"]
-    assert aan == 1
-
-    resp = ingelogde_client.post(
-        "/kiosk/prijzen/trainingsavond-modus",
-        data={"csrf_token": _csrf(ingelogde_client)},
-        headers={"X-Requested-With": "fetch"},
-    )
-    assert resp.get_json() == {"ok": True, "trainingsavond_modus_actief": 0}
-    uit = db.execute(
-        "SELECT trainingsavond_modus_actief FROM kiosk_prijzen_instellingen WHERE id = 1"
-    ).fetchone()["trainingsavond_modus_actief"]
-    assert uit == 0
+    rijen = {r["naam"]: r["toon_op_kiosk"] for r in db.execute("SELECT naam, toon_op_kiosk FROM producten")}
+    assert rijen["Blijft"] == 1 and rijen["Komt erbij"] == 1
 
 
 def _wedstrijden_json(tekst):

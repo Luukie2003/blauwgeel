@@ -231,13 +231,6 @@ KOLOM_MIGRATIES = [
     # kiosk_prijzen_scherm.html) en toont de melding dan 1x, ongeacht het
     # tijdvak. Zie kiosk_wedstrijddag_welkom_testen in routes/kiosk.py.
     ("kiosk_prijzen_instellingen", "wedstrijddag_test_teller", "INTEGER NOT NULL DEFAULT 0"),
-    # Handmatige schakelaar: bepaalt of het prijzenscherm nu de
-    # trainingsavond-productselectie toont i.p.v. de normale (zie
-    # DAG_KOLOM/_dag_type_vandaag in routes/kiosk.py) -- bewust geen
-    # automatische koppeling meer aan de kalenderdag, want de training
-    # verschuift weleens (vakantie, extra training, calamiteit) en dan klopt
-    # de vaste dag niet. Zie kiosk_trainingsavond_modus_wisselen.
-    ("kiosk_prijzen_instellingen", "trainingsavond_modus_actief", "INTEGER NOT NULL DEFAULT 0"),
     # Weergaveduur (seconden) van het "komende thuiswedstrijden"-blok op het
     # kantine scherm -- was hardcoded op 10s, maar bij meerdere komende
     # wedstrijden is dat soms te kort om te lezen. Zie _bouw_slides in
@@ -377,25 +370,6 @@ def _migreer_telling_verkoopprijs(db):
                SELECT verkoopprijs FROM producten WHERE producten.id = telling_regels.product_id
            )"""
     )
-
-
-def _migreer_kiosk_trainingsavond(db):
-    """toon_op_kiosk_trainingsavond is nieuw: een gewone kolom-migratie (via
-    KOLOM_MIGRATIES) zou 'm op DEFAULT 0 laten staan, waardoor het
-    prijzenscherm op de eerstvolgende trainingsavond ineens leeg lijkt voor
-    iedereen die nog niets heeft ingesteld. In plaats daarvan vullen we 'm,
-    precies op het moment dat de kolom voor het eerst wordt aangemaakt,
-    eenmalig met de dan geldende toon_op_kiosk-waarde -- zodat de
-    trainingsavond-versie er in eerste instantie hetzelfde uitziet als
-    normaal, tot een beheerder 'm zelf aanpast via de Trainingsavond-tab
-    (zie routes/kiosk.py)."""
-    bestaande = {row["name"] for row in db.execute("PRAGMA table_info(producten)")}
-    if "toon_op_kiosk_trainingsavond" in bestaande:
-        return
-    db.execute(
-        "ALTER TABLE producten ADD COLUMN toon_op_kiosk_trainingsavond INTEGER NOT NULL DEFAULT 0"
-    )
-    db.execute("UPDATE producten SET toon_op_kiosk_trainingsavond = toon_op_kiosk")
 
 
 def _migreer_categorieen(db):
@@ -656,7 +630,6 @@ def get_db():
             _migreer_categorieen(g.db)
             _migreer_keuken_categorie(g.db)
             _migreer_telling_verkoopprijs(g.db)
-            _migreer_kiosk_trainingsavond(g.db)
             _migreer_kassa_afgesloten(g.db)
             _migreer_bieren_backfill(g.db)
             _migreer_club_van_20_datums(g.db)
