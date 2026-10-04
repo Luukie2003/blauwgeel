@@ -1,0 +1,85 @@
+{% extends "base_pda.html" %}
+{% block titel %}Aanmeldingen{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Nieuwe aanmeldingen via de website. Controleer eerst de betaling
+    (Mollie: zoek de naam en het bedrag in je Mollie-app; contant: kijk of het geld er is en vraag het na bij de bardienst)
+    en keur dan goed. Ontbrekende gegevens (team, telefoon, e-mail) vul je later op de computer aan.
+</p>
+
+{% if not status.aan %}
+<div class="flash flash-error">Aanmelden via de website staat uit.</div>
+{% elif not status.open %}
+<div class="flash flash-warning">Het formulier opent op {{ status.opent_label }}.</div>
+{% endif %}
+
+<h2 class="pda-kopje">Wachten op goedkeuring ({{ openstaand|length }})</h2>
+{% if openstaand %}
+{% for a in openstaand %}
+<div class="pda-kaartje">
+    <div class="pda-regel-kop">
+        <strong>{{ a.bordje }}</strong>
+        <span class="tekst-zacht">{{ a.aangemaakt_op[8:10] }}-{{ a.aangemaakt_op[5:7] }} {{ a.aangemaakt_op[11:16] }}</span>
+    </div>
+    <div class="pda-regel-info">
+        <span>{{ a.naam }}</span>
+        {% if a.verlenging %}<span class="badge badge-in">verlenging</span>
+            {% if a.lid and a.lid.naam|lower != a.bordje|lower %}<span class="tekst-zacht">nu: {{ a.lid.naam }}</span>{% endif %}
+        {% elif a.lid %}<span class="badge badge-uit">bestaand lid: {{ a.lid.naam }}</span>{% endif %}
+    </div>
+    <div class="pda-regel-info">
+        <strong>{% if a.betaalwijze == 'mollie' %}Mollie{% else %}Contant{% endif %} &middot; {{ a.bedrag|euro }}</strong>
+        {% if a.bardienst %}<span class="tekst-zacht">bardienst: {{ a.bardienst }}</span>{% endif %}
+    </div>
+
+    <form method="post" action="{{ url_for('club_van_20_aanmelding_goedkeuren', aanmelding_id=a.id) }}" class="pda-goedkeuren">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="modus" value="{{ 'bestaand' if a.lid else 'nieuw' }}">
+        <input type="hidden" name="lid_id" value="{{ a.lid.id if a.lid else '' }}">
+        <input type="hidden" name="bordje" value="{{ a.bordje }}">
+        <input type="hidden" name="voornaam" value="{{ a.voornaam }}">
+        <input type="hidden" name="achternaam" value="{{ a.achternaam }}">
+        <input type="hidden" name="bedrag" value="{{ '%g'|format(a.bedrag) }}">
+        <input type="hidden" name="betaalwijze" value="{{ a.betaalwijze }}">
+        <input type="hidden" name="betaald_op" value="{{ a.datum }}">
+        {% if a.lid and a.lid.naam|lower != a.bordje|lower %}
+        <label class="pda-vinkregel">
+            <input type="checkbox" name="bordje_aanpassen"> Bordje van het lid aanpassen naar &lsquo;{{ a.bordje }}&rsquo;
+        </label>
+        {% endif %}
+        <label class="pda-vinkregel">
+            <input type="checkbox" name="betaling_gecontroleerd" value="1" required> Ik heb de betaling gecontroleerd
+        </label>
+        <button type="submit" class="btn btn-geel">Goedkeuren</button>
+    </form>
+
+    <details class="pda-corrigeren">
+        <summary>Afwijzen</summary>
+        <form method="post" action="{{ url_for('club_van_20_aanmelding_afwijzen', aanmelding_id=a.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="veld">
+                <label for="afwijs-{{ a.id }}">Reden (optioneel)</label>
+                <input type="text" id="afwijs-{{ a.id }}" name="reden" maxlength="120" placeholder="Bijv. geen betaling gevonden / dubbel">
+            </div>
+            <button type="submit" class="btn btn-gevaar">Afwijzen</button>
+        </form>
+    </details>
+</div>
+{% endfor %}
+{% else %}
+<p class="leeg">Geen aanmeldingen die op goedkeuring wachten.</p>
+{% endif %}
+
+{% if behandeld %}
+<h2 class="pda-kopje">Eerder behandeld</h2>
+{% for a in behandeld[:10] %}
+<div class="pda-kaartje">
+    <div class="pda-regel-kop">
+        <strong>{{ a.bordje }}</strong>
+        <span class="badge {{ 'badge-in' if a.status == 'goedgekeurd' else 'badge-neutraal' }}">{{ a.status }}</span>
+    </div>
+    <div class="tekst-zacht">{{ a.naam }} &middot; {{ a.behandeld_op or '' }}{% if a.behandeld_door %} door {{ a.behandeld_door }}{% endif %}</div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

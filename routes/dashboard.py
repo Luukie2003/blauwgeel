@@ -11,6 +11,7 @@ from helpers import (
     bereken_komende_thuiswedstrijden,
     bereken_laatste_telling_status,
     bereken_omzet_trend_periode,
+    bereken_pda_start,
     bereken_wedstrijd_geschiedenis,
     bereken_week_overzicht,
     csv_response,
@@ -26,8 +27,20 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.24.0"
+HUIDIGE_VERSIE = "1.25.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.25.0",
+        "datum": "5 oktober 2026",
+        "punten": [
+            "Handterminal: het startscherm toont bovenaan wat aandacht nodig heeft (producten onder het minimum, bestellingen om in te boeken, aanmeldingen, prikbord, laatste telling, kassa, frituurvet, volgende thuiswedstrijd), met tellers op de knoppen, en heeft nieuwe knoppen voor Voorraad, Prognose, Tellingen, Keuken, Kluis en Aanmeldingen",
+            "Handterminal: voorraadlijst per categorie met zoeken en \"alleen laag\", tellingen en het resultaat van een telling als compacte kaarten (niet meer de desktop-pagina), en op de Bestellijst nu ook het bestel-advies, de voorspelde tekorten en de meldingen om te bekijken",
+            "Handterminal: aanmeldingen voor de Club van 20 goedkeuren of afwijzen, bijvoorbeeld aan de bar bij een contante betaling",
+            "Looplijst: pauzeren en later verder, ook na uitloggen of op een ander toestel (3 dagen bewaard)",
+            "Looplijst: per product staat wat er ongeveer in het schap hoort te staan, en op het controlescherm krijgt een telling die daar ver naast zit een waarschuwing",
+            "Wie alleen keuken of kassa mag, ziet in de handterminal geen productzoeker en geen voorraadcijfers",
+        ],
+    },
     {
         "versie": "1.24.0",
         "datum": "5 oktober 2026",
@@ -686,10 +699,16 @@ def register_routes(app):
     @app.route("/")
     def dashboard():
         if g.get("weergave_modus") == "pda":
-            # Geen van de zware dashboard-cijfers is relevant voor de
-            # PDA-modus (puur een menu naar de vloerpagina's), dus die
-            # queries hoeven hier niet te draaien.
-            return render_template("pda_start.html", groet=dagdeel_groet())
+            # De zware dashboard-cijfers (omzettrend, top-verkopers) zijn niet
+            # relevant op de vloer; wel een paar korte regels met wat er nu
+            # aandacht nodig heeft (zie bereken_pda_start).
+            return render_template(
+                "pda_start.html",
+                groet=dagdeel_groet(),
+                **bereken_pda_start(
+                    get_db(), session.get("gebruiker_rol"), session.get("gebruiker_secties")
+                ),
+            )
 
         db = get_db()
         producten = db.execute(

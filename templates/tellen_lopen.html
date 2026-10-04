@@ -20,6 +20,13 @@
     <div class="loop-categorie">{{ product.categorie }}</div>
     <h1 class="loop-product">{{ product.naam }}</h1>
     <p class="tekst-zacht">Geregistreerde voorraad: {{ product.voorraad }} {{ product.eenheid }}</p>
+    {% if verwacht %}
+    <p class="tekst-zacht loop-verwacht" title="Op basis van de verkoop van de afgelopen weken, de wedstrijden, de training en het weer. Bar en voorraadhok samen.">
+        Verwacht nu ongeveer <strong>{{ verwacht.verwacht }}</strong> {{ product.eenheid }}
+        {% if verwacht.hoog > verwacht.laag %}(waarschijnlijk {{ verwacht.laag }} tot {{ verwacht.hoog }}){% endif %}
+        <span class="loop-verwacht-noot">bar + voorraadhok samen</span>
+    </p>
+    {% endif %}
     {% if fase == 'hok' %}
     <p class="tekst-zacht">Bar geteld: {{ bar_waarde_hint if bar_waarde_hint else '—' }} {{ product.eenheid }}</p>
     {% endif %}
@@ -62,6 +69,10 @@
             </button>
         </div>
     </form>
+
+    <p class="loop-pauze">
+        <button type="submit" form="loop-formulier" name="actie" value="pauzeren" class="btn-tekstlink">Pauzeren, later verder</button>
+    </p>
 
     <form method="post" class="loop-stop"
           onsubmit="return bevestigEnVerstuur(this, 'Looplijst afbreken? Wat je tot nu toe hebt ingevuld wordt niet opgeslagen.');">

@@ -1,0 +1,75 @@
+{% extends "base_pda.html" %}
+{% block titel %}Telling #{{ telling.id }}{% endblock %}
+{% block inhoud %}
+<div class="pda-paginakop">
+    <h1>Telling #{{ telling.id }}</h1>
+    <p class="tekst-zacht">{{ telling.datum|datum_nl }}{% if telling.naam %} &middot; geteld door {{ telling.naam }}{% endif %}</p>
+</div>
+
+<div class="pda-cijferrij">
+    <div class="pda-cijfer">
+        <span class="pda-cijfer-getal">{{ "€ %.2f"|format(totaal_omzet) }}</span>
+        <span class="tekst-zacht">omzet</span>
+    </div>
+    <div class="pda-cijfer">
+        <span class="pda-cijfer-getal">{{ regels|length }}</span>
+        <span class="tekst-zacht">producten geteld</span>
+    </div>
+</div>
+
+<div class="pda-knoppenrij">
+    <a href="{{ url_for('telling_pdf', telling_id=telling.id) }}" class="btn btn-geel">Verkooprapport (PDF)</a>
+    <a href="{{ url_for('tellingen_overzicht') }}" class="btn btn-rand">Alle tellingen</a>
+</div>
+
+{% if besteladvies %}
+<div class="pda-status pda-status--oranje" style="margin-bottom:1rem">
+    <span class="pda-status-tekst">
+        <strong>{{ besteladvies|length }} {{ 'product staat' if besteladvies|length == 1 else 'producten staan' }} nu onder het minimum</strong>
+        <span class="tekst-zacht">{% for p in besteladvies[:3] %}{{ p.naam }}{% if not loop.last %}, {% endif %}{% endfor %}{% if besteladvies|length > 3 %} en {{ besteladvies|length - 3 }} meer{% endif %}</span>
+    </span>
+    <a href="{{ url_for('voorraadoverzicht', alleen='laag') }}" class="btn btn-rand btn-klein">Bekijk</a>
+</div>
+{% endif %}
+
+{% for r in regels %}
+<div class="pda-kaartje">
+    <div class="pda-regel-kop">
+        <strong>{{ r.product_naam }}</strong>
+        <span class="tekst-zacht">{{ "€ %.2f"|format(r.verkocht * r.verkoopprijs) }}</span>
+    </div>
+    <div class="pda-regel-info">
+        <span>Geteld <strong>{{ r.geteld_aantal }}</strong> {{ r.eenheid }}</span>
+        {% if r.verkocht > 0 %}<span class="badge badge-uit">{{ r.verkocht }} verkocht</span>{% endif %}
+        {% if r.correctie > 0 %}<span class="badge badge-in">+{{ r.correctie }} correctie</span>{% endif %}
+        <span class="tekst-zacht">was {{ r.voorraad_voor }}</span>
+    </div>
+    <details class="pda-corrigeren">
+        <summary>Corrigeren</summary>
+        <form method="post" action="{{ url_for('telling_regel_corrigeren', regel_id=r.id) }}"
+              onsubmit="return bevestigEnVerstuur(this, 'Telling voor \'{{ r.product_naam }}\' corrigeren? Dit past het verkocht/correctie-cijfer (en de omzet) van deze telling aan, niet de actuele voorraad.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="veld">
+                <label for="geteld-{{ r.id }}">Werkelijk geteld ({{ r.eenheid }})</label>
+                <input type="number" id="geteld-{{ r.id }}" name="geteld_aantal" min="0" inputmode="numeric" value="{{ r.geteld_aantal }}" required>
+            </div>
+            <div class="veld">
+                <label for="reden-{{ r.id }}">Reden (optioneel)</label>
+                <input type="text" id="reden-{{ r.id }}" name="correctie_opmerking" placeholder="Bijv. krat over het hoofd gezien">
+            </div>
+            <button type="submit" class="btn btn-rand">Opslaan</button>
+        </form>
+        {% if r.geteld_aantal_voor_correctie is not none %}
+        <p class="tekst-zacht" style="font-size:0.78rem; margin:0.5rem 0 0">
+            Laatst gecorrigeerd door {{ r.gecorrigeerd_door or 'onbekend' }} op {{ r.gecorrigeerd_op|datum_nl }}
+            (was {{ r.geteld_aantal_voor_correctie }} {{ r.eenheid }} geteld){% if r.correctie_opmerking %}: {{ r.correctie_opmerking }}{% endif %}
+        </p>
+        {% endif %}
+    </details>
+</div>
+{% endfor %}
+
+<div class="pda-knoppenrij" style="margin-top:1rem">
+    <a href="{{ url_for('tellen') }}" class="btn btn-rand">Nieuwe telling</a>
+</div>
+{% endblock %}

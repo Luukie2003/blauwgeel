@@ -3,7 +3,7 @@
 {% block inhoud %}
 <div class="actiebalk">
     {% if pda_modus %}
-    <p class="subtitel" style="margin:0">Boek bestellingen in zodra de levering binnenkomt.</p>
+    <p class="subtitel" style="margin:0">Boek bestellingen in zodra de levering binnenkomt, en zie wat er nog besteld moet worden.</p>
     {% else %}
     <p class="subtitel" style="margin:0">Bestel wat nodig is, of boek in wat er binnenkomt.</p>
     <div style="display:flex; gap:0.5rem">
@@ -283,6 +283,87 @@
         </table>
     </div>
     {% endif %}
+</div>
+{% endif %}
+{% else %}
+{# ---------- Handterminal: alleen kijken wat er besteld moet worden. De bestelling
+   zelf klaarzetten blijft op de computer (zie bestelling_aanmaken). ---------- #}
+<div class="kaart">
+    <h2>Nu bestellen</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Onder het minimum. Een bestelling klaarzetten doe je op de computer.</p>
+    {% if suggesties %}
+    {% for p in suggesties %}
+    {% set tekort = p.bestel_hoeveelheid if p.bestel_hoeveelheid > 0 else (p.min_voorraad - p.voorraad) %}
+    {% set besteleenheden = tekort|naar_besteleenheden(p) %}
+    <div class="pda-kaartje">
+        <div class="pda-regel-kop">
+            <strong><a href="{{ url_for('product_detail', product_id=p.id) }}">{{ p.naam }}</a></strong>
+            <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
+        </div>
+        <div class="pda-regel-info">
+            <span class="tekst-zacht">minimum {{ p.min_voorraad }} {{ p.eenheid }}</span>
+            <span>Bestel <strong>{{ besteleenheden }} {{ p|besteleenheid_naam }}</strong></span>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="leeg">Niets nodig, alle voorraad zit boven het minimum.</p>
+    {% endif %}
+</div>
+
+{% if voorspelde_tekorten %}
+<div class="kaart">
+    <h2>Voorspelde tekorten</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Nog boven het minimum, maar waarschijnlijk op binnen 7 dagen.
+        <a href="{{ url_for('prognose_pagina') }}">Hele prognose</a>
+    </p>
+    {% for r in voorspelde_tekorten %}
+    <div class="pda-kaartje">
+        <div class="pda-regel-kop">
+            <strong><a href="{{ url_for('product_detail', product_id=r.product.id) }}">{{ r.product.naam }}</a></strong>
+            <span class="badge badge-laag">{% if r.kans_tekort > 0.99 %}&gt; 99%{% else %}{{ (r.kans_tekort * 100)|round|int }}%{% endif %} kans</span>
+        </div>
+        <div class="pda-regel-info">
+            <span class="tekst-zacht">nu {{ r.product.voorraad }} {{ r.product.eenheid }}, verwacht verbruik {{ r.verwacht_verbruik }}</span>
+            {% if r.advies_stuks %}<span>Bestel <strong>{% if r.advies_eenheden %}{{ r.advies_eenheden }} {{ r.besteleenheid }}{% else %}{{ r.advies_stuks }} {{ r.product.eenheid }}{% endif %}</strong></span>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if meldingen.producten or meldingen.teksten %}
+<div class="kaart">
+    <h2>Gemeld</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Via een gescande schaplabel-QR of handmatig op de lijst gezet.</p>
+    {% for m in meldingen.producten %}
+    <div class="pda-kaartje">
+        <div class="pda-regel-kop">
+            <strong><a href="{{ url_for('product_detail', product_id=m.product.id) }}">{{ m.product.naam }}</a></strong>
+            <span class="badge badge-laag">{{ m.aantal }}x gemeld</span>
+        </div>
+        <div class="pda-regel-info">
+            <span class="tekst-zacht">laatst {{ m.laatste_melding|datum_nl }}</span>
+            <form method="post" action="{{ url_for('bestellijst_melding_product_afhandelen', product_id=m.product.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-rand btn-klein">Afhandelen</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% for t in meldingen.teksten %}
+    <div class="pda-kaartje">
+        <div class="pda-regel-kop"><strong>{{ t.tekst }}</strong></div>
+        <div class="pda-regel-info">
+            <span class="tekst-zacht">{{ t.aangemaakt_op|datum_nl }} &middot; verbruiksvoorwerp</span>
+            <form method="post" action="{{ url_for('bestellijst_melding_afhandelen', melding_id=t.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-rand btn-klein">Afhandelen</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 {% endif %}
 {% endif %}

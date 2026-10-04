@@ -1,5 +1,32 @@
 {% extends "base_pda.html" %}
 {% block titel %}Start{% endblock %}
+
+{# Eén menuknop: cirkel met icoon, label en eventueel een teller. 'pad' is de
+   binnenkant van het svg-icoon. #}
+{% macro menu_knop(url, label, pad, teller=None, teller_waarschuwing=False) %}
+<a href="{{ url }}" class="pda-menu-knop">
+    <span class="pda-menu-icoon-cirkel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">{{ pad|safe }}</svg>
+        {% if teller %}<span class="pda-menu-teller{{ ' pda-menu-teller--let-op' if teller_waarschuwing else '' }}">{{ teller }}</span>{% endif %}
+    </span>
+    <span class="pda-menu-label">{{ label }}</span>
+</a>
+{% endmacro %}
+
+{# Eén statusregel: gekleurde rand links (goed/slecht/oranje/neutraal), tekst en
+   eventueel een link. #}
+{% macro status_regel(klasse, titel, tekst, url=None) %}
+{% set inhoud %}
+    <span class="pda-status-tekst"><strong>{{ titel }}</strong><span class="tekst-zacht">{{ tekst }}</span></span>
+    {% if url %}<span class="pda-status-pijl" aria-hidden="true">&rsaquo;</span>{% endif %}
+{% endset %}
+{% if url %}
+<a href="{{ url }}" class="pda-status pda-status--{{ klasse }}">{{ inhoud }}</a>
+{% else %}
+<div class="pda-status pda-status--{{ klasse }}">{{ inhoud }}</div>
+{% endif %}
+{% endmacro %}
+
 {% block inhoud %}
 <div class="pda-groet-kop">
     <img src="{{ url_for('static', filename='logo.png') }}" alt="" class="pda-groet-logo">
@@ -9,68 +36,83 @@
     </div>
 </div>
 
+{# ---------- Even kijken: wat heeft nu aandacht nodig? ---------- #}
+{% if laag is not none or open_bestellingen or club_aanmeldingen_open or mededelingen_open %}
+<div class="pda-status-lijst">
+    {% if laag is not none %}
+        {% if laag %}
+        {{ status_regel('slecht', laag ~ (' product' if laag == 1 else ' producten') ~ ' onder het minimum', 'Bekijk welke het zijn', url_for('voorraadoverzicht', alleen='laag')) }}
+        {% else %}
+        {{ status_regel('goed', 'Voorraad op orde', 'Niets onder het minimum', url_for('voorraadoverzicht')) }}
+        {% endif %}
+    {% endif %}
+    {% if open_bestellingen %}
+    {{ status_regel('oranje', open_bestellingen ~ (' bestelling' if open_bestellingen == 1 else ' bestellingen') ~ ' om in te boeken', 'Boek in zodra de levering binnen is', url_for('bestellijst')) }}
+    {% endif %}
+    {% if club_aanmeldingen_open %}
+    {{ status_regel('oranje', club_aanmeldingen_open ~ (' aanmelding' if club_aanmeldingen_open == 1 else ' aanmeldingen') ~ ' Club van 20', 'Wacht op goedkeuring', url_for('club_van_20_aanmeldingen')) }}
+    {% endif %}
+    {% if mededelingen_open %}
+    {{ status_regel('slecht' if mededelingen_urgent else 'neutraal', 'Prikbord: ' ~ mededelingen_open ~ ' open', (mededelingen_urgent ~ ' urgent' if mededelingen_urgent else 'Niets urgents'), url_for('bijzonderheden')) }}
+    {% endif %}
+</div>
+{% endif %}
+
 <div class="pda-menu">
     {% if sectie_toegang.voorraad %}
-    <a href="{{ url_for('tellen') }}" class="pda-menu-knop">
-        <span class="pda-menu-icoon-cirkel">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 13l2 2 4-4"/></svg>
-        </span>
-        <span class="pda-menu-label">Tellen</span>
-    </a>
-    <a href="{{ url_for('boeken') }}" class="pda-menu-knop">
-        <span class="pda-menu-icoon-cirkel">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
-        </span>
-        <span class="pda-menu-label">Boeken</span>
-    </a>
+    {{ menu_knop(url_for('tellen'), 'Tellen', '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 13l2 2 4-4"/>') }}
+    {{ menu_knop(url_for('boeken'), 'Boeken', '<path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>') }}
+    {{ menu_knop(url_for('scannen'), 'Scannen', '<path d="M4 7V5a1 1 0 0 1 1-1h2"/><path d="M17 4h2a1 1 0 0 1 1 1v2"/><path d="M20 17v2a1 1 0 0 1-1 1h-2"/><path d="M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/>') }}
+    {{ menu_knop(url_for('voorraadoverzicht'), 'Voorraad', '<path d="M4 20V10l8-6 8 6v10"/><path d="M9 20v-6h6v6"/>', laag, true) }}
+    {{ menu_knop(url_for('bestellijst'), 'Bestellijst', '<circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/><path d="M3 4h2l2.4 11.6a2 2 0 0 0 2 1.6h7.4a2 2 0 0 0 2-1.6L21 8H6"/>', open_bestellingen) }}
+    {{ menu_knop(url_for('prognose_pagina'), 'Prognose', '<path d="M3 17l6-6 4 4 8-9"/><path d="M15 6h6v6"/>') }}
+    {{ menu_knop(url_for('boodschappenlijst'), 'Boodschappen', '<path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/>') }}
+    {{ menu_knop(url_for('geschiedenis'), 'Geschiedenis', '<path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/>') }}
+    {{ menu_knop(url_for('tellingen_overzicht'), 'Tellingen', '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6l1 1 2-2"/><path d="M3 12l1 1 2-2"/><path d="M3 18l1 1 2-2"/>') }}
     {% endif %}
-    <a href="{{ url_for('bijzonderheden') }}" class="pda-menu-knop">
-        <span class="pda-menu-icoon-cirkel">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1-5a8 8 0 1 1 17-6z"/></svg>
-        </span>
-        <span class="pda-menu-label">Prikbord</span>
-    </a>
+    {{ menu_knop(url_for('bijzonderheden'), 'Prikbord', '<path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1-5a8 8 0 1 1 17-6z"/>', mededelingen_open or None, mededelingen_urgent > 0) }}
     {% if sectie_toegang.kassa %}
-    <a href="{{ url_for('kassa_tellen') }}" class="pda-menu-knop">
-        <span class="pda-menu-icoon-cirkel">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 11h20"/><circle cx="12" cy="15" r="2"/></svg>
-        </span>
-        <span class="pda-menu-label">Kassa</span>
-    </a>
+    {{ menu_knop(url_for('kassa_tellen'), 'Kassa', '<rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 11h20"/><circle cx="12" cy="15" r="2"/>') }}
+    {% endif %}
+    {% if sectie_toegang.keuken %}
+    {{ menu_knop(url_for('keuken_voorraad'), 'Keuken', '<path d="M7 14a4 4 0 1 1 1-7.9A4 4 0 0 1 16 6a4 4 0 1 1 1 8"/><path d="M7 14v6h10v-6"/>') }}
     {% endif %}
     {% if huidige_gebruiker_rol == 'beheerder' %}
-    <a href="{{ url_for('kiosk_prijzen_instellingen') }}" class="pda-menu-knop">
-        <span class="pda-menu-icoon-cirkel">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 9l2.5 2.5L14 7"/></svg>
-        </span>
-        <span class="pda-menu-label">Kiosk</span>
-    </a>
+    {{ menu_knop(url_for('kluis_tellen'), 'Kluis', '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M12 9v-2"/><path d="M12 17v-2"/>') }}
+    {{ menu_knop(url_for('kiosk_prijzen_instellingen'), 'Kiosk', '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 9l2.5 2.5L14 7"/>') }}
     {% endif %}
-    {% if sectie_toegang.voorraad %}
-    <a href="{{ url_for('scannen') }}" class="pda-menu-knop">
-        <span class="pda-menu-icoon-cirkel">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2"/><path d="M17 4h2a1 1 0 0 1 1 1v2"/><path d="M20 17v2a1 1 0 0 1-1 1h-2"/><path d="M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+    {% if sectie_toegang.club_van_20 %}
+    {{ menu_knop(url_for('club_van_20_aanmeldingen'), 'Aanmeldingen', '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M19 8v6"/><path d="M16 11h6"/>', club_aanmeldingen_open or None) }}
+    {% endif %}
+</div>
+
+{# ---------- Verder: telling, kassa, wedstrijd en frituurvet ---------- #}
+<div class="pda-status-lijst pda-status-lijst--onder">
+    {% if telling_status %}
+        {% if telling_status.laatste %}
+        {{ status_regel('goed' if telling_status.ok else 'slecht', 'Laatst geteld: ' ~ telling_status.laatste.datum|datum_nl, ('vandaag' if telling_status.dagen_geleden == 0 else telling_status.dagen_geleden ~ (' dag' if telling_status.dagen_geleden == 1 else ' dagen') ~ ' geleden') ~ (' door ' ~ telling_status.laatste.naam if telling_status.laatste.naam else ''), url_for('tellen')) }}
+        {% else %}
+        {{ status_regel('slecht', 'Nog nooit geteld', 'Start de looplijst', url_for('tellen')) }}
+        {% endif %}
+    {% endif %}
+    {% if kassa_status %}
+    {{ status_regel({'groen': 'goed', 'rood': 'slecht', 'oranje': 'oranje'}.get(kassa_status.status, 'neutraal'), 'Kassa', kassa_status.tekst, url_for('kassa_tellen')) }}
+    {% endif %}
+    {% if volgende_wedstrijd %}
+    {% set w = volgende_wedstrijd %}
+    {{ status_regel('neutraal', 'Thuiswedstrijd ' ~ w.dag_kort ~ ' ' ~ w.dag_nummer ~ ' ' ~ w.maand_kort, (w.wedstrijden|map(attribute='team')|join(', ')) ~ (' · ' ~ w.weer.label ~ ', ' ~ w.weer.max_temp|round|int ~ '°' if w.weer and w.weer.max_temp is not none else '')) }}
+    {% endif %}
+    {% if frituurvet_status %}
+    <div class="pda-status pda-status--{{ 'goed' if frituurvet_status.ok else 'slecht' }}">
+        <span class="pda-status-tekst">
+            <strong>Frituurvet: {{ ('vervangen ' ~ frituurvet_status.dagen_geleden ~ (' dag' if frituurvet_status.dagen_geleden == 1 else ' dagen') ~ ' geleden') if frituurvet_status.laatste else 'nog nooit vervangen' }}</strong>
+            <span class="tekst-zacht">Elke {{ frituurvet_status.interval }} dagen</span>
         </span>
-        <span class="pda-menu-label">Scannen</span>
-    </a>
-    <a href="{{ url_for('bestellijst') }}" class="pda-menu-knop">
-        <span class="pda-menu-icoon-cirkel">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/><path d="M3 4h2l2.4 11.6a2 2 0 0 0 2 1.6h7.4a2 2 0 0 0 2-1.6L21 8H6"/></svg>
-        </span>
-        <span class="pda-menu-label">Bestellijst</span>
-    </a>
-    <a href="{{ url_for('geschiedenis') }}" class="pda-menu-knop">
-        <span class="pda-menu-icoon-cirkel">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/></svg>
-        </span>
-        <span class="pda-menu-label">Geschiedenis</span>
-    </a>
-    <a href="{{ url_for('boodschappenlijst') }}" class="pda-menu-knop">
-        <span class="pda-menu-icoon-cirkel">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/></svg>
-        </span>
-        <span class="pda-menu-label">Boodschappen</span>
-    </a>
+        <form method="post" action="{{ url_for('frituurvet_vervangen') }}" onsubmit="return bevestigEnVerstuur(this, 'Frituurvet vandaag vervangen?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-rand btn-klein">Vet vervangen</button>
+        </form>
+    </div>
     {% endif %}
 </div>
 
@@ -79,5 +121,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
         Desktop versie openen
     </a>
+    <p class="pda-start-links">
+        <a href="{{ url_for('tips_pagina') }}">Tips &amp; functies</a>
+        &middot; <a href="{{ url_for('help_pagina') }}">Help</a>
+        &middot; <a href="{{ url_for('privacyverklaring') }}">Privacy</a>
+    </p>
 </div>
 {% endblock %}

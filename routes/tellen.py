@@ -1,9 +1,15 @@
+import json
 from datetime import datetime, timedelta
 
-from flask import Response, flash, redirect, render_template, request, session, url_for
+from flask import Response, flash, g, redirect, render_template, request, session, url_for
 
 from database import get_db
-from voorspelling import maak_prognose
+from voorspelling import (
+    maak_prognose,
+    telling_ver_van_verwachting,
+    verwachte_verkoop_sinds_telling,
+    verwachte_voorraad,
+)
 from voorspelling import omzet_per_week as omzet_per_week_berekend
 from helpers import (
     bereken_trend,
@@ -154,14 +160,111 @@ def register_routes(app):
             "tellen.html",
             producten=producten,
             nu_datetime_local=now_datetime_local(),
+            loop_onderbroken=loop_onderbroken(db, len(producten)),
         )
 
     LOOP_SESSIE_SLEUTELS = ("loop_fase", "loop_index", "loop_bar", "loop_hok")
+    LOOP_BEWAREN_DAGEN = 3  # een onderbroken looplijst blijft zo lang bewaard
+
+    # ---------- Looplijst bewaren, zodat je 'm kunt pauzeren en later oppakken ----------
+    # De stand staat tijdens het lopen in de sessie (zie hieronder) en wordt bij
+    # elke stap ook in de database bewaard: zo overleeft 'ie een vergrendelde
+    # telefoon, uitloggen of een ander toestel.
+
+    def loop_bewaren(db):
+        gebruiker_id = session.get("gebruiker_id")
+        review = session.get("loop_review")
+        if gebruiker_id is None or (review is None and "loop_fase" not in session):
+            return
+        db.execute(
+            """INSERT OR REPLACE INTO loop_voortgang
+                   (gebruiker_id, fase, indx, bar, hok, review, bijgewerkt_op)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                gebruiker_id,
+                session.get("loop_fase", "bar"),
+                session.get("loop_index", 0),
+                json.dumps(session.get("loop_bar", {})),
+                json.dumps(session.get("loop_hok", {})),
+                json.dumps(review) if review is not None else None,
+                now_str(),
+            ),
+        )
+        db.commit()
+
+    def loop_wissen(db):
+        """Alles van de looplijst weg: sessie en bewaarde stand."""
+        for sleutel in list(LOOP_SESSIE_SLEUTELS) + ["loop_review"]:
+            session.pop(sleutel, None)
+        gebruiker_id = session.get("gebruiker_id")
+        if gebruiker_id is not None:
+            db.execute("DELETE FROM loop_voortgang WHERE gebruiker_id = ?", (gebruiker_id,))
+            db.commit()
+
+    def _bewaarde_loop(db):
+        """De bewaarde stand van deze gebruiker, of None (ook als 'ie verlopen is)."""
+        gebruiker_id = session.get("gebruiker_id")
+        if gebruiker_id is None:
+            return None
+        rij = db.execute("SELECT * FROM loop_voortgang WHERE gebruiker_id = ?", (gebruiker_id,)).fetchone()
+        if rij is None:
+            return None
+        try:
+            bijgewerkt = datetime.strptime(rij["bijgewerkt_op"], "%Y-%m-%d %H:%M")
+        except ValueError:
+            bijgewerkt = datetime.now()
+        if datetime.now() - bijgewerkt > timedelta(days=LOOP_BEWAREN_DAGEN):
+            db.execute("DELETE FROM loop_voortgang WHERE gebruiker_id = ?", (gebruiker_id,))
+            db.commit()
+            return None
+        return rij
+
+    def loop_herstellen(db):
+        """Zet de bewaarde stand terug in de sessie. True als er iets was."""
+        rij = _bewaarde_loop(db)
+        if rij is None:
+            return False
+        session["loop_bar"] = json.loads(rij["bar"])
+        session["loop_hok"] = json.loads(rij["hok"])
+        if rij["review"] is not None:
+            session["loop_review"] = json.loads(rij["review"])
+            session.pop("loop_fase", None)
+            session.pop("loop_index", None)
+        else:
+            session["loop_fase"] = rij["fase"]
+            session["loop_index"] = rij["indx"]
+        session.modified = True
+        return True
+
+    def loop_onderbroken(db, totaal):
+        """Beschrijving van een lopende of onderbroken looplijst voor de
+        tellen-pagina, of None."""
+        rij = _bewaarde_loop(db)
+        bijgewerkt = rij["bijgewerkt_op"] if rij else None
+        if session.get("loop_review") is not None:
+            return {"in_controle": True, "fase": None, "nummer": None, "totaal": totaal, "bijgewerkt_op": bijgewerkt}
+        if "loop_fase" in session:
+            return {"in_controle": False, "fase": session.get("loop_fase", "bar"),
+                    "nummer": session.get("loop_index", 0) + 1, "totaal": totaal, "bijgewerkt_op": bijgewerkt}
+        if rij is None:
+            return None
+        return {"in_controle": rij["review"] is not None, "fase": rij["fase"], "nummer": rij["indx"] + 1,
+                "totaal": totaal, "bijgewerkt_op": bijgewerkt}
 
     @app.route("/tellen/lopen/starten")
     def tellen_lopen_starten():
-        for sleutel in LOOP_SESSIE_SLEUTELS:
-            session.pop(sleutel, None)
+        loop_wissen(get_db())
+        return redirect(url_for("tellen_lopen"))
+
+    @app.route("/tellen/lopen/hervatten")
+    def tellen_lopen_hervatten():
+        """Pakt een onderbroken looplijst weer op waar je was."""
+        db = get_db()
+        if session.get("loop_review") is None and "loop_fase" not in session and not loop_herstellen(db):
+            flash("Er is geen looplijst om mee verder te gaan.", "error")
+            return redirect(url_for("tellen"))
+        if session.get("loop_review") is not None:
+            return redirect(url_for("tellen_lopen_controleren"))
         return redirect(url_for("tellen_lopen"))
 
     @app.route("/tellen/lopen", methods=["GET", "POST"])
@@ -175,11 +278,16 @@ def register_routes(app):
             return redirect(url_for("tellen"))
         totaal = len(producten)
 
+        # Sessie kwijt (uitgelogd, nieuw toestel) maar wel iets bewaard: pak dat op.
+        if session.get("loop_review") is None and "loop_fase" not in session:
+            loop_herstellen(db)
+            if session.get("loop_review") is not None:
+                return redirect(url_for("tellen_lopen_controleren"))
+
         if request.method == "POST":
             actie = request.form.get("actie", "volgende")
             if actie == "stoppen":
-                for sleutel in LOOP_SESSIE_SLEUTELS:
-                    session.pop(sleutel, None)
+                loop_wissen(db)
                 flash("Looplijst afgebroken, er is niets opgeslagen.", "error")
                 return redirect(url_for("tellen"))
 
@@ -196,6 +304,17 @@ def register_routes(app):
                     huidige_dict[product_id] = waarde
                 elif product_id in huidige_dict:
                     del huidige_dict[product_id]
+
+            if actie == "pauzeren":
+                # Wat er is ingevuld bewaren en later verder: de stand blijft staan.
+                session["loop_fase"] = fase
+                session["loop_index"] = index
+                session["loop_bar"] = bar_waarden
+                session["loop_hok"] = hok_waarden
+                session.modified = True
+                loop_bewaren(db)
+                flash("Looplijst gepauzeerd. Je kunt later op deze pagina doorgaan waar je was.", "success")
+                return redirect(url_for("tellen"))
 
             if actie == "vorige":
                 index -= 1
@@ -234,15 +353,17 @@ def register_routes(app):
                                 geparsed[pid_str] = geteld_totaal
 
                         if not geparsed:
-                            for sleutel in LOOP_SESSIE_SLEUTELS:
-                                session.pop(sleutel, None)
+                            loop_wissen(db)
                             flash("Geen aantallen ingevuld: er is niets geteld.", "error")
                             return redirect(url_for("tellen"))
 
                         session["loop_review"] = geparsed
+                        session["loop_bar"] = bar_waarden
+                        session["loop_hok"] = hok_waarden
                         session.pop("loop_fase", None)
                         session.pop("loop_index", None)
                         session.modified = True
+                        loop_bewaren(db)
                         return redirect(url_for("tellen_lopen_controleren"))
 
             session["loop_fase"] = fase
@@ -250,6 +371,7 @@ def register_routes(app):
             session["loop_bar"] = bar_waarden
             session["loop_hok"] = hok_waarden
             session.modified = True
+            loop_bewaren(db)
             return redirect(url_for("tellen_lopen"))
 
         fase = session.get("loop_fase", "bar")
@@ -266,9 +388,20 @@ def register_routes(app):
         stap_nu = (0 if fase == "bar" else totaal) + index
         voortgang_percentage = round(stap_nu / (totaal * 2) * 100, 1)
 
+        # Wat er ongeveer in het schap hoort te staan (bar en voorraadhok samen),
+        # als hulp om een telfout meteen op te merken. Mag de looplijst nooit stuk maken.
+        try:
+            verwacht = verwachte_voorraad(
+                verwachte_verkoop_sinds_telling(db).get(huidig["id"]), huidig["voorraad"]
+            )
+        except Exception as fout:
+            print(f"[voorspelling] verwachte voorraad mislukt: {fout}")
+            verwacht = None
+
         return render_template(
             "tellen_lopen.html",
             product=huidig,
+            verwacht=verwacht,
             index=index,
             totaal=totaal,
             fase=fase,
@@ -282,13 +415,15 @@ def register_routes(app):
         db = get_db()
         review = session.get("loop_review")
         if not review:
+            loop_herstellen(db)
+            review = session.get("loop_review")
+        if not review:
             return redirect(url_for("tellen"))
 
         if request.method == "POST":
             actie = request.form.get("actie", "bevestigen")
             if actie == "annuleren":
-                for sleutel in list(LOOP_SESSIE_SLEUTELS) + ["loop_review"]:
-                    session.pop(sleutel, None)
+                loop_wissen(db)
                 flash("Looplijst afgebroken, er is niets opgeslagen.", "error")
                 return redirect(url_for("tellen"))
 
@@ -305,8 +440,7 @@ def register_routes(app):
                     continue
                 waarden[int(product_id_str)] = aantal
 
-            for sleutel in list(LOOP_SESSIE_SLEUTELS) + ["loop_review"]:
-                session.pop(sleutel, None)
+            loop_wissen(db)
 
             telling_id = verwerk_telling(
                 db,
@@ -327,6 +461,11 @@ def register_routes(app):
 
         bar_waarden = session.get("loop_bar", {})
         hok_waarden = session.get("loop_hok", {})
+        try:
+            verwachting = verwachte_verkoop_sinds_telling(db)
+        except Exception as fout:
+            print(f"[voorspelling] verwachte voorraad mislukt: {fout}")
+            verwachting = {}
         regels = []
         for product_id_str, totaal in review.items():
             product = db.execute(
@@ -334,6 +473,7 @@ def register_routes(app):
             ).fetchone()
             if product is None:
                 continue
+            verwacht_nu = verwachte_voorraad(verwachting.get(product["id"]), product["voorraad"])
             regels.append(
                 {
                     "product": product,
@@ -342,6 +482,10 @@ def register_routes(app):
                     "totaal": totaal,
                     "afwijking": signaleer_afwijkende_telling(
                         db, product["id"], product["voorraad"], totaal
+                    ),
+                    "verwacht": verwacht_nu,
+                    "model_afwijking": telling_ver_van_verwachting(
+                        verwachting.get(product["id"]), product["voorraad"], totaal
                     ),
                 }
             )
@@ -388,7 +532,7 @@ def register_routes(app):
             prognose = None
 
         return render_template(
-            "tellingen_overzicht.html",
+            "pda_tellingen.html" if g.get("weergave_modus") == "pda" else "tellingen_overzicht.html",
             tellingen=tellingen,
             regels_per_telling=regels_per_telling,
             omzet_per_week=omzet_per_week,
@@ -460,7 +604,7 @@ def register_routes(app):
         besteladvies = bestel_suggesties(db)
 
         return render_template(
-            "telling_detail.html",
+            "pda_telling_detail.html" if g.get("weergave_modus") == "pda" else "telling_detail.html",
             telling=telling,
             regels=regels,
             totaal_omzet=totaal_omzet,

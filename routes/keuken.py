@@ -1,8 +1,8 @@
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import flash, g, redirect, render_template, request, session, url_for
 
 from database import get_db
 from helpers import bereken_frituurvet_status, now_str
-from routes.producten import render_producten_pagina
+from routes.producten import render_producten_pagina, render_voorraad_pda
 
 
 def register_routes(app):
@@ -25,6 +25,8 @@ def register_routes(app):
         # routes/producten.py). Blijft een eigen route+endpoint, want deze
         # zit achter sectie 'keuken' i.p.v. 'voorraad': een vrijwilliger met
         # alleen keuken-rechten mag hier wel komen, maar niet op /producten.
+        if g.get("weergave_modus") == "pda":
+            return render_voorraad_pda(categorie="Keuken", titel="Keuken")
         return render_producten_pagina(categorie_vergrendeld="Keuken")
 
     @app.route("/keuken/instellingen", methods=["GET", "POST"])

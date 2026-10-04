@@ -3,7 +3,7 @@ de Club van 20-pagina naartoe leidt) en de concepttabel voor de beheerders
 (Club van 20 > Aanmeldingen) waar elke aanmelding wordt goedgekeurd nadat de
 betaling is gecontroleerd. De regels zelf staan in aanmeldingen.py."""
 
-from flask import current_app, flash, redirect, render_template, request, session, url_for
+from flask import current_app, flash, g, redirect, render_template, request, session, url_for
 
 from aanmeldingen import (
     AANMELD_BETAALWIJZEN,
@@ -184,7 +184,7 @@ def register_routes(app):
                WHERE a.status != 'nieuw' ORDER BY a.behandeld_op DESC, a.id DESC LIMIT 50"""
         ).fetchall()
         return render_template(
-            "club_van_20_aanmeldingen.html",
+            "pda_club_aanmeldingen.html" if g.get("weergave_modus") == "pda" else "club_van_20_aanmeldingen.html",
             openstaand=openstaand,
             behandeld=behandeld,
             teams=[

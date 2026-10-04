@@ -171,7 +171,7 @@ def test_desktop_modus_toont_wel_voorgesteld_om_te_bestellen(ingelogde_client):
     assert 'id="suggesties-tabel"' in body
 
 
-def test_pda_start_bevat_alle_zes_secties(ingelogde_client):
+def test_pda_start_bevat_de_vaste_ingangen(ingelogde_client):
     ingelogde_client.get("/weergave/pda")
     resp = ingelogde_client.get("/")
     body = resp.data.decode()

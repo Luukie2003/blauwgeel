@@ -1,0 +1,91 @@
+{% extends "base_pda.html" %}
+{% block titel %}{{ titel }}{% endblock %}
+{% block inhoud %}
+<div class="pda-cijferrij">
+    <div class="pda-cijfer {{ 'pda-cijfer--let-op' if aantal_laag else '' }}">
+        <span class="pda-cijfer-getal">{{ aantal_laag }}</span>
+        <span class="tekst-zacht">onder het minimum</span>
+    </div>
+    <div class="pda-cijfer {{ 'pda-cijfer--let-op' if aantal_leeg else '' }}">
+        <span class="pda-cijfer-getal">{{ aantal_leeg }}</span>
+        <span class="tekst-zacht">op voorraad 0</span>
+    </div>
+</div>
+
+{% if producten %}
+<div class="pda-voorraad-bediening">
+    <input type="search" id="pda-voorraad-zoek" placeholder="Zoek in {{ titel|lower }}..." autocomplete="off" aria-label="Zoek in de voorraad">
+    <div class="pda-wissel" role="group" aria-label="Wat tonen">
+        <button type="button" class="pda-wissel-knop{{ '' if alleen_laag else ' actief' }}" data-modus="alles">Alles</button>
+        <button type="button" class="pda-wissel-knop{{ ' actief' if alleen_laag else '' }}" data-modus="laag">Alleen laag</button>
+    </div>
+    <span id="pda-voorraad-aantal" class="tekst-zacht"></span>
+</div>
+
+<div id="pda-voorraad-groepen">
+    {% for categorie, producten_in_categorie in producten|groupby('categorie') %}
+    <details class="pda-groep" open data-groep>
+        <summary class="pda-groep-kop">
+            <span>{{ categorie }}</span>
+            <span class="tekst-zacht pda-groep-aantal"></span>
+        </summary>
+        {% for p in producten_in_categorie %}
+        {% set laag = p.voorraad < p.min_voorraad %}
+        {% if sectie_toegang.voorraad %}<a href="{{ url_for('product_detail', product_id=p.id) }}"{% else %}<div{% endif %}
+           class="pda-voorraad-rij{{ ' pda-voorraad-rij--laag' if laag else '' }}"
+           data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ (p.subcategorie or ''))|lower }}"
+           data-laag="{{ 1 if laag else 0 }}">
+            <span class="pda-voorraad-naam">
+                {{ p.naam }}
+                <span class="tekst-zacht pda-voorraad-sub">minimum {{ p.min_voorraad }} {{ p.eenheid }}{% if p.subcategorie %} &middot; {{ p.subcategorie }}{% endif %}</span>
+            </span>
+            <span class="badge {{ 'badge-laag' if laag else 'badge-ok' }}">{{ p.voorraad }} {{ p.eenheid }}</span>
+        {% if sectie_toegang.voorraad %}</a>{% else %}</div>{% endif %}
+        {% endfor %}
+    </details>
+    {% endfor %}
+</div>
+<p class="leeg" id="pda-voorraad-leeg" style="display:none">Niets gevonden.</p>
+
+<script>
+(function () {
+    var zoek = document.getElementById('pda-voorraad-zoek');
+    var rijen = Array.prototype.slice.call(document.querySelectorAll('.pda-voorraad-rij'));
+    var groepen = Array.prototype.slice.call(document.querySelectorAll('[data-groep]'));
+    var knoppen = Array.prototype.slice.call(document.querySelectorAll('.pda-wissel-knop'));
+    var aantalLabel = document.getElementById('pda-voorraad-aantal');
+    var leeg = document.getElementById('pda-voorraad-leeg');
+    var alleenLaag = {{ 'true' if alleen_laag else 'false' }};
+
+    function filter() {
+        var term = zoek.value.trim().toLowerCase();
+        var zichtbaar = 0;
+        rijen.forEach(function (rij) {
+            var toon = (!term || rij.dataset.zoek.indexOf(term) !== -1) && (!alleenLaag || rij.dataset.laag === '1');
+            rij.style.display = toon ? '' : 'none';
+            if (toon) zichtbaar++;
+        });
+        groepen.forEach(function (groep) {
+            var n = groep.querySelectorAll('.pda-voorraad-rij:not([style*="display: none"])').length;
+            groep.style.display = n ? '' : 'none';
+            groep.querySelector('.pda-groep-aantal').textContent = n;
+        });
+        aantalLabel.textContent = zichtbaar + ' van ' + rijen.length + ' producten';
+        leeg.style.display = zichtbaar ? 'none' : '';
+    }
+
+    knoppen.forEach(function (knop) {
+        knop.addEventListener('click', function () {
+            alleenLaag = knop.dataset.modus === 'laag';
+            knoppen.forEach(function (k) { k.classList.toggle('actief', k === knop); });
+            filter();
+        });
+    });
+    zoek.addEventListener('input', filter);
+    filter();
+})();
+</script>
+{% else %}
+<p class="leeg">Nog geen actieve producten.</p>
+{% endif %}
+{% endblock %}

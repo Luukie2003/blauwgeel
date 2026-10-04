@@ -13,7 +13,7 @@
         {% if pda_modus %}
         <div id="loop-controleren-kaarten">
             {% for r in regels %}
-            <div class="pda-kaartje{{ ' pda-kaartje--manco' if r.afwijking else '' }}">
+            <div class="pda-kaartje{{ ' pda-kaartje--manco' if r.afwijking or r.model_afwijking else '' }}">
                 <div class="pda-kaartje-vink" style="cursor:default">
                     <span class="pda-kaartje-naam">{{ r.product.naam }}</span>
                     {% if r.afwijking %}
@@ -26,6 +26,13 @@
                 <div class="pda-kaartje-info">
                     <span class="tekst-zacht">Bar: {{ r.bar }} {{ r.product.eenheid }} &middot; Voorraadhok: {{ r.hok }} {{ r.product.eenheid }}</span>
                 </div>
+                {% if r.model_afwijking %}
+                <p class="loop-model-afwijking">
+                    {% if r.model_afwijking == 'minder' %}Veel minder dan verwacht{% else %}Meer dan verwacht{% endif %}:
+                    je telde {{ r.totaal }}, verwacht ongeveer {{ r.verwacht.verwacht }} ({{ r.verwacht.laag }} tot {{ r.verwacht.hoog }}).
+                    {% if r.model_afwijking == 'minder' %}Nog eens tellen?{% else %}Is er een levering niet ingeboekt?{% endif %}
+                </p>
+                {% endif %}
                 <div class="veld pda-kaartje-veld">
                     <label>Totaal ({{ r.product.eenheid }})</label>
                     <input type="number" name="totaal_{{ r.product.id }}" min="0" value="{{ r.totaal }}">
@@ -47,8 +54,16 @@
                 </thead>
                 <tbody>
                     {% for r in regels %}
-                    <tr class="{{ 'rij-waarschuwing' if r.afwijking }}">
-                        <td>{{ r.product.naam }}</td>
+                    <tr class="{{ 'rij-waarschuwing' if r.afwijking or r.model_afwijking }}">
+                        <td>{{ r.product.naam }}
+                            {% if r.model_afwijking %}
+                            <div class="loop-model-afwijking">
+                                {% if r.model_afwijking == 'minder' %}Veel minder dan verwacht{% else %}Meer dan verwacht{% endif %}:
+                                verwacht ongeveer {{ r.verwacht.verwacht }} ({{ r.verwacht.laag }} tot {{ r.verwacht.hoog }}).
+                                {% if r.model_afwijking == 'minder' %}Nog eens tellen?{% else %}Levering niet ingeboekt?{% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
                         <td class="tekst-zacht">{{ r.bar }} {{ r.product.eenheid }}</td>
                         <td class="tekst-zacht">{{ r.hok }} {{ r.product.eenheid }}</td>
                         <td>

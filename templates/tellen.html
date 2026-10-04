@@ -11,6 +11,28 @@
 </p>
 {% endif %}
 
+{% if loop_onderbroken %}
+<div class="kaart loop-aankondiging" style="border-color:var(--geel-donker)">
+    <div>
+        <strong>Looplijst onderbroken</strong>
+        <p class="tekst-zacht" style="margin:0.2rem 0 0">
+            {% if loop_onderbroken.in_controle %}
+            Je was klaar met tellen en hoefde alleen nog te controleren en te bevestigen.
+            {% else %}
+            Je was bij product {{ loop_onderbroken.nummer }} van {{ loop_onderbroken.totaal }}
+            ({{ 'bar' if loop_onderbroken.fase == 'bar' else 'voorraadhok' }}).
+            {% endif %}
+            {% if loop_onderbroken.bijgewerkt_op %}Laatst bijgewerkt {{ loop_onderbroken.bijgewerkt_op|datum_nl }}.{% endif %}
+            Wat je al hebt ingevuld is bewaard.
+        </p>
+    </div>
+    <div class="pda-knoppenrij" style="margin:0">
+        <a href="{{ url_for('tellen_lopen_hervatten') }}" class="btn btn-geel">Doorgaan</a>
+        <a href="{{ url_for('tellen_lopen_starten') }}" class="btn btn-rand"
+           onclick="toonBevestiging('Opnieuw beginnen? Wat je tot nu toe hebt ingevuld wordt weggegooid.', function () { window.location = '{{ url_for('tellen_lopen_starten') }}'; }); return false;">Opnieuw beginnen</a>
+    </div>
+</div>
+{% else %}
 <div class="kaart loop-aankondiging">
     <div>
         <strong>Onderweg tellen met je telefoon?</strong>
@@ -30,6 +52,7 @@
         Looplijst starten
     </a>
 </div>
+{% endif %}
 
 {% if not pda_modus %}
 <div class="kaart" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap">

@@ -788,6 +788,110 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
 
 
 # ---------------------------------------------------------------------------
+# Wat zou er nu in het schap moeten staan? (voor de looplijst)
+# ---------------------------------------------------------------------------
+
+MIN_WAARNEMINGEN_VERWACHTING = 3  # eerder zegt het model te weinig over één product
+_VERWACHT_CACHE = {}  # (database, telling, kwartier) -> uitkomst; de looplijst vraagt dit bij elk product
+_VERWACHT_CACHE_MAX = 4
+
+
+def verwachte_verkoop_sinds_telling(db, nu=None):
+    """Per product: hoeveel er volgens het model verkocht is sinds de laatste
+    telling van dat product, met een ruime marge. De geregistreerde voorraad
+    is namelijk de stand van de laatste telling plus wat er sindsdien is
+    ingeboekt; de verkoop ertussen weet de app pas bij de volgende telling.
+    Daarmee kan de looplijst tonen wat er ongeveer in het schap hoort te staan
+    en een telling die daar ver naast zit laten controleren.
+
+    Geeft {product_id: {"verwacht", "laag", "hoog", "ruim_laag", "ruim_hoog",
+    "sinds", "waarnemingen"}}; leeg zolang er te weinig tellingen zijn. Het
+    resultaat wordt kort bewaard (het model aanpassen kost wat rekentijd en de
+    looplijst vraagt het voor elk product opnieuw)."""
+    nu = nu or datetime.now()
+    laatste = db.execute(
+        "SELECT COUNT(*) AS n, COALESCE(MAX(id), 0) AS laatste FROM tellingen"
+    ).fetchone()
+    sleutel = (db.execute("PRAGMA database_list").fetchone()[2], laatste["n"], laatste["laatste"], int(nu.timestamp() // 900))
+    if sleutel in _VERWACHT_CACHE:
+        return _VERWACHT_CACHE[sleutel]
+
+    uitkomst = {}
+    rijen, _ = lees_rijen(db, nu)
+    if rijen:
+        kalender = lees_kalender(
+            db, min(r["start"] for r in rijen).date() - timedelta(days=2), nu.date() + timedelta(days=2)
+        )
+        _voeg_blootstelling_toe(rijen, kalender, nu)
+        effecten, overspreiding, _informatie = pas_model_aan(rijen)
+        snelheid = _snelheden(rijen, effecten)
+        rijen_per_product = {}
+        for r in rijen:
+            rijen_per_product.setdefault(r["pid"], []).append(r)
+        laatste_telling = {
+            r["product_id"]: _parse(r["laatste"])
+            for r in db.execute(
+                """SELECT tr.product_id, MAX(t.datum) AS laatste
+                   FROM telling_regels tr JOIN tellingen t ON t.id = tr.telling_id
+                   GROUP BY tr.product_id"""
+            ).fetchall()
+        }
+        for pid, snel in snelheid.items():
+            sinds = laatste_telling.get(pid)
+            lijst = rijen_per_product[pid]
+            if snel <= 0 or sinds is None or sinds >= nu or len(lijst) < MIN_WAARNEMINGEN_VERWACHTING:
+                continue
+            gewicht_som = sum(r["w"] for r in lijst if not r["afgekapt"]) or sum(r["w"] for r in lijst)
+            gewicht_blootstelling = sum(
+                r["w"] * drukte(r["b"], effecten) for r in lijst if not r["afgekapt"]
+            ) or sum(r["w"] * drukte(r["b"], effecten) for r in lijst)
+            mu = snel * drukte(blootstelling(sinds, nu, kalender), effecten)
+            rel_snelheid_var = 1.0 / max(snel * gewicht_blootstelling, 1e-9) + overspreiding / max(gewicht_som, 1.0)
+            var = mu + (mu ** 2) * (overspreiding + rel_snelheid_var + 0.03 ** 2)
+            uitkomst[pid] = {
+                "verwacht": mu,
+                "laag": kwantiel(mu, var, 0.1),
+                "hoog": kwantiel(mu, var, 0.9),
+                "ruim_laag": kwantiel(mu, var, 0.02),
+                "ruim_hoog": kwantiel(mu, var, 0.98),
+                "sinds": sinds,
+                "waarnemingen": len(lijst),
+            }
+    if len(_VERWACHT_CACHE) >= _VERWACHT_CACHE_MAX:
+        _VERWACHT_CACHE.clear()
+    _VERWACHT_CACHE[sleutel] = uitkomst
+    return uitkomst
+
+
+def verwachte_voorraad(verwachting, voorraad):
+    """Wat er ongeveer in het schap hoort te staan: {"verwacht", "laag", "hoog"}
+    (aantallen, nooit onder 0), of None zonder bruikbare verwachting."""
+    if not verwachting:
+        return None
+    return {
+        "verwacht": max(0, round(voorraad - verwachting["verwacht"])),
+        "laag": max(0, voorraad - verwachting["hoog"]),
+        "hoog": max(0, voorraad - verwachting["laag"]),
+    }
+
+
+def telling_ver_van_verwachting(verwachting, voorraad, geteld):
+    """'minder' of 'meer' als het getelde aantal ruim buiten de verwachting
+    valt (ruimer dan de gewone marge, en alleen bij een merkbaar verschil),
+    anders None. 'minder' kan een telfout zijn, of verlies; 'meer' wijst vaak op
+    een levering die nog niet is ingeboekt."""
+    if not verwachting:
+        return None
+    verwacht = verwachting["verwacht"]
+    slack = max(2, 0.25 * verwacht)
+    if geteld < voorraad - verwachting["ruim_hoog"] - slack:
+        return "minder"
+    if geteld > voorraad - verwachting["ruim_laag"] + slack:
+        return "meer"
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Omzet per week, ook als je niet elke week op dezelfde dag telt
 # ---------------------------------------------------------------------------
 

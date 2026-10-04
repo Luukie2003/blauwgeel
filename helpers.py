@@ -1310,6 +1310,45 @@ def bereken_bestelling_status(db):
     return {"status": status, "tekst": tekst, "laatste_bestelling": laatste_ontvangen}
 
 
+def bereken_pda_start(db, rol, secties):
+    """Wat het handterminal-startscherm bovenaan laat zien: een paar korte
+    regels met wat er nu aandacht nodig heeft. Alleen wat bij de rechten
+    van de gebruiker past (voorraad, kassa, keuken), zodat een vrijwilliger
+    met alleen keuken-rechten niet ineens voorraadcijfers krijgt."""
+    heeft = lambda sectie: heeft_sectie_toegang(rol, secties, sectie)
+    uitkomst = {
+        "laag": None,
+        "open_bestellingen": None,
+        "telling_status": None,
+        "kassa_status": None,
+        "bestelling_status": None,
+        "frituurvet_status": None,
+        "volgende_wedstrijd": None,
+    }
+    if heeft("voorraad"):
+        uitkomst["laag"] = db.execute(
+            "SELECT COUNT(*) AS n FROM producten WHERE actief = 1 AND voorraad < min_voorraad"
+        ).fetchone()["n"]
+        uitkomst["open_bestellingen"] = db.execute(
+            "SELECT COUNT(*) AS n FROM bestellingen WHERE status = 'besteld'"
+        ).fetchone()["n"]
+        uitkomst["telling_status"] = bereken_laatste_telling_status(db)
+        uitkomst["bestelling_status"] = bereken_bestelling_status(db)
+        komend = bereken_komende_thuiswedstrijden(db, dagen=7)
+        uitkomst["volgende_wedstrijd"] = komend[0] if komend else None
+    if heeft("kassa"):
+        uitkomst["kassa_status"] = bereken_kassa_telling_status(db)
+    if heeft("keuken"):
+        uitkomst["frituurvet_status"] = bereken_frituurvet_status(db)
+    mededelingen = db.execute(
+        """SELECT COUNT(*) AS n, COALESCE(SUM(urgent), 0) AS urgent
+           FROM mededelingen WHERE afgehandeld = 0"""
+    ).fetchone()
+    uitkomst["mededelingen_open"] = mededelingen["n"]
+    uitkomst["mededelingen_urgent"] = mededelingen["urgent"]
+    return uitkomst
+
+
 def bereken_frituurvet_status(db):
     """Status van het statusblokje 'Frituurvet': groen zolang de laatste
     vervanging binnen het ingestelde aantal dagen (instellingen tabel,

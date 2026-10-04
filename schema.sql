@@ -672,3 +672,19 @@ CREATE TABLE IF NOT EXISTS kiosk_prijzen_instellingen (
     wedstrijddag_welkom_tekst TEXT NOT NULL DEFAULT 'Welkom {tegenstander}!'
 );
 INSERT OR IGNORE INTO kiosk_prijzen_instellingen (id) VALUES (1);
+
+-- Waar iemand is met de looplijst voor tellen (zie routes/tellen.py), zodat je
+-- 'm kunt pauzeren en later (ook na uitloggen, een vergrendelde telefoon of op
+-- een ander toestel) weer oppakt. 1 rij per gebruiker; bar en hok zijn
+-- JSON-objecten {product_id: aantal} en review is het totaal zodra beide
+-- rondes klaar zijn en alleen nog gecontroleerd hoeft te worden. Verdwijnt
+-- bij bevestigen, stoppen, opnieuw beginnen of na een paar dagen.
+CREATE TABLE IF NOT EXISTS loop_voortgang (
+    gebruiker_id INTEGER PRIMARY KEY REFERENCES gebruikers(id) ON DELETE CASCADE,
+    fase TEXT NOT NULL DEFAULT 'bar',
+    indx INTEGER NOT NULL DEFAULT 0,
+    bar TEXT NOT NULL DEFAULT '{}',
+    hok TEXT NOT NULL DEFAULT '{}',
+    review TEXT,
+    bijgewerkt_op TEXT NOT NULL
+);

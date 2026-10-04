@@ -1,6 +1,6 @@
 import sqlite3
 
-from flask import Response, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Response, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 import qr
 from database import get_db
@@ -57,6 +57,36 @@ def render_producten_pagina(categorie_vergrendeld=None):
         subcategorieen=subcategorieen,
         niet_verplicht_categorieen=categorienamen_zonder_verkoopprijsplicht(db),
         categorie_vergrendeld=categorie_vergrendeld,
+    )
+
+
+def render_voorraad_pda(categorie=None, titel="Voorraad"):
+    """De voorraadlijst voor de handterminal-weergave: per categorie een
+    compacte lijst met wat er op voorraad is, met zoeken en een filter
+    "alleen wat laag is". Optioneel beperkt tot 1 categorie (de
+    keuken-pagina, zie routes/keuken.py -- die zit achter de sectie
+    'keuken', dus dan komen er geen producten van andere categorieën
+    in beeld)."""
+    db = get_db()
+    if categorie:
+        producten = db.execute(
+            "SELECT * FROM producten WHERE actief = 1 AND categorie = ? ORDER BY categorie, naam",
+            (categorie,),
+        ).fetchall()
+    else:
+        producten = db.execute(
+            "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
+        ).fetchall()
+    laag = [p for p in producten if p["voorraad"] < p["min_voorraad"]]
+    leeg = [p for p in producten if p["voorraad"] <= 0]
+    return render_template(
+        "pda_voorraad.html",
+        titel=titel,
+        producten=producten,
+        aantal_laag=len(laag),
+        aantal_leeg=len(leeg),
+        alleen_laag=request.args.get("alleen") == "laag",
+        categorie_vergrendeld=categorie,
     )
 
 
@@ -182,6 +212,8 @@ def register_routes(app):
 
     @app.route("/voorraadoverzicht")
     def voorraadoverzicht():
+        if g.get("weergave_modus") == "pda":
+            return render_voorraad_pda()
         db = get_db()
         return render_template(
             "voorraadoverzicht.html", **bereken_voorraadoverzicht(db)

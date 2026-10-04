@@ -194,6 +194,7 @@ SECTIE_ENDPOINTS = {
         "geschiedenis",
         "tellen",
         "tellen_lopen_starten",
+        "tellen_lopen_hervatten",
         "tellen_lopen",
         "tellen_lopen_controleren",
         "tellingen_overzicht",
@@ -407,6 +408,7 @@ NAV_ITEMS = [
             "tellen",
             "tellen_lopen",
             "tellen_lopen_starten",
+            "tellen_lopen_hervatten",
             "tellen_lopen_controleren",
         ],
         "url_endpoint": "tellen",
@@ -693,11 +695,12 @@ NAV_ITEMS.sort(key=lambda item: NAV_GROEP_VOLGORDE.index(item["groep"]))
 # een vrijwilliger, ook al staan ze niet in NAV_GROEP_SECTIE.
 NAV_GROEP_ALLEEN_BEHEERDER = {"Club", "Kluis"}
 
-# De PDA-modus (zie WEERGAVE_TELEFOON_PATROON hieronder) toont alleen deze
-# handvol pagina's -- puur vloerwerk, geen beheer/rapportages. Bewust een
-# losse, kortere lijst i.p.v. een subset-vlag op NAV_ITEMS: die twee navigaties
-# verschillen te veel (geen groepen, kortere labels) om hetzelfde datamodel
-# te delen.
+# De PDA-modus (zie WEERGAVE_TELEFOON_PATROON hieronder) heeft zijn eigen
+# kop met alleen een kort label per pagina (geen zijbalk): vloerwerk plus een
+# paar overzichten om te bekijken, geen beheer en geen zware rapportages.
+# Bewust een losse lijst i.p.v. een subset-vlag op NAV_ITEMS: die twee
+# navigaties verschillen te veel (geen groepen, kortere labels) om hetzelfde
+# datamodel te delen. De knoppen op het startscherm staan in pda_start.html.
 PDA_NAV_ITEMS = [
     {"url_endpoint": "tellen", "pda_label": "Tellen"},
     {"url_endpoint": "boeken", "pda_label": "Boeken"},
@@ -707,6 +710,12 @@ PDA_NAV_ITEMS = [
     {"url_endpoint": "bestellijst", "pda_label": "Bestellijst"},
     {"url_endpoint": "geschiedenis", "pda_label": "Geschiedenis"},
     {"url_endpoint": "boodschappenlijst", "pda_label": "Boodschappen"},
+    {"url_endpoint": "voorraadoverzicht", "pda_label": "Voorraad"},
+    {"url_endpoint": "tellingen_overzicht", "pda_label": "Tellingen"},
+    {"url_endpoint": "prognose_pagina", "pda_label": "Prognose"},
+    {"url_endpoint": "keuken_voorraad", "pda_label": "Keuken"},
+    {"url_endpoint": "kluis_tellen", "pda_label": "Kluis"},
+    {"url_endpoint": "club_van_20_aanmeldingen", "pda_label": "Club 20"},
 ]
 
 
@@ -850,14 +859,6 @@ def create_app(database_path=None, admin_wachtwoord=None):
         zichtbare_nav_items = [
             item for item in NAV_ITEMS if _nav_item_zichtbaar(item, gebruiker_rol, gebruiker_secties)
         ]
-        zichtbare_pda_items = [
-            item
-            for item in PDA_NAV_ITEMS
-            if item["url_endpoint"] not in ENDPOINT_SECTIE
-            or heeft_sectie_toegang(
-                gebruiker_rol, gebruiker_secties, ENDPOINT_SECTIE[item["url_endpoint"]]
-            )
-        ]
         actieve_nav = next(
             (item for item in NAV_ITEMS if request.endpoint in item["endpoints"]),
             None,
@@ -888,7 +889,6 @@ def create_app(database_path=None, admin_wachtwoord=None):
         }
         return {
             "nav_items": zichtbare_nav_items,
-            "pda_nav_items": zichtbare_pda_items,
             "sectie_toegang": sectie_toegang,
             "club_aanmeldingen_open": club_aanmeldingen_open,
             "actieve_nav": actieve_nav,
