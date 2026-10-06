@@ -27,8 +27,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.26.1"
+HUIDIGE_VERSIE = "1.27.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.27.0",
+        "datum": "7 oktober 2026",
+        "punten": [
+            "Man of the Match: kies per team of jullie hebben gewonnen, gelijkgespeeld of verloren. De dia zet de uitslag dan zelf in de juiste volgorde (eigen team links), ook als je de cijfers in een andere volgorde invult, en toont het resultaat in kleur onder de score",
+        ],
+    },
     {
         "versie": "1.26.1",
         "datum": "6 oktober 2026",

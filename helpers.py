@@ -1034,6 +1034,41 @@ def kassa_telling_is_zelf_goedgekeurd(telling):
     )
 
 
+MOTM_RESULTATEN = {"gewonnen": "Gewonnen", "gelijk": "Gelijkspel", "verloren": "Verloren"}
+_MOTM_SCORE = re.compile(r"^\s*(\d+)\s*[-\u2013:]\s*(\d+)\s*$")
+
+
+def motm_score_weergave(uitslag, resultaat):
+    """De uitslag zoals 'ie op de Man of the Match-dia komt: het eigen team links.
+    Met een gekozen resultaat (gewonnen/gelijk/verloren) maakt dit uit welk
+    getal van het eigen team is: bij "gewonnen" het hoogste, bij "verloren" het
+    laagste. Zo maakt het niet uit of je "1-2" of "2-1" intikt, of de uitslag
+    overneemt van voetbal.nl (thuisploeg eerst, ook als je zelf uit speelde).
+    Zonder resultaat, een tegenstrijdige combinatie (bijv. "2-2" bij gewonnen)
+    of een uitslag die geen twee getallen is, blijft de tekst zoals getypt."""
+    tekst = (uitslag or "").strip()
+    gevonden = _MOTM_SCORE.match(tekst)
+    if not gevonden or resultaat not in MOTM_RESULTATEN:
+        return tekst
+    a, b = int(gevonden.group(1)), int(gevonden.group(2))
+    if resultaat == "gelijk":
+        return f"{a}-{b}" if a == b else tekst
+    if a == b:
+        return tekst
+    hoog, laag = max(a, b), min(a, b)
+    return f"{hoog}-{laag}" if resultaat == "gewonnen" else f"{laag}-{hoog}"
+
+
+def motm_resultaat_klopt(uitslag, resultaat):
+    """False als de uitslag een score is die niet bij het gekozen resultaat past
+    (gelijkspel met ongelijke cijfers, of winst/verlies met gelijke cijfers)."""
+    gevonden = _MOTM_SCORE.match((uitslag or "").strip())
+    if not gevonden or resultaat not in MOTM_RESULTATEN:
+        return True
+    gelijk = int(gevonden.group(1)) == int(gevonden.group(2))
+    return gelijk if resultaat == "gelijk" else not gelijk
+
+
 def bereken_wedstrijd_geschiedenis(db, limiet=25, inclusief_afgelast=False):
     """De laatst gespeelde wedstrijden (alle teams, thuis en uit) --
     gedeeld tussen de Wedstrijden-pagina en Club instellingen. Afgelaste

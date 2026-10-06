@@ -241,7 +241,11 @@
     <h2 style="margin-top:0">Man of the Match bijwerken</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
         Sleep in de gewenste volgorde, pas de teamnaam aan waar nodig en vul de tegenstander, de
-        uitslag en de naam in bij elk team dat afgelopen weekend heeft gespeeld. Meerdere mensen?
+        uitslag en de naam in bij elk team dat afgelopen weekend heeft gespeeld. Kies ook of jullie
+        gewonnen, gelijkgespeeld of verloren hebben: dan zet de dia de uitslag zelf goed (eigen team links)
+        en maakt het niet uit in welke volgorde je de cijfers invult, bijvoorbeeld "1-2" zoals voetbal.nl
+        het noemt als jullie uit speelden. Zonder resultaat staat de uitslag precies zoals je 'm typt.
+        Meerdere mensen?
         Scheid de namen met een komma (bijv. "Jan Jansen, Piet Pietersen"). Uitslag én naam leeg
         laten = dat team heeft niet gespeeld en wordt overgeslagen op de dia. Staat de tegenstander
         ook al in het clublogo-register (zie "Standen bijwerken" hieronder), dan verschijnt dat logo
@@ -253,6 +257,12 @@
             <input type="text" class="motm-item-naam-veld" value="{{ team.team }}" title="Teamnaam aanpassen" draggable="false">
             <input type="text" class="motm-tegenstander-veld" placeholder="Tegenstander..." value="{{ team.tegenstander or '' }}" draggable="false">
             <input type="text" class="motm-uitslag-veld" placeholder="Uitslag (bijv. 3-1)..." value="{{ team.uitslag or '' }}" draggable="false">
+            <select class="motm-resultaat-veld" title="Gewonnen of verloren? Dan zet de dia de uitslag zelf goed, ook als je de cijfers in een andere volgorde invult." draggable="false">
+                <option value="">Resultaat...</option>
+                {% for sleutel, label in motm_resultaten.items() %}
+                <option value="{{ sleutel }}" {{ 'selected' if team.resultaat == sleutel }}>{{ label }}</option>
+                {% endfor %}
+            </select>
             <input type="text" class="motm-speler-veld" placeholder="Naam/namen invullen..." value="{{ team.speler or '' }}" draggable="false">
             <form method="post" action="{{ url_for('kiosk_motm_team_verwijderen', team_id=team.id) }}" draggable="false">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -267,6 +277,7 @@
         <input type="hidden" name="volgorde" class="motm-volgorde-veld">
         <input type="hidden" name="spelers" class="motm-spelers-veld">
         <input type="hidden" name="uitslagen" class="motm-uitslagen-veld">
+        <input type="hidden" name="resultaten" class="motm-resultaten-veld">
         <input type="hidden" name="tegenstanders" class="motm-tegenstanders-veld">
         <input type="hidden" name="teamnamen" class="motm-teamnamen-veld">
         <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
@@ -387,6 +398,7 @@
         user-select: none;
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 0.6rem;
     }
     .motm-item.wordt-gesleept { opacity: 0.4; }
@@ -403,7 +415,8 @@
     .motm-item-naam-veld:hover, .motm-item-naam-veld:focus { border-color: #d7dae2; background: #fff; }
     .motm-tegenstander-veld { flex-shrink: 0; width: 9rem; }
     .motm-uitslag-veld { flex-shrink: 0; width: 6rem; }
-    .motm-speler-veld { flex: 1; }
+    .motm-resultaat-veld { flex-shrink: 0; width: 8rem; }
+    .motm-speler-veld { flex: 1; min-width: 12rem; }
     .motm-item form { margin: 0; }
 </style>
 
@@ -539,17 +552,20 @@
         var volgorde = items.map(function (item) { return item.dataset.id; });
         var spelers = {};
         var uitslagen = {};
+        var resultaten = {};
         var tegenstanders = {};
         var teamnamen = {};
         items.forEach(function (item) {
             spelers[item.dataset.id] = item.querySelector('.motm-speler-veld').value;
             uitslagen[item.dataset.id] = item.querySelector('.motm-uitslag-veld').value;
+            resultaten[item.dataset.id] = item.querySelector('.motm-resultaat-veld').value;
             tegenstanders[item.dataset.id] = item.querySelector('.motm-tegenstander-veld').value;
             teamnamen[item.dataset.id] = item.querySelector('.motm-item-naam-veld').value;
         });
         form.querySelector('.motm-volgorde-veld').value = JSON.stringify(volgorde);
         form.querySelector('.motm-spelers-veld').value = JSON.stringify(spelers);
         form.querySelector('.motm-uitslagen-veld').value = JSON.stringify(uitslagen);
+        form.querySelector('.motm-resultaten-veld').value = JSON.stringify(resultaten);
         form.querySelector('.motm-tegenstanders-veld').value = JSON.stringify(tegenstanders);
         form.querySelector('.motm-teamnamen-veld').value = JSON.stringify(teamnamen);
     });

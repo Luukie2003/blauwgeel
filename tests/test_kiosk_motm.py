@@ -284,3 +284,106 @@ def test_motm_titel_verschijnt_boven_de_dia(client, ingelogde_client, db):
 
     resp = client.get("/kiosk/scherm")
     assert "Weekendresultaten" in resp.data.decode()
+
+
+# ---------- Resultaat kiezen: gewonnen, gelijk of verloren ----------
+
+from helpers import motm_resultaat_klopt, motm_score_weergave
+
+
+def test_score_wordt_gedraaid_op_basis_van_het_resultaat():
+    # Eigen team altijd links, hoe je de cijfers ook invult.
+    assert motm_score_weergave("1-2", "verloren") == "1-2"
+    assert motm_score_weergave("2-1", "verloren") == "1-2"
+    assert motm_score_weergave("1-2", "gewonnen") == "2-1"
+    assert motm_score_weergave("2-1", "gewonnen") == "2-1"
+    assert motm_score_weergave("3-3", "gelijk") == "3-3"
+    # Ruim invoeren mag: spaties, een andere streep of een dubbele punt.
+    assert motm_score_weergave(" 0 - 4 ", "gewonnen") == "4-0"
+    assert motm_score_weergave("1:3", "gewonnen") == "3-1"
+    assert motm_score_weergave("1–3", "gewonnen") == "3-1"
+
+
+def test_score_blijft_zoals_getypt_zonder_bruikbaar_resultaat():
+    assert motm_score_weergave("1-2", None) == "1-2"
+    assert motm_score_weergave(" 1 - 2 ", "") == "1 - 2"
+    assert motm_score_weergave("1-2", "onzin") == "1-2"
+    assert motm_score_weergave("2-2", "gewonnen") == "2-2"  # tegenstrijdig: ongemoeid
+    assert motm_score_weergave("3-1", "gelijk") == "3-1"
+    assert motm_score_weergave("2-1 (na strafschoppen)", "gewonnen") == "2-1 (na strafschoppen)"
+    assert motm_score_weergave(None, "gewonnen") == ""
+
+
+def test_resultaat_klopt_met_de_uitslag():
+    assert motm_resultaat_klopt("2-1", "gewonnen") and motm_resultaat_klopt("1-2", "verloren")
+    assert motm_resultaat_klopt("2-2", "gelijk")
+    assert not motm_resultaat_klopt("2-2", "gewonnen") and not motm_resultaat_klopt("3-1", "gelijk")
+    assert motm_resultaat_klopt("onduidelijk", "gewonnen") and motm_resultaat_klopt("1-0", None)
+
+
+def test_dia_toont_de_score_eigen_team_links_met_resultaat(client, db):
+    team_id = _voeg_team_toe(db, "Eigen Team Alpha", uitslag="2-1", tegenstander="Gruno 6")
+    db.execute("UPDATE kiosk_motm SET resultaat = 'verloren' WHERE id = ?", (team_id,))
+    db.commit()
+
+    tekst = client.get("/kiosk/scherm").data.decode()
+
+    assert 'class="motmdia-score motmdia-score--verloren">1-2<' in tekst
+    assert "motmdia-resultaat--verloren" in tekst and ">Verloren<" in tekst
+
+
+def test_dia_zonder_resultaat_blijft_zoals_voorheen(client, db):
+    _voeg_team_toe(db, "Eigen Team Alpha", uitslag="1-2")
+    tekst = client.get("/kiosk/scherm").data.decode()
+    assert 'class="motmdia-score">1-2<' in tekst and "motmdia-resultaat--" not in tekst.split("</style>")[-1]
+
+
+def test_alleen_een_resultaat_zonder_uitslag_of_speler_toont_het_team_ook(client, db):
+    team_id = _voeg_team_toe(db, "Eigen Team Alpha")
+    db.execute("UPDATE kiosk_motm SET resultaat = 'gewonnen' WHERE id = ?", (team_id,))
+    db.commit()
+    tekst = client.get("/kiosk/scherm").data.decode()
+    assert 'class="motmdia-lijst"' in tekst and ">Gewonnen<" in tekst
+
+
+def test_resultaat_opslaan_en_onbekende_waarde_wordt_leeg(ingelogde_client, db):
+    id_a = _voeg_team_toe(db, "ZA 1", uitslag="1-2")
+    id_b = _voeg_team_toe(db, "ZA 2", uitslag="3-3")
+    id_c = _voeg_team_toe(db, "ZA 3", uitslag="1-0")
+
+    ingelogde_client.post(
+        "/kiosk/scherm/motm/volgorde",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "volgorde": json.dumps([id_a, id_b, id_c]),
+            "resultaten": json.dumps({id_a: "gewonnen", id_b: "GELIJK", id_c: "gigantisch"}),
+        },
+    )
+
+    resultaten = {r["id"]: r["resultaat"] for r in db.execute("SELECT id, resultaat FROM kiosk_motm")}
+    assert resultaten == {id_a: "gewonnen", id_b: "gelijk", id_c: None}
+
+
+def test_tegenstrijdige_uitslag_geeft_een_melding_maar_wordt_bewaard(ingelogde_client, db):
+    team_id = _voeg_team_toe(db, "ZA 1", uitslag="2-2")
+    resp = ingelogde_client.post(
+        "/kiosk/scherm/motm/volgorde",
+        data={
+            "csrf_token": _csrf(ingelogde_client),
+            "volgorde": json.dumps([team_id]),
+            "resultaten": json.dumps({team_id: "gewonnen"}),
+        },
+        follow_redirects=True,
+    )
+    tekst = resp.data.decode()
+    assert "past niet bij &#39;gewonnen&#39;" in tekst or "past niet bij 'gewonnen'" in tekst
+    assert db.execute("SELECT resultaat FROM kiosk_motm WHERE id = ?", (team_id,)).fetchone()["resultaat"] == "gewonnen"
+
+
+def test_beheerpagina_toont_de_resultaatkeuze(ingelogde_client, db):
+    team_id = _voeg_team_toe(db, "ZA 1", uitslag="2-1")
+    db.execute("UPDATE kiosk_motm SET resultaat = 'gelijk' WHERE id = ?", (team_id,))
+    db.commit()
+    tekst = ingelogde_client.get("/kiosk/sponsoren-leden").data.decode()
+    assert 'class="motm-resultaat-veld"' in tekst
+    assert '<option value="gelijk" selected>Gelijkspel</option>' in tekst

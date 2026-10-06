@@ -277,6 +277,11 @@ KOLOM_MIGRATIES = [
     # (club_van_team_naam + kiosk_club_logos in routes/kiosk.py). Het eigen
     # team toont altijd het eigen clublogo (static/logo.png).
     ("kiosk_motm", "tegenstander", "TEXT"),
+    # Of het eigen team gewonnen, gelijkgespeeld of verloren heeft ('gewonnen',
+    # 'gelijk', 'verloren'). Met een gekozen resultaat zet de dia de uitslag zelf
+    # in de juiste volgorde (eigen team links), ongeacht in welke volgorde je de
+    # cijfers invoert, bijvoorbeeld zoals voetbal.nl ze noemt (thuisploeg eerst).
+    ("kiosk_motm", "resultaat", "TEXT"),
     # Club van 20-module (zie club_van_20.py en routes/club_van_20.py): de
     # weergave op het kantine scherm en de publieke pagina. zichtbaar_seizoenen
     # = hoeveel seizoenen terug een betaling nog "telt" voor het scherm (1 =

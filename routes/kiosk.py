@@ -25,11 +25,14 @@ from helpers import (
     KIOSK_TEKST_GROOTTES,
     KIOSK_TIJD_PATROON,
     KIOSK_UITLIJNINGEN,
+    MOTM_RESULTATEN,
     bepaal_tegenstander,
     bereken_komende_thuiswedstrijden,
     bewaar_club_logo,
     club_van_team_naam,
     is_ajax_verzoek,
+    motm_resultaat_klopt,
+    motm_score_weergave,
     now_str,
     sla_afbeelding_op,
     sla_club_logo_op,
@@ -226,7 +229,9 @@ def register_routes(app):
                 {
                     "team": t["team"],
                     "speler": _motm_namen_weergave(t["speler"]),
-                    "uitslag": (t["uitslag"] or "").strip(),
+                    "uitslag": motm_score_weergave(t["uitslag"], t["resultaat"]),
+                    "resultaat": t["resultaat"] if t["resultaat"] in MOTM_RESULTATEN else None,
+                    "resultaat_label": MOTM_RESULTATEN.get(t["resultaat"]),
                     "tegenstander": (t["tegenstander"] or "").strip(),
                     "tegenstander_logo": (
                         club_logos.get(club_van_team_naam(t["tegenstander"]))
@@ -235,7 +240,7 @@ def register_routes(app):
                     ),
                 }
                 for t in _motm_teams(db)
-                if (t["speler"] or "").strip() or (t["uitslag"] or "").strip()
+                if (t["speler"] or "").strip() or (t["uitslag"] or "").strip() or t["resultaat"] in MOTM_RESULTATEN
             ]
             if motm_teams:
                 blokken.append(
@@ -1253,6 +1258,7 @@ def register_routes(app):
                 r["club"]: r["afbeelding"] for r in db.execute("SELECT club, afbeelding FROM kiosk_club_logos").fetchall()
             },
             motm_teams=_motm_teams(db),
+            motm_resultaten=MOTM_RESULTATEN,
         )
 
     def _sponsor_uit_formulier():
@@ -1925,6 +1931,16 @@ def register_routes(app):
                 ((uitslag or "").strip() or None, team_id),
             )
         try:
+            resultaten = json.loads(request.form.get("resultaten") or "{}")
+        except ValueError:
+            resultaten = {}
+        for team_id, resultaat in resultaten.items():
+            resultaat = (resultaat or "").strip().lower()
+            db.execute(
+                "UPDATE kiosk_motm SET resultaat = ? WHERE id = ?",
+                (resultaat if resultaat in MOTM_RESULTATEN else None, team_id),
+            )
+        try:
             tegenstanders = json.loads(request.form.get("tegenstanders") or "{}")
         except ValueError:
             tegenstanders = {}
@@ -1946,9 +1962,19 @@ def register_routes(app):
                 continue
             db.execute("UPDATE kiosk_motm SET team = ? WHERE id = ?", (team, team_id))
         db.commit()
+        # Een uitslag die niet past bij het gekozen resultaat (bijv. "2-2" bij
+        # gewonnen) wordt toch bewaard, maar je krijgt er een melding bij.
+        waarschuwingen = [
+            f"{r['team']}: de uitslag {r['uitslag']} past niet bij '{MOTM_RESULTATEN[r['resultaat']].lower()}', "
+            "dus de dia toont 'm zoals je 'm hebt ingevuld."
+            for r in _motm_teams(db)
+            if r["resultaat"] in MOTM_RESULTATEN and not motm_resultaat_klopt(r["uitslag"], r["resultaat"])
+        ]
         if is_ajax_verzoek():
-            return jsonify({"ok": True})
+            return jsonify({"ok": True, "waarschuwingen": waarschuwingen})
         flash("Man of the Match opgeslagen.", "success")
+        for tekst in waarschuwingen:
+            flash(tekst, "warning")
         return redirect(url_for("kiosk_sponsoren_leden"))
 
     @app.route("/kiosk/scherm")

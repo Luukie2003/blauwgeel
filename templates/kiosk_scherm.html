@@ -257,7 +257,12 @@
                                 <img class="motmdia-clublogo" src="{{ url_for('static', filename='logo.png') }}" alt="">
                                 <span>{{ team.team }}</span>
                             </div>
-                            {% if team.uitslag %}<span class="motmdia-score">{{ team.uitslag }}</span>{% endif %}
+                            {% if team.uitslag or team.resultaat_label %}
+                            <div class="motmdia-score-blok">
+                                {% if team.uitslag %}<span class="motmdia-score{{ ' motmdia-score--' ~ team.resultaat if team.resultaat else '' }}">{{ team.uitslag }}</span>{% endif %}
+                                {% if team.resultaat_label %}<span class="motmdia-resultaat motmdia-resultaat--{{ team.resultaat }}">{{ team.resultaat_label }}</span>{% endif %}
+                            </div>
+                            {% endif %}
                             {% if team.tegenstander %}
                             <div class="motmdia-club">
                                 {% if team.tegenstander_logo %}
