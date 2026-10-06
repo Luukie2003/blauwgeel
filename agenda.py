@@ -29,6 +29,23 @@ TIMEOUT_SECONDEN = 15
 # uitwedstrijd is. Hoofdletterongevoelig vergeleken.
 CLUBNAAM = "blauw geel"
 
+# Een afgelaste wedstrijd herkennen we aan STATUS:CANCELLED in de feed, of aan een
+# woord als "afgelast" in de omschrijving. Dat woord halen we uit de omschrijving
+# weg, zodat een wedstrijd die later alsnog als afgelast in de feed komt dezelfde
+# rij blijft en niet dubbel in de database komt.
+AFGELAST_WOORDEN = r"afgelast|afgelasting|geannuleerd|cancelled|canceled"
+_AFGELAST_PATROON = re.compile(rf"\b(?:{AFGELAST_WOORDEN})\b", re.IGNORECASE)
+_AFGELAST_MARKERING = re.compile(
+    rf"[\(\[]?\b(?:{AFGELAST_WOORDEN})\b[\)\]]?\s*[:\-\u2013]?\s*", re.IGNORECASE
+)
+
+
+def _schoon_afgelasting(samenvatting, status_geannuleerd=False):
+    """(omschrijving zonder afgelast-markering, afgelast?)."""
+    afgelast = status_geannuleerd or bool(_AFGELAST_PATROON.search(samenvatting))
+    schoon = _AFGELAST_MARKERING.sub("", samenvatting).strip(" -:") or samenvatting
+    return schoon, afgelast
+
 
 def _team_naam(tekst):
     match = re.search(r"X-WR-CALNAME:(.+)", tekst)
@@ -75,12 +92,16 @@ def _parse_ics(tekst):
             else:
                 tijd = f"{uur:02d}:{minuut:02d}"
         samenvatting = samenvatting_match.group(1).strip().replace("\\,", ",").replace("\\;", ";")
+        samenvatting, afgelast = _schoon_afgelasting(
+            samenvatting, status_geannuleerd=bool(re.search(r"STATUS:\s*CANCELLED", blok, re.IGNORECASE))
+        )
         thuisploeg = samenvatting.split("-", 1)[0]
         wedstrijden.append({
             "datum": datum.isoformat(),
             "omschrijving": samenvatting,
             "thuis": CLUBNAAM in thuisploeg.lower(),
             "tijd": tijd,
+            "afgelast": afgelast,
         })
     return wedstrijden
 
@@ -105,6 +126,52 @@ def controleer_feeds(urls):
         except Exception as fout:
             resultaten.append({"url": url, "ok": False, "team": None, "fout": str(fout)})
     return resultaten
+
+
+def _werk_afgelasting_bij(conn, team, wedstrijden):
+    """Wedstrijden die al in de database stonden: zet ze op afgelast als de agenda dat
+    nu meldt, en haal een afgelasting weg die alleen de agenda had gezet als de agenda
+    weer zegt dat de wedstrijd gewoon doorgaat. Wat iemand handmatig heeft gekozen
+    (afgelast of juist "toch spelen") blijft staan."""
+    for wedstrijd in wedstrijden:
+        if wedstrijd["afgelast"]:
+            conn.execute(
+                """UPDATE wedstrijden SET afgelast = 1, afgelast_bron = 'agenda'
+                   WHERE team = ? AND datum = ? AND omschrijving = ?
+                         AND afgelast = 0 AND afgelast_bron IS NOT 'handmatig'""",
+                (team, wedstrijd["datum"], wedstrijd["omschrijving"]),
+            )
+        else:
+            conn.execute(
+                """UPDATE wedstrijden SET afgelast = 0, afgelast_bron = NULL
+                   WHERE team = ? AND datum = ? AND omschrijving = ?
+                         AND afgelast = 1 AND afgelast_bron = 'agenda'""",
+                (team, wedstrijd["datum"], wedstrijd["omschrijving"]),
+            )
+
+
+def _markeer_verdwenen_wedstrijden(conn, team, wedstrijden, dagen_vooruit=14, vandaag=None):
+    """Een wedstrijd van de komende dagen die nog in de database staat maar niet
+    meer in de feed van dit team (afgelast en uit de agenda gehaald, of verzet
+    naar een andere datum), gaat als afgelast door. Alleen als de feed zelf
+    nog wedstrijden op of na die datum bevat: een feed die opeens leeg of
+    afgekapt is mag niet voor een stapel valse afgelastingen zorgen."""
+    if not wedstrijden:
+        return
+    vandaag = vandaag or datetime.now(ZoneInfo("Europe/Amsterdam")).date()
+    grens = vandaag.fromordinal(vandaag.toordinal() + dagen_vooruit).isoformat()
+    in_feed = {(w["datum"], w["omschrijving"]) for w in wedstrijden}
+    laatste_in_feed = max(w["datum"] for w in wedstrijden)
+    for rij in conn.execute(
+        """SELECT id, datum, omschrijving FROM wedstrijden
+           WHERE team = ? AND afgelast = 0 AND afgelast_bron IS NOT 'handmatig'
+                 AND datum >= ? AND datum <= ?""",
+        (team, vandaag.isoformat(), grens),
+    ).fetchall():
+        if (rij["datum"], rij["omschrijving"]) not in in_feed and laatste_in_feed >= rij["datum"]:
+            conn.execute(
+                "UPDATE wedstrijden SET afgelast = 1, afgelast_bron = 'agenda' WHERE id = ?", (rij["id"],)
+            )
 
 
 def ververs_wedstrijden(db_pad=None):
@@ -140,14 +207,16 @@ def ververs_wedstrijden(db_pad=None):
         conn.execute("UPDATE agenda_feeds SET team = ? WHERE id = ?", (team, feed["id"]))
         for wedstrijd in wedstrijden:
             cursor = conn.execute(
-                """INSERT OR IGNORE INTO wedstrijden (team, datum, omschrijving, thuis, tijd)
-                   VALUES (?, ?, ?, ?, ?)""",
+                """INSERT OR IGNORE INTO wedstrijden (team, datum, omschrijving, thuis, tijd, afgelast, afgelast_bron)
+                   VALUES (?, ?, ?, ?, ?, ?, CASE WHEN ? = 1 THEN 'agenda' END)""",
                 (
                     team,
                     wedstrijd["datum"],
                     wedstrijd["omschrijving"],
                     int(wedstrijd["thuis"]),
                     wedstrijd["tijd"],
+                    1 if wedstrijd["afgelast"] else 0,
+                    1 if wedstrijd["afgelast"] else 0,
                 ),
             )
             if cursor.rowcount:
@@ -168,6 +237,9 @@ def ververs_wedstrijden(db_pad=None):
                         wedstrijd["tijd"],
                     ),
                 )
+
+        _werk_afgelasting_bij(conn, team, wedstrijden)
+        _markeer_verdwenen_wedstrijden(conn, team, wedstrijden)
 
     conn.commit()
     conn.close()

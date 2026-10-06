@@ -12,7 +12,11 @@ Hoe het werkt, in het kort
   (een zaterdagse wedstrijd valt dan bij zaterdag, ook als er 's avonds nog
   gedronken wordt). Een periode van 3 dagen telt zo precies 3 dagen mee,
   met een telling om 14.00 uur ruim een dag niet-tellend.
-* Per dag is de "drukte" 1 + effect(thuiswedstrijd) + effect(training) +
+* Er wordt niet elke dag verkocht: standaard alleen op woensdag en zaterdag
+  (instelbaar, met uitzonderingen per datum, zie lees_verkoopdagen). Op een
+  gesloten dag is de verwachte verkoop 0 en telt hij niet mee in de
+  blootstelling van een periode.
+* Per open dag is de "drukte" 1 + effect(thuiswedstrijd) + effect(training) +
   effect(weer). De drie effecten starten bij een aanname (+30%, +20%,
   +-12%) en worden bijgeleerd uit de eigen tellingen: hoe meer data, hoe
   meer het model de aanname loslaat (Bayesiaans: aanname = voorkennis,
@@ -62,6 +66,35 @@ DEKKING_SERVICENIVEAU = 0.9  # bestelling dekt de vraag in 9 van de 10 gevallen
 _WEEKDAG = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
 _WEEKDAG_KORT = ["ma", "di", "wo", "do", "vr", "za", "zo"]
 
+VERKOOPDAGEN_STANDAARD = (2, 5)  # woensdag en zaterdag (maandag = 0)
+_LEGE_DAG = {"wedstrijden": 0, "training": False, "weer": None, "open": True}
+
+
+def lees_verkoopdagen(db):
+    """(weekdagen, uitzonderingen): de weekdagen waarop standaard verkocht wordt
+    (maandag = 0) en {datum-tekst: True/False} voor losse datums die daarvan
+    afwijken (True = wel open, False = dicht). Zonder instelling: woensdag
+    en zaterdag."""
+    tekst = None
+    try:
+        rij = db.execute("SELECT verkoopdagen FROM instellingen WHERE id = 1").fetchone()
+        tekst = rij["verkoopdagen"] if rij else None
+    except Exception:  # kolom bestaat nog niet (oude database)
+        pass
+    dagen = {int(x) for x in (tekst or "").split(",") if x.strip().isdigit() and 0 <= int(x) <= 6}
+    try:
+        uitzonderingen = {
+            r["datum"]: bool(r["open"]) for r in db.execute("SELECT datum, open FROM verkoop_uitzonderingen")
+        }
+    except Exception:  # tabel bestaat nog niet
+        uitzonderingen = {}
+    return (dagen or set(VERKOOPDAGEN_STANDAARD)), uitzonderingen
+
+
+def dag_is_open(dag, weekdagen, uitzonderingen):
+    """Wordt er op deze datum (date) verkocht?"""
+    return uitzonderingen.get(dag.isoformat(), dag.weekday() in weekdagen)
+
 
 # ---------------------------------------------------------------------------
 # Kalender: wat gebeurt er op welke dag?
@@ -89,7 +122,7 @@ def weer_score(max_temp, neerslag_kans):
 
 
 def lees_kalender(db, van, tot):
-    """{datum: {wedstrijden, training, weer}} voor van t/m tot (date-objecten).
+    """{datum: {wedstrijden, training, weer, open}} voor van t/m tot (date-objecten).
     Wedstrijden komen uit de gekoppelde teamagenda's, het weer uit de
     opgeslagen weergeschiedenis (laatst bekende verwachting per dag) en voor
     de komende dagen uit de actuele verwachting."""
@@ -97,7 +130,7 @@ def lees_kalender(db, van, tot):
         r["datum"]: r["n"]
         for r in db.execute(
             """SELECT datum, COUNT(*) AS n FROM wedstrijden
-               WHERE thuis = 1 AND datum >= ? AND datum <= ? GROUP BY datum""",
+               WHERE thuis = 1 AND afgelast = 0 AND datum >= ? AND datum <= ? GROUP BY datum""",
             (van.isoformat(), tot.isoformat()),
         ).fetchall()
     }
@@ -112,14 +145,17 @@ def lees_kalender(db, van, tot):
             rijen = []
         for r in rijen:
             weer[r["datum"]] = weer_score(r["max_temp"], r["neerslag_kans"])
+    weekdagen, uitzonderingen = lees_verkoopdagen(db)
     kalender = {}
     dag = van
     while dag <= tot:
         iso = dag.isoformat()
+        open_ = dag_is_open(dag, weekdagen, uitzonderingen)
         kalender[dag] = {
             "wedstrijden": wedstrijden.get(iso, 0),
             "training": dag.weekday() == TRAININGSDAG,
             "weer": weer.get(iso),
+            "open": open_,
         }
         dag += timedelta(days=1)
     return kalender
@@ -134,7 +170,8 @@ def blootstelling(start, einde, kalender):
     """Hoeveel 'dag-equivalent' een periode bevat, opgesplitst:
     D = dagen, M = wedstrijddagen (gewogen), T = trainingsavonden, S = weerscore
     (mooi +, regen -), W = dagen waarvan het weer bekend is. Een dag telt
-    mee naar rato van hoeveel van zijn 12-12-venster in de periode valt."""
+    mee naar rato van hoeveel van zijn 12-12-venster in de periode valt. Een dag
+    waarop niet verkocht wordt (zie lees_verkoopdagen) telt helemaal niet mee."""
     D = M = T = S = W = 0.0
     dag = (start - timedelta(hours=DAG_BEGIN_UUR)).date()
     while True:
@@ -142,8 +179,8 @@ def blootstelling(start, einde, kalender):
         if d_begin >= einde:
             break
         deel = (min(einde, d_eind) - max(start, d_begin)).total_seconds() / 86400
-        if deel > 0:
-            k = kalender.get(dag) or {"wedstrijden": 0, "training": False, "weer": None}
+        k = kalender.get(dag) or _LEGE_DAG
+        if deel > 0 and k.get("open", True):
             D += deel
             M += deel * wedstrijd_gewicht(k["wedstrijden"])
             T += deel * (1.0 if k["training"] else 0.0)
@@ -252,6 +289,11 @@ def _voeg_blootstelling_toe(rijen, kalender, nu):
             cache[sleutel] = blootstelling(r["start"], r["einde"], kalender)
         r["b"] = cache[sleutel]
         r["w"] = _gewicht(r["einde"], nu)
+    # Een periode zonder enige open dag zegt niets over de snelheid per open dag
+    # (er is dan verkocht op een dag die als gesloten staat, bijvoorbeeld een
+    # evenement): buiten het model laten. Voor de weekomzet blijft de verkoop wel
+    # meetellen, zie verdeling().
+    rijen[:] = [r for r in rijen if r["b"]["D"] > 1e-9]
     return rijen
 
 
@@ -562,7 +604,7 @@ def _waargenomen_dagen(rijen, kalender, soort):
         dag = (r["start"] - timedelta(hours=DAG_BEGIN_UUR)).date()
         while _dag_venster(dag)[0] < r["einde"]:
             k = kalender.get(dag)
-            if k:
+            if k and k.get("open", True):
                 if (soort == "wedstrijd" and k["wedstrijden"]) or (soort == "training" and k["training"]) or (
                     soort == "weer" and k["weer"] not in (None, 0.0)
                 ):
@@ -630,12 +672,16 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
         d_begin, d_eind = _dag_venster(dag)
         deel = (min(eind, d_eind) - max(nu, d_begin)).total_seconds() / 86400
         if deel > 0.05:
-            kenmerken = kalender.get(dag) or {"wedstrijden": 0, "training": False, "weer": None}
+            kenmerken = kalender.get(dag) or _LEGE_DAG
+            open_ = kenmerken.get("open", True)
             m = 1 + effecten["wedstrijd"] * wedstrijd_gewicht(kenmerken["wedstrijden"]) + effecten["training"] * (
                 1.0 if kenmerken["training"] else 0.0
             ) + effecten["weer"] * (kenmerken["weer"] or 0.0)
+            if not open_:
+                m = 0.0  # gesloten: er wordt niets verkocht
             dagen_overzicht.append(
                 {
+                    "open": open_,
                     "datum": dag,
                     "weekdag": _WEEKDAG[dag.weekday()],
                     "weekdag_kort": _WEEKDAG_KORT[dag.weekday()],
@@ -787,6 +833,32 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
     }
 
 
+def wedstrijden_op_gesloten_dagen(db, nu=None, weken_terug=8, dagen_vooruit=21):
+    """Thuiswedstrijden op een dag waarop standaard niet verkocht wordt en waar nog
+    niets over is vastgelegd: [{"datum", "weekdag", "wedstrijden": [omschrijving],
+    "toekomst"}]. De pagina vraagt dan of er die dag toch verkocht wordt, want een
+    wedstrijd op bijvoorbeeld zondag levert meestal wel omzet op."""
+    nu = nu or datetime.now()
+    weekdagen, uitzonderingen = lees_verkoopdagen(db)
+    van = nu.date() - timedelta(weeks=weken_terug)
+    tot = nu.date() + timedelta(days=dagen_vooruit)
+    per_datum = {}
+    for r in db.execute(
+        "SELECT datum, omschrijving FROM wedstrijden WHERE thuis = 1 AND afgelast = 0 AND datum >= ? AND datum <= ? ORDER BY datum, id",
+        (van.isoformat(), tot.isoformat()),
+    ).fetchall():
+        per_datum.setdefault(r["datum"], []).append(r["omschrijving"] or "Thuiswedstrijd")
+    uitkomst = []
+    for iso, lijst in sorted(per_datum.items()):
+        dag = date.fromisoformat(iso)
+        if iso in uitzonderingen or dag.weekday() in weekdagen:
+            continue
+        uitkomst.append(
+            {"datum": dag, "weekdag": _WEEKDAG[dag.weekday()], "wedstrijden": lijst, "toekomst": dag >= nu.date()}
+        )
+    return uitkomst
+
+
 # ---------------------------------------------------------------------------
 # Wat zou er nu in het schap moeten staan? (voor de looplijst)
 # ---------------------------------------------------------------------------
@@ -897,7 +969,11 @@ def telling_ver_van_verwachting(verwachting, voorraad, geteld):
 
 
 def _dagdrukte(dag, kalender, effecten):
-    kenmerken = kalender.get(dag) or {"wedstrijden": 0, "training": dag.weekday() == TRAININGSDAG, "weer": None}
+    kenmerken = kalender.get(dag) or {
+        "wedstrijden": 0, "training": dag.weekday() == TRAININGSDAG, "weer": None, "open": True,
+    }
+    if not kenmerken.get("open", True):
+        return 0.0  # gesloten: daar wordt niets verkocht
     return (
         1.0
         + effecten["wedstrijd"] * wedstrijd_gewicht(kenmerken["wedstrijden"])
@@ -940,17 +1016,24 @@ def verdeling(db, nu=None):
     for r in rijen:
         sleutel = (r["start"], r["einde"])
         if sleutel not in gewichten_per_periode:
-            gewichten = {}
+            gewichten, delen = {}, {}
             dag = (r["start"] - timedelta(hours=DAG_BEGIN_UUR)).date()
             while _dag_venster(dag)[0] < r["einde"]:
                 d_begin, d_eind = _dag_venster(dag)
                 deel = (min(r["einde"], d_eind) - max(r["start"], d_begin)).total_seconds() / 86400
                 if deel > 0:
+                    delen[dag] = deel
                     gewichten[dag] = deel * _dagdrukte(dag, kalender, effecten)
                 dag += timedelta(days=1)
             totaal = sum(gewichten.values())
+            if totaal <= 0 and delen:
+                # Geen enkele open dag in deze periode, maar er is wel verkocht (bijvoorbeeld
+                # een evenement op een gesloten dag): gelijk verdelen, zodat de omzet nooit verdwijnt.
+                gewichten, totaal = dict(delen), sum(delen.values())
             gewichten_per_periode[sleutel] = {d: g / totaal for d, g in gewichten.items()} if totaal > 0 else {}
         for dag, aandeel in gewichten_per_periode[sleutel].items():
+            if aandeel <= 0:
+                continue  # gesloten dag: geen verkoop
             omzet = r["V"] * r["prijs"] * aandeel
             uitkomst["omzet"][dag] = uitkomst["omzet"].get(dag, 0.0) + omzet
             regel = uitkomst["producten"].setdefault(dag, {}).setdefault(r["pid"], [0.0, 0.0])

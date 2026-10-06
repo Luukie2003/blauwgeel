@@ -19,7 +19,17 @@
                     <td>{{ dag.datum_weergave }}</td>
                     <td>
                         {% for w in dag.wedstrijden %}
-                        {{ w.omschrijving }}{% if not loop.last %}<br>{% endif %}
+                        <span style="{{ 'text-decoration:line-through; opacity:0.6' if w.afgelast else '' }}">{{ w.omschrijving }}</span>
+                        {% if w.afgelast %}<span class="badge badge-neutraal">afgelast</span>{% endif %}
+                        {% if sectie_toegang.voorraad %}
+                        <form method="post" action="{{ url_for('wedstrijd_afgelast_wisselen', wedstrijd_id=w.id) }}" style="display:inline; margin:0">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="terug" value="wedstrijden">
+                            <input type="hidden" name="afgelast" value="{{ 0 if w.afgelast else 1 }}">
+                            <button type="submit" class="btn-tekstlink" style="font-size:0.78rem">{{ 'Toch spelen' if w.afgelast else 'Afgelast?' }}</button>
+                        </form>
+                        {% endif %}
+                        {% if not loop.last %}<br>{% endif %}
                         {% endfor %}
                     </td>
                     <td>
@@ -31,8 +41,9 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if dag.wedstrijden|length > 1 %}
-                        <span class="badge badge-laag">{{ dag.wedstrijden|length }}x thuis, kan drukker zijn</span>
+                        {% set doorgaand = dag.wedstrijden|rejectattr('afgelast')|list %}
+                        {% if doorgaand|length > 1 %}
+                        <span class="badge badge-laag">{{ doorgaand|length }}x thuis, kan drukker zijn</span>
                         {% endif %}
                     </td>
                 </tr>

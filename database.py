@@ -99,6 +99,10 @@ KOLOM_MIGRATIES = [
     ("gebruikers", "mail_club_aanmelding", "INTEGER NOT NULL DEFAULT 0"),
     ("instellingen", "banner_tekst", "TEXT"),
     ("instellingen", "privacy_contact", "TEXT"),
+    # Weekdagen waarop de kantine verkoopt, maandag = 0 ("2,5" = woensdag en
+    # zaterdag), zie voorspelling.lees_verkoopdagen. Afwijkende datums staan in
+    # verkoop_uitzonderingen.
+    ("instellingen", "verkoopdagen", "TEXT NOT NULL DEFAULT '2,5'"),
     ("instellingen", "kassalade_stand", "REAL NOT NULL DEFAULT 0"),
     ("instellingen", "kluis_stand", "REAL NOT NULL DEFAULT 0"),
     ("mutaties", "gebruiker_id", "INTEGER REFERENCES gebruikers(id)"),
@@ -200,6 +204,13 @@ KOLOM_MIGRATIES = [
     # blijft dit NULL. Zie agenda.py (_parse_ics) en de
     # wedstrijddag-welkomstbanner in routes/kiosk.py.
     ("wedstrijden", "tijd", "TEXT"),
+    # afgelast = 1: de wedstrijd gaat niet door. Een afgelaste thuiswedstrijd telt
+    # nergens mee: niet in de prognose, de dia's, de welkomstmelding of de
+    # kassa-herinnering. afgelast_bron zegt wie dat bepaalde: 'agenda' (de feed
+    # meldt het, zie agenda.py) of 'handmatig' (iemand heeft het zelf gezet, ook
+    # "toch spelen"); een handmatige keuze overschrijft de synchronisatie nooit.
+    ("wedstrijden", "afgelast", "INTEGER NOT NULL DEFAULT 0"),
+    ("wedstrijden", "afgelast_bron", "TEXT"),
     # Welke categorie-kop in welke van de 3 vaste kolommen van het
     # prijzenscherm staat, en in welke volgorde -- JSON {"1": [...namen],
     # "2": [...], "3": [...]}, versleept via de drag-and-drop-indeling op

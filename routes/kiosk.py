@@ -705,7 +705,7 @@ def register_routes(app):
         vandaag = vandaag_amsterdam().isoformat()
         wedstrijden = db.execute(
             """SELECT tijd, omschrijving FROM wedstrijden
-               WHERE thuis = 1 AND datum = ?
+               WHERE thuis = 1 AND afgelast = 0 AND datum = ?
                ORDER BY tijd IS NULL, tijd, team""",
             (vandaag,),
         ).fetchall()
@@ -731,7 +731,7 @@ def register_routes(app):
         vandaag = vandaag_amsterdam().isoformat()
         wedstrijden = db.execute(
             """SELECT omschrijving FROM wedstrijden
-               WHERE thuis = 1 AND datum >= ?
+               WHERE thuis = 1 AND afgelast = 0 AND datum >= ?
                ORDER BY datum, tijd IS NULL, tijd""",
             (vandaag,),
         ).fetchall()

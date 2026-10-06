@@ -612,7 +612,7 @@ def bereken_omzet_trend_periode(db, van, tot):
     wedstrijd_datums = [
         w["datum"]
         for w in db.execute(
-            "SELECT datum FROM wedstrijden WHERE thuis = 1 AND datum >= ? AND datum <= ? ORDER BY datum",
+            "SELECT datum FROM wedstrijden WHERE thuis = 1 AND afgelast = 0 AND datum >= ? AND datum <= ? ORDER BY datum",
             (van, tot),
         ).fetchall()
     ]
@@ -1045,7 +1045,7 @@ def bereken_wedstrijd_geschiedenis(db, limiet=25):
             "thuis": w["thuis"],
         }
         for w in db.execute(
-            "SELECT * FROM wedstrijden WHERE datum < ? ORDER BY datum DESC, team LIMIT ?",
+            "SELECT * FROM wedstrijden WHERE datum < ? AND afgelast = 0 ORDER BY datum DESC, team LIMIT ?",
             (date.today().isoformat(), limiet),
         ).fetchall()
     ]
@@ -1058,18 +1058,21 @@ _MAAND_KORT = [
 ]
 
 
-def bereken_komende_thuiswedstrijden(db, dagen=14):
+def bereken_komende_thuiswedstrijden(db, dagen=14, inclusief_afgelast=False):
     """Groepeert de komende thuiswedstrijden per datum -- gevuld door
     agenda.py (de gekoppelde teamagenda's) -- samen met de weersverwachting
     van diezelfde dag (gevuld door weer.py), als indicatie hoe druk het kan
     worden: een thuiswedstrijd bij mooi weer trekt meer mensen dan bij
     regen. Rekent nog niets automatisch door in de omzetverwachting -- zie
-    bereken_voorspelde_tekorten() voor waar dat wel gebeurt."""
+    bereken_voorspelde_tekorten() voor waar dat wel gebeurt. Een afgelaste
+    wedstrijd doet niet mee, behalve met inclusief_afgelast=True (de pagina's
+    waar je een wedstrijd als afgelast markeert of weer terugzet)."""
     vandaag = date.today().isoformat()
     grens = (date.today() + timedelta(days=dagen)).isoformat()
     rijen = db.execute(
-        """SELECT datum, team, omschrijving FROM wedstrijden
+        f"""SELECT id, datum, team, omschrijving, afgelast FROM wedstrijden
            WHERE thuis = 1 AND datum >= ? AND datum <= ?
+           {"" if inclusief_afgelast else "AND afgelast = 0"}
            ORDER BY datum, team""",
         (vandaag, grens),
     ).fetchall()
@@ -1232,7 +1235,7 @@ def bereken_kassa_telling_status(db):
 
     vandaag = date.today()
     laatste_wedstrijd = db.execute(
-        "SELECT datum FROM wedstrijden WHERE thuis = 1 AND datum <= ? ORDER BY datum DESC LIMIT 1",
+        "SELECT datum FROM wedstrijden WHERE thuis = 1 AND afgelast = 0 AND datum <= ? ORDER BY datum DESC LIMIT 1",
         (vandaag.isoformat(),),
     ).fetchone()
     laatste_kassatelling = db.execute(

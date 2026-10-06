@@ -27,8 +27,17 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.25.0"
+HUIDIGE_VERSIE = "1.26.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.26.0",
+        "datum": "6 oktober 2026",
+        "punten": [
+            "Prognose: er wordt alleen gerekend met de dagen waarop je verkoopt, standaard woensdag en zaterdag. Gesloten dagen verwachten niets en tellen niet mee bij het leren, en de weekomzet wordt alleen over de verkoopdagen verdeeld. In de testrun met jullie eigen tellingen zat de prognose daardoor merkbaar dichter bij de werkelijkheid",
+            "Afgelaste thuiswedstrijden: zet een wedstrijd die niet doorgaat op afgelast (bij Prognose en bij Wedstrijden) en hij telt nergens meer mee: niet in de prognose, de dia's, de welkomstmelding en de kassa-herinnering. De agenda-koppeling markeert ook zelf wedstrijden die de feed als afgelast meldt of uit de agenda haalt",
+            "Prognose: bovenaan de pagina stel je de vaste verkoopdagen in en geef je uitzonderingen per datum aan (een wedstrijd op zondag, een dichte woensdag), ook voor het verleden. Een thuiswedstrijd op een gesloten dag wordt je voorgelegd met de vraag of je die dag wel verkocht hebt",
+        ],
+    },
     {
         "versie": "1.25.0",
         "datum": "5 oktober 2026",
@@ -767,13 +776,43 @@ def register_routes(app):
     @app.route("/wedstrijden")
     def wedstrijden_overzicht():
         db = get_db()
-        komende_thuiswedstrijden = bereken_komende_thuiswedstrijden(db)
+        # Ook afgelaste wedstrijden, zodat je een afgelasting hier kunt terugdraaien.
+        komende_thuiswedstrijden = bereken_komende_thuiswedstrijden(db, inclusief_afgelast=True)
         wedstrijd_geschiedenis = bereken_wedstrijd_geschiedenis(db)
         return render_template(
             "wedstrijden.html",
             komende_thuiswedstrijden=komende_thuiswedstrijden,
             wedstrijd_geschiedenis=wedstrijd_geschiedenis,
         )
+
+    @app.route("/wedstrijden/<int:wedstrijd_id>/afgelast", methods=["POST"])
+    def wedstrijd_afgelast_wisselen(wedstrijd_id):
+        """Een wedstrijd als afgelast markeren (of terugzetten op "gaat door").
+        Een afgelaste thuiswedstrijd telt nergens meer mee, bijvoorbeeld niet in de
+        prognose. De keuze blijft staan, ook als de agenda-koppeling het later
+        anders meldt."""
+        db = get_db()
+        wedstrijd = db.execute("SELECT * FROM wedstrijden WHERE id = ?", (wedstrijd_id,)).fetchone()
+        terug = {
+            "prognose": url_for("prognose_pagina") + "#thuiswedstrijden",
+            "wedstrijden": url_for("wedstrijden_overzicht"),
+        }.get(request.form.get("terug"), url_for("wedstrijden_overzicht"))
+        if wedstrijd is None:
+            flash("Die wedstrijd bestaat niet meer.", "error")
+            return redirect(terug)
+        afgelast = 1 if request.form.get("afgelast") == "1" else 0
+        db.execute(
+            "UPDATE wedstrijden SET afgelast = ?, afgelast_bron = 'handmatig' WHERE id = ?",
+            (afgelast, wedstrijd_id),
+        )
+        db.commit()
+        flash(
+            f"'{wedstrijd['omschrijving']}' staat als afgelast en telt niet meer mee."
+            if afgelast
+            else f"'{wedstrijd['omschrijving']}' gaat weer door en telt weer mee.",
+            "success",
+        )
+        return redirect(terug)
 
     @app.route("/verkooprapport/pdf")
     def verkooprapport_pdf_route():

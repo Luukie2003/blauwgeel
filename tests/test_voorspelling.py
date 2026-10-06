@@ -53,12 +53,20 @@ def _wedstrijd(db, dag, aantal=1):
     db.commit()
 
 
+ALLE_DAGEN = "0,1,2,3,4,5,6"
+
+
 def _bouw_geschiedenis(
-    db, snelheden, effecten=None, tijdstippen=None, wedstrijddagen=(), nu_voorraad=None, geteld=50
+    db, snelheden, effecten=None, tijdstippen=None, wedstrijddagen=(), nu_voorraad=None, geteld=50,
+    open_dagen=ALLE_DAGEN,
 ):
     """Maakt tellingen op 'tijdstippen' (eerste = nulmeting) waarvan de verkoop precies
     klopt met een kantine waar de gegeven (waarde) effecten gelden. snelheden =
-    {product_id: verkoop per normale dag}. Geeft de laatste telling-datum terug."""
+    {product_id: verkoop per normale dag}. open_dagen = de weekdagen waarop verkocht
+    wordt (standaard elke dag, zodat de oudere tests over 'per dag' blijven kloppen;
+    de echte standaard is woensdag en zaterdag, "2,5"). Geeft de laatste telling-datum terug."""
+    db.execute("UPDATE instellingen SET verkoopdagen = ? WHERE id = 1", (open_dagen,))
+    db.commit()
     effecten = effecten or {"wedstrijd": 0.3, "training": 0.2, "weer": 0.0}
     tijdstippen = tijdstippen or [MAANDAG + timedelta(days=7 * i) for i in range(10)]
     for dag in wedstrijddagen:

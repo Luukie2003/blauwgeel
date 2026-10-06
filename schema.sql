@@ -688,3 +688,13 @@ CREATE TABLE IF NOT EXISTS loop_voortgang (
     review TEXT,
     bijgewerkt_op TEXT NOT NULL
 );
+
+-- Dagen waarop de kantine afwijkt van de vaste verkoopdagen (instellingen.verkoopdagen,
+-- standaard woensdag en zaterdag): open=1 is "toch open" (bijv. een wedstrijd op zondag),
+-- open=0 is "dicht" (bijv. een vrije zaterdag). Het voorspellen en de weekomzet
+-- (zie voorspelling.py) tellen alleen open dagen mee. Ook voor datums in het verleden.
+CREATE TABLE IF NOT EXISTS verkoop_uitzonderingen (
+    datum TEXT PRIMARY KEY,
+    open INTEGER NOT NULL,
+    opmerking TEXT
+);

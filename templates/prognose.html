@@ -4,7 +4,8 @@
 <p class="subtitel">
     Wat er de komende dagen waarschijnlijk verkocht wordt, welke producten kunnen opraken en wat je
     daarvoor kunt bestellen. Het systeem leert van jullie eigen tellingen, de thuiswedstrijden, de
-    trainingsavond en het weer, en wordt dus slimmer naarmate er meer tellingen bijkomen.
+    trainingsavond en het weer, en wordt dus slimmer naarmate er meer tellingen bijkomen. Er wordt
+    alleen gerekend met de dagen waarop je verkoopt ({{ verkoop.samenvatting }}).
 </p>
 
 <div class="actiebalk" style="justify-content:flex-start; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap">
@@ -23,6 +24,135 @@
     {% endif %}
     <a href="{{ url_for('bestellijst') }}" class="btn btn-rand">Naar de bestellijst</a>
 </div>
+
+{% if thuiswedstrijden %}
+<div class="kaart" id="thuiswedstrijden">
+    <h2 style="margin-top:0">Thuiswedstrijden die meetellen</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Een thuiswedstrijd maakt het drukker en telt mee in de prognose. Is er een wedstrijd afgelast of verzet?
+        Zet 'm dan op afgelast, dan rekent de prognose er niet meer mee. De koppeling met de agenda doet dat ook
+        als de feed het meldt.
+    </p>
+    {% for dag in thuiswedstrijden %}
+    {% for w in dag.wedstrijden %}
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:0.8rem; flex-wrap:wrap; padding:0.45rem 0; border-top:1px solid var(--rand-licht)">
+        <div style="{{ 'text-decoration:line-through; opacity:0.6' if w.afgelast else '' }}">
+            <strong>{{ dag.dag_kort }} {{ dag.dag_nummer }} {{ dag.maand_kort }}</strong>
+            <span class="tekst-zacht">{{ w.omschrijving }}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.5rem">
+            {% if w.afgelast %}<span class="badge badge-neutraal">afgelast</span>{% endif %}
+            <form method="post" action="{{ url_for('wedstrijd_afgelast_wisselen', wedstrijd_id=w.id) }}" style="margin:0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="terug" value="prognose">
+                <input type="hidden" name="afgelast" value="{{ 0 if w.afgelast else 1 }}">
+                <button type="submit" class="btn btn-rand btn-klein">{{ 'Toch spelen' if w.afgelast else 'Afgelast' }}</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<details class="kaart" id="verkoopdagen" {{ 'open' if verkoop.onbeslist else '' }}>
+    <summary style="cursor:pointer">
+        <strong>Verkoopdagen:</strong> {{ verkoop.samenvatting }}
+        <span class="tekst-zacht">(aanpassen)</span>
+        {% if verkoop.onbeslist %}<span class="badge badge-laag">{{ verkoop.onbeslist|length }} om te bevestigen</span>{% endif %}
+    </summary>
+
+    <p class="tekst-zacht">
+        Op een dag waarop je niet verkoopt, verwacht de prognose niets en telt die dag niet mee bij het leren van de
+        verkoop. Geef hieronder de vaste dagen aan, en daaronder uitzonderingen voor losse datums (een wedstrijd op
+        zondag, of een woensdag dat de kantine dicht is). Uitzonderingen kunnen ook voor datums in het verleden.
+    </p>
+
+    <form method="post" action="{{ url_for('prognose_verkoopdagen') }}" style="margin-bottom:1.2rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:flex; flex-wrap:wrap; gap:0.4rem 1.1rem; margin-bottom:0.7rem">
+            {% for i, naam in verkoop.dagnamen %}
+            <label style="display:flex; align-items:center; gap:0.35rem; font-weight:400">
+                <input type="checkbox" name="dag_{{ i }}" style="width:auto" {{ 'checked' if i in verkoop.weekdagen }}> {{ naam|capitalize }}
+            </label>
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-geel btn-klein">Vaste dagen opslaan</button>
+    </form>
+
+    {% if verkoop.onbeslist %}
+    <h3 style="margin:0 0 0.4rem">Thuiswedstrijd op een dag waarop je normaal niet verkoopt</h3>
+    <p class="tekst-zacht" style="margin-top:0">Wordt er op deze dagen verkocht? Dan telt de verkoop mee in de prognose.</p>
+    {% for o in verkoop.onbeslist %}
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:0.8rem; flex-wrap:wrap; padding:0.5rem 0; border-top:1px solid var(--rand-licht)">
+        <div>
+            <strong>{{ o.weekdag|capitalize }} {{ o.datum.day }}-{{ o.datum.month }}-{{ o.datum.year }}</strong>
+            <span class="tekst-zacht">{{ 'komende' if o.toekomst else 'geweest' }} &middot; {{ o.wedstrijden|join(', ') }}</span>
+        </div>
+        <div style="display:flex; gap:0.4rem">
+            {% for status, label, klasse in [('open', 'Ja, open', 'btn-geel'), ('dicht', 'Nee, dicht', 'btn-rand')] %}
+            <form method="post" action="{{ url_for('prognose_uitzondering_toevoegen') }}" style="margin:0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="datum" value="{{ o.datum.isoformat() }}">
+                <input type="hidden" name="status" value="{{ status }}">
+                <input type="hidden" name="opmerking" value="Thuiswedstrijd">
+                <button type="submit" class="btn {{ klasse }} btn-klein">{{ label }}</button>
+            </form>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <h3 style="margin:1.2rem 0 0.4rem">Uitzonderingen</h3>
+    {% if verkoop.uitzonderingen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Datum</th><th>Verkoop</th><th>Opmerking</th><th></th></tr></thead>
+            <tbody>
+                {% for u in verkoop.uitzonderingen %}
+                <tr>
+                    <td>{{ verkoop.dagnamen[u.datum.weekday()][1]|capitalize }} {{ u.datum.day }}-{{ u.datum.month }}-{{ u.datum.year }}</td>
+                    <td>
+                        {% if u.open %}<span class="badge badge-in">open</span>{% else %}<span class="badge badge-neutraal">gesloten</span>{% endif %}
+                        {% if u.open == u.standaard_open %}<span class="tekst-zacht">(zoals gewoonlijk)</span>{% endif %}
+                    </td>
+                    <td class="tekst-zacht">{{ u.opmerking or '' }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('prognose_uitzondering_verwijderen', datum=u.datum.isoformat()) }}" style="margin:0">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-rand btn-klein">Verwijderen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg" style="margin:0 0 0.6rem">Geen uitzonderingen: de vaste dagen gelden altijd.</p>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('prognose_uitzondering_toevoegen') }}" style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap; margin-top:0.8rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld" style="margin:0">
+            <label for="uitz-datum">Datum</label>
+            <input type="date" id="uitz-datum" name="datum" required>
+        </div>
+        <div class="veld" style="margin:0">
+            <label for="uitz-status">Op die dag</label>
+            <select id="uitz-status" name="status">
+                <option value="open">wel verkocht</option>
+                <option value="dicht">niet verkocht</option>
+            </select>
+        </div>
+        <div class="veld" style="margin:0; flex:1; min-width:10rem">
+            <label for="uitz-opmerking">Opmerking (optioneel)</label>
+            <input type="text" id="uitz-opmerking" name="opmerking" maxlength="80" placeholder="Bijv. zondagwedstrijd, toernooi">
+        </div>
+        <button type="submit" class="btn btn-rand">Uitzondering toevoegen</button>
+    </form>
+</details>
 
 {% if not prognose.beschikbaar %}
 <div class="kaart"><p class="leeg">{{ prognose.reden }}</p></div>
@@ -69,8 +199,8 @@
     {% set maximum = (prognose.dagen_overzicht|map(attribute='omzet')|max) or 1 %}
     <div class="omzet-trend-grafiek">
         {% for dag in prognose.dagen_overzicht %}
-        <div class="omzet-bar-kolom">
-            <span class="omzet-bar-waarde">&euro;{{ '%.0f'|format(dag.omzet) }}</span>
+        <div class="omzet-bar-kolom"{% if not dag.open %} style="opacity:0.45"{% endif %}>
+            <span class="omzet-bar-waarde">{% if dag.open %}&euro;{{ '%.0f'|format(dag.omzet) }}{% else %}dicht{% endif %}</span>
             <div class="omzet-bar" style="height: {{ (dag.omzet / maximum * 100)|round|int }}%"
                  title="{{ dag.weekdag }} {{ dag.datum.day }}-{{ dag.datum.month }}: ongeveer &euro; {{ '%.0f'|format(dag.omzet) }}"></div>
             <span class="omzet-bar-label">{{ dag.weekdag_kort }} {{ dag.datum.day }}</span>
@@ -85,14 +215,15 @@
                 <tr>
                     <td>{{ dag.weekdag|capitalize }} {{ dag.datum.day }}-{{ dag.datum.month }}{% if dag.deel < 0.95 %} <span class="tekst-zacht">(rest van de dag)</span>{% endif %}</td>
                     <td>
+                        {% if not dag.open %}<span class="badge badge-neutraal" title="Op deze dag wordt niet verkocht, zie Verkoopdagen hierboven">gesloten</span>{% endif %}
                         {% if dag.wedstrijden %}<span class="badge badge-ok">&#9917; {{ dag.wedstrijden }}x thuis</span>{% endif %}
                         {% if dag.training %}<span class="badge badge-neutraal">Training</span>{% endif %}
                         {% if dag.weer_score == 1 %}<span class="badge badge-in" title="Warm en droog">&#9728;&#65039; mooi weer</span>
                         {% elif dag.weer_score == -1 %}<span class="badge badge-uit" title="Veel kans op regen">&#127783;&#65039; regen</span>{% endif %}
-                        {% if not dag.wedstrijden and not dag.training and dag.weer_score in (none, 0) %}<span class="tekst-zacht">gewone dag</span>{% endif %}
+                        {% if dag.open and not dag.wedstrijden and not dag.training and dag.weer_score in (none, 0) %}<span class="tekst-zacht">gewone dag</span>{% endif %}
                     </td>
-                    <td>{{ '%+.0f'|format((dag.drukte - 1) * 100) }}%</td>
-                    <td>&euro; {{ '%.0f'|format(dag.omzet) }}</td>
+                    <td>{% if dag.open %}{{ '%+.0f'|format((dag.drukte - 1) * 100) }}%{% else %}&ndash;{% endif %}</td>
+                    <td>{% if dag.open %}&euro; {{ '%.0f'|format(dag.omzet) }}{% else %}&ndash;{% endif %}</td>
                 </tr>
                 {% endfor %}
             </tbody>
