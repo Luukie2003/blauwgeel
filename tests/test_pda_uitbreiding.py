@@ -266,7 +266,9 @@ def test_telling_ver_van_de_verwachting_wordt_gesignaleerd(db):
 def test_looplijst_toont_de_verwachting_en_het_controlescherm_waarschuwt(ingelogde_client, db):
     _alleen_eigen_producten(db)
     pid, _ = _geschiedenis_tot_voor_twee_dagen(db)
-    db.execute("UPDATE producten SET voorraad = 50 WHERE id = ?", (pid,))
+    # Geregistreerd 100, verwacht verbruik zo'n 20 (marge ruim): 0 geteld is dan duidelijk te weinig,
+    # los van het tijdstip van de dag waarop de test draait.
+    db.execute("UPDATE producten SET voorraad = 100 WHERE id = ?", (pid,))
     db.commit()
     c = _pda(ingelogde_client)
     c.get("/tellen/lopen/starten")

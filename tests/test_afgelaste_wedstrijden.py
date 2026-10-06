@@ -256,3 +256,20 @@ def test_afgelasten_hoort_bij_de_voorraad_sectie(client, db):
     resp = client.post(f"/wedstrijden/{wid}/afgelast", data={"csrf_token": _csrf(client), "afgelast": "1"})
     assert resp.status_code == 302 and resp.headers["Location"].endswith("/")
     assert _afgelast(db, wid) == (0, None)
+
+
+def test_gespeelde_wedstrijden_kun_je_achteraf_afgelasten(ingelogde_client, db):
+    gisteren = date.today() - timedelta(days=1)
+    wid = _wedstrijd(db, gisteren, "Blauw Geel'15 3-Helpman 4")
+    tekst = ingelogde_client.get("/wedstrijden").data.decode()
+    assert "Helpman 4" in tekst and "Afgelast?" in tekst and f"/wedstrijden/{wid}/afgelast" in tekst
+
+    ingelogde_client.post(
+        f"/wedstrijden/{wid}/afgelast", data={"csrf_token": _csrf(ingelogde_client), "afgelast": "1"}
+    )
+    tekst = ingelogde_client.get("/wedstrijden").data.decode()
+    assert "afgelast" in tekst and "Toch gespeeld" in tekst
+    # Voor de rest van de app is 'ie niet gespeeld: niet in de kalender van de prognose.
+    assert lees_kalender(db, gisteren, gisteren)[gisteren]["wedstrijden"] == 0
+    assert bereken_wedstrijd_geschiedenis(db) == []
+    assert [w["afgelast"] for w in bereken_wedstrijd_geschiedenis(db, inclusief_afgelast=True)] == [1]

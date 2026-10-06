@@ -27,8 +27,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.26.0"
+HUIDIGE_VERSIE = "1.26.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.26.1",
+        "datum": "6 oktober 2026",
+        "punten": [
+            "Wedstrijden: ook een wedstrijd die al geweest is kun je achteraf op afgelast zetten (bij Gespeelde wedstrijden), zodat de prognose er niet meer van leert",
+        ],
+    },
     {
         "versie": "1.26.0",
         "datum": "6 oktober 2026",
@@ -778,7 +785,7 @@ def register_routes(app):
         db = get_db()
         # Ook afgelaste wedstrijden, zodat je een afgelasting hier kunt terugdraaien.
         komende_thuiswedstrijden = bereken_komende_thuiswedstrijden(db, inclusief_afgelast=True)
-        wedstrijd_geschiedenis = bereken_wedstrijd_geschiedenis(db)
+        wedstrijd_geschiedenis = bereken_wedstrijd_geschiedenis(db, inclusief_afgelast=True)
         return render_template(
             "wedstrijden.html",
             komende_thuiswedstrijden=komende_thuiswedstrijden,

@@ -59,7 +59,8 @@
 <div class="kaart">
     <h2>Gespeelde wedstrijden</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Blijft bewaard nadat een wedstrijd is geweest, laatste 25.
+        Blijft bewaard nadat een wedstrijd is geweest, laatste 25. Was een thuiswedstrijd afgelast? Zet 'm dan
+        op "Afgelast?": hij telt dan ook in het verleden niet meer mee bij het leren van de prognose.
     </p>
     {% if wedstrijd_geschiedenis %}
     <div class="tabel-wrap">
@@ -72,10 +73,19 @@
                 <tr>
                     <td>{{ w.datum_weergave }}</td>
                     <td>{{ w.team }}</td>
-                    <td>{{ w.omschrijving }}</td>
+                    <td style="{{ 'text-decoration:line-through; opacity:0.6' if w.afgelast else '' }}">{{ w.omschrijving }}</td>
                     <td>
                         {% if w.thuis %}<span class="badge badge-ok">Thuis</span>
                         {% else %}<span class="badge badge-neutraal">Uit</span>{% endif %}
+                        {% if w.afgelast %}<span class="badge badge-neutraal">afgelast</span>{% endif %}
+                        {% if w.thuis and sectie_toegang.voorraad %}
+                        <form method="post" action="{{ url_for('wedstrijd_afgelast_wisselen', wedstrijd_id=w.id) }}" style="display:inline; margin:0">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="terug" value="wedstrijden">
+                            <input type="hidden" name="afgelast" value="{{ 0 if w.afgelast else 1 }}">
+                            <button type="submit" class="btn-tekstlink" style="font-size:0.78rem">{{ 'Toch gespeeld' if w.afgelast else 'Afgelast?' }}</button>
+                        </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

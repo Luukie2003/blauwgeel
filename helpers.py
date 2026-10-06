@@ -1034,18 +1034,24 @@ def kassa_telling_is_zelf_goedgekeurd(telling):
     )
 
 
-def bereken_wedstrijd_geschiedenis(db, limiet=25):
+def bereken_wedstrijd_geschiedenis(db, limiet=25, inclusief_afgelast=False):
     """De laatst gespeelde wedstrijden (alle teams, thuis en uit) --
-    gedeeld tussen de Wedstrijden-pagina en Club instellingen."""
+    gedeeld tussen de Wedstrijden-pagina en Club instellingen. Afgelaste
+    wedstrijden zijn niet gespeeld en doen niet mee, behalve met
+    inclusief_afgelast=True (de Wedstrijden-pagina, waar je een afgelasting
+    ook achteraf kunt zetten of terugdraaien)."""
     return [
         {
+            "id": w["id"],
             "datum_weergave": datetime.strptime(w["datum"], "%Y-%m-%d").strftime("%d-%m-%Y"),
             "team": w["team"],
             "omschrijving": w["omschrijving"],
             "thuis": w["thuis"],
+            "afgelast": w["afgelast"],
         }
         for w in db.execute(
-            "SELECT * FROM wedstrijden WHERE datum < ? AND afgelast = 0 ORDER BY datum DESC, team LIMIT ?",
+            f"""SELECT * FROM wedstrijden WHERE datum < ? {"" if inclusief_afgelast else "AND afgelast = 0"}
+                ORDER BY datum DESC, team LIMIT ?""",
             (date.today().isoformat(), limiet),
         ).fetchall()
     ]
