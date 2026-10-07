@@ -27,8 +27,15 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.27.0"
+HUIDIGE_VERSIE = "1.28.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.28.0",
+        "datum": "9 oktober 2026",
+        "punten": [
+            "Club van 20 importeren: in het voorbeeld kies je per lid of 'ie meegaat, met erbij wat er voor dat lid verandert. Niet aangevinkte leden blijven zoals ze in de app staan. Een lid waarvan een betaling in de app na de import anders zou zijn staat als \"let op\" standaard uit. Handige knoppen voor alles, niets of alleen nieuwe leden, en een zoekveld",
+        ],
+    },
     {
         "versie": "1.27.0",
         "datum": "7 oktober 2026",

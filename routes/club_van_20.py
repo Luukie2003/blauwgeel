@@ -31,6 +31,7 @@ from club_van_20 import (
     leden_met_bijdragen,
     normaliseer_seizoen,
     onbetaald_actie,
+    import_rij_overzicht,
     import_samenvatting,
     parse_import,
     rijen_naar_csv,
@@ -618,23 +619,41 @@ def register_routes(app):
             if voorbeeld["fout"]:
                 flash(voorbeeld["fout"], "error")
                 voorbeeld = None
-            elif request.form.get("bevestig"):
-                nieuw, bijgewerkt = voer_import_uit(
-                    db,
-                    voorbeeld["rijen"],
-                    gebruiker=session.get("gebruiker_naam"),
-                    standaard_bedrag=instellingen["club_van_20_bedrag"],
-                )
-                db.commit()
-                flash(f"Import klaar: {nieuw} nieuwe leden, {bijgewerkt} bijgewerkt.", "success")
-                return redirect(url_for("club_van_20_overzicht"))
             else:
+                # Het voorbeeld kent per lid een vinkje (zie het sjabloon): alleen de
+                # aangevinkte leden gaan mee. Zonder 'kies_aanwezig' (een oud
+                # formulier of een eigen aanroep) gaat de hele import door.
+                alle_rijen = voorbeeld["rijen"]
+                gekozen_rijen = alle_rijen
+                if request.form.get("kies_aanwezig"):
+                    gekozen = {int(i) for i in request.form.getlist("kies") if i.isdigit()}
+                    gekozen_rijen = [r for i, r in enumerate(alle_rijen) if i in gekozen]
+                if request.form.get("bevestig") and not gekozen_rijen:
+                    flash("Je hebt geen leden aangevinkt, dus er is niets geïmporteerd.", "warning")
+                elif request.form.get("bevestig"):
+                    nieuw, bijgewerkt = voer_import_uit(
+                        db,
+                        gekozen_rijen,
+                        gebruiker=session.get("gebruiker_naam"),
+                        standaard_bedrag=instellingen["club_van_20_bedrag"],
+                    )
+                    db.commit()
+                    overgeslagen = len(alle_rijen) - len(gekozen_rijen)
+                    flash(
+                        f"Import klaar: {nieuw} nieuwe leden, {bijgewerkt} bijgewerkt"
+                        + (f", {overgeslagen} leden uit het bestand overgeslagen." if overgeslagen else "."),
+                        "success",
+                    )
+                    return redirect(url_for("club_van_20_overzicht"))
+            if voorbeeld is not None:
                 bestaande = {
                     r["naam"].lower()
                     for r in db.execute("SELECT naam FROM club_van_20_leden").fetchall()
                 }
-                for rij in voorbeeld["rijen"]:
+                overzicht = import_rij_overzicht(db, voorbeeld["rijen"])
+                for rij, wat in zip(voorbeeld["rijen"], overzicht):
                     rij["bestaat"] = rij["naam"].lower() in bestaande
+                    rij["wat"] = wat
                 voorbeeld["samenvatting"] = import_samenvatting(db, voorbeeld["rijen"])
                 voorbeeld["totalen"] = {
                     s: sum(

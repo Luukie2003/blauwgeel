@@ -6,6 +6,8 @@
     cellen (inclusief de kopregel) en plak ze hieronder. Bij een Excel-bestand wordt het blad "Ledenlijst" gebruikt (verborgen bladen
     tellen niet mee). Is een lid al aanwezig (zelfde naambordje), dan worden alleen lege velden aangevuld &mdash; wat je in de app
     hebt aangepast, zoals een team, blijft staan. De seizoenen die je erin zet komen erbij; betalingen die al hetzelfde zijn blijven ongemoeid.
+    Leden die alleen in de app staan (bijvoorbeeld handmatig toegevoegd of via de website aangemeld) worden nooit verwijderd.
+    In het voorbeeld kies je zelf per lid of 'ie meegaat.
     Herkende kolommen: Voornaam, Achternaam, Team, Naambordje, een kolom per seizoen (bijv. "2023-2024") met het
     betaalde bedrag, "Status 2026-2027", "Betaald door", Telefoon en E-mail.
 </p>
@@ -29,6 +31,11 @@
 {% if voorbeeld %}
 <div class="kaart">
     <h2 style="margin-top:0">Voorbeeld: {{ voorbeeld.rijen|length }} leden</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Vink hieronder aan welke leden je wilt importeren. Leden die je niet aanvinkt blijven precies zoals ze in de app staan.
+        Een lid met <span class="badge badge-laag">let op</span> heeft in de app een betaling die er na de import anders
+        uitziet (bijvoorbeeld &lsquo;betaald&rsquo; wordt &lsquo;gevraagd&rsquo;): die staat daarom standaard niet aangevinkt.
+    </p>
     <p>
         {{ voorbeeld.rijen|selectattr('bestaat')|list|length }} bestaan al (worden aangevuld op naambordje),
         {{ voorbeeld.rijen|rejectattr('bestaat')|list|length }} zijn nieuw.
@@ -52,20 +59,41 @@
         <ul class="tekst-zacht">{% for w in voorbeeld.waarschuwingen %}<li>{{ w }}</li>{% endfor %}</ul>
     </details>
     {% endif %}
+    <div class="actiebalk" style="justify-content:flex-start; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.6rem">
+        <button type="button" class="btn btn-rand btn-klein js-kies" data-kies="alles">Alles</button>
+        <button type="button" class="btn btn-rand btn-klein js-kies" data-kies="standaard">Alles behalve &lsquo;let op&rsquo;</button>
+        <button type="button" class="btn btn-rand btn-klein js-kies" data-kies="nieuw">Alleen nieuwe leden</button>
+        <button type="button" class="btn btn-rand btn-klein js-kies" data-kies="niets">Niets</button>
+        <input type="search" id="import-zoek" placeholder="Zoek een lid..." style="max-width:14rem" aria-label="Zoek een lid">
+        <span class="tekst-zacht" id="import-teller"></span>
+    </div>
     <div class="tabel-wrap" style="max-height:420px; overflow:auto">
         <table class="c20-tabel">
             <thead>
-                <tr><th></th><th>Naambordje</th><th>Naam</th><th>Team</th>
+                <tr><th></th><th></th><th>Naambordje</th><th>Naam</th><th>Team</th><th>Wat verandert</th>
                     {% for s in voorbeeld.seizoenen %}<th class="c20-seizoenscel">{{ s|seizoen_kort }}</th>{% endfor %}
                 </tr>
             </thead>
             <tbody>
                 {% for rij in voorbeeld.rijen %}
-                <tr>
-                    <td>{% if rij.bestaat %}<span class="badge badge-neutraal">bijwerken</span>{% else %}<span class="badge badge-in">nieuw</span>{% endif %}</td>
+                <tr class="{{ 'rij-waarschuwing' if rij.wat.soort == 'conflict' else '' }}" data-soort="{{ rij.wat.soort }}" data-zoek="{{ (rij.naam ~ ' ' ~ rij.voornaam ~ ' ' ~ rij.achternaam)|lower }}">
+                    <td>
+                        <input type="checkbox" form="import-bevestig" name="kies" value="{{ loop.index0 }}" class="js-kies-vak"
+                               style="width:auto" aria-label="Importeer {{ rij.naam }}"
+                               {{ 'checked' if rij.wat.soort in ('nieuw', 'wijziging') else '' }}>
+                    </td>
+                    <td>
+                        {% if rij.wat.soort == 'nieuw' %}<span class="badge badge-in">nieuw</span>
+                        {% elif rij.wat.soort == 'conflict' %}<span class="badge badge-laag">let op</span>
+                        {% elif rij.wat.soort == 'wijziging' %}<span class="badge badge-neutraal">bijwerken</span>
+                        {% else %}<span class="badge badge-neutraal">geen wijziging</span>{% endif %}
+                    </td>
                     <td><strong>{{ rij.naam }}</strong></td>
                     <td>{{ rij.voornaam }} {{ rij.achternaam }}</td>
                     <td>{{ rij.team }}</td>
+                    <td class="tekst-zacht" style="font-size:0.8rem; min-width:14rem">
+                        {% for regel in rij.wat.regels %}{{ regel }}{% if not loop.last %}<br>{% endif %}{% else %}&ndash;{% endfor %}
+                    </td>
                     {% for s in voorbeeld.seizoenen %}
                     {% set b = rij.bijdragen.get(s) %}
                     <td class="c20-seizoenscel {{ b.status if b else '' }}">
@@ -77,13 +105,53 @@
             </tbody>
         </table>
     </div>
-    <form method="post" style="margin-top:1rem">
+    <form method="post" id="import-bevestig" style="margin-top:1rem">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <textarea name="tekst" hidden>{{ tekst }}</textarea>
         <input type="hidden" name="bevestig" value="1">
-        <button type="submit" class="btn btn-geel">Importeren</button>
-        <span class="tekst-zacht">Seizoenen uit de import overschrijven wat er voor die seizoenen al stond; de rest blijft staan.</span>
+        <input type="hidden" name="kies_aanwezig" value="1">
+        <button type="submit" class="btn btn-geel" id="import-knop">Geselecteerde leden importeren</button>
+        <span class="tekst-zacht">Bij de aangevinkte leden overschrijven de seizoenen uit de import wat er voor die seizoenen al stond; de rest blijft staan.</span>
     </form>
+    <script>
+    (function () {
+        var vakjes = Array.prototype.slice.call(document.querySelectorAll('.js-kies-vak'));
+        var teller = document.getElementById('import-teller');
+        var knop = document.getElementById('import-knop');
+        var zoek = document.getElementById('import-zoek');
+        function bijwerken() {
+            var n = vakjes.filter(function (v) { return v.checked; }).length;
+            teller.textContent = n + ' van ' + vakjes.length + ' aangevinkt';
+            knop.textContent = n ? 'Importeer ' + n + (n === 1 ? ' lid' : ' leden') : 'Geselecteerde leden importeren';
+        }
+        vakjes.forEach(function (v) { v.addEventListener('change', bijwerken); });
+        document.querySelectorAll('.js-kies').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var wat = b.dataset.kies;
+                vakjes.forEach(function (v) {
+                    var soort = v.closest('tr').dataset.soort;
+                    v.checked = wat === 'alles' || (wat === 'nieuw' && soort === 'nieuw') ||
+                        (wat === 'standaard' && (soort === 'nieuw' || soort === 'wijziging'));
+                });
+                bijwerken();
+            });
+        });
+        zoek.addEventListener('input', function () {
+            var term = zoek.value.trim().toLowerCase();
+            vakjes.forEach(function (v) {
+                var rij = v.closest('tr');
+                rij.style.display = !term || rij.dataset.zoek.indexOf(term) !== -1 ? '' : 'none';
+            });
+        });
+        document.getElementById('import-bevestig').addEventListener('submit', function (e) {
+            if (!vakjes.some(function (v) { return v.checked; })) {
+                e.preventDefault();
+                alert('Vink eerst minstens één lid aan.');
+            }
+        });
+        bijwerken();
+    })();
+    </script>
 </div>
 {% endif %}
 

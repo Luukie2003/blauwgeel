@@ -1043,6 +1043,64 @@ def import_samenvatting(db, rijen):
     return samenvatting
 
 
+def _bijdrage_tekst(b):
+    """Korte tekst voor een bijdrage in het importvoorbeeld, bijv. "betaald €20"."""
+    tekst = BIJDRAGE_STATUS_LABELS[b["status"]].lower()
+    if b["status"] == "betaald":
+        tekst += " €%g" % (b["bedrag"] or 0)
+    return tekst
+
+
+def import_rij_overzicht(db, rijen):
+    """Per rij uit de import (zelfde volgorde) wat er voor dat lid zou gebeuren,
+    zodat je in het voorbeeld per lid kunt kiezen of 'ie meegaat:
+    {'soort', 'regels'}. soort is 'nieuw' (lid bestaat nog niet), 'wijziging'
+    (bestaand lid krijgt een nieuwe of aangepaste betaling, of lege velden
+    aangevuld), 'conflict' (een bestaande betaling van 'betaald' wordt
+    anders: een andere status of een ander bedrag) of 'niets' (er verandert
+    niets). Een conflict staat in het voorbeeld standaard niet aangevinkt:
+    daar kan de app nieuwer zijn dan het bestand."""
+    leden = {r["naam"].lower(): r for r in db.execute("SELECT * FROM club_van_20_leden").fetchall()}
+    huidige = {
+        (r["lid_id"], r["seizoen"]): r for r in db.execute("SELECT * FROM club_van_20_bijdragen").fetchall()
+    }
+    uitkomst = []
+    for rij in rijen:
+        lid = leden.get(rij["naam"].lower())
+        regels = []
+        conflict = False
+        if lid is not None:
+            aanvullen = [
+                veld
+                for veld in ("voornaam", "achternaam", "team", "telefoon", "email", "notitie")
+                if rij[veld] and not (lid[veld] or "").strip()
+            ]
+            if aanvullen:
+                regels.append("vult aan: " + ", ".join(aanvullen))
+        for seizoen, b in rij["bijdragen"].items():
+            if b["status"] == "niet_gevraagd" and not b.get("betaald_door"):
+                continue
+            huidig = huidige.get((lid["id"], seizoen)) if lid is not None else None
+            if huidig is None:
+                regels.append(f"{seizoen}: {_bijdrage_tekst(b)}")
+            elif not _bijdrage_ongewijzigd(huidig, b):
+                regels.append(f"{seizoen}: {_bijdrage_tekst(huidig)} → {_bijdrage_tekst(b)}")
+                if huidig["status"] == "betaald" and (
+                    b["status"] != "betaald" or abs((huidig["bedrag"] or 0) - (b.get("bedrag") or 0)) >= 0.005
+                ):
+                    conflict = True
+        if lid is None:
+            soort = "nieuw"
+        elif conflict:
+            soort = "conflict"
+        elif regels:
+            soort = "wijziging"
+        else:
+            soort = "niets"
+        uitkomst.append({"soort": soort, "regels": regels})
+    return uitkomst
+
+
 def voer_import_uit(db, rijen, gebruiker=None, standaard_bedrag=20):
     """Zet geparste rijen (zie parse_import) in de database. Een lid met
     hetzelfde naambordje (hoofdletterongevoelig) wordt bijgewerkt i.p.v.
