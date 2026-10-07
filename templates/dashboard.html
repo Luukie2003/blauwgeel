@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block titel %}Overzicht{% endblock %}
 {% block inhoud %}
+{% if backup_status and not backup_status.ok %}
+<div class="kaart" style="border-left:4px solid #c0392b">
+    <strong>Back-up:</strong> {{ backup_status.tekst }}
+    <a href="{{ url_for('backups_lijst') }}">Naar de back-ups</a>
+</div>
+{% endif %}
 <div class="statgrid">
     <div class="statuskaart {{ 'statuskaart-goed' if laatste_telling_status.ok else 'statuskaart-slecht' }}">
         <div class="statuskaart-titel">Telling</div>

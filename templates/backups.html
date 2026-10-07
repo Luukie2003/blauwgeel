@@ -13,6 +13,12 @@
     </form>
 </div>
 
+{% if not backup_status.ok %}
+<div class="kaart" style="border-left:4px solid #c0392b">
+    <strong>Let op:</strong> {{ backup_status.tekst }}
+</div>
+{% endif %}
+
 <div class="kaart">
     {% if backups %}
     <div class="tabel-wrap">

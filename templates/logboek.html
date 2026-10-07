@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block titel %}Logboek{% endblock %}
+{% block inhoud %}
+<h1>Logboek</h1>
+<p class="subtitel">
+    Wie deed wat: wijzigingen aan accounts en rechten, kassa en kluis, producten, instellingen en
+    back-ups &mdash; en wie er is ingelogd. Dagelijkse handelingen zoals boeken en tellen staan in hun eigen geschiedenis.
+</p>
+
+<div class="actiebalk">
+    <form method="get" action="{{ url_for('logboek') }}" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center">
+        {% for optie in toonbare_dagen %}
+        <a href="{{ url_for('logboek', dagen=optie, gebruiker=gebruiker_filter or None) }}"
+           class="btn btn-klein {{ 'btn-geel' if gekozen_dagen == optie else 'btn-rand' }}">
+            {{ 'Laatste ' ~ optie ~ ' dagen' if optie < 365 else 'Laatste jaar' }}
+        </a>
+        {% endfor %}
+        <input type="hidden" name="dagen" value="{{ gekozen_dagen }}">
+        <select name="gebruiker" onchange="this.form.submit()" aria-label="Filter op gebruiker">
+            <option value="">Alle gebruikers</option>
+            {% for naam in namen %}
+            <option value="{{ naam }}" {{ 'selected' if naam == gebruiker_filter }}>{{ naam }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="kaart">
+    {% if regels %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Moment</th><th>Wie</th><th>Actie</th><th>Details</th></tr>
+            </thead>
+            <tbody>
+                {% for r in regels %}
+                <tr>
+                    <td>{{ r.datum|datum_nl }}</td>
+                    <td>{{ r.gebruiker_naam or '-' }}</td>
+                    <td>{{ r.actie }}</td>
+                    <td>{{ r.omschrijving or '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if te_veel %}
+    <p class="tekst-zacht">Alleen de nieuwste {{ max_regels }} regels worden getoond &mdash; kies een kortere periode of een gebruiker.</p>
+    {% endif %}
+    {% else %}
+    <p class="leeg">Niets gelogd in deze periode.</p>
+    {% endif %}
+</div>
+{% endblock %}

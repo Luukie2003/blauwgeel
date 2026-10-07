@@ -155,7 +155,9 @@ def register_routes(app):
             }
             for b in bestanden
         ]
-        return render_template("backups.html", backups=backups)
+        return render_template(
+            "backups.html", backups=backups, backup_status=backup_module.bereken_backup_status()
+        )
 
     @app.route("/backups/nu", methods=["POST"])
     def backup_nu():

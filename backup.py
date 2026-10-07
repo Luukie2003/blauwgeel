@@ -9,8 +9,14 @@ gebruikt ook alleen smtplib/email uit de standaardbibliotheek). Back-ups
 komen in de map backups/, als voorraad-JJJJ-MM-DD.db. Back-ups ouder dan
 BEWAARTERMIJN_DAGEN worden automatisch verwijderd.
 
-Elke maandag wordt de back-up van die dag ook als bijlage gemaild naar
-BACKUP_MAIL_NAAR, als extra kopie buiten de server om.
+Elke dag wordt de back-up ook als bijlage gemaild naar BACKUP_MAIL_NAAR,
+als extra kopie buiten de server om (de database is maar enkele honderden
+kB, dus dat is licht genoeg om dagelijks te doen -- bij een wekelijkse mail
+ben je bij een kapotte server tot een week aan gegevens kwijt).
+
+Elke back-up wordt direct na het maken gecontroleerd (PRAGMA
+integrity_check). Is die niet in orde, dan wordt hij weggegooid en gaat er
+een waarschuwingsmail uit, zodat je dat niet pas merkt als je hem nodig hebt.
 """
 
 import sqlite3
@@ -24,6 +30,9 @@ BRON = BASE_DIR / "voorraad.db"
 BACKUP_MAP = BASE_DIR / "backups"
 BEWAARTERMIJN_DAGEN = 90
 BACKUP_MAIL_NAAR = "no-reply@kantineblauwgeel.nl"
+# Na hoeveel dagen zonder nieuwe back-up de app een waarschuwing toont (de
+# taak draait dagelijks, dus 1 gemiste dag is nog geen reden tot alarm).
+MAX_LEEFTIJD_DAGEN = 2
 
 
 def maak_backup():
@@ -46,6 +55,42 @@ def maak_backup():
 
     print(f"Back-up gemaakt: {doel.name}")
     return doel
+
+
+def controleer_backup(pad):
+    """Controleert of een back-up een heel, leesbaar SQLite-bestand is.
+    Geeft (ok, melding) terug."""
+    try:
+        conn = sqlite3.connect(pad)
+        try:
+            resultaat = conn.execute("PRAGMA integrity_check").fetchone()[0]
+            conn.execute("SELECT COUNT(*) FROM producten").fetchone()
+        finally:
+            conn.close()
+    except sqlite3.Error as fout:
+        return False, f"niet te openen of onvolledig: {fout}"
+    if resultaat != "ok":
+        return False, f"integriteitscontrole mislukt: {resultaat}"
+    return True, "ok"
+
+
+def bereken_backup_status(nu=None, backup_map=None):
+    """Hoe vers is de nieuwste back-up? Voor de waarschuwing op het
+    dashboard en op de Back-ups-pagina. 'laatste' is een datetime of None."""
+    nu = nu or datetime.now()
+    backup_map = backup_map or BACKUP_MAP
+    bestanden = list(backup_map.glob("voorraad-????-??-??.db")) if backup_map.exists() else []
+    if not bestanden:
+        return {"ok": False, "laatste": None, "tekst": "Er is nog geen back-up gemaakt."}
+    laatste = max(datetime.fromtimestamp(b.stat().st_mtime) for b in bestanden)
+    dagen = (nu - laatste).days
+    if dagen >= MAX_LEEFTIJD_DAGEN:
+        return {
+            "ok": False,
+            "laatste": laatste,
+            "tekst": f"De laatste back-up is {dagen} dagen oud. Controleer de dagelijkse back-uptaak.",
+        }
+    return {"ok": True, "laatste": laatste, "tekst": "Back-ups lopen goed."}
 
 
 def maak_backup_met_naam(bestandsnaam):
@@ -93,9 +138,9 @@ def mail_backup(pad):
     """Mailt de gegeven back-up als bijlage naar BACKUP_MAIL_NAAR. Faalt
     stil (net als mail.stuur_mail zelf) als er geen email_instellingen.py
     is -- de back-up zelf staat dan alsnog gewoon op de server."""
-    onderwerp = f"Wekelijkse back-up {pad.stem}"
+    onderwerp = f"Back-up {pad.stem}"
     tekst = (
-        f"Bijgevoegd de wekelijkse back-up van de database: {pad.name}.\n\n"
+        f"Bijgevoegd de back-up van de database van vandaag: {pad.name}.\n\n"
         "Dit is een automatische e-mail, als extra kopie naast de back-ups "
         "die al op de server staan."
     )
@@ -104,8 +149,28 @@ def mail_backup(pad):
     return gelukt
 
 
+def meld_mislukte_backup(reden):
+    onderwerp = "WAARSCHUWING: back-up van Kantine Beheer mislukt"
+    tekst = (
+        f"De dagelijkse back-up van de database is niet gelukt: {reden}\n\n"
+        "Kijk op de server of voorraad.db in orde is. De oudere back-ups "
+        "zijn niet aangeraakt."
+    )
+    mail.stuur_mail(onderwerp, tekst, naar=BACKUP_MAIL_NAAR)
+
+
 if __name__ == "__main__":
     pad = maak_backup()
+    if pad is None:
+        meld_mislukte_backup("voorraad.db is niet gevonden.")
+        raise SystemExit(1)
+    ok, melding = controleer_backup(pad)
+    if not ok:
+        # Een kapotte back-up weggooien: anders telt hij mee als "de back-up
+        # van vandaag" en wordt hij straks gemaild/als herstelpunt gebruikt.
+        pad.unlink()
+        print(f"Back-up afgekeurd en verwijderd: {melding}")
+        meld_mislukte_backup(melding)
+        raise SystemExit(1)
     ruim_oude_backups_op()
-    if pad and datetime.now().weekday() == 0:  # maandag
-        mail_backup(pad)
+    mail_backup(pad)

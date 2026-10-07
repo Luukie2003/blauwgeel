@@ -168,6 +168,7 @@ BEHEERDER_ENDPOINTS = {
     "kluis_mutatie_nieuw",
     "kluis_mutatie_corrigeren",
     "gebruiksstatistieken",
+    "logboek",
 }
 
 # Fijnmazige rechten bovenop BEHEERDER_ENDPOINTS: elk account (ook
@@ -628,6 +629,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Rapporten",
+        "endpoints": ["compacte_uitdraai", "compacte_uitdraai_pdf_route"],
+        "url_endpoint": "compacte_uitdraai",
+        "label": "Compacte uitdraai",
+    },
+    {
+        "groep": "Rapporten",
         "endpoints": ["week_overzicht"],
         "url_endpoint": "week_overzicht",
         "label": "Weekoverzicht",
@@ -649,6 +656,12 @@ NAV_ITEMS = [
         "endpoints": ["club_instellingen"],
         "url_endpoint": "club_instellingen",
         "label": "Club instellingen",
+    },
+    {
+        "groep": "Club",
+        "endpoints": ["logboek"],
+        "url_endpoint": "logboek",
+        "label": "Logboek",
     },
     {
         "groep": "Club",
@@ -1034,12 +1047,14 @@ def create_app(database_path=None, admin_wachtwoord=None):
         keuken,
         kiosk,
         kluis,
+        logboek,
         privacy,
         producten,
         prognose,
         sponsoren,
         stemmen,
         tellen,
+        uitdraai,
         verbruiksvoorwerpen,
     )
 
@@ -1060,10 +1075,12 @@ def create_app(database_path=None, admin_wachtwoord=None):
     keuken.register_routes(app)
     kiosk.register_routes(app)
     kluis.register_routes(app)
+    logboek.register_routes(app)
     producten.register_routes(app)
     sponsoren.register_routes(app)
     stemmen.register_routes(app)
     tellen.register_routes(app)
+    uitdraai.register_routes(app)
     verbruiksvoorwerpen.register_routes(app)
     return app
 

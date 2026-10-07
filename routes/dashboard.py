@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from flask import Response, flash, g, jsonify, redirect, render_template, request, session, url_for
 
+import backup as backup_module
 from club_van_20 import bereken_club_van_20_status
 from database import get_db
 from helpers import (
@@ -27,8 +28,17 @@ from pdf import periode_verkoop_pdf
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.28.0"
+HUIDIGE_VERSIE = "1.30.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.30.0",
+        "datum": "7 oktober 2026",
+        "punten": [
+            "Compacte uitdraai: bij Rapporten maak je één A4 met het kasverslag, het kluisverslag en de huidige voorraadstand. Je vinkt aan wat erop moet; wat jouw account niet mag zien (de kluis is alleen voor beheerders) staat er niet bij",
+            "Logboek (alleen beheerders): bij Club zie je wie wat deed, zoals accounts en rechten, kassa en kluis, producten, instellingen en back-ups, en wie er is ingelogd",
+            "Back-ups: elke back-up wordt direct gecontroleerd, de kopie per e-mail komt nu elke dag in plaats van elke week, en het dashboard waarschuwt beheerders als de laatste back-up te oud is",
+        ],
+    },
     {
         "versie": "1.28.0",
         "datum": "9 oktober 2026",
@@ -767,6 +777,13 @@ def register_routes(app):
             kassa_telling_status=bereken_kassa_telling_status(db),
             bestelling_status=bereken_bestelling_status(db),
             frituurvet_status=bereken_frituurvet_status(db),
+            # Alleen beheerders hebben iets aan (en toegang tot) de back-ups;
+            # de waarschuwing verschijnt alleen als er iets mis is.
+            backup_status=(
+                backup_module.bereken_backup_status()
+                if session.get("gebruiker_rol") == "beheerder"
+                else None
+            ),
             # Alleen voor wie de Club van 20-sectie heeft (beheerders altijd) --
             # deze query overslaan voor wie de tegel toch niet te zien krijgt.
             club_van_20_status=(

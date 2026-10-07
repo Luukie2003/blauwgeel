@@ -698,3 +698,19 @@ CREATE TABLE IF NOT EXISTS verkoop_uitzonderingen (
     open INTEGER NOT NULL,
     opmerking TEXT
 );
+
+-- Logboek ("wie deed wat") van gevoelige acties: accounts en rechten,
+-- back-ups, kassa/kluis, producten en instellingen. Wordt centraal gevuld
+-- door routes/logboek.py (geen aanpassing per route nodig). De naam staat
+-- er los bij, naast de gebruiker_id: een later verwijderd account moet in
+-- de historie gewoon leesbaar blijven.
+CREATE TABLE IF NOT EXISTS logboek (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    datum TEXT NOT NULL,
+    gebruiker_id INTEGER REFERENCES gebruikers(id) ON DELETE SET NULL,
+    gebruiker_naam TEXT,
+    endpoint TEXT NOT NULL,
+    actie TEXT NOT NULL,
+    omschrijving TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_logboek_datum ON logboek(datum);
