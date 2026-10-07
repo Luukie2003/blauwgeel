@@ -31,6 +31,25 @@
 {% if voorbeeld %}
 <div class="kaart">
     <h2 style="margin-top:0">Voorbeeld: {{ voorbeeld.rijen|length }} leden</h2>
+    {% if voorbeeld.verlengd %}
+    {% set v = voorbeeld.verlengd %}
+    <div class="flash flash-success" style="display:block; margin-bottom:1rem">
+        <strong>Verlengd voor {{ v.seizoen }} volgens dit bestand: {{ v.totaal }} {{ 'lid' if v.totaal == 1 else 'leden' }}.</strong>
+        <ul style="margin:0.4rem 0 0.6rem 1.2rem; padding:0">
+            <li><strong>{{ v.wordt_betaald|length }}</strong> {{ 'staat' if v.wordt_betaald|length == 1 else 'staan' }} in de app nog niet op betaald en
+                {{ 'wordt' if v.wordt_betaald|length == 1 else 'worden' }} dat na het importeren{% if v.wordt_betaald %}: {{ v.wordt_betaald|join(', ') }}{% endif %}.</li>
+            <li><strong>{{ v.nieuw|length }}</strong> {{ 'is' if v.nieuw|length == 1 else 'zijn' }} nog geen lid in de app en {{ 'komt' if v.nieuw|length == 1 else 'komen' }} erbij{% if v.nieuw %}: {{ v.nieuw|join(', ') }}{% endif %}.</li>
+            <li><strong>{{ v.al_betaald|length }}</strong> {{ 'staat' if v.al_betaald|length == 1 else 'staan' }} al op betaald{% if v.al_betaald %} ({{ v.al_betaald|join(', ') }}){% endif %}.</li>
+        </ul>
+        {% if v.rijen %}
+        <button type="button" class="btn btn-geel btn-klein js-kies" data-kies="verlengd">
+            Alleen de {{ v.rijen|length }} {{ 'lid' if v.rijen|length == 1 else 'leden' }} aanvinken die nog verlengd {{ 'moet' if v.rijen|length == 1 else 'moeten' }} worden
+        </button>
+        {% else %}
+        <span class="tekst-zacht">Er is niemand die nog verlengd hoeft te worden.</span>
+        {% endif %}
+    </div>
+    {% endif %}
     <p class="tekst-zacht" style="margin-top:-0.4rem">
         Vink hieronder aan welke leden je wilt importeren. Leden die je niet aanvinkt blijven precies zoals ze in de app staan.
         Een lid met <span class="badge badge-laag">let op</span> heeft in de app een betaling die er na de import anders
@@ -76,7 +95,7 @@
             </thead>
             <tbody>
                 {% for rij in voorbeeld.rijen %}
-                <tr class="{{ 'rij-waarschuwing' if rij.wat.soort == 'conflict' else '' }}" data-soort="{{ rij.wat.soort }}" data-zoek="{{ (rij.naam ~ ' ' ~ rij.voornaam ~ ' ' ~ rij.achternaam)|lower }}">
+                <tr class="{{ 'rij-waarschuwing' if rij.wat.soort == 'conflict' else '' }}" data-soort="{{ rij.wat.soort }}" data-verlengd="{{ 1 if rij.verlengd else 0 }}" data-zoek="{{ (rij.naam ~ ' ' ~ rij.voornaam ~ ' ' ~ rij.achternaam)|lower }}">
                     <td>
                         <input type="checkbox" form="import-bevestig" name="kies" value="{{ loop.index0 }}" class="js-kies-vak"
                                style="width:auto" aria-label="Importeer {{ rij.naam }}"
@@ -129,8 +148,10 @@
             b.addEventListener('click', function () {
                 var wat = b.dataset.kies;
                 vakjes.forEach(function (v) {
-                    var soort = v.closest('tr').dataset.soort;
+                    var rij = v.closest('tr');
+                    var soort = rij.dataset.soort;
                     v.checked = wat === 'alles' || (wat === 'nieuw' && soort === 'nieuw') ||
+                        (wat === 'verlengd' && rij.dataset.verlengd === '1') ||
                         (wat === 'standaard' && (soort === 'nieuw' || soort === 'wijziging'));
                 });
                 bijwerken();

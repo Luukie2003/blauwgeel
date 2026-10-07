@@ -40,8 +40,15 @@ WIJZIGINGEN = [
         ],
     },
     {
+        "versie": "1.29.0",
+        "datum": "7 oktober 2026",
+        "punten": [
+            "Club van 20 importeren: upload het Excel-bestand van de penningmeester en de site laat bovenaan zien wie er voor dit seizoen heeft verlengd (\"Status\" op Betaald): wie nog niet op betaald stond, wie al betaald was en wie nog geen lid is. Eén knop vinkt precies de leden aan die nog verlengd moeten worden. Een lid dat in het bestand op Betaald staat met een bedrag van 0 (bijvoorbeeld al vooruit betaald in het vorige seizoen) telt nu ook als verlengd, zonder dat het geld dubbel in de totalen komt",
+        ],
+    },
+    {
         "versie": "1.28.0",
-        "datum": "9 oktober 2026",
+        "datum": "7 oktober 2026",
         "punten": [
             "Club van 20 importeren: in het voorbeeld kies je per lid of 'ie meegaat, met erbij wat er voor dat lid verandert. Niet aangevinkte leden blijven zoals ze in de app staan. Een lid waarvan een betaling in de app na de import anders zou zijn staat als \"let op\" standaard uit. Handige knoppen voor alles, niets of alleen nieuwe leden, en een zoekveld",
         ],

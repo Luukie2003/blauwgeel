@@ -157,14 +157,16 @@ def is_nieuw_lid(lid, seizoen):
 
 def sla_bijdrage_op(db, lid_id, seizoen, status, bedrag=None, betaald_door=None,
                     betaalwijze=None, notitie=None, standaard_bedrag=20, gebruiker=None,
-                    betaald_op=None):
+                    betaald_op=None, nul_toegestaan=False):
     """Upsert van 1 bijdrage. Bij 'betaald' zonder bedrag geldt het
     standaardbedrag, en zonder datum vandaag. 'niet_gevraagd' zonder verdere
-    gegevens verwijdert de rij gewoon (= geen rij, zie de moduledocstring)."""
+    gegevens verwijdert de rij gewoon (= geen rij, zie de moduledocstring).
+    Met nul_toegestaan blijft een bedrag van 0 bij 'betaald' staan (de import:
+    verlengd, maar het geld is al in een eerder seizoen meegeteld)."""
     if status not in BIJDRAGE_STATUS_LABELS:
         raise ValueError(f"Onbekende status: {status}")
     if status == "betaald":
-        if not bedrag:
+        if bedrag is None or (not bedrag and not nul_toegestaan):
             bedrag = standaard_bedrag
         betaald_op = betaald_op or vandaag_amsterdam().isoformat()
     else:
@@ -974,9 +976,14 @@ def parse_import(tekst, standaard_bedrag=20):
             elif status in ("gevraagd", "toegezegd", "afgezegd"):
                 bijdragen[seizoen] = {"status": status, "bedrag": 0}
             elif status == "betaald" and not ruw.strip():
-                # Alleen "Betaald" zonder bedragkolom: standaardbedrag. Staat
-                # er expliciet 0 in de bedragkolom, dan wint dat bedrag.
+                # Alleen "Betaald" zonder bedragkolom: standaardbedrag.
                 bijdragen[seizoen] = {"status": "betaald", "bedrag": standaard_bedrag}
+            elif status == "betaald" and bedrag == 0:
+                # "Betaald" met expliciet 0 in de bedragkolom: de penningmeester
+                # rekent dit lid als verlengd, maar het geld stond al in een
+                # eerder seizoen (bijv. vooruitbetaald). Verlengd dus, met bedrag
+                # 0 zodat de totalen niets dubbel tellen.
+                bijdragen[seizoen] = {"status": "betaald", "bedrag": 0, "nul_betaald": True}
         betaald_door = _schoon(cel(rij, velden.get("betaald_door")))
         if betaald_door and betaald_door_seizoen:
             bijdragen.setdefault(betaald_door_seizoen, {"status": "niet_gevraagd", "bedrag": 0})
@@ -1001,6 +1008,8 @@ def _bijdrage_ongewijzigd(bestaande, b):
     """True als de import voor dit seizoen niets verandert aan wat er al staat
     (zelfde status en bedrag) -- dan blijft de bestaande bijdrage met al haar
     details (betaalwijze, notitie) ongemoeid."""
+    if b.get("nul_betaald") and bestaande is not None and bestaande["status"] == "betaald":
+        return True  # de app heeft dit lid al op betaald, met een echt bedrag: dat blijft
     return (
         bestaande is not None
         and bestaande["status"] == b["status"]
@@ -1047,7 +1056,9 @@ def _bijdrage_tekst(b):
     """Korte tekst voor een bijdrage in het importvoorbeeld, bijv. "betaald €20"."""
     tekst = BIJDRAGE_STATUS_LABELS[b["status"]].lower()
     if b["status"] == "betaald":
-        tekst += " €%g" % (b["bedrag"] or 0)
+        # b is een regel uit de import (dict) of uit de database (sqlite Row, zonder .get)
+        nul = isinstance(b, dict) and b.get("nul_betaald")
+        tekst += " (€0 in het bestand)" if nul else " €%g" % (b["bedrag"] or 0)
     return tekst
 
 
@@ -1098,6 +1109,39 @@ def import_rij_overzicht(db, rijen):
         else:
             soort = "niets"
         uitkomst.append({"soort": soort, "regels": regels})
+    return uitkomst
+
+
+def verlengingen_overzicht(db, rijen, seizoen):
+    """Wie volgens het bestand voor `seizoen` betaald heeft (= verlengd), voor het
+    voorbeeld van de import: {'seizoen', 'totaal', 'al_betaald', 'wordt_betaald',
+    'nieuw', 'rijen'}. 'al_betaald' zijn leden die in de app al op betaald staan,
+    'wordt_betaald' bestaande leden die de import op betaald zet, 'nieuw' leden die
+    er nog niet zijn (namen), 'rijen' de volgnummers (in `rijen`) van de leden die de
+    import nog moet verlengen (dus 'wordt_betaald' en 'nieuw', niet 'al_betaald')."""
+    leden = {r["naam"].lower(): r["id"] for r in db.execute("SELECT id, naam FROM club_van_20_leden").fetchall()}
+    betaald = {
+        r["lid_id"]
+        for r in db.execute(
+            "SELECT lid_id FROM club_van_20_bijdragen WHERE seizoen = ? AND status = 'betaald'", (seizoen,)
+        ).fetchall()
+    }
+    uitkomst = {"seizoen": seizoen, "totaal": 0, "al_betaald": [], "wordt_betaald": [], "nieuw": [], "rijen": []}
+    for index, rij in enumerate(rijen):
+        b = rij["bijdragen"].get(seizoen)
+        if not b or b["status"] != "betaald":
+            continue
+        lid_id = leden.get(rij["naam"].lower())
+        if lid_id is None:
+            soort = "nieuw"
+        elif lid_id in betaald:
+            soort = "al_betaald"
+        else:
+            soort = "wordt_betaald"
+        uitkomst[soort].append(rij["naam"])
+        if soort != "al_betaald":
+            uitkomst["rijen"].append(index)
+        uitkomst["totaal"] += 1
     return uitkomst
 
 
@@ -1169,5 +1213,6 @@ def voer_import_uit(db, rijen, gebruiker=None, standaard_bedrag=20):
                 # Historische seizoenen: geen "vandaag" als betaaldatum,
                 # anders lijkt iedereen ineens een nieuw lid.
                 betaald_op=f"{seizoen[:4]}-{SEIZOEN_STARTMAAND:02d}-01",
+                nul_toegestaan=bool(b.get("nul_betaald")),
             )
     return nieuw, bijgewerkt

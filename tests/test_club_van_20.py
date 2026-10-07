@@ -857,8 +857,11 @@ def test_parse_import_van_de_oude_spreadsheet():
         "2024-2025": {"status": "betaald", "bedrag": 20},
     }
     assert rijen["Ten Boer On Tour"]["bijdragen"]["2023-2024"]["bedrag"] == 160
-    # "Betaald" in de statuskolom maar expliciet 0 in de bedragkolom: geen betaling.
-    assert "2026-2027" not in rijen["Mv. Subaeswaren"]["bijdragen"]
+    # "Betaald" in de statuskolom maar expliciet 0 in de bedragkolom: verlengd, met bedrag 0
+    # (het geld stond al in een eerder seizoen).
+    assert rijen["Mv. Subaeswaren"]["bijdragen"]["2026-2027"] == {
+        "status": "betaald", "bedrag": 0, "nul_betaald": True
+    }
     assert rijen["Mv. Subaeswaren"]["team"] == "SJO"
     assert rijen["Mv. Subaeswaren"]["voornaam"] == ""
     assert rijen["Bartelds sr."]["bijdragen"]["2026-2027"] == {

@@ -42,6 +42,7 @@ from club_van_20 import (
     scherm_bereik,
     sla_bijdrage_op,
     team_stand,
+    verlengingen_overzicht,
     verschuif_seizoen,
     verzoek_tekst,
     voer_import_uit,
@@ -655,6 +656,15 @@ def register_routes(app):
                     rij["bestaat"] = rij["naam"].lower() in bestaande
                     rij["wat"] = wat
                 voorbeeld["samenvatting"] = import_samenvatting(db, voorbeeld["rijen"])
+                # Wie heeft er volgens het bestand dit seizoen betaald (verlengd)?
+                verlengd_seizoen = huidig_seizoen() if huidig_seizoen() in voorbeeld["seizoenen"] else (
+                    voorbeeld["seizoenen"][-1] if voorbeeld["seizoenen"] else None
+                )
+                voorbeeld["verlengd"] = (
+                    verlengingen_overzicht(db, voorbeeld["rijen"], verlengd_seizoen) if verlengd_seizoen else None
+                )
+                for index, rij in enumerate(voorbeeld["rijen"]):
+                    rij["verlengd"] = bool(voorbeeld["verlengd"]) and index in voorbeeld["verlengd"]["rijen"]
                 voorbeeld["totalen"] = {
                     s: sum(
                         r["bijdragen"][s]["bedrag"]
