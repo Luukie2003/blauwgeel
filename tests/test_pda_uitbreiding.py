@@ -226,6 +226,10 @@ def test_aanmeldingen_op_desktop_houden_de_tabel(ingelogde_client, db):
 
 def _geschiedenis_tot_voor_twee_dagen(db):
     """10 wekelijkse tellingen van een product dat 10 per dag verkoopt, de laatste 2 dagen geleden."""
+    # Er wordt standaard alleen op woensdag en zaterdag verkocht: zou dit test van de weekdag van
+    # vandaag afhangen (maandag tot woensdag bevat maar 1 verkoopdag), dus alle dagen open.
+    db.execute("UPDATE instellingen SET verkoopdagen = '0,1,2,3,4,5,6' WHERE id = 1")
+    db.commit()
     laatste = (datetime.now() - timedelta(days=2)).replace(minute=0, second=0, microsecond=0)
     tijden = [laatste - timedelta(days=7 * (9 - i)) for i in range(10)]
     pid = _product(db, "Snelle Pils", voorraad=50)
@@ -257,10 +261,14 @@ def test_telling_ver_van_de_verwachting_wordt_gesignaleerd(db):
     pid, laatste = _geschiedenis_tot_voor_twee_dagen(db)
     verwachting = verwachte_verkoop_sinds_telling(db, nu=laatste + timedelta(days=2))[pid]
 
-    verwacht = verwachte_voorraad(verwachting, 50)["verwacht"]
-    assert telling_ver_van_verwachting(verwachting, 50, verwacht) is None
-    assert telling_ver_van_verwachting(verwachting, 50, 0) == "minder"
-    assert telling_ver_van_verwachting(verwachting, 50, 90) == "meer"
+    # De marge van het model hangt af van wat er in de komende dagen valt (bijv. een
+    # trainingsavond) en dus van de dag waarop dit draait. Een ruime voorraad houdt de
+    # test daar onafhankelijk van: "0" is altijd ver onder de verwachting.
+    voorraad = 100
+    verwacht = verwachte_voorraad(verwachting, voorraad)["verwacht"]
+    assert telling_ver_van_verwachting(verwachting, voorraad, verwacht) is None
+    assert telling_ver_van_verwachting(verwachting, voorraad, 0) == "minder"
+    assert telling_ver_van_verwachting(verwachting, voorraad, 200) == "meer"
 
 
 def test_looplijst_toont_de_verwachting_en_het_controlescherm_waarschuwt(ingelogde_client, db):

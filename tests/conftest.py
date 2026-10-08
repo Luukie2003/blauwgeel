@@ -1,3 +1,4 @@
+import shutil
 import sys
 from pathlib import Path
 
@@ -6,21 +7,25 @@ from werkzeug.security import generate_password_hash
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# Het echte aantal hash-rondes (200.000, zie database.py) kost ~0,1 s per hash
+# en elke test maakt er meerdere (seed-account, tablet-code, inloggen): dat was
+# ruim de helft van de totale testtijd. De tests gaan over gedrag, niet over de
+# sterkte van de hash, dus hier een lichte variant. Moet vóór de import van app
+# gebeuren: de routes binden de waarde bij het importeren.
+import database  # noqa: E402
+
+database.WACHTWOORD_HASH_METHODE = "pbkdf2:sha256:1000"
+
 from app import create_app  # noqa: E402
 from database import WACHTWOORD_HASH_METHODE, get_db  # noqa: E402
 
 
-@pytest.fixture
-def app(tmp_path):
+def _maak_sjabloon_db(pad):
+    """Bouwt de schone testdatabase: schema + seed-producten + seed-account."""
     # Vast wachtwoord i.p.v. het willekeurig gegenereerde standaardwachtwoord
     # (zie database.init_db) -- de hele testsuite logt in met dit account en
     # moet dus weten wat het wachtwoord is.
-    flask_app = create_app(database_path=str(tmp_path / "test.db"), admin_wachtwoord="kantine123")
-    flask_app.config["TESTING"] = True
-    # In productie staat dit standaard aan (de site draait altijd over https),
-    # maar de testclient praat over http -- anders verstuurt de browser het
-    # sessiecookie nooit terug en blijft elke request "uitgelogd".
-    flask_app.config["SESSION_COOKIE_SECURE"] = False
+    flask_app = create_app(database_path=str(pad), admin_wachtwoord="kantine123")
     with flask_app.app_context():
         # tablet_code_hash IS NULL dwingt (zie vereis_login in app.py) elk
         # account naar de instelpagina voor de tablet-code -- zonder dit zou
@@ -45,6 +50,29 @@ def app(tmp_path):
                 END"""
         )
         db.commit()
+
+
+@pytest.fixture(scope="session")
+def sjabloon_db(tmp_path_factory):
+    """De schone database wordt 1x per testrun opgebouwd (schema, migraties en
+    seed-data kosten per keer tientallen ms) en daarna per test gekopieerd."""
+    pad = tmp_path_factory.mktemp("sjabloon") / "sjabloon.db"
+    _maak_sjabloon_db(pad)
+    return pad
+
+
+@pytest.fixture
+def app(tmp_path, sjabloon_db):
+    pad = tmp_path / "test.db"
+    shutil.copyfile(sjabloon_db, pad)
+    # Het schema zit al in de kopie: laat get_db() het niet opnieuw toepassen.
+    database._SCHEMA_TOEGEPAST_VOOR.add(str(pad))
+    flask_app = create_app(database_path=str(pad), admin_wachtwoord="kantine123")
+    flask_app.config["TESTING"] = True
+    # In productie staat dit standaard aan (de site draait altijd over https),
+    # maar de testclient praat over http -- anders verstuurt de browser het
+    # sessiecookie nooit terug en blijft elke request "uitgelogd".
+    flask_app.config["SESSION_COOKIE_SECURE"] = False
     yield flask_app
 
 

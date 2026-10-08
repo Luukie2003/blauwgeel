@@ -15,7 +15,7 @@ werk in dezelfde wijziging ook het volgende bij:
    hoofd worden gezien (niet voor de voor de hand liggende dingen). Schrijf
    kort, in gewoon Nederlands, gericht op wat de vrijwilliger ermee kan —
    niet op de implementatie.
-2. **`WIJZIGINGEN`/`HUIDIGE_VERSIE` in [routes/dashboard.py](routes/dashboard.py)**
+2. **`WIJZIGINGEN`/`HUIDIGE_VERSIE` in [wijzigingen.py](wijzigingen.py)**
    — het handmatige versie-logje voor de Help-pagina (`/help`). Bump
    `HUIDIGE_VERSIE` (patch/minor — er is geen releases/tags-systeem) en voeg
    een nieuw item toe aan `WIJZIGINGEN` met datum en een korte,
