@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block titel %}Zoeken{% endblock %}
+{% block inhoud %}
+<h1>Zoeken</h1>
+<p class="subtitel">
+    Zoek in producten, tellingen, het prikbord, de Club van 20 en de pagina's van de app &mdash; voor zover je account daar bij mag.
+    Een datum zoek je als <code>03-10-2026</code> of <code>03-10</code>.
+</p>
+
+<div class="kaart" style="max-width:520px">
+    <form method="get" action="{{ url_for('zoeken') }}" style="display:flex; gap:0.5rem">
+        <input type="search" name="q" value="{{ term }}" placeholder="Waar ben je naar op zoek?" autofocus style="flex:1" aria-label="Zoekterm">
+        <button type="submit" class="btn btn-geel">Zoeken</button>
+    </form>
+</div>
+
+{% if te_kort %}
+<p class="tekst-zacht">Typ minstens 2 tekens.</p>
+{% elif term and not groepen %}
+<div class="kaart"><p class="leeg">Niets gevonden voor &ldquo;{{ term }}&rdquo;.</p></div>
+{% endif %}
+
+{% for groep in groepen %}
+<div class="kaart">
+    <h2 style="margin-top:0">{{ groep.titel }}</h2>
+    <ul class="zoek-resultaten">
+        {% for r in groep.resultaten %}
+        <li>
+            <a href="{{ r.url }}"><strong>{{ r.titel }}</strong></a>
+            {% if r.detail %}<span class="tekst-zacht"> &mdash; {{ r.detail }}</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% if groep.meer %}<p class="tekst-zacht" style="margin:0.3rem 0 0">Er zijn nog meer resultaten &mdash; maak je zoekterm specifieker.</p>{% endif %}
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,8 +1,23 @@
 from flask import Response, flash, redirect, render_template, request, session, url_for
 
 from database import get_db
-from helpers import bereken_kassalade_stand, bereken_kluis_stand, heeft_sectie_toegang, now_str
+from helpers import (
+    bereken_kassalade_stand,
+    bereken_kluis_stand,
+    bereken_voorspelde_tekorten,
+    besteleenheid_factor,
+    besteleenheid_naam,
+    bestel_suggesties,
+    heeft_sectie_toegang,
+    naar_besteleenheden,
+    now_str,
+)
 from pdf import compacte_uitdraai_pdf
+from seizoensrapport import bereken_seizoensrapport
+from voorspelling import maak_prognose
+
+ONDERDELEN = ("kas", "kluis", "voorraad", "bestellijst", "prognose", "seizoenen")
+PROGNOSE_DAGEN = 7
 
 AANTAL_RECENTE_MUTATIES = 4
 
@@ -17,6 +32,10 @@ def _toegestane_onderdelen():
         "kas": heeft_sectie_toegang(rol, secties, "kassa"),
         "kluis": rol == "beheerder",
         "voorraad": heeft_sectie_toegang(rol, secties, "voorraad"),
+        "bestellijst": heeft_sectie_toegang(rol, secties, "voorraad"),
+        "prognose": heeft_sectie_toegang(rol, secties, "voorraad"),
+        # Net als het seizoensrapport zelf (Rapporten) voor iedereen.
+        "seizoenen": True,
     }
 
 
@@ -120,6 +139,83 @@ def bouw_voorraad_gegevens(db):
     }
 
 
+def _bestel_tekst(product, hoeveelheid):
+    """"2 krat (48 flesjes)" -- afgerond op hele besteleenheden."""
+    aantal = naar_besteleenheden(hoeveelheid, product)
+    tekst = f"{aantal} {besteleenheid_naam(product)}"
+    factor = besteleenheid_factor(product)
+    if factor > 1:
+        tekst += f" ({aantal * factor} {product['eenheid']})"
+    return tekst
+
+
+def bouw_bestellijst_gegevens(db):
+    nu = []
+    for p in bestel_suggesties(db):
+        tekort = p["bestel_hoeveelheid"] if p["bestel_hoeveelheid"] > 0 else max(0, p["min_voorraad"] - p["voorraad"])
+        nu.append(
+            {
+                "naam": p["naam"],
+                "voorraad": f"{p['voorraad']} {p['eenheid']}",
+                "minimum": f"{p['min_voorraad']} {p['eenheid']}",
+                "bestel": _bestel_tekst(p, tekort),
+            }
+        )
+    tekorten = []
+    for t in bereken_voorspelde_tekorten(db, dagen_vooruit=PROGNOSE_DAGEN):
+        p = t["product"]
+        tekorten.append(
+            {
+                "naam": p["naam"],
+                "voorraad": f"{p['voorraad']} {p['eenheid']}",
+                "kans": f"{round(t['kans_tekort'] * 100)}%",
+                "bestel": _bestel_tekst(p, t["advies_stuks"]) if t["advies_stuks"] else "-",
+            }
+        )
+    return {"nu": nu, "tekorten": tekorten, "dagen": PROGNOSE_DAGEN}
+
+
+def bouw_prognose_gegevens(db):
+    prognose = maak_prognose(db, dagen=PROGNOSE_DAGEN)
+    if not prognose["beschikbaar"]:
+        return {"beschikbaar": False, "reden": prognose["reden"]}
+    dagen = []
+    for d in prognose["dagen_overzicht"]:
+        opmerkingen = []
+        if d["wedstrijden"]:
+            opmerkingen.append(f"{d['wedstrijden']} thuiswedstrijd" + ("en" if d["wedstrijden"] > 1 else ""))
+        if d["training"]:
+            opmerkingen.append("training")
+        dagen.append(
+            {
+                "dag": f"{d['weekdag'].capitalize()} {d['datum'].day}-{d['datum'].month}",
+                "open": d["open"],
+                "omzet": d["omzet"],
+                "opmerking": ", ".join(opmerkingen),
+            }
+        )
+    risico = [
+        {
+            "naam": p["product"]["naam"],
+            "voorraad": f"{p['voorraad']} {p['product']['eenheid']}",
+            "kans": f"{round(p['kans_tekort'] * 100)}%",
+            "status": p["status"],
+        }
+        for p in prognose["producten"]
+        if p["status"] in ("urgent", "let_op")
+    ]
+    return {
+        "beschikbaar": True,
+        "dagen_aantal": PROGNOSE_DAGEN,
+        "omzet": prognose["totaal"]["omzet"],
+        "laag": prognose["totaal"]["laag"],
+        "hoog": prognose["totaal"]["hoog"],
+        "betrouwbaarheid": prognose["model"]["betrouwbaarheid"],
+        "dagen": dagen,
+        "risico": risico,
+    }
+
+
 def register_routes(app):
 
     @app.route("/rapporten/uitdraai")
@@ -129,11 +225,7 @@ def register_routes(app):
     @app.route("/rapporten/uitdraai/pdf")
     def compacte_uitdraai_pdf_route():
         toegestaan = _toegestane_onderdelen()
-        gekozen = [
-            onderdeel
-            for onderdeel in ("kas", "kluis", "voorraad")
-            if request.args.get(onderdeel) and toegestaan[onderdeel]
-        ]
+        gekozen = [onderdeel for onderdeel in ONDERDELEN if request.args.get(onderdeel) and toegestaan[onderdeel]]
         if not gekozen:
             flash("Kies minstens één onderdeel voor de uitdraai.", "error")
             return redirect(url_for("compacte_uitdraai"))
@@ -143,6 +235,9 @@ def register_routes(app):
             kas=bouw_kas_gegevens(db) if "kas" in gekozen else None,
             kluis=bouw_kluis_gegevens(db) if "kluis" in gekozen else None,
             voorraad=bouw_voorraad_gegevens(db) if "voorraad" in gekozen else None,
+            bestellijst=bouw_bestellijst_gegevens(db) if "bestellijst" in gekozen else None,
+            prognose=bouw_prognose_gegevens(db) if "prognose" in gekozen else None,
+            seizoenen={"rapport": bereken_seizoensrapport(db)} if "seizoenen" in gekozen else None,
             moment=now_str(),
         )
         return Response(

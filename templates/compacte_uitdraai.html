@@ -3,7 +3,7 @@
 {% block inhoud %}
 <h1>Compacte uitdraai</h1>
 <p class="subtitel">
-    Eén A4 met het kasverslag, het kluisverslag en de huidige voorraadstand &mdash; handig om uit te printen
+    Een A4 met het kasverslag, het kluisverslag en de huidige voorraadstand &mdash; en als je wilt ook de bestellijst, de prognose en de omzet per seizoen &mdash; handig om uit te printen
     of mee te nemen naar een overleg. Kies wat erop moet.
 </p>
 
@@ -27,7 +27,25 @@
             <span><strong>Huidige voorraadstand</strong> &mdash; alle actieve producten per categorie, met het minimum erbij</span>
         </label>
         {% endif %}
-        {% if not (toegestaan.kas or toegestaan.kluis or toegestaan.voorraad) %}
+        {% if toegestaan.bestellijst %}
+        <label style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.6rem">
+            <input type="checkbox" name="bestellijst" value="1">
+            <span><strong>Bestellijst</strong> &mdash; wat nu besteld moet worden en wat de komende dagen waarschijnlijk opraakt</span>
+        </label>
+        {% endif %}
+        {% if toegestaan.prognose %}
+        <label style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.6rem">
+            <input type="checkbox" name="prognose" value="1">
+            <span><strong>Prognose</strong> &mdash; verwachte omzet per dag voor de komende 7 dagen</span>
+        </label>
+        {% endif %}
+        {% if toegestaan.seizoenen %}
+        <label style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.6rem">
+            <input type="checkbox" name="seizoenen" value="1">
+            <span><strong>Omzet per seizoen</strong> &mdash; dit seizoen naast de vorige, tot dezelfde datum</span>
+        </label>
+        {% endif %}
+        {% if not (toegestaan.kas or toegestaan.kluis or toegestaan.voorraad or toegestaan.bestellijst or toegestaan.prognose or toegestaan.seizoenen) %}
         <p class="tekst-zacht">Jouw account heeft geen toegang tot onderdelen die op de uitdraai kunnen.</p>
         {% else %}
         <button type="submit" class="btn btn-geel">Uitdraai maken (PDF)</button>

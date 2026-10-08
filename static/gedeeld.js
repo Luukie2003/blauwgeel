@@ -358,3 +358,111 @@ document.addEventListener("DOMContentLoaded", function () {
         activeer(eersteKnop.dataset.tabDoel);
     }
 });
+
+
+// ---------- Zoekbalk in de titelbalk ----------
+// Typt iemand in de zoekbalk, dan haalt dit na een korte pauze de beste
+// resultaten op (zie /zoeken/live in routes/zoeken.py) en toont ze direct in
+// een lijstje; Enter opent de volledige resultatenpagina. De sneltoets "/"
+// zet de cursor in de zoekbalk, tenzij je al in een invoerveld typt.
+document.addEventListener("DOMContentLoaded", function () {
+    var formulier = document.getElementById("zoekbalk");
+    var invoer = document.getElementById("zoekbalk-invoer");
+    var lijst = document.getElementById("zoekbalk-resultaten");
+    if (!formulier || !invoer || !lijst) return;
+
+    var timer = null;
+    var lopend = null;
+    var actief = -1;
+
+    function verberg() {
+        lijst.hidden = true;
+        lijst.textContent = "";
+        actief = -1;
+    }
+
+    function links() {
+        return lijst.querySelectorAll(".zoek-resultaat");
+    }
+
+    function markeer(nieuw) {
+        var alle = links();
+        if (!alle.length) return;
+        actief = (nieuw + alle.length) % alle.length;
+        alle.forEach(function (a, i) {
+            a.classList.toggle("actief", i === actief);
+        });
+        alle[actief].scrollIntoView({ block: "nearest" });
+    }
+
+    function toon(antwoord) {
+        lijst.textContent = "";
+        if (!antwoord.groepen.length) {
+            var leeg = document.createElement("div");
+            leeg.className = "zoek-leeg";
+            leeg.textContent = "Niets gevonden.";
+            lijst.appendChild(leeg);
+        }
+        antwoord.groepen.forEach(function (groep) {
+            var kop = document.createElement("div");
+            kop.className = "zoek-groep-titel";
+            kop.textContent = groep.titel;
+            lijst.appendChild(kop);
+            groep.resultaten.forEach(function (r) {
+                var a = document.createElement("a");
+                a.className = "zoek-resultaat";
+                a.href = r.url;
+                a.textContent = r.titel;
+                if (r.detail) {
+                    var klein = document.createElement("small");
+                    klein.textContent = r.detail;
+                    a.appendChild(klein);
+                }
+                lijst.appendChild(a);
+            });
+        });
+        if (antwoord.groepen.length) {
+            var alle = document.createElement("a");
+            alle.className = "zoek-alle";
+            alle.href = antwoord.alle_url;
+            alle.textContent = "Alle resultaten bekijken";
+            lijst.appendChild(alle);
+        }
+        lijst.hidden = false;
+        actief = -1;
+    }
+
+    function zoek() {
+        var term = invoer.value.trim();
+        if (term.length < 2) { verberg(); return; }
+        if (lopend) lopend.abort();
+        lopend = new AbortController();
+        fetch("/zoeken/live?q=" + encodeURIComponent(term), { signal: lopend.signal, credentials: "same-origin" })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (antwoord) { if (antwoord && invoer.value.trim() === term) toon(antwoord); })
+            .catch(function () { /* afgebroken of offline: dan blijft het lijstje zoals het was */ });
+    }
+
+    invoer.addEventListener("input", function () {
+        clearTimeout(timer);
+        timer = setTimeout(zoek, 200);
+    });
+    invoer.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { verberg(); invoer.blur(); }
+        else if (e.key === "ArrowDown") { e.preventDefault(); markeer(actief + 1); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); markeer(actief - 1); }
+        else if (e.key === "Enter" && actief >= 0) { e.preventDefault(); links()[actief].click(); }
+    });
+    document.addEventListener("click", function (e) {
+        if (!e.target.closest("#zoekbalk")) verberg();
+    });
+    document.addEventListener("keydown", function (e) {
+        var doel = e.target;
+        var typt = doel && (doel.tagName === "INPUT" || doel.tagName === "TEXTAREA" || doel.tagName === "SELECT" || doel.isContentEditable);
+        if (e.key === "/" && !typt && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            invoer.focus();
+            invoer.select();
+        }
+    });
+});

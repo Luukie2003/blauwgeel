@@ -774,11 +774,94 @@ def _uitdraai_voorraadrijen(voorraad):
     return rijen
 
 
-def compacte_uitdraai_pdf(kas=None, kluis=None, voorraad=None, moment=None):
+def _ruimte_voor(pdf, mm):
+    """Begin een onderdeel op een nieuwe pagina als er niet genoeg plek meer is
+    voor zijn kop en de eerste regels (anders blijft de kop alleen achter)."""
+    if pdf.get_y() + mm > pdf.page_break_trigger:
+        pdf.add_page()
+
+
+def _uitdraai_bestellijst(pdf, bestellijst):
+    _ruimte_voor(pdf, 40)
+    pdf.set_x(10)
+    pdf.sectie("Bestellijst")
+    if not bestellijst["nu"] and not bestellijst["tekorten"]:
+        pdf.leeg_bericht("Niets te bestellen - alle voorraad zit boven het minimum.")
+        return
+    if bestellijst["nu"]:
+        pdf.kop_rij([("Nu bestellen (onder het minimum)", 75, "L"), ("Voorraad", 30, "R"), ("Minimum", 30, "R"), ("Bestellen", 55, "R")])
+        for i, p in enumerate(bestellijst["nu"]):
+            pdf.data_rij(
+                [
+                    (_kort(pdf, p["naam"], 75), 75, "L"),
+                    (p["voorraad"], 30, "R"),
+                    (p["minimum"], 30, "R"),
+                    (_kort(pdf, p["bestel"], 55), 55, "R"),
+                ],
+                zebra=i % 2 == 1,
+            )
+    if bestellijst["tekorten"]:
+        pdf.ln(3)
+        pdf.kop_rij(
+            [(f"Verwacht tekort binnen {bestellijst['dagen']} dagen", 75, "L"), ("Voorraad", 30, "R"), ("Kans", 30, "R"), ("Bestellen", 55, "R")]
+        )
+        for i, p in enumerate(bestellijst["tekorten"]):
+            pdf.data_rij(
+                [
+                    (_kort(pdf, p["naam"], 75), 75, "L"),
+                    (p["voorraad"], 30, "R"),
+                    (p["kans"], 30, "R"),
+                    (_kort(pdf, p["bestel"], 55), 55, "R"),
+                ],
+                zebra=i % 2 == 1,
+            )
+
+
+def _uitdraai_prognose(pdf, prognose):
+    _ruimte_voor(pdf, 95 if prognose["beschikbaar"] else 25)
+    pdf.set_x(10)
+    pdf.sectie("Prognose komende dagen")
+    if not prognose["beschikbaar"]:
+        pdf.leeg_bericht(prognose["reden"])
+        return
+    pdf.statregel(
+        f"Verwachte omzet ({prognose['dagen_aantal']} dagen):",
+        f"{_euro(prognose['omzet'])}  (waarschijnlijk {_euro(prognose['laag'])} - {_euro(prognose['hoog'])})",
+    )
+    pdf.statregel("Betrouwbaarheid van de voorspelling:", prognose["betrouwbaarheid"])
+    pdf.ln(1)
+    pdf.kop_rij([("Dag", 55, "L"), ("Verwachte omzet", 45, "R"), ("Bijzonderheden", 90, "L")])
+    for i, d in enumerate(prognose["dagen"]):
+        pdf.data_rij(
+            [
+                (d["dag"], 55, "L"),
+                (_euro(d["omzet"]) if d["open"] else "dicht", 45, "R"),
+                (d["opmerking"], 90, "L"),
+            ],
+            zebra=i % 2 == 1,
+        )
+    if prognose["risico"]:
+        pdf.ln(3)
+        pdf.kop_rij([("Kans dat het opraakt", 100, "L"), ("Voorraad nu", 45, "R"), ("Kans", 45, "R")])
+        for i, p in enumerate(prognose["risico"]):
+            pdf.data_rij(
+                [
+                    (_kort(pdf, p["naam"], 100), 100, "L"),
+                    (p["voorraad"], 45, "R"),
+                    (p["kans"], 45, "R"),
+                ],
+                zebra=i % 2 == 1,
+            )
+
+
+def compacte_uitdraai_pdf(
+    kas=None, kluis=None, voorraad=None, moment=None, bestellijst=None, prognose=None, seizoenen=None
+):
     """Compacte A4-uitdraai met (naar keuze) het kasverslag, het kluisverslag
     en de huidige voorraadstand. Kas en kluis staan naast elkaar, de voorraad
     loopt in twee kolommen daaronder, zodat het bij een normale kantine op
-    één pagina past."""
+    één pagina past. Daarna, als gekozen, de bestellijst, de prognose voor de
+    komende dagen en de omzet per seizoen (die vullen de rest van de pagina's)."""
     pdf = Rapport("Compacte uitdraai", f"Stand per {_datum_nl(moment)}" if moment else "")
 
     geldblokken = [(titel, g) for titel, g in (("Kasverslag", kas), ("Kluisverslag", kluis)) if g]
@@ -812,6 +895,10 @@ def compacte_uitdraai_pdf(kas=None, kluis=None, voorraad=None, moment=None):
             if per_kolom < 6 and index:
                 pdf.add_page()
                 continue
+            # Past de rest op deze pagina, verdeel dan gelijk over de twee kolommen
+            # in plaats van de eerste helemaal vol te zetten: dat laat ruimte voor
+            # wat eronder komt (bestellijst, prognose...).
+            per_kolom = min(per_kolom, -(-(len(rijen) - index) // 2) + 1)
             stuk = rijen[index : index + 2 * per_kolom]
             # Een categoriekop mag niet als laatste regel van een kolom
             # blijven hangen: schuif 'm dan mee naar de volgende kolom.
@@ -852,4 +939,146 @@ def compacte_uitdraai_pdf(kas=None, kluis=None, voorraad=None, moment=None):
             if index < len(rijen):
                 pdf.add_page()
 
+    if bestellijst:
+        _uitdraai_bestellijst(pdf, bestellijst)
+    if prognose:
+        _uitdraai_prognose(pdf, prognose)
+    if seizoenen:
+        _ruimte_voor(pdf, 80)
+        pdf.set_x(10)
+        pdf.sectie("Omzet per seizoen")
+        if seizoenen["rapport"] is None:
+            pdf.leeg_bericht("Er zijn nog geen tellingen, dus er is nog niets te vergelijken.")
+        else:
+            seizoen_samenvatting_tabel(pdf, seizoenen["rapport"], max_seizoenen=4)
+
+    return bytes(pdf.output())
+
+
+SEIZOEN_PDF_MAX_SEIZOENEN = 5
+
+
+def _procent(waarde):
+    if waarde is None:
+        return "-"
+    return f"{waarde:+.1f}%".replace(".", ",")
+
+
+def _seizoen_tabel_kop(pdf, seizoenen, label_breedte=52):
+    breedte = (190 - label_breedte) / max(len(seizoenen), 1)
+    pdf.kop_rij([("", label_breedte, "L")] + [(s["seizoen"], breedte, "R") for s in seizoenen])
+    return breedte
+
+
+def seizoen_samenvatting_tabel(pdf, rapport, max_seizoenen=SEIZOEN_PDF_MAX_SEIZOENEN):
+    """De vergelijkingstabel per seizoen (omzet, vergelijking tot dezelfde datum,
+    verkoopdagen...) -- gedeeld door het seizoensrapport en de compacte uitdraai."""
+    seizoenen = rapport["seizoenen"][-max_seizoenen:]
+    label_breedte = 52
+    breedte = _seizoen_tabel_kop(pdf, seizoenen, label_breedte)
+    peil = rapport["peildatum"].strftime("%d-%m")
+    rijen = [
+        ("Omzet", [_euro(s["omzet"]) for s in seizoenen]),
+        ("Verschil met vorig seizoen", [_procent(s["verschil_vorig_seizoen"]) for s in seizoenen]),
+        (f"Omzet t/m {peil}", [_euro(s["tot_nu"]) for s in seizoenen]),
+        (
+            f"Dit seizoen t.o.v. t/m {peil}",
+            ["-" if s["is_huidig"] else _procent(s["tot_nu_verschil_met_huidig"]) for s in seizoenen],
+        ),
+        ("Verkoopdagen", [str(s["verkoopdagen"]) for s in seizoenen]),
+        ("Gemiddeld per verkoopdag", [_euro(s["per_verkoopdag"]) for s in seizoenen]),
+        ("Thuiswedstrijden", [str(s["thuiswedstrijden"]) for s in seizoenen]),
+    ]
+    for i, (label, waarden) in enumerate(rijen):
+        pdf.data_rij(
+            [(label, label_breedte, "L")] + [(w, breedte, "R") for w in waarden],
+            zebra=i % 2 == 1,
+        )
+    onvolledig = [s for s in seizoenen if not s["volledig"]]
+    if onvolledig:
+        pdf.set_font("Helvetica", "I", 8)
+        pdf.set_text_color(*KLEUR_GRIJS)
+        for s in onvolledig:
+            if s["gegevens_vanaf"]:
+                tekst = f"{s['seizoen']}: tellingen pas vanaf {s['gegevens_vanaf'].strftime('%d-%m-%Y')}, dus niet het hele seizoen."
+            else:
+                tekst = f"{s['seizoen']}: tellingen tot {s['gegevens_tot'].strftime('%d-%m-%Y')}."
+            pdf.cell(0, 4.5, tekst, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(0, 0, 0)
+
+
+def seizoensrapport_pdf(rapport):
+    seizoenen = rapport["seizoenen"][-SEIZOEN_PDF_MAX_SEIZOENEN:]
+    pdf = Rapport(
+        "Omzet per seizoen",
+        f"Peildatum {rapport['peildatum'].strftime('%d-%m-%Y')}  -  seizoen = 1 juli t/m 30 juni",
+    )
+
+    pdf.sectie("Vergelijking")
+    seizoen_samenvatting_tabel(pdf, rapport)
+
+    pdf.sectie("Omzet per maand")
+    label_breedte = 52
+    breedte = _seizoen_tabel_kop(pdf, seizoenen, label_breedte)
+    for i, (maand, naam) in enumerate(rapport["maanden"]):
+        pdf.data_rij(
+            [(naam.capitalize(), label_breedte, "L")]
+            + [(_euro(s["maanden"][maand]) if s["maanden"][maand] else "-", breedte, "R") for s in seizoenen],
+            zebra=i % 2 == 1,
+        )
+
+    pdf.sectie("Meest verkochte producten per seizoen")
+    for s in reversed(seizoenen):
+        if not s["top_producten"]:
+            continue
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(0, 6, s["seizoen"], new_x="LMARGIN", new_y="NEXT")
+        for i, p in enumerate(s["top_producten"], start=1):
+            pdf.data_rij(
+                [
+                    (f"{i}. {_kort(pdf, p['naam'], 100)}", 110, "L"),
+                    (f"{p['aantal']} stuks", 35, "R"),
+                    (_euro(p["omzet"]), 45, "R"),
+                ],
+                zebra=i % 2 == 0,
+            )
+        pdf.ln(2)
+
+    return bytes(pdf.output())
+
+
+def _logboek_kop(pdf):
+    pdf.kop_rij([("Moment", 33, "L"), ("Wie", 27, "L"), ("Actie", 48, "L"), ("Details", 82, "L")])
+
+
+def logboek_pdf(regels, periode):
+    """Het logboek als PDF: regels = [{"moment", "wie", "actie", "details"}]."""
+    pdf = Rapport("Logboek", f"{periode}  -  {len(regels)} regels")
+    if not regels:
+        pdf.leeg_bericht("Niets gelogd in deze periode.")
+        return bytes(pdf.output())
+    _logboek_kop(pdf)
+    pdf.set_font("Helvetica", "", 8)
+    for i, r in enumerate(regels):
+        pdf.set_font("Helvetica", "", 8)
+        # Details kunnen lang zijn: laat ze over meerdere regels lopen, en maak de
+        # rij zo hoog als dat nodig is.
+        regels_details = pdf.multi_cell(81, 4.2, r["details"] or " ", align="L", dry_run=True, output="LINES")
+        hoogte = max(5.5, len(regels_details) * 4.2 + 1.3)
+        if pdf.get_y() + hoogte > pdf.page_break_trigger:
+            pdf.add_page()
+            _logboek_kop(pdf)
+            pdf.set_font("Helvetica", "", 8)
+        x, y = pdf.get_x(), pdf.get_y()
+        pdf.set_fill_color(*(KLEUR_ZEBRA if i % 2 == 1 else KLEUR_WIT))
+        pdf.set_draw_color(*KLEUR_RAND)
+        for tekst, breedte in ((r["moment"], 33), (r["wie"], 27), (r["actie"], 48)):
+            pdf.set_xy(x, y)
+            pdf.cell(breedte, hoogte, _kort(pdf, tekst, breedte), border=1, fill=True)
+            x += breedte
+        pdf.set_xy(x, y)
+        pdf.rect(x, y, 82, hoogte, style="DF")
+        pdf.set_xy(x + 0.5, y + 0.65)
+        pdf.multi_cell(81, 4.2, r["details"], align="L", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_xy(10, y + hoogte)
     return bytes(pdf.output())

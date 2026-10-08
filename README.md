@@ -50,11 +50,14 @@ Gebouwd met Python (Flask) en SQLite — geen Node.js nodig.
 
 ## Lokaal draaien
 
-Vereist Python 3.9+ (al aanwezig op macOS).
+Vereist Python 3.9+. Gebruik bij voorkeur **Python 3.13**: dat is de versie
+waarop de site op PythonAnywhere draait, dus wat lokaal werkt, werkt daar ook.
+`bash scripts/maak_venv.sh` maakt een venv met 3.13 en installeert alles
+(installeer Python 3.13 eerst, bijvoorbeeld met `brew install python@3.13`).
 
 ```bash
 cd "Voorraadbeheer"
-python3 -m venv venv
+python3.13 -m venv venv   # of: bash scripts/maak_venv.sh
 source venv/bin/activate
 pip install -r requirements.txt
 python app.py
@@ -75,8 +78,8 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-De tests draaien tegen een tijdelijke, lege database per test (nooit tegen
-`voorraad.db`) en dekken de kernberekeningen: kassa-tellingen (concept →
+De tests draaien (in ongeveer 40 seconden) tegen een tijdelijke, lege database
+per test (nooit tegen `voorraad.db`) en dekken de kernberekeningen: kassa-tellingen (concept →
 afsluiten → heropenen), voorraadmutaties bij het tellen, inloggen/CSRF en de
 brute-force-blokkade.
 
@@ -99,11 +102,19 @@ gewist wordt).
 ## Projectstructuur
 
 ```
-app.py          Flask-routes
+app.py          Flask-app: navigatie, rechten per sectie, hooks
 database.py     Database-verbinding, init, migraties en voorbeelddata
-pdf.py          PDF-opmaak (bestellijst en verkooprapporten)
-schema.sql      Tabellen: producten, mutaties, bestellingen, bestelregels,
-                tellingen, telling_regels
+schema.sql      Tabellen (producten, tellingen, kassa/kluis, logboek, ...)
+pdf.py          PDF-opmaak (bestellijst, verkooprapport, uitdraai, ...)
+wijzigingen.py  Versie-logje voor de Help-pagina
+helpers/        Gedeelde hulpfuncties, per onderwerp (tijd, kas, producten, ...)
+club_van_20/    Rekenregels van de Club van 20 (seizoenen, administratie, import)
+routes/         De pagina's, per onderdeel; grote onderdelen zijn een map
+                (producten/, tellen/, kiosk/, club_van_20/)
+voorspelling.py Prognose en omzetverdeling per dag
+seizoensrapport.py  Omzet per seizoen naast elkaar
+backup.py       Dagelijkse back-up (taak op PythonAnywhere)
 templates/      Pagina's (Jinja2)
-static/         Stijl (CSS)
+static/         Stijl (CSS) en scripts
+tests/          pytest-tests
 ```

@@ -82,3 +82,75 @@ def test_vrijwilliger_zonder_rechten_krijgt_geen_kluis_of_kas(app, client, db):
     resp = client.get("/rapporten/uitdraai/pdf?kas=1&kluis=1&voorraad=1")
     assert resp.status_code == 200
     assert resp.data.startswith(b"%PDF")
+
+
+# ---------- Bestellijst, prognose en seizoenen op de uitdraai ----------
+
+
+def _alles(extra=""):
+    return "/rapporten/uitdraai/pdf?kas=1&kluis=1&voorraad=1&bestellijst=1&prognose=1&seizoenen=1" + extra
+
+
+def test_alle_onderdelen_met_lege_database(ingelogde_client):
+    resp = ingelogde_client.get(_alles())
+    assert resp.status_code == 200
+    assert resp.data.startswith(b"%PDF")
+
+
+def test_alle_onderdelen_met_tellinggeschiedenis(ingelogde_client, db):
+    from test_seizoensrapport import _product as _maak_product, _weekelijkse_tellingen
+    from datetime import date
+
+    pils = _maak_product(db, "Pils", 2.0)
+    _weekelijkse_tellingen(db, {pils: (70, 2.0)}, van=date(2025, 6, 28), tot=date.today())
+    db.execute("UPDATE producten SET voorraad = 2, min_voorraad = 24, besteleenheid = 'krat', besteleenheid_factor = 24 WHERE id = ?", (pils,))
+    db.commit()
+
+    resp = ingelogde_client.get(_alles())
+
+    assert resp.status_code == 200
+    assert resp.data.startswith(b"%PDF")
+
+
+def test_bestellijstgegevens_rekenen_af_op_hele_besteleenheden(db):
+    from routes.uitdraai import bouw_bestellijst_gegevens
+
+    db.execute(
+        """INSERT INTO producten (naam, categorie, eenheid, voorraad, min_voorraad, besteleenheid, besteleenheid_factor)
+           VALUES ('Pils', 'Bier', 'flesjes', 3, 24, 'krat', 24)"""
+    )
+    db.commit()
+
+    bestellijst = bouw_bestellijst_gegevens(db)
+
+    pils = next(p for p in bestellijst["nu"] if p["naam"] == "Pils")
+    assert pils["bestel"] == "1 krat (24 flesjes)"
+    assert pils["voorraad"] == "3 flesjes"
+
+
+def test_prognosegegevens_zonder_geschiedenis_leggen_uit_waarom(db):
+    from routes.uitdraai import bouw_prognose_gegevens
+
+    prognose = bouw_prognose_gegevens(db)
+
+    assert prognose["beschikbaar"] is False
+    assert "tellingen" in prognose["reden"]
+
+
+def test_vrijwilliger_met_alleen_kassa_ziet_geen_bestellijst_en_prognose(client, db):
+    _voeg_data_toe(db)
+    db.execute(
+        "INSERT INTO gebruikers (naam, wachtwoord_hash, rol, secties, aangemaakt_op) "
+        "VALUES ('kassavrijwilliger', ?, 'vrijwilliger', 'kassa', '2026-01-01 10:00')",
+        (generate_password_hash("geheim123", method=WACHTWOORD_HASH_METHODE),),
+    )
+    db.commit()
+    client.post("/login", data={"naam": "kassavrijwilliger", "wachtwoord": "geheim123", "csrf_token": _csrf(client)})
+
+    pagina = client.get("/rapporten/uitdraai").data
+    assert b'name="kas"' in pagina and b'name="seizoenen"' in pagina
+    assert b'name="bestellijst"' not in pagina and b'name="prognose"' not in pagina
+
+    # Alleen niet-toegestane onderdelen aanvinken levert niets op.
+    resp = client.get("/rapporten/uitdraai/pdf?bestellijst=1&prognose=1&kluis=1&voorraad=1")
+    assert resp.status_code == 302

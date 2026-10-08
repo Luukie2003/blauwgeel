@@ -21,6 +21,11 @@
             <span>BG 1915 - Kantine Beheer{% if actieve_nav %} <em style="margin-left:1.2rem">{{ actieve_nav.label }}</em>{% endif %}</span>
         </a>
         {% if huidige_gebruiker %}
+        <form class="titelbalk-zoek" id="zoekbalk" action="{{ url_for('zoeken') }}" method="get" role="search">
+            <input type="search" name="q" id="zoekbalk-invoer" placeholder="Zoeken&hellip;" autocomplete="off"
+                   aria-label="Zoeken (sneltoets: /)" title="Zoeken (sneltoets: /)">
+            <div class="zoek-dropdown" id="zoekbalk-resultaten" hidden></div>
+        </form>
         <div class="menu-item">
             <button type="button" class="menu-trigger titelbalk-account-trigger">
                 Welkom, {{ huidige_gebruiker }} <span class="menu-trigger-pijl">&#9662;</span>

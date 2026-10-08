@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta
 
-from flask import g, render_template, request, session
+from flask import Response, g, render_template, request, session
 
 from database import get_db
-from helpers import is_ajax_verzoek, now_str
+from helpers import csv_response, format_datum, is_ajax_verzoek, now_str
+from pdf import logboek_pdf
 
 # Endpoint -> korte omschrijving van de actie, voor Club > Logboek. Alleen
 # POSTs die iets belangrijks wijzigen: rechten, geld, assortiment, back-ups
@@ -57,6 +58,7 @@ LOGBOEK_ACTIES = {
 TOONBARE_DAGEN = (7, 30, 90, 365)
 STANDAARD_DAGEN = 30
 MAX_REGELS = 500
+MAX_REGELS_EXPORT = 5000
 MAX_OMSCHRIJVING = 300
 
 
@@ -122,25 +124,30 @@ def register_routes(app):
         schrijf_logboek(get_db(), request.endpoint, omschrijving)
         return response
 
-    @app.route("/logboek")
-    def logboek():
+    def _gekozen_filter():
         dagen = request.args.get("dagen", STANDAARD_DAGEN, type=int)
         if dagen not in TOONBARE_DAGEN:
             dagen = STANDAARD_DAGEN
-        gebruiker_filter = request.args.get("gebruiker", "").strip()
-        sinds = (datetime.now() - timedelta(days=dagen - 1)).strftime("%Y-%m-%d 00:00")
+        return dagen, request.args.get("gebruiker", "").strip()
 
-        db = get_db()
+    def _haal_regels(db, dagen, gebruiker_filter, limiet):
+        sinds = (datetime.now() - timedelta(days=dagen - 1)).strftime("%Y-%m-%d 00:00")
         voorwaarden = ["datum >= ?"]
         parameters = [sinds]
         if gebruiker_filter:
             voorwaarden.append("gebruiker_naam = ?")
             parameters.append(gebruiker_filter)
-        regels = db.execute(
+        return db.execute(
             f"""SELECT * FROM logboek WHERE {' AND '.join(voorwaarden)}
                 ORDER BY datum DESC, id DESC LIMIT ?""",
-            (*parameters, MAX_REGELS + 1),
+            (*parameters, limiet),
         ).fetchall()
+
+    @app.route("/logboek")
+    def logboek():
+        dagen, gebruiker_filter = _gekozen_filter()
+        db = get_db()
+        regels = _haal_regels(db, dagen, gebruiker_filter, MAX_REGELS + 1)
         namen = [
             r["gebruiker_naam"]
             for r in db.execute(
@@ -156,4 +163,38 @@ def register_routes(app):
             toonbare_dagen=TOONBARE_DAGEN,
             gebruiker_filter=gebruiker_filter,
             namen=namen,
+        )
+
+    @app.route("/logboek/csv")
+    def logboek_csv_route():
+        dagen, gebruiker_filter = _gekozen_filter()
+        regels = _haal_regels(get_db(), dagen, gebruiker_filter, MAX_REGELS_EXPORT)
+        return csv_response(
+            "logboek.csv",
+            ["Moment", "Wie", "Actie", "Details"],
+            [(format_datum(r["datum"]), r["gebruiker_naam"] or "", r["actie"], r["omschrijving"] or "") for r in regels],
+        )
+
+    @app.route("/logboek/pdf")
+    def logboek_pdf_route():
+        dagen, gebruiker_filter = _gekozen_filter()
+        regels = _haal_regels(get_db(), dagen, gebruiker_filter, MAX_REGELS_EXPORT)
+        periode = "Laatste jaar" if dagen == 365 else f"Laatste {dagen} dagen"
+        if gebruiker_filter:
+            periode += f"  -  {gebruiker_filter}"
+        return Response(
+            logboek_pdf(
+                [
+                    {
+                        "moment": format_datum(r["datum"]),
+                        "wie": r["gebruiker_naam"] or "-",
+                        "actie": r["actie"],
+                        "details": r["omschrijving"] or "",
+                    }
+                    for r in regels
+                ],
+                periode,
+            ),
+            mimetype="application/pdf",
+            headers={"Content-Disposition": "inline; filename=logboek.pdf"},
         )

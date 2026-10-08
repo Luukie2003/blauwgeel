@@ -6,8 +6,18 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.30.0"
+HUIDIGE_VERSIE = "1.31.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.31.0",
+        "datum": "8 oktober 2026",
+        "punten": [
+            "Zoekbalk bovenin elke pagina: typ een product, een telling (ook op datum, bijvoorbeeld 03-10-2026), een prikbordbericht, een lid van de Club van 20 of een pagina van de app en je ziet meteen de resultaten. Met de / op je toetsenbord ga je direct naar het zoekveld. Je ziet alleen wat jouw account mag zien",
+            "Rapporten: nieuw rapport 'Omzet per seizoen' (1 juli t/m 30 juni): dit seizoen naast de vorige, per maand, per verkoopdag en tot dezelfde datum als vandaag, met de meest verkochte producten. Ook als PDF en Excel (CSV)",
+            "Compacte uitdraai: je kunt er nu ook de bestellijst, de prognose voor de komende 7 dagen en de omzet per seizoen bij kiezen",
+            "Logboek: downloaden als Excel (CSV) of PDF, met de periode en persoon die je hebt gekozen",
+        ],
+    },
     {
         "versie": "1.30.0",
         "datum": "7 oktober 2026",

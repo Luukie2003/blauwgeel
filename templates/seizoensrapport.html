@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block titel %}Omzet per seizoen{% endblock %}
+{% block inhoud %}
+<h1>Omzet per seizoen</h1>
+<p class="subtitel">
+    Dit seizoen naast de vorige, bijvoorbeeld voor de penningmeester of een overleg. Een seizoen loopt van
+    1 juli t/m 30 juni. De omzet komt uit de tellingen en is over de dagen verdeeld waarop is verkocht,
+    dus het maakt niet uit op welke dagen je telt.
+</p>
+
+{% if not rapport %}
+<div class="kaart"><p class="leeg">Er zijn nog geen tellingen, dus er is nog niets te vergelijken.</p></div>
+{% else %}
+<div class="actiebalk">
+    <span class="tekst-zacht">Peildatum: {{ rapport.peildatum.strftime('%d-%m-%Y') }}</span>
+    <div style="display:flex; gap:0.5rem">
+        <a href="{{ url_for('seizoensrapport_csv_route') }}" class="btn btn-rand">Excel (CSV)</a>
+        <a href="{{ url_for('seizoensrapport_pdf_route') }}" class="btn btn-geel" target="_blank">Downloaden als PDF</a>
+    </div>
+</div>
+
+{% set peil = rapport.peildatum.strftime('%d-%m') %}
+<div class="kaart">
+    <h2 style="margin-top:0">Vergelijking</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    {% for s in rapport.seizoenen %}
+                    <th style="text-align:right">{{ s.seizoen }}{% if s.is_huidig %} <span class="tekst-zacht">(nu)</span>{% endif %}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Omzet</strong></td>
+                    {% for s in rapport.seizoenen %}<td style="text-align:right"><strong>€ {{ '%.2f'|format(s.omzet) }}</strong></td>{% endfor %}
+                </tr>
+                <tr>
+                    <td>Verschil met vorig seizoen</td>
+                    {% for s in rapport.seizoenen %}
+                    <td style="text-align:right">{{ '%+.1f%%'|format(s.verschil_vorig_seizoen) if s.verschil_vorig_seizoen is not none else '–' }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>Omzet t/m {{ peil }}</td>
+                    {% for s in rapport.seizoenen %}<td style="text-align:right">€ {{ '%.2f'|format(s.tot_nu) }}</td>{% endfor %}
+                </tr>
+                <tr>
+                    <td>Dit seizoen t.o.v. t/m {{ peil }}</td>
+                    {% for s in rapport.seizoenen %}
+                    <td style="text-align:right">{{ '%+.1f%%'|format(s.tot_nu_verschil_met_huidig) if s.tot_nu_verschil_met_huidig is not none else '–' }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td>Verkoopdagen</td>
+                    {% for s in rapport.seizoenen %}<td style="text-align:right">{{ s.verkoopdagen }}</td>{% endfor %}
+                </tr>
+                <tr>
+                    <td>Gemiddeld per verkoopdag</td>
+                    {% for s in rapport.seizoenen %}<td style="text-align:right">€ {{ '%.2f'|format(s.per_verkoopdag) }}</td>{% endfor %}
+                </tr>
+                <tr>
+                    <td>Thuiswedstrijden (volgens agenda)</td>
+                    {% for s in rapport.seizoenen %}<td style="text-align:right">{{ s.thuiswedstrijden }}</td>{% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% for s in rapport.seizoenen if not s.volledig %}
+    <p class="tekst-zacht" style="margin:0.4rem 0 0">
+        <strong>{{ s.seizoen }}:</strong>
+        {% if s.gegevens_vanaf %}tellingen pas vanaf {{ s.gegevens_vanaf.strftime('%d-%m-%Y') }}, dus niet het hele seizoen.
+        {% else %}tellingen tot {{ s.gegevens_tot.strftime('%d-%m-%Y') }}.{% endif %}
+    </p>
+    {% endfor %}
+</div>
+
+{% set max_maand = namespace(waarde=0) %}
+{% for s in rapport.seizoenen %}{% for m, naam in rapport.maanden %}{% if s.maanden[m] > max_maand.waarde %}{% set max_maand.waarde = s.maanden[m] %}{% endif %}{% endfor %}{% endfor %}
+<div class="kaart">
+    <h2 style="margin-top:0">Omzet per maand</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Maand</th>
+                    {% for s in rapport.seizoenen %}<th style="text-align:right">{{ s.seizoen }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for m, naam in rapport.maanden %}
+                <tr>
+                    <td>{{ naam|capitalize }}</td>
+                    {% for s in rapport.seizoenen %}
+                    <td style="text-align:right; white-space:nowrap">
+                        {% if s.maanden[m] %}
+                        € {{ '%.2f'|format(s.maanden[m]) }}
+                        <span style="display:block; height:4px; margin-top:2px; background:var(--accent, #1c2b4a); opacity:.55; width:{{ (s.maanden[m] / max_maand.waarde * 100)|round(0) if max_maand.waarde else 0 }}%; margin-left:auto"></span>
+                        {% else %}<span class="tekst-zacht">–</span>{% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="kaart">
+    <h2 style="margin-top:0">Meest verkochte producten</h2>
+    <div class="formgrid" style="align-items:start">
+        {% for s in rapport.seizoenen|reverse %}
+        {% if s.top_producten %}
+        <div>
+            <h3 style="margin:0 0 .3rem">{{ s.seizoen }}</h3>
+            <ol style="margin:0; padding-left:1.2rem">
+                {% for p in s.top_producten %}
+                <li>{{ p.naam }} <span class="tekst-zacht">&mdash; € {{ '%.2f'|format(p.omzet) }} ({{ p.aantal }} stuks)</span></li>
+                {% endfor %}
+            </ol>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

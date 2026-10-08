@@ -117,6 +117,8 @@ TABLET_CODE_UITGEZONDERD = {"tablet_code_instellen", "logout"}
 # gelogd, want dat gebeurt alleen bij een echte (her)start van het scherm.
 GEBRUIK_NIET_LOGGEN = {
     "static",
+    # Typen in de zoekbalk haalt bij elke toetsslag resultaten op.
+    "zoeken_live",
     "favicon_ico",
     "service_worker",
     "offline_pagina",
@@ -169,6 +171,8 @@ BEHEERDER_ENDPOINTS = {
     "kluis_mutatie_corrigeren",
     "gebruiksstatistieken",
     "logboek",
+    "logboek_csv_route",
+    "logboek_pdf_route",
 }
 
 # Fijnmazige rechten bovenop BEHEERDER_ENDPOINTS: elk account (ook
@@ -629,6 +633,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Rapporten",
+        "endpoints": ["seizoensrapport", "seizoensrapport_csv_route", "seizoensrapport_pdf_route"],
+        "url_endpoint": "seizoensrapport",
+        "label": "Omzet per seizoen",
+    },
+    {
+        "groep": "Rapporten",
         "endpoints": ["compacte_uitdraai", "compacte_uitdraai_pdf_route"],
         "url_endpoint": "compacte_uitdraai",
         "label": "Compacte uitdraai",
@@ -659,7 +669,7 @@ NAV_ITEMS = [
     },
     {
         "groep": "Club",
-        "endpoints": ["logboek"],
+        "endpoints": ["logboek", "logboek_csv_route", "logboek_pdf_route"],
         "url_endpoint": "logboek",
         "label": "Logboek",
     },
@@ -869,6 +879,14 @@ def create_app(database_path=None, admin_wachtwoord=None):
             return gebruiker_rol == "beheerder"
         return True
 
+    # De zoekfunctie (routes/zoeken.py) zoekt ook in de pagina's van de app zelf,
+    # en mag alleen de pagina's tonen die dit account in de zijbalk ziet.
+    app.extensions["zichtbare_nav_items"] = lambda: [
+        item
+        for item in NAV_ITEMS
+        if _nav_item_zichtbaar(item, session.get("gebruiker_rol"), session.get("gebruiker_secties"))
+    ]
+
     @app.context_processor
     def inject_nav():
         gebruiker_rol = session.get("gebruiker_rol")
@@ -1051,11 +1069,13 @@ def create_app(database_path=None, admin_wachtwoord=None):
         privacy,
         producten,
         prognose,
+        seizoensrapport,
         sponsoren,
         stemmen,
         tellen,
         uitdraai,
         verbruiksvoorwerpen,
+        zoeken,
     )
 
     aanmeldingen.register_routes(app)
@@ -1077,11 +1097,13 @@ def create_app(database_path=None, admin_wachtwoord=None):
     kluis.register_routes(app)
     logboek.register_routes(app)
     producten.register_routes(app)
+    seizoensrapport.register_routes(app)
     sponsoren.register_routes(app)
     stemmen.register_routes(app)
     tellen.register_routes(app)
     uitdraai.register_routes(app)
     verbruiksvoorwerpen.register_routes(app)
+    zoeken.register_routes(app)
     return app
 
 

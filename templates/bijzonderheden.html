@@ -34,7 +34,7 @@
 {% if mededelingen %}
 <div class="prikbord">
     {% for m in mededelingen %}
-    <div class="prikbriefje {{ 'prikbriefje-afgehandeld' if m.afgehandeld else ('prikbriefje-urgent' if m.urgent) }}">
+    <div class="prikbriefje {{ 'prikbriefje-afgehandeld' if m.afgehandeld else ('prikbriefje-urgent' if m.urgent) }}" id="mededeling-{{ m.id }}">
         {% if m.urgent and not m.afgehandeld %}
         <span class="badge badge-laag" style="margin-bottom:0.5rem">Urgent</span>
         {% endif %}

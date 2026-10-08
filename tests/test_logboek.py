@@ -81,3 +81,45 @@ def test_filter_op_gebruiker(ingelogde_client, db):
     assert "Back-up gemaakt: x.db" in alles
     assert "Back-up gemaakt: x.db" in gefilterd
     assert "<td>Ingelogd</td>" not in gefilterd
+
+
+# ---------- Export ----------
+
+
+def _vul_logboek(db, aantal=3, details="Rol van 'pietje' gewijzigd"):
+    for i in range(aantal):
+        db.execute(
+            "INSERT INTO logboek (datum, gebruiker_naam, endpoint, actie, omschrijving) "
+            "VALUES (strftime('%Y-%m-%d %H:%M','now','localtime'), ?, 'account_rol_wijzigen', 'Rol gewijzigd', ?)",
+            ("karin" if i % 2 else "piet", f"{details} {i}"),
+        )
+    db.commit()
+
+
+def test_csv_export_volgt_het_filter(ingelogde_client, db):
+    _vul_logboek(db, 4)
+    tekst = ingelogde_client.get("/logboek/csv?dagen=30&gebruiker=karin").data.decode("utf-8-sig")
+    assert tekst.startswith("Moment;Wie;Actie;Details")
+    assert tekst.count("Rol gewijzigd") == 2
+    assert ";piet;" not in tekst
+
+
+def test_pdf_export_met_veel_en_lange_regels(ingelogde_client, db):
+    _vul_logboek(db, 120, details="Een lange omschrijving " * 12)
+    resp = ingelogde_client.get("/logboek/pdf")
+    assert resp.status_code == 200
+    assert resp.data.startswith(b"%PDF")
+
+
+def test_pdf_export_zonder_regels(ingelogde_client, db):
+    db.execute("DELETE FROM logboek")
+    db.commit()
+    resp = ingelogde_client.get("/logboek/pdf?dagen=7")
+    assert resp.status_code == 200 and resp.data.startswith(b"%PDF")
+
+
+def test_export_is_alleen_voor_beheerders(client, db):
+    _maak_vrijwilliger(db, "vrijwilliger", "test1234")
+    client.post("/login", data={"naam": "vrijwilliger", "wachtwoord": "test1234", "csrf_token": _csrf(client)})
+    assert client.get("/logboek/csv").status_code == 302
+    assert client.get("/logboek/pdf").status_code == 302

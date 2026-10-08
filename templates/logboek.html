@@ -23,6 +23,10 @@
             {% endfor %}
         </select>
     </form>
+    <div style="display:flex; gap:0.5rem">
+        <a href="{{ url_for('logboek_csv_route', dagen=gekozen_dagen, gebruiker=gebruiker_filter or None) }}" class="btn btn-rand btn-klein">Excel (CSV)</a>
+        <a href="{{ url_for('logboek_pdf_route', dagen=gekozen_dagen, gebruiker=gebruiker_filter or None) }}" class="btn btn-rand btn-klein" target="_blank">PDF</a>
+    </div>
 </div>
 
 <div class="kaart">

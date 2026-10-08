@@ -2323,3 +2323,121 @@ a.pda-voorraad-rij:hover, a.pda-voorraad-rij:active { background: var(--kaart); 
     text-align: center;
     line-height: 1.5;
 }
+
+
+/* ---------- Zoekbalk in de titelbalk ---------- */
+
+.titelbalk-zoek {
+    position: relative;
+    flex: 0 1 300px;
+    margin: 0 0.5rem 0 auto;
+    min-width: 0;
+}
+
+.titelbalk-zoek input[type="search"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.28rem 0.7rem;
+    font-size: 0.82rem;
+    font-weight: 400;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.12);
+    color: #f0f2f6;
+}
+
+.titelbalk-zoek input[type="search"]::placeholder {
+    color: #b8c2dc;
+}
+
+.titelbalk-zoek input[type="search"]:focus {
+    outline: none;
+    background: #fff;
+    color: var(--tekst);
+}
+
+.zoek-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: var(--kaart);
+    border: 1px solid var(--rand);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius);
+    max-height: 70vh;
+    overflow-y: auto;
+    z-index: 40;
+    font-weight: 400;
+}
+
+@media (min-width: 721px) {
+    .zoek-dropdown {
+        min-width: 360px;
+        left: auto;
+    }
+}
+
+.zoek-groep-titel {
+    padding: 0.35rem 0.8rem 0.15rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--tekst-zacht, #667);
+}
+
+.zoek-resultaat {
+    display: block;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.84rem;
+    color: var(--tekst);
+}
+
+.zoek-resultaat:hover,
+.zoek-resultaat.actief {
+    background: var(--selectie-bg);
+    text-decoration: none;
+}
+
+.zoek-resultaat small {
+    display: block;
+    color: var(--tekst-zacht, #667);
+    font-size: 0.74rem;
+}
+
+.zoek-alle,
+.zoek-leeg {
+    display: block;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+    border-top: 1px solid var(--rand);
+}
+
+.zoek-resultaten {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.zoek-resultaten li {
+    padding: 0.3rem 0;
+    border-bottom: 1px solid var(--rand);
+}
+
+.zoek-resultaten li:last-child {
+    border-bottom: none;
+}
+
+@media (max-width: 720px) {
+    /* Op een smal scherm krijgt de zoekbalk een eigen rij onder de titel. */
+    .app-titelbalk {
+        flex-wrap: wrap;
+    }
+    .titelbalk-zoek {
+        order: 3;
+        flex: 1 1 100%;
+        margin: 0.3rem 0 0;
+    }
+}
