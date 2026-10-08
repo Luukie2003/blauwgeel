@@ -70,8 +70,8 @@
             {% set ns.eerste = False %}
             {% set ns.vorige_groep = item.groep %}
             <div class="zijbalk-groep" data-groep="{{ item.groep }}">
-                <button type="button" class="zijbalk-groepkop">
-                    <span>{{ item.groep }}</span>
+                <button type="button" class="zijbalk-groepkop" aria-expanded="false">
+                    <span class="zijbalk-groepnaam"><span class="zijbalk-icoon" aria-hidden="true">{{ nav_groep_icoon.get(item.groep, '') }}</span>{{ item.groep }}</span>
                     <span class="zijbalk-groep-pijl">&#9662;</span>
                 </button>
                 <ul>

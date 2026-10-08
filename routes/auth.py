@@ -96,6 +96,10 @@ def register_routes(app):
                     )
                 db.execute("DELETE FROM login_pogingen WHERE naam = ?", (naam,))
                 session.clear()
+                # "Ingelogd blijven": een vaste sessie van 30 dagen (die elke keer dat je de site
+                # gebruikt weer opschuift) i.p.v. een sessie die verdwijnt zodra je de browser of
+                # de app sluit -- dat was vooral op telefoons een reden om steeds opnieuw in te loggen.
+                session.permanent = bool(request.form.get("blijf_ingelogd"))
                 session["gebruiker_id"] = gebruiker["id"]
                 session["gebruiker_naam"] = gebruiker["naam"]
                 session["gebruiker_rol"] = gebruiker["rol"]
@@ -234,6 +238,7 @@ def register_routes(app):
                 )
                 db.commit()
                 session.clear()
+                session.permanent = True  # zie de inlogpagina: standaard 30 dagen ingelogd blijven
                 session["gebruiker_id"] = gebruiker["id"]
                 session["gebruiker_naam"] = gebruiker["naam"]
                 session["gebruiker_rol"] = gebruiker["rol"]

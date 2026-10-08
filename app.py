@@ -1,11 +1,15 @@
 import secrets
+from datetime import timedelta
 from pathlib import Path
 
 from flask import Flask, flash, g, redirect, render_template, request, send_from_directory, session, url_for
 
+import mail
+import uitrollen as uitrollen_module
 from aanmeldingen import aantal_openstaand
 from club_van_20 import bereken_club_van_20_status  # noqa: F401 (tests importeren 'm via app)
 from database import get_db, init_db, register_db
+from foutmelding import Melder
 from helpers import (
     PRODUCT_AFBEELDINGEN_MAP,
     STEM_AFBEELDINGEN_MAP,
@@ -41,6 +45,7 @@ from helpers import (
 )
 from navigatie import (  # noqa: F401
     NAV_GROEP_ALLEEN_BEHEERDER,
+    NAV_GROEP_ICOON,
     NAV_GROEP_SECTIE,
     NAV_ITEM_ALLEEN_BEHEERDER,
     NAV_ITEM_SECTIE,
@@ -68,7 +73,7 @@ def get_secret_key():
     return key
 
 
-def create_app(database_path=None, admin_wachtwoord=None):
+def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=False):
     app = Flask(__name__)
     app.config["DATABASE"] = database_path or str(BASE_DIR / "voorraad.db")
     app.config["SECRET_KEY"] = get_secret_key()
@@ -78,6 +83,9 @@ def create_app(database_path=None, admin_wachtwoord=None):
     app.config["SESSION_COOKIE_SECURE"] = True
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    # Hoe lang "Ingelogd blijven" duurt (zie de inlogpagina); een geblokkeerd account wordt bij
+    # elk verzoek gecontroleerd (vereis_login), dus dat is daarna alsnog meteen buitengesloten.
+    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
     # Ruim genoeg voor een paar afbeeldingen bij stemopties, of het
     # terugzetten van een back-up.
     app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
@@ -185,7 +193,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
     def _nav_item_zichtbaar(item, gebruiker_rol, gebruiker_secties):
         # Een los item-vlak (NAV_ITEM_SECTIE) wint altijd van de groepregels
         # hieronder -- daarmee kan 1 item uit een verder beheerder-only groep
-        # (bijv. "Club instellingen" in de groep "Club") toch aan een
+        # (bijv. "Club instellingen" in de groep "Beheer") toch aan een
         # vrijwilliger met de juiste sectie getoond worden.
         if item["url_endpoint"] in NAV_ITEM_ALLEEN_BEHEERDER:
             return gebruiker_rol == "beheerder"
@@ -241,6 +249,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
         }
         return {
             "nav_items": zichtbare_nav_items,
+            "nav_groep_icoon": NAV_GROEP_ICOON,
             "sectie_toegang": sectie_toegang,
             "club_aanmeldingen_open": club_aanmeldingen_open,
             "actieve_nav": actieve_nav,
@@ -362,8 +371,34 @@ def create_app(database_path=None, admin_wachtwoord=None):
     def pagina_niet_gevonden(fout):
         return render_template("404.html"), 404
 
+    def _ontvanger_foutmeldingen():
+        """Het vaste e-mailadres voor systeemmeldingen (Club > Instellingen); anders het standaardadres."""
+        try:
+            rij = get_db().execute("SELECT notificatie_email FROM instellingen WHERE id = 1").fetchone()
+            return (rij["notificatie_email"] or None) if rij else None
+        except Exception:
+            return None  # ook als de database zelf het probleem is
+
+    foutmelder = Melder()
+
     @app.errorhandler(500)
     def interne_fout(fout):
+        # Alleen echte (onverwachte) fouten melden, en niet tijdens de tests.
+        origineel = getattr(fout, "original_exception", None)
+        if origineel is not None and app.config.get("FOUTMELDING_MAIL", not app.testing):
+            from wijzigingen import HUIDIGE_VERSIE
+
+            naar = _ontvanger_foutmeldingen()
+            foutmelder.meld(
+                origineel,
+                lambda onderwerp, tekst: mail.stuur_mail(onderwerp, tekst, naar=naar),
+                endpoint=request.endpoint,
+                methode=request.method,
+                pad=request.path,
+                gebruiker=session.get("gebruiker_naam"),
+                versie=HUIDIGE_VERSIE,
+                commit=uitrollen_module.huidige_commit(),
+            )
         return render_template("500.html"), 500
 
     from routes import (
@@ -425,10 +460,29 @@ def create_app(database_path=None, admin_wachtwoord=None):
     uitrollen.register_routes(app)
     verbruiksvoorwerpen.register_routes(app)
     zoeken.register_routes(app)
+    if sjablonen_voorladen:
+        _laad_sjablonen_voor(app)
     return app
 
 
-app = create_app()
+def _laad_sjablonen_voor(app):
+    """Leest alle sjablonen nu al in, in plaats van pas wanneer ze voor het eerst nodig zijn.
+
+    Bij live zetten wordt de code op schijf vervangen en daarna de web-app herstart. In die paar
+    seconden (of langer, als het herstarten wordt vergeten) draait het oude proces nog: laadde het
+    dan een sjabloon die het nog niet kende, dan las het de NIEUWE versie van schijf, die naar
+    routes verwijst die dit proces niet heeft. Zo ontstond op 20 september een reeks BuildErrors.
+    Zijn alle sjablonen al ingelezen, dan draait een oud proces consequent op oude code en sjablonen
+    tot het wordt herstart. Een sjabloon dat niet te lezen is mag het starten nooit tegenhouden;
+    de tests (test_sjablonen.py) vangen zulke fouten eerder af."""
+    for naam in app.jinja_env.list_templates():
+        try:
+            app.jinja_env.get_template(naam)
+        except Exception as fout:  # pragma: no cover
+            print(f"[sjablonen] {naam} niet te laden: {fout}")
+
+
+app = create_app(sjablonen_voorladen=True)
 
 if __name__ == "__main__":
     # Lokaal draait de app over gewone http, niet https -- met

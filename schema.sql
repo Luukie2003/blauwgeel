@@ -714,3 +714,15 @@ CREATE TABLE IF NOT EXISTS logboek (
     omschrijving TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_logboek_datum ON logboek(datum);
+
+-- Omzet per maand van eerdere seizoenen, met de hand ingevuld uit de oude administratie
+-- (Rapporten > Omzet per seizoen > Eerdere seizoenen invullen). Wordt alleen gebruikt voor
+-- maanden waarvoor er geen tellingen zijn; tellingen gaan altijd voor.
+CREATE TABLE IF NOT EXISTS omzet_historie (
+    seizoen TEXT NOT NULL,
+    maand INTEGER NOT NULL CHECK (maand BETWEEN 1 AND 12),
+    omzet REAL NOT NULL,
+    ingevoerd_door TEXT,
+    ingevoerd_op TEXT NOT NULL,
+    PRIMARY KEY (seizoen, maand)
+);

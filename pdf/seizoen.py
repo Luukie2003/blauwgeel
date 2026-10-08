@@ -33,8 +33,8 @@ def seizoen_samenvatting_tabel(pdf, rapport, max_seizoenen=SEIZOEN_PDF_MAX_SEIZO
             f"Dit seizoen t.o.v. t/m {peil}",
             ["-" if s["is_huidig"] else _procent(s["tot_nu_verschil_met_huidig"]) for s in seizoenen],
         ),
-        ("Verkoopdagen", [str(s["verkoopdagen"]) for s in seizoenen]),
-        ("Gemiddeld per verkoopdag", [_euro(s["per_verkoopdag"]) for s in seizoenen]),
+        ("Verkoopdagen", [str(s["verkoopdagen"]) if s["verkoopdagen"] else "-" for s in seizoenen]),
+        ("Gemiddeld per verkoopdag", [_euro(s["per_verkoopdag"]) if s["verkoopdagen"] else "-" for s in seizoenen]),
         ("Thuiswedstrijden", [str(s["thuiswedstrijden"]) for s in seizoenen]),
     ]
     for i, (label, waarden) in enumerate(rijen):
@@ -43,7 +43,8 @@ def seizoen_samenvatting_tabel(pdf, rapport, max_seizoenen=SEIZOEN_PDF_MAX_SEIZO
             zebra=i % 2 == 1,
         )
     onvolledig = [s for s in seizoenen if not s["volledig"]]
-    if onvolledig:
+    ingevuld = [s for s in seizoenen if s["handmatige_maanden"]]
+    if onvolledig or ingevuld:
         pdf.set_font("Helvetica", "I", 8)
         pdf.set_text_color(*KLEUR_GRIJS)
         for s in onvolledig:
@@ -52,6 +53,14 @@ def seizoen_samenvatting_tabel(pdf, rapport, max_seizoenen=SEIZOEN_PDF_MAX_SEIZO
             else:
                 tekst = f"{s['seizoen']}: tellingen tot {s['gegevens_tot'].strftime('%d-%m-%Y')}."
             pdf.cell(0, 4.5, tekst, new_x="LMARGIN", new_y="NEXT")
+        for s in ingevuld:
+            pdf.cell(
+                0,
+                4.5,
+                f"{s['seizoen']}: {len(s['handmatige_maanden'])} maand(en) met de hand ingevuld (maandtotalen uit de oude administratie).",
+                new_x="LMARGIN",
+                new_y="NEXT",
+            )
         pdf.set_text_color(0, 0, 0)
 
 
@@ -71,9 +80,23 @@ def seizoensrapport_pdf(rapport):
     for i, (maand, naam) in enumerate(rapport["maanden"]):
         pdf.data_rij(
             [(naam.capitalize(), label_breedte, "L")]
-            + [(_euro(s["maanden"][maand]) if s["maanden"][maand] else "-", breedte, "R") for s in seizoenen],
+            + [
+                (
+                    (_euro(s["maanden"][maand]) + (" *" if maand in s["handmatige_maanden"] else ""))
+                    if s["maanden"][maand]
+                    else "-",
+                    breedte,
+                    "R",
+                )
+                for s in seizoenen
+            ],
             zebra=i % 2 == 1,
         )
+    if rapport["heeft_ingevulde_maanden"]:
+        pdf.set_font("Helvetica", "I", 8)
+        pdf.set_text_color(*KLEUR_GRIJS)
+        pdf.cell(0, 4.5, "* met de hand ingevuld (maandtotaal uit de oude administratie)", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(0, 0, 0)
 
     pdf.sectie("Meest verkochte producten per seizoen")
     for s in reversed(seizoenen):

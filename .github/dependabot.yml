@@ -1,10 +1,20 @@
 version: 2
 updates:
+  # Alle pakket-updates van een week in 1 voorstel (i.p.v. 1 per pakket): dat is 1x nakijken en
+  # mergen. De CI draait alle tests, dus groen betekent dat het werkt.
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      pakketten:
+        patterns:
+          - "*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

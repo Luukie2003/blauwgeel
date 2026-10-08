@@ -6,6 +6,7 @@ import backup as backup_module
 from club_van_20 import bereken_club_van_20_status
 from database import get_db
 from helpers import (
+    bouw_taken,
     bereken_bestelling_status,
     bereken_frituurvet_status,
     bereken_kassa_telling_status,
@@ -131,8 +132,13 @@ def register_routes(app):
         ).fetchone()["n"]
         omzet_trend = bereken_omzet_trend(db)
         komende_thuiswedstrijden = bereken_komende_thuiswedstrijden(db)
+        taken = [
+            {**t, "url": url_for(t["endpoint"], **t["kwargs"])}
+            for t in bouw_taken(db, session.get("gebruiker_rol"), session.get("gebruiker_secties"))
+        ]
         return render_template(
             "dashboard.html",
+            taken=taken,
             producten=producten,
             laag=laag,
             recente_mutaties=recente_mutaties,

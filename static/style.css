@@ -195,7 +195,7 @@ a:hover { text-decoration: underline; }
 }
 
 .app-zijbalk {
-    width: 190px;
+    width: 215px;
     flex-shrink: 0;
     background: var(--paneel);
     border-right: 1px solid var(--rand);
@@ -217,26 +217,48 @@ a:hover { text-decoration: underline; }
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 0.55rem 0.9rem 0.2rem;
+    padding: 0.62rem 0.9rem;
     font: inherit;
-    font-size: 0.66rem;
+    font-size: 0.92rem;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--tekst-zacht);
+    color: var(--tekst);
     background: none;
     border: none;
+    border-left: 3px solid transparent;
     cursor: pointer;
+    text-align: left;
 }
 
-.zijbalk-groep:not(:first-child) .zijbalk-groepkop {
-    margin-top: 0.35rem;
-    padding-top: 0.55rem;
+.zijbalk-groepkop:hover {
+    background: #e4eaf3;
+}
+
+.zijbalk-groep:not(:first-child) {
     border-top: 1px solid var(--rand-licht);
 }
 
+/* De groep met de pagina waar je nu bent, ook als je 'm dichtklapt. */
+.zijbalk-groep.heeft-actief .zijbalk-groepkop {
+    color: var(--accent);
+    border-left-color: var(--accent);
+}
+
+.zijbalk-groepnaam {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.zijbalk-icoon {
+    width: 1.25rem;
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1;
+}
+
 .zijbalk-groep-pijl {
-    font-size: 0.6rem;
+    font-size: 0.65rem;
+    color: var(--tekst-zacht);
     transition: transform 0.15s ease;
 }
 
@@ -251,12 +273,12 @@ a:hover { text-decoration: underline; }
 .app-zijbalk ul {
     list-style: none;
     margin: 0;
-    padding: 0.3rem 0;
+    padding: 0 0 0.4rem;
 }
 
 .app-zijbalk a {
     display: block;
-    padding: 0.5rem 0.9rem;
+    padding: 0.42rem 0.9rem 0.42rem 2.65rem;  /* ingesprongen onder het pictogram */
     color: var(--tekst);
     font-size: 0.86rem;
     border-left: 3px solid transparent;
@@ -1335,7 +1357,8 @@ footer {
         text-align: left;
     }
     .app-zijbalk a.actief { border-left-color: var(--accent); }
-    .zijbalk-groepkop { padding: 0.7rem 1rem 0.3rem; }
+    .zijbalk-groepkop { padding: 0.7rem 1rem; }
+    .app-zijbalk a { padding-left: 2.9rem; }
     main { padding: 1rem; }
 }
 
@@ -2440,4 +2463,60 @@ a.pda-voorraad-rij:hover, a.pda-voorraad-rij:active { background: var(--kaart); 
         flex: 1 1 100%;
         margin: 0.3rem 0 0;
     }
+}
+
+
+/* ---------- Dashboard: "Wat moet er nu?" ---------- */
+
+.taken-kaart {
+    margin-bottom: 1rem;
+}
+
+.taken-lijst {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.taak a {
+    display: flex;
+    align-items: baseline;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    padding: 0.55rem 0.8rem;
+    color: var(--tekst);
+    background: var(--paneel);
+    border: 1px solid var(--rand-licht);
+    border-left: 4px solid var(--oranje, #d98a1c);
+    border-radius: var(--radius);
+}
+
+.taak a:hover {
+    background: #e4eaf3;
+    text-decoration: none;
+}
+
+.taak-urgent a {
+    border-left-color: var(--rood, #c0392b);
+}
+
+.taak .tekst-zacht {
+    flex: 1 1 14rem;
+    font-size: 0.85rem;
+}
+
+.taak-pijl {
+    margin-left: auto;
+    color: var(--tekst-zacht);
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.taken-leeg {
+    margin: 0;
+    color: var(--groen, #2e7d32);
+    font-weight: 600;
 }

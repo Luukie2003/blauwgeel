@@ -144,6 +144,8 @@ BEHEERDER_ENDPOINTS = {
     "logboek_pdf_route",
     # Omzet per persoon: gevoelig tussen vrijwilligers, dus alleen voor beheerders.
     "bardienstrapport",
+    # Omzet van eerdere seizoenen met de hand invullen.
+    "seizoensrapport_historie",
 }
 
 # Fijnmazige rechten bovenop BEHEERDER_ENDPOINTS: elk account (ook

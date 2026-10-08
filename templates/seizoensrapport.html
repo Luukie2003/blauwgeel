@@ -9,11 +9,15 @@
 </p>
 
 {% if not rapport %}
-<div class="kaart"><p class="leeg">Er zijn nog geen tellingen, dus er is nog niets te vergelijken.</p></div>
+<div class="kaart"><p class="leeg">Er zijn nog geen tellingen, dus er is nog niets te vergelijken.
+    {% if huidige_gebruiker_rol == 'beheerder' %}Je kunt wel <a href="{{ url_for('seizoensrapport_historie') }}">de omzet van eerdere seizoenen invullen</a>.{% endif %}</p></div>
 {% else %}
 <div class="actiebalk">
     <span class="tekst-zacht">Peildatum: {{ rapport.peildatum.strftime('%d-%m-%Y') }}</span>
-    <div style="display:flex; gap:0.5rem">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+        {% if huidige_gebruiker_rol == 'beheerder' %}
+        <a href="{{ url_for('seizoensrapport_historie') }}" class="btn btn-rand">Eerdere seizoenen invullen</a>
+        {% endif %}
         <a href="{{ url_for('seizoensrapport_csv_route') }}" class="btn btn-rand">Excel (CSV)</a>
         <a href="{{ url_for('seizoensrapport_pdf_route') }}" class="btn btn-geel" target="_blank">Downloaden als PDF</a>
     </div>
@@ -55,11 +59,11 @@
                 </tr>
                 <tr>
                     <td>Verkoopdagen</td>
-                    {% for s in rapport.seizoenen %}<td style="text-align:right">{{ s.verkoopdagen }}</td>{% endfor %}
+                    {% for s in rapport.seizoenen %}<td style="text-align:right">{{ s.verkoopdagen if s.verkoopdagen else '–' }}</td>{% endfor %}
                 </tr>
                 <tr>
                     <td>Gemiddeld per verkoopdag</td>
-                    {% for s in rapport.seizoenen %}<td style="text-align:right">€ {{ '%.2f'|format(s.per_verkoopdag) }}</td>{% endfor %}
+                    {% for s in rapport.seizoenen %}<td style="text-align:right">{{ '€ %.2f'|format(s.per_verkoopdag) if s.verkoopdagen else '–' }}</td>{% endfor %}
                 </tr>
                 <tr>
                     <td>Thuiswedstrijden (volgens agenda)</td>
@@ -68,6 +72,9 @@
             </tbody>
         </table>
     </div>
+    {% if rapport.heeft_ingevulde_maanden %}
+    <p class="tekst-zacht" style="margin:0.4rem 0 0">* Met de hand ingevuld (maandtotalen uit de oude administratie): in de tabel hieronder cursief.</p>
+    {% endif %}
     {% for s in rapport.seizoenen if not s.volledig %}
     <p class="tekst-zacht" style="margin:0.4rem 0 0">
         <strong>{{ s.seizoen }}:</strong>
@@ -96,7 +103,7 @@
                     {% for s in rapport.seizoenen %}
                     <td style="text-align:right; white-space:nowrap">
                         {% if s.maanden[m] %}
-                        € {{ '%.2f'|format(s.maanden[m]) }}
+                        {% if m in s.handmatige_maanden %}<span title="Met de hand ingevuld (oude administratie)" style="font-style:italic">€ {{ '%.2f'|format(s.maanden[m]) }} *</span>{% else %}€ {{ '%.2f'|format(s.maanden[m]) }}{% endif %}
                         <span style="display:block; height:4px; margin-top:2px; background:var(--accent, #1c2b4a); opacity:.55; width:{{ (s.maanden[m] / max_maand.waarde * 100)|round(0) if max_maand.waarde else 0 }}%; margin-left:auto"></span>
                         {% else %}<span class="tekst-zacht">–</span>{% endif %}
                     </td>

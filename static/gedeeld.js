@@ -16,62 +16,39 @@ document.addEventListener("click", function (e) {
     }
 });
 
-// ---------- Inklapbare zijbalk-groepen ----------
-// De groep met de actieve pagina staat altijd open; voor de andere
-// groepen onthouden we de voorkeur van de gebruiker (welke hij/zij zelf
-// heeft opengeklikt) via localStorage, zelfde patroon als de
-// banner-dismiss hieronder. Standaard (nog niets aangeklikt) staat een
-// groep dicht -- dat is wat de zijbalk in één oogopslag overzichtelijk
-// houdt.
+// ---------- Zijbalk: één groep tegelijk open ----------
+// Alleen de groep met de pagina waar je nu bent staat open; de rest is dicht. Klik je op een
+// andere groep, dan klapt die open en de vorige dicht (een accordeon), zodat het menu nooit
+// uitgroeit tot een lange lijst. Een groep die je zelf dichtklikt blijft dicht tot je naar een
+// andere pagina gaat. Er wordt bewust niets onthouden: elke pagina begint weer overzichtelijk.
 //
-// Dit script staat vóór de zijbalk in de HTML (zie base.html), dus de
-// groepen bestaan nog niet op het moment dat dit script geparsed wordt --
-// vandaar dat alles hieronder tot na DOMContentLoaded wacht (net als de
-// click-delegatie op #zijbalk-toggle hierboven, die om dezelfde reden pas
-// bij het klikken zelf naar #app-zijbalk zoekt).
+// Dit script staat vóór de zijbalk in de HTML (zie base.html), dus de groepen bestaan nog niet
+// op het moment dat dit script geparsed wordt -- vandaar dat alles tot na DOMContentLoaded wacht.
 document.addEventListener("DOMContentLoaded", function () {
     var groepen = document.querySelectorAll(".zijbalk-groep");
     if (!groepen.length) return;
 
-    var opslagSleutel = "zijbalk-open-groepen";
-    var openGroepen;
-    try {
-        openGroepen = JSON.parse(localStorage.getItem(opslagSleutel) || "[]");
-    } catch (e) {
-        openGroepen = [];
+    // De sleutel van de vorige versie (meerdere groepen onthouden) is niet meer nodig.
+    try { localStorage.removeItem("zijbalk-open-groepen"); } catch (e) { /* niet erg */ }
+
+    function zet(groep, open) {
+        groep.classList.toggle("dicht", !open);
+        var knop = groep.querySelector(".zijbalk-groepkop");
+        if (knop) knop.setAttribute("aria-expanded", open ? "true" : "false");
     }
 
     groepen.forEach(function (groep) {
         var heeftActieveLink = !!groep.querySelector("a.actief");
-        var moetOpen = heeftActieveLink || openGroepen.indexOf(groep.dataset.groep) !== -1;
-        groep.classList.toggle("dicht", !moetOpen);
+        groep.classList.toggle("heeft-actief", heeftActieveLink);
+        zet(groep, heeftActieveLink);
     });
 
     document.addEventListener("click", function (e) {
         var knop = e.target.closest(".zijbalk-groepkop");
         if (!knop) return;
         var groep = knop.closest(".zijbalk-groep");
-        var nuDicht = groep.classList.toggle("dicht");
-
-        var lijst;
-        try {
-            lijst = JSON.parse(localStorage.getItem(opslagSleutel) || "[]");
-        } catch (e2) {
-            lijst = [];
-        }
-        var index = lijst.indexOf(groep.dataset.groep);
-        if (nuDicht && index !== -1) {
-            lijst.splice(index, 1);
-        } else if (!nuDicht && index === -1) {
-            lijst.push(groep.dataset.groep);
-        }
-        try {
-            localStorage.setItem(opslagSleutel, JSON.stringify(lijst));
-        } catch (e3) {
-            // localStorage kan geblokkeerd zijn (bijv. privénavigatie) --
-            // de knop blijft dan gewoon werken, alleen zonder onthouden
-            // voorkeur.
-        }
+        var openen = groep.classList.contains("dicht");
+        groepen.forEach(function (andere) { zet(andere, andere === groep && openen); });
     });
 });
 

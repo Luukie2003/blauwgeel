@@ -3,6 +3,7 @@
 from datetime import datetime
 
 from helpers.kas import bereken_kassa_telling_status
+from helpers.producten import bereken_bestellijst_meldingen
 from helpers.toegang import heeft_sectie_toegang
 from helpers.wedstrijden import bereken_komende_thuiswedstrijden
 
@@ -108,3 +109,108 @@ def bereken_frituurvet_status(db):
         "interval": interval,
         "ok": dagen_geleden <= interval,
     }
+
+
+def _taak(titel, detail, endpoint, urgent=False, **kwargs):
+    return {"titel": titel, "detail": detail, "endpoint": endpoint, "kwargs": kwargs, "urgent": urgent}
+
+
+def bouw_taken(db, rol, secties):
+    """De lijst "Wat moet er nu?" bovenaan het dashboard: alleen dingen die nu echt aandacht nodig
+    hebben, en alleen wat bij de rechten van het account past -- een vrijwilliger met alleen keuken
+    ziet dus alleen het frituurvet en het prikbord. Dringende dingen staan bovenaan.
+
+    Elke taak is {"titel", "detail", "endpoint", "kwargs", "urgent"}; de pagina maakt er een link van."""
+    heeft = lambda sectie: heeft_sectie_toegang(rol, secties, sectie)
+    taken = []
+
+    if heeft("voorraad"):
+        telling = bereken_laatste_telling_status(db)
+        if telling["laatste"] is None:
+            taken.append(_taak("Voorraad tellen", "Er is nog nooit geteld", "tellen", urgent=True))
+        elif not telling["ok"]:
+            taken.append(
+                _taak("Voorraad tellen", f"De laatste telling is {telling['dagen_geleden']} dagen geleden", "tellen", urgent=True)
+            )
+        bestelling = bereken_bestelling_status(db)
+        if bestelling["status"] == "oranje":
+            taken.append(_taak("Bestelling inboeken", "Er staat een bestelling open: boek 'm in zodra de levering binnen is", "bestellijst"))
+        laag = db.execute(
+            "SELECT COUNT(*) AS n FROM producten WHERE actief = 1 AND voorraad < min_voorraad"
+        ).fetchone()["n"]
+        if laag:
+            taken.append(
+                _taak(
+                    f"{laag} {'product' if laag == 1 else 'producten'} onder het minimum",
+                    "Kijk of er besteld moet worden",
+                    "bestellijst",
+                    urgent=laag >= 5,
+                )
+            )
+        meldingen = bereken_bestellijst_meldingen(db)
+        aantal_meldingen = len(meldingen["producten"]) + len(meldingen["teksten"])
+        if aantal_meldingen:
+            taken.append(
+                _taak(
+                    f"{aantal_meldingen} {'melding' if aantal_meldingen == 1 else 'meldingen'} voor de bestellijst",
+                    "Via een QR-code of verbruiksvoorwerp gemeld",
+                    "bestellijst",
+                )
+            )
+
+    if heeft("kassa"):
+        kassa = bereken_kassa_telling_status(db)
+        if kassa["status"] == "oranje":
+            taken.append(
+                _taak(
+                    "Kassatelling afronden",
+                    "Er staat een telling open die nog niet is goedgekeurd",
+                    "kassa_telling_detail",
+                    telling_id=kassa["laatste_kassatelling"]["id"],
+                )
+            )
+        elif kassa["status"] == "rood":
+            taken.append(_taak("Kassa tellen", kassa["tekst"], "kassa_tellen", urgent=True))
+
+    if heeft("keuken"):
+        vet = bereken_frituurvet_status(db)
+        if not vet["ok"]:
+            detail = (
+                "Het is nog nooit vervangen"
+                if vet["laatste"] is None
+                else f"Laatst vervangen {vet['dagen_geleden']} dagen geleden (elke {vet['interval']} dagen)"
+            )
+            taken.append(_taak("Frituurvet vervangen", detail, "keuken_voorraad"))
+
+    if heeft("club_van_20"):
+        aanmeldingen = db.execute(
+            "SELECT COUNT(*) AS n FROM club_van_20_aanmeldingen WHERE status = 'nieuw'"
+        ).fetchone()["n"]
+        if aanmeldingen:
+            taken.append(
+                _taak(
+                    f"{aanmeldingen} {'aanmelding' if aanmeldingen == 1 else 'aanmeldingen'} Club van 20",
+                    "Wachten op goedkeuring",
+                    "club_van_20_aanmeldingen",
+                )
+            )
+
+    prikbord = db.execute(
+        "SELECT COUNT(*) AS n, COALESCE(SUM(urgent), 0) AS urgent FROM mededelingen WHERE afgehandeld = 0"
+    ).fetchone()
+    if prikbord["urgent"]:
+        taken.append(
+            _taak(
+                f"Prikbord: {prikbord['urgent']} urgent{'e mededeling' if prikbord['urgent'] == 1 else 'e mededelingen'}",
+                "Lees ze en handel ze af",
+                "bijzonderheden",
+                urgent=True,
+            )
+        )
+    elif prikbord["n"]:
+        taken.append(
+            _taak(f"Prikbord: {prikbord['n']} open {'mededeling' if prikbord['n'] == 1 else 'mededelingen'}", "Niets urgents", "bijzonderheden")
+        )
+
+    taken.sort(key=lambda t: not t["urgent"])  # dringend eerst, verder de volgorde van hierboven
+    return taken

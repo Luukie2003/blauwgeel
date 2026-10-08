@@ -9,10 +9,8 @@ NAV_ITEMS (groep, endpoints, url_endpoint, label)."""
 # voor iedereen zichtbaar, net als het vroegere "Algemeen".
 NAV_GROEP_SECTIE = {
     "Voorraad": "voorraad",
-    "Tellen": "voorraad",
     "Bestellen": "voorraad",
-    "Assortiment": "voorraad",
-    "Kassa": "kassa",
+    "Producten": "voorraad",
     "Keuken": "keuken",
     "Stemmen": "stemmen",
     "Kantine-tv": "kantine_tv",
@@ -20,11 +18,15 @@ NAV_GROEP_SECTIE = {
 }
 # Uitzondering per los NAV-item (i.p.v. de hele groep) op NAV_GROEP_SECTIE/
 # NAV_GROEP_ALLEEN_BEHEERDER hieronder -- voor een item dat wél sectie-
-# gebonden is terwijl de rest van zijn zijbalkgroep beheerder-only blijft
-# (zie "club" hierboven: Club instellingen is delegeerbaar, Accounts/
-# Back-ups/Instellingen in dezelfde groep niet).
+# gebonden is terwijl de rest van zijn zijbalkgroep anders is. "Geld" bevat
+# bijvoorbeeld de kassa (sectie kassa) én de kluis (alleen beheerders), en in
+# "Beheer" is Club instellingen delegeerbaar terwijl Accounts/Back-ups/
+# Instellingen dat niet zijn.
 NAV_ITEM_SECTIE = {
     "club_instellingen": "club",
+    "kassa_tellen": "kassa",
+    "kassa_geschiedenis": "kassa",
+    "kassa_mutatie_nieuw": "kassa",
 }
 
 NAV_ITEMS = [
@@ -59,7 +61,7 @@ NAV_ITEMS = [
         "label": "Mutatieoverzicht",
     },
     {
-        "groep": "Tellen",
+        "groep": "Voorraad",
         "endpoints": [
             "tellen",
             "tellen_lopen",
@@ -71,7 +73,7 @@ NAV_ITEMS = [
         "label": "Voorraad tellen",
     },
     {
-        "groep": "Tellen",
+        "groep": "Voorraad",
         "endpoints": ["tellingen_overzicht", "telling_detail", "tellingen_gecombineerd_pdf"],
         "url_endpoint": "tellingen_overzicht",
         "label": "Tellingen",
@@ -95,7 +97,7 @@ NAV_ITEMS = [
         "label": "Boodschappenlijst",
     },
     {
-        "groep": "Assortiment",
+        "groep": "Producten",
         "endpoints": [
             "producten_lijst",
             "product_nieuw",
@@ -107,13 +109,13 @@ NAV_ITEMS = [
         "label": "Producten",
     },
     {
-        "groep": "Assortiment",
+        "groep": "Producten",
         "endpoints": ["verbruiksvoorwerpen_lijst"],
         "url_endpoint": "verbruiksvoorwerpen_lijst",
         "label": "Verbruiksvoorwerpen",
     },
     {
-        "groep": "Kassa",
+        "groep": "Geld",
         "endpoints": [
             "kassa_tellen",
             "kassa_telling_detail",
@@ -126,19 +128,19 @@ NAV_ITEMS = [
         "label": "Kassa tellen",
     },
     {
-        "groep": "Kassa",
+        "groep": "Geld",
         "endpoints": ["kassa_geschiedenis"],
         "url_endpoint": "kassa_geschiedenis",
         "label": "Kassa geschiedenis",
     },
     {
-        "groep": "Kassa",
+        "groep": "Geld",
         "endpoints": ["kassa_mutatie_nieuw"],
         "url_endpoint": "kassa_mutatie_nieuw",
         "label": "Afdracht / toevoeging",
     },
     {
-        "groep": "Kluis",
+        "groep": "Geld",
         "endpoints": [
             "kluis_tellen",
             "kluis_telling_detail",
@@ -150,13 +152,13 @@ NAV_ITEMS = [
         "label": "Kluis tellen",
     },
     {
-        "groep": "Kluis",
+        "groep": "Geld",
         "endpoints": ["kluis_geschiedenis"],
         "url_endpoint": "kluis_geschiedenis",
         "label": "Kluis geschiedenis",
     },
     {
-        "groep": "Kluis",
+        "groep": "Geld",
         "endpoints": ["kluis_mutatie_nieuw"],
         "url_endpoint": "kluis_mutatie_nieuw",
         "label": "Storting / opname",
@@ -309,37 +311,37 @@ NAV_ITEMS = [
         "label": "Wedstrijden",
     },
     {
-        "groep": "Club",
+        "groep": "Beheer",
         "endpoints": ["accounts_lijst"],
         "url_endpoint": "accounts_lijst",
         "label": "Accounts beheren",
     },
     {
-        "groep": "Club",
+        "groep": "Beheer",
         "endpoints": ["club_instellingen"],
         "url_endpoint": "club_instellingen",
         "label": "Club instellingen",
     },
     {
-        "groep": "Club",
+        "groep": "Beheer",
         "endpoints": ["logboek", "logboek_csv_route", "logboek_pdf_route"],
         "url_endpoint": "logboek",
         "label": "Logboek",
     },
     {
-        "groep": "Club",
+        "groep": "Beheer",
         "endpoints": ["backups_lijst"],
         "url_endpoint": "backups_lijst",
         "label": "Back-ups",
     },
     {
-        "groep": "Club",
+        "groep": "Beheer",
         "endpoints": ["instellingen_pagina"],
         "url_endpoint": "instellingen_pagina",
         "label": "Instellingen",
     },
     {
-        "groep": "Club",
+        "groep": "Beheer",
         "endpoints": ["gebruiksstatistieken"],
         "url_endpoint": "gebruiksstatistieken",
         "label": "Gebruiksstatistieken",
@@ -354,30 +356,47 @@ NAV_ITEMS = [
 NAV_GROEP_VOLGORDE = [
     "Start",
     "Voorraad",
-    "Tellen",
     "Bestellen",
-    "Assortiment",
-    "Kassa",
-    "Kluis",
+    "Producten",
+    "Geld",
     "Keuken",
     "Kantine-tv",
     "Club van 20",
     "Stemmen",
     "Rapporten",
-    "Club",
+    "Beheer",
 ]
 NAV_ITEMS.sort(key=lambda item: NAV_GROEP_VOLGORDE.index(item["groep"]))
 
-# Club- en Kluisbeheer zijn (op het "club_instellingen"-item na, zie
-# NAV_ITEM_SECTIE hierboven) volledig beheerder-only (zie BEHEERDER_ENDPOINTS)
-# -- i.t.t. de sectie-gebonden groepen hierboven (die vrijwilligers met de
-# juiste sectie wel mogen zien) toont de zijbalk deze groepen daarom nooit aan
-# een vrijwilliger, ook al staan ze niet in NAV_GROEP_SECTIE.
-NAV_GROEP_ALLEEN_BEHEERDER = {"Club", "Kluis"}
+# Beheer (accounts, back-ups, logboek...) is -- op het "club_instellingen"-item na, zie
+# NAV_ITEM_SECTIE hierboven -- volledig beheerder-only (zie BEHEERDER_ENDPOINTS). De zijbalk toont
+# deze groep daarom nooit aan een vrijwilliger, ook al staat hij niet in NAV_GROEP_SECTIE.
+NAV_GROEP_ALLEEN_BEHEERDER = {"Beheer"}
 
 # Losse items in een groep die voor iedereen zichtbaar is, maar zelf alleen voor beheerders
 # (de route staat dan ook in BEHEERDER_ENDPOINTS).
-NAV_ITEM_ALLEEN_BEHEERDER = {"bardienstrapport"}
+NAV_ITEM_ALLEEN_BEHEERDER = {
+    "bardienstrapport",
+    # De kluis is gevoeliger dan de kassalade (minder mutaties, groter bedrag).
+    "kluis_tellen",
+    "kluis_geschiedenis",
+    "kluis_mutatie_nieuw",
+}
+
+# Een klein pictogram voor elke groep, zodat je het menu in één oogopslag kunt scannen.
+NAV_GROEP_ICOON = {
+    "Start": "🏠",
+    "Voorraad": "📦",
+    "Bestellen": "🛒",
+    "Producten": "🏷️",
+    "Geld": "💶",
+    "Keuken": "🍳",
+    "Kantine-tv": "📺",
+    "Club van 20": "⭐",
+    "Stemmen": "🗳️",
+    "Rapporten": "📊",
+    "Beheer": "⚙️",
+}
 
 # De PDA-modus (zie WEERGAVE_TELEFOON_PATROON hieronder) heeft zijn eigen
 # kop met alleen een kort label per pagina (geen zijbalk): vloerwerk plus een

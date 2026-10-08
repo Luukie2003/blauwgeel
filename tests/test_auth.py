@@ -165,3 +165,38 @@ def test_oude_pbkdf2_hash_wordt_stilzwijgend_vervangen_bij_inloggen(client, csrf
     )
     assert resp2.status_code == 302
     assert resp2.headers["Location"] == "/"
+
+
+# ---------- Ingelogd blijven ----------
+
+
+def _login(client, csrf, **extra):
+    return client.post("/login", data={"naam": "admin", "wachtwoord": "kantine123", "csrf_token": csrf, **extra})
+
+
+def _sessiecookie(resp):
+    return next(c for c in resp.headers.getlist("Set-Cookie") if c.startswith("session="))
+
+
+def test_ingelogd_blijven_geeft_een_sessiecookie_van_30_dagen(client, csrf):
+    cookie = _sessiecookie(_login(client, csrf, blijf_ingelogd="1"))
+    assert "Expires=" in cookie  # blijft staan na het sluiten van de browser
+
+
+def test_zonder_vinkje_verdwijnt_de_sessie_met_de_browser(client, csrf):
+    cookie = _sessiecookie(_login(client, csrf))
+    assert "Expires=" not in cookie and "Max-Age" not in cookie
+
+
+def test_inlogpagina_heeft_het_vinkje_standaard_aan(client):
+    pagina = client.get("/login").data.decode()
+    assert 'name="blijf_ingelogd"' in pagina and "checked" in pagina.split('name="blijf_ingelogd"')[1][:80]
+
+
+def test_een_geblokkeerd_account_wordt_ook_bij_een_lange_sessie_buitengesloten(client, csrf, db):
+    _login(client, csrf, blijf_ingelogd="1")
+    assert client.get("/").status_code == 200
+    db.execute("UPDATE gebruikers SET actief = 0")
+    db.commit()
+    resp = client.get("/")
+    assert resp.status_code == 302 and "/login" in resp.headers["Location"]

@@ -7,6 +7,25 @@
     <a href="{{ url_for('backups_lijst') }}">Naar de back-ups</a>
 </div>
 {% endif %}
+<div class="kaart taken-kaart">
+    <h2 style="margin-top:0">Wat moet er nu?</h2>
+    {% if taken %}
+    <ul class="taken-lijst">
+        {% for t in taken %}
+        <li class="taak{{ ' taak-urgent' if t.urgent else '' }}">
+            <a href="{{ t.url }}">
+                <strong>{{ t.titel }}</strong>
+                <span class="tekst-zacht">{{ t.detail }}</span>
+                <span class="taak-pijl" aria-hidden="true">&rsaquo;</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="taken-leeg">Alles is bij &mdash; er hoeft nu niets te gebeuren. 👍</p>
+    {% endif %}
+</div>
+
 <div class="statgrid">
     <div class="statuskaart {{ 'statuskaart-goed' if laatste_telling_status.ok else 'statuskaart-slecht' }}">
         <div class="statuskaart-titel">Telling</div>

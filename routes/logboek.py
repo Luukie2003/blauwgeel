@@ -53,6 +53,7 @@ LOGBOEK_ACTIES = {
     "club_van_20_aanmelding_goedkeuren": "Club van 20-aanmelding goedgekeurd",
     "club_van_20_aanmelding_afwijzen": "Club van 20-aanmelding afgewezen",
     "stemvraag_verwijderen": "Stemming verwijderd",
+    "seizoensrapport_historie": "Omzet van een eerder seizoen ingevuld",
 }
 
 TOONBARE_DAGEN = (7, 30, 90, 365)

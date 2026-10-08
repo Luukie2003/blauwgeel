@@ -6,8 +6,19 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.32.0"
+HUIDIGE_VERSIE = "1.33.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.33.0",
+        "datum": "9 oktober 2026",
+        "punten": [
+            "Menu links opnieuw ingedeeld: 11 onderdelen i.p.v. 13 (Tellen zit nu bij Voorraad, kassa en kluis samen onder Geld, 'Club' heet nu Beheer), met een pictogram en een grotere kop. Er staat altijd maar één onderdeel open: klik je op een ander onderdeel, dan klapt het vorige vanzelf dicht",
+            "Inloggen: nieuw vinkje 'Ingelogd blijven op dit toestel (30 dagen)', standaard aan. Je hoeft niet meer steeds opnieuw in te loggen na het sluiten van de browser of de app",
+            "Dashboard: bovenaan een lijst 'Wat moet er nu?' met wat nu aandacht nodig heeft, afgestemd op wat jouw account mag zien",
+            "Rapporten (beheerders): bij 'Omzet per seizoen' kun je met 'Eerdere seizoenen invullen' de omzet per maand uit de oude administratie invoeren, zodat ook seizoenen van vóór de eerste telling vergeleken kunnen worden",
+            "Beheerders krijgen een mail als de site een serverfout geeft (maximaal 1 keer per uur per fout)",
+        ],
+    },
     {
         "versie": "1.32.0",
         "datum": "9 oktober 2026",

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block titel %}Eerdere seizoenen invullen{% endblock %}
+{% block inhoud %}
+<h1>Omzet van eerdere seizoenen invullen</h1>
+<p class="subtitel">
+    Heb je de omzet per maand uit de oude administratie? Vul die hier in, dan kan het rapport
+    <a href="{{ url_for('seizoensrapport') }}">Omzet per seizoen</a> ook seizoenen vergelijken die
+    van v&oacute;&oacute;r de eerste telling in dit systeem zijn. Maanden waarvoor er w&eacute;l tellingen zijn,
+    komen altijd uit de tellingen: wat je daar invult, wordt niet meegeteld (zodat niets dubbel telt).
+</p>
+
+<div class="actiebalk">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+        {% for k in keuzes %}
+        <a href="{{ url_for('seizoensrapport_historie', seizoen=k) }}"
+           class="btn btn-klein {{ 'btn-geel' if k == seizoen else 'btn-rand' }}">{{ k }}{% if k in seizoenen_met_gegevens %} &check;{% endif %}</a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="kaart" style="max-width:520px">
+    <h2 style="margin-top:0">Seizoen {{ seizoen }}</h2>
+    <form method="post" action="{{ url_for('seizoensrapport_historie') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="seizoen" value="{{ seizoen }}">
+        <div class="tabel-wrap">
+            <table>
+                <thead><tr><th>Maand</th><th>Omzet (&euro;)</th><th>Uit tellingen</th></tr></thead>
+                <tbody>
+                    {% for m in maanden %}
+                    <tr>
+                        <td>{{ m.naam }}</td>
+                        <td><input type="text" inputmode="decimal" name="maand_{{ m.nummer }}" value="{{ m.waarde }}"
+                                   placeholder="bijv. 1234,50" style="width:9rem" aria-label="Omzet {{ m.naam }}"></td>
+                        <td class="tekst-zacht">{% if m.uit_tellingen %}&euro; {{ '%.2f'|format(m.uit_tellingen) }} &mdash; telt die mee{% else %}&ndash;{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="tekst-zacht">Laat een maand leeg als je het niet weet; een leeg veld wist een eerder ingevuld bedrag.
+            Bedragen met een komma voor de centen.</p>
+        <button type="submit" class="btn btn-geel">Opslaan</button>
+        <a href="{{ url_for('seizoensrapport') }}" class="btn btn-rand">Terug naar het rapport</a>
+    </form>
+</div>
+{% endblock %}

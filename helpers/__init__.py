@@ -114,6 +114,7 @@ from helpers.kas import (
     kassa_telling_is_zelf_goedgekeurd,
 )
 from helpers.status import (
+    bouw_taken,
     bereken_bestelling_status,
     bereken_frituurvet_status,
     bereken_laatste_telling_status,
@@ -122,6 +123,7 @@ from helpers.status import (
 from helpers.stemmen import stemming_is_open, tel_stemmers
 
 __all__ = [
+    "bouw_taken",
     "BASE_DIR",
     "AFBEELDING_MAX_AFMETING",
     "CLUB_LOGO_MAP",
