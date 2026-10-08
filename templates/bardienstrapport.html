@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block titel %}Omzet per bardienst{% endblock %}
+{% block inhoud %}
+<h1>Omzet per bardienst</h1>
+<p class="subtitel">
+    Wat er gemiddeld wordt verkocht in de diensten van iedereen op de bardienstplanning (Kantine-tv &rarr; Bardienst).
+    De omzet per dag is een schatting uit de tellingen, dus kijk naar een heel seizoen of een paar maanden en niet naar
+    &eacute;&eacute;n avond. Alleen voor beheerders.
+</p>
+
+<div class="actiebalk">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+        {% for s in seizoenen %}
+        <a href="{{ url_for('bardienstrapport', periode=s) }}" class="btn btn-klein {{ 'btn-geel' if keuze == s else 'btn-rand' }}">{{ s }}</a>
+        {% endfor %}
+        <a href="{{ url_for('bardienstrapport', periode='90') }}" class="btn btn-klein {{ 'btn-geel' if keuze == '90' else 'btn-rand' }}">Laatste 90 dagen</a>
+    </div>
+    <span class="tekst-zacht">{{ titel }}</span>
+</div>
+
+{% if not rapport %}
+<div class="kaart"><p class="leeg">Er zijn nog geen tellingen, dus er is nog geen omzet om te verdelen.</p></div>
+{% elif not rapport.aantal_diensten %}
+<div class="kaart">
+    <p class="leeg">Geen diensten met omzet in deze periode.
+        {% if rapport.zonder_gegevens %}Er stonden {{ rapport.zonder_gegevens }} diensten op de planning, maar daar zijn geen tellingen of verkoop bij.{% endif %}
+        Zet de diensten bij Kantine-tv &rarr; Bardienst, dan verschijnen ze hier.</p>
+</div>
+{% else %}
+<div class="kaart">
+    <h2 style="margin-top:0">Per persoon</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Naam</th>
+                    <th style="text-align:right">Diensten</th>
+                    <th style="text-align:right">Uren</th>
+                    <th style="text-align:right">Omzet per dienst</th>
+                    <th style="text-align:right">Omzet per uur</th>
+                    <th style="text-align:right" title="Wat een dienst gemiddeld zou opleveren op een gewone dag, zonder wedstrijd, training of mooi weer">Gecorrigeerd per dienst</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in rapport.personen %}
+                <tr>
+                    <td><strong>{{ p.naam }}</strong></td>
+                    <td style="text-align:right">{{ p.diensten }}</td>
+                    <td style="text-align:right">{{ '%.1f'|format(p.uren) }}</td>
+                    <td style="text-align:right">&euro; {{ '%.2f'|format(p.per_dienst) }}</td>
+                    <td style="text-align:right">&euro; {{ '%.2f'|format(p.per_uur) }}</td>
+                    <td style="text-align:right">&euro; {{ '%.2f'|format(p.gecorrigeerd_per_dienst) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="tekst-zacht" style="margin:0.5rem 0 0">
+        Gemiddeld per dienst: <strong>&euro; {{ '%.2f'|format(rapport.gemiddelde_per_dienst) }}</strong> over {{ rapport.aantal_diensten }} diensten.
+        <strong>Gecorrigeerd</strong> = de omzet gedeeld door hoeveel drukker het model die dag verwachtte (thuiswedstrijd, training, weer),
+        dus eerlijker om te vergelijken als iemand vaak op wedstrijddagen staat.
+        Staan er meer namen bij een dienst (bijvoorbeeld &ldquo;Luuk &amp; Femke&rdquo;), dan telt de hele dienst voor ieder van hen.
+        {% if rapport.zonder_gegevens %}<br>{{ rapport.zonder_gegevens }} diensten zijn niet meegeteld: er zijn geen tellingen die die dag dekken, of er is niets verkocht.{% endif %}
+    </p>
+</div>
+
+<div class="kaart">
+    <h2 style="margin-top:0">Laatste diensten</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Datum</th><th>Tijd</th><th>Wie</th><th style="text-align:right">Omzet</th><th style="text-align:right">Drukte</th></tr>
+            </thead>
+            <tbody>
+                {% for d in rapport.recente_diensten %}
+                <tr>
+                    <td>{{ d.datum.strftime('%d-%m-%Y') }}</td>
+                    <td>{{ d.tijd }}</td>
+                    <td>{{ d.namen }}</td>
+                    <td style="text-align:right">&euro; {{ '%.2f'|format(d.omzet) }}</td>
+                    <td style="text-align:right" title="1,0 = gewone dag">{{ '%.2f'|format(d.drukte)|replace('.', ',') }}&times;</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

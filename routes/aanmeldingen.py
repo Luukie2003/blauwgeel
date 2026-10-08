@@ -11,7 +11,6 @@ from aanmeldingen import (
     VOORBEELD_MIN_TEKENS,
     aanmelden_status,
     aanmelden_status_voor,
-    aantal_openstaand,
     bardienst_suggesties,
     bestaand_lid_voor,
     ip_hash,

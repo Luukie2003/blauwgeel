@@ -1,80 +1,11 @@
-import secrets
-import sqlite3
+"""Migraties: kolommen en gegevens die zijn toegevoegd nadat de database van een
+bestaande installatie al was aangemaakt. CREATE TABLE IF NOT EXISTS (schema.sql)
+vult die niet aan, dus dat gebeurt hier, zelfhelend, bij elke start."""
+
 from datetime import date, datetime
-from pathlib import Path
 
-from flask import current_app, g
-from werkzeug.security import generate_password_hash
-
+from database.seed import SEED_PRODUCTEN
 from helpers import club_van_team_naam, voeg_maanden_toe
-
-SCHEMA_PATH = Path(__file__).parent / "schema.sql"
-
-STANDAARD_GEBRUIKER = "admin"
-
-# Waar het willekeurig gegenereerde wachtwoord van het allereerste
-# beheerdersaccount komt te staan (zie init_db) -- zelfde opzet als
-# SECRET_KEY_PATH in app.py: een vast wachtwoord in de broncode ("kantine123")
-# zou voor elke nieuwe installatie hetzelfde en publiek bekend zijn.
-ADMIN_WACHTWOORD_PAD = Path(__file__).parent / "admin_wachtwoord_initieel.txt"
-
-# Expliciet gekozen i.p.v. werkzeug's eigen standaard: die is "scrypt" sinds
-# werkzeug 2.3, wat hashlib.scrypt vereist -- niet overal beschikbaar
-# (bijv. deze lokale ontwikkelomgeving mist het, afhankelijk van de
-# OpenSSL/LibreSSL-build van Python). pbkdf2_hmac zit altijd in de
-# standaardbibliotheek. Het aantal iteraties is ook bewust lager dan
-# werkzeug's eigen pbkdf2-standaard (600.000): dat duurde op de hosting van
-# deze site ruim 0,6s per inlogpoging. 200.000 is nog steeds een serieuze
-# drempel voor offline brute-force, en ruim voldoende voor dit interne
-# kantine-beheersysteem (geen betaalgegevens, geen hoogwaardig doelwit).
-WACHTWOORD_HASH_METHODE = "pbkdf2:sha256:200000"
-
-SEED_PRODUCTEN = [
-    # (artikelcode, naam, categorie, eenheid, voorraad, min_voorraad, bestel_hoeveelheid, verkoopprijs, actief)
-    ("KAN", "Grote kan", "Bier", "Pitcher", 0, 0, 0, 12.00, 1),
-    ("BIER", "Tap Bier", "Bier", "Glas", 0, 0, 0, 2.00, 1),
-    ("HERTOG", "Hertog Jan Fles", "Bier", "Fles", 0, 0, 0, 2.20, 1),
-    ("HERTOG0.0", "Hertog Jan 0.0 Fles", "Bier", "Fles", 0, 0, 0, 2.20, 1),
-    ("GUINNESS", "Guinness Export", "Bier", "Fles", 0, 0, 0, 3.00, 1),
-    ("LIEFMANS", "Liefmans Fruitesse", "Bier", "Fles", 0, 0, 0, 2.50, 1),
-    ("SINASBB", "Sonnema Sinas", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
-    ("BACARDI", "Bacardi Cola", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
-    ("COLABB", "Sonnema Cola", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
-    ("BOZUBLUE", "Bozu Blueberry", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
-    ("BOZUGREEN", "Bozu Green", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
-    ("WIJN", "Assorti Wijn", "Kassa knop", "Los", 0, 0, 0, 2.00, 1),
-    ("PROSECCO", "Fles Prosecco", "Wijn", "Fles", 0, 0, 0, 8.00, 1),
-    ("RADLER", "Amstel Radler", "Bier", "Fles", 0, 0, 0, 1.80, 1),
-    ("SHOT", "Shot", "Kassa knop", "Los", 0, 0, 0, 1.50, 1),
-    ("SNAKE", "Snakebite", "Shot", "Los", 0, 0, 0, 1.50, 1),
-    ("MAGNERS", "Magners", "Bier", "Fles", 0, 0, 0, 5.00, 1),
-    ("CAPTAIN", "Captain Morgan", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
-    ("TRAYBB", "Tray Berenburg", "Tray", "Tray", 0, 0, 0, 42.00, 1),
-    ("GUINNESSBLK", "Guinness Draugt Blik", "Bier", "Blik", 0, 0, 0, 5.00, 1),
-    ("AA", "AA Drink", "Fris", "Fles", 0, 0, 0, 2.00, 1),
-    ("POWERG", "Powerrade Geel", "Fris", "Fles", 0, 0, 0, 2.00, 1),
-    ("POWERB", "Powerrade Blauw", "Fris", "Fles", 0, 0, 0, 2.00, 1),
-    ("COCA", "Coca Cola", "Fris", "Fles", 0, 0, 0, 2.00, 1),
-    ("COCAZERO", "Coca Cola Zero", "Fris", "Fles", 0, 0, 0, 2.00, 1),
-    ("FANTA", "Fanta", "Fris", "Fles", 0, 0, 0, 2.00, 1),
-    ("RIV", "Rivella", "Fris", "Fles", 0, 0, 0, 2.00, 1),
-    ("WATER", "Water", "Fris", "Fles", 0, 0, 0, 1.85, 1),
-    ("BOZUDARK", "Bozu Hard Icetea", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
-    ("BOZUORANJE", "Bozu Peach", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
-    ("HJFUST", "Fust Hertog Jan", "Telling", "Fust", 0, 0, 0, 0.00, 1),
-    ("DORITOS", "Doritos", "Chips", "Zakje", 0, 0, 0, 1.20, 1),
-    ("DORITOSZW", "Doritos Zwart", "Chips", "Zakje", 0, 0, 0, 1.20, 1),
-    ("LAYS", "Lays Groen", "Chips", "Zakje", 0, 0, 0, 1.20, 1),
-    ("LAYSBLW", "Lays Blauw", "Chips", "Zakje", 0, 0, 0, 1.20, 1),
-    ("DROGE", "Droge Worst", "Snoep", "Worst", 0, 3, 0, 1.80, 1),
-    ("HARIBO", "Haribo Starmix", "Snoep", "Zakje", 0, 0, 0, 1.50, 1),
-    ("SNICKER", "Snicker", "Snoep", "Reep", 0, 0, 0, 1.00, 1),
-    ("MARS", "Mars", "Snoep", "Reep", 0, 0, 0, 1.00, 1),
-    ("TWIX", "Twix", "Snoep", "Reep", 0, 0, 0, 1.00, 1),
-    ("MM", "M&M Geel", "Snoep", "Zakje", 0, 0, 0, 1.00, 1),
-    ("CHOCO", "Chocolade melk", "Fris", "Flesje", 0, 0, 0, 1.20, 1),
-    ("ABSO", "Absolute Sprite", "Voorgemixte Blik", "Blik", 0, 0, 0, 3.50, 1),
-]
 
 
 # Columns added after the initial release. CREATE TABLE IF NOT EXISTS won't
@@ -603,109 +534,18 @@ def _migreer_club_van_20_administratie(db):
     db.execute("UPDATE club_van_20_leden SET status = 'actief' WHERE status = 'niet_betaald'")
 
 
-# Databasepaden waarvoor het schema al is toegepast in dit proces -- zie
-# get_db() hieronder.
-_SCHEMA_TOEGEPAST_VOOR = set()
-
-
-def get_db():
-    if "db" not in g:
-        db_pad = current_app.config["DATABASE"]
-        g.db = sqlite3.connect(db_pad)
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA foreign_keys = ON")
-        # Bewust GEEN WAL-modus (was dat eerder wel): WAL vereist dat alle
-        # connecties het bijbehorende -shm-bestand via mmap delen, en dat
-        # bleek op deze hosting niet betrouwbaar zodra zowel de webapp
-        # (meerdere workers) als een los proces (de dagelijkse back-up-taak,
-        # of een handmatig console-scriptje) tegelijk een eigen connectie
-        # naar hetzelfde bestand open hadden -- dat gaf 1x een "database
-        # disk image is malformed"-fout (bleek gelukkig geen echte
-        # corruptie: PRAGMA integrity_check kwam daarna weer "ok" terug,
-        # maar het risico is te groot om te laten staan). De standaard
-        # journal-mode (DELETE) gebruikt alleen gewone bestandsloks i.p.v.
-        # gedeeld geheugen, en is de reden dat dit weer per request een
-        # nieuwe connectie opent i.p.v. er 1 te hergebruiken: zonder WAL is
-        # er geen -wal-bestand meer dat bij elke request op- en afgebroken
-        # hoeft te worden, dus dat kostte toch al geen tientallen ms meer.
-        g.db.execute("PRAGMA journal_mode = DELETE")
-        # Schema + migraties toepassen is zelfhelend (CREATE ... IF NOT
-        # EXISTS) en hoeft dus maar 1x per proces, niet op elke request --
-        # het db-pad wordt hierboven al bijgehouden zodat een volgende
-        # request in hetzelfde proces dit overslaat. Wordt de database ooit
-        # vervangen of leeggehaald onder een lopend proces (bijv. door
-        # iCloud Drive dat het .db-bestand synchroniseert/evict, waar dit
-        # project staat), dan herstelt de eerstvolgende procesherstart dit
-        # weer vanzelf.
-        if db_pad not in _SCHEMA_TOEGEPAST_VOOR:
-            with open(SCHEMA_PATH) as f:
-                g.db.executescript(f.read())
-            _migreer_kluis_kassalade(g.db)
-            _migreer_kolommen(g.db)
-            _migreer_stemmen_meerdere_keuzes(g.db)
-            _migreer_categorieen(g.db)
-            _migreer_keuken_categorie(g.db)
-            _migreer_telling_verkoopprijs(g.db)
-            _migreer_kassa_afgesloten(g.db)
-            _migreer_bieren_backfill(g.db)
-            _migreer_club_van_20_datums(g.db)
-            _migreer_club_van_20_administratie(g.db)
-            _migreer_stand_club_backfill(g.db)
-            _migreer_stand_poules_backfill(g.db)
-            g.db.commit()
-            _SCHEMA_TOEGEPAST_VOOR.add(db_pad)
-    return g.db
-
-
-def close_db(e=None):
-    db = g.pop("db", None)
-    if db is not None:
-        db.close()
-
-
-def init_db(app, admin_wachtwoord=None):
-    with app.app_context():
-        db = get_db()
-        count = db.execute("SELECT COUNT(*) AS n FROM producten").fetchone()["n"]
-        if count == 0:
-            db.executemany(
-                """INSERT INTO producten
-                   (artikelcode, naam, categorie, eenheid, voorraad, min_voorraad,
-                    bestel_hoeveelheid, verkoopprijs, actief)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                SEED_PRODUCTEN,
-            )
-            db.commit()
-
-        gebruikers_count = db.execute("SELECT COUNT(*) AS n FROM gebruikers").fetchone()["n"]
-        if gebruikers_count == 0:
-            # admin_wachtwoord is alleen bedoeld voor de testsuite (zie
-            # tests/conftest.py), die een vast wachtwoord nodig heeft om
-            # voorspelbaar te kunnen inloggen. Bij een echte (nieuwe)
-            # installatie wordt er willekeurig een gegenereerd, zodat er geen
-            # voor iedereen gelijk en publiek bekend standaardwachtwoord
-            # bestaat -- eenmalig weggeschreven zodat degene die de
-            # installatie doet het kan opzoeken.
-            if admin_wachtwoord is None:
-                if ADMIN_WACHTWOORD_PAD.exists():
-                    admin_wachtwoord = ADMIN_WACHTWOORD_PAD.read_text().strip()
-                else:
-                    admin_wachtwoord = secrets.token_urlsafe(9)
-                    ADMIN_WACHTWOORD_PAD.write_text(admin_wachtwoord)
-                print(
-                    f"[setup] Beheerdersaccount '{STANDAARD_GEBRUIKER}' aangemaakt. "
-                    f"Wachtwoord: {admin_wachtwoord} (ook opgeslagen in {ADMIN_WACHTWOORD_PAD.name})"
-                )
-            db.execute(
-                "INSERT INTO gebruikers (naam, wachtwoord_hash, aangemaakt_op) VALUES (?, ?, ?)",
-                (
-                    STANDAARD_GEBRUIKER,
-                    generate_password_hash(admin_wachtwoord, method=WACHTWOORD_HASH_METHODE),
-                    datetime.now().strftime("%Y-%m-%d %H:%M"),
-                ),
-            )
-            db.commit()
-
-
-def register_db(app):
-    app.teardown_appcontext(close_db)
+def migreer_alles(db):
+    """Past alle migraties toe, in de volgorde waarin ze zijn ontstaan (alle zijn
+    zelfhelend: ze doen niets als het al gebeurd is)."""
+    _migreer_kluis_kassalade(db)
+    _migreer_kolommen(db)
+    _migreer_stemmen_meerdere_keuzes(db)
+    _migreer_categorieen(db)
+    _migreer_keuken_categorie(db)
+    _migreer_telling_verkoopprijs(db)
+    _migreer_kassa_afgesloten(db)
+    _migreer_bieren_backfill(db)
+    _migreer_club_van_20_datums(db)
+    _migreer_club_van_20_administratie(db)
+    _migreer_stand_club_backfill(db)
+    _migreer_stand_poules_backfill(db)

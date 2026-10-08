@@ -12,3 +12,4 @@ __pycache__/
 .pytest_cache/
 uptime_status.txt
 static/stem_afbeeldingen/
+uitrol_geheim.txt

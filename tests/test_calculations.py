@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 
 from conftest import stel_csrf_token_in as _csrf
 
@@ -164,7 +164,6 @@ class TestOmzetTrendPeriode:
     def _maak_telling(self, db, product_id, verkocht, datum):
         cur = db.execute("INSERT INTO tellingen (datum, naam) VALUES (?, 'test')", (datum,))
         telling_id = cur.lastrowid
-        product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
         db.execute(
             """INSERT INTO telling_regels
                (telling_id, product_id, voorraad_voor, geteld_aantal, verkocht, verkoopprijs)
@@ -237,7 +236,6 @@ class TestWeekOverzicht:
     def _maak_telling(self, db, product_id, verkocht, datum):
         cur = db.execute("INSERT INTO tellingen (datum, naam) VALUES (?, 'test')", (datum,))
         telling_id = cur.lastrowid
-        product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
         db.execute(
             """INSERT INTO telling_regels
                (telling_id, product_id, voorraad_voor, geteld_aantal, verkocht, verkoopprijs)

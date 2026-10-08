@@ -6,8 +6,18 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.31.0"
+HUIDIGE_VERSIE = "1.32.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.32.0",
+        "datum": "9 oktober 2026",
+        "punten": [
+            "Rapporten (alleen beheerders): nieuw rapport 'Omzet per bardienst'. Per persoon op de bardienstplanning zie je het aantal diensten, de uren en de gemiddelde omzet per dienst en per uur, ook gecorrigeerd voor drukke dagen (thuiswedstrijd, training, mooi weer) zodat je eerlijk kunt vergelijken",
+            "Zoekbalk: zoekt nu ook in bestellingen, de boodschappenlijst, verbruiksvoorwerpen, afdrachten en stortingen van kassa en kluis, wedstrijden en sponsoren, en onthoudt je laatste 5 zoekopdrachten",
+            "Back-ups (alleen beheerders): eens per maand wordt een back-up echt teruggezet in een wegwerp-database en helemaal doorgelezen. Je ziet de uitkomst op de Back-ups-pagina; mislukt het, dan krijg je een melding",
+            "Privacy: paginabezoeken en het logboek worden na 2 jaar automatisch opgeruimd (en kortlopende inlogtellers na 30 dagen); de privacyverklaring noemt dat nu, en dat de back-up elke dag per e-mail wordt gekopieerd",
+        ],
+    },
     {
         "versie": "1.31.0",
         "datum": "8 oktober 2026",

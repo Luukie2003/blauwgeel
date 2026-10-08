@@ -683,7 +683,7 @@ def test_weekoverzicht_gebruikt_de_omzet_van_de_week_zelf(db):
     a = _product(db, "Pils", prijs=2.0)
     # Telt woensdag en vrijdag; het weekend (met 2 thuiswedstrijden) valt in de periode vrijdag > woensdag.
     tijden = _woensdag_vrijdag_maandag(8)
-    laatste = _bouw_geschiedenis(
+    _bouw_geschiedenis(
         db, {a: 40}, effecten=WAAR, tijdstippen=tijden, wedstrijddagen=_zaterdagen(8, uit=(0, 2, 5))
     )
     week_van = date.fromisoformat((MAANDAG + timedelta(days=7 * 4)).date().isoformat())

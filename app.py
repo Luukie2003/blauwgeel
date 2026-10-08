@@ -39,711 +39,25 @@ from helpers import (
     secties_lijst,
     stemming_is_open,
 )
+from navigatie import (  # noqa: F401
+    NAV_GROEP_ALLEEN_BEHEERDER,
+    NAV_GROEP_SECTIE,
+    NAV_ITEM_ALLEEN_BEHEERDER,
+    NAV_ITEM_SECTIE,
+    NAV_ITEMS,
+    PDA_NAV_ITEMS,
+)
+from rechten import (  # noqa: F401
+    BEHEERDER_ENDPOINTS,
+    ENDPOINT_SECTIE,
+    GEBRUIK_NIET_LOGGEN,
+    OPEN_ENDPOINTS,
+    SECTIE_ENDPOINTS,
+    TABLET_CODE_UITGEZONDERD,
+)
 
 BASE_DIR = Path(__file__).parent
 SECRET_KEY_PATH = BASE_DIR / "secret_key.txt"
-
-OPEN_ENDPOINTS = {
-    "login",
-    "static",
-    "favicon_ico",
-    "service_worker",
-    "offline_pagina",
-    "wachtwoord_vergeten",
-    "wachtwoord_instellen",
-    # Machine-naar-machine JSON-API voor de kiosk-tablet-app (los project,
-    # zie android-apps/tablet) -- die heeft nog geen sessie/cookie op het
-    # moment van de aanroep zelf (die start 'm juist, bij een geldige code).
-    # Zie ook de CSRF-uitzondering in csrf_beschermen hieronder.
-    "tablet_code_inloggen",
-    # De publieke stempagina's hebben geen account nodig, bezoekers scannen
-    # 'm via een QR-code of stemmen.kantineblauwgeel.nl, ze loggen nergens in.
-    "stem_pagina",
-    "stem_overzicht_publiek",
-    # Waar de QR-code op een schaplabel naartoe wijst: iedereen mag zonder
-    # account een product melden voor de bestellijst. "Naar productpagina"
-    # op die landingspagina vraagt daarna alsnog om in te loggen, want
-    # product_detail zelf staat niet in deze lijst.
-    "scan_landing",
-    "scan_melden",
-    # Zelfde als hierboven, maar dan voor de QR-code op een
-    # verbruiksvoorwerp-schaplabel (geen productpagina om naartoe te gaan,
-    # dus alleen een meld-knop).
-    "scan_landing_verbruiksvoorwerp",
-    "scan_melden_verbruiksvoorwerp",
-    # De twee Kantine Kiosk-schermen draaien op een TV via Chromecast --
-    # daar kan niemand op inloggen, dus moeten ze net als de stempagina's
-    # zonder account bereikbaar zijn. Het beheer ervan (wat erop staat) zit
-    # wel achter login, zie BEHEERDER_ENDPOINTS hieronder.
-    "kiosk_prijzen_scherm",
-    "kiosk_scherm",
-    # Optioneel derde scherm voor wie (nog) maar 1 fysiek scherm heeft en
-    # daarop wisselt tussen prijzen/dia's (zie kiosk_tv in routes/kiosk.py) --
-    # zelfde publieke, geen-account-nodig behandeling als de 2 vaste schermen.
-    "kiosk_tv",
-    # De schermen pollen deze endpoints zelf (zie de <script> in
-    # kiosk_prijzen_scherm.html/kiosk_scherm.html) om te bepalen of ze zichzelf
-    # moeten herladen -- dus ook zonder account bereikbaar.
-    "kiosk_prijzen_versie",
-    "kiosk_scherm_versie",
-    "kiosk_tv_versie",
-    # Publieke Club van 20-pagina: waar de QR-code op de wervingsdia van het
-    # kantine scherm naartoe wijst -- bezoekers hebben geen account.
-    "club_van_20_publiek",
-    # Aanmeldformulier (en bedankpagina) voor nieuwe leden, bereikbaar via de
-    # knop bovenaan die pagina -- ook zonder account; beheerders keuren de
-    # aanmeldingen daarna goed (Club van 20 > Aanmeldingen).
-    "club_van_20_aanmelden",
-    "club_van_20_aanmelden_bedankt",
-    "club_van_20_aanmelden_voorbeeld",
-    "club_van_20_aanmelden_voorbeeld_stop",
-    # De privacyverklaring moet voor iedereen te lezen zijn, ook zonder account.
-    "privacyverklaring",
-}
-
-# Iedereen moet bij de eerste keer inloggen een eigen 6-cijferige tablet-code
-# instellen (zie tablet_code_instellen in routes/auth.py) -- die code wordt
-# straks gebruikt om aan te melden op de kiosk-tablet/tv-app (los van deze
-# website), zonder gebruikersnaam. Zolang dat nog niet is gebeurd, blokkeert
-# vereis_login hieronder alle andere pagina's; deze twee blijven bereikbaar
-# zodat niemand vast komt te zitten.
-TABLET_CODE_UITGEZONDERD = {"tablet_code_instellen", "logout"}
-
-# Endpoints die niet meetellen als paginabezoek voor Club > Gebruiksstatistieken
-# (zie log_paginabezoek hieronder en routes/gebruik.py) -- puur technisch
-# verkeer zonder betekenis voor "wie gebruikt welk onderdeel". De _versie-
-# polls draaien elke 10s zolang een kiosk-scherm openstaat; het scherm zelf
-# openen/herladen (kiosk_scherm/kiosk_prijzen_scherm/kiosk_tv) wordt wél
-# gelogd, want dat gebeurt alleen bij een echte (her)start van het scherm.
-GEBRUIK_NIET_LOGGEN = {
-    "static",
-    # Typen in de zoekbalk haalt bij elke toetsslag resultaten op.
-    "zoeken_live",
-    "favicon_ico",
-    "service_worker",
-    "offline_pagina",
-    "kiosk_prijzen_versie",
-    "kiosk_scherm_versie",
-    "kiosk_tv_versie",
-}
-
-# Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers
-# komen hier niet in -- zij kunnen de dagelijkse operatie doen (tellen,
-# boeken, bestellijst, bijzonderheden) maar niet het assortiment, accounts,
-# categorieën of back-ups beheren.
-BEHEERDER_ENDPOINTS = {
-    "accounts_lijst",
-    "account_nieuw",
-    "account_verwijderen",
-    "account_rol_wijzigen",
-    "account_secties_wijzigen",
-    "account_email_wijzigen",
-    "account_actief_wisselen",
-    "account_wachtwoord_link_versturen",
-    "categorieen_lijst",
-    "categorie_verwijderen",
-    "categorie_verkoopprijs_verplicht_wisselen",
-    "subcategorie_nieuw",
-    "subcategorie_verwijderen",
-    "backups_lijst",
-    "backup_nu",
-    "backup_download",
-    "backup_herstellen",
-    "product_nieuw",
-    "product_bewerken",
-    "product_verwijderen",
-    "producten_minimumvoorraad",
-    "producten_besteleenheid",
-    "producten_bulk_bewerken",
-    "instellingen_pagina",
-    # Kluis-acties zijn gevoeliger dan de kassalade (minder mutaties, groter
-    # bedrag) en daarom bewust beheerder-only, i.t.t. kassa_mutatie_nieuw
-    # (zie SECTIE_ENDPOINTS["kassa"] hieronder, die blijft voor iedereen met
-    # de kassa-sectie).
-    "kluis_tellen",
-    "kluis_telling_detail",
-    "kluis_telling_heropenen",
-    "kluis_telling_coupures_corrigeren",
-    "kluis_telling_bewerken",
-    "kluis_telling_goedkeuren",
-    "kluis_geschiedenis",
-    "kluis_mutatie_nieuw",
-    "kluis_mutatie_corrigeren",
-    "gebruiksstatistieken",
-    "logboek",
-    "logboek_csv_route",
-    "logboek_pdf_route",
-}
-
-# Fijnmazige rechten bovenop BEHEERDER_ENDPOINTS: elk account (ook
-# vrijwilligers) heeft per sectie een los aan/uit-vinkje (zie Accounts).
-# Beheerders omzeilen deze check altijd (zie vereis_login hieronder) -- dit
-# is puur om te bepalen welke secties een vrijwilliger wél/niet mag. Routes
-# die al in BEHEERDER_ENDPOINTS staan (bijv. product_nieuw) hoeven hier niet
-# ook nog in: die blijven sowieso beheerder-only, ongeacht secties.
-SECTIE_ENDPOINTS = {
-    "voorraad": {
-        "voorraadoverzicht",
-        "voorraadoverzicht_pdf_route",
-        "voorraadoverzicht_csv_route",
-        "producten_lijst",
-        "api_tablet_producten",
-        "product_actief_wisselen",
-        "product_zoeken",
-        "product_detail",
-        "product_snel_toevoegen",
-        "product_label_pdf",
-        "producten_labels_pdf",
-        "boeken",
-        "levering_inboeken",
-        "geschiedenis",
-        "tellen",
-        "tellen_lopen_starten",
-        "tellen_lopen_hervatten",
-        "tellen_lopen",
-        "tellen_lopen_controleren",
-        "tellingen_overzicht",
-        "tellingen_gecombineerd_pdf",
-        "telling_detail",
-        "telling_regel_corrigeren",
-        "telling_pdf",
-        "bestellijst",
-        "prognose_pagina",
-        "wedstrijd_afgelast_wisselen",
-        "prognose_verkoopdagen",
-        "prognose_uitzondering_toevoegen",
-        "prognose_uitzondering_verwijderen",
-        "bestellijst_pdf_route",
-        "bestelling_aanmaken",
-        "bestelling_nieuw",
-        "bestelling_bewerken",
-        "bestelling_inboeken",
-        "bestelling_verwijderen",
-        "bestellijst_melding_product_afhandelen",
-        "bestellijst_melding_afhandelen",
-        "fusten_overzicht",
-        "boodschappenlijst",
-        "boodschap_afvinken",
-        "boodschap_verwijderen",
-        "scannen",
-        "verbruiksvoorwerpen_lijst",
-        "verbruiksvoorwerp_verwijderen",
-        "verbruiksvoorwerp_bestellijst_melden",
-        "verbruiksvoorwerp_label_pdf",
-        "verbruiksvoorwerpen_labels_pdf",
-    },
-    "kassa": {
-        "kassa_tellen",
-        "kassa_telling_detail",
-        "kassa_telling_heropenen",
-        "kassa_telling_omzet_corrigeren",
-        "kassa_telling_coupures_corrigeren",
-        "kassa_telling_bewerken",
-        "kassa_telling_goedkeuren",
-        "kassa_telling_pdf",
-        "kassa_geschiedenis",
-        "kassa_mutatie_nieuw",
-        "kassa_mutatie_corrigeren",
-    },
-    "keuken": {
-        "frituurvet_vervangen",
-        "keuken_voorraad",
-        "keuken_instellingen",
-    },
-    "stemmen": {
-        "stemmen_overzicht",
-        "stemvraag_nieuw",
-        "stemvraag_detail",
-        "stemvraag_poster_pdf",
-        "stem_afkeuren",
-        "stem_goedkeuren",
-        "stemvraag_sluiten",
-        "stemvraag_heropenen",
-        "stemvraag_einddatum_instellen",
-        "stemvraag_instellingen_bijwerken",
-        "stemvraag_verwijderen",
-        "bieren_lijst",
-        "bier_verwijderen",
-    },
-    # Kantine-tv is losgemaakt van BEHEERDER_ENDPOINTS: puur scherminstellingen
-    # (prijzenscherm, dia's), geen toegang tot accounts/back-ups/instellingen,
-    # dus veilig om als losse sectie aan een vrijwilliger te geven.
-    "kantine_tv": {
-        "kiosk_hub",
-        "kiosk_prijzen_instellingen",
-        "kiosk_wedstrijddag_welkom_instellingen",
-        "kiosk_wedstrijddag_welkom_testen",
-        "api_tablet_wedstrijddag_welkom",
-        "kiosk_categorie_kolommen_instellingen",
-        "kiosk_uitgelicht_product_instellingen",
-        "api_tablet_uitgelicht",
-        "kiosk_product_toon_wisselen",
-        "kiosk_product_uitverkocht_wisselen",
-        "kiosk_acties",
-        "kiosk_actie_nieuw",
-        "kiosk_actie_bewerken",
-        "kiosk_actie_verwijderen",
-        "kiosk_actie_toon_wisselen",
-        "api_tablet_acties",
-        "kiosk_bardienst",
-        "kiosk_bardienst_nieuw",
-        "kiosk_bardienst_bewerken",
-        "kiosk_bardienst_verwijderen",
-        "api_tablet_bardiensten",
-        "kiosk_tv_wisselen",
-        "kiosk_sponsoren_leden",
-        "kiosk_sponsor_nieuw",
-        "kiosk_sponsor_bewerken",
-        "kiosk_sponsor_verwijderen",
-        "kiosk_sponsorlogos",
-        "kiosk_sponsorlogos_instellingen",
-        "kiosk_sponsorlogo_bewerken",
-        "kiosk_sponsorlogo_actief_wisselen",
-        "kiosk_sponsorlogo_verwijderen",
-        "kiosk_sjabloon_nieuw",
-        "kiosk_sjabloon_bewerken",
-        "kiosk_sjabloon_verwijderen",
-        "kiosk_scherm_instellingen",
-        "kiosk_stand_team_nieuw",
-        "kiosk_stand_team_verwijderen",
-        "kiosk_stand_team_eigen_wisselen",
-        "kiosk_stand_volgorde_opslaan",
-        "kiosk_club_logo_opslaan",
-        "kiosk_stand_poule_nieuw",
-        "kiosk_stand_poule_verwijderen",
-        "kiosk_motm_team_nieuw",
-        "kiosk_motm_team_verwijderen",
-        "kiosk_motm_volgorde_opslaan",
-    },
-    # Club van 20: ledenadministratie + betalingen + projecten + de
-    # Club van 20-dia's. Eigen sectie (los van Kantine-tv) zodat bijv. de
-    # penningmeester/coördinator van de Club van 20 hier wel bij kan zonder
-    # de rest van de kantine-tv te beheren -- en andersom.
-    "club_van_20": {
-        "club_van_20_overzicht",
-        "club_van_20_bijdrage_opslaan",
-        "club_van_20_bulk",
-        "club_van_20_lid_nieuw",
-        "club_van_20_lid_bewerken",
-        "club_van_20_lid_verwijderen",
-        "club_van_20_lid_archiveren",
-        "club_van_20_projecten",
-        "club_van_20_project_bewerken",
-        "club_van_20_project_status",
-        "club_van_20_project_verwijderen",
-        "club_van_20_importeren",
-        "club_van_20_exporteren",
-        "club_van_20_aanmeldingen",
-        "club_van_20_aanmelding_goedkeuren",
-        "club_van_20_aanmelding_afwijzen",
-        "club_van_20_instellingen",
-    },
-    # Losgemaakt van BEHEERDER_ENDPOINTS voor hetzelfde soort reden --
-    # agenda/banner raakt geen accounts, categorieën of back-ups. Alleen
-    # club_instellingen zelf (het NAV-item) i.p.v. de hele "Club"-groep, zie
-    # NAV_ITEM_SECTIE hieronder: Accounts/Back-ups/Instellingen/Statistieken
-    # in diezelfde zijbalkgroep blijven beheerder-only.
-    "club": {
-        "club_instellingen",
-        "club_agenda_toevoegen",
-        "club_agenda_verwijderen",
-        "club_agenda_verversen",
-        "club_agenda_controleren",
-        "mededeling_pinnen_als_banner",
-    },
-}
-# Omgekeerde opzoektabel: endpoint -> vereiste sectie, 1x opgebouwd bij het
-# starten van het proces i.p.v. bij elk verzoek opnieuw over te zoeken.
-ENDPOINT_SECTIE = {
-    endpoint: sectie for sectie, endpoints in SECTIE_ENDPOINTS.items() for endpoint in endpoints
-}
-# Voor het filteren van de zijbalk: welke navigatiegroep hoort bij welke
-# sectie. "Start" en "Rapporten" staan hier bewust niet in -- die blijven
-# voor iedereen zichtbaar, net als het vroegere "Algemeen".
-NAV_GROEP_SECTIE = {
-    "Voorraad": "voorraad",
-    "Tellen": "voorraad",
-    "Bestellen": "voorraad",
-    "Assortiment": "voorraad",
-    "Kassa": "kassa",
-    "Keuken": "keuken",
-    "Stemmen": "stemmen",
-    "Kantine-tv": "kantine_tv",
-    "Club van 20": "club_van_20",
-}
-# Uitzondering per los NAV-item (i.p.v. de hele groep) op NAV_GROEP_SECTIE/
-# NAV_GROEP_ALLEEN_BEHEERDER hieronder -- voor een item dat wél sectie-
-# gebonden is terwijl de rest van zijn zijbalkgroep beheerder-only blijft
-# (zie "club" hierboven: Club instellingen is delegeerbaar, Accounts/
-# Back-ups/Instellingen in dezelfde groep niet).
-NAV_ITEM_SECTIE = {
-    "club_instellingen": "club",
-}
-
-NAV_ITEMS = [
-    {
-        "groep": "Start",
-        "endpoints": ["dashboard"],
-        "url_endpoint": "dashboard",
-        "label": "Overzicht",
-    },
-    {
-        "groep": "Start",
-        "endpoints": ["bijzonderheden"],
-        "url_endpoint": "bijzonderheden",
-        "label": "Prikbord",
-    },
-    {
-        "groep": "Voorraad",
-        "endpoints": ["voorraadoverzicht"],
-        "url_endpoint": "voorraadoverzicht",
-        "label": "Voorraadoverzicht",
-    },
-    {
-        "groep": "Voorraad",
-        "endpoints": ["boeken", "levering_inboeken"],
-        "url_endpoint": "boeken",
-        "label": "In/uit boeken",
-    },
-    {
-        "groep": "Voorraad",
-        "endpoints": ["geschiedenis"],
-        "url_endpoint": "geschiedenis",
-        "label": "Mutatieoverzicht",
-    },
-    {
-        "groep": "Tellen",
-        "endpoints": [
-            "tellen",
-            "tellen_lopen",
-            "tellen_lopen_starten",
-            "tellen_lopen_hervatten",
-            "tellen_lopen_controleren",
-        ],
-        "url_endpoint": "tellen",
-        "label": "Voorraad tellen",
-    },
-    {
-        "groep": "Tellen",
-        "endpoints": ["tellingen_overzicht", "telling_detail", "tellingen_gecombineerd_pdf"],
-        "url_endpoint": "tellingen_overzicht",
-        "label": "Tellingen",
-    },
-    {
-        "groep": "Bestellen",
-        "endpoints": ["bestellijst", "bestelling_aanmaken", "bestelling_nieuw", "bestelling_inboeken"],
-        "url_endpoint": "bestellijst",
-        "label": "Bestellijst",
-    },
-    {
-        "groep": "Bestellen",
-        "endpoints": ["prognose_pagina"],
-        "url_endpoint": "prognose_pagina",
-        "label": "Prognose",
-    },
-    {
-        "groep": "Bestellen",
-        "endpoints": ["boodschappenlijst"],
-        "url_endpoint": "boodschappenlijst",
-        "label": "Boodschappenlijst",
-    },
-    {
-        "groep": "Assortiment",
-        "endpoints": [
-            "producten_lijst",
-            "product_nieuw",
-            "product_bewerken",
-            "categorieen_lijst",
-            "producten_bulk_bewerken",
-        ],
-        "url_endpoint": "producten_lijst",
-        "label": "Producten",
-    },
-    {
-        "groep": "Assortiment",
-        "endpoints": ["verbruiksvoorwerpen_lijst"],
-        "url_endpoint": "verbruiksvoorwerpen_lijst",
-        "label": "Verbruiksvoorwerpen",
-    },
-    {
-        "groep": "Kassa",
-        "endpoints": [
-            "kassa_tellen",
-            "kassa_telling_detail",
-            "kassa_telling_bewerken",
-            "kassa_telling_goedkeuren",
-            "kassa_telling_pdf",
-            "kassa_telling_heropenen",
-        ],
-        "url_endpoint": "kassa_tellen",
-        "label": "Kassa tellen",
-    },
-    {
-        "groep": "Kassa",
-        "endpoints": ["kassa_geschiedenis"],
-        "url_endpoint": "kassa_geschiedenis",
-        "label": "Kassa geschiedenis",
-    },
-    {
-        "groep": "Kassa",
-        "endpoints": ["kassa_mutatie_nieuw"],
-        "url_endpoint": "kassa_mutatie_nieuw",
-        "label": "Afdracht / toevoeging",
-    },
-    {
-        "groep": "Kluis",
-        "endpoints": [
-            "kluis_tellen",
-            "kluis_telling_detail",
-            "kluis_telling_bewerken",
-            "kluis_telling_goedkeuren",
-            "kluis_telling_heropenen",
-        ],
-        "url_endpoint": "kluis_tellen",
-        "label": "Kluis tellen",
-    },
-    {
-        "groep": "Kluis",
-        "endpoints": ["kluis_geschiedenis"],
-        "url_endpoint": "kluis_geschiedenis",
-        "label": "Kluis geschiedenis",
-    },
-    {
-        "groep": "Kluis",
-        "endpoints": ["kluis_mutatie_nieuw"],
-        "url_endpoint": "kluis_mutatie_nieuw",
-        "label": "Storting / opname",
-    },
-    {
-        "groep": "Keuken",
-        "endpoints": ["keuken_voorraad"],
-        "url_endpoint": "keuken_voorraad",
-        "label": "Voorraad",
-    },
-    {
-        "groep": "Keuken",
-        "endpoints": ["keuken_instellingen"],
-        "url_endpoint": "keuken_instellingen",
-        "label": "Instellingen",
-    },
-    {
-        "groep": "Kantine-tv",
-        "endpoints": ["kiosk_hub"],
-        "url_endpoint": "kiosk_hub",
-        "label": "Overzicht",
-    },
-    {
-        "groep": "Kantine-tv",
-        "endpoints": [
-            "kiosk_prijzen_instellingen",
-            "kiosk_wedstrijddag_welkom_instellingen",
-            "kiosk_categorie_kolommen_instellingen",
-            "kiosk_uitgelicht_product_instellingen",
-            "kiosk_acties",
-            "kiosk_actie_nieuw",
-            "kiosk_actie_bewerken",
-            "kiosk_bardienst",
-            "kiosk_bardienst_bewerken",
-        ],
-        "url_endpoint": "kiosk_prijzen_instellingen",
-        "label": "Prijzenscherm & acties",
-    },
-    {
-        "groep": "Kantine-tv",
-        "endpoints": [
-            "kiosk_scherm_instellingen",
-            "kiosk_sponsoren_leden",
-            "kiosk_sponsor_nieuw",
-            "kiosk_sponsor_bewerken",
-            "kiosk_sjabloon_nieuw",
-            "kiosk_sjabloon_bewerken",
-        ],
-        "url_endpoint": "kiosk_sponsoren_leden",
-        "label": "Dia's",
-    },
-    {
-        "groep": "Kantine-tv",
-        "endpoints": ["kiosk_sponsorlogos", "kiosk_sponsorlogo_bewerken"],
-        "url_endpoint": "kiosk_sponsorlogos",
-        "label": "Sponsoren",
-    },
-    {
-        "groep": "Club van 20",
-        "endpoints": [
-            "club_van_20_overzicht",
-            "club_van_20_lid_nieuw",
-            "club_van_20_lid_bewerken",
-        ],
-        "url_endpoint": "club_van_20_overzicht",
-        "label": "Leden & betalingen",
-    },
-    {
-        "groep": "Club van 20",
-        "endpoints": ["club_van_20_aanmeldingen"],
-        "url_endpoint": "club_van_20_aanmeldingen",
-        "label": "Aanmeldingen",
-    },
-    {
-        "groep": "Club van 20",
-        "endpoints": ["club_van_20_projecten", "club_van_20_project_bewerken"],
-        "url_endpoint": "club_van_20_projecten",
-        "label": "Projecten",
-    },
-    {
-        "groep": "Club van 20",
-        "endpoints": ["club_van_20_instellingen"],
-        "url_endpoint": "club_van_20_instellingen",
-        "label": "Scherm & werving",
-    },
-    {
-        "groep": "Club van 20",
-        "endpoints": ["club_van_20_importeren"],
-        "url_endpoint": "club_van_20_importeren",
-        "label": "Importeren / exporteren",
-    },
-    {
-        "groep": "Stemmen",
-        "endpoints": [
-            "stemmen_overzicht",
-            "stemvraag_nieuw",
-            "stemvraag_detail",
-            "stemvraag_poster_pdf",
-            "stemvraag_sluiten",
-            "stemvraag_heropenen",
-            "stemvraag_verwijderen",
-            "stemvraag_einddatum_instellen",
-            "stemvraag_instellingen_bijwerken",
-            "stem_goedkeuren",
-            "stem_afkeuren",
-        ],
-        "url_endpoint": "stemmen_overzicht",
-        "label": "Overzicht",
-    },
-    {
-        "groep": "Stemmen",
-        "endpoints": ["bieren_lijst", "bier_verwijderen"],
-        "url_endpoint": "bieren_lijst",
-        "label": "Bierbibliotheek",
-    },
-    {
-        "groep": "Rapporten",
-        "endpoints": ["verkooprapport", "verkooprapport_pdf_route", "verkooprapport_csv_route"],
-        "url_endpoint": "verkooprapport",
-        "label": "Verkooprapport",
-    },
-    {
-        "groep": "Rapporten",
-        "endpoints": ["seizoensrapport", "seizoensrapport_csv_route", "seizoensrapport_pdf_route"],
-        "url_endpoint": "seizoensrapport",
-        "label": "Omzet per seizoen",
-    },
-    {
-        "groep": "Rapporten",
-        "endpoints": ["compacte_uitdraai", "compacte_uitdraai_pdf_route"],
-        "url_endpoint": "compacte_uitdraai",
-        "label": "Compacte uitdraai",
-    },
-    {
-        "groep": "Rapporten",
-        "endpoints": ["week_overzicht"],
-        "url_endpoint": "week_overzicht",
-        "label": "Weekoverzicht",
-    },
-    {
-        "groep": "Rapporten",
-        "endpoints": ["wedstrijden_overzicht"],
-        "url_endpoint": "wedstrijden_overzicht",
-        "label": "Wedstrijden",
-    },
-    {
-        "groep": "Club",
-        "endpoints": ["accounts_lijst"],
-        "url_endpoint": "accounts_lijst",
-        "label": "Accounts beheren",
-    },
-    {
-        "groep": "Club",
-        "endpoints": ["club_instellingen"],
-        "url_endpoint": "club_instellingen",
-        "label": "Club instellingen",
-    },
-    {
-        "groep": "Club",
-        "endpoints": ["logboek", "logboek_csv_route", "logboek_pdf_route"],
-        "url_endpoint": "logboek",
-        "label": "Logboek",
-    },
-    {
-        "groep": "Club",
-        "endpoints": ["backups_lijst"],
-        "url_endpoint": "backups_lijst",
-        "label": "Back-ups",
-    },
-    {
-        "groep": "Club",
-        "endpoints": ["instellingen_pagina"],
-        "url_endpoint": "instellingen_pagina",
-        "label": "Instellingen",
-    },
-    {
-        "groep": "Club",
-        "endpoints": ["gebruiksstatistieken"],
-        "url_endpoint": "gebruiksstatistieken",
-        "label": "Gebruiksstatistieken",
-    },
-]
-
-# Groepen komen in deze volgorde in de zijbalk te staan (Python dicts noch
-# SQL-resultaten garanderen een stabiele groepsvolgorde als items ooit worden
-# herschikt, dus NAV_ITEMS wordt bij het opbouwen van de zijbalk hierop
-# gesorteerd). Nieuwe groepen hoeven hier alleen aan toegevoegd te worden om
-# vanzelf een eigen sectie te krijgen.
-NAV_GROEP_VOLGORDE = [
-    "Start",
-    "Voorraad",
-    "Tellen",
-    "Bestellen",
-    "Assortiment",
-    "Kassa",
-    "Kluis",
-    "Keuken",
-    "Kantine-tv",
-    "Club van 20",
-    "Stemmen",
-    "Rapporten",
-    "Club",
-]
-NAV_ITEMS.sort(key=lambda item: NAV_GROEP_VOLGORDE.index(item["groep"]))
-
-# Club- en Kluisbeheer zijn (op het "club_instellingen"-item na, zie
-# NAV_ITEM_SECTIE hierboven) volledig beheerder-only (zie BEHEERDER_ENDPOINTS)
-# -- i.t.t. de sectie-gebonden groepen hierboven (die vrijwilligers met de
-# juiste sectie wel mogen zien) toont de zijbalk deze groepen daarom nooit aan
-# een vrijwilliger, ook al staan ze niet in NAV_GROEP_SECTIE.
-NAV_GROEP_ALLEEN_BEHEERDER = {"Club", "Kluis"}
-
-# De PDA-modus (zie WEERGAVE_TELEFOON_PATROON hieronder) heeft zijn eigen
-# kop met alleen een kort label per pagina (geen zijbalk): vloerwerk plus een
-# paar overzichten om te bekijken, geen beheer en geen zware rapportages.
-# Bewust een losse lijst i.p.v. een subset-vlag op NAV_ITEMS: die twee
-# navigaties verschillen te veel (geen groepen, kortere labels) om hetzelfde
-# datamodel te delen. De knoppen op het startscherm staan in pda_start.html.
-PDA_NAV_ITEMS = [
-    {"url_endpoint": "tellen", "pda_label": "Tellen"},
-    {"url_endpoint": "boeken", "pda_label": "Boeken"},
-    {"url_endpoint": "bijzonderheden", "pda_label": "Prikbord"},
-    {"url_endpoint": "kassa_tellen", "pda_label": "Kassa"},
-    {"url_endpoint": "kiosk_prijzen_instellingen", "pda_label": "Kiosk"},
-    {"url_endpoint": "bestellijst", "pda_label": "Bestellijst"},
-    {"url_endpoint": "geschiedenis", "pda_label": "Geschiedenis"},
-    {"url_endpoint": "boodschappenlijst", "pda_label": "Boodschappen"},
-    {"url_endpoint": "voorraadoverzicht", "pda_label": "Voorraad"},
-    {"url_endpoint": "tellingen_overzicht", "pda_label": "Tellingen"},
-    {"url_endpoint": "prognose_pagina", "pda_label": "Prognose"},
-    {"url_endpoint": "keuken_voorraad", "pda_label": "Keuken"},
-    {"url_endpoint": "kluis_tellen", "pda_label": "Kluis"},
-    {"url_endpoint": "club_van_20_aanmeldingen", "pda_label": "Club 20"},
-]
 
 
 def get_secret_key():
@@ -811,12 +125,13 @@ def create_app(database_path=None, admin_wachtwoord=None):
         een verouderd token werd getoond) sturen we terug naar dezelfde
         pagina i.p.v. een kale 400-foutpagina te tonen -- die pagina heeft
         dan meteen weer een geldig token."""
-        if request.method == "POST" and request.endpoint == "tablet_code_inloggen":
+        if request.method == "POST" and request.endpoint in ("tablet_code_inloggen", "uitrollen_endpoint"):
             # CSRF is een misbruik van een browser die AL een geldige sessie
             # heeft -- dat bestaat hier niet: dit is een kale JSON-API-aanroep
             # vanuit de kiosk-tablet-app, zonder cookies/sessie, dus zonder
             # csrf_token om te controleren. Eigen brute-force-bescherming
-            # (per IP) zit al in tablet_code_inloggen zelf.
+            # (per IP) zit al in tablet_code_inloggen zelf. Hetzelfde geldt voor
+            # uitrollen_endpoint: een script, beveiligd met een handtekening.
             return None
         if request.method == "POST":
             verwacht = session.get("csrf_token")
@@ -872,6 +187,8 @@ def create_app(database_path=None, admin_wachtwoord=None):
         # hieronder -- daarmee kan 1 item uit een verder beheerder-only groep
         # (bijv. "Club instellingen" in de groep "Club") toch aan een
         # vrijwilliger met de juiste sectie getoond worden.
+        if item["url_endpoint"] in NAV_ITEM_ALLEEN_BEHEERDER:
+            return gebruiker_rol == "beheerder"
         sectie = NAV_ITEM_SECTIE.get(item["url_endpoint"]) or NAV_GROEP_SECTIE.get(item["groep"])
         if sectie:
             return heeft_sectie_toegang(gebruiker_rol, gebruiker_secties, sectie)
@@ -1053,6 +370,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
         aanmeldingen,
         accounts,
         auth,
+        bardienstrapport,
         bestellijst,
         boeken,
         boodschappenlijst,
@@ -1074,6 +392,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
         stemmen,
         tellen,
         uitdraai,
+        uitrollen,
         verbruiksvoorwerpen,
         zoeken,
     )
@@ -1083,6 +402,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
     prognose.register_routes(app)
     accounts.register_routes(app)
     auth.register_routes(app)
+    bardienstrapport.register_routes(app)
     bestellijst.register_routes(app)
     boeken.register_routes(app)
     boodschappenlijst.register_routes(app)
@@ -1102,6 +422,7 @@ def create_app(database_path=None, admin_wachtwoord=None):
     stemmen.register_routes(app)
     tellen.register_routes(app)
     uitdraai.register_routes(app)
+    uitrollen.register_routes(app)
     verbruiksvoorwerpen.register_routes(app)
     zoeken.register_routes(app)
     return app

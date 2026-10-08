@@ -324,7 +324,7 @@ def register_routes(app):
                 flash("Vul een tekst in.", "error")
                 return redirect(url_for("bijzonderheden"))
             naam = session.get("gebruiker_naam")
-            cur = db.execute(
+            db.execute(
                 "INSERT INTO mededelingen (tekst, naam, datum, urgent) VALUES (?, ?, ?, ?)",
                 (tekst, naam, now_str(), 1 if request.form.get("urgent") else 0),
             )

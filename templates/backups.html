@@ -19,6 +19,18 @@
 </div>
 {% endif %}
 
+<div class="kaart" style="font-size:0.9rem">
+    {% set h = backup_status.herstel %}
+    {% if h %}
+    <strong>Laatste herstelcontrole:</strong>
+    {% if h.ok %}<span class="badge badge-ok">gelukt</span>{% else %}<span class="badge badge-laag">mislukt</span>{% endif %}
+    op {{ h.datum|datum_nl }} &mdash; {{ h.melding }} ({{ h.backup }}).
+    {% else %}
+    <strong>Herstelcontrole:</strong> nog niet gedraaid.
+    {% endif %}
+    <span class="tekst-zacht">Eens per maand zet de back-uptaak een back-up terug in een wegwerp-database en leest die helemaal door, zodat je weet dat herstellen echt werkt.</span>
+</div>
+
 <div class="kaart">
     {% if backups %}
     <div class="tabel-wrap">

@@ -114,3 +114,62 @@ def test_zoekbalk_staat_in_de_titelbalk(ingelogde_client):
 def test_live_zoeken_telt_niet_mee_als_paginabezoek(ingelogde_client, db):
     _zoek(ingelogde_client, "pils")
     assert db.execute("SELECT COUNT(*) AS n FROM paginabezoeken WHERE endpoint = 'zoeken_live'").fetchone()["n"] == 0
+
+
+# ---------- Uitgebreid zoeken ----------
+
+
+def test_zoekt_ook_in_bestellingen_boodschappen_en_verbruiksvoorwerpen(ingelogde_client, db):
+    pid = db.execute("INSERT INTO producten (naam, categorie) VALUES ('Radler Citroen', 'Bier')").lastrowid
+    cur = db.execute(
+        "INSERT INTO bestellingen (status, aangemaakt_op, besteld_door, referentie) VALUES ('besteld', '2026-10-01 10:00', 'Piet', 'Jumbo-4521')"
+    )
+    db.execute(
+        "INSERT INTO bestelregels (bestelling_id, product_id, aantal_besteld) VALUES (?, ?, 2)", (cur.lastrowid, pid)
+    )
+    db.execute("INSERT INTO boodschappen (tekst, aangemaakt_op) VALUES ('Schoonmaakdoekjes kopen', '2026-10-01 10:00')")
+    db.execute("INSERT INTO verbruiksvoorwerpen (naam, aangemaakt_op) VALUES ('Schoonmaakspray', '2026-10-01 10:00')")
+    db.commit()
+
+    assert "Bestelling #" in _titels(_zoek(ingelogde_client, "jumbo"))["Bestellingen"][0]
+    # Ook via een product in de bestelling
+    assert "Bestellingen" in _titels(_zoek(ingelogde_client, "citroen"))
+    titels = _titels(_zoek(ingelogde_client, "schoonmaak"))
+    assert titels["Boodschappenlijst"] == ["Schoonmaakdoekjes kopen"]
+    assert titels["Verbruiksvoorwerpen"] == ["Schoonmaakspray"]
+
+
+def test_zoekt_in_geldbewegingen_wedstrijden_en_sponsoren(ingelogde_client, db):
+    db.execute(
+        "INSERT INTO kassa_mutaties (type, bedrag, datum, naam, ontvanger, opmerking) "
+        "VALUES ('afdracht', 80, '2026-10-03 22:30', 'Piet', 'Penningmeester', 'sponsorgeld')"
+    )
+    db.execute(
+        "INSERT INTO kluis_mutaties (type, bedrag, datum, naam, opmerking) VALUES ('storting', 150, '2026-10-04 10:00', 'Karin', 'sponsorgeld naar bank')"
+    )
+    db.execute("INSERT INTO wedstrijden (team, datum, omschrijving, thuis) VALUES ('ZA 1', '2026-10-10', 'Blauw-Geel - Sponsorteam', 1)")
+    db.execute("INSERT INTO kiosk_sponsoren (titel, aangemaakt_op) VALUES ('Sponsor Bakkerij Jansen', '2026-10-01 10:00')")
+    db.commit()
+
+    titels = _titels(_zoek(ingelogde_client, "sponsor"))
+
+    assert any("Afdracht" in t for t in titels["Kassa-afdrachten en -toevoegingen"])
+    assert any("Storting" in t for t in titels["Kluis-stortingen en -opnames"])
+    assert titels["Wedstrijden"] == ["ZA 1 · 2026-10-10"] or titels["Wedstrijden"][0].startswith("ZA 1")
+    assert titels["Sponsoren (Kantine-tv)"] == ["Sponsor Bakkerij Jansen"]
+
+
+def test_uitgebreide_resultaten_volgen_de_rechten(client, db):
+    db.execute("INSERT INTO kluis_mutaties (type, bedrag, datum, naam, opmerking) VALUES ('storting', 1, '2026-10-04 10:00', 'K', 'geheimtekst')")
+    db.execute("INSERT INTO kassa_mutaties (type, bedrag, datum, naam, opmerking) VALUES ('afdracht', 1, '2026-10-04 10:00', 'K', 'geheimtekst')")
+    db.execute("INSERT INTO kiosk_sponsoren (titel, aangemaakt_op) VALUES ('geheimtekst sponsor', '2026-10-01 10:00')")
+    db.execute("INSERT INTO boodschappen (tekst, aangemaakt_op) VALUES ('geheimtekst', '2026-10-01 10:00')")
+    db.commit()
+    _vrijwilliger(client, db, "kassa")
+
+    titels = _titels(_zoek(client, "geheimtekst"))
+
+    assert "Kassa-afdrachten en -toevoegingen" in titels
+    assert "Kluis-stortingen en -opnames" not in titels
+    assert "Sponsoren (Kantine-tv)" not in titels
+    assert "Boodschappenlijst" not in titels  # voorraad-sectie

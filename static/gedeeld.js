@@ -381,6 +381,49 @@ document.addEventListener("DOMContentLoaded", function () {
         actief = -1;
     }
 
+    // Laatste zoekopdrachten, alleen in deze browser onthouden (localStorage kan
+    // geblokkeerd zijn, bijvoorbeeld in een privévenster: dan werkt zoeken gewoon zonder).
+    var RECENT_SLEUTEL = "zoek-recent";
+    function leesRecent() {
+        try {
+            var lijstje = JSON.parse(localStorage.getItem(RECENT_SLEUTEL) || "[]");
+            return Array.isArray(lijstje) ? lijstje.filter(function (t) { return typeof t === "string"; }) : [];
+        } catch (e) { return []; }
+    }
+    function bewaarRecent(term) {
+        term = (term || "").trim();
+        if (term.length < 2) return;
+        var nieuw = [term].concat(leesRecent().filter(function (t) { return t.toLowerCase() !== term.toLowerCase(); }));
+        try { localStorage.setItem(RECENT_SLEUTEL, JSON.stringify(nieuw.slice(0, 5))); } catch (e) { /* niet erg */ }
+    }
+    function wisRecent() {
+        try { localStorage.removeItem(RECENT_SLEUTEL); } catch (e) { /* niet erg */ }
+    }
+    function toonRecent() {
+        var termen = leesRecent();
+        if (!termen.length) { verberg(); return; }
+        lijst.textContent = "";
+        var kop = document.createElement("div");
+        kop.className = "zoek-groep-titel";
+        kop.textContent = "Recent gezocht";
+        lijst.appendChild(kop);
+        termen.forEach(function (term) {
+            var a = document.createElement("a");
+            a.className = "zoek-resultaat";
+            a.href = "/zoeken?q=" + encodeURIComponent(term);
+            a.textContent = term;
+            lijst.appendChild(a);
+        });
+        var wis = document.createElement("a");
+        wis.className = "zoek-alle";
+        wis.href = "#";
+        wis.textContent = "Wissen";
+        wis.addEventListener("click", function (e) { e.preventDefault(); wisRecent(); verberg(); });
+        lijst.appendChild(wis);
+        lijst.hidden = false;
+        actief = -1;
+    }
+
     function links() {
         return lijst.querySelectorAll(".zoek-resultaat");
     }
@@ -434,7 +477,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function zoek() {
         var term = invoer.value.trim();
-        if (term.length < 2) { verberg(); return; }
+        if (term.length < 2) { if (term.length === 0) toonRecent(); else verberg(); return; }
         if (lopend) lopend.abort();
         lopend = new AbortController();
         fetch("/zoeken/live?q=" + encodeURIComponent(term), { signal: lopend.signal, credentials: "same-origin" })
@@ -443,6 +486,14 @@ document.addEventListener("DOMContentLoaded", function () {
             .catch(function () { /* afgebroken of offline: dan blijft het lijstje zoals het was */ });
     }
 
+    invoer.addEventListener("focus", function () {
+        if (!invoer.value.trim()) toonRecent();
+    });
+    formulier.addEventListener("submit", function () { bewaarRecent(invoer.value); });
+    lijst.addEventListener("click", function (e) {
+        // Een resultaat aanklikken telt ook als een zoekopdracht om te onthouden.
+        if (e.target.closest(".zoek-resultaat") && invoer.value.trim()) bewaarRecent(invoer.value);
+    });
     invoer.addEventListener("input", function () {
         clearTimeout(timer);
         timer = setTimeout(zoek, 200);

@@ -1,0 +1,19 @@
+# Alleen de instellingen voor de code-controle (ruff). Het project zelf wordt niet als
+# pakket geïnstalleerd; zie requirements.txt.
+
+[tool.ruff]
+exclude = ["venv", ".claude", "android-apps", "backups", "static", "node_modules"]
+
+[tool.ruff.lint]
+# Alleen echte fouten: ongedefinieerde namen, ongebruikte imports/variabelen en
+# syntaxfouten. Geen opmaakregels: die zou je bij elke wijziging in de weg zitten.
+select = ["F", "E9"]
+
+[tool.ruff.lint.per-file-ignores]
+# Deze bestanden voeren namen opnieuw uit, zodat bestaande imports blijven werken
+# (`from helpers import ...`, `from app import ...` in de tests).
+"app.py" = ["F401"]
+"**/__init__.py" = ["F401"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

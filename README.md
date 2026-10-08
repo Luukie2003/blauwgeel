@@ -83,6 +83,31 @@ per test (nooit tegen `voorraad.db`) en dekken de kernberekeningen: kassa-tellin
 afsluiten → heropenen), voorraadmutaties bij het tellen, inloggen/CSRF en de
 brute-force-blokkade.
 
+## Live zetten
+
+De site draait op PythonAnywhere. Met 1 commando zet je de nieuwste code live:
+
+```bash
+venv/bin/python scripts/zet_live.py
+```
+
+Dat controleert dat alles gecommit is, draait ruff en de tests, pusht naar GitHub, laat de server
+de nieuwe code ophalen en herstarten, en wacht tot `/status` de nieuwe versie laat zien.
+
+Eenmalig instellen: `venv/bin/python scripts/zet_live.py --maak-geheim` maakt een geheim op jouw computer
+aan en toont de ene regel die je in een Bash-console op PythonAnywhere plakt (hij zet het geheim in
+`uitrol_geheim.txt`). Zonder dat bestand op de server is het endpoint `POST /uitrollen` uitgeschakeld.
+Het endpoint doet alleen `git pull --ff-only` en herstart de web-app; zie `uitrollen.py`. Is
+`requirements.txt` gewijzigd, dan meldt het script dat je de pakketten nog op de server moet installeren.
+
+Bij elke push draait GitHub Actions (`.github/workflows/tests.yml`) ruff en alle tests.
+
+## Onderhoud
+
+De dagelijkse taak op PythonAnywhere is `python3 backup.py`. Die maakt en controleert de back-up, mailt
+een kopie, zet eens per maand een back-up terug in een wegwerp-database (herstelcontrole) en ruimt daarna
+oude gegevens op (zie `onderhoud.py`: paginabezoeken en logboek na 2 jaar, inlogtellers na 30 dagen).
+
 ## Straks online hosten
 
 Omdat dit een normale Flask-app met een SQLite-bestand is, kun je hem op veel
@@ -102,18 +127,21 @@ gewist wordt).
 ## Projectstructuur
 
 ```
-app.py          Flask-app: navigatie, rechten per sectie, hooks
-database.py     Database-verbinding, init, migraties en voorbeelddata
+app.py          Flask-app: hooks (inloggen, CSRF, rechten), context en het koppelen van alle routes
+rechten.py      Welk endpoint bij welke sectie hoort, en wat alleen voor beheerders is
+navigatie.py    De zijbalk (menu) en het menu van de handterminal
+database/       Verbinding, schema toepassen, eerste account; migraties.py en seed.py
 schema.sql      Tabellen (producten, tellingen, kassa/kluis, logboek, ...)
-pdf.py          PDF-opmaak (bestellijst, verkooprapport, uitdraai, ...)
-wijzigingen.py  Versie-logje voor de Help-pagina
+pdf/            PDF-opmaak per onderwerp (voorraad, kas, verkoop, labels, uitdraai, seizoen, logboek)
 helpers/        Gedeelde hulpfuncties, per onderwerp (tijd, kas, producten, ...)
-club_van_20/    Rekenregels van de Club van 20 (seizoenen, administratie, import)
+club_van_20/    Rekenregels van de Club van 20 (seizoenen, administratie, scherm, import)
 routes/         De pagina's, per onderdeel; grote onderdelen zijn een map
                 (producten/, tellen/, kiosk/, club_van_20/)
 voorspelling.py Prognose en omzetverdeling per dag
-seizoensrapport.py  Omzet per seizoen naast elkaar
-backup.py       Dagelijkse back-up (taak op PythonAnywhere)
+seizoensrapport.py, bardienstrapport.py   Omzet per seizoen en per bardienst
+backup.py       Dagelijkse taak: back-up, herstelcontrole, opruimen (onderhoud.py)
+uitrollen.py    Het beveiligde "live zetten"-endpoint (scripts/zet_live.py is de andere kant)
+wijzigingen.py  Versie-logje voor de Help-pagina
 templates/      Pagina's (Jinja2)
 static/         Stijl (CSS) en scripts
 tests/          pytest-tests

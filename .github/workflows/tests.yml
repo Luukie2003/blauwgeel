@@ -1,5 +1,7 @@
 name: Tests
 
+# Bij elke push en pull request: code-controle en alle tests, op dezelfde Python-versie
+# als op PythonAnywhere. Zo zie je meteen of iets kapot is, vóór het live gaat.
 on:
   push:
   pull_request:
@@ -9,8 +11,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install -r requirements-dev.txt
-      - run: pytest -q
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Pakketten installeren
+        run: pip install -r requirements-dev.txt
+
+      - name: Code-controle (ruff)
+        run: ruff check .
+
+      - name: Tests
+        run: pytest -q

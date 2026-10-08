@@ -991,14 +991,16 @@ def verdeling(db, nu=None):
     maar de som klopt altijd met de tellingen.
 
     Geeft {"omzet": {datum: euro}, "producten": {datum: {product_id: [aantal,
-    euro]}}, "eerste": datetime, "laatste": datetime} (eerste/laatste = de
-    eerste en laatste telling), of None als er nog geen telling is."""
+    euro]}}, "drukte": {datum: factor}, "eerste": datetime, "laatste": datetime}
+    (eerste/laatste = de eerste en laatste telling; drukte = hoeveel drukker dan
+    een gewone dag het model die dag verwachtte: wedstrijd, training, weer;
+    0 = gesloten), of None als er nog geen telling is."""
     nu = nu or datetime.now()
     rijen, tellingen = lees_rijen(db, nu, weken=520, eerste_meenemen=True)
     if not tellingen:
         return None
     eerste, laatste = _parse(tellingen[0]["datum"]), _parse(tellingen[-1]["datum"])
-    uitkomst = {"omzet": {}, "producten": {}, "eerste": eerste, "laatste": laatste}
+    uitkomst = {"omzet": {}, "producten": {}, "drukte": {}, "eerste": eerste, "laatste": laatste}
     if not rijen:
         return uitkomst
     kalender = lees_kalender(
@@ -1023,7 +1025,9 @@ def verdeling(db, nu=None):
                 deel = (min(r["einde"], d_eind) - max(r["start"], d_begin)).total_seconds() / 86400
                 if deel > 0:
                     delen[dag] = deel
-                    gewichten[dag] = deel * _dagdrukte(dag, kalender, effecten)
+                    drukte_dag = _dagdrukte(dag, kalender, effecten)
+                    uitkomst["drukte"][dag] = drukte_dag
+                    gewichten[dag] = deel * drukte_dag
                 dag += timedelta(days=1)
             totaal = sum(gewichten.values())
             if totaal <= 0 and delen:

@@ -1,6 +1,5 @@
 from datetime import date, timedelta
 
-from conftest import stel_csrf_token_in as _csrf
 
 
 def _voeg_wedstrijd_toe(db, datum, omschrijving="1e - Test", thuis=1):

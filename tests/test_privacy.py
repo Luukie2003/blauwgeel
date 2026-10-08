@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from conftest import stel_csrf_token_in as _csrf
 
 from aanmeldingen import ruim_op
+from routes.privacy import BIJGEWERKT_OP
 
 from test_club_van_20_aanmeldingen import _aanmelding, _aanmeldingen, _formulier, _open
 
@@ -30,7 +31,7 @@ def test_privacyverklaring_is_openbaar_en_compleet(client):
         "PythonAnywhere",
     ):
         assert onderdeel in tekst, onderdeel
-    assert "laatst bijgewerkt op 3 oktober 2026" in tekst
+    assert f"laatst bijgewerkt op {BIJGEWERKT_OP}" in tekst
 
 
 def test_privacyverklaring_zonder_streepjes_en_zonder_mollie_gedeelte(client):
@@ -128,3 +129,9 @@ def test_aanmelden_ruimt_onderweg_op(client, db):
     db.commit()
     _formulier(client)
     assert db.execute("SELECT ip_hash FROM club_van_20_aanmeldingen WHERE id = ?", (oud,)).fetchone()[0] is None
+
+
+def test_privacyverklaring_noemt_de_bewaartermijn_van_het_logboek_en_de_dagelijkse_back_upmail(client):
+    tekst = client.get("/privacy").data.decode()
+    assert "het logboek" in tekst and "2 jaar" in tekst
+    assert "elke dag gaat een kopie per e-mail" in tekst

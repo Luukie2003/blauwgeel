@@ -3,9 +3,8 @@
 en je kunt het zelf op afgelast zetten of terugzetten op "gaat door"."""
 
 import sqlite3
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
-import pytest
 
 import agenda
 from conftest import stel_csrf_token_in as _csrf

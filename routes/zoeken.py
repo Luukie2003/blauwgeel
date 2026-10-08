@@ -109,6 +109,63 @@ def zoek_alles(db, term, rol, secties, nav_items, limiet):
             },
         )
 
+        toevoegen(
+            "Bestellingen",
+            db.execute(
+                """SELECT DISTINCT b.id, b.status, b.referentie, b.besteld_door, b.aangemaakt_op
+                   FROM bestellingen b
+                   LEFT JOIN bestelregels br ON br.bestelling_id = b.id
+                   LEFT JOIN producten p ON p.id = br.product_id
+                   WHERE b.referentie LIKE :p ESCAPE '\\' OR b.besteld_door LIKE :p ESCAPE '\\'
+                      OR p.naam LIKE :p ESCAPE '\\'""" + (" OR b.aangemaakt_op LIKE :d" if datum else "") + """
+                   ORDER BY b.id DESC LIMIT :max""",
+                {"p": patroon, "d": datum, "max": limiet + 1},
+            ).fetchall(),
+            lambda r: {
+                "titel": f"Bestelling #{r['id']}" + (f" ({r['referentie']})" if r["referentie"] else ""),
+                "detail": " · ".join(
+                    x
+                    for x in (
+                        "besteld" if r["status"] == "besteld" else "ontvangen",
+                        _nl_datum(r["aangemaakt_op"]),
+                        f"door {r['besteld_door']}" if r["besteld_door"] else "",
+                    )
+                    if x
+                ),
+                # Een nog openstaande bestelling heeft een eigen pagina (inboeken); een
+                # ontvangen bestelling zie je op de bestellijst.
+                "url": url_for("bestelling_inboeken", bestelling_id=r["id"])
+                if r["status"] == "besteld"
+                else url_for("bestellijst"),
+            },
+        )
+        toevoegen(
+            "Boodschappenlijst",
+            db.execute(
+                "SELECT id, tekst, afgevinkt FROM boodschappen WHERE tekst LIKE :p ESCAPE '\\' "
+                "ORDER BY afgevinkt, id DESC LIMIT :max",
+                {"p": patroon, "max": limiet + 1},
+            ).fetchall(),
+            lambda r: {
+                "titel": r["tekst"],
+                "detail": "afgevinkt" if r["afgevinkt"] else "nog te kopen",
+                "url": url_for("boodschappenlijst"),
+            },
+        )
+        toevoegen(
+            "Verbruiksvoorwerpen",
+            db.execute(
+                "SELECT id, naam, categorie FROM verbruiksvoorwerpen WHERE naam LIKE :p ESCAPE '\\' "
+                "OR categorie LIKE :p ESCAPE '\\' ORDER BY naam LIMIT :max",
+                {"p": patroon, "max": limiet + 1},
+            ).fetchall(),
+            lambda r: {
+                "titel": r["naam"],
+                "detail": r["categorie"] or "",
+                "url": url_for("verbruiksvoorwerpen_lijst"),
+            },
+        )
+
     if mag("kassa"):
         toevoegen(
             "Kassatellingen",
@@ -121,6 +178,24 @@ def zoek_alles(db, term, rol, secties, nav_items, limiet):
                 "titel": f"Kassatelling {_nl_datum(r['datum'])}",
                 "detail": " · ".join(x for x in (f"door {r['naam']}" if r["naam"] else "", _kort(r["opmerking"], 60)) if x),
                 "url": url_for("kassa_telling_detail", telling_id=r["id"]),
+            },
+        )
+
+    if mag("kassa"):
+        toevoegen(
+            "Kassa-afdrachten en -toevoegingen",
+            db.execute(
+                """SELECT id, type, bedrag, datum, naam, ontvanger, opmerking FROM kassa_mutaties
+                   WHERE naam LIKE :p ESCAPE '\\' OR ontvanger LIKE :p ESCAPE '\\' OR opmerking LIKE :p ESCAPE '\\'"""
+                + (" OR datum LIKE :d" if datum else "")
+                + " ORDER BY datum DESC LIMIT :max",
+                {"p": patroon, "d": datum, "max": limiet + 1},
+            ).fetchall(),
+            lambda r: {
+                "titel": f"{'Afdracht' if r['type'] == 'afdracht' else 'Toevoeging'} € {r['bedrag']:.2f}".replace(".", ",")
+                + f" · {_nl_datum(r['datum'])}",
+                "detail": " · ".join(x for x in (f"door {r['naam']}" if r["naam"] else "", _kort(r["opmerking"], 60)) if x),
+                "url": url_for("kassa_geschiedenis"),
             },
         )
 
@@ -138,6 +213,43 @@ def zoek_alles(db, term, rol, secties, nav_items, limiet):
                 "url": url_for("kluis_telling_detail", telling_id=r["id"]),
             },
         )
+
+    if rol == "beheerder":
+        toevoegen(
+            "Kluis-stortingen en -opnames",
+            db.execute(
+                """SELECT id, type, bedrag, datum, naam, ontvanger, opmerking FROM kluis_mutaties
+                   WHERE naam LIKE :p ESCAPE '\\' OR ontvanger LIKE :p ESCAPE '\\' OR opmerking LIKE :p ESCAPE '\\'"""
+                + (" OR datum LIKE :d" if datum else "")
+                + " ORDER BY datum DESC LIMIT :max",
+                {"p": patroon, "d": datum, "max": limiet + 1},
+            ).fetchall(),
+            lambda r: {
+                "titel": f"{'Storting' if r['type'] == 'storting' else 'Opname'} € {r['bedrag']:.2f}".replace(".", ",")
+                + f" · {_nl_datum(r['datum'])}",
+                "detail": " · ".join(x for x in (f"door {r['naam']}" if r["naam"] else "", _kort(r["opmerking"], 60)) if x),
+                "url": url_for("kluis_geschiedenis"),
+            },
+        )
+
+    # Wedstrijden zijn, net als de pagina zelf, voor iedereen.
+    toevoegen(
+        "Wedstrijden",
+        db.execute(
+            """SELECT team, datum, omschrijving, thuis, afgelast FROM wedstrijden
+               WHERE team LIKE :p ESCAPE '\\' OR omschrijving LIKE :p ESCAPE '\\'"""
+            + (" OR datum LIKE :d" if datum else "")
+            + " ORDER BY datum DESC LIMIT :max",
+            {"p": patroon, "d": datum, "max": limiet + 1},
+        ).fetchall(),
+        lambda r: {
+            "titel": f"{r['team']} · {_nl_datum(r['datum'])}",
+            "detail": " · ".join(
+                x for x in (_kort(r["omschrijving"], 60), "thuis" if r["thuis"] else "uit", "afgelast" if r["afgelast"] else "") if x
+            ),
+            "url": url_for("wedstrijden_overzicht"),
+        },
+    )
 
     # Het prikbord is voor iedereen.
     toevoegen(
@@ -171,6 +283,21 @@ def zoek_alles(db, term, rol, secties, nav_items, limiet):
                     x for x in (" ".join(y for y in (r["voornaam"], r["achternaam"]) if y), r["team"]) if x
                 ),
                 "url": url_for("club_van_20_lid_bewerken", lid_id=r["id"]),
+            },
+        )
+
+    if mag("kantine_tv"):
+        toevoegen(
+            "Sponsoren (Kantine-tv)",
+            db.execute(
+                """SELECT id, titel, tekst, actief FROM kiosk_sponsoren
+                   WHERE titel LIKE :p ESCAPE '\\' OR tekst LIKE :p ESCAPE '\\' ORDER BY id DESC LIMIT :max""",
+                {"p": patroon, "max": limiet + 1},
+            ).fetchall(),
+            lambda r: {
+                "titel": r["titel"] or _kort(r["tekst"], 60) or f"Dia #{r['id']}",
+                "detail": "" if r["actief"] else "staat uit",
+                "url": url_for("kiosk_sponsor_bewerken", sponsor_id=r["id"]),
             },
         )
 
