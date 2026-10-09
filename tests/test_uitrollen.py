@@ -74,7 +74,7 @@ def test_nieuwe_code_wordt_opgehaald(repos):
     assert resultaat["ok"] and resultaat["gewijzigd"]
     assert resultaat["oud"] != resultaat["nieuw"]
     assert (repos["server"] / "app.txt").read_text() == "2"
-    assert not resultaat["requirements_gewijzigd"]
+    assert resultaat["pakketten"] is None  # niets aan de pakketten veranderd: niets installeren
 
 
 def test_niets_nieuws_is_geen_wijziging(repos):
@@ -82,9 +82,60 @@ def test_niets_nieuws_is_geen_wijziging(repos):
     assert resultaat["ok"] and not resultaat["gewijzigd"]
 
 
-def test_wijziging_in_requirements_wordt_gemeld(repos):
-    _nieuwe_commit(repos["laptop"], "requirements.txt", "Flask")
-    assert uitrollen.werk_code_bij(repos["server"])["requirements_gewijzigd"]
+@pytest.fixture
+def pakketten(monkeypatch):
+    """Vervangt het echte installeren (internet!) door een nep die bijhoudt of hij is aangeroepen."""
+    aanroepen = []
+    uitkomst = {"gelukt": True}
+
+    def nep(repo):
+        aanroepen.append(repo)
+        return uitkomst["gelukt"], "nep-uitvoer"
+
+    monkeypatch.setattr(uitrollen, "installeer_pakketten", nep)
+    return {"aanroepen": aanroepen, "uitkomst": uitkomst}
+
+
+@pytest.mark.parametrize("bestand", ["requirements-vast.txt", "requirements.txt"])
+def test_gewijzigde_pakketten_worden_geinstalleerd(repos, pakketten, bestand):
+    _nieuwe_commit(repos["laptop"], bestand, "Flask==9.9.9")
+
+    resultaat = uitrollen.werk_code_bij(repos["server"])
+
+    assert resultaat["ok"] and resultaat["gewijzigd"] and resultaat["pakketten"] == "geinstalleerd"
+    assert pakketten["aanroepen"] == [repos["server"]]
+
+
+def test_zonder_wijziging_in_de_pakketten_wordt_er_niets_geinstalleerd(repos, pakketten):
+    _nieuwe_commit(repos["laptop"], "app.txt", "3")
+    assert uitrollen.werk_code_bij(repos["server"])["pakketten"] is None
+    assert pakketten["aanroepen"] == []
+
+
+def test_mislukt_het_installeren_dan_gaat_de_code_terug(repos, pakketten):
+    pakketten["uitkomst"]["gelukt"] = False
+    voor = _git(repos["server"], "rev-parse", "HEAD")
+    _nieuwe_commit(repos["laptop"], "requirements-vast.txt", "Flask==9.9.9")
+
+    resultaat = uitrollen.werk_code_bij(repos["server"])
+
+    assert not resultaat["ok"] and resultaat["pakketten"] == "mislukt" and resultaat["teruggedraaid"]
+    assert not resultaat["gewijzigd"]
+    assert _git(repos["server"], "rev-parse", "HEAD") == voor  # de server draait weer de oude code
+    assert not (repos["server"] / "requirements-vast.txt").exists()
+    assert "nep-uitvoer" in resultaat["uitvoer"]
+
+
+def test_pip_commando_past_zich_aan_de_omgeving_aan(monkeypatch, tmp_path):
+    monkeypatch.setattr("sys.prefix", "/een/venv")
+    monkeypatch.setattr("sys.base_prefix", "/een/venv")  # geen virtualenv
+    zonder_venv = uitrollen.maak_pip_commando(tmp_path, python="python3.13")
+    assert zonder_venv[:4] == ["python3.13", "-m", "pip", "install"] and "--user" in zonder_venv
+    assert zonder_venv[-1] == str(tmp_path / "requirements-vast.txt")
+
+    monkeypatch.setattr("sys.prefix", "/een/venv")
+    monkeypatch.setattr("sys.base_prefix", "/systeem/python")  # wel in een virtualenv
+    assert "--user" not in uitrollen.maak_pip_commando(tmp_path, python="python3.13")
 
 
 def test_pull_overschrijft_nooit_lokale_geschiedenis(repos):
@@ -173,6 +224,21 @@ def test_endpoint_herstart_niet_als_er_niets_nieuws_is(client, geheim_aan, repos
     resp.close()
 
     assert resp.status_code == 200 and not json.loads(resp.data)["gewijzigd"]
+    assert herstarts == []
+
+
+def test_endpoint_herstart_niet_als_het_installeren_mislukt(client, geheim_aan, repos, pakketten, monkeypatch):
+    monkeypatch.setattr(uitrollen, "BASE_DIR", repos["server"])
+    herstarts = []
+    monkeypatch.setattr(uitrollen, "herstart_web_app", lambda *a: herstarts.append(1) or True)
+    pakketten["uitkomst"]["gelukt"] = False
+    _nieuwe_commit(repos["laptop"], "requirements-vast.txt", "Flask==9.9.9")
+
+    resp = _verzoek(client)
+    resp.close()
+
+    assert resp.status_code == 500
+    assert json.loads(resp.data)["teruggedraaid"] is True
     assert herstarts == []
 
 

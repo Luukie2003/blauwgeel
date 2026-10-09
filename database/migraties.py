@@ -18,6 +18,8 @@ KOLOM_MIGRATIES = [
     ("mutaties", "telling_id", "INTEGER REFERENCES tellingen(id)"),
     ("gebruikers", "rol", "TEXT NOT NULL DEFAULT 'beheerder'"),
     ("gebruikers", "laatste_login", "TEXT"),
+    # Hoeveel keer "overal uitloggen" is gebruikt: een sessie met een oudere versie is niet meer geldig.
+    ("gebruikers", "sessie_versie", "INTEGER NOT NULL DEFAULT 0"),
     ("producten", "besteleenheid", "TEXT"),
     ("producten", "besteleenheid_factor", "INTEGER NOT NULL DEFAULT 1"),
     ("producten", "inkoopprijs", "REAL NOT NULL DEFAULT 0"),

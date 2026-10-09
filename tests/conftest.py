@@ -76,6 +76,16 @@ def app(tmp_path, sjabloon_db):
     yield flask_app
 
 
+@pytest.fixture(autouse=True)
+def _voorspelling_zonder_bewaren(monkeypatch):
+    """Elke test rekent de voorspelling echt uit (veel tests passen de gegevens aan en vragen daarna
+    opnieuw). Het bewaren zelf wordt getest in tests/test_voorspelling_bewaren.py."""
+    import voorspelling
+
+    monkeypatch.setattr(voorspelling, "CACHE_AAN", False)
+    voorspelling.wis_bewaarde_resultaten()
+
+
 @pytest.fixture
 def client(app):
     return app.test_client()

@@ -161,12 +161,19 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         # van vóór de blokkade dateert.
         db = get_db()
         gebruiker = db.execute(
-            "SELECT rol, secties, actief, tablet_code_hash FROM gebruikers WHERE id = ?",
+            "SELECT rol, secties, actief, tablet_code_hash, sessie_versie FROM gebruikers WHERE id = ?",
             (session["gebruiker_id"],),
         ).fetchone()
         if gebruiker is None or not gebruiker["actief"]:
             session.clear()
             flash("Dit account bestaat niet meer of is geblokkeerd. Neem contact op met een beheerder.", "error")
+            return redirect(url_for("login"))
+        # "Overal uitloggen" verhoogt sessie_versie in de database; een sessie met een oudere versie
+        # is daarna ongeldig. Sessies van vóór deze functie hebben nog geen versie: dat telt als 0,
+        # net als de beginwaarde in de database, dus niemand wordt bij het invoeren uitgelogd.
+        if session.get("sessie_versie", 0) != gebruiker["sessie_versie"]:
+            session.clear()
+            flash("Je bent uitgelogd, want je account is op alle toestellen uitgelogd. Log opnieuw in.", "error")
             return redirect(url_for("login"))
         if "gebruiker_rol" not in session or "gebruiker_secties" not in session:
             # Sessie is aangemaakt voor rollen/secties bestonden (of

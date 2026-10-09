@@ -108,6 +108,7 @@ BEHEERDER_ENDPOINTS = {
     "account_secties_wijzigen",
     "account_email_wijzigen",
     "account_actief_wisselen",
+    "account_overal_uitloggen",
     "account_wachtwoord_link_versturen",
     "categorieen_lijst",
     "categorie_verwijderen",

@@ -24,7 +24,7 @@ fi
 
 "$GEWENST" -m venv venv
 venv/bin/pip install --upgrade pip
-venv/bin/pip install -r requirements-dev.txt
+venv/bin/pip install -r requirements-dev.txt  # bevat requirements-vast.txt: de exacte versies
 echo
 venv/bin/python --version
 echo "Klaar. Draai de tests met: venv/bin/python -m pytest"

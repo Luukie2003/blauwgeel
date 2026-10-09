@@ -21,6 +21,8 @@ LOGBOEK_ACTIES = {
     "account_actief_wisselen": "Account geblokkeerd/geactiveerd",
     "account_wachtwoord_link_versturen": "Wachtwoord-link verstuurd",
     "account_wachtwoord": "Eigen wachtwoord gewijzigd",
+    "account_andere_toestellen_uitloggen": "Op alle andere toestellen uitgelogd",
+    "account_overal_uitloggen": "Account op alle toestellen uitgelogd",
     "backup_nu": "Back-up gemaakt",
     "backup_herstellen": "Back-up teruggezet",
     "instellingen_pagina": "Algemene instellingen gewijzigd",

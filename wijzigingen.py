@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.33.0"
+HUIDIGE_VERSIE = "1.34.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.34.0",
+        "datum": "9 oktober 2026",
+        "punten": [
+            "Tellingen, Prognose, Bestellijst en de omzetrapporten laden veel sneller (van enkele seconden naar een fractie daarvan): de berekening wordt bewaard en alleen opnieuw gedaan als er iets verandert, zoals een telling, de voorraad, een bestelling of een wedstrijd. De eerste keer na zo'n wijziging duurt nog even",
+            "Mijn voorkeuren: nieuwe knop 'Uitloggen op alle andere toestellen', handig als je een telefoon kwijt bent of ingelogd bent gebleven op een toestel dat je niet meer gebruikt. Een nieuw wachtwoord logt de andere toestellen ook vanzelf uit",
+            "Accounts (beheerders): per account een knop 'Overal uitloggen'",
+        ],
+    },
     {
         "versie": "1.33.0",
         "datum": "9 oktober 2026",

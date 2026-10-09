@@ -7,7 +7,8 @@ Wat het doet:
   1. controleert dat alles gecommit is en je op main staat;
   2. draait de code-controle (ruff) en alle tests -- faalt er iets, dan stopt het;
   3. pusht naar GitHub;
-  4. vraagt de server (POST /uitrollen, ondertekend) de nieuwste code op te halen en
+  4. vraagt de server (POST /uitrollen, ondertekend) de nieuwste code op te halen, zo nodig de
+     vastgezette pakketten te installeren (lukt dat niet, dan zet de server de vorige versie terug) en
      de web-app te herstarten;
   5. wacht tot /status laat zien dat de nieuwe versie echt draait.
 
@@ -109,7 +110,8 @@ def vraag_server(geheim):
         },
     )
     try:
-        with urllib.request.urlopen(verzoek, timeout=90) as antwoord:
+        # Ruim: bij nieuwe pakketten installeert de server die eerst (kan een minuut duren).
+        with urllib.request.urlopen(verzoek, timeout=300) as antwoord:
             return antwoord.status, json.loads(antwoord.read().decode())
     except urllib.error.HTTPError as e:
         try:
@@ -172,10 +174,11 @@ def main():
     if code == 403:
         return fout("de server weigert de handtekening: staat hetzelfde geheim op de server? (ook de klok van je computer moet kloppen)")
     if code != 200 or not antwoord.get("ok"):
-        return fout(f"de server kon de code niet ophalen (HTTP {code}):\n{antwoord.get('uitvoer', '')}")
+        extra = "\nDe server heeft de vorige versie teruggezet; er is niets veranderd." if antwoord.get("teruggedraaid") else ""
+        return fout(f"de server kon de code niet bijwerken (HTTP {code}):\n{antwoord.get('uitvoer', '')}{extra}")
 
-    if antwoord.get("requirements_gewijzigd"):
-        print("! requirements.txt is gewijzigd: installeer de pakketten nog op de server (pip install -r requirements.txt).")
+    if antwoord.get("pakketten") == "geinstalleerd":
+        print("✓ Pakketten op de server bijgewerkt (requirements-vast.txt).")
     if not antwoord["gewijzigd"] and antwoord["nieuw"] == lokaal:
         status = lees_status()
         if status and status.get("commit") == lokaal:

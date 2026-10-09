@@ -1,5 +1,18 @@
 {% extends "base.html" %}
-{% block titel %}Mijn voorkeuren{% endblock %}
+{% block titel %}Mijn voorkeuren
+<div class="kaart" style="max-width:480px">
+    <h2 style="margin-top:0">Beveiliging</h2>
+    <p class="tekst-zacht" style="margin-top:0">
+        Ben je ingelogd gebleven op een toestel dat je niet meer gebruikt, of ben je een telefoon kwijt?
+        Log dan overal uit: alleen dit toestel blijft ingelogd. Een nieuw wachtwoord doet dit ook vanzelf.
+    </p>
+    <form method="post" action="{{ url_for('account_andere_toestellen_uitloggen') }}"
+          onsubmit="return bevestigEnVerstuur(this, 'Uitloggen op alle andere toestellen?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-rand">Uitloggen op alle andere toestellen</button>
+    </form>
+</div>
+{% endblock %}
 {% block inhoud %}
 <h1>Mijn voorkeuren</h1>
 <p class="subtitel">Ingelogd als {{ huidige_gebruiker }}.</p>

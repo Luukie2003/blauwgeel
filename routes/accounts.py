@@ -279,15 +279,45 @@ def register_routes(app):
             elif nieuw != nieuw_herhaald:
                 flash("Nieuwe wachtwoorden komen niet overeen.", "error")
             else:
+                # Een nieuw wachtwoord logt alle ANDERE toestellen uit (dit toestel blijft ingelogd): wie je
+                # wachtwoord had of een toestel kwijt is, kan er dan niet meer mee in.
                 db.execute(
-                    "UPDATE gebruikers SET wachtwoord_hash = ? WHERE id = ?",
+                    "UPDATE gebruikers SET wachtwoord_hash = ?, sessie_versie = sessie_versie + 1 WHERE id = ?",
                     (generate_password_hash(nieuw, method=WACHTWOORD_HASH_METHODE), gebruiker["id"]),
                 )
                 db.commit()
-                flash("Wachtwoord gewijzigd.", "success")
+                session["sessie_versie"] = gebruiker["sessie_versie"] + 1
+                flash("Wachtwoord gewijzigd. Op je andere toestellen ben je nu uitgelogd.", "success")
                 return redirect(url_for("dashboard"))
 
         return render_template("account_wachtwoord.html")
+
+    def _log_overal_uit(db, gebruiker_id):
+        """Verhoogt de sessieversie van dit account: alle bestaande sessies worden ongeldig. Geeft de
+        nieuwe versie terug."""
+        db.execute("UPDATE gebruikers SET sessie_versie = sessie_versie + 1 WHERE id = ?", (gebruiker_id,))
+        db.commit()
+        return db.execute("SELECT sessie_versie FROM gebruikers WHERE id = ?", (gebruiker_id,)).fetchone()["sessie_versie"]
+
+    @app.route("/account/uitloggen-elders", methods=["POST"])
+    def account_andere_toestellen_uitloggen():
+        nieuwe_versie = _log_overal_uit(get_db(), session["gebruiker_id"])
+        session["sessie_versie"] = nieuwe_versie  # dit toestel blijft ingelogd
+        flash("Je bent op alle andere toestellen uitgelogd. Dit toestel blijft ingelogd.", "success")
+        return redirect(url_for("account_voorkeuren"))
+
+    @app.route("/accounts/<int:gebruiker_id>/overal-uitloggen", methods=["POST"])
+    def account_overal_uitloggen(gebruiker_id):
+        db = get_db()
+        gebruiker = db.execute("SELECT naam FROM gebruikers WHERE id = ?", (gebruiker_id,)).fetchone()
+        if gebruiker is None:
+            flash("Account niet gevonden.", "error")
+            return redirect(url_for("accounts_lijst"))
+        nieuwe_versie = _log_overal_uit(db, gebruiker_id)
+        if gebruiker_id == session.get("gebruiker_id"):
+            session["sessie_versie"] = nieuwe_versie  # je sluit jezelf niet buiten
+        flash(f"'{gebruiker['naam']}' is op alle toestellen uitgelogd.", "success")
+        return redirect(url_for("accounts_lijst"))
 
     @app.route("/account/voorkeuren", methods=["GET", "POST"])
     def account_voorkeuren():

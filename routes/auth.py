@@ -101,6 +101,7 @@ def register_routes(app):
                 # de app sluit -- dat was vooral op telefoons een reden om steeds opnieuw in te loggen.
                 session.permanent = bool(request.form.get("blijf_ingelogd"))
                 session["gebruiker_id"] = gebruiker["id"]
+                session["sessie_versie"] = gebruiker["sessie_versie"]  # zie vereis_login (app.py)
                 session["gebruiker_naam"] = gebruiker["naam"]
                 session["gebruiker_rol"] = gebruiker["rol"]
                 # Eenmalig vlaggetje (net als flash()) -- inject_nav() haalt
@@ -228,7 +229,8 @@ def register_routes(app):
             else:
                 db.execute(
                     """UPDATE gebruikers
-                       SET wachtwoord_hash = ?, reset_token_hash = NULL, reset_token_verloopt = NULL
+                       SET wachtwoord_hash = ?, reset_token_hash = NULL, reset_token_verloopt = NULL,
+                           sessie_versie = sessie_versie + 1
                        WHERE id = ?""",
                     (generate_password_hash(nieuw, method=WACHTWOORD_HASH_METHODE), gebruiker["id"]),
                 )
@@ -240,6 +242,7 @@ def register_routes(app):
                 session.clear()
                 session.permanent = True  # zie de inlogpagina: standaard 30 dagen ingelogd blijven
                 session["gebruiker_id"] = gebruiker["id"]
+                session["sessie_versie"] = gebruiker["sessie_versie"] + 1  # na een nieuw wachtwoord zijn alle andere toestellen uitgelogd
                 session["gebruiker_naam"] = gebruiker["naam"]
                 session["gebruiker_rol"] = gebruiker["rol"]
                 flash("Wachtwoord ingesteld. Je bent nu ingelogd.", "success")
@@ -343,6 +346,7 @@ def register_routes(app):
             db.execute("DELETE FROM tablet_code_pogingen WHERE ip_adres = ?", (ip,))
             session.clear()
             session["gebruiker_id"] = gebruiker["id"]
+            session["sessie_versie"] = gebruiker["sessie_versie"]  # zie vereis_login (app.py)
             session["gebruiker_naam"] = gebruiker["naam"]
             session["gebruiker_rol"] = gebruiker["rol"]
             session["toon_welkom_popup"] = True

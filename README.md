@@ -97,10 +97,23 @@ de nieuwe code ophalen en herstarten, en wacht tot `/status` de nieuwe versie la
 Eenmalig instellen: `venv/bin/python scripts/zet_live.py --maak-geheim` maakt een geheim op jouw computer
 aan en toont de ene regel die je in een Bash-console op PythonAnywhere plakt (hij zet het geheim in
 `uitrol_geheim.txt`). Zonder dat bestand op de server is het endpoint `POST /uitrollen` uitgeschakeld.
-Het endpoint doet alleen `git pull --ff-only` en herstart de web-app; zie `uitrollen.py`. Is
-`requirements.txt` gewijzigd, dan meldt het script dat je de pakketten nog op de server moet installeren.
+Het endpoint doet alleen `git pull --ff-only`, installeert zo nodig de vastgezette pakketten (zie
+hieronder) en herstart de web-app; zie `uitrollen.py`. Lukt het installeren niet, dan zet de server de
+vorige versie terug en blijft alles zoals het was.
 
 Bij elke push draait GitHub Actions (`.github/workflows/tests.yml`) ruff en alle tests.
+
+## Pakketten
+
+`requirements.txt` bevat de minimumversies die wij kiezen. `requirements-vast.txt` bevat de **exacte**
+versies van alles (ook Werkzeug, Jinja2, ...), en is wat de tests, de CI en de server installeren. Zo
+draait overal hetzelfde: vroeger stond op de server een oudere Pillow dan waar de tests op liepen.
+
+- Een minimum verhogen (of Dependabot doet dat): pas `requirements.txt` aan en draai daarna
+  `bash scripts/leg_pakketten_vast.sh` om `requirements-vast.txt` te vernieuwen.
+- `tests/test_pakketten.py` controleert dat die twee bij elkaar passen, en dat de CI op precies de
+  vastgezette versies draait.
+- Live zetten installeert de vastgezette pakketten op de server zodra dat bestand verandert.
 
 ## Onderhoud
 

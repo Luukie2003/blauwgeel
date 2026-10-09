@@ -1,0 +1,15 @@
+# Exacte versies van alle pakketten waar de site op draait (gegenereerd, niet met de hand wijzigen).
+# Maak opnieuw met: bash scripts/leg_pakketten_vast.sh. Waarom: zie die scripttekst.
+blinker==1.9.0
+click==8.5.0
+defusedxml==0.7.1
+Flask==3.1.3
+fonttools==4.66.1
+fpdf2==2.8.9
+itsdangerous==2.2.0
+Jinja2==3.1.6
+MarkupSafe==3.0.4
+pillow==12.3.0
+pypng==0.20220715.0
+qrcode==8.2
+Werkzeug==3.1.9

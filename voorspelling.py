@@ -35,7 +35,10 @@ Alles is gewoon Python (geen numpy), zodat het op de hosting zonder extra
 pakketten draait.
 """
 
+import functools
+import hashlib
 import math
+import threading
 from datetime import date, datetime, time, timedelta
 from statistics import NormalDist
 
@@ -637,7 +640,7 @@ def _gemeenschappelijke_schommeling(rijen, effecten, snelheid):
     return min(0.70, max(0.10, math.sqrt(gemiddeld) * 1.15))
 
 
-def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
+def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
     """De complete prognose voor de komende 'dagen' dagen vanaf 'nu'. Zie de
     moduledocstring voor hoe het werkt. Geeft {"beschikbaar": False, ...} als er
     nog te weinig tellingen zijn."""
@@ -982,7 +985,7 @@ def _dagdrukte(dag, kalender, effecten):
     )
 
 
-def verdeling(db, nu=None):
+def _verdeling(db, nu=None):
     """Verdeelt de verkoop van elke periode tussen twee tellingen over de dagen
     waarin die verkocht is, waarbij een drukke dag (thuiswedstrijd, training,
     mooi weer) zwaarder weegt dan een gewone. Zo is de verkoop van een telling
@@ -1044,6 +1047,108 @@ def verdeling(db, nu=None):
             regel[0] += r["V"] * aandeel
             regel[1] += omzet
     return uitkomst
+
+
+# ---------------------------------------------------------------------------
+# Resultaten bewaren
+# ---------------------------------------------------------------------------
+# Het model aanpassen en terugtoetsen kost op de server enkele seconden (zie _maak_prognose en
+# _verdeling), en de Tellingen-, Prognose- en Bestellijst-pagina vragen het bij elk bezoek opnieuw,
+# terwijl de uitkomst pas verandert als er iets verandert. We bewaren de uitkomst daarom, samen
+# met een "vingerafdruk" van alles waar de uitkomst van afhangt: zodra een telling, voorraad,
+# bestelling, wedstrijd, verkoopdag of het weer verandert, klopt de vingerafdruk niet meer en
+# rekenen we opnieuw. Voor wat we over het hoofd zien geldt een maximumduur (CACHE_BUCKET_SECONDEN).
+
+CACHE_AAN = True  # de tests zetten dit uit (tests/conftest.py), behalve de tests van de cache zelf
+CACHE_BUCKET_SECONDEN = 600  # 'nu' wordt op 10 minuten afgerond: de uitkomst is binnen dat venster dezelfde
+CACHE_MAX_ITEMS = 24
+_CACHE = {}  # sleutel -> uitkomst, op volgorde van toevoegen
+_CACHE_SLOT = threading.Lock()
+
+
+def _hash_rijen(rijen):
+    return hashlib.sha1(repr([tuple(r) for r in rijen]).encode()).hexdigest()
+
+
+def data_vingerafdruk(db):
+    """Een korte tekst die verandert zodra er iets verandert waar de voorspelling van afhangt."""
+    delen = [
+        tuple(db.execute("SELECT COUNT(*), COALESCE(MAX(id), 0), COALESCE(MAX(datum), '') FROM tellingen").fetchone()),
+        tuple(
+            db.execute(
+                """SELECT COUNT(*), COALESCE(MAX(id), 0), TOTAL(verkocht), TOTAL(correctie),
+                          TOTAL(CAST(verkoopprijs * 100 AS INTEGER)), TOTAL(geteld_aantal)
+                   FROM telling_regels"""
+            ).fetchone()
+        ),
+        tuple(
+            db.execute(
+                """SELECT COUNT(*), COALESCE(MAX(id), 0), TOTAL(voorraad), TOTAL(min_voorraad), TOTAL(actief),
+                          TOTAL(besteleenheid_factor), TOTAL(CAST(verkoopprijs * 100 AS INTEGER))
+                   FROM producten"""
+            ).fetchone()
+        ),
+        tuple(
+            db.execute(
+                """SELECT COUNT(*), TOTAL(br.aantal_besteld) FROM bestelregels br
+                   JOIN bestellingen b ON b.id = br.bestelling_id WHERE b.status = 'besteld'"""
+            ).fetchone()
+        ),
+        _hash_rijen(db.execute("SELECT * FROM wedstrijden ORDER BY id")),
+        _hash_rijen(db.execute("SELECT * FROM weer_voorspelling ORDER BY datum")),
+        tuple(db.execute("SELECT COUNT(*), COALESCE(MAX(datum), ''), TOTAL(max_temp), TOTAL(neerslag_kans) FROM weer_historie").fetchone()),
+    ]
+    try:
+        delen.append(_hash_rijen(db.execute("SELECT * FROM verkoop_uitzonderingen ORDER BY datum")))
+        delen.append(db.execute("SELECT verkoopdagen FROM instellingen WHERE id = 1").fetchone()[0])
+    except Exception:  # oudere database zonder deze tabel/kolom
+        pass
+    return hashlib.sha1(repr(delen).encode()).hexdigest()
+
+
+def _bewaard(db, naam, nu, argumenten, bereken):
+    """Geeft de bewaarde uitkomst als de gegevens en het tijdvenster hetzelfde zijn, anders
+    rekent het opnieuw (zie CACHE_AAN)."""
+    if not CACHE_AAN:
+        return bereken()
+    sleutel = (
+        db.execute("PRAGMA database_list").fetchone()[2],
+        naam,
+        argumenten,
+        int(nu.timestamp() // CACHE_BUCKET_SECONDEN),
+        data_vingerafdruk(db),
+    )
+    with _CACHE_SLOT:
+        if sleutel in _CACHE:
+            return _CACHE[sleutel]
+    uitkomst = bereken()
+    with _CACHE_SLOT:
+        while len(_CACHE) >= CACHE_MAX_ITEMS:
+            _CACHE.pop(next(iter(_CACHE)))
+        _CACHE[sleutel] = uitkomst
+    return uitkomst
+
+
+def wis_bewaarde_resultaten():
+    with _CACHE_SLOT:
+        _CACHE.clear()
+
+
+@functools.wraps(_maak_prognose)
+def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
+    nu = nu or datetime.now()
+    uitkomst = _bewaard(
+        db, "prognose", nu, (int(dagen), serviceniveau),
+        lambda: _maak_prognose(db, dagen=dagen, nu=nu, serviceniveau=serviceniveau),
+    )
+    return dict(uitkomst)  # eigen kopie van de bovenste laag: een pagina mag er sleutels aan toevoegen
+
+
+@functools.wraps(_verdeling)
+def verdeling(db, nu=None):
+    nu = nu or datetime.now()
+    uitkomst = _bewaard(db, "verdeling", nu, (), lambda: _verdeling(db, nu))
+    return dict(uitkomst) if uitkomst is not None else None
 
 
 def omzet_per_dag(db, nu=None):

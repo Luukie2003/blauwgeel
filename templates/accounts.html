@@ -80,6 +80,11 @@
                         {{ 'Blokkeren' if g.actief else 'Deblokkeren' }}
                     </button>
                 </form>
+                <form method="post" action="{{ url_for('account_overal_uitloggen', gebruiker_id=g.id) }}"
+                      onsubmit="return bevestigEnVerstuur(this, 'Account \'{{ g.naam }}\' op alle toestellen uitloggen?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-rand btn-klein" title="Bijvoorbeeld als iemand een telefoon kwijt is">Overal uitloggen</button>
+                </form>
                 <form method="post" action="{{ url_for('account_wachtwoord_link_versturen', gebruiker_id=g.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-rand btn-klein"{{ ' disabled title="Vul eerst een e-mailadres in"' if not g.email }}>
