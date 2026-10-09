@@ -640,12 +640,11 @@ def _gemeenschappelijke_schommeling(rijen, effecten, snelheid):
     return min(0.70, max(0.10, math.sqrt(gemiddeld) * 1.15))
 
 
-def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
-    """De complete prognose voor de komende 'dagen' dagen vanaf 'nu'. Zie de
-    moduledocstring voor hoe het werkt. Geeft {"beschikbaar": False, ...} als er
-    nog te weinig tellingen zijn."""
-    nu = nu or datetime.now()
-    dagen = max(1, min(int(dagen), 28))
+def _prognose_model(db, dagen, nu):
+    """Het zware deel van de prognose: alles wat alleen van de telgeschiedenis, de kalender (wedstrijden,
+    training, verkoopdagen) en het weer afhangt -- het model aanpassen en terugtoetsen. De voorraad en de
+    bestellingen doen hier niet mee, dus dit wordt bewaard tot de geschiedenis verandert (zie
+    historie_vingerafdruk) en niet bij elke boeking opnieuw uitgerekend."""
     rijen, tellingen = lees_rijen(db, nu)
     if not rijen:
         return {
@@ -698,17 +697,7 @@ def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
             )
         dag += timedelta(days=1)
 
-    # --- per product
-    producten = {p["id"]: p for p in db.execute("SELECT * FROM producten WHERE actief = 1").fetchall()}
-    op_bestellijst = {p["id"] for p in bestel_suggesties(db)}
-    onderweg = {
-        r["product_id"]: r["aantal"]
-        for r in db.execute(
-            """SELECT br.product_id, SUM(br.aantal_besteld) AS aantal FROM bestelregels br
-               JOIN bestellingen b ON b.id = br.bestelling_id
-               WHERE b.status = 'besteld' GROUP BY br.product_id"""
-        ).fetchall()
-    }
+
     rijen_per_product = {}
     for r in rijen:
         rijen_per_product.setdefault(r["pid"], []).append(r)
@@ -722,6 +711,80 @@ def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
         for pid, lijst in rijen_per_product.items()
     }
 
+    effect_lijst = []
+    for sleutel in ("wedstrijd", "training", "weer"):
+        waargenomen = _waargenomen_dagen(rijen, kalender, sleutel)
+        effect_lijst.append(
+            {
+                "sleutel": sleutel,
+                "naam": EFFECT_NAMEN[sleutel],
+                "waarde": effecten[sleutel],
+                "aanname": PRIOR[sleutel],
+                "waargenomen_dagen": waargenomen,
+                "status": _status(waargenomen) if informatie[sleutel] > 0.3 else "aanname",
+            }
+        )
+    eerste = min(r["start"] for r in rijen)
+    nauwkeurigheid = terugtoetsen(rijen, nu)
+    weken_data = (nu - eerste).total_seconds() / (7 * 86400)
+    if len(tellingen) < 15 or weken_data < 8 or nauwkeurigheid is None:
+        betrouwbaarheid = "laag"
+    elif nauwkeurigheid["mape_model"] < 0.25:
+        betrouwbaarheid = "goed"
+    elif nauwkeurigheid["mape_model"] < 0.45:
+        betrouwbaarheid = "redelijk"
+    else:
+        betrouwbaarheid = "laag"
+    return {
+        "beschikbaar": True,
+        "dagen_overzicht": dagen_overzicht,
+        "E_h": E_h,
+        "effecten": effecten,
+        "overspreiding": overspreiding,
+        "snelheid": snelheid,
+        "sigma_gemeenschappelijk": sigma_gemeenschappelijk,
+        "rijen_per_product": rijen_per_product,
+        "gewicht_som": gewicht_som,
+        "gewicht_blootstelling": gewicht_blootstelling,
+        "model": {
+            "effecten": effect_lijst,
+            "overspreiding": overspreiding,
+            "sigma_gemeenschappelijk": sigma_gemeenschappelijk,
+            "aantal_tellingen": len(tellingen),
+            "aantal_producten_in_model": len(snelheid),
+            "eerste_datum": eerste,
+            "weken_data": weken_data,
+            "nauwkeurigheid": nauwkeurigheid,
+            "betrouwbaarheid": betrouwbaarheid,
+        },
+    }
+
+
+def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
+    """De complete prognose voor de komende 'dagen' dagen vanaf 'nu'. Zie de
+    moduledocstring voor hoe het werkt. Geeft {"beschikbaar": False, ...} als er
+    nog te weinig tellingen zijn."""
+    nu = nu or datetime.now()
+    dagen = max(1, min(int(dagen), 28))
+    m = _bewaard(db, "prognose-model", nu, (dagen,), lambda: _prognose_model(db, dagen, nu), historie_vingerafdruk)
+    if not m["beschikbaar"]:
+        return dict(m)
+    E_h, overspreiding, snelheid = m["E_h"], m["overspreiding"], m["snelheid"]
+    sigma_gemeenschappelijk = m["sigma_gemeenschappelijk"]
+    rijen_per_product, gewicht_som, gewicht_blootstelling = m["rijen_per_product"], m["gewicht_som"], m["gewicht_blootstelling"]
+    dagen_overzicht = [dict(d) for d in m["dagen_overzicht"]]  # de omzet per dag hieronder is van deze aanroep
+
+    # --- per product
+    producten = {p["id"]: p for p in db.execute("SELECT * FROM producten WHERE actief = 1").fetchall()}
+    op_bestellijst = {p["id"] for p in bestel_suggesties(db)}
+    onderweg = {
+        r["product_id"]: r["aantal"]
+        for r in db.execute(
+            """SELECT br.product_id, SUM(br.aantal_besteld) AS aantal FROM bestelregels br
+               JOIN bestellingen b ON b.id = br.bestelling_id
+               WHERE b.status = 'besteld' GROUP BY br.product_id"""
+        ).fetchall()
+    }
     uitkomst, omzet_gem, omzet_toeval = [], 0.0, 0.0
     for pid, snel in snelheid.items():
         product = producten.get(pid)
@@ -785,30 +848,6 @@ def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
         d["omzet"] = totaal["gewone_dag"] * d["drukte"] * d["deel"]
     drukste = max(dagen_overzicht, key=lambda d: d["omzet"], default=None)
 
-    effect_lijst = []
-    for sleutel in ("wedstrijd", "training", "weer"):
-        waargenomen = _waargenomen_dagen(rijen, kalender, sleutel)
-        effect_lijst.append(
-            {
-                "sleutel": sleutel,
-                "naam": EFFECT_NAMEN[sleutel],
-                "waarde": effecten[sleutel],
-                "aanname": PRIOR[sleutel],
-                "waargenomen_dagen": waargenomen,
-                "status": _status(waargenomen) if informatie[sleutel] > 0.3 else "aanname",
-            }
-        )
-    eerste = min(r["start"] for r in rijen)
-    nauwkeurigheid = terugtoetsen(rijen, nu)
-    weken_data = (nu - eerste).total_seconds() / (7 * 86400)
-    if len(tellingen) < 15 or weken_data < 8 or nauwkeurigheid is None:
-        betrouwbaarheid = "laag"
-    elif nauwkeurigheid["mape_model"] < 0.25:
-        betrouwbaarheid = "goed"
-    elif nauwkeurigheid["mape_model"] < 0.45:
-        betrouwbaarheid = "redelijk"
-    else:
-        betrouwbaarheid = "laag"
     return {
         "beschikbaar": True,
         "nu": nu,
@@ -822,18 +861,10 @@ def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
             "let_op": sum(1 for p in uitkomst if p["status"] == "let_op"),
             "producten": len(uitkomst),
         },
-        "model": {
-            "effecten": effect_lijst,
-            "overspreiding": overspreiding,
-            "sigma_gemeenschappelijk": sigma_gemeenschappelijk,
-            "aantal_tellingen": len(tellingen),
-            "aantal_producten_in_model": len(snelheid),
-            "eerste_datum": eerste,
-            "weken_data": weken_data,
-            "nauwkeurigheid": nauwkeurigheid,
-            "betrouwbaarheid": betrouwbaarheid,
-        },
+        "model": m["model"],
     }
+
+
 
 
 def wedstrijden_op_gesloten_dagen(db, nu=None, weken_terug=8, dagen_vooruit=21):
@@ -1070,8 +1101,10 @@ def _hash_rijen(rijen):
     return hashlib.sha1(repr([tuple(r) for r in rijen]).encode()).hexdigest()
 
 
-def data_vingerafdruk(db):
-    """Een korte tekst die verandert zodra er iets verandert waar de voorspelling van afhangt."""
+def historie_vingerafdruk(db):
+    """Verandert zodra de telgeschiedenis, de kalender (wedstrijden, verkoopdagen) of het weer verandert:
+    alles waar het zware deel van de prognose van afhangt (zie _prognose_model). De voorraad hoort
+    hier bewust niet bij."""
     delen = [
         tuple(db.execute("SELECT COUNT(*), COALESCE(MAX(id), 0), COALESCE(MAX(datum), '') FROM tellingen").fetchone()),
         tuple(
@@ -1079,19 +1112,6 @@ def data_vingerafdruk(db):
                 """SELECT COUNT(*), COALESCE(MAX(id), 0), TOTAL(verkocht), TOTAL(correctie),
                           TOTAL(CAST(verkoopprijs * 100 AS INTEGER)), TOTAL(geteld_aantal)
                    FROM telling_regels"""
-            ).fetchone()
-        ),
-        tuple(
-            db.execute(
-                """SELECT COUNT(*), COALESCE(MAX(id), 0), TOTAL(voorraad), TOTAL(min_voorraad), TOTAL(actief),
-                          TOTAL(besteleenheid_factor), TOTAL(CAST(verkoopprijs * 100 AS INTEGER))
-                   FROM producten"""
-            ).fetchone()
-        ),
-        tuple(
-            db.execute(
-                """SELECT COUNT(*), TOTAL(br.aantal_besteld) FROM bestelregels br
-                   JOIN bestellingen b ON b.id = br.bestelling_id WHERE b.status = 'besteld'"""
             ).fetchone()
         ),
         _hash_rijen(db.execute("SELECT * FROM wedstrijden ORDER BY id")),
@@ -1106,9 +1126,32 @@ def data_vingerafdruk(db):
     return hashlib.sha1(repr(delen).encode()).hexdigest()
 
 
-def _bewaard(db, naam, nu, argumenten, bereken):
+def data_vingerafdruk(db):
+    """Als historie_vingerafdruk, plus alles wat de uitkomst per product beïnvloedt: de voorraad en
+    de bestellingen die onderweg zijn."""
+    delen = [
+        historie_vingerafdruk(db),
+        tuple(
+            db.execute(
+                """SELECT COUNT(*), COALESCE(MAX(id), 0), TOTAL(voorraad), TOTAL(min_voorraad), TOTAL(actief),
+                          TOTAL(besteleenheid_factor), TOTAL(CAST(verkoopprijs * 100 AS INTEGER))
+                   FROM producten"""
+            ).fetchone()
+        ),
+        tuple(
+            db.execute(
+                """SELECT COUNT(*), TOTAL(br.aantal_besteld) FROM bestelregels br
+                   JOIN bestellingen b ON b.id = br.bestelling_id WHERE b.status = 'besteld'"""
+            ).fetchone()
+        ),
+    ]
+    return hashlib.sha1(repr(delen).encode()).hexdigest()
+
+
+def _bewaard(db, naam, nu, argumenten, bereken, vingerafdruk=None):
     """Geeft de bewaarde uitkomst als de gegevens en het tijdvenster hetzelfde zijn, anders
-    rekent het opnieuw (zie CACHE_AAN)."""
+    rekent het opnieuw (zie CACHE_AAN). vingerafdruk: de functie die bepaalt wanneer de gegevens
+    veranderd zijn (standaard data_vingerafdruk)."""
     if not CACHE_AAN:
         return bereken()
     sleutel = (
@@ -1116,7 +1159,7 @@ def _bewaard(db, naam, nu, argumenten, bereken):
         naam,
         argumenten,
         int(nu.timestamp() // CACHE_BUCKET_SECONDEN),
-        data_vingerafdruk(db),
+        (vingerafdruk or data_vingerafdruk)(db),
     )
     with _CACHE_SLOT:
         if sleutel in _CACHE:

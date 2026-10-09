@@ -15,8 +15,13 @@ def bewaren(monkeypatch, db):
     voorspelling.wis_bewaarde_resultaten()
     pils = _product(db, "Pils", 2.0)
     _weekelijkse_tellingen(db, {pils: (70, 2.0)}, van=date(2026, 6, 27), tot=date(2026, 10, 3))
-    aantal = {"prognose": 0, "verdeling": 0}
+    aantal = {"prognose": 0, "verdeling": 0, "model": 0}
     echte_prognose, echte_verdeling = voorspelling._maak_prognose, voorspelling._verdeling
+    echt_model = voorspelling._prognose_model
+
+    def geteld_model(*a, **k):
+        aantal["model"] += 1
+        return echt_model(*a, **k)
 
     def geteld_prognose(*a, **k):
         aantal["prognose"] += 1
@@ -28,6 +33,7 @@ def bewaren(monkeypatch, db):
 
     monkeypatch.setattr(voorspelling, "_maak_prognose", geteld_prognose)
     monkeypatch.setattr(voorspelling, "_verdeling", geteld_verdeling)
+    monkeypatch.setattr(voorspelling, "_prognose_model", geteld_model)
     yield {"aantal": aantal, "product": pils}
     voorspelling.wis_bewaarde_resultaten()
 
@@ -86,7 +92,7 @@ def test_een_wijziging_in_de_gegevens_geeft_een_nieuwe_berekening(db, bewaren, w
     voorspelling.maak_prognose(db, dagen=7, nu=NU)
     voorspelling.verdeling(db, NU)
 
-    assert bewaren["aantal"] == {"prognose": 2, "verdeling": 2}, wijziging
+    assert bewaren["aantal"]["prognose"] == 2 and bewaren["aantal"]["verdeling"] == 2, wijziging
 
 
 def test_een_nieuwe_telling_geeft_een_nieuwe_berekening(db, bewaren):
@@ -154,3 +160,48 @@ def test_pagina_s_geven_hetzelfde_antwoord_met_en_zonder_bewaren(ingelogde_clien
     for pad, verwacht in zonder.items():
         assert pagina(pad) == verwacht  # eerste keer rekenen
         assert pagina(pad) == verwacht  # tweede keer uit het geheugen
+
+
+# ---------- Het zware model apart bewaren ----------
+
+
+def test_een_voorraadwijziging_rekent_het_model_niet_opnieuw_maar_wel_het_advies(db, bewaren):
+    """Elke boeking verandert de voorraad; het model aanpassen (het zware deel) hoeft daarvoor niet opnieuw."""
+    eerste = voorspelling.maak_prognose(db, dagen=7, nu=NU)
+    voor = next(p for p in eerste["producten"] if p["product"]["id"] == bewaren["product"])["voorraad"]
+
+    db.execute("UPDATE producten SET voorraad = voorraad + 500 WHERE id = ?", (bewaren["product"],))
+    db.commit()
+    tweede = voorspelling.maak_prognose(db, dagen=7, nu=NU)
+
+    assert bewaren["aantal"]["prognose"] == 2  # de uitkomst per product is opnieuw bepaald...
+    assert bewaren["aantal"]["model"] == 1  # ...maar het model niet
+    na = next(p for p in tweede["producten"] if p["product"]["id"] == bewaren["product"])
+    assert na["voorraad"] == voor + 500
+    assert tweede["model"] == eerste["model"]
+
+
+@pytest.mark.parametrize(
+    "wijziging",
+    [
+        "INSERT INTO tellingen (datum, naam) VALUES ('2026-10-07 23:00', 'x')",
+        "UPDATE telling_regels SET verkocht = verkocht + 1 WHERE id = (SELECT MAX(id) FROM telling_regels)",
+        "UPDATE instellingen SET verkoopdagen = '1,2,3'",
+        "INSERT INTO wedstrijden (team, datum, omschrijving, thuis) VALUES ('ZA 1', '2026-10-10', 'x', 1)",
+    ],
+)
+def test_een_wijziging_in_de_geschiedenis_rekent_het_model_wel_opnieuw(db, bewaren, wijziging):
+    voorspelling.maak_prognose(db, dagen=7, nu=NU)
+    db.execute(wijziging)
+    db.commit()
+    voorspelling.maak_prognose(db, dagen=7, nu=NU)
+    assert bewaren["aantal"]["model"] == 2
+
+
+def test_dagoverzicht_van_een_aanroep_wijzigt_het_bewaarde_model_niet(db, bewaren):
+    eerste = voorspelling.maak_prognose(db, dagen=7, nu=NU)
+    eerste["dagen_overzicht"][0]["omzet"] = -1
+    db.execute("UPDATE producten SET voorraad = voorraad + 1")
+    db.commit()
+    tweede = voorspelling.maak_prognose(db, dagen=7, nu=NU)
+    assert tweede["dagen_overzicht"][0]["omzet"] != -1
