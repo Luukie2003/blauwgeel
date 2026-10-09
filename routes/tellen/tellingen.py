@@ -26,15 +26,15 @@ def register_routes(app):
 
         # Per telling de regels erbij, voor de "Bekijken"-pop-up -- scheelt
         # een aparte pagina-navigatie voor een snel kijkje.
-        regels_per_telling = {
-            t["id"]: db.execute(
-                """SELECT tr.*, p.naam AS product_naam, p.eenheid
-                   FROM telling_regels tr JOIN producten p ON p.id = tr.product_id
-                   WHERE tr.telling_id = ? ORDER BY p.categorie, p.naam""",
-                (t["id"],),
-            ).fetchall()
-            for t in tellingen
-        }
+        # Alle regels in 1 query (i.p.v. 1 query per telling): bij tientallen tellingen scheelt dat
+        # honderden aparte database-aanroepen per bezoek.
+        regels_per_telling = {t["id"]: [] for t in tellingen}
+        for regel in db.execute(
+            """SELECT tr.*, p.naam AS product_naam, p.eenheid
+               FROM telling_regels tr JOIN producten p ON p.id = tr.product_id
+               ORDER BY p.categorie, p.naam"""
+        ).fetchall():
+            regels_per_telling[regel["telling_id"]].append(regel)
 
         # Omzet per week: de omzet van elke telling wordt verdeeld over de dagen die
         # erbij horen (zie voorspelling.omzet_per_week), dus het maakt niet uit
