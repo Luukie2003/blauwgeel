@@ -329,7 +329,10 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline'; "
             "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data:"
+            "img-src 'self' data:; "
+            # blob: voor de video-dia's: het scherm haalt een video eerst helemaal binnen en speelt 'm dan uit het
+            # geheugen af (zie laadVideo in kiosk_scherm.html); zonder blob: weigert de browser dat.
+            "media-src 'self' blob:"
         )
         if request.endpoint == "login":
             # Voorkomt dat de browser (of terug-knop/bfcache) een oude

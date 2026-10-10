@@ -76,7 +76,7 @@
                     {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
                 {% elif slide.sjabloon == 'video_volledig' %}
                     {% if slide.video %}
-                    <video class="sponsor-video" src="{{ url_for('static', filename='kiosk_videos/' + slide.video) }}" preload="metadata" muted loop playsinline{% if slide.video_geluid %} data-geluid="1"{% endif %}></video>
+                    <video class="sponsor-video" data-bron="{{ url_for('static', filename='kiosk_videos/' + slide.video) }}" data-bytes="{{ slide.video_bytes }}" preload="none" muted loop playsinline{% if slide.video_geluid %} data-geluid="1"{% endif %}></video>
                     {% endif %}
                     {% if slide.titel %}<div class="onderschrift">{{ slide.titel }}</div>{% endif %}
                 {% elif slide.sjabloon == 'aangepast' %}
@@ -347,12 +347,48 @@
     }
     telOp(document.querySelector('.slide.actief'));
 
-    // Video-dia's: de video begint steeds opnieuw zodra de dia in beeld komt en pauzeert daarna. Zonder
-    // geluid (staat in de video zelf), want een scherm mag zonder aanraking alleen dan zelf beginnen; lukt het
-    // met geluid niet, dan toch gedempt afspelen.
+    // Video-dia's. De server kan een video niet "streamen" (geen Range-verzoeken, geen cache-headers), dus een
+    // video die pas begint te laden als de dia in beeld komt, haperde en werd elke ronde opnieuw opgehaald.
+    // Daarom haalt het scherm elke video bij het laden van de pagina eerst helemaal binnen (in het geheugen) en
+    // toont de dia pas als hij klaar is; tot die tijd wordt de dia overgeslagen. Een video die te groot is voor
+    // het geheugen (> 48 MB) laat de browser zelf streamen. Mislukt het ophalen, dan probeert hij het na 30 s opnieuw.
+    var VIDEO_MAX_IN_GEHEUGEN = 48 * 1024 * 1024;
+    function videoKlaar(slide) {
+        var v = slide && slide.querySelector('video');
+        return !v || v.dataset.klaar === '1';
+    }
+    function laadVideo(v) {
+        var bron = v.getAttribute('data-bron');
+        var type = /\.webm$/i.test(bron) ? 'video/webm' : 'video/mp4';
+        function klaar() {
+            v.dataset.klaar = '1';
+            var slide = v.closest('.slide');
+            if (slide && slide.classList.contains('actief')) speelVideo(slide);  // stond al in beeld en wachtte
+        }
+        function opnieuw() { setTimeout(function () { laadVideo(v); }, 30000); }
+        if ((parseInt(v.dataset.bytes, 10) || 0) > VIDEO_MAX_IN_GEHEUGEN) {
+            v.addEventListener('canplaythrough', klaar);
+            v.addEventListener('error', opnieuw);
+            v.preload = 'auto';
+            v.src = bron;
+            return;
+        }
+        fetch(bron)
+            .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+            .then(function (buf) {
+                v.src = URL.createObjectURL(new Blob([buf], { type: type }));
+                klaar();
+            })
+            .catch(opnieuw);
+    }
+    document.querySelectorAll('.slide video[data-bron]').forEach(laadVideo);
+
+    // De video begint steeds opnieuw zodra de dia in beeld komt en pauzeert daarna. Zonder geluid (staat in de
+    // video zelf), want een scherm mag zonder aanraking alleen dan zelf beginnen; lukt het met geluid niet,
+    // dan toch gedempt afspelen.
     function speelVideo(slide) {
         var v = slide && slide.querySelector('video');
-        if (!v) return;
+        if (!v || v.dataset.klaar !== '1') return;
         try { v.currentTime = 0; } catch (e) {}
         v.muted = !v.dataset.geluid;
         var p = v.play();
@@ -421,7 +457,7 @@
             speelVideo(slide);
         }
 
-        function volgende() {
+        function volgendeKandidaat() {
             if (sponsors.length && (!gewoon.length || sindsSponsor >= sponsorsElke)) {
                 sindsSponsor = 0;
                 return sponsors[sponsorIndex++ % sponsors.length];
@@ -429,6 +465,16 @@
             gewoonIndex = (gewoonIndex + 1) % gewoon.length;
             sindsSponsor++;
             return gewoon[gewoonIndex];
+        }
+
+        // De volgende dia die klaar is om getoond te worden: een video-dia waarvan de video nog binnenkomt
+        // slaan we over (hij komt in een volgende ronde). Is er niets anders, dan blijft de huidige staan.
+        function volgende() {
+            for (var i = 0; i < slides.length; i++) {
+                var kandidaat = volgendeKandidaat();
+                if (videoKlaar(kandidaat)) return kandidaat;
+            }
+            return huidige;
         }
 
         function plan() {
@@ -440,6 +486,7 @@
             }, duur);
         }
 
+        if (!videoKlaar(huidige)) huidige = volgende();  // niet beginnen met een zwart scherm als er iets anders is
         toon(huidige);
         plan();
     })();

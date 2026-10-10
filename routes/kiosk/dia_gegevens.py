@@ -8,6 +8,7 @@ from flask import url_for
 import qr
 from club_van_20 import bouw_slides as club_van_20_slides
 from helpers import (
+    video_info,
     KIOSK_SPONSOR_SJABLOON_AANGEPAST,
     MOTM_RESULTATEN,
     bereken_komende_thuiswedstrijden,
@@ -46,6 +47,7 @@ def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None):
         "type": "sponsor",
         "duur": duur,
         "video": s["video"],
+        "video_bytes": (video_info(s["video"], s["video_duur"]) or {}).get("bytes", 0),
         "video_geluid": bool(s["video_geluid"]),
         "sjabloon": s["sjabloon"],
         "titel": s["titel"],

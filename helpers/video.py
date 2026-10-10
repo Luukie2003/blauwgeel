@@ -114,6 +114,35 @@ def sla_video_op(bestand, doelmap=None):
     return naam, duur, None
 
 
+# Boven zoveel Mbit/s is een video zwaar voor een gewone verbinding (een iPhone- of schermopname is al gauw 15-20).
+VIDEO_ZWAAR_MBIT = 8
+
+
+def video_info(bestandsnaam, duur, doelmap=None):
+    """{'mb', 'mbit', 'zwaar'} van een opgeslagen video (mbit is None als de lengte onbekend is), of None als het
+    bestand er niet is. Voor de waarschuwing bij een te zware video."""
+    if not bestandsnaam or not _VIDEO_BESTANDSNAAM.match(bestandsnaam):
+        return None
+    try:
+        bytes_ = (Path(doelmap or KIOSK_VIDEOS_MAP) / bestandsnaam).stat().st_size
+    except OSError:
+        return None
+    mbit = bytes_ * 8 / duur / 1_000_000 if duur else None
+    return {"bytes": bytes_, "mb": bytes_ / (1024 * 1024), "mbit": mbit, "zwaar": bool(mbit and mbit > VIDEO_ZWAAR_MBIT)}
+
+
+def zwaarte_melding(info, duur):
+    """De waarschuwing voor een te zware video (of None)."""
+    if not info or not info["zwaar"]:
+        return None
+    return (
+        f"Let op: deze video is zwaar ({info['mb']:.1f} MB voor {duur:.0f} seconden, ongeveer {info['mbit']:.0f} Mbit/s). "
+        "Het scherm moet 'm eerst helemaal binnenhalen en dat duurt op een trage verbinding even; tot die tijd slaat "
+        "het de dia over. Handiger: maak 'm kleiner, bijvoorbeeld 720p en rond de 3 Mbit/s "
+        "(op een Mac: QuickTime Player, Bestand, Exporteer als, 720p)."
+    )
+
+
 def verwijder_video(bestandsnaam, doelmap=None):
     """Haalt een opgeslagen video weg (alleen bestanden die door sla_video_op zijn gemaakt)."""
     if not bestandsnaam or not _VIDEO_BESTANDSNAAM.match(bestandsnaam):

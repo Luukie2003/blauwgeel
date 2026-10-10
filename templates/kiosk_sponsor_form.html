@@ -101,7 +101,8 @@
                     <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.4rem; flex-wrap:wrap">
                         <video src="{{ url_for('static', filename='kiosk_videos/' + sponsor.video) }}#t=0.5" muted preload="metadata"
                                style="max-height:5rem; border-radius:6px; background:#000"></video>
-                        <span class="tekst-zacht">Huidige video{% if sponsor.video_duur %} ({{ sponsor.video_duur|round|int }} seconden){% endif %}</span>
+                        <span class="tekst-zacht">Huidige video{% if sponsor.video_duur %} ({{ sponsor.video_duur|round|int }} seconden{% if video_info %}, {{ '%.1f'|format(video_info.mb) }} MB{% if video_info.mbit %}, ongeveer {{ video_info.mbit|round|int }} Mbit/s{% endif %}{% endif %}){% endif %}</span>
+                        {% if video_info and video_info.zwaar %}<span style="color:#b45309; font-weight:700">Zwaar: het scherm moet 'm eerst helemaal binnenhalen. Kleiner maken (720p, ca. 3 Mbit/s) werkt beter.</span>{% endif %}
                         <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400; cursor:pointer">
                             <input type="checkbox" name="video_verwijderen" style="width:auto">
                             Verwijderen
@@ -109,7 +110,7 @@
                     </div>
                     {% endif %}
                     <input type="file" id="video" name="video" accept="video/mp4,video/quicktime,video/webm,.mp4,.m4v,.mov,.webm">
-                    <span class="tekst-zacht">Liefst een mp4 (H.264): die speelt overal af. Maximaal 80 MB, dus houd het kort (een paar seconden tot een halve minuut). Het kantinescherm speelt 'm schermvullend af.{% if sponsor and sponsor.video %} Kies je hier een nieuw bestand, dan vervangt dat de huidige video.{% endif %}</span>
+                    <span class="tekst-zacht">Liefst een mp4 (H.264): die speelt overal af. Maximaal 80 MB, maar hoe kleiner hoe beter: het scherm haalt de hele video eerst binnen voordat de dia in beeld komt. Richtlijn: 720p en rond de 3 Mbit/s (ongeveer 20 MB per minuut). Een opname van een iPhone of Mac is vaak veel zwaarder; maak die kleiner met bijvoorbeeld QuickTime Player (Bestand, Exporteer als, 720p). Het kantinescherm speelt 'm schermvullend af.{% if sponsor and sponsor.video %} Kies je hier een nieuw bestand, dan vervangt dat de huidige video.{% endif %}</span>
                 </div>
                 <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.4rem">
                     <input type="checkbox" name="video_hele_duur" style="width:auto" {{ 'checked' if not sponsor or sponsor.video_hele_duur }}>

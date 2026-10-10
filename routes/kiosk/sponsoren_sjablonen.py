@@ -24,6 +24,9 @@ from helpers import (
     sla_afbeelding_op,
     sla_video_op,
     verwijder_video,
+    VIDEO_ZWAAR_MBIT,
+    video_info,
+    zwaarte_melding,
 )
 from routes.kiosk.dia_gegevens import _motm_teams, _stand_poules, _stand_teams
 from routes.kiosk.gedeeld import _scherm_instellingen
@@ -253,6 +256,8 @@ def register_routes(app):
             flash("Sponsor toegevoegd.", "success")
             if video_fout:
                 flash(f"De video is niet opgeslagen: {video_fout} Kies 'Bewerken' om het opnieuw te proberen.", "error")
+            elif video and zwaarte_melding(video_info(video, video_duur), video_duur):
+                flash(zwaarte_melding(video_info(video, video_duur), video_duur), "warning")
             elif gegevens["sjabloon"] == "video_volledig" and not video:
                 flash("Er is nog geen video gekozen: deze dia verschijnt pas op het scherm zodra je er een toevoegt.", "warning")
             return redirect(url_for("kiosk_sponsoren_leden"))
@@ -305,7 +310,7 @@ def register_routes(app):
 
             # Een andere layout kiezen laat een eerder geuploade video staan (je kunt terugschakelen);
             # alleen bij de videolayout vervang of verwijder je 'm.
-            video, video_duur, video_fout = sponsor["video"], sponsor["video_duur"], None
+            video, video_duur, video_fout, nieuwe_video = sponsor["video"], sponsor["video_duur"], None, None
             if gegevens["sjabloon"] == "video_volledig":
                 nieuwe_video, nieuwe_duur, video_fout = sla_video_op(request.files.get("video"))
                 if nieuwe_video:
@@ -346,6 +351,8 @@ def register_routes(app):
             flash("Sponsor bijgewerkt.", "success")
             if video_fout:
                 flash(f"De nieuwe video is niet opgeslagen: {video_fout}", "error")
+            elif nieuwe_video and zwaarte_melding(video_info(video, video_duur), video_duur):
+                flash(zwaarte_melding(video_info(video, video_duur), video_duur), "warning")
             elif gegevens["sjabloon"] == "video_volledig" and not video:
                 flash("Er is nog geen video gekozen: deze dia verschijnt pas op het scherm zodra je er een toevoegt.", "warning")
             return redirect(url_for("kiosk_sponsoren_leden"))
@@ -360,6 +367,8 @@ def register_routes(app):
             overgangen=KIOSK_OVERGANGEN,
             tekst_groottes=KIOSK_TEKST_GROOTTES,
             producten=_sjabloon_producten(db),
+            video_info=video_info(sponsor["video"], sponsor["video_duur"]),
+            VIDEO_ZWAAR_MBIT=VIDEO_ZWAAR_MBIT,
         )
 
     @app.route("/kiosk/sponsoren-leden/sponsoren/<int:sponsor_id>/verwijderen", methods=["POST"])

@@ -10,7 +10,7 @@ from conftest import stel_csrf_token_in as _csrf
 from werkzeug.datastructures import FileStorage
 
 import helpers.video as video_module
-from helpers import mp4_duur, sla_video_op, verwijder_video
+from helpers import VIDEO_ZWAAR_MBIT, mp4_duur, sla_video_op, verwijder_video, video_info, zwaarte_melding
 
 
 def _blok(soort, inhoud=b""):
@@ -263,7 +263,7 @@ def test_het_formulier_heeft_de_videolayout_en_de_videovelden(ingelogde_client, 
 
     _nieuw(ingelogde_client, video=(_mp4(3), "een.mp4"))
     bewerken = ingelogde_client.get(f"/kiosk/sponsoren-leden/sponsoren/{_dia(db)['id']}/bewerken").data.decode()
-    assert 'name="video_verwijderen"' in bewerken and "Huidige video (3 seconden)" in bewerken
+    assert 'name="video_verwijderen"' in bewerken and "Huidige video (3 seconden" in bewerken
 
 
 # ---------- Op het scherm ----------
@@ -283,7 +283,9 @@ def test_de_videodia_op_het_scherm(ingelogde_client, client, db, videomap):
     assert gevonden is not None
     assert gevonden.group(1) == "6.5"  # de dia blijft staan zolang de video duurt
     html = gevonden.group(0)
-    assert f'src="/static/kiosk_videos/{dia["video"]}"' in html
+    # De bron staat in data-bron (het scherm haalt 'm zelf binnen), niet in src: anders begint de browser zelf te laden.
+    assert f'data-bron="/static/kiosk_videos/{dia["video"]}"' in html and ' src="' not in html
+    assert f'data-bytes="{len(_mp4(6.5))}"' in html
     assert " muted " in html and " loop " in html and "playsinline" in html and "data-geluid" not in html
     assert "Onze sponsor" in html and 'class="onderschrift"' in html
 
@@ -307,10 +309,61 @@ def test_een_video_zonder_leesbare_lengte_gebruikt_de_ingestelde_duur(ingelogde_
     assert _scherm_dia(client).group(1) == "11"
 
 
+def test_het_scherm_haalt_video_s_eerst_binnen_en_slaat_een_nog_ladende_dia_over(client, db):
+    tekst = client.get("/kiosk/scherm").data.decode()
+    assert "function laadVideo" in tekst and "URL.createObjectURL" in tekst  # eerst helemaal binnenhalen
+    assert "VIDEO_MAX_IN_GEHEUGEN" in tekst  # een te groot bestand laat de browser zelf streamen
+    assert "function videoKlaar" in tekst and "if (videoKlaar(kandidaat)) return kandidaat;" in tekst  # overslaan tot klaar
+    assert "if (!videoKlaar(huidige)) huidige = volgende();" in tekst  # niet beginnen met een zwart scherm
+    assert "setTimeout(function () { laadVideo(v); }, 30000)" in tekst  # mislukt het ophalen: opnieuw proberen
+
+
+def test_de_beveiligingsregels_laten_een_video_uit_het_geheugen_toe(client, db):
+    """Zonder media-src met blob: weigert de browser de binnengehaalde video ("URL safety check")."""
+    beleid = client.get("/kiosk/scherm").headers["Content-Security-Policy"]
+    assert "media-src 'self' blob:" in beleid
+    assert "default-src 'self'" in beleid and "script-src 'self' 'unsafe-inline'" in beleid  # de rest blijft zoals het was
+
+
 def test_het_scherm_pauzeert_en_start_de_video_bij_het_wisselen(client, db):
     tekst = client.get("/kiosk/scherm").data.decode()
     assert "function speelVideo" in tekst and "pauzeerVideos(slide)" in tekst and "speelVideo(slide)" in tekst
     assert "speelVideo(slides[0])" in tekst  # ook als de video de enige dia is
+
+
+# ---------- Zware video's ----------
+
+
+def test_een_zware_video_krijgt_een_waarschuwing(ingelogde_client, db, videomap):
+    # 6 MB voor 5 seconden: ruim boven de 8 Mbit/s.
+    resp = _nieuw(ingelogde_client, video=(_mp4(5, extra=b"\0" * (6 * 1024 * 1024)), "zwaar.mp4"))
+
+    tekst = resp.data.decode()
+    assert "Let op: deze video is zwaar" in tekst and "720p" in tekst
+    assert _dia(db)["video"] is not None  # hij wordt wel opgeslagen: het is een advies, geen verbod
+
+
+def test_een_lichte_video_krijgt_geen_waarschuwing(ingelogde_client, db, videomap):
+    resp = _nieuw(ingelogde_client, video=(_mp4(60, extra=b"\0" * (6 * 1024 * 1024)), "licht.mp4"))
+    assert "zwaar" not in resp.data.decode().lower().replace("zwaar:", "")  # geen melding, geen markering
+
+
+def test_de_zwaarte_van_een_video(videomap):
+    zwaar, _, _ = sla_video_op(_bestand(_mp4(5, extra=b"\0" * (6 * 1024 * 1024))))
+    licht, _, _ = sla_video_op(_bestand(_mp4(60, extra=b"\0" * (6 * 1024 * 1024))))
+
+    info = video_info(zwaar, 5)
+    assert info["zwaar"] and info["mbit"] > VIDEO_ZWAAR_MBIT and round(info["mb"]) == 6
+    assert "6.0 MB voor 5 seconden" in zwaarte_melding(info, 5)
+    assert not video_info(licht, 60)["zwaar"] and zwaarte_melding(video_info(licht, 60), 60) is None
+    assert video_info(zwaar, None)["mbit"] is None and not video_info(zwaar, None)["zwaar"]  # lengte onbekend (webm)
+    assert video_info("bestaat_niet.mp4", 5) is None and video_info(None, 5) is None
+
+
+def test_het_formulier_toont_grootte_en_zwaarte_van_de_huidige_video(ingelogde_client, db, videomap):
+    _nieuw(ingelogde_client, video=(_mp4(5, extra=b"\0" * (6 * 1024 * 1024)), "zwaar.mp4"))
+    tekst = ingelogde_client.get(f"/kiosk/sponsoren-leden/sponsoren/{_dia(db)['id']}/bewerken").data.decode()
+    assert "6.0 MB" in tekst and "Mbit/s" in tekst and "Zwaar: het scherm moet" in tekst
 
 
 # ---------- De uploadlimiet ----------

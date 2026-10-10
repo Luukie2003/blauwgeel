@@ -6,8 +6,16 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.39.0"
+HUIDIGE_VERSIE = "1.39.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.39.1",
+        "datum": "10 oktober 2026",
+        "punten": [
+            "Video op een dia laadde niet goed (haperen, of de dia was weg voordat de video speelde). Het scherm haalt een video nu eerst helemaal binnen en toont de dia pas als hij klaar is (een nog ladende video-dia wordt tijdelijk overgeslagen), en speelt hem daarna steeds meteen af zonder opnieuw te laden.",
+            "Een te zware video (bijvoorbeeld een opname van een iPhone of Mac van 18 Mbit/s) geeft bij het uploaden een waarschuwing, en het formulier toont de grootte van de huidige video. Richtlijn: 720p en ongeveer 3 Mbit/s.",
+        ],
+    },
     {
         "versie": "1.39.0",
         "datum": "10 oktober 2026",
