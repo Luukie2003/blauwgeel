@@ -124,6 +124,12 @@
             Welkom nieuwe leden (eerste betaling in de afgelopen 30 dagen)
         </label>
         <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.5rem">
+            <input type="checkbox" name="club_van_20_toon_onbetaald" style="width:auto" {{ 'checked' if instellingen.club_van_20_toon_onbetaald }}>
+            "Leden? Steun de club!": de leden die dit seizoen nog niet betaald hebben (maar eerder wel) apart in het rood
+            <input type="number" name="club_van_20_onbetaald_per_slide" min="4" max="24" value="{{ instellingen.club_van_20_onbetaald_per_slide }}"
+                   style="width:4.5rem" aria-label="Namen per dia"> per dia
+        </label>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.5rem">
             <input type="checkbox" name="club_van_20_toon_werving" style="width:auto" {{ 'checked' if instellingen.club_van_20_toon_werving }}>
             "Ook bij de Club van 20?" met QR-code naar de publieke pagina
         </label>

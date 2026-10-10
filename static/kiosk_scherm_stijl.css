@@ -612,3 +612,47 @@
 .leeg-scherm { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 1.2rem; color: var(--tekst-zacht); text-align: center; }
 .leeg-scherm img { height: 5rem; width: auto; }
 .leeg-scherm h1 { color: #fff; font-size: 2.2rem; margin: 0; }
+
+
+/* "Leden? Steun de club!" -- dramatische dia met de leden die dit seizoen nog niet betaald hebben:
+   donkerrode lucht, kloppende titel en gloeiende rode bordjes (kleur van de lichtrode bordjes op de
+   naammuur, maar dan fel). Rekent in --u (1920x1080) net als de dia's hierboven. */
+.slide.slide-club_van_20_onbetaald {
+    background: radial-gradient(ellipse 90% 70% at 50% 0%, #8f1428 0%, #3d0b1d 52%, #12060f 100%);
+    padding: calc(30 * var(--u)) calc(70 * var(--u)) calc(50 * var(--u));
+    justify-content: center;
+    gap: calc(30 * var(--u));
+}
+.c20-steun-kop { display: flex; flex-direction: column; align-items: center; gap: calc(8 * var(--u)); }
+.c20-steun-boven {
+    font-family: var(--c20-font); font-weight: 700; font-size: calc(30 * var(--u)); letter-spacing: 0.4em;
+    text-transform: uppercase; color: #ff9aa4; animation: steun-knipper 2.6s ease-in-out infinite;
+}
+.c20-steun-kop h2 {
+    font-size: calc(128 * var(--u)); line-height: 1.02; color: #fff; text-transform: uppercase;
+    text-shadow: 0 0 calc(18 * var(--u)) rgba(255, 70, 90, 0.9), 0 0 calc(60 * var(--u)) rgba(255, 40, 70, 0.6);
+    animation: steun-puls 2.8s ease-in-out infinite;
+}
+.c20-steun-sub { font-family: var(--c20-font); font-size: calc(42 * var(--u)); color: var(--geel); }
+.c20-steun-muur {
+    display: grid; grid-template-columns: repeat(var(--kolommen, 4), minmax(0, 1fr)); gap: calc(20 * var(--u));
+    width: 100%; max-width: calc(1600 * var(--u)); font-size: calc(46 * var(--u));
+}
+.c20-bordje--steun {
+    background: linear-gradient(180deg, #ee3a48, #a5121f); border-color: #ffb3b8; color: #fff;
+    padding: 0.5em 0.6em; box-shadow: 0 0 calc(18 * var(--u)) rgba(255, 70, 90, 0.5);
+}
+.slide.c20.actief .c20-bordje--steun {
+    animation: bordje-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both, steun-gloed 2.4s ease-in-out infinite alternate;
+}
+.c20-steun-voet { display: flex; align-items: center; justify-content: center; gap: calc(60 * var(--u)); flex-wrap: wrap; }
+.c20-steun-voet p { margin: 0; font-family: var(--c20-font); font-weight: 700; font-size: calc(50 * var(--u)); color: #fff; }
+.c20-steun-voet .pagina-indicator { margin: 0; color: #ff9aa4; }
+.c20-steun-qr { display: flex; align-items: center; gap: calc(22 * var(--u)); font-family: var(--c20-font); font-size: calc(32 * var(--u)); color: var(--geel); }
+.c20-steun-qr .c20-qr-code { width: calc(170 * var(--u)); height: calc(170 * var(--u)); padding: calc(10 * var(--u)); border-radius: calc(12 * var(--u)); }
+@keyframes steun-puls { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+@keyframes steun-knipper { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes steun-gloed {
+    from { box-shadow: 0 0 calc(10 * var(--u)) rgba(255, 70, 90, 0.35); }
+    to { box-shadow: 0 0 calc(34 * var(--u)) rgba(255, 90, 110, 0.85); }
+}

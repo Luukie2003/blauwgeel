@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.34.0"
+HUIDIGE_VERSIE = "1.35.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.35.0",
+        "datum": "10 oktober 2026",
+        "punten": [
+            "Kantine-tv: nieuwe dramatische dia 'Leden? Steun de club!' met alle leden die dit seizoen nog niet hebben betaald maar eerder wel, 12 per dia, met de prijs en een QR-code om weer mee te doen. Bij Club van 20 > Scherm & werving zet je de dia uit of kies je het aantal namen per dia",
+        ],
+    },
     {
         "versie": "1.34.0",
         "datum": "9 oktober 2026",

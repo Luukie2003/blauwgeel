@@ -117,6 +117,18 @@ def zichtbare_leden(db, instellingen, seizoen=None, leden=None, zichtbaar_seizoe
     return resultaat
 
 
+ONBETAALD_KOLOMMEN = 4
+
+
+def onbetaalde_leden(zichtbaar):
+    """De leden voor de "Leden? Steun de club!"-dia: wie op het scherm hoort maar dit seizoen nog niet
+    betaald heeft, en eerder wel (een lid dat nog nooit betaald heeft is geen "trouw lid dat ontbreekt").
+    Dat zijn precies de bordjes die tijdens de tijdelijke herinnering lichtrood op de naammuur staan. Op
+    alfabet, zodat niemand zich uitgelicht voelt."""
+    namen = [lid for lid in zichtbaar if not lid["betaald"] and lid["seizoenen"] >= 1]
+    return sorted(namen, key=lambda lid: lid["naam"].lower())
+
+
 def team_stand(zichtbaar, leden=()):
     """Aantal naambordjes op het scherm per team, meeste eerst -- voor de
     'welk team steunt het meest'-dia. Elk team dat bij een (niet
@@ -312,7 +324,8 @@ def verdeel_over_dias(zichtbaar, per_slide, kolommen):
 def bouw_slides(db, instellingen, qr_svg=None):
     """Alle Club van 20-dia's voor het kantine scherm, in vaste volgorde:
     naammuur (verdeeld over meerdere dia's bij veel namen), opbrengst/doel,
-    teamstrijd, welkom nieuwe leden, werving. Een onderdeel zonder inhoud
+    teamstrijd, welkom nieuwe leden, "Leden? Steun de club!" (wie nog niet
+    betaald heeft), werving. Een onderdeel zonder inhoud
     levert gewoon geen dia op."""
     seizoen = huidig_seizoen()
     leden = leden_met_bijdragen(db, alleen_actief=True)
@@ -403,6 +416,30 @@ def bouw_slides(db, instellingen, qr_svg=None):
             slides.append(
                 {"type": "club_van_20_nieuw", "duur": duur, "achtergrond": achtergrond, "namen": nieuw[:12]}
             )
+
+    if instellingen["club_van_20_toon_onbetaald"]:
+        ontbrekend = onbetaalde_leden(zichtbaar)
+        per_dia = max(ONBETAALD_KOLOMMEN, min(24, instellingen["club_van_20_onbetaald_per_slide"] or 12))
+        # Vol of bijna vol: de dia's krijgen even veel namen (13 namen = 7 + 6, niet 12 + 1).
+        aantal_dias = -(-len(ontbrekend) // per_dia)
+        if aantal_dias:
+            per_dia_gelijk = -(-len(ontbrekend) // aantal_dias)
+            for idx in range(aantal_dias):
+                groep = ontbrekend[idx * per_dia_gelijk : (idx + 1) * per_dia_gelijk]
+                slides.append(
+                    {
+                        "type": "club_van_20_onbetaald",
+                        "duur": duur,
+                        "achtergrond": None,  # eigen, donkerrode opmaak
+                        "namen": [{"naam": lid["naam"], "lang": lid["lang"]} for lid in groep],
+                        "totaal": len(ontbrekend),
+                        "seizoen": seizoen,
+                        "kolommen": ONBETAALD_KOLOMMEN,
+                        "bedrag": bedrag,
+                        "qr_svg": qr_svg,
+                        "pagina": f"{idx + 1}/{aantal_dias}" if aantal_dias > 1 else None,
+                    }
+                )
 
     # Werving alleen als de Club van 20 ook echt in gebruik is (er staan
     # leden in de administratie) -- anders verschijnt er op een verse

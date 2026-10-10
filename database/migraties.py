@@ -277,6 +277,9 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "club_van_20_toon_teams", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "club_van_20_toon_nieuw", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "club_van_20_toon_werving", "INTEGER NOT NULL DEFAULT 1"),
+    # "Leden? Steun de club!": dia met de leden die dit seizoen nog niet betaald hebben maar eerder wel.
+    ("kiosk_scherm_instellingen", "club_van_20_toon_onbetaald", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "club_van_20_onbetaald_per_slide", "INTEGER NOT NULL DEFAULT 12"),
     (
         "kiosk_scherm_instellingen",
         "club_van_20_werving_tekst",

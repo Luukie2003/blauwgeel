@@ -121,7 +121,7 @@ def _bouw_slides(db):
             instellingen,
             qr_svg=(
                 qr.qr_svg(url_for("club_van_20_publiek", _external=True))
-                if instellingen["club_van_20_toon_werving"]
+                if instellingen["club_van_20_toon_werving"] or instellingen["club_van_20_toon_onbetaald"]
                 else None
             ),
         )
