@@ -22,6 +22,16 @@ from helpers.afbeeldingen import (
     sla_club_logo_op,
     sla_stemoptie_afbeelding_op,
 )
+from helpers.video import (
+    KIOSK_VIDEOS_MAP,
+    TOEGESTANE_VIDEO_EXTENSIES,
+    VIDEO_MAX_BYTES,
+    VIDEO_UPLOAD_ENDPOINTS,
+    VIDEO_UPLOAD_MAX_BYTES,
+    mp4_duur,
+    sla_video_op,
+    verwijder_video,
+)
 from helpers.kiosk_constanten import (
     HEX_KLEUR_PATROON,
     KIOSK_ELEMENT_TYPES,

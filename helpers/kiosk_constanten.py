@@ -15,6 +15,7 @@ KIOSK_SPONSOR_SJABLONEN = [
     ("titel_tekst_groot", "Alleen titel en tekst (geen afbeelding)"),
     ("titel_ondertitel_banner", "Compacte banner (titel + ondertitel)"),
     ("mededeling_groot", "Mededeling (met label, geen afbeelding)"),
+    ("video_volledig", "Video (schermvullend, met optioneel onderschrift)"),
 ]
 
 
@@ -42,6 +43,7 @@ KIOSK_SPONSOR_SJABLOON_VOORBEELDEN = {
         "Bijv. 'Kantinedienst gezocht!'",
         "Bijv. 'Meld je aan bij de bar of via het secretariaat.'",
     ),
+    "video_volledig": ("Bijv. 'Sponsorfilm Bakkerij Jansen' (onderschrift, mag leeg)", ""),
 }
 
 

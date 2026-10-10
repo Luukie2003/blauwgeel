@@ -256,6 +256,12 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "sponsors_kop", "TEXT NOT NULL DEFAULT 'Mede mogelijk gemaakt door'"),
     ("kiosk_scherm_instellingen", "sponsors_kop_meervoud", "TEXT NOT NULL DEFAULT ''"),
     ("kiosk_scherm_instellingen", "club_van_20_aanmelden_aan", "INTEGER NOT NULL DEFAULT 1"),
+    # Video op een dia (sjabloon 'video_volledig'): bestandsnaam in static/kiosk_videos, de lengte in seconden
+    # (als die te lezen was), of de dia zo lang blijft staan als de video duurt, en of het geluid aan staat.
+    ("kiosk_sponsoren", "video", "TEXT"),
+    ("kiosk_sponsoren", "video_duur", "REAL"),
+    ("kiosk_sponsoren", "video_hele_duur", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_sponsoren", "video_geluid", "INTEGER NOT NULL DEFAULT 0"),
     # Melding op alle schermen bij een nieuw lid of verlenging, en hoe lang elke melding in beeld blijft (seconden).
     ("kiosk_scherm_instellingen", "club_van_20_toon_welkom", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "club_van_20_welkom_duur", "INTEGER NOT NULL DEFAULT 12"),

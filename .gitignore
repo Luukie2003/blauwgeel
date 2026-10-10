@@ -12,4 +12,5 @@ __pycache__/
 .pytest_cache/
 uptime_status.txt
 static/stem_afbeeldingen/
+static/kiosk_videos/
 uitrol_geheim.txt

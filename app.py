@@ -13,6 +13,8 @@ from foutmelding import Melder
 from helpers import (
     PRODUCT_AFBEELDINGEN_MAP,
     STEM_AFBEELDINGEN_MAP,
+    VIDEO_UPLOAD_ENDPOINTS,
+    VIDEO_UPLOAD_MAX_BYTES,
     bepaal_weergave_modus,
     bereken_bestelling_status,
     bereken_frituurvet_status,
@@ -118,6 +120,14 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         (verkeerd) 'desktop' vastzetten in het cookie voordat deze functie
         ooit draait, en dat cookie wint daarna altijd van de User-Agent."""
         g.weergave_modus = bepaal_weergave_modus()
+
+    @app.before_request
+    def ruim_uploadlimiet_op_voor_video():
+        """Een dia met een video is veel groter dan de gewone uploadlimiet (MAX_CONTENT_LENGTH). Alleen de twee
+        dia-formulieren, en alleen voor wie is ingelogd, mogen daarom groter zijn. Moet vóór
+        csrf_beschermen draaien: dat leest het formulier al, en daar zou de lage limiet nog gelden."""
+        if request.method == "POST" and request.endpoint in VIDEO_UPLOAD_ENDPOINTS and "gebruiker_id" in session:
+            request.max_content_length = VIDEO_UPLOAD_MAX_BYTES
 
     @app.before_request
     def csrf_beschermen():
@@ -374,6 +384,12 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             )
             db.commit()
         return response
+
+    @app.errorhandler(413)
+    def upload_te_groot(fout):
+        limiet = (request.max_content_length or app.config["MAX_CONTENT_LENGTH"]) // (1024 * 1024)
+        flash(f"Dit bestand is te groot om te uploaden (maximaal {limiet} MB).", "error")
+        return redirect(request.referrer or url_for("login"))
 
     @app.errorhandler(404)
     def pagina_niet_gevonden(fout):

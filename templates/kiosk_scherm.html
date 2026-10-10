@@ -74,6 +74,11 @@
                     <div class="mededeling-label">Mededeling</div>
                     {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
                     {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
+                {% elif slide.sjabloon == 'video_volledig' %}
+                    {% if slide.video %}
+                    <video class="sponsor-video" src="{{ url_for('static', filename='kiosk_videos/' + slide.video) }}" preload="metadata" muted loop playsinline{% if slide.video_geluid %} data-geluid="1"{% endif %}></video>
+                    {% endif %}
+                    {% if slide.titel %}<div class="onderschrift">{{ slide.titel }}</div>{% endif %}
                 {% elif slide.sjabloon == 'aangepast' %}
                     {% if slide.custom_achtergrond_afbeelding %}
                     <img class="canvas-achtergrond-img" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.custom_achtergrond_afbeelding) }}" alt="">
@@ -342,6 +347,27 @@
     }
     telOp(document.querySelector('.slide.actief'));
 
+    // Video-dia's: de video begint steeds opnieuw zodra de dia in beeld komt en pauzeert daarna. Zonder
+    // geluid (staat in de video zelf), want een scherm mag zonder aanraking alleen dan zelf beginnen; lukt het
+    // met geluid niet, dan toch gedempt afspelen.
+    function speelVideo(slide) {
+        var v = slide && slide.querySelector('video');
+        if (!v) return;
+        try { v.currentTime = 0; } catch (e) {}
+        v.muted = !v.dataset.geluid;
+        var p = v.play();
+        if (p && p.catch) p.catch(function () {
+            v.muted = true;
+            var q = v.play();
+            if (q && q.catch) q.catch(function () {});
+        });
+    }
+    function pauzeerVideos(behalve) {
+        document.querySelectorAll('.slide video').forEach(function (v) {
+            if (!behalve || !behalve.contains(v)) v.pause();
+        });
+    }
+
     // Aftelklok op de wervingsdia: tikt elke seconde, los van de diashow.
     // Op nul verdwijnt de klok (de server geeft na dat moment de "na
     // afloop"-tekst of niets meer mee; de versiepoll hieronder herlaadt
@@ -377,7 +403,7 @@
 
     (function () {
         var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
-        if (slides.length < 2) return;
+        if (slides.length < 2) { speelVideo(slides[0]); return; }
         // Sponsordia's draaien niet mee in de gewone volgorde, maar komen na
         // elke 'sponsorsElke' gewone dia's tussendoor -- steeds de volgende
         // sponsor, ook over de rondes heen, zodat elke sponsor evenveel in
@@ -391,6 +417,8 @@
         function toon(slide) {
             slides.forEach(function (s) { s.classList.toggle('actief', s === slide); });
             telOp(slide);
+            pauzeerVideos(slide);
+            speelVideo(slide);
         }
 
         function volgende() {

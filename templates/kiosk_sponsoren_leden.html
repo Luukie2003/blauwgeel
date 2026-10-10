@@ -591,10 +591,11 @@
                         {% if s.afbeelding %}
                         <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + s.afbeelding) }}" alt="" class="product-thumb">
                         {% endif %}
+                        {% if s.video %}<span class="badge badge-neutraal">Video</span>{% endif %}
                     </td>
                     <td>{{ s.titel or '—' }}</td>
                     <td>{{ sjabloon_labels.get(s.sjabloon, s.sjabloon) }}</td>
-                    <td>{{ s.weergave_duur_seconden }}s</td>
+                    <td>{% if s.sjabloon == 'video_volledig' and s.video_hele_duur and s.video_duur %}{{ s.video_duur|round|int }}s (video){% else %}{{ s.weergave_duur_seconden }}s{% endif %}</td>
                     <td>{{ s.volgorde }}</td>
                     <td>
                         {% if s.actief %}

@@ -36,9 +36,17 @@ def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None):
     vers uit producten_bij_id -- dat gebeurt bij elke opbouw opnieuw
     (elke paginalaad/versiepoll), dus een latere prijswijziging van het
     gekoppelde product komt vanzelf door, net als de rest van het scherm."""
+    duur = s["weergave_duur_seconden"]
+    if s["sjabloon"] == "video_volledig":
+        if not s["video"]:
+            return None  # een videodia zonder video heeft niets te tonen
+        if s["video_hele_duur"] and s["video_duur"]:
+            duur = max(2, round(s["video_duur"], 1))  # de dia blijft staan zolang de video duurt
     slide = {
         "type": "sponsor",
-        "duur": s["weergave_duur_seconden"],
+        "duur": duur,
+        "video": s["video"],
+        "video_geluid": bool(s["video_geluid"]),
         "sjabloon": s["sjabloon"],
         "titel": s["titel"],
         "tekst": s["tekst"],

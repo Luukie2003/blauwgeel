@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.38.0"
+HUIDIGE_VERSIE = "1.39.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.39.0",
+        "datum": "10 oktober 2026",
+        "punten": [
+            "Kantine-tv: een video op een dia. Kies bij Dia's & sponsoren → Nieuwe dia de layout 'Video (schermvullend, met optioneel onderschrift)' en upload een filmpje (mp4, mov of webm, maximaal 80 MB). Het scherm speelt de video schermvullend af, standaard zonder geluid en zo lang als de video duurt (of een vaste tijd, en op wens met geluid). Het formulier toont een live voorbeeld; een nieuwe upload vervangt de oude video en bij het verwijderen van de dia verdwijnt de video ook.",
+        ],
+    },
     {
         "versie": "1.38.0",
         "datum": "10 oktober 2026",

@@ -10,6 +10,7 @@
         <li><strong>Sponsoradvertentie</strong> &mdash; een logo/poster van een sponsor, eventueel met een tekstje erbij.</li>
         <li><strong>Kantine-info</strong> &mdash; openingstijden, happy hour, een nieuwe kaart of actie.</li>
         <li><strong>Mededeling</strong> &mdash; een interne oproep (bijv. "kantinedienst gezocht") met een duidelijk MEDEDELING-label, zodat 'm niemand voor een betaalde sponsor aanziet.</li>
+        <li><strong>Video</strong> &mdash; een filmpje (bijv. een sponsorfilm of een samenvatting van de wedstrijd) dat schermvullend afspeelt, met optioneel een onderschrift.</li>
     </ul>
     <p class="tekst-zacht" style="margin-bottom:0">
         Kies hieronder een sjabloon; de invoervelden tonen dan een voorbeeld van wat erin past. Kies je "Eigen
@@ -93,6 +94,32 @@
                 {% endif %}
                 <input type="file" id="afbeelding" name="afbeelding" accept="image/*">
             </div>
+            <div id="video-veld" hidden>
+                <div class="veld">
+                    <label for="video">Video</label>
+                    {% if sponsor and sponsor.video %}
+                    <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.4rem; flex-wrap:wrap">
+                        <video src="{{ url_for('static', filename='kiosk_videos/' + sponsor.video) }}#t=0.5" muted preload="metadata"
+                               style="max-height:5rem; border-radius:6px; background:#000"></video>
+                        <span class="tekst-zacht">Huidige video{% if sponsor.video_duur %} ({{ sponsor.video_duur|round|int }} seconden){% endif %}</span>
+                        <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400; cursor:pointer">
+                            <input type="checkbox" name="video_verwijderen" style="width:auto">
+                            Verwijderen
+                        </label>
+                    </div>
+                    {% endif %}
+                    <input type="file" id="video" name="video" accept="video/mp4,video/quicktime,video/webm,.mp4,.m4v,.mov,.webm">
+                    <span class="tekst-zacht">Liefst een mp4 (H.264): die speelt overal af. Maximaal 80 MB, dus houd het kort (een paar seconden tot een halve minuut). Het kantinescherm speelt 'm schermvullend af.{% if sponsor and sponsor.video %} Kies je hier een nieuw bestand, dan vervangt dat de huidige video.{% endif %}</span>
+                </div>
+                <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.4rem">
+                    <input type="checkbox" name="video_hele_duur" style="width:auto" {{ 'checked' if not sponsor or sponsor.video_hele_duur }}>
+                    De dia zo lang laten staan als de video duurt (anders geldt de weergaveduur hierboven; een kortere video begint dan opnieuw)
+                </label>
+                <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.8rem">
+                    <input type="checkbox" name="video_geluid" style="width:auto" {{ 'checked' if sponsor and sponsor.video_geluid }}>
+                    Met geluid (laat dit uit als er in de kantine muziek of gepraat is)
+                </label>
+            </div>
             <div class="veld" id="achtergrond-afbeelding-veld" hidden>
                 <label for="achtergrond_afbeelding">Eigen achtergrondfoto (mededeling)</label>
                 {% if sponsor and sponsor.achtergrond_afbeelding %}
@@ -163,6 +190,9 @@
     {% set achtergrond_url = url_for('static', filename='kiosk_afbeeldingen/' + sponsor.achtergrond_afbeelding) if sponsor and sponsor.achtergrond_afbeelding else None %}
     var afbeeldingUrl = {{ afbeelding_url|tojson }};
     var achtergrondUrl = {{ achtergrond_url|tojson }};
+    {% set video_url = url_for('static', filename='kiosk_videos/' + sponsor.video) if sponsor and sponsor.video else None %}
+    var videoUrl = {{ video_url|tojson }};
+    var videoVeld = document.getElementById('video');
     var KIOSK_AFB_PREFIX = "{{ url_for('static', filename='kiosk_afbeeldingen/') }}";
 
     var sjablonenCustom = {};
@@ -192,6 +222,7 @@
         document.getElementById('custom-sjabloon-veld').hidden = sjabloon !== 'aangepast';
         document.getElementById('tekst-grootte-veld').hidden = sjabloon === 'aangepast';
         document.getElementById('achtergrond-afbeelding-veld').hidden = sjabloon !== 'mededeling_groot';
+        document.getElementById('video-veld').hidden = sjabloon !== 'video_volledig';
     }
 
     function renderVoorbeeld() {
@@ -226,6 +257,9 @@
             html += '<div class="mededeling-label">Mededeling</div>';
             if (titel) html += '<h2>' + escapeHtml(titel) + '</h2>';
             if (tekst) html += '<p>' + escapeHtml(tekst) + '</p>';
+        } else if (sjabloon === 'video_volledig') {
+            if (videoUrl) html += '<video class="sponsor-video" src="' + videoUrl + '" muted loop autoplay playsinline></video>';
+            if (titel) html += '<div class="onderschrift">' + escapeHtml(titel) + '</div>';
         } else if (sjabloon === 'aangepast') {
             var custom = sjablonenCustom[customSjabloonVeld.value];
             if (custom) {
@@ -280,6 +314,12 @@
     afbeeldingVeld.addEventListener('change', function () {
         if (afbeeldingVeld.files && afbeeldingVeld.files[0]) {
             afbeeldingUrl = URL.createObjectURL(afbeeldingVeld.files[0]);
+            renderVoorbeeld();
+        }
+    });
+    videoVeld.addEventListener('change', function () {
+        if (videoVeld.files && videoVeld.files[0]) {
+            videoUrl = URL.createObjectURL(videoVeld.files[0]);
             renderVoorbeeld();
         }
     });

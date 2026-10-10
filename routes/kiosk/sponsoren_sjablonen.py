@@ -22,6 +22,8 @@ from helpers import (
     MOTM_RESULTATEN,
     now_str,
     sla_afbeelding_op,
+    sla_video_op,
+    verwijder_video,
 )
 from routes.kiosk.dia_gegevens import _motm_teams, _stand_poules, _stand_teams
 from routes.kiosk.gedeeld import _scherm_instellingen
@@ -69,6 +71,8 @@ def _sponsor_uit_formulier():
         "actief": 1 if request.form.get("actief") else 0,
         "overgang": overgang,
         "tekst_grootte": tekst_grootte,
+        "video_hele_duur": 1 if request.form.get("video_hele_duur") else 0,
+        "video_geluid": 1 if request.form.get("video_geluid") else 0,
     }
 
 
@@ -216,12 +220,16 @@ def register_routes(app):
                 achtergrond_afbeelding = sla_afbeelding_op(
                     request.files.get("achtergrond_afbeelding"), KIOSK_AFBEELDINGEN_MAP
                 )
+            video, video_duur, video_fout = None, None, None
+            if gegevens["sjabloon"] == "video_volledig":
+                video, video_duur, video_fout = sla_video_op(request.files.get("video"))
             db.execute(
                 """INSERT INTO kiosk_sponsoren
                    (sjabloon, custom_sjabloon_id, titel, tekst, afbeelding,
                     achtergrond_afbeelding, overgang, tekst_grootte,
-                    weergave_duur_seconden, volgorde, actief, aangemaakt_op)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    weergave_duur_seconden, volgorde, actief, aangemaakt_op,
+                    video, video_duur, video_hele_duur, video_geluid)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     gegevens["sjabloon"],
                     gegevens["custom_sjabloon_id"],
@@ -235,10 +243,18 @@ def register_routes(app):
                     gegevens["volgorde"],
                     gegevens["actief"],
                     now_str(),
+                    video,
+                    video_duur,
+                    gegevens["video_hele_duur"],
+                    gegevens["video_geluid"],
                 ),
             )
             db.commit()
             flash("Sponsor toegevoegd.", "success")
+            if video_fout:
+                flash(f"De video is niet opgeslagen: {video_fout} Kies 'Bewerken' om het opnieuw te proberen.", "error")
+            elif gegevens["sjabloon"] == "video_volledig" and not video:
+                flash("Er is nog geen video gekozen: deze dia verschijnt pas op het scherm zodra je er een toevoegt.", "warning")
             return redirect(url_for("kiosk_sponsoren_leden"))
         sjablonen_custom, sjablonen_custom_json = _sjablonen_custom_context(db)
         return render_template(
@@ -287,12 +303,25 @@ def register_routes(app):
                 else:
                     achtergrond_afbeelding = sponsor["achtergrond_afbeelding"]
 
+            # Een andere layout kiezen laat een eerder geuploade video staan (je kunt terugschakelen);
+            # alleen bij de videolayout vervang of verwijder je 'm.
+            video, video_duur, video_fout = sponsor["video"], sponsor["video_duur"], None
+            if gegevens["sjabloon"] == "video_volledig":
+                nieuwe_video, nieuwe_duur, video_fout = sla_video_op(request.files.get("video"))
+                if nieuwe_video:
+                    verwijder_video(video)
+                    video, video_duur = nieuwe_video, nieuwe_duur
+                elif request.form.get("video_verwijderen"):
+                    verwijder_video(video)
+                    video = video_duur = None
+
             db.execute(
                 """UPDATE kiosk_sponsoren
                    SET sjabloon = ?, custom_sjabloon_id = ?, titel = ?, tekst = ?,
                        afbeelding = ?, achtergrond_afbeelding = ?, overgang = ?,
                        tekst_grootte = ?, weergave_duur_seconden = ?, volgorde = ?,
-                       actief = ?
+                       actief = ?, video = ?, video_duur = ?, video_hele_duur = ?,
+                       video_geluid = ?
                    WHERE id = ?""",
                 (
                     gegevens["sjabloon"],
@@ -306,11 +335,19 @@ def register_routes(app):
                     gegevens["weergave_duur_seconden"],
                     gegevens["volgorde"],
                     gegevens["actief"],
+                    video,
+                    video_duur,
+                    gegevens["video_hele_duur"],
+                    gegevens["video_geluid"],
                     sponsor_id,
                 ),
             )
             db.commit()
             flash("Sponsor bijgewerkt.", "success")
+            if video_fout:
+                flash(f"De nieuwe video is niet opgeslagen: {video_fout}", "error")
+            elif gegevens["sjabloon"] == "video_volledig" and not video:
+                flash("Er is nog geen video gekozen: deze dia verschijnt pas op het scherm zodra je er een toevoegt.", "warning")
             return redirect(url_for("kiosk_sponsoren_leden"))
         sjablonen_custom, sjablonen_custom_json = _sjablonen_custom_context(db)
         return render_template(
@@ -328,8 +365,11 @@ def register_routes(app):
     @app.route("/kiosk/sponsoren-leden/sponsoren/<int:sponsor_id>/verwijderen", methods=["POST"])
     def kiosk_sponsor_verwijderen(sponsor_id):
         db = get_db()
+        rij = db.execute("SELECT video FROM kiosk_sponsoren WHERE id = ?", (sponsor_id,)).fetchone()
         db.execute("DELETE FROM kiosk_sponsoren WHERE id = ?", (sponsor_id,))
         db.commit()
+        if rij:
+            verwijder_video(rij["video"])  # zonder dia is het bestand alleen nog schijfruimte
         flash("Sponsor verwijderd.", "success")
         return redirect(url_for("kiosk_sponsoren_leden"))
 

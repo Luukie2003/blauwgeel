@@ -54,12 +54,19 @@
 .slide-sponsor.sjabloon-afbeelding_volledig .sponsor-afbeelding {
     position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff;
 }
-.slide-sponsor.sjabloon-afbeelding_volledig .onderschrift {
+.slide-sponsor.sjabloon-afbeelding_volledig .onderschrift,
+.slide-sponsor.sjabloon-video_volledig .onderschrift {
     position: absolute; left: 0; right: 0; bottom: 0;
     background: rgba(15, 31, 77, 0.85);
     padding: 1.1rem 2rem;
     font-size: calc(1.7rem * var(--tekstschaal));
     font-weight: 700;
+}
+
+/* Sponsor: video vult het scherm (zwarte randen als de verhouding niet 16:9 is), titel als onderschrift */
+.slide-sponsor.sjabloon-video_volledig { padding: 0; background: #000; }
+.slide-sponsor.sjabloon-video_volledig .sponsor-video {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000;
 }
 
 /* Sponsor: afbeelding naast titel + tekst */
