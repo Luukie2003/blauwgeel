@@ -64,6 +64,7 @@ from club_van_20.scherm import (
     vakjes_breedte,
     verdeel_over_dias,
     verzoek_tekst,
+    welkom_wachtrij,
     whatsapp_link,
     zichtbare_leden,
 )
@@ -133,6 +134,7 @@ __all__ = [
     "vakjes_breedte",
     "verdeel_over_dias",
     "verzoek_tekst",
+    "welkom_wachtrij",
     "whatsapp_link",
     "zichtbare_leden",
     "MAX_XLSX_XML_BYTES",

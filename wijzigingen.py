@@ -6,8 +6,16 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.36.0"
+HUIDIGE_VERSIE = "1.37.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.37.0",
+        "datum": "10 oktober 2026",
+        "punten": [
+            "Kantine-tv, dia 'Welkom nieuwe leden': veel groter (1 nieuw lid vult bijna het hele scherm, bij meer namen worden ze vanzelf kleiner), lange namen staan op 2 regels in plaats van afgekapt, en bij 12 nieuwe leden past de titel nu ook weer op het scherm.",
+            "Club van 20: zodra een lid betaalt (nieuw of verlenging, ook via een goedgekeurde aanmelding) komt er op alle schermen even groot een melding met de naam: 'Welkom in de Club van 20!' of 'Bedankt voor je verlenging!' met de sterren. Komen er meer tegelijk, dan staan ze in een wachtrij en komen ze achter elkaar. Bij Club van 20 → Scherm & werving zet je het uit, stel je de duur per melding in en stuur je een testmelding.",
+        ],
+    },
     {
         "versie": "1.36.0",
         "datum": "10 oktober 2026",

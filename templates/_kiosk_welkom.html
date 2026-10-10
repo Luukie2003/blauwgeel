@@ -1,0 +1,118 @@
+{# Melding bij een nieuw of verlengd lid van de Club van 20: komt bovenop elk scherm (de diashow, het prijzenscherm
+   en de gedeelde tv) in beeld. Meerdere tegelijk? Dan staan ze in een wachtrij en komen ze achter elkaar.
+   Elk scherm houdt zelf bij tot welke melding het heeft getoond (localStorage per pagina), dus elk scherm
+   krijgt elke melding. De server levert ze via /kiosk/welkom (welkom_wachtrij in club_van_20/scherm.py). #}
+<link rel="stylesheet" href="{{ url_for('static', filename='kiosk_welkom_stijl.css') }}?v={{ kiosk_welkom_stijl_versie|default('') }}">
+<div id="welkom-melding" class="welkom-melding" role="status" aria-live="polite"></div>
+<script>
+(function () {
+    var url = {{ url_for('kiosk_welkom')|tojson }};
+    var sleutel = 'kiosk_welkom_laatste:' + location.pathname;
+    var kleuren = ['#fcd42f', '#ffffff', '#ffe58a', '#5b7fe0', '#fcd42f', '#ffffff'];
+    var el = document.getElementById('welkom-melding');
+    var geheugen = null;      // als localStorage niet werkt: tot de volgende herlaadbeurt
+    var cursor = null;        // id van de laatst getoonde melding; null = dit scherm heeft nog niet gekeken
+    var hoogsteBekend = null; // hoogste id dat al in de wachtrij zit of getoond is
+    var wachtrij = [];
+    var bezig = false;
+    var duurMs = 12000;
+
+    function lees() {
+        var plekken = ['localStorage', 'sessionStorage'];
+        for (var i = 0; i < plekken.length; i++) {
+            try {
+                var w = window[plekken[i]].getItem(sleutel);
+                if (w !== null && !isNaN(parseInt(w, 10))) return parseInt(w, 10);
+            } catch (e) {}
+        }
+        return geheugen;
+    }
+    function bewaar(id) {
+        geheugen = id;
+        try { localStorage.setItem(sleutel, String(id)); } catch (e) {}
+        try { sessionStorage.setItem(sleutel, String(id)); } catch (e) {}
+    }
+
+    function maak(tag, klasse, tekst) {
+        var n = document.createElement(tag);
+        if (klasse) n.className = klasse;
+        if (tekst) n.textContent = tekst;
+        return n;
+    }
+    function sterretjes(n) {
+        if (n > 5) return n + '★';
+        var s = '';
+        for (var i = 0; i < n; i++) s += '★';
+        return s;
+    }
+
+    function toon(m, over) {
+        var nieuw = m.soort === 'nieuw';
+        el.innerHTML = '';
+        for (var i = 0; i < 34; i++) {
+            var c = maak('span', 'welkom-confetti');
+            c.style.left = Math.round(Math.random() * 100) + '%';
+            c.style.background = kleuren[i % kleuren.length];
+            c.style.animationDuration = (4 + Math.random() * 4).toFixed(1) + 's';
+            c.style.animationDelay = (-Math.random() * 8).toFixed(1) + 's';
+            el.appendChild(c);
+        }
+        el.appendChild(maak('div', 'welkom-boven', nieuw ? 'Nieuw lid van de Club van 20' : 'Verlenging Club van 20'));
+        el.appendChild(maak('h2', 'welkom-kop', nieuw ? 'Welkom in de Club van 20!' : 'Bedankt voor je verlenging!'));
+        var bordje = maak('div', 'welkom-bordje' + (m.glans ? ' welkom-bordje--glans' : '') + (m.naam.length > 18 ? ' welkom-bordje--lang' : ''));
+        bordje.appendChild(maak('span', '', m.naam));
+        el.appendChild(bordje);
+        if (m.sterren > 0) el.appendChild(maak('div', 'welkom-sterren', sterretjes(m.sterren)));
+        el.appendChild(maak('div', 'welkom-sub',
+            nieuw ? 'Fijn dat je erbij bent!'
+                  : (m.seizoenen >= 2 ? 'Al ' + m.seizoenen + ' seizoenen lid van de Club van 20' : 'Weer een seizoen erbij')));
+        if (over > 0) el.appendChild(maak('div', 'welkom-rest', over === 1 ? 'Nog 1 melding te gaan' : 'Nog ' + over + ' meldingen te gaan'));
+        el.classList.remove('zichtbaar');
+        void el.offsetWidth;  // de ingang opnieuw laten afspelen als er een melding op een melding volgt
+        el.classList.add('zichtbaar');
+    }
+
+    function volgende() {
+        var m = wachtrij.shift();
+        if (!m) {
+            bezig = false;
+            el.classList.remove('zichtbaar');
+            return;
+        }
+        bezig = true;
+        // Zodra een melding in beeld komt telt hij als getoond, ook als het scherm tussendoor herlaadt:
+        // dan komen alleen de nog niet getoonde meldingen opnieuw (zie welkom_wachtrij).
+        cursor = m.id;
+        bewaar(cursor);
+        toon(m, wachtrij.length);
+        setTimeout(volgende, duurMs);
+    }
+
+    function poll() {
+        fetch(url + (cursor === null ? '' : '?na=' + cursor), { cache: 'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                duurMs = (data.duur || 12) * 1000;
+                if (cursor === null || data.laatste < cursor) {
+                    // Eerste keer kijken (niet alles van vroeger opnieuw tonen), of de server telt opnieuw.
+                    cursor = hoogsteBekend = data.laatste;
+                    bewaar(cursor);
+                }
+                (data.meldingen || []).forEach(function (m) {
+                    if (hoogsteBekend === null || m.id > hoogsteBekend) {
+                        hoogsteBekend = m.id;
+                        wachtrij.push(m);
+                    }
+                });
+                if (!bezig) volgende();
+            })
+            .catch(function () {});
+    }
+
+    // De versiepoll van het scherm wacht met herladen tot de wachtrij leeg is (zie kiosk_scherm.html).
+    window.kioskWelkomBezig = function () { return bezig; };
+    cursor = hoogsteBekend = lees();
+    poll();
+    setInterval(poll, 5000);
+})();
+</script>

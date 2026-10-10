@@ -1,5 +1,7 @@
 """De ledenadministratie: leden, betalingen per seizoen, projecten en de financiele cijfers."""
 
+import time
+
 from helpers import now_str, vandaag_amsterdam
 from club_van_20.seizoenen import huidig_seizoen, verschuif_seizoen
 
@@ -76,14 +78,55 @@ def is_nieuw_lid(lid, seizoen):
     return lid["eerste_seizoen"] == seizoen and not (lid.get("eerdere_seizoenen") or 0)
 
 
+# Een melding voor dezelfde bijdrage binnen zo'n tijd (bijv. betaald, per ongeluk teruggezet en weer betaald)
+# komt maar 1x op het scherm; meldingen ouder dan MELDING_BEWAARTIJD worden opgeruimd.
+MELDING_DUBBEL_SECONDEN = 3600
+MELDING_BEWAARTIJD = 3 * 86400
+
+
+def registreer_melding(db, lid_id, seizoen, nu=None):
+    """Legt vast dat dit lid net betaald heeft, zodat elk scherm er een melding van toont: 'nieuw' bij
+    de eerste betaalde bijdrage (zelfde regel als is_nieuw_lid), anders 'verlengd'. 'seizoenen' is het
+    aantal betaalde seizoenen inclusief dit (voor het aantal sterren op het scherm)."""
+    lid = db.execute("SELECT naam, eerdere_seizoenen FROM club_van_20_leden WHERE id = ?", (lid_id,)).fetchone()
+    if lid is None:
+        return
+    nu = int(time.time()) if nu is None else nu
+    if db.execute(
+        "SELECT 1 FROM club_van_20_meldingen WHERE lid_id = ? AND seizoen = ? AND aangemaakt_op >= ?",
+        (lid_id, seizoen, nu - MELDING_DUBBEL_SECONDEN),
+    ).fetchone():
+        return
+    eerdere = lid["eerdere_seizoenen"] or 0
+    eerder_betaald = db.execute(
+        "SELECT COUNT(*) FROM club_van_20_bijdragen WHERE lid_id = ? AND status = 'betaald' AND seizoen != ?",
+        (lid_id, seizoen),
+    ).fetchone()[0]
+    db.execute(
+        """INSERT INTO club_van_20_meldingen (lid_id, naam, soort, seizoen, seizoenen, aangemaakt_op)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (
+            lid_id,
+            lid["naam"],
+            "nieuw" if not eerder_betaald and not eerdere else "verlengd",
+            seizoen,
+            eerder_betaald + eerdere + 1,
+            nu,
+        ),
+    )
+    db.execute("DELETE FROM club_van_20_meldingen WHERE aangemaakt_op < ?", (nu - MELDING_BEWAARTIJD,))
+
+
 def sla_bijdrage_op(db, lid_id, seizoen, status, bedrag=None, betaald_door=None,
                     betaalwijze=None, notitie=None, standaard_bedrag=20, gebruiker=None,
-                    betaald_op=None, nul_toegestaan=False):
+                    betaald_op=None, nul_toegestaan=False, melding=True):
     """Upsert van 1 bijdrage. Bij 'betaald' zonder bedrag geldt het
     standaardbedrag, en zonder datum vandaag. 'niet_gevraagd' zonder verdere
     gegevens verwijdert de rij gewoon (= geen rij, zie de moduledocstring).
     Met nul_toegestaan blijft een bedrag van 0 bij 'betaald' staan (de import:
-    verlengd, maar het geld is al in een eerder seizoen meegeteld)."""
+    verlengd, maar het geld is al in een eerder seizoen meegeteld).
+    Wordt een bijdrage voor het huidige seizoen nu pas 'betaald', dan krijgen de schermen er een melding
+    van (nieuw lid of verlenging); melding=False slaat dat over (de import van oude gegevens)."""
     if status not in BIJDRAGE_STATUS_LABELS:
         raise ValueError(f"Onbekende status: {status}")
     if status == "betaald":
@@ -98,6 +141,9 @@ def sla_bijdrage_op(db, lid_id, seizoen, status, bedrag=None, betaald_door=None,
             "DELETE FROM club_van_20_bijdragen WHERE lid_id = ? AND seizoen = ?", (lid_id, seizoen)
         )
         return
+    eerder = db.execute(
+        "SELECT status FROM club_van_20_bijdragen WHERE lid_id = ? AND seizoen = ?", (lid_id, seizoen)
+    ).fetchone()
     db.execute(
         """INSERT INTO club_van_20_bijdragen
                (lid_id, seizoen, status, bedrag, betaald_door, betaalwijze, betaald_op,
@@ -133,6 +179,8 @@ def sla_bijdrage_op(db, lid_id, seizoen, status, bedrag=None, betaald_door=None,
             "UPDATE club_van_20_bijdragen SET betaald_op = NULL WHERE lid_id = ? AND seizoen = ?",
             (lid_id, seizoen),
         )
+    elif melding and (eerder is None or eerder["status"] != "betaald") and seizoen == huidig_seizoen():
+        registreer_melding(db, lid_id, seizoen)
 
 
 def seizoen_totalen(db):

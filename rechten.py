@@ -55,6 +55,8 @@ OPEN_ENDPOINTS = {
     "kiosk_prijzen_versie",
     "kiosk_scherm_versie",
     "kiosk_tv_versie",
+    # Idem voor de melding bij een nieuw of verlengd lid van de Club van 20 (templates/_kiosk_welkom.html).
+    "kiosk_welkom",
     # Publieke Club van 20-pagina: waar de QR-code op de wervingsdia van het
     # kantine scherm naartoe wijst -- bezoekers hebben geen account.
     "club_van_20_publiek",
@@ -311,6 +313,7 @@ SECTIE_ENDPOINTS = {
         "club_van_20_aanmelding_goedkeuren",
         "club_van_20_aanmelding_afwijzen",
         "club_van_20_instellingen",
+        "club_van_20_melding_testen",
     },
     # Losgemaakt van BEHEERDER_ENDPOINTS voor hetzelfde soort reden --
     # agenda/banner raakt geen accounts, categorieën of back-ups. Alleen

@@ -167,13 +167,15 @@
                     {% else %}Gelijk op tussen {{ slide.teams[0].team }} en {{ slide.teams[1].team }}!{% endif %}
                 </div>
                 {% elif slide.type == 'club_van_20_nieuw' %}
-                <div class="c20-kop"><h2>Welkom in de Club van 20!</h2></div>
-                <div class="c20-nieuw-namen">
-                    {% for naam in slide.namen %}
-                    <div class="c20-bordje c20-bordje--goud" style="animation-delay: {{ (loop.index0 * 0.15)|round(2) }}s"><span class="c20-naam">{{ naam }}</span></div>
-                    {% endfor %}
+                <div class="c20-nieuw" style="--nieuw-letter: {{ slide.maat.letter }}; --nieuw-kop: {{ slide.maat.kop }}; --nieuw-onder: {{ slide.maat.onder }};">
+                    <div class="c20-kop"><h2>Welkom in de Club van 20!</h2></div>
+                    <div class="c20-nieuw-namen">
+                        {% for naam in slide.namen %}
+                        <div class="c20-bordje c20-bordje--goud{{ ' c20-bordje--lang' if naam|length > 16 else '' }}" style="animation-delay: {{ (loop.index0 * 0.15)|round(2) }}s"><span class="c20-naam">{{ naam }}</span></div>
+                        {% endfor %}
+                    </div>
+                    <div class="c20-teams-onder">Bedankt voor jullie steun!</div>
                 </div>
-                <div class="c20-teams-onder">Bedankt voor jullie steun!</div>
                 {% elif slide.type == 'club_van_20_onbetaald' %}
                 <div class="c20-steun" style="--k: {{ slide.raster.schaal }};">
                     <div class="c20-steun-kop">
@@ -432,11 +434,16 @@
             fetch('{{ versie_url }}')
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
-                    if (data.versie && data.versie !== huidigeVersie) window.location.reload();
+                    if (data.versie && data.versie !== huidigeVersie) {
+                        // Een melding voor een nieuw/verlengd lid (_kiosk_welkom.html) eerst laten uitspelen.
+                        if (window.kioskWelkomBezig && window.kioskWelkomBezig()) return;
+                        window.location.reload();
+                    }
                 })
                 .catch(function () {});
         }, 10000);
     })();
     </script>
+    {% include '_kiosk_welkom.html' %}
 </body>
 </html>

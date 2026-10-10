@@ -1,5 +1,7 @@
 """Scherminstellingen voor de Club van 20-dia's en de publieke pagina."""
 
+import time
+
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
 
 import qr
@@ -19,6 +21,7 @@ from club_van_20 import (
     team_stand,
     zichtbare_leden,
 )
+from club_van_20.scherm import WELKOM_DUUR_MAX, WELKOM_DUUR_MIN
 from database import get_db
 from helpers import KIOSK_AFBEELDINGEN_MAP, is_ajax_verzoek, sla_afbeelding_op
 from routes.club_van_20.gedeeld import (
@@ -69,6 +72,7 @@ def register_routes(app):
                        club_van_20_aankondiging_na_tekst = ?, club_van_20_aankondiging_op_dia = ?,
                        club_van_20_seizoenen_per_ster = ?, club_van_20_glans_vanaf_sterren = ?,
                        club_van_20_aanmelden_aan = ?, club_van_20_publiek_namen = ?, club_van_20_bordje_max_tekens = ?,
+                       club_van_20_toon_welkom = ?, club_van_20_welkom_duur = ?,
                        club_van_20_voorbeeldcode = ?,
                        club_van_20_onbetaald_tot = ?, club_van_20_onbetaald_seizoenen = ?
                    WHERE id = 1""",
@@ -103,6 +107,8 @@ def register_routes(app):
                     1 if request.form.get("club_van_20_aanmelden_aan") else 0,
                     1 if request.form.get("club_van_20_publiek_namen") else 0,
                     max(5, min(60, _getal("club_van_20_bordje_max_tekens", STANDAARD_MAX_TEKENS))),
+                    1 if request.form.get("club_van_20_toon_welkom") else 0,
+                    max(WELKOM_DUUR_MIN, min(WELKOM_DUUR_MAX, _getal("club_van_20_welkom_duur", 12))),
                     voorbeeldcode_nieuw,
                     _datum(request.form.get("club_van_20_onbetaald_tot")),
                     max(0, min(20, _getal("club_van_20_onbetaald_seizoenen", 3))),
@@ -129,6 +135,23 @@ def register_routes(app):
             aanmelden=aanmelden_status(instellingen),
             voorbeeld_min_tekens=VOORBEELD_MIN_TEKENS,
         )
+
+    @app.route("/club-van-20/melding-testen", methods=["POST"])
+    def club_van_20_melding_testen():
+        """Een testmelding (zonder echt lid) op alle schermen, om te zien hoe het eruitziet."""
+        db = get_db()
+        verlengd = request.form.get("soort") == "verlengd"
+        db.execute(
+            """INSERT INTO club_van_20_meldingen (lid_id, naam, soort, seizoen, seizoenen, aangemaakt_op)
+               VALUES (NULL, ?, ?, ?, ?, ?)""",
+            ("Testmelding", "verlengd" if verlengd else "nieuw", huidig_seizoen(), 7 if verlengd else 1, int(time.time())),
+        )
+        db.commit()
+        melding = "Testmelding verstuurd: binnen een paar seconden op alle schermen."
+        if is_ajax_verzoek():
+            return jsonify({"ok": True, "melding": melding})
+        flash(melding, "success")
+        return redirect(url_for("club_van_20_instellingen"))
 
     # ---------- Publieke pagina (QR-code op de wervingsdia) ----------
 

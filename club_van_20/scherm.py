@@ -1,6 +1,7 @@
 """Wie er op het kantine scherm staat, de aankondiging met aftelklok en het bouwen van de dia's."""
 
 import re
+import time
 from datetime import date, datetime, timedelta
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -126,6 +127,19 @@ ONBETAALD_RIJEN_RUIM = 3  # tot 12 namen (3 rijen) is er plek voor de grote kop 
 _ONBETAALD_MAAT = {4: (42, 118, 0.7), 5: (37, 94, 0.66), 6: (32, 78, 0.62)}
 
 
+# "Welkom nieuwe leden": hoe meer namen, hoe kleiner. Per grens (aantal namen t/m): (letter, kop, onderregel) in --u.
+# 1 nieuw lid vult bijna het hele scherm; bij 12 (het maximum) past het nog net, ook met lange namen op 2 regels.
+_NIEUW_MAAT = [(1, (170, 130, 60)), (2, (130, 120, 56)), (4, (90, 104, 52)), (6, (80, 92, 50)), (9, (60, 78, 46)), (12, (56, 72, 44))]
+
+
+def nieuw_maat(aantal):
+    """De lettergroottes van de dia "Welkom nieuwe leden" voor zoveel namen."""
+    for grens, (letter, kop, onder) in _NIEUW_MAAT:
+        if aantal <= grens:
+            break
+    return {"letter": letter, "kop": kop, "onder": onder}
+
+
 KLEINE_TEKSTEN_MAX = 3
 KLEINE_TEKST_TEKENS = 140
 
@@ -191,6 +205,46 @@ def nieuwe_leden(leden, seizoen, dagen=30):
         if datum and datum >= grens:
             namen.append(lid["naam"])
     return namen
+
+
+# ---------- Melding bij een nieuw lid of verlenging ----------
+
+WELKOM_MAX_LEEFTIJD = 30 * 60  # een melding die langer dan 30 minuten oud is, komt niet meer in beeld
+WELKOM_MAX_WACHTRIJ = 10  # bij een stortvloed (bijv. 30 leden tegelijk op 'betaald') alleen de 10 nieuwste
+WELKOM_DUUR_MIN, WELKOM_DUUR_MAX = 5, 60
+
+
+def welkom_wachtrij(db, instellingen, na=None, nu=None):
+    """Wat een scherm nog moet tonen: {'laatste': hoogste id, 'duur': seconden per melding, 'meldingen': [...]}.
+    'na' is het id waarmee dit scherm het laatst een melding heeft getoond; elk scherm houdt dat zelf bij, dus
+    elk scherm krijgt elke melding, oudste eerst (= de wachtrij). Zonder 'na' (een scherm dat voor het eerst
+    kijkt) of als de meldingen uit staan komt er niets, alleen 'laatste' om bij te houden."""
+    nu = int(time.time()) if nu is None else nu
+    laatste = db.execute("SELECT COALESCE(MAX(id), 0) FROM club_van_20_meldingen").fetchone()[0]
+    duur = max(WELKOM_DUUR_MIN, min(WELKOM_DUUR_MAX, instellingen["club_van_20_welkom_duur"] or 12))
+    antwoord = {"laatste": laatste, "duur": duur, "meldingen": []}
+    if na is None or na >= laatste or not instellingen["club_van_20_toon_welkom"]:
+        return antwoord
+    rijen = db.execute(
+        """SELECT * FROM club_van_20_meldingen WHERE id > ? AND aangemaakt_op >= ?
+           ORDER BY id DESC LIMIT ?""",
+        (na, nu - WELKOM_MAX_LEEFTIJD, WELKOM_MAX_WACHTRIJ),
+    ).fetchall()
+    per_ster = instellingen["club_van_20_seizoenen_per_ster"]
+    glans_vanaf = max(1, instellingen["club_van_20_glans_vanaf_sterren"] or STANDAARD_GLANS_VANAF_STERREN)
+    for rij in reversed(rijen):
+        sterren = sterren_voor(rij["seizoenen"], per_ster)
+        antwoord["meldingen"].append(
+            {
+                "id": rij["id"],
+                "soort": rij["soort"],
+                "naam": rij["naam"],
+                "seizoenen": rij["seizoenen"],
+                "sterren": sterren,
+                "glans": sterren >= glans_vanaf,
+            }
+        )
+    return antwoord
 
 
 # ---------- Aankondiging op de publieke pagina ----------
@@ -440,7 +494,13 @@ def bouw_slides(db, instellingen, qr_svg=None):
         nieuw = nieuwe_leden(leden, seizoen)
         if nieuw:
             slides.append(
-                {"type": "club_van_20_nieuw", "duur": duur, "achtergrond": achtergrond, "namen": nieuw[:12]}
+                {
+                    "type": "club_van_20_nieuw",
+                    "duur": duur,
+                    "achtergrond": achtergrond,
+                    "namen": nieuw[:12],
+                    "maat": nieuw_maat(len(nieuw[:12])),
+                }
             )
 
     if instellingen["club_van_20_toon_onbetaald"]:

@@ -538,6 +538,8 @@
                         );
                         setTimeout(function () { window.location.reload(); }, 8000);
                     } else {
+                        // Een melding voor een nieuw/verlengd lid (_kiosk_welkom.html) eerst laten uitspelen.
+                        if (window.kioskWelkomBezig && window.kioskWelkomBezig()) return;
                         window.location.reload();
                     }
                 })
@@ -545,5 +547,6 @@
         }, 10000);
     })();
     </script>
+    {% include '_kiosk_welkom.html' %}
 </body>
 </html>

@@ -496,5 +496,6 @@ def voer_import_uit(db, rijen, gebruiker=None, standaard_bedrag=20):
                 # anders lijkt iedereen ineens een nieuw lid.
                 betaald_op=f"{seizoen[:4]}-{SEIZOEN_STARTMAAND:02d}-01",
                 nul_toegestaan=bool(b.get("nul_betaald")),
+                melding=False,  # oude gegevens inlezen is geen nieuw lid op het scherm
             )
     return nieuw, bijgewerkt

@@ -266,6 +266,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             "css_versie": int((BASE_DIR / "static" / "style.css").stat().st_mtime),
             "gedeeld_js_versie": int((BASE_DIR / "static" / "gedeeld.js").stat().st_mtime),
             "kiosk_stijl_versie": int((BASE_DIR / "static" / "kiosk_scherm_stijl.css").stat().st_mtime),
+            "kiosk_welkom_stijl_versie": int((BASE_DIR / "static" / "kiosk_welkom_stijl.css").stat().st_mtime),
             "site_banner_tekst": banner_tekst,
             "csrf_token": csrf_token,
             "pda_modus": pda_modus,

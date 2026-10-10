@@ -4,6 +4,7 @@ import json
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
 
+from club_van_20 import welkom_wachtrij
 from database import get_db
 from helpers import (
     MOTM_RESULTATEN,
@@ -402,6 +403,15 @@ def register_routes(app):
             versie=_versie(slides),
             versie_url=url_for("kiosk_scherm_versie"),
         )
+
+    @app.route("/kiosk/welkom")
+    def kiosk_welkom():
+        """Meldingen voor nieuwe en verlengde leden van de Club van 20, voor elk scherm (zie
+        templates/_kiosk_welkom.html): ?na=<id van de laatst getoonde melding>."""
+        db = get_db()
+        antwoord = jsonify(welkom_wachtrij(db, _scherm_instellingen(db), request.args.get("na", type=int)))
+        antwoord.headers["Cache-Control"] = "no-store"
+        return antwoord
 
     @app.route("/kiosk/scherm/versie")
     def kiosk_scherm_versie():

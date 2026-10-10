@@ -1,0 +1,48 @@
+/* De melding bij een nieuw of verlengd lid van de Club van 20, bovenop elk kantinescherm
+   (templates/_kiosk_welkom.html). Rekent in --u (1 pixel van een 1920x1080-scherm), net als de dia's, en
+   brengt zijn eigen lettertype en kleuren mee: het prijzenscherm laadt kiosk_scherm_stijl.css niet altijd. */
+:root { --u: min(100vw / 1920, 100vh / 1080); }
+.welkom-melding {
+    position: fixed; inset: 0; z-index: 1000; pointer-events: none; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(28 * var(--u));
+    padding: calc(40 * var(--u)) calc(70 * var(--u)); text-align: center;
+    font-family: "Oswald", "Bebas Neue", "Roboto Condensed", "sans-serif-condensed", "Arial Narrow", sans-serif; font-weight: 700;
+    color: #fff;
+    background: radial-gradient(ellipse 85% 75% at 50% 30%, #3556c4 0%, #1e3a8a 42%, #0a1535 100%);
+    opacity: 0; visibility: hidden; transition: opacity 0.7s ease, visibility 0s linear 0.7s;
+}
+.welkom-melding.zichtbaar { opacity: 1; visibility: visible; transition: opacity 0.6s ease; }
+.welkom-boven {
+    font-size: calc(34 * var(--u)); letter-spacing: 0.4em; text-transform: uppercase; color: #fcd42f;
+}
+.welkom-kop {
+    margin: 0; font-size: calc(116 * var(--u)); line-height: 1.02; text-transform: uppercase; color: #fff;
+    text-shadow: 0 0 calc(20 * var(--u)) rgba(252, 212, 47, 0.75), 0 0 calc(70 * var(--u)) rgba(252, 212, 47, 0.4);
+}
+.welkom-bordje {
+    max-width: calc(1700 * var(--u)); padding: calc(26 * var(--u)) calc(90 * var(--u)); border-radius: calc(16 * var(--u));
+    font-size: calc(124 * var(--u)); line-height: 1.12; color: #1a2f6e;
+    background: #fcd42f; border: calc(8 * var(--u)) solid #fff3b0;
+    box-shadow: 0 0 calc(40 * var(--u)) rgba(252, 212, 47, 0.7);
+    animation: welkom-spring 1s cubic-bezier(0.22, 1, 0.36, 1) both, welkom-gloed 2.2s 1s ease-in-out infinite alternate;
+}
+.welkom-bordje--glans { background: linear-gradient(135deg, #f3c623 0%, #ffe9a0 22%, #f0b90b 48%, #ffe58a 74%, #e3a600 100%); }
+.welkom-bordje--lang { font-size: calc(78 * var(--u)); }
+.welkom-sterren { font-size: calc(96 * var(--u)); line-height: 1; color: #fcd42f; text-shadow: 0 0 calc(24 * var(--u)) rgba(252, 212, 47, 0.8); letter-spacing: 0.08em; }
+.welkom-sub { font-size: calc(54 * var(--u)); color: #dfe6fb; }
+.welkom-rest { position: absolute; left: 0; right: 0; bottom: calc(34 * var(--u)); font-size: calc(30 * var(--u)); letter-spacing: 0.08em; color: #b9c2e0; }
+.welkom-confetti {
+    position: absolute; top: 0; width: calc(16 * var(--u)); height: calc(28 * var(--u)); opacity: 0.9;
+    animation: welkom-val 6s linear infinite;
+}
+.welkom-melding.zichtbaar .welkom-kop { animation: welkom-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes welkom-in { from { transform: translateY(calc(-40 * var(--u))) scale(0.92); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes welkom-spring { 0% { transform: scale(0.3); opacity: 0; } 55% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes welkom-gloed {
+    from { box-shadow: 0 0 calc(24 * var(--u)) rgba(252, 212, 47, 0.45); }
+    to { box-shadow: 0 0 calc(64 * var(--u)) rgba(252, 212, 47, 0.95); }
+}
+@keyframes welkom-val {
+    from { transform: translateY(-12vh) rotate(0deg); }
+    to { transform: translateY(112vh) rotate(720deg); }
+}

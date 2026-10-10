@@ -256,6 +256,9 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "sponsors_kop", "TEXT NOT NULL DEFAULT 'Mede mogelijk gemaakt door'"),
     ("kiosk_scherm_instellingen", "sponsors_kop_meervoud", "TEXT NOT NULL DEFAULT ''"),
     ("kiosk_scherm_instellingen", "club_van_20_aanmelden_aan", "INTEGER NOT NULL DEFAULT 1"),
+    # Melding op alle schermen bij een nieuw lid of verlenging, en hoe lang elke melding in beeld blijft (seconden).
+    ("kiosk_scherm_instellingen", "club_van_20_toon_welkom", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "club_van_20_welkom_duur", "INTEGER NOT NULL DEFAULT 12"),
     # Naambordjes (de ledenlijst) op de publieke pagina; uit = alleen aantallen, doel en teamstand.
     ("kiosk_scherm_instellingen", "club_van_20_publiek_namen", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "club_van_20_voorbeeldcode", "TEXT"),

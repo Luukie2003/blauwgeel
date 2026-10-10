@@ -194,6 +194,25 @@
     </fieldset>
 
     <fieldset class="groupbox">
+        <legend>Melding bij een nieuw lid of verlenging</legend>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.6rem">
+            <input type="checkbox" name="club_van_20_toon_welkom" style="width:auto" {{ 'checked' if instellingen.club_van_20_toon_welkom }}>
+            Zodra een lid betaalt, even groot in beeld op alle schermen
+        </label>
+        <div class="veld" style="max-width:16rem">
+            <label for="club_van_20_welkom_duur">Seconden per melding</label>
+            <input type="number" id="club_van_20_welkom_duur" name="club_van_20_welkom_duur" min="5" max="60"
+                   value="{{ instellingen.club_van_20_welkom_duur }}">
+        </div>
+        <p class="tekst-zacht" style="margin:0">
+            Een nieuw lid krijgt "Welkom in de Club van 20!", een verlenging "Bedankt voor je verlenging!" (met de sterren).
+            Komen er meer tegelijk, dan staan ze in een wachtrij en komen ze achter elkaar (maximaal 10). Het gaat om
+            de prijzenschermen, de diashow en de gedeelde tv; een scherm dat uit staat, mist de melding.
+            Rechts onder het voorbeeld kun je een testmelding sturen.
+        </p>
+    </fieldset>
+
+    <fieldset class="groupbox">
         <legend>Leden op de publieke pagina</legend>
         <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.4rem">
             <input type="checkbox" name="club_van_20_publiek_namen" style="width:auto" {{ 'checked' if instellingen.club_van_20_publiek_namen }}>
@@ -248,6 +267,14 @@
         <iframe id="c20-preview" src="{{ url_for('kiosk_scherm') }}" title="Voorbeeld kantine scherm"></iframe>
     </div>
     <p class="tekst-zacht">Toont de hele diashow; de Club van 20-dia's komen vanzelf voorbij.</p>
+
+    <form method="post" action="{{ url_for('club_van_20_melding_testen') }}" class="kaart">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <strong>Testmelding</strong>
+        <p class="tekst-zacht" style="margin:0.3rem 0 0.6rem">Laat zien hoe een nieuw lid of verlenging eruitziet, op dit voorbeeld en op alle schermen (zonder dat er een lid wordt aangemaakt).</p>
+        <button type="submit" name="soort" value="nieuw" class="btn btn-rand btn-klein">Test: nieuw lid</button>
+        <button type="submit" name="soort" value="verlengd" class="btn btn-rand btn-klein">Test: verlenging</button>
+    </form>
 
     <div class="kaart" style="display:flex; gap:1rem; align-items:center">
         <div class="c20-qr-klein">{{ publiek_qr_svg|safe }}</div>

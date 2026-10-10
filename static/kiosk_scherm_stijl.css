@@ -322,7 +322,7 @@
     gap: calc(28 * var(--u));
 }
 .slide-club_van_20_teams .c20-kop, .slide-club_van_20_nieuw .c20-kop { margin-bottom: calc(22 * var(--u)); }
-.slide-club_van_20_teams .c20-kop h2, .slide-club_van_20_nieuw .c20-kop h2 { font-size: calc(64 * var(--u)); }
+.slide-club_van_20_teams .c20-kop h2 { font-size: calc(64 * var(--u)); }
 .slide-club_van_20_teams .c20-seizoen { font-size: calc(22 * var(--u)); }
 /* Rijhoogte uit het aantal teams (--n), net als bij de standen: 4 teams = ruime
    balken, 8 teams = alles compacter, altijd op 1 dia. 700 = beschikbare hoogte. */
@@ -345,13 +345,17 @@
 .slide.c20.actief .c20-team-vulling { animation: balk-vullen 1.4s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .c20-teams-onder { margin: calc(24 * var(--u)) 0 calc(16 * var(--u)); font-family: var(--c20-font); font-size: calc(42 * var(--u)); color: var(--geel); }
 
-/* Welkom nieuwe leden */
+/* Welkom nieuwe leden: hoe weinig namen, hoe groter alles (--nieuw-*, zie nieuw_maat in club_van_20/scherm.py). */
+.c20-nieuw { display: flex; flex-direction: column; align-items: center; width: 100%; gap: calc(28 * var(--u)); }
+.slide-club_van_20_nieuw .c20-kop { margin-bottom: 0; }
+.slide-club_van_20_nieuw .c20-kop h2 { font-size: calc(var(--nieuw-kop, 64) * var(--u)); }
 .c20-nieuw-namen {
     flex: 0 0 auto; align-content: center; display: flex; flex-wrap: wrap; justify-content: center;
-    gap: calc(22 * var(--u)); max-width: calc(1280 * var(--u)); margin-top: calc(24 * var(--u));
-    font-size: calc(51 * var(--u));
+    gap: calc(22 * var(--u)); max-width: calc(1700 * var(--u)); margin-top: calc(10 * var(--u));
+    font-size: calc(var(--nieuw-letter, 51) * var(--u));
 }
 .c20-nieuw-namen .c20-bordje { padding: 0.35em 1em; }
+.c20-nieuw .c20-teams-onder { font-size: calc(var(--nieuw-onder, 42) * var(--u)); margin: 0; }
 
 /* Werving + QR-code naar de publieke Club van 20-pagina */
 .c20-werving { flex: 0 0 auto; width: 100%; display: flex; align-items: center; justify-content: center; gap: calc(100 * var(--u)); text-align: left; }

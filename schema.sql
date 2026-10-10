@@ -475,6 +475,21 @@ CREATE TABLE IF NOT EXISTS club_van_20_bijdragen (
 );
 CREATE INDEX IF NOT EXISTS idx_club_van_20_bijdragen_seizoen ON club_van_20_bijdragen(seizoen);
 
+-- Meldingen voor de schermen: een nieuw lid of een verlenging komt even groot in beeld (zie
+-- registreer_melding in club_van_20/administratie.py en welkom_wachtrij in club_van_20/scherm.py).
+-- Elk scherm onthoudt zelf tot welk id het meldingen heeft getoond, dus elk scherm krijgt ze allemaal.
+-- lid_id is leeg bij een testmelding. aangemaakt_op is UNIX-tijd (seconden), voor de leeftijd van een melding.
+CREATE TABLE IF NOT EXISTS club_van_20_meldingen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lid_id INTEGER REFERENCES club_van_20_leden(id) ON DELETE CASCADE,
+    naam TEXT NOT NULL,
+    soort TEXT NOT NULL CHECK (soort IN ('nieuw', 'verlengd')),
+    seizoen TEXT NOT NULL,
+    seizoenen INTEGER NOT NULL DEFAULT 1,
+    aangemaakt_op INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_club_van_20_meldingen_tijd ON club_van_20_meldingen(aangemaakt_op);
+
 -- Aanmeldingen via de publieke pagina (/club-van-20/aanmelden): een concept
 -- dat pas een lid + betaling wordt als een beheerder de betaling heeft
 -- gecontroleerd en goedkeurt (zie aanmeldingen.py). naam = wie de aanmelder
