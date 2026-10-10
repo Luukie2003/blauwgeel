@@ -256,6 +256,8 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "sponsors_kop", "TEXT NOT NULL DEFAULT 'Mede mogelijk gemaakt door'"),
     ("kiosk_scherm_instellingen", "sponsors_kop_meervoud", "TEXT NOT NULL DEFAULT ''"),
     ("kiosk_scherm_instellingen", "club_van_20_aanmelden_aan", "INTEGER NOT NULL DEFAULT 1"),
+    # Naambordjes (de ledenlijst) op de publieke pagina; uit = alleen aantallen, doel en teamstand.
+    ("kiosk_scherm_instellingen", "club_van_20_publiek_namen", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "club_van_20_voorbeeldcode", "TEXT"),
     ("club_van_20_aanmeldingen", "verlengt_lid_id", "INTEGER REFERENCES club_van_20_leden(id) ON DELETE SET NULL"),
     ("kiosk_scherm_instellingen", "club_van_20_bordje_max_tekens", "INTEGER NOT NULL DEFAULT 24"),
@@ -279,7 +281,15 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "club_van_20_toon_werving", "INTEGER NOT NULL DEFAULT 1"),
     # "Leden? Steun de club!": dia met de leden die dit seizoen nog niet betaald hebben maar eerder wel.
     ("kiosk_scherm_instellingen", "club_van_20_toon_onbetaald", "INTEGER NOT NULL DEFAULT 1"),
-    ("kiosk_scherm_instellingen", "club_van_20_onbetaald_per_slide", "INTEGER NOT NULL DEFAULT 12"),
+    ("kiosk_scherm_instellingen", "club_van_20_onbetaald_per_slide", "INTEGER NOT NULL DEFAULT 24"),
+    # Kleine teksten onder de "Steun de club!"-dia, elke regel een eigen tekst (max. 3); leeg = geen tekst.
+    (
+        "kiosk_scherm_instellingen",
+        "club_van_20_onbetaald_tekst",
+        "TEXT NOT NULL DEFAULT 'Wel drinken bestellen maar niet die 20 euro betalen?\n"
+        "Elke week de kantine tot de laatste cent leeg kopen, maar de club van 20 is te veel?\n"
+        "Scan de QR of regel de betaling bij de bar'",
+    ),
     (
         "kiosk_scherm_instellingen",
         "club_van_20_werving_tekst",

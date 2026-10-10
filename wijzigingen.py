@@ -6,8 +6,16 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.35.0"
+HUIDIGE_VERSIE = "1.36.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.36.0",
+        "datum": "10 oktober 2026",
+        "punten": [
+            "Kantine-tv, dia 'Leden? Steun de club!': nu standaard 24 namen per dia (bij veel namen worden kop en onderkant compacter, zodat alle namen leesbaar blijven) en kleine teksten onder de dia: 'Wel drinken bestellen maar niet die 20 euro betalen?', 'Elke week de kantine tot de laatste cent leeg kopen, maar de club van 20 is te veel?' en 'Scan de QR of regel de betaling bij de bar'. Bij Club van 20 → Scherm & werving kun je het aantal namen en die teksten aanpassen (elke regel een eigen tekst, max. 3) of ze leeg laten.",
+            "Club van 20: de naambordjes van de leden kunnen nu uit op de openbare pagina (Scherm & werving → 'Leden op de publieke pagina'). Bezoekers zien dan alleen aantallen, spaardoel, projecten en teamstand; op het scherm in de kantine blijven de namen staan.",
+        ],
+    },
     {
         "versie": "1.35.0",
         "datum": "10 oktober 2026",

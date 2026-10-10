@@ -129,6 +129,11 @@
             <input type="number" name="club_van_20_onbetaald_per_slide" min="4" max="24" value="{{ instellingen.club_van_20_onbetaald_per_slide }}"
                    style="width:4.5rem" aria-label="Namen per dia"> per dia
         </label>
+        <div class="veld" style="margin:0 0 0.5rem 1.6rem">
+            <label for="club_van_20_onbetaald_tekst" style="font-weight:400">Kleine teksten onder die dia: elke regel een eigen tekst, maximaal 3 (leeg = geen tekst)</label>
+            <textarea id="club_van_20_onbetaald_tekst" name="club_van_20_onbetaald_tekst" rows="3" maxlength="500"
+                      style="width:100%; max-width:42rem">{{ instellingen.club_van_20_onbetaald_tekst }}</textarea>
+        </div>
         <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.5rem">
             <input type="checkbox" name="club_van_20_toon_werving" style="width:auto" {{ 'checked' if instellingen.club_van_20_toon_werving }}>
             "Ook bij de Club van 20?" met QR-code naar de publieke pagina
@@ -186,6 +191,19 @@
                    value="{{ instellingen.club_van_20_voorbeeldcode or '' }}" placeholder="minstens {{ voorbeeld_min_tekens }} tekens, leeg = uit">
             <span class="tekst-zacht">Onderaan de openbare pagina staat een bijna onzichtbaar puntje. Wie daarop klikt en deze code invoert, ziet het aanmeldformulier al vóór het openingsmoment. Een aanmelding die je dan verstuurt komt gewoon in de lijst bij Aanmeldingen, zodat je alles kunt uitproberen. Verander je de code, dan vervalt het voorbeeld voor iedereen die het nu open heeft.</span>
         </div>
+    </fieldset>
+
+    <fieldset class="groupbox">
+        <legend>Leden op de publieke pagina</legend>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; margin-bottom:0.4rem">
+            <input type="checkbox" name="club_van_20_publiek_namen" style="width:auto" {{ 'checked' if instellingen.club_van_20_publiek_namen }}>
+            De naambordjes van de leden tonen op de publieke pagina
+        </label>
+        <p class="tekst-zacht" style="margin:0">
+            Uit: bezoekers zien alleen het aantal bordjes, het bedrag, het spaardoel, de projecten en de teamstand, en geen enkele naam.
+            Op het scherm in de kantine blijven de namen gewoon staan. Is aanmelden via de website aan, dan zien bezoekers die zich
+            willen verlengen wel de namen uit de lijst waaruit ze hun eigen bordje kiezen; zet dat uit als ook dat niet de bedoeling is.
+        </p>
     </fieldset>
 
     <fieldset class="groupbox">

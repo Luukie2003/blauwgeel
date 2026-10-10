@@ -506,6 +506,38 @@ def test_publieke_pagina_zonder_login(client, db):
     assert b"Ook bij de Club van 20?" in resp.data
 
 
+def test_namen_op_de_publieke_pagina_kunnen_uit_maar_het_scherm_houdt_ze(client, db):
+    _alleen_club_van_20(db)
+    _bijdrage(db, _lid(db, "Publiek Lid", team="ZA2"), HUIDIG)
+    _bijdrage(db, _lid(db, "Tweede Lid", team="ZA3"), HUIDIG)
+    assert db.execute("SELECT club_van_20_publiek_namen FROM kiosk_scherm_instellingen").fetchone()[0] == 1  # standaard aan
+    aan = client.get("/club-van-20/doe-mee").data.decode()
+    assert "Publiek Lid" in aan and "Tweede Lid" in aan
+
+    _zet(db, club_van_20_publiek_namen=0)
+    uit = client.get("/club-van-20/doe-mee").data.decode()
+
+    assert "Publiek Lid" not in uit and "Tweede Lid" not in uit
+    assert "De Club van 20 &middot; seizoen" not in uit  # ook het kopje van de naamlijst is weg
+    assert "naambordjes dit seizoen" in uit and ">2<" in uit  # het aantal blijft staan: dat is geen naam
+    assert "Welk team steunt het meest?" in uit  # teamstand (alleen aantallen) ook
+    # Op het scherm in de kantine blijven de namen staan.
+    assert "Publiek Lid" in client.get("/kiosk/scherm").data.decode()
+
+
+def test_namen_op_de_publieke_pagina_opslaan_via_de_instellingen(ingelogde_client, db):
+    _alleen_club_van_20(db)
+    pagina = ingelogde_client.get("/club-van-20/instellingen").data.decode()
+    assert 'name="club_van_20_publiek_namen"' in pagina and "Leden op de publieke pagina" in pagina
+
+    def bewaar(**velden):
+        ingelogde_client.post("/club-van-20/instellingen", data={"csrf_token": _csrf(ingelogde_client), **velden})
+        return db.execute("SELECT club_van_20_publiek_namen FROM kiosk_scherm_instellingen").fetchone()[0]
+
+    assert bewaar(club_van_20_titel="Club van 20") == 0  # vinkje niet meegestuurd = uit
+    assert bewaar(club_van_20_titel="Club van 20", club_van_20_publiek_namen="1") == 1
+
+
 def test_aankondiging_telt_af_en_wisselt_na_afloop():
     from datetime import datetime, timezone
 

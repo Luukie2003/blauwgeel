@@ -4,10 +4,19 @@ from conftest import stel_csrf_token_in as _csrf
 from test_club_van_20 import HUIDIG, TWEE_TERUG, VORIG, _alleen_club_van_20, _bijdrage, _lid, _zet
 
 from club_van_20 import bouw_slides, onbetaalde_leden, verschuif_seizoen
+from club_van_20 import kleine_teksten
+from club_van_20.scherm import onbetaald_raster
 
 
 def _instellingen(db):
     return db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
+
+
+STANDAARD_KLEINE_TEKSTEN = [
+    "Wel drinken bestellen maar niet die 20 euro betalen?",
+    "Elke week de kantine tot de laatste cent leeg kopen, maar de club van 20 is te veel?",
+    "Scan de QR of regel de betaling bij de bar",
+]
 
 
 def _steun(db, qr_svg=None):
@@ -51,7 +60,7 @@ def test_twaalf_per_dia_en_gelijk_verdeeld(db):
     _bijdrage(db, _lid(db, "Betaalt Nu"), HUIDIG)
     for i in range(13):
         _bijdrage(db, _lid(db, f"Lid {i:02d}"), VORIG)
-    _zet(db, club_van_20_zichtbaar_seizoenen=2)
+    _zet(db, club_van_20_zichtbaar_seizoenen=2, club_van_20_onbetaald_per_slide=12)
 
     dias = _steun(db)
 
@@ -69,8 +78,59 @@ def test_precies_twaalf_is_een_dia(db):
     _alleen_club_van_20(db)
     for i in range(12):
         _bijdrage(db, _lid(db, f"Lid {i:02d}"), VORIG)
-    _zet(db, club_van_20_zichtbaar_seizoenen=2)
+    _zet(db, club_van_20_zichtbaar_seizoenen=2, club_van_20_onbetaald_per_slide=12)
     assert [len(d["namen"]) for d in _steun(db)] == [12]
+
+
+def test_standaard_gaan_er_vierentwintig_op_een_dia_en_51_leden_worden_3_dias(db):
+    _alleen_club_van_20(db)
+    for i in range(51):
+        _bijdrage(db, _lid(db, f"Lid {i:02d}"), VORIG)
+    _zet(db, club_van_20_zichtbaar_seizoenen=2)
+
+    dias = _steun(db)
+
+    assert [len(d["namen"]) for d in dias] == [17, 17, 17]  # gelijk verdeeld, niet 24 + 24 + 3
+    _bijdrage(db, _lid(db, "Een erbij"), VORIG)
+    assert [len(d["namen"]) for d in _steun(db)] == [18, 18, 16]  # 52 leden: nog steeds 3 dia's
+
+
+def test_een_dia_met_veel_namen_wordt_compacter_maar_houdt_vier_kolommen():
+    ruim = onbetaald_raster(12)
+    assert ruim["kolommen"] == 4 and ruim["rij"] is None and ruim["schaal"] == 1  # zoals altijd: grote kop en letter
+    for aantal in range(1, 13):
+        assert onbetaald_raster(aantal) == ruim
+
+    vorige_letter = ruim["letter"]
+    for aantal in range(13, 25):
+        raster = onbetaald_raster(aantal)
+        # Smaller dan 4 kolommen: namen als "Aaltje Hofstra" worden afgekapt.
+        assert raster["kolommen"] == 4 and raster["schaal"] < 1
+        assert raster["letter"] <= vorige_letter  # meer rijen: nooit grotere letters
+        vorige_letter = raster["letter"]
+        # De rijen (met vaste hoogte) moeten onder de kop en boven de QR-code/kleine teksten passen: ruim 540 --u.
+        rijen = -(-aantal // 4)
+        assert rijen * raster["rij"] + (rijen - 1) * 20 * raster["schaal"] <= 540
+
+
+def test_de_kleine_tekst_onder_de_dia(db):
+    _alleen_club_van_20(db)
+    _bijdrage(db, _lid(db, "Vorig Seizoen"), VORIG)
+    _zet(db, club_van_20_zichtbaar_seizoenen=2)
+
+    assert _steun(db)[0]["kleintjes"] == STANDAARD_KLEINE_TEKSTEN
+
+    _zet(db, club_van_20_onbetaald_tekst="  Even afrekenen?  ")
+    assert _steun(db)[0]["kleintjes"] == ["Even afrekenen?"]
+    _zet(db, club_van_20_onbetaald_tekst="")
+    assert _steun(db)[0]["kleintjes"] == []
+
+
+def test_kleine_teksten_zijn_regels_met_een_maximum():
+    assert kleine_teksten(None) == [] and kleine_teksten("") == [] and kleine_teksten("  \n \n") == []
+    assert kleine_teksten(" een \n\n twee\r\ndrie ") == ["een", "twee", "drie"]  # lege regels vallen weg, ook \r\n
+    assert kleine_teksten("1\n2\n3\n4\n5") == ["1", "2", "3"]  # meer past er niet onder de namen
+    assert kleine_teksten("x" * 500) == ["x" * 140]
 
 
 def test_zonder_ontbrekende_leden_geen_dia(db):
@@ -126,6 +186,8 @@ def test_het_scherm_toont_de_dramatische_dia_met_alle_namen(client, db):
     assert "Vorig Seizoen" in deel and "Een Heel Lange Naam Van Iemand" in deel
     assert "c20-bordje--lang" in deel  # lange namen krijgen hun eigen opmaak
     assert "Scan &amp; doe weer mee" in deel  # QR-code naar de publieke pagina
+    for regel in STANDAARD_KLEINE_TEKSTEN:  # de kleine teksten eronder, elk op een eigen regel
+        assert f"<p>{regel}</p>" in deel
 
 
 def test_een_enkel_lid_krijgt_een_correcte_zin(client, db):
@@ -156,6 +218,25 @@ def test_instelling_opslaan_en_tonen(ingelogde_client, db):
     assert rij["club_van_20_toon_onbetaald"] == 1 and rij["club_van_20_onbetaald_per_slide"] == 24  # begrensd
 
 
-def test_standaard_staat_de_dia_aan_met_twaalf_per_dia(db):
+def test_de_kleine_tekst_opslaan_leeg_laten_en_begrenzen(ingelogde_client, db):
+    _alleen_club_van_20(db)
+
+    def bewaar(tekst):
+        ingelogde_client.post(
+            "/club-van-20/instellingen",
+            data={"csrf_token": _csrf(ingelogde_client), "club_van_20_onbetaald_tekst": tekst},
+        )
+        return _instellingen(db)["club_van_20_onbetaald_tekst"]
+
+    assert bewaar("  Ook jij?  ") == "Ook jij?"
+    assert bewaar("Eerste\r\n\r\nTweede\nDerde\nVierde") == "Eerste\nTweede\nDerde"  # lege regels weg, max. 3
+    assert bewaar("") == ""  # leeg = geen tekst onder de dia
+    assert bewaar("x" * 500) == "x" * 140
+    pagina = ingelogde_client.get("/club-van-20/instellingen").data.decode()
+    assert 'name="club_van_20_onbetaald_tekst"' in pagina
+
+
+def test_standaard_staat_de_dia_aan_met_vierentwintig_per_dia(db):
     rij = _instellingen(db)
-    assert rij["club_van_20_toon_onbetaald"] == 1 and rij["club_van_20_onbetaald_per_slide"] == 12
+    assert rij["club_van_20_toon_onbetaald"] == 1 and rij["club_van_20_onbetaald_per_slide"] == 24
+    assert rij["club_van_20_onbetaald_tekst"].split("\n") == STANDAARD_KLEINE_TEKSTEN

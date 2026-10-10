@@ -118,6 +118,32 @@ def zichtbare_leden(db, instellingen, seizoen=None, leden=None, zichtbaar_seizoe
 
 
 ONBETAALD_KOLOMMEN = 4
+ONBETAALD_RIJEN_RUIM = 3  # tot 12 namen (3 rijen) is er plek voor de grote kop en de grote letter
+
+# Vanaf 4 rijen past het alleen met een compactere kop/onderkant en rijen met een vaste hoogte (anders groeit
+# een rij met een lange, 2-regelige naam de dia uit het scherm). Per aantal rijen: (letter, rijhoogte, schaal van
+# kop en onderkant), de eerste twee in --u. Zo blijft er met 3 regels kleine tekst nog ruim 4% rand boven en onder.
+_ONBETAALD_MAAT = {4: (42, 118, 0.7), 5: (37, 94, 0.66), 6: (32, 78, 0.62)}
+
+
+KLEINE_TEKSTEN_MAX = 3
+KLEINE_TEKST_TEKENS = 140
+
+
+def kleine_teksten(tekst):
+    """De regels van de kleine tekst onder de "Steun de club"-dia: elke niet-lege regel is een eigen tekst
+    (max. 3, zoveel past er onder de namen). Ook gebruikt om de ingevoerde tekst schoon te maken."""
+    regels = [regel.strip()[:KLEINE_TEKST_TEKENS] for regel in (tekst or "").splitlines()]
+    return [regel for regel in regels if regel][:KLEINE_TEKSTEN_MAX]
+
+
+def onbetaald_raster(aantal):
+    """Opmaak van een "Steun de club"-dia met zoveel namen. Altijd 4 kolommen: smaller kapt de namen af."""
+    rijen = -(-aantal // ONBETAALD_KOLOMMEN)
+    if rijen <= ONBETAALD_RIJEN_RUIM:
+        return {"kolommen": ONBETAALD_KOLOMMEN, "letter": 46, "rij": None, "schaal": 1}
+    letter, rij, schaal = _ONBETAALD_MAAT[min(rijen, 6)]
+    return {"kolommen": ONBETAALD_KOLOMMEN, "letter": letter, "rij": rij, "schaal": schaal}
 
 
 def onbetaalde_leden(zichtbaar):
@@ -419,13 +445,14 @@ def bouw_slides(db, instellingen, qr_svg=None):
 
     if instellingen["club_van_20_toon_onbetaald"]:
         ontbrekend = onbetaalde_leden(zichtbaar)
-        per_dia = max(ONBETAALD_KOLOMMEN, min(24, instellingen["club_van_20_onbetaald_per_slide"] or 12))
+        per_dia = max(ONBETAALD_KOLOMMEN, min(24, instellingen["club_van_20_onbetaald_per_slide"] or 24))
         # Vol of bijna vol: de dia's krijgen even veel namen (13 namen = 7 + 6, niet 12 + 1).
         aantal_dias = -(-len(ontbrekend) // per_dia)
         if aantal_dias:
             per_dia_gelijk = -(-len(ontbrekend) // aantal_dias)
             for idx in range(aantal_dias):
                 groep = ontbrekend[idx * per_dia_gelijk : (idx + 1) * per_dia_gelijk]
+                raster = onbetaald_raster(len(groep))
                 slides.append(
                     {
                         "type": "club_van_20_onbetaald",
@@ -434,7 +461,8 @@ def bouw_slides(db, instellingen, qr_svg=None):
                         "namen": [{"naam": lid["naam"], "lang": lid["lang"]} for lid in groep],
                         "totaal": len(ontbrekend),
                         "seizoen": seizoen,
-                        "kolommen": ONBETAALD_KOLOMMEN,
+                        "raster": raster,
+                        "kleintjes": kleine_teksten(instellingen["club_van_20_onbetaald_tekst"]),
                         "bedrag": bedrag,
                         "qr_svg": qr_svg,
                         "pagina": f"{idx + 1}/{aantal_dias}" if aantal_dias > 1 else None,
