@@ -285,6 +285,9 @@ KOLOM_MIGRATIES = [
     # "Leden? Steun de club!": dia met de leden die dit seizoen nog niet betaald hebben maar eerder wel.
     ("kiosk_scherm_instellingen", "club_van_20_toon_onbetaald", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "club_van_20_onbetaald_per_slide", "INTEGER NOT NULL DEFAULT 24"),
+    # Wie op die dia telt als "nog niet betaald": betaald in een van de laatste N seizoenen (0 = ooit), los van wie
+    # er op de naammuur staat. Zo blijft de dia ook als de muur alleen de betaalde leden toont.
+    ("kiosk_scherm_instellingen", "club_van_20_steun_seizoenen", "INTEGER NOT NULL DEFAULT 3"),
     # Kleine teksten onder de "Steun de club!"-dia, elke regel een eigen tekst (max. 3); leeg = geen tekst.
     (
         "kiosk_scherm_instellingen",

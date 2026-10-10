@@ -130,6 +130,16 @@
                    style="width:4.5rem" aria-label="Namen per dia"> per dia
         </label>
         <div class="veld" style="margin:0 0 0.5rem 1.6rem">
+            <label for="club_van_20_steun_seizoenen" style="font-weight:400">Wie staat er op die dia?</label>
+            <select id="club_van_20_steun_seizoenen" name="club_van_20_steun_seizoenen">
+                <option value="2" {{ 'selected' if instellingen.club_van_20_steun_seizoenen == 2 }}>Wie vorig seizoen wel betaald heeft, maar dit seizoen niet</option>
+                <option value="3" {{ 'selected' if instellingen.club_van_20_steun_seizoenen == 3 }}>Wie in de 2 seizoenen daarvoor wel betaald heeft, maar dit seizoen niet</option>
+                <option value="4" {{ 'selected' if instellingen.club_van_20_steun_seizoenen == 4 }}>Wie in de 3 seizoenen daarvoor wel betaald heeft, maar dit seizoen niet</option>
+                <option value="0" {{ 'selected' if instellingen.club_van_20_steun_seizoenen == 0 }}>Iedereen die ooit betaald heeft, maar dit seizoen niet</option>
+            </select>
+            <span class="tekst-zacht">Nu {{ aantal_op_steun_dia }} leden op die dia's. Dit staat los van "Wie staat er op het scherm?" hierboven: de muur mag best alleen de betaalde leden tonen, de onbetaalde staan dan alleen op deze dia's.</span>
+        </div>
+        <div class="veld" style="margin:0 0 0.5rem 1.6rem">
             <label for="club_van_20_onbetaald_tekst" style="font-weight:400">Kleine teksten onder die dia: elke regel een eigen tekst, maximaal 3 (leeg = geen tekst)</label>
             <textarea id="club_van_20_onbetaald_tekst" name="club_van_20_onbetaald_tekst" rows="3" maxlength="500"
                       style="width:100%; max-width:42rem">{{ instellingen.club_van_20_onbetaald_tekst }}</textarea>

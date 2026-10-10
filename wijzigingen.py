@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.37.0"
+HUIDIGE_VERSIE = "1.38.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.38.0",
+        "datum": "10 oktober 2026",
+        "punten": [
+            "Kantine-tv, dia 'Leden? Steun de club!': staat nu los van de naammuur. Eerder verdwenen de onbetaalde leden van die dia zodra je de muur op 'alleen wie dit seizoen betaald heeft' zette; nu kun je de muur alleen de betaalde leden laten tonen en staan de onbetaalde leden alleen op deze dia's. Bij Club van 20 → Scherm & werving kies je onder 'Wie staat er op die dia?' hoe ver terug iemand betaald moet hebben (standaard: de laatste 3 seizoenen).",
+        ],
+    },
     {
         "versie": "1.37.0",
         "datum": "10 oktober 2026",

@@ -39,6 +39,7 @@ def _rood(tekst, naam):
 
 def test_zonder_herinnering_blijft_het_scherm_zoals_ingesteld(client, db):
     _alleen_club_van_20(db)
+    _zet(db, club_van_20_toon_onbetaald=0)  # deze test gaat over de naammuur, niet over de Steun-de-club-dia
     _leden(db)
     _zet(db, club_van_20_zichtbaar_seizoenen=1, club_van_20_markeer_onbetaald=0)
     tekst = _scherm(client)
@@ -48,6 +49,7 @@ def test_zonder_herinnering_blijft_het_scherm_zoals_ingesteld(client, db):
 
 def test_herinnering_toont_onbetaalden_lichtrood_en_betaalden_gewoon(client, db):
     _alleen_club_van_20(db)
+    _zet(db, club_van_20_toon_onbetaald=0)  # deze test gaat over de naammuur, niet over de Steun-de-club-dia
     _leden(db)
     _zet(db, club_van_20_zichtbaar_seizoenen=1, club_van_20_markeer_onbetaald=0,
          club_van_20_onbetaald_tot=_tot(7), club_van_20_onbetaald_seizoenen=3)
@@ -60,6 +62,7 @@ def test_herinnering_toont_onbetaalden_lichtrood_en_betaalden_gewoon(client, db)
 
 def test_herinnering_met_alle_actieve_leden_en_ruimer_dan_de_gewone_instelling(client, db):
     _alleen_club_van_20(db)
+    _zet(db, club_van_20_toon_onbetaald=0)  # deze test gaat over de naammuur, niet over de Steun-de-club-dia
     _leden(db)
     _zet(db, club_van_20_zichtbaar_seizoenen=1, club_van_20_onbetaald_tot=_tot(7),
          club_van_20_onbetaald_seizoenen=0)
@@ -71,6 +74,7 @@ def test_herinnering_met_alle_actieve_leden_en_ruimer_dan_de_gewone_instelling(c
 
 def test_herinnering_loopt_t_m_de_ingestelde_dag(client, db):
     _alleen_club_van_20(db)
+    _zet(db, club_van_20_toon_onbetaald=0)  # deze test gaat over de naammuur, niet over de Steun-de-club-dia
     _leden(db)
     _zet(db, club_van_20_zichtbaar_seizoenen=1, club_van_20_onbetaald_tot=_tot(0))
     assert "Vorig Seizoen" in _scherm(client)  # vandaag is de laatste dag
@@ -94,6 +98,7 @@ def test_onbetaald_actie_en_scherm_bereik(db):
 
 def test_tellers_en_teamstand_en_publieke_pagina_tellen_alleen_betaalden(client, db):
     _alleen_club_van_20(db)
+    _zet(db, club_van_20_toon_onbetaald=0)  # deze test gaat over de naammuur, niet over de Steun-de-club-dia
     _leden(db)
     _zet(db, club_van_20_zichtbaar_seizoenen=1, club_van_20_onbetaald_tot=_tot(7),
          club_van_20_onbetaald_seizoenen=3, club_van_20_toon_teller=1, club_van_20_toon_werving=1)
@@ -109,6 +114,7 @@ def test_tellers_en_teamstand_en_publieke_pagina_tellen_alleen_betaalden(client,
 
 def test_herinnering_opslaan_en_tonen_in_de_instellingen(ingelogde_client, db):
     _alleen_club_van_20(db)
+    _zet(db, club_van_20_toon_onbetaald=0)  # deze test gaat over de naammuur, niet over de Steun-de-club-dia
     _leden(db)
     morgen = _tot(1)
     resp = ingelogde_client.post(
@@ -137,6 +143,7 @@ def test_herinnering_opslaan_en_tonen_in_de_instellingen(ingelogde_client, db):
 
 def test_ledenlijst_markeert_wie_tijdelijk_op_het_scherm_staat(ingelogde_client, db):
     _alleen_club_van_20(db)
+    _zet(db, club_van_20_toon_onbetaald=0)  # deze test gaat over de naammuur, niet over de Steun-de-club-dia
     _leden(db)
     _zet(db, club_van_20_zichtbaar_seizoenen=1)
     lid_id = db.execute("SELECT id FROM club_van_20_leden WHERE naam = 'Vorig Seizoen'").fetchone()["id"]

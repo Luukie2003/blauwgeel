@@ -161,12 +161,28 @@ def onbetaald_raster(aantal):
 
 
 def onbetaalde_leden(zichtbaar):
-    """De leden voor de "Leden? Steun de club!"-dia: wie op het scherm hoort maar dit seizoen nog niet
-    betaald heeft, en eerder wel (een lid dat nog nooit betaald heeft is geen "trouw lid dat ontbreekt").
-    Dat zijn precies de bordjes die tijdens de tijdelijke herinnering lichtrood op de naammuur staan. Op
-    alfabet, zodat niemand zich uitgelicht voelt."""
+    """De leden voor de "Leden? Steun de club!"-dia: wie dit seizoen nog niet betaald heeft, en eerder wel
+    (een lid dat nog nooit betaald heeft is geen "trouw lid dat ontbreekt"). Op alfabet, zodat niemand zich
+    uitgelicht voelt."""
     namen = [lid for lid in zichtbaar if not lid["betaald"] and lid["seizoenen"] >= 1]
     return sorted(namen, key=lambda lid: lid["naam"].lower())
+
+
+def steun_bereik(instellingen, vandaag=None):
+    """Hoeveel seizoenen terug iemand betaald moet hebben om op de "Steun de club"-dia te kunnen staan (0 = ooit).
+    Een eigen instelling, los van wie er op de naammuur staat: de muur mag best alleen de betaalde leden tonen.
+    Tijdens de tijdelijke herinnering geldt het ruimste van die twee."""
+    bereik = instellingen["club_van_20_steun_seizoenen"]
+    actie = onbetaald_actie(instellingen, vandaag)
+    return _ruimste_bereik(bereik, actie["seizoenen"]) if actie else bereik
+
+
+def steun_leden(db, instellingen, seizoen=None, leden=None):
+    """De leden op de "Leden? Steun de club!"-dia, op alfabet (zie onbetaalde_leden en steun_bereik)."""
+    zichtbaar = zichtbare_leden(
+        db, instellingen, seizoen, leden, zichtbaar_seizoenen=steun_bereik(instellingen)
+    )
+    return onbetaalde_leden(zichtbaar)
 
 
 def team_stand(zichtbaar, leden=()):
@@ -504,7 +520,7 @@ def bouw_slides(db, instellingen, qr_svg=None):
             )
 
     if instellingen["club_van_20_toon_onbetaald"]:
-        ontbrekend = onbetaalde_leden(zichtbaar)
+        ontbrekend = steun_leden(db, instellingen, seizoen, leden)
         per_dia = max(ONBETAALD_KOLOMMEN, min(24, instellingen["club_van_20_onbetaald_per_slide"] or 24))
         # Vol of bijna vol: de dia's krijgen even veel namen (13 namen = 7 + 6, niet 12 + 1).
         aantal_dias = -(-len(ontbrekend) // per_dia)

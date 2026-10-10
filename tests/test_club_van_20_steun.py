@@ -48,11 +48,53 @@ def test_alleen_wie_eerder_wel_en_nu_niet_betaald_heeft_staat_erop(db):
     assert dias[0]["totaal"] == 2 and dias[0]["pagina"] is None
 
 
-def test_het_bereik_van_het_scherm_bepaalt_wie_er_nog_meetelt(db):
+def _steun_namen(db):
+    return [n["naam"] for d in _steun(db) for n in d["namen"]]
+
+
+def test_de_eigen_instelling_bepaalt_wie_er_nog_meetelt(db):
     _alleen_club_van_20(db)
     _leden(db)
-    _zet(db, club_van_20_zichtbaar_seizoenen=2)  # dit seizoen en het vorige
-    assert [n["naam"] for d in _steun(db) for n in d["namen"]] == ["Vorig Seizoen"]
+
+    _zet(db, club_van_20_steun_seizoenen=2)  # dit seizoen en het vorige
+    assert _steun_namen(db) == ["Vorig Seizoen"]
+    _zet(db, club_van_20_steun_seizoenen=3)
+    assert _steun_namen(db) == ["Twee Terug", "Vorig Seizoen"]
+    _zet(db, club_van_20_steun_seizoenen=0)  # ooit betaald
+    assert _steun_namen(db) == ["Lang Weg", "Twee Terug", "Vorig Seizoen"]
+
+
+def test_standaard_gaan_de_laatste_drie_seizoenen_mee(db):
+    assert _instellingen(db)["club_van_20_steun_seizoenen"] == 3
+
+
+def test_de_dia_staat_los_van_wie_er_op_de_naammuur_staat(client, db):
+    """Was: de muur op "alleen wie dit seizoen betaald heeft" zetten haalde ook de Steun-de-club-dia weg."""
+    _alleen_club_van_20(db)
+    _leden(db)
+    _zet(db, club_van_20_zichtbaar_seizoenen=1, club_van_20_markeer_onbetaald=0)
+
+    assert _steun_namen(db) == ["Twee Terug", "Vorig Seizoen"]
+    tekst = client.get("/kiosk/scherm").data.decode()
+    muur = tekst.split("slide-club_van_20_onbetaald")[0]
+    steun = tekst.split("slide-club_van_20_onbetaald")[1]
+    assert "Betaalt Nu" in muur and "Vorig Seizoen" not in muur and "Twee Terug" not in muur  # de muur: alleen betaald
+    assert "Vorig Seizoen" in steun and "Twee Terug" in steun  # de onbetaalden: alleen op de dia
+
+
+def test_de_tijdelijke_herinnering_verruimt_ook_de_dia(db):
+    from datetime import timedelta
+
+    from helpers import vandaag_amsterdam
+
+    _alleen_club_van_20(db)
+    _leden(db)
+    _zet(db, club_van_20_steun_seizoenen=2)
+    assert _steun_namen(db) == ["Vorig Seizoen"]
+
+    tot = (vandaag_amsterdam() + timedelta(days=7)).isoformat()
+    _zet(db, club_van_20_onbetaald_tot=tot, club_van_20_onbetaald_seizoenen=0)  # herinnering: iedereen die ooit betaalde
+    assert _steun_namen(db) == ["Lang Weg", "Twee Terug", "Vorig Seizoen"]
 
 
 def test_twaalf_per_dia_en_gelijk_verdeeld(db):
@@ -216,6 +258,24 @@ def test_instelling_opslaan_en_tonen(ingelogde_client, db):
     )
     rij = _instellingen(db)
     assert rij["club_van_20_toon_onbetaald"] == 1 and rij["club_van_20_onbetaald_per_slide"] == 24  # begrensd
+
+
+def test_het_bereik_van_de_dia_opslaan_en_begrenzen(ingelogde_client, db):
+    _alleen_club_van_20(db)
+    pagina = ingelogde_client.get("/club-van-20/instellingen").data.decode()
+    assert 'name="club_van_20_steun_seizoenen"' in pagina and "Wie staat er op die dia?" in pagina
+
+    def bewaar(waarde):
+        ingelogde_client.post(
+            "/club-van-20/instellingen",
+            data={"csrf_token": _csrf(ingelogde_client), "club_van_20_steun_seizoenen": waarde},
+        )
+        return _instellingen(db)["club_van_20_steun_seizoenen"]
+
+    assert bewaar("4") == 4
+    assert bewaar("0") == 0
+    assert bewaar("999") == 20
+    assert bewaar("-5") == 0
 
 
 def test_de_kleine_tekst_opslaan_leeg_laten_en_begrenzen(ingelogde_client, db):

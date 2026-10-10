@@ -18,6 +18,7 @@ from club_van_20 import (
     kleine_teksten,
     leden_met_bijdragen,
     onbetaald_actie,
+    steun_leden,
     team_stand,
     zichtbare_leden,
 )
@@ -72,7 +73,7 @@ def register_routes(app):
                        club_van_20_aankondiging_na_tekst = ?, club_van_20_aankondiging_op_dia = ?,
                        club_van_20_seizoenen_per_ster = ?, club_van_20_glans_vanaf_sterren = ?,
                        club_van_20_aanmelden_aan = ?, club_van_20_publiek_namen = ?, club_van_20_bordje_max_tekens = ?,
-                       club_van_20_toon_welkom = ?, club_van_20_welkom_duur = ?,
+                       club_van_20_toon_welkom = ?, club_van_20_welkom_duur = ?, club_van_20_steun_seizoenen = ?,
                        club_van_20_voorbeeldcode = ?,
                        club_van_20_onbetaald_tot = ?, club_van_20_onbetaald_seizoenen = ?
                    WHERE id = 1""",
@@ -109,6 +110,7 @@ def register_routes(app):
                     max(5, min(60, _getal("club_van_20_bordje_max_tekens", STANDAARD_MAX_TEKENS))),
                     1 if request.form.get("club_van_20_toon_welkom") else 0,
                     max(WELKOM_DUUR_MIN, min(WELKOM_DUUR_MAX, _getal("club_van_20_welkom_duur", 12))),
+                    max(0, min(20, _getal("club_van_20_steun_seizoenen", 3))),
                     voorbeeldcode_nieuw,
                     _datum(request.form.get("club_van_20_onbetaald_tot")),
                     max(0, min(20, _getal("club_van_20_onbetaald_seizoenen", 3))),
@@ -131,6 +133,7 @@ def register_routes(app):
             publiek_qr_svg=qr.qr_svg(publiek_url),
             aantal_op_scherm=len(op_scherm),
             aantal_onbetaald_op_scherm=sum(1 for lid in op_scherm if not lid["betaald"]),
+            aantal_op_steun_dia=len(steun_leden(db, instellingen)),
             onbetaald_actie=onbetaald_actie(instellingen),
             aanmelden=aanmelden_status(instellingen),
             voorbeeld_min_tekens=VOORBEELD_MIN_TEKENS,

@@ -80,6 +80,7 @@ def test_normaliseer_seizoen():
 
 def test_scherm_toont_betalers_en_verbergt_gestopte_leden(client, db):
     _alleen_club_van_20(db)
+    _zet(db, club_van_20_toon_onbetaald=0)  # deze test gaat over de naammuur, niet over de Steun-de-club-dia
     _bijdrage(db, _lid(db, "Betaalt Nu"), HUIDIG)
     _bijdrage(db, _lid(db, "Betaalde Vorig Jaar"), VORIG)
     _bijdrage(db, _lid(db, "Lang Geleden"), TWEE_TERUG)
@@ -102,6 +103,7 @@ def test_scherm_toont_betalers_en_verbergt_gestopte_leden(client, db):
 
 def test_scherm_alleen_dit_seizoen_en_markeer_onbetaald(client, db):
     _alleen_club_van_20(db)
+    _zet(db, club_van_20_toon_onbetaald=0)  # deze test gaat over de naammuur, niet over de Steun-de-club-dia
     _bijdrage(db, _lid(db, "Betaalt Nu"), HUIDIG)
     _bijdrage(db, _lid(db, "Nog Niet Betaald"), VORIG)
 
