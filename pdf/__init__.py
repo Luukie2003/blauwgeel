@@ -25,6 +25,13 @@ from pdf.basis import (
 )
 from pdf.voorraad import bestellijst_pdf, voorraadoverzicht_pdf
 from pdf.kas import kassa_pdf
+from pdf.kaartjes import (
+    MAX_HARDLOPERS,
+    OPTIES as KAARTJES_OPTIES,
+    kaartjes_overzicht_pdf,
+    kaartjes_pdf,
+    schoon_hardlopers,
+)
 from pdf.verkoop import periode_verkoop_pdf, verkoop_pdf
 from pdf.labels import (
     LABEL_BREEDTE,
@@ -93,4 +100,9 @@ __all__ = [
     "UITDRAAI_RIJ_HOOGTE",
     "compacte_uitdraai_pdf",
     "logboek_pdf",
+    "MAX_HARDLOPERS",
+    "KAARTJES_OPTIES",
+    "kaartjes_overzicht_pdf",
+    "kaartjes_pdf",
+    "schoon_hardlopers",
 ]

@@ -475,6 +475,18 @@ CREATE TABLE IF NOT EXISTS club_van_20_bijdragen (
 );
 CREATE INDEX IF NOT EXISTS idx_club_van_20_bijdragen_seizoen ON club_van_20_bijdragen(seizoen);
 
+-- Kaartjes printen (kaartjes.py, pdf/kaartjes.py): welk ontwerp, welke hardlopers (een naam per regel), hoeveel
+-- vellen en of het zwart-wit moet. Altijd precies 1 rij.
+CREATE TABLE IF NOT EXISTS kaartjes_instellingen (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    optie TEXT NOT NULL DEFAULT 'D',
+    hardlopers TEXT NOT NULL DEFAULT '',
+    vellen INTEGER NOT NULL DEFAULT 1,
+    zwartwit INTEGER NOT NULL DEFAULT 0
+);
+INSERT OR IGNORE INTO kaartjes_instellingen (id, hardlopers)
+VALUES (1, 'Pils tap' || char(10) || 'Hertog Jan Fles' || char(10) || 'Bozu' || char(10) || 'Powerrade' || char(10) || 'Bacardi Cola' || char(10) || 'Sonnema Cola');
+
 -- Meldingen voor de schermen: een nieuw lid of een verlenging komt even groot in beeld (zie
 -- registreer_melding in club_van_20/administratie.py en welkom_wachtrij in club_van_20/scherm.py).
 -- Elk scherm onthoudt zelf tot welk id het meldingen heeft getoond, dus elk scherm krijgt ze allemaal.

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block titel %}Kaartjes printen{% endblock %}
+{% block inhoud %}
+<h1>Kaartjes printen</h1>
+<p class="subtitel">
+    Voorgedrukte kaartjes met Naam, Team, Datum, de hardlopers (met een vak om bij te turven) en lege regels.
+    Kies een ontwerp, typ de hardlopers en print de pdf op A4 &mdash; de kaartjes sluiten op elkaar aan, dus je knipt
+    langs de stippellijntjes.
+</p>
+
+<style>
+    .kaartjes-layout { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
+    .kaartjes-layout > .kaart { flex: 1 1 420px; margin: 0; }
+    .kaartjes-voorbeeld { flex: 1 1 420px; min-width: 300px; }
+    .kaartjes-voorbeeld iframe { width: 100%; height: 640px; border: 1px solid var(--rand, #d6dbe8); border-radius: 8px; background: #fff; }
+    .ontwerp { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.55rem 0.7rem; border: 1px solid var(--rand, #d6dbe8); border-radius: 8px; margin-bottom: 0.5rem; cursor: pointer; font-weight: 400; }
+    .ontwerp:has(input:checked) { border-color: var(--blauw, #1e3a8a); background: rgba(30, 58, 138, 0.06); }
+    .ontwerp input { width: auto; margin-top: 0.25rem; }
+    .ontwerp .maat { color: var(--tekst-zacht, #6b7390); font-size: 0.85rem; }
+    .suggesties { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+    .suggesties button { cursor: pointer; }
+</style>
+
+<div class="kaartjes-layout">
+<div class="kaart">
+    <form method="post" id="kaartjes-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <fieldset class="groupbox">
+            <legend>Ontwerp</legend>
+            {% for o in opties %}
+            <label class="ontwerp">
+                <input type="radio" name="optie" value="{{ o.sleutel }}" {{ 'checked' if instellingen.optie == o.sleutel }}>
+                <span>
+                    <strong>{{ o.naam }}</strong> <span class="maat">&middot; {{ o.breedte }} &times; {{ o.hoogte }} mm &middot; {{ o.kolommen * o.rijen }} per A4</span><br>
+                    <span class="tekst-zacht">{{ o.omschrijving }}</span>
+                </span>
+            </label>
+            {% endfor %}
+            <a href="{{ url_for('kaartjes_pdf_route', alle=1) }}" target="_blank" rel="noopener">Alle ontwerpen naast elkaar bekijken (pdf, 1 pagina per ontwerp) &nearr;</a>
+        </fieldset>
+
+        <fieldset class="groupbox">
+            <legend>Hardlopers</legend>
+            <div class="veld">
+                <label for="hardlopers">De dranken die hard lopen (een per regel, maximaal {{ max_hardlopers }})</label>
+                <textarea id="hardlopers" name="hardlopers" rows="{{ max_hardlopers }}" style="font-family:inherit">{{ instellingen.hardlopers_tekst }}</textarea>
+                <span class="tekst-zacht">Typ wat je wilt, bijvoorbeeld ook "Pils tap" (die zit niet in de tellingen). Lege regels tellen niet mee.</span>
+            </div>
+            {% if topverkopers %}
+            <div class="veld">
+                <span style="font-weight:700">Dit seizoen het meest verkocht</span>
+                <span class="tekst-zacht" style="display:block">Klik op een naam om 'm onder de hardlopers te zetten. Producten van hetzelfde merk zijn samengenomen (alle Bozu-smaken samen).</span>
+                <div class="suggesties">
+                    {% for t in topverkopers %}
+                    <button type="button" class="btn btn-rand btn-klein suggestie" data-naam="{{ t.naam }}" title="{{ t.aantal }} stuks{% if t.producten > 1 %}, {{ t.producten }} producten samen{% endif %}">
+                        {{ t.naam }} <span class="tekst-zacht">&middot; {{ t.aantal }}</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </fieldset>
+
+        <fieldset class="groupbox">
+            <legend>Afdrukken</legend>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="vellen">Aantal vellen (A4)</label>
+                    <input type="number" id="vellen" name="vellen" min="1" max="{{ max_vellen }}" value="{{ instellingen.vellen }}" style="max-width:8rem">
+                </div>
+            </div>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400">
+                <input type="checkbox" name="zwartwit" style="width:auto" {{ 'checked' if instellingen.zwartwit }}>
+                Zwart-wit (geen blauw, spaart inkt)
+            </label>
+        </fieldset>
+
+        <button type="submit" class="btn btn-geel">Opslaan en voorbeeld verversen</button>
+    </form>
+</div>
+
+<div class="kaartjes-voorbeeld">
+    <div class="actiebalk" style="margin-bottom:0.6rem">
+        <h2 style="margin:0">Voorbeeld</h2>
+        <span>
+            <a href="{{ url_for('kaartjes_pdf_route') }}" target="_blank" rel="noopener" class="btn btn-geel btn-klein">Pdf openen om te printen ({{ instellingen.vellen }} {{ 'vel' if instellingen.vellen == 1 else 'vellen' }})</a>
+            <a href="{{ url_for('kaartjes_pdf_route', download=1) }}" class="btn btn-rand btn-klein">Downloaden</a>
+        </span>
+    </div>
+    <iframe src="{{ url_for('kaartjes_pdf_route', voorbeeld=1) }}#navpanes=0&amp;view=FitH" title="Voorbeeld van de kaartjes"></iframe>
+    <p class="tekst-zacht">Print op 100% (niet "passend maken"), anders klopt de maat niet. Print eerst een proefvel.</p>
+</div>
+</div>
+
+<script>
+(function () {
+    var veld = document.getElementById('hardlopers');
+    var MAX = {{ max_hardlopers|tojson }};
+    document.querySelectorAll('.suggestie').forEach(function (knop) {
+        knop.addEventListener('click', function () {
+            var namen = veld.value.split('\n').map(function (n) { return n.trim(); }).filter(Boolean);
+            var naam = knop.dataset.naam;
+            if (namen.some(function (n) { return n.toLowerCase() === naam.toLowerCase(); })) return;
+            if (namen.length >= MAX) { alert('Er passen maximaal ' + MAX + ' hardlopers op een kaartje. Haal er eerst een weg.'); return; }
+            namen.push(naam);
+            veld.value = namen.join('\n');
+        });
+    });
+})();
+</script>
+{% endblock %}

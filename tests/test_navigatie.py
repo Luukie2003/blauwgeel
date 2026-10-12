@@ -57,7 +57,7 @@ def test_vrijwilliger_met_alleen_voorraad_heeft_geen_geld_en_geen_bardienstrappo
     _inloggen(client, db, "voorraad")
     menu = _menu(client.get("/").data.decode())
     assert "Geld" not in menu
-    assert menu["Voorraad"] == ["Voorraadoverzicht", "In/uit boeken", "Mutatieoverzicht", "Voorraad tellen", "Tellingen"]
+    assert menu["Voorraad"] == ["Voorraadoverzicht", "In/uit boeken", "Mutatieoverzicht", "Voorraad tellen", "Tellingen", "Kaartjes printen"]
     assert "Omzet per bardienst" not in menu["Rapporten"]
 
 

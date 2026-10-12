@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.40.0"
+HUIDIGE_VERSIE = "1.41.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.41.0",
+        "datum": "12 oktober 2026",
+        "punten": [
+            "Nieuwe pagina Voorraad → Kaartjes printen: voorgedrukte kaartjes (Naam, Team, Datum, hardlopers met turfvakken en lege regels) op A4 om uit te knippen. Kies uit 5 ontwerpen (breed, breed met lange turflijn, en drie vierkante maten), typ zelf de hardlopers (of klik ze aan uit wat dit seizoen het meest is verkocht, met merken samengenomen zoals alle Bozu-smaken), kies het aantal vellen en eventueel zwart-wit. De instellingen blijven bewaard en het voorbeeld past zich meteen aan.",
+        ],
+    },
     {
         "versie": "1.40.0",
         "datum": "10 oktober 2026",

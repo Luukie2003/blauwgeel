@@ -321,7 +321,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         # (SAMEORIGIN-uitzondering incluis) uit.
         response.headers["X-Frame-Options"] = (
             "SAMEORIGIN"
-            if request.endpoint in ("kiosk_scherm", "kiosk_prijzen_scherm", "kiosk_tv")
+            if request.endpoint in ("kiosk_scherm", "kiosk_prijzen_scherm", "kiosk_tv", "kaartjes_pdf_route")
             else "DENY"
         )
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
@@ -441,6 +441,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         fusten,
         gebruik,
         instellingen,
+        kaartjes,
         kassa,
         keuken,
         kiosk,
@@ -473,6 +474,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     fusten.register_routes(app)
     gebruik.register_routes(app)
     instellingen.register_routes(app)
+    kaartjes.register_routes(app)
     kassa.register_routes(app)
     keuken.register_routes(app)
     kiosk.register_routes(app)

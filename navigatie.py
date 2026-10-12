@@ -79,6 +79,12 @@ NAV_ITEMS = [
         "label": "Tellingen",
     },
     {
+        "groep": "Voorraad",
+        "endpoints": ["kaartjes_pagina", "kaartjes_pdf_route"],
+        "url_endpoint": "kaartjes_pagina",
+        "label": "Kaartjes printen",
+    },
+    {
         "groep": "Bestellen",
         "endpoints": ["bestellijst", "bestelling_aanmaken", "bestelling_nieuw", "bestelling_inboeken"],
         "url_endpoint": "bestellijst",
