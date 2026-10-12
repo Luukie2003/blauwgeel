@@ -1,0 +1,21 @@
+{# De pop-up "Taak afgerond?": verschijnt na het opslaan van iets dat bij een taak van deze persoon hoort,
+   of als je op een taak zonder pagina klikt (zie routes/eigen_taken.py). #}
+{% set taak_vragen_nu = taak_vragen() if taak_vragen is defined else [] %}
+{% if taak_vragen_nu %}
+<div class="modal-overlay open" id="taak-vraag-modal" role="dialog" aria-modal="true">
+    <div class="modal-venster modal-venster-bevestig">
+        {% for t in taak_vragen_nu %}
+        <form method="post" action="{{ url_for('eigen_taak_afronden', taak_id=t.id) }}"{% if not loop.last %} style="margin-bottom:1.2rem; padding-bottom:1.2rem; border-bottom:1px solid var(--rand-licht)"{% endif %}>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="terug" value="{{ request.path }}">
+            {# Alles op een regel: in een pop-up behouden alinea's hun regeleinden (white-space: pre-line). #}
+            <p><strong>Taak &ldquo;{{ t.titel }}&rdquo; afgerond?</strong>{% if t.iedereen and t.mensen|length > 1 %}<br><span class="tekst-zacht" style="font-size:0.85rem">Dit rond je voor jezelf af; de anderen doen het zelf.</span>{% endif %}</p>
+            <div class="modal-knoppen">
+                <button type="submit" class="btn btn-rand" formaction="{{ url_for('eigen_taak_nog_niet', taak_id=t.id) }}">Nog niet</button>
+                <button type="submit" class="btn btn-geel">Ja, afgerond</button>
+            </div>
+        </form>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}

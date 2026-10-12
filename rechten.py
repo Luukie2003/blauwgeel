@@ -120,6 +120,12 @@ BEHEERDER_ENDPOINTS = {
     "backups_lijst",
     "opslag_pagina",
     "opslag_video_opruimen",
+    # Eigen taken toevoegen en beheren; zelf afronden (eigen_taak_afronden/-openen) mag iedereen die is ingelogd.
+    "eigen_taken_pagina",
+    "eigen_taak_nieuw",
+    "eigen_taak_verwijderen",
+    # Alle verkoopprijzen in één keer aanpassen.
+    "producten_prijzen",
     "backup_nu",
     "backup_download",
     "backup_herstellen",

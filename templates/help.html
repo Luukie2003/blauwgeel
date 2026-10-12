@@ -20,6 +20,29 @@
 <div class="kaart">
     <h2>Versie-informatie</h2>
     <p class="tekst-zacht" style="margin-top:0">Huidige versie: <strong>{{ huidige_versie }}</strong></p>
+
+    <h3>Modules en hun vermoedelijke versie</h3>
+    <p class="tekst-zacht" style="margin-top:0; font-size:0.85rem">{{ modules_uitleg }}</p>
+    <div class="tabel-wrap" style="margin-bottom:1.4rem">
+        <table>
+            <thead>
+                <tr><th>Module</th><th>Vermoedelijke versie</th><th>Sinds</th><th>Laatst aangepast</th><th>Wat zit erin</th></tr>
+            </thead>
+            <tbody>
+                {% for m in modules %}
+                <tr>
+                    <td><strong>{{ m.naam }}</strong></td>
+                    <td><span class="badge badge-neutraal">{{ m.versie }}</span></td>
+                    <td>{{ m.sinds or '&mdash;'|safe }}</td>
+                    <td>{{ m.laatst or '&mdash;'|safe }}</td>
+                    <td class="tekst-zacht" style="font-size:0.85rem">{{ m.inhoud }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Wat er per versie is veranderd</h3>
     {% for release in wijzigingen %}
     <div style="margin-bottom:1.1rem">
         <div style="font-weight:700">

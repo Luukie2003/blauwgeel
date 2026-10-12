@@ -494,3 +494,60 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 });
+
+// @naam taggen: een veld met data-tag-autocomplete toont, zodra je een @ typt, de accounts die erbij passen. De namen
+// staan op de pagina in <script type="application/json" id="gebruikersnamen-data"> (prikbord en taken).
+document.addEventListener("DOMContentLoaded", function () {
+    var gebruikersnamenEl = document.getElementById("gebruikersnamen-data");
+    if (!gebruikersnamenEl) return;
+    var gebruikersnamen = JSON.parse(gebruikersnamenEl.textContent);
+    if (!gebruikersnamen.length) return;
+
+    document.querySelectorAll("[data-tag-autocomplete]").forEach(function (veld) {
+        var lijst = document.createElement("div");
+        lijst.className = "tag-suggesties";
+        lijst.style.display = "none";
+        veld.insertAdjacentElement("afterend", lijst);
+
+        function huidigeAtWoord() {
+            var voor = veld.value.slice(0, veld.selectionStart);
+            var match = voor.match(/@([A-Za-z0-9_.\-]*)$/);
+            return match ? match[1] : null;
+        }
+
+        function verbergen() {
+            lijst.style.display = "none";
+            lijst.innerHTML = "";
+        }
+
+        function bijwerken() {
+            var deel = huidigeAtWoord();
+            if (deel === null) { verbergen(); return; }
+            var suggesties = gebruikersnamen.filter(function (naam) {
+                return naam.toLowerCase().indexOf(deel.toLowerCase()) === 0;
+            });
+            if (!suggesties.length) { verbergen(); return; }
+            lijst.innerHTML = "";
+            suggesties.forEach(function (naam) {
+                var item = document.createElement("button");
+                item.type = "button";
+                item.className = "tag-suggestie";
+                item.textContent = "@" + naam;
+                item.addEventListener("click", function () {
+                    var pos = veld.selectionStart;
+                    var voor = veld.value.slice(0, pos).replace(/@([A-Za-z0-9_.\-]*)$/, "@" + naam + " ");
+                    veld.value = voor + veld.value.slice(pos);
+                    verbergen();
+                    veld.focus();
+                });
+                lijst.appendChild(item);
+            });
+            lijst.style.display = "block";
+        }
+
+        veld.addEventListener("input", bijwerken);
+        veld.addEventListener("blur", function () {
+            setTimeout(verbergen, 150); // laat een klik op een suggestie nog wel doorkomen
+        });
+    });
+});

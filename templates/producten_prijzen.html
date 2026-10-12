@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block titel %}Prijzen aanpassen{% endblock %}
+{% macro bedrag(x) %}{{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% macro prijsveld(naam, huidig, label=None) %}
+<span class="prijs-veld">&euro; <input type="text" inputmode="decimal" name="{{ naam }}" class="prijs-invoer" style="width:6rem; text-align:right"
+       value="{{ ingevuld.get(naam, bedrag(huidig)) }}" data-orig="{{ bedrag(huidig) }}" {% if label %}aria-label="{{ label }}"{% endif %}></span>
+{% endmacro %}
+{% block inhoud %}
+<style>
+    .prijs-invoer.prijs-gewijzigd { background: #fff6cf; border-color: var(--geel-donker); font-weight: 700; }
+    .prijzen-gereedschap { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; align-items: flex-end; padding: 0.7rem 0.9rem;
+        background: var(--paneel); border: 1px solid var(--rand-licht); border-radius: var(--radius); margin-bottom: 1rem; }
+    .prijzen-gereedschap .veld { margin: 0; }
+    .prijzen-opslaan { position: sticky; bottom: 0; display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;
+        padding: 0.7rem 0; margin-top: 1rem; background: var(--kaart); border-top: 1px solid var(--rand-licht); }
+    .prijzen-categorie td { background: var(--grid-header); font-weight: 700; }
+    .prijzen-sub td:nth-child(1) { padding-left: 1.6rem; color: var(--tekst-zacht); }
+    .prijs-veld { display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+    .marge { font-size: 0.78rem; color: var(--tekst-zacht); }
+</style>
+
+<p class="subtitel">
+    Alle verkoopprijzen in één overzicht: pas aan wat je wilt en sla alles in één keer op. Een gewijzigde verkoopprijs komt
+    in de prijsgeschiedenis van het product. De tv met de prijzen en de kaartjes passen zich vanzelf aan.
+    <a href="{{ url_for('producten_lijst') }}">&larr; Terug naar producten</a>
+</p>
+
+{% if fouten %}
+<div class="flash flash-error">
+    <strong>Er is niets opgeslagen:</strong>
+    <ul style="margin:0.3rem 0 0; padding-left:1.2rem">{% for f in fouten %}<li>{{ f }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<div class="kaart">
+    {% if producten %}
+    <div class="filterbalk">
+        <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">
+        <select id="filter-categorie">
+            <option value="">Alle categorieën</option>
+            {% for c in categorieen %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+        </select>
+        <label style="display:flex; align-items:center; gap:0.35rem; font-weight:400; cursor:pointer; white-space:nowrap">
+            <input type="checkbox" id="toon-zonder-prijs" style="width:auto"> Ook producten zonder verkoopprijs
+        </label>
+        <span id="filter-aantal" class="tekst-zacht"></span>
+    </div>
+
+    <div class="prijzen-gereedschap" aria-label="Alle getoonde prijzen in één keer aanpassen">
+        <div class="veld">
+            <label for="gr-richting">Alle getoonde prijzen</label>
+            <select id="gr-richting">
+                <option value="op">verhogen met</option>
+                <option value="af">verlagen met</option>
+            </select>
+        </div>
+        <div class="veld">
+            <label for="gr-waarde">Bedrag</label>
+            <input type="text" inputmode="decimal" id="gr-waarde" style="width:5.5rem" placeholder="bijv. 5">
+        </div>
+        <div class="veld">
+            <label for="gr-eenheid">in</label>
+            <select id="gr-eenheid">
+                <option value="pct">procent (%)</option>
+                <option value="euro">euro (&euro;)</option>
+            </select>
+        </div>
+        <div class="veld">
+            <label for="gr-afronden">Afronden op</label>
+            <select id="gr-afronden">
+                <option value="0">niet afronden</option>
+                <option value="0.05">5 cent</option>
+                <option value="0.1" selected>10 cent</option>
+                <option value="0.5">50 cent</option>
+                <option value="1">hele euro</option>
+            </select>
+        </div>
+        <button type="button" class="btn btn-rand" id="gr-toepassen">Toepassen</button>
+        <button type="button" class="btn btn-rand" id="gr-herstellen">Alles terugzetten</button>
+        <span class="tekst-zacht" style="font-size:0.82rem; flex-basis:100%">
+            Dit vult alleen de velden in zodat je kunt nalopen wat er verandert; er wordt pas iets opgeslagen met &ldquo;Alles opslaan&rdquo;.
+            Prijzen van &euro; 0,00 blijven staan.
+        </span>
+    </div>
+
+    <form method="post" id="prijzen-formulier">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="tabel-wrap">
+            <table id="prijzen-tabel">
+                <thead>
+                    <tr><th>Product</th><th>Inkoop</th><th>Verkoop</th><th>Marge</th></tr>
+                </thead>
+                <tbody>
+                    {% set ns = namespace(categorie=None) %}
+                    {% for p in producten %}
+                    {% set heeft_opties = opties.get(p.id) %}
+                    {% set standaard_zichtbaar = p.verkoopprijs > 0 or heeft_opties or p.glazen_per_fust or p.categorie not in niet_verplicht %}
+                    {% if p.categorie != ns.categorie %}
+                    {% set ns.categorie = p.categorie %}
+                    <tr class="prijzen-categorie" data-categorie="{{ p.categorie }}" data-kop="1"><td colspan="4">{{ p.categorie }}</td></tr>
+                    {% endif %}
+                    <tr class="prijzen-product" data-categorie="{{ p.categorie }}" data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie)|lower }}"
+                        data-zonder-prijs="{{ '0' if standaard_zichtbaar else '1' }}" data-product="{{ p.id }}">
+                        <td>
+                            {{ p.naam }}{% if not p.actief %} <span class="badge badge-neutraal">Inactief</span>{% endif %}
+                            {% if heeft_opties %}<div class="tekst-zacht" style="font-size:0.72rem">Op de tv staan de prijsopties hieronder, niet deze prijs.</div>{% endif %}
+                        </td>
+                        <td data-inkoop="{{ p.inkoopprijs }}">{% if p.inkoopprijs %}&euro; {{ bedrag(p.inkoopprijs) }}{% else %}<span class="tekst-zacht">&mdash;</span>{% endif %}</td>
+                        <td>{{ prijsveld('prijs_' ~ p.id, p.verkoopprijs, 'Verkoopprijs ' ~ p.naam) }}</td>
+                        <td class="marge"></td>
+                    </tr>
+                    {% if p.glazen_per_fust %}
+                    <tr class="prijzen-sub" data-categorie="{{ p.categorie }}" data-volgt="{{ p.id }}">
+                        <td>&#8627; Per glas (voor de omzetschatting van het fust)</td><td></td>
+                        <td>{{ prijsveld('glas_' ~ p.id, p.prijs_per_glas, 'Prijs per glas ' ~ p.naam) }}</td><td></td>
+                    </tr>
+                    {% endif %}
+                    {% for o in (heeft_opties or []) %}
+                    <tr class="prijzen-sub" data-categorie="{{ p.categorie }}" data-volgt="{{ p.id }}">
+                        <td>&#8627; {{ o.naam }}</td><td></td>
+                        <td>{{ prijsveld('optie_' ~ o.id, o.prijs, o.naam ~ ' ' ~ p.naam) }}</td><td></td>
+                    </tr>
+                    {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="prijzen-opslaan">
+            <button type="submit" class="btn btn-geel">Alles opslaan</button>
+            <span id="gewijzigd-aantal" class="tekst-zacht">Nog niets gewijzigd.</span>
+        </div>
+    </form>
+    {% else %}
+    <p class="leeg">Nog geen producten toegevoegd.</p>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    var tabel = document.getElementById('prijzen-tabel');
+    if (!tabel) return;
+    var zoek = document.getElementById('filter-zoek');
+    var categorie = document.getElementById('filter-categorie');
+    var zonderPrijs = document.getElementById('toon-zonder-prijs');
+    var aantalLabel = document.getElementById('filter-aantal');
+    var gewijzigdLabel = document.getElementById('gewijzigd-aantal');
+    var producten = Array.prototype.slice.call(tabel.querySelectorAll('tr.prijzen-product'));
+    var invoeren = Array.prototype.slice.call(tabel.querySelectorAll('.prijs-invoer'));
+
+    function getal(tekst) {
+        var n = parseFloat(String(tekst).replace(',', '.'));
+        return isNaN(n) ? null : n;
+    }
+    function bedrag(n) { return n.toFixed(2).replace('.', ','); }
+
+    // Producten tonen of verbergen; de regels eronder (glas, opties) en de categoriekop volgen.
+    function filter() {
+        var tekst = zoek.value.trim().toLowerCase();
+        var zichtbaar = 0;
+        var categorieMetProduct = {};
+        producten.forEach(function (rij) {
+            var toon = (!tekst || rij.dataset.zoek.indexOf(tekst) !== -1)
+                && (!categorie.value || rij.dataset.categorie === categorie.value)
+                && (zonderPrijs.checked || rij.dataset.zonderPrijs !== '1');
+            rij.style.display = toon ? '' : 'none';
+            rij.dataset.getoond = toon ? '1' : '0';
+            if (toon) { zichtbaar++; categorieMetProduct[rij.dataset.categorie] = true; }
+        });
+        tabel.querySelectorAll('tr.prijzen-sub').forEach(function (rij) {
+            var hoofd = tabel.querySelector('tr.prijzen-product[data-product="' + rij.dataset.volgt + '"]');
+            rij.style.display = hoofd && hoofd.dataset.getoond === '1' ? '' : 'none';
+        });
+        tabel.querySelectorAll('tr.prijzen-categorie').forEach(function (rij) {
+            rij.style.display = categorieMetProduct[rij.dataset.categorie] ? '' : 'none';
+        });
+        aantalLabel.textContent = zichtbaar + ' van ' + producten.length + ' producten';
+    }
+
+    function marges() {
+        producten.forEach(function (rij) {
+            var inkoop = parseFloat(rij.querySelector('[data-inkoop]').dataset.inkoop);
+            var verkoop = getal(rij.querySelector('.prijs-invoer').value);
+            var cel = rij.querySelector('.marge');
+            cel.textContent = (inkoop > 0 && verkoop > 0) ? Math.round((verkoop - inkoop) / verkoop * 100) + '%' : '';
+        });
+    }
+
+    function gewijzigd() {
+        var aantal = 0;
+        invoeren.forEach(function (veld) {
+            var anders = veld.value.trim() !== veld.dataset.orig;
+            veld.classList.toggle('prijs-gewijzigd', anders);
+            if (anders) aantal++;
+        });
+        gewijzigdLabel.textContent = aantal ? aantal + (aantal === 1 ? ' prijs gewijzigd' : ' prijzen gewijzigd') + ': nog niet opgeslagen.' : 'Nog niets gewijzigd.';
+        marges();
+    }
+
+    document.getElementById('gr-toepassen').addEventListener('click', function () {
+        var waarde = getal(document.getElementById('gr-waarde').value);
+        if (waarde === null || waarde < 0) { document.getElementById('gr-waarde').focus(); return; }
+        var richting = document.getElementById('gr-richting').value === 'af' ? -1 : 1;
+        var procent = document.getElementById('gr-eenheid').value === 'pct';
+        var stap = parseFloat(document.getElementById('gr-afronden').value);
+        var raakt = 0;
+        invoeren.forEach(function (veld) {
+            var rij = veld.closest('tr');
+            var hoofd = rij.classList.contains('prijzen-sub') ? tabel.querySelector('tr.prijzen-product[data-product="' + rij.dataset.volgt + '"]') : rij;
+            if (!hoofd || hoofd.dataset.getoond !== '1') return;
+            var oud = getal(veld.value);
+            if (oud === null || oud <= 0) return;
+            var nieuw = procent ? oud * (1 + richting * waarde / 100) : oud + richting * waarde;
+            if (stap > 0) nieuw = Math.round(nieuw / stap) * stap;
+            nieuw = Math.max(0, Math.round(nieuw * 100) / 100);
+            veld.value = bedrag(nieuw);
+            raakt++;
+        });
+        gewijzigd();
+        gewijzigdLabel.textContent += ' (' + raakt + ' ingevuld; kijk ze na en sla op)';
+    });
+    document.getElementById('gr-herstellen').addEventListener('click', function () {
+        invoeren.forEach(function (veld) { veld.value = veld.dataset.orig; });
+        gewijzigd();
+    });
+
+    [zoek, categorie, zonderPrijs].forEach(function (el) { el.addEventListener('input', filter); el.addEventListener('change', filter); });
+    invoeren.forEach(function (veld) { veld.addEventListener('input', gewijzigd); });
+    filter();
+    gewijzigd();
+})();
+</script>
+{% endblock %}

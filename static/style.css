@@ -2501,6 +2501,27 @@ a.pda-voorraad-rij:hover, a.pda-voorraad-rij:active { background: var(--kaart); 
     border-left-color: var(--rood, #c0392b);
 }
 
+/* Een eigen taak heeft naast de link een knop "Klaar". */
+.taak-eigen {
+    display: flex;
+    gap: 0.4rem;
+    align-items: stretch;
+}
+
+.taak-eigen a {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.taak-klaar {
+    margin: 0;
+    display: flex;
+}
+
+.taak-klaar .btn {
+    white-space: nowrap;
+}
+
 .taak .tekst-zacht {
     flex: 1 1 14rem;
     font-size: 0.85rem;

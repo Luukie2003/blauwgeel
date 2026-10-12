@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block titel %}Taken{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Voeg een taak toe aan &ldquo;Wat moet er nu?&rdquo; op het overzicht van de mensen die je tagt. Hoort er een pagina bij,
+    dan komen ze met een klik op de taak op die pagina; zodra ze daar iets opslaan vraagt de site of de taak klaar is.
+    <a href="{{ url_for('dashboard') }}">&larr; Terug naar het overzicht</a>
+</p>
+
+<div class="kaart" style="max-width:760px">
+    <h2 style="margin-top:0">Nieuwe taak</h2>
+    <form method="post" action="{{ url_for('eigen_taak_nieuw') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="soort">Waar gaat de taak over?</label>
+            <select id="soort" name="soort">
+                <optgroup label="Veelvoorkomend">
+                    {% for waarde, label in presets %}
+                    <option value="{{ waarde }}" data-titel="{{ label }}">{{ label }}</option>
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="Een pagina uit het menu">
+                    {% for waarde, label in paginas %}
+                    <option value="{{ waarde }}">{{ label }}</option>
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="Zonder pagina">
+                    <option value="{{ soort_eigen }}">Alleen afvinken (geen pagina)</option>
+                </optgroup>
+            </select>
+            <span class="tekst-zacht" style="font-size:0.82rem">Bij een pagina brengt een klik op de taak je daar; na het opslaan op die pagina vraagt de site of de taak klaar is.</span>
+        </div>
+        <div class="veld">
+            <label for="titel">Naam van de taak</label>
+            <input type="text" id="titel" name="titel" required maxlength="120" placeholder="Bijvoorbeeld: Prijzenlijst nalopen">
+        </div>
+        <div class="veld">
+            <label for="omschrijving">Toelichting (optioneel)</label>
+            <textarea id="omschrijving" name="omschrijving" rows="2" maxlength="500" placeholder="Bijvoorbeeld: controleer ook de prijzen van de nieuwe Bozu-smaken"></textarea>
+        </div>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="deadline">Uiterlijk (optioneel)</label>
+                <input type="date" id="deadline" name="deadline" min="{{ vandaag }}">
+            </div>
+        </div>
+        <div class="veld" style="position:relative">
+            <label for="voor_wie">Voor wie? Tag mensen met een @</label>
+            <input type="text" id="voor_wie" name="voor_wie" required autocomplete="off" data-tag-autocomplete
+                   placeholder="Typ @ en kies een account, bijvoorbeeld @bakker @luuk">
+            <span class="tekst-zacht" style="font-size:0.82rem">Alleen mensen met een account. Ze zien de taak bij &ldquo;Wat moet er nu?&rdquo; en krijgen een mail als er een e-mailadres bij hun account staat.</span>
+        </div>
+        <div class="veld">
+            <label>Wanneer is de taak klaar?</label>
+            <label style="display:flex; align-items:center; gap:0.35rem; font-weight:400; cursor:pointer">
+                <input type="radio" name="wie_rondt_af" value="iedereen" checked style="width:auto"> Als iedereen die ik kies het heeft gedaan
+            </label>
+            <label style="display:flex; align-items:center; gap:0.35rem; font-weight:400; cursor:pointer">
+                <input type="radio" name="wie_rondt_af" value="een" style="width:auto"> Zodra een van hen het heeft gedaan
+            </label>
+        </div>
+        <button type="submit" class="btn btn-geel">Taak toevoegen</button>
+    </form>
+</div>
+
+<div class="kaart">
+    <h2 style="margin-top:0">Openstaande taken</h2>
+    {% if open_taken %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Taak</th><th>Voor</th><th>Pagina</th><th>Uiterlijk</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for t in open_taken %}
+                <tr>
+                    <td>
+                        <strong>{{ t.titel }}</strong>
+                        {% if t.omschrijving %}<div class="tekst-zacht" style="font-size:0.82rem">{{ t.omschrijving }}</div>{% endif %}
+                        <div class="tekst-zacht" style="font-size:0.75rem">Toegevoegd door {{ t.aangemaakt_door or '?' }} op {{ t.aangemaakt_op|datum_nl }}</div>
+                    </td>
+                    <td>
+                        {% for m in t.mensen %}
+                        <span class="badge {{ 'badge-ok' if m.afgerond_op else 'badge-neutraal' }}" title="{{ 'Klaar op ' ~ (m.afgerond_op|datum_nl) if m.afgerond_op else 'Nog niet klaar' }}">{% if m.afgerond_op %}&#10003; {% endif %}@{{ m.naam }}</span>
+                        {% else %}
+                        <span class="tekst-zacht">niemand meer</span>
+                        {% endfor %}
+                        <div class="tekst-zacht" style="font-size:0.75rem">{{ 'Iedereen moet het doen' if t.iedereen else 'Een van hen is genoeg' }}</div>
+                    </td>
+                    <td>{{ t.doel.label if t.doel else 'Alleen afvinken' }}</td>
+                    <td>
+                        {% if t.deadline %}
+                        {{ t.deadline[8:10] }}-{{ t.deadline[5:7] }}-{{ t.deadline[:4] }}{% if t.te_laat %} <span class="badge badge-laag">te laat</span>{% endif %}
+                        {% else %}&mdash;{% endif %}
+                    </td>
+                    <td style="white-space:nowrap">
+                        <form method="post" action="{{ url_for('eigen_taak_afronden', taak_id=t.id) }}" style="display:inline"
+                              onsubmit="return confirm('Taak voor iedereen op afgerond zetten?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="voor_iedereen" value="1">
+                            <input type="hidden" name="terug" value="{{ url_for('eigen_taken_pagina') }}">
+                            <button type="submit" class="btn btn-rand btn-klein">Klaar voor iedereen</button>
+                        </form>
+                        <form method="post" action="{{ url_for('eigen_taak_verwijderen', taak_id=t.id) }}" style="display:inline"
+                              onsubmit="return confirm('Taak verwijderen?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-rand btn-klein">Verwijderen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Er staan geen eigen taken open.</p>
+    {% endif %}
+</div>
+
+{% if afgeronde_taken %}
+<div class="kaart">
+    <h2 style="margin-top:0">Recent afgerond</h2>
+    <ul style="margin:0; padding-left:1.2rem">
+        {% for t in afgeronde_taken %}
+        <li>
+            <strong>{{ t.titel }}</strong>
+            <span class="tekst-zacht">&mdash; {{ t.mensen|map(attribute='naam')|join(', ') }}, klaar op {{ t.afgerond_op|datum_nl }}{% if t.afgerond_door %} (door {{ t.afgerond_door }}){% endif %}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<script id="gebruikersnamen-data" type="application/json">{{ gebruikersnamen|tojson }}</script>
+<script>
+(function () {
+    // Kies je een veelvoorkomende taak, dan staat de naam er meteen in (en kun je die nog aanpassen).
+    var soort = document.getElementById('soort');
+    var titel = document.getElementById('titel');
+    var laatsteVoorstel = '';
+    soort.addEventListener('change', function () {
+        var optie = soort.options[soort.selectedIndex];
+        var voorstel = optie.dataset.titel || optie.textContent.split('→').pop().trim();
+        if (soort.value === '{{ soort_eigen }}') voorstel = '';
+        if (!titel.value || titel.value === laatsteVoorstel) titel.value = voorstel;
+        laatsteVoorstel = voorstel;
+    });
+    soort.dispatchEvent(new Event('change'));
+})();
+</script>
+{% endblock %}

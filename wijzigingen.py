@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.42.2"
+HUIDIGE_VERSIE = "1.43.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.43.0",
+        "datum": "12 oktober 2026",
+        "punten": [
+            "Nieuwe pagina Producten → Prijzen aanpassen (beheerders): alle verkoopprijzen in één tabel nalopen en in één keer opslaan, inclusief de prijsopties van een fust en de prijs per glas. Je kunt alle getoonde prijzen met een percentage of bedrag verhogen of verlagen (met afronden op 5, 10 of 50 cent) en daarna nakijken; gewijzigde prijzen kleuren geel, de marge staat erbij, en elke wijziging komt in de prijsgeschiedenis.",
+            "Eigen taken bij 'Wat moet er nu?': een beheerder voegt via Start → Taken (of de knop '+ Taak toevoegen' op het overzicht) een taak toe en koppelt die aan een of meer mensen door ze te taggen met een @ (net als op het prikbord; alleen mensen met een account, die ook een mail krijgen als hun e-mailadres bekend is), met eventueel een uiterste datum. Kies een veelvoorkomende klus (prijzen nalopen, nieuw product toevoegen, tellen, bestellen, inboeken, frituurvet, dia's), een pagina uit het menu, of een taak zonder pagina. Een klik op de taak brengt je op die pagina; sla je daar iets op, dan vraagt een pop-up 'Taak … afgerond?'. Met 'Klaar' rond je een taak ook zo af. Je kiest of iedereen het zelf moet afronden of dat een van hen genoeg is.",
+            "Bovenaan dit versielogboek staat nu een overzicht van alle modules met hun vermoedelijke versienummer.",
+        ],
+    },
     {
         "versie": "1.42.2",
         "datum": "12 oktober 2026",
@@ -765,4 +774,49 @@ WIJZIGINGEN = [
             "Verkooprapport per periode (PDF), huisstijl s.v. Blauw-Geel 1915",
         ],
     },
+]
+
+
+# Het overzicht van de modules bovenaan het versielogboek op de Help-pagina. Er is geen aparte versiebeheer per module:
+# dit nummer is een schatting uit het logboek hierboven en bedoeld als houvast, niet als exacte administratie.
+# Het is opgebouwd als hoofd.uitbreidingen.verbeteringen: hoofd 1 = in gebruik (0 = nog nieuw), uitbreidingen = het
+# aantal versies waarin er iets bij is gekomen, verbeteringen = het aantal versies met alleen een kleine aanpassing of fix.
+# Pas een module aan? Tel dan bij 'versie' de uitbreiding of verbetering erbij op en zet 'laatst' op de nieuwe appversie
+# (zie CLAUDE.md).
+MODULES_UITLEG = (
+    "Er is geen aparte versie per module; dit nummer is een schatting op basis van dit logboek. Het eerste getal is 1 "
+    "voor een module die in gebruik is (0 = nog nieuw), het tweede telt de versies waarin er iets bij is gekomen en het "
+    "derde de versies met een kleine verbetering of fix."
+)
+MODULES = [
+    {"naam": "Voorraad & tellen", "versie": "1.9.2", "sinds": "0.1.0", "laatst": "1.41.0",
+     "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
+    {"naam": "Bestellen & prognose", "versie": "1.6.2", "sinds": "0.4.0", "laatst": "1.34.0",
+     "inhoud": "Bestellijst, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop, boodschappenlijst"},
+    {"naam": "Producten & prijzen", "versie": "1.7.1", "sinds": "0.1.0", "laatst": "1.43.0",
+     "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen en alle verkoopprijzen in één keer aanpassen"},
+    {"naam": "Geld (kassa & kluis)", "versie": "1.3.1", "sinds": "1.0.0", "laatst": "1.33.0",
+     "inhoud": "Kassa tellen met vier-ogen-goedkeuring, afdracht en toevoeging, kluis, geschiedenis"},
+    {"naam": "Keuken", "versie": "1.2.0", "sinds": "1.6.0", "laatst": "1.7.0",
+     "inhoud": "Keukenvoorraad en de herinnering voor het frituurvet"},
+    {"naam": "Kantine-tv", "versie": "1.17.23", "sinds": "1.10.1", "laatst": "1.42.0",
+     "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm"},
+    {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
+     "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
+    {"naam": "Stemmen", "versie": "1.0.0", "sinds": "", "laatst": "",
+     "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
+    {"naam": "Rapporten", "versie": "1.9.1", "sinds": "0.1.0", "laatst": "1.42.0",
+     "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
+    {"naam": "Handterminal", "versie": "1.3.0", "sinds": "1.5.0", "laatst": "1.25.0",
+     "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
+    {"naam": "Accounts & rechten", "versie": "1.9.2", "sinds": "0.1.0", "laatst": "1.34.0",
+     "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
+    {"naam": "Back-ups & beheer", "versie": "1.9.2", "sinds": "0.2.0", "laatst": "1.42.2",
+     "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
+    {"naam": "Overzicht & prikbord", "versie": "1.8.2", "sinds": "0.2.0", "laatst": "1.43.0",
+     "inhoud": "Dashboard, 'Wat moet er nu?', prikbord, zoekbalk en de tips-pagina"},
+    {"naam": "Taken", "versie": "0.1.0", "sinds": "1.43.0", "laatst": "1.43.0",
+     "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?', met de vraag 'Taak afgerond?' na het opslaan"},
+    {"naam": "Techniek & beveiliging", "versie": "1.4.0", "sinds": "1.1.0", "laatst": "1.34.0",
+     "inhoud": "Geautomatiseerde tests, beveiligingsheaders, bereikbaarheidscontrole, snelheid"},
 ]

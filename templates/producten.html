@@ -12,6 +12,7 @@
         {% if not categorie_vergrendeld %}
         <a href="{{ url_for('categorieen_lijst') }}" class="btn btn-rand">Categorieën beheren</a>
         <a href="{{ url_for('producten_bulk_bewerken') }}" class="btn btn-rand">Bulk bewerken</a>
+        <a href="{{ url_for('producten_prijzen') }}" class="btn btn-rand">Prijzen aanpassen</a>
         {% endif %}
         <a href="{{ url_for('product_nieuw', categorie=categorie_vergrendeld) }}" class="btn btn-geel">
             + Nieuw {{ (categorie_vergrendeld ~ '-product') if categorie_vergrendeld else 'product' }}

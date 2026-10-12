@@ -48,6 +48,7 @@
     {% endif %}
     <script src="{{ url_for('static', filename='gedeeld.js') }}?v={{ gedeeld_js_versie }}"></script>
     {% include "_welkom_popup.html" %}
+    {% include "_taak_vraag.html" %}
     <script>
     (function () {
         var invoer = document.getElementById('pda-zoek-invoer');

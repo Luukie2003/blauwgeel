@@ -20,8 +20,14 @@ werk in dezelfde wijziging ook het volgende bij:
    `HUIDIGE_VERSIE` (patch/minor — er is geen releases/tags-systeem) en voeg
    een nieuw item toe aan `WIJZIGINGEN` met datum en een korte,
    gebruikersgerichte omschrijving van wat er is veranderd.
+3. **`MODULES` in [wijzigingen.py](wijzigingen.py)** — het overzicht van alle
+   modules met hun vermoedelijke versienummer, bovenaan het versielogboek op de
+   Help-pagina. Raakt de wijziging een module, tel dan bij `versie` van die
+   module een uitbreiding (tweede getal) of een kleine verbetering/fix (derde
+   getal) op en zet `laatst` op de nieuwe appversie. Komt er een heel nieuwe
+   module bij, voeg dan een regel toe (begin met `0.1.0`).
 
-Beide lijsten zijn handmatig bijgehouden, geen generator — dat gebeurt dus
+Deze lijsten zijn handmatig bijgehouden, geen generator — dat gebeurt dus
 niet vanzelf, alleen door het er zelf bij te doen zodra de code verandert.
 
 Sla dit over bij pure refactors, bugfixes zonder zichtbaar gedragsverschil,

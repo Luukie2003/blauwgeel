@@ -753,3 +753,28 @@ CREATE TABLE IF NOT EXISTS omzet_historie (
     ingevoerd_op TEXT NOT NULL,
     PRIMARY KEY (seizoen, maand)
 );
+
+-- Taken die een beheerder zelf toevoegt aan "Wat moet er nu?" op het overzicht en aan mensen koppelt
+-- (zie eigen_taken.py). soort zegt waar de taak over gaat: 'eigen' (geen pagina, alleen afvinken),
+-- 'preset:<naam>' (een veelvoorkomende klus met een eigen pagina) of 'pagina:<endpoint>' (een pagina uit
+-- het menu). iedereen = 1: elke gekozen persoon moet het zelf afronden; 0: een van hen is genoeg.
+CREATE TABLE IF NOT EXISTS taken (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    titel TEXT NOT NULL,
+    omschrijving TEXT,
+    soort TEXT NOT NULL DEFAULT 'eigen',
+    deadline TEXT,
+    iedereen INTEGER NOT NULL DEFAULT 1,
+    aangemaakt_door TEXT,
+    aangemaakt_op TEXT NOT NULL,
+    afgerond_op TEXT,
+    afgerond_door TEXT
+);
+
+CREATE TABLE IF NOT EXISTS taak_toewijzingen (
+    taak_id INTEGER NOT NULL REFERENCES taken(id) ON DELETE CASCADE,
+    gebruiker_id INTEGER NOT NULL REFERENCES gebruikers(id) ON DELETE CASCADE,
+    afgerond_op TEXT,
+    PRIMARY KEY (taak_id, gebruiker_id)
+);
+CREATE INDEX IF NOT EXISTS idx_taak_toewijzingen_gebruiker ON taak_toewijzingen(gebruiker_id);

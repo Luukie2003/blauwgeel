@@ -26,14 +26,18 @@ from helpers import (
     stuur_tag_notificaties,
 )
 from pdf import periode_verkoop_pdf
-from wijzigingen import HUIDIGE_VERSIE, WIJZIGINGEN
+from wijzigingen import HUIDIGE_VERSIE, MODULES, MODULES_UITLEG, WIJZIGINGEN
 
 
 def register_routes(app):
     @app.route("/help")
     def help_pagina():
         return render_template(
-            "help.html", huidige_versie=HUIDIGE_VERSIE, wijzigingen=WIJZIGINGEN
+            "help.html",
+            huidige_versie=HUIDIGE_VERSIE,
+            wijzigingen=WIJZIGINGEN,
+            modules=MODULES,
+            modules_uitleg=MODULES_UITLEG,
         )
 
     @app.route("/tips")
@@ -151,7 +155,9 @@ def register_routes(app):
         komende_thuiswedstrijden = bereken_komende_thuiswedstrijden(db)
         taken = [
             {**t, "url": url_for(t["endpoint"], **t["kwargs"])}
-            for t in bouw_taken(db, session.get("gebruiker_rol"), session.get("gebruiker_secties"))
+            for t in bouw_taken(
+                db, session.get("gebruiker_rol"), session.get("gebruiker_secties"), session.get("gebruiker_id")
+            )
         ]
         return render_template(
             "dashboard.html",

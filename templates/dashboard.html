@@ -8,16 +8,28 @@
 </div>
 {% endif %}
 <div class="kaart taken-kaart">
-    <h2 style="margin-top:0">Wat moet er nu?</h2>
+    <div class="actiebalk" style="margin-bottom:0.6rem">
+        <h2 style="margin:0">Wat moet er nu?</h2>
+        {% if huidige_gebruiker_rol == 'beheerder' %}
+        <a href="{{ url_for('eigen_taken_pagina') }}" class="btn btn-rand btn-klein">+ Taak toevoegen</a>
+        {% endif %}
+    </div>
     {% if taken %}
     <ul class="taken-lijst">
         {% for t in taken %}
-        <li class="taak{{ ' taak-urgent' if t.urgent else '' }}">
+        <li class="taak{{ ' taak-urgent' if t.urgent else '' }}{{ ' taak-eigen' if t.taak_id else '' }}">
             <a href="{{ t.url }}">
                 <strong>{{ t.titel }}</strong>
                 <span class="tekst-zacht">{{ t.detail }}</span>
                 <span class="taak-pijl" aria-hidden="true">&rsaquo;</span>
             </a>
+            {% if t.taak_id %}
+            <form method="post" action="{{ url_for('eigen_taak_afronden', taak_id=t.taak_id) }}" class="taak-klaar">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="terug" value="{{ url_for('dashboard') }}">
+                <button type="submit" class="btn btn-rand btn-klein" title="Deze taak is klaar">&#10003; Klaar</button>
+            </form>
+            {% endif %}
         </li>
         {% endfor %}
     </ul>

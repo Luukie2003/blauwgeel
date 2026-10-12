@@ -43,6 +43,12 @@ NAV_ITEMS = [
         "label": "Prikbord",
     },
     {
+        "groep": "Start",
+        "endpoints": ["eigen_taken_pagina", "eigen_taak_nieuw", "eigen_taak_verwijderen"],
+        "url_endpoint": "eigen_taken_pagina",
+        "label": "Taken",
+    },
+    {
         "groep": "Voorraad",
         "endpoints": ["voorraadoverzicht"],
         "url_endpoint": "voorraadoverzicht",
@@ -113,6 +119,12 @@ NAV_ITEMS = [
         ],
         "url_endpoint": "producten_lijst",
         "label": "Producten",
+    },
+    {
+        "groep": "Producten",
+        "endpoints": ["producten_prijzen"],
+        "url_endpoint": "producten_prijzen",
+        "label": "Prijzen aanpassen",
     },
     {
         "groep": "Producten",
@@ -388,6 +400,8 @@ NAV_GROEP_ALLEEN_BEHEERDER = {"Beheer"}
 # Losse items in een groep die voor iedereen zichtbaar is, maar zelf alleen voor beheerders
 # (de route staat dan ook in BEHEERDER_ENDPOINTS).
 NAV_ITEM_ALLEEN_BEHEERDER = {
+    "eigen_taken_pagina",
+    "producten_prijzen",
     "bardienstrapport",
     # De kluis is gevoeliger dan de kassalade (minder mutaties, groter bedrag).
     "kluis_tellen",

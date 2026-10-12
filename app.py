@@ -438,6 +438,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         boodschappenlijst,
         club_van_20,
         dashboard,
+        eigen_taken,
         fusten,
         gebruik,
         instellingen,
@@ -472,6 +473,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     boodschappenlijst.register_routes(app)
     club_van_20.register_routes(app)
     dashboard.register_routes(app)
+    eigen_taken.register_routes(app)
     fusten.register_routes(app)
     gebruik.register_routes(app)
     instellingen.register_routes(app)

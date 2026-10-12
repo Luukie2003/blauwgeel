@@ -115,14 +115,36 @@ def _taak(titel, detail, endpoint, urgent=False, **kwargs):
     return {"titel": titel, "detail": detail, "endpoint": endpoint, "kwargs": kwargs, "urgent": urgent}
 
 
-def bouw_taken(db, rol, secties):
+def _eigen_taken(db, gebruiker_id):
+    """De taken die een beheerder voor deze persoon heeft toegevoegd (zie eigen_taken.py)."""
+    from eigen_taken import taken_voor_gebruiker
+
+    uitkomst = []
+    for t in taken_voor_gebruiker(db, gebruiker_id):
+        anderen = [m["naam"] for m in t["mensen"] if m["id"] != gebruiker_id]
+        delen = [t["omschrijving"]] if t["omschrijving"] else []
+        if anderen:
+            delen.append(f"Samen met {', '.join(anderen)}")
+        if t["deadline"]:
+            delen.append(f"Uiterlijk {t['deadline'][8:10]}-{t['deadline'][5:7]}" + (" (te laat)" if t["te_laat"] else ""))
+        uitkomst.append(
+            {
+                **_taak(t["titel"], " · ".join(delen) or f"Toegevoegd door {t['aangemaakt_door'] or 'een beheerder'}",
+                        "eigen_taak_openen", urgent=t["te_laat"], taak_id=t["id"]),
+                "taak_id": t["id"],
+            }
+        )
+    return uitkomst
+
+
+def bouw_taken(db, rol, secties, gebruiker_id=None):
     """De lijst "Wat moet er nu?" bovenaan het dashboard: alleen dingen die nu echt aandacht nodig
     hebben, en alleen wat bij de rechten van het account past -- een vrijwilliger met alleen keuken
     ziet dus alleen het frituurvet en het prikbord. Dringende dingen staan bovenaan.
 
     Elke taak is {"titel", "detail", "endpoint", "kwargs", "urgent"}; de pagina maakt er een link van."""
     heeft = lambda sectie: heeft_sectie_toegang(rol, secties, sectie)
-    taken = []
+    taken = _eigen_taken(db, gebruiker_id) if gebruiker_id else []
 
     if heeft("voorraad"):
         telling = bereken_laatste_telling_status(db)
