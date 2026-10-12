@@ -162,7 +162,7 @@ def test_het_dashboard_rekent_de_weekcijfers_niet_zelf_uit(ingelogde_client, mon
     resp = ingelogde_client.get("/")
     tekst = resp.data.decode()
     assert resp.status_code == 200
-    assert 'id="omzettrend-kaart"' in tekst and f'data-bron="{KAART}"' in tekst  # de plek waar de kaart in komt
+    assert 'id="omzettrend-kaart"' in tekst and f'data-lazy-bron="{KAART}"' in tekst  # de plek waar de kaart in komt
     assert "wordt berekend" in tekst  # tot de cijfers er zijn
 
 

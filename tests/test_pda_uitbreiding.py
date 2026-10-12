@@ -143,7 +143,8 @@ def test_telling_detail_en_overzicht_in_de_handterminal_schil(ingelogde_client, 
 
     overzicht = ingelogde_client.get("/tellingen").data.decode()
     assert _heeft_pda_schil(overzicht)
-    assert "Alle tellingen" in overzicht and "Omzet per week" in overzicht
+    assert "Alle tellingen" in overzicht and 'data-lazy-bron="/tellingen/cijfers"' in overzicht
+    assert "Omzet per week" in ingelogde_client.get("/tellingen/cijfers").data.decode()  # komt na het laden binnen
 
 
 def test_telling_detail_op_desktop_blijft_de_tabel(ingelogde_client, db):

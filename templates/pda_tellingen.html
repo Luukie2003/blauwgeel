@@ -6,50 +6,12 @@
     <a href="{{ url_for('prognose_pagina') }}" class="btn btn-rand">Prognose</a>
 </div>
 
-{% if prognose and prognose.beschikbaar %}
-<h2 class="pda-kopje">Verwachting komende 7 dagen</h2>
-<div class="pda-cijferrij">
-    <div class="pda-cijfer">
-        <span class="pda-cijfer-getal">&euro; {{ '%.0f'|format(prognose.totaal.omzet) }}</span>
-        <span class="tekst-zacht">verwachte omzet<br>tussen &euro; {{ '%.0f'|format(prognose.totaal.laag) }} en &euro; {{ '%.0f'|format(prognose.totaal.hoog) }}</span>
-    </div>
-    <div class="pda-cijfer {{ 'pda-cijfer--let-op' if prognose.samenvatting.urgent else '' }}">
-        <span class="pda-cijfer-getal">{{ prognose.samenvatting.urgent }}</span>
-        <span class="tekst-zacht">{{ 'product raakt' if prognose.samenvatting.urgent == 1 else 'producten raken' }} waarschijnlijk op</span>
-    </div>
+{# Verwachting, trend en omzet per week komen uit _pda_tellingen_cijfers.html en laden na de rest (zie gedeeld.js). #}
+<div data-lazy-bron="{{ url_for('tellingen_cijfers') }}"
+     data-lazy-fout="De verwachting en de omzet per week konden niet worden geladen. Ververs de pagina.">
+    <h2 class="pda-kopje">Omzet per week</h2>
+    <p class="tekst-zacht" data-lazy-status>Wordt berekend&hellip;</p>
 </div>
-{% endif %}
-
-{% if trend %}
-<p class="tekst-zacht" style="margin:0.2rem 0 1rem">
-    Trend over de afgesloten weken:
-    <strong>{% if trend.richting == 'stijgend' %}&#8599; stijgend{% elif trend.richting == 'dalend' %}&#8600; dalend{% else %}&#8594; gelijk{% endif %}</strong>
-    ({{ "%+.2f"|format(trend.richting_per_week) }} &euro;/week)
-</p>
-{% endif %}
-
-<h2 class="pda-kopje">Omzet per week</h2>
-{% if omzet_per_week %}
-{% for w in omzet_per_week %}
-<div class="pda-kaartje pda-weekregel">
-    <div>
-        <strong>Week {{ w.week }}, {{ w.jaar }}</strong>
-        {% if w.status == 'loopt_nog' %}
-        <span class="badge badge-neutraal">{% if w.jaar == huidige_jaar and w.week == huidige_week %}loopt nog{% else %}geteld t/m {{ w.geteld_tot.strftime('%d-%m') }}{% endif %}</span>
-        {% elif w.status == 'begin' %}
-        <span class="badge badge-neutraal">begin meting</span>
-        {% endif %}
-        <div class="tekst-zacht">{{ w.van }} t/m {{ w.tot }}</div>
-    </div>
-    <div class="pda-weekregel-rechts">
-        <strong>{{ "€ %.2f"|format(w.omzet) }}</strong>
-        <a href="{{ url_for('verkooprapport_pdf_route', van=w.van, tot=w.tot) }}" class="tekst-zacht" target="_blank">PDF</a>
-    </div>
-</div>
-{% endfor %}
-{% else %}
-<p class="leeg">Nog geen verkoop geregistreerd via tellingen.</p>
-{% endif %}
 
 <h2 class="pda-kopje">Alle tellingen</h2>
 {% if tellingen %}

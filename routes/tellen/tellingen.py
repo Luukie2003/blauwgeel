@@ -36,10 +36,23 @@ def register_routes(app):
         ).fetchall():
             regels_per_telling[regel["telling_id"]].append(regel)
 
-        # Omzet per week: de omzet van elke telling wordt verdeeld over de dagen die
-        # erbij horen (zie voorspelling.omzet_per_week), dus het maakt niet uit
-        # op welke dagen je telt. Alleen volledig gedekte weken tellen mee voor
-        # de trend.
+        # De verwachting, de trend en de omzet per week komen uit het voorspelmodel en dat rekent op de server soms
+        # enkele seconden. Die haalt de pagina daarom na het laden apart op (zie tellingen_cijfers), zodat de
+        # tellingen zelf meteen klaarstaan.
+        return render_template(
+            "pda_tellingen.html" if g.get("weergave_modus") == "pda" else "tellingen_overzicht.html",
+            tellingen=tellingen,
+            regels_per_telling=regels_per_telling,
+        )
+
+    @app.route("/tellingen/cijfers")
+    def tellingen_cijfers():
+        """De verwachting, de trend en de omzet per week voor het tellingenoverzicht, apart opgehaald (zie hierboven).
+
+        Omzet per week: de omzet van elke telling wordt verdeeld over de dagen die erbij horen (zie
+        voorspelling.omzet_per_week), dus het maakt niet uit op welke dagen je telt. Alleen volledig gedekte weken
+        tellen mee voor de trend."""
+        db = get_db()
         omzet_per_week = omzet_per_week_berekend(db)
         huidige_jaar, huidige_week, _ = datetime.now().isocalendar()
         trend = bereken_trend(omzet_per_week, huidige_jaar, huidige_week)
@@ -50,9 +63,7 @@ def register_routes(app):
             prognose = None
 
         return render_template(
-            "pda_tellingen.html" if g.get("weergave_modus") == "pda" else "tellingen_overzicht.html",
-            tellingen=tellingen,
-            regels_per_telling=regels_per_telling,
+            "_pda_tellingen_cijfers.html" if g.get("weergave_modus") == "pda" else "_tellingen_cijfers.html",
             omzet_per_week=omzet_per_week,
             huidige_jaar=huidige_jaar,
             huidige_week=huidige_week,

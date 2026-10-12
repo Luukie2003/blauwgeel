@@ -219,29 +219,13 @@
     {% endif %}
 </div>
 
-<div class="kaart" id="omzettrend-kaart" data-bron="{{ url_for('dashboard_omzettrend') }}">
+<div class="kaart" id="omzettrend-kaart" data-lazy-bron="{{ url_for('dashboard_omzettrend') }}"
+     data-lazy-fout="De omzettrend kon niet worden geladen. Ververs de pagina om het opnieuw te proberen.">
     <div class="actiebalk">
         <h2 style="margin:0">Omzettrend</h2>
     </div>
-    <p class="tekst-zacht" id="omzettrend-status" style="margin:0.4rem 0 0">De omzet per week wordt berekend&hellip;</p>
+    <p class="tekst-zacht" data-lazy-status style="margin:0.4rem 0 0">De omzet per week wordt berekend&hellip;</p>
 </div>
-<script>
-    // De weekcijfers komen uit het voorspelmodel en dat rekent soms enkele seconden: de rest van het overzicht
-    // staat dan al klaar, en deze kaart vult zich zodra de cijfers er zijn.
-    (function () {
-        var kaart = document.getElementById('omzettrend-kaart');
-        fetch(kaart.dataset.bron, { credentials: 'same-origin' })
-            .then(function (r) {
-                if (!r.ok || r.redirected) throw new Error('niet gelukt');  // redirected: de sessie is verlopen
-                return r.text();
-            })
-            .then(function (html) { kaart.innerHTML = html; })
-            .catch(function () {
-                document.getElementById('omzettrend-status').textContent =
-                    'De omzettrend kon niet worden geladen. Ververs de pagina om het opnieuw te proberen.';
-            });
-    })();
-</script>
 
 <div class="kaart">
     <h2>Recente boekingen</h2>

@@ -155,7 +155,7 @@ def test_pagina_s_geven_hetzelfde_antwoord_met_en_zonder_bewaren(ingelogde_clien
 
     pagina("/")  # de welkomstmelding verschijnt maar op de allereerste pagina na het inloggen
     monkeypatch.setattr(voorspelling, "CACHE_AAN", False)
-    zonder = {pad: pagina(pad) for pad in ("/bestellijst", "/prognose", "/tellingen")}
+    zonder = {pad: pagina(pad) for pad in ("/bestellijst", "/prognose", "/tellingen/cijfers")}
     monkeypatch.setattr(voorspelling, "CACHE_AAN", True)
     for pad, verwacht in zonder.items():
         assert pagina(pad) == verwacht  # eerste keer rekenen

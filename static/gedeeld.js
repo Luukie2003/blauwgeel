@@ -551,3 +551,24 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 });
+
+// Zware onderdelen van een pagina laden na de rest: <div data-lazy-bron="/url">…</div> haalt die url op en zet het antwoord
+// (HTML) in het blok zodra het er is. Het blok toont tot dan wat erin staat; mislukt het laden, dan wordt de tekst in het
+// element met data-lazy-status vervangen door data-lazy-fout. De berekeningen van het voorspelmodel duren op de server soms
+// enkele seconden; zo staat de pagina zelf meteen klaar.
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("[data-lazy-bron]").forEach(function (blok) {
+        fetch(blok.dataset.lazyBron, { credentials: "same-origin" })
+            .then(function (antwoord) {
+                // redirected: de sessie is verlopen en we kregen de inlogpagina terug
+                if (!antwoord.ok || antwoord.redirected) throw new Error("niet gelukt");
+                return antwoord.text();
+            })
+            .then(function (html) { blok.innerHTML = html; })
+            .catch(function () {
+                var status = blok.querySelector("[data-lazy-status]");
+                if (status) status.textContent = blok.dataset.lazyFout || "Laden is niet gelukt. Ververs de pagina om het opnieuw te proberen.";
+            });
+    });
+});
+

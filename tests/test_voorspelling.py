@@ -531,7 +531,7 @@ def test_prognose_staat_in_het_menu_en_op_de_tellingenpagina(ingelogde_client, d
     )
     menu = ingelogde_client.get("/").data.decode()
     assert 'href="/prognose"' in menu
-    tellingen = ingelogde_client.get("/tellingen").data.decode()
+    tellingen = ingelogde_client.get("/tellingen/cijfers").data.decode()  # de pagina haalt dit na het laden op
     assert "Verwachte omzet komende 7 dagen" in tellingen and "/prognose" in tellingen
 
 
@@ -672,7 +672,7 @@ def test_tellingenpagina_toont_geen_afwijkende_periode_meer_en_wel_een_trend(ing
     begin = maandag_deze_week - timedelta(days=7 * 7)
     tijden = [t for t in (begin + (_t - MAANDAG) for _t in _woensdag_vrijdag_maandag(8)) if t < nu - timedelta(hours=3)]
     _bouw_geschiedenis(db, {a: 40}, tijdstippen=tijden)
-    pagina = ingelogde_client.get("/tellingen").data.decode()
+    pagina = ingelogde_client.get("/tellingen/cijfers").data.decode()
     assert "afwijkende periode" not in pagina
     assert "Omzet per week" in pagina and "verdeeld over de dagen" in pagina
     assert "Trend over de afgesloten weken" in pagina  # eerder: "te weinig volledige weken"

@@ -187,6 +187,7 @@ SECTIE_ENDPOINTS = {
         "tellen_lopen",
         "tellen_lopen_controleren",
         "tellingen_overzicht",
+        "tellingen_cijfers",
         "tellingen_gecombineerd_pdf",
         "kaartjes_pagina",
         "kaartjes_pdf_route",

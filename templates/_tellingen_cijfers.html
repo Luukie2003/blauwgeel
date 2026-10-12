@@ -1,0 +1,91 @@
+{# De kaarten 'Verwachting & trend' en 'Omzet per week' van het tellingenoverzicht (zie routes/tellen/tellingen.py). #}
+<div class="kaart">
+    <h2>Verwachting &amp; trend</h2>
+    {% if prognose and prognose.beschikbaar %}
+    <div class="statgrid">
+        <div class="stat">
+            <div class="getal">&euro; {{ '%.0f'|format(prognose.totaal.omzet) }}</div>
+            <div class="label">Verwachte omzet komende 7 dagen<br>
+                <span class="tekst-zacht">(waarschijnlijk tussen &euro; {{ '%.0f'|format(prognose.totaal.laag) }} en &euro; {{ '%.0f'|format(prognose.totaal.hoog) }})</span></div>
+        </div>
+        <div class="stat {{ 'waarschuwing' if prognose.samenvatting.urgent else '' }}">
+            <div class="getal">{{ prognose.samenvatting.urgent }}</div>
+            <div class="label">Producten die waarschijnlijk opraken</div>
+        </div>
+    </div>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Rekent per dag, met de thuiswedstrijden, de trainingsavond en het weer, en werkt ook als er niet
+        elke week op dezelfde dag geteld is. <a href="{{ url_for('prognose_pagina') }}">Bekijk de volledige prognose</a>.
+    </p>
+    {% endif %}
+    {% if trend %}
+    <div class="statgrid">
+        {% if not (prognose and prognose.beschikbaar) %}
+        <div class="stat">
+            <div class="getal">{{ "€ %.2f"|format(trend.verwachting) }}</div>
+            <div class="label">Verwachte omzet komende week (gemiddelde laatste {{ trend.gebaseerd_op_weken }} we{{ 'ken' if trend.gebaseerd_op_weken != 1 else 'ek' }})</div>
+        </div>
+        {% endif %}
+        <div class="stat {{ 'waarschuwing' if trend.richting == 'dalend' else '' }}">
+            <div class="getal">
+                {% if trend.richting == 'stijgend' %}&#8599;
+                {% elif trend.richting == 'dalend' %}&#8600;
+                {% else %}&#8594;{% endif %}
+                {{ trend.richting|capitalize }}
+            </div>
+            <div class="label">Trend over de afgesloten weken ({{ "%+.2f"|format(trend.richting_per_week) }} €/week)</div>
+        </div>
+    </div>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        De trend is gebaseerd op volledig gedekte weken (de lopende week telt nog niet mee). Hoe meer
+        weken met tellingen, hoe betrouwbaarder dit wordt.
+    </p>
+    {% else %}
+    {% if not (prognose and prognose.beschikbaar) %}
+    <p class="leeg">Nog te weinig volledig afgesloten weken met tellingen voor een trend (minimaal 2 nodig).</p>
+    {% endif %}
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Omzet per week</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        De omzet van elke telling is verdeeld over de dagen die erbij horen (drukke dagen, zoals een thuiswedstrijd,
+        tellen zwaarder), dus het maakt niet uit op welke dagen je telt. Het totaal klopt met de tellingen; hoe de omzet
+        binnen een telling over de dagen valt is een schatting.
+    </p>
+    {% if omzet_per_week %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Week</th><th>Periode</th><th>Omzet</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for w in omzet_per_week %}
+                <tr>
+                    <td>
+                        Week {{ w.week }}, {{ w.jaar }}
+                        {% if w.status == 'loopt_nog' %}
+                        <span class="badge badge-neutraal" title="De laatste telling was op {{ w.geteld_tot.strftime('%d-%m %H:%M') }}; wat daarna verkocht is, komt erbij bij de volgende telling.">
+                            {% if w.jaar == huidige_jaar and w.week == huidige_week %}loopt nog{% else %}geteld t/m {{ w.geteld_tot.strftime('%d-%m') }}{% endif %}
+                        </span>
+                        {% elif w.status == 'begin' %}
+                        <span class="badge badge-neutraal" title="De eerste telling viel midden in deze week, dus de dagen ervoor zijn niet gemeten.">begin meting</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ w.van }} t/m {{ w.tot }}</td>
+                    <td>{{ "€ %.2f"|format(w.omzet) }}</td>
+                    <td>
+                        <a href="{{ url_for('verkooprapport_pdf_route', van=w.van, tot=w.tot) }}"
+                           class="btn btn-rand btn-klein" target="_blank"
+                           title="PDF van de tellingen die in deze week gedaan zijn; dat is niet precies hetzelfde als de weekomzet hier">PDF</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen verkoop geregistreerd via tellingen.</p>
+    {% endif %}
+</div>

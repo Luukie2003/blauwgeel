@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.43.0"
+HUIDIGE_VERSIE = "1.43.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.43.1",
+        "datum": "12 oktober 2026",
+        "punten": [
+            "Het tellingenoverzicht opent meteen. De lijst met tellingen staat direct klaar; de verwachting, de trend en de omzet per week worden erna berekend en komen er een paar seconden later bij. Voorheen duurde het openen na een tijdje niet gebruikt te zijn zo'n 5 seconden, omdat die cijfers eerst klaar moesten zijn.",
+        ],
+    },
     {
         "versie": "1.43.0",
         "datum": "12 oktober 2026",
@@ -789,7 +796,7 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.9.2", "sinds": "0.1.0", "laatst": "1.41.0",
+    {"naam": "Voorraad & tellen", "versie": "1.9.3", "sinds": "0.1.0", "laatst": "1.43.1",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.6.2", "sinds": "0.4.0", "laatst": "1.34.0",
      "inhoud": "Bestellijst, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop, boodschappenlijst"},

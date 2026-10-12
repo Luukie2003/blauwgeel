@@ -353,10 +353,10 @@ def test_vraag_kandidaten_kijkt_alleen_naar_taken_van_die_persoon(app, db):
 
 def test_het_handterminal_scherm_toont_de_vraag_ook(ingelogde_client, db):
     taak_id = _taak(db, "Kerstboom ophalen", soort="eigen")
-    with ingelogde_client.session_transaction() as sess:
-        sess["weergave_modus"] = "pda"
+    ingelogde_client.get("/weergave/pda")
     ingelogde_client.get(f"/taken/{taak_id}/openen")
     tekst = ingelogde_client.get("/").data.decode()
+    assert "pda-kop-menuknop" in tekst and 'class="app-zijbalk"' not in tekst  # echt de handterminal-weergave
     assert "Kerstboom ophalen" in tekst and "afgerond?" in tekst
 
 
