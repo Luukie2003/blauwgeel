@@ -315,3 +315,11 @@ def test_de_vijf_ontwerpen_zijn_echt_verschillend_van_vorm():
     assert maten["D"][0] > maten["D"][1] and maten["D2"][0] > maten["D2"][1]  # twee brede
     assert maten["A"][0] == maten["A"][1] and maten["B"][0] == maten["B"][1]  # twee vierkante
     assert maten["C"][1] > maten["C"][0]  # een staand
+
+
+def test_er_staat_nergens_een_datum_op_de_kaartjes():
+    for optie in OPTIES:
+        inhoud = _ontvouw(kaartjes_pdf(optie.sleutel, STANDAARD))
+        assert b"Datum" not in inhoud and b"DATUM" not in inhoud, optie.sleutel
+        assert b"Naam" in inhoud and b"Team" in inhoud, optie.sleutel
+        assert "Datum" not in optie.omschrijving

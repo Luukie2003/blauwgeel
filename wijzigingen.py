@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.43.5"
+HUIDIGE_VERSIE = "1.43.6"
 WIJZIGINGEN = [
+    {
+        "versie": "1.43.6",
+        "datum": "12 oktober 2026",
+        "punten": [
+            "Kaartjes printen: het veld Datum is van alle ontwerpen weggehaald. Naam en Team hebben de plek gekregen, en bij de vierkante en het staande ontwerp is de vrijgekomen ruimte schrijfruimte geworden: 'Vierkant' en 'Staand, smal' hebben nu 4 lege regels, 'Vierkant, met logo' 3.",
+        ],
+    },
     {
         "versie": "1.43.5",
         "datum": "12 oktober 2026",
@@ -826,7 +833,7 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.9.6", "sinds": "0.1.0", "laatst": "1.43.5",
+    {"naam": "Voorraad & tellen", "versie": "1.9.7", "sinds": "0.1.0", "laatst": "1.43.6",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.6.3", "sinds": "0.4.0", "laatst": "1.43.2",
      "inhoud": "Bestellijst, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop, boodschappenlijst"},
