@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.39.1"
+HUIDIGE_VERSIE = "1.40.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.40.0",
+        "datum": "10 oktober 2026",
+        "punten": [
+            "Kantine-tv: een dia (video, sponsor of mededeling) kan nu vaker per ronde van de diashow in beeld komen. Bij Dia's & sponsoren → bewerken kies je 'Hoe vaak per ronde' (1 t/m 6); de extra keren worden gelijkmatig over de ronde verspreid en een dia komt nooit direct na zichzelf. Een video wordt daarbij nog steeds maar één keer opgehaald.",
+        ],
+    },
     {
         "versie": "1.39.1",
         "datum": "10 oktober 2026",

@@ -10,6 +10,7 @@ from helpers import (
     HEX_KLEUR_PATROON,
     KIOSK_AFBEELDINGEN_MAP,
     KIOSK_ELEMENT_TYPES,
+    KIOSK_MAX_HERHALINGEN,
     KIOSK_OVERGANGEN,
     KIOSK_OVERGANG_SLEUTELS,
     KIOSK_SPONSOR_SJABLONEN,
@@ -58,6 +59,10 @@ def _sponsor_uit_formulier():
         volgorde = int(request.form.get("volgorde") or 0)
     except ValueError:
         volgorde = 0
+    try:
+        herhalingen = int(request.form.get("herhalingen") or 1)
+    except ValueError:
+        herhalingen = 1
     overgang = request.form.get("overgang", "").strip()
     if overgang not in KIOSK_OVERGANG_SLEUTELS:
         overgang = "fade"
@@ -71,6 +76,7 @@ def _sponsor_uit_formulier():
         "tekst": request.form.get("tekst", "").strip() or None,
         "weergave_duur_seconden": max(2, duur),
         "volgorde": volgorde,
+        "herhalingen": max(1, min(KIOSK_MAX_HERHALINGEN, herhalingen)),
         "actief": 1 if request.form.get("actief") else 0,
         "overgang": overgang,
         "tekst_grootte": tekst_grootte,
@@ -231,8 +237,8 @@ def register_routes(app):
                    (sjabloon, custom_sjabloon_id, titel, tekst, afbeelding,
                     achtergrond_afbeelding, overgang, tekst_grootte,
                     weergave_duur_seconden, volgorde, actief, aangemaakt_op,
-                    video, video_duur, video_hele_duur, video_geluid)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    video, video_duur, video_hele_duur, video_geluid, herhalingen)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     gegevens["sjabloon"],
                     gegevens["custom_sjabloon_id"],
@@ -250,6 +256,7 @@ def register_routes(app):
                     video_duur,
                     gegevens["video_hele_duur"],
                     gegevens["video_geluid"],
+                    gegevens["herhalingen"],
                 ),
             )
             db.commit()
@@ -265,6 +272,7 @@ def register_routes(app):
         return render_template(
             "kiosk_sponsor_form.html",
             sponsor=None,
+            max_herhalingen=KIOSK_MAX_HERHALINGEN,
             sjablonen=KIOSK_SPONSOR_SJABLONEN,
             sjabloon_voorbeelden=KIOSK_SPONSOR_SJABLOON_VOORBEELDEN,
             sjablonen_custom=sjablonen_custom,
@@ -326,7 +334,7 @@ def register_routes(app):
                        afbeelding = ?, achtergrond_afbeelding = ?, overgang = ?,
                        tekst_grootte = ?, weergave_duur_seconden = ?, volgorde = ?,
                        actief = ?, video = ?, video_duur = ?, video_hele_duur = ?,
-                       video_geluid = ?
+                       video_geluid = ?, herhalingen = ?
                    WHERE id = ?""",
                 (
                     gegevens["sjabloon"],
@@ -344,6 +352,7 @@ def register_routes(app):
                     video_duur,
                     gegevens["video_hele_duur"],
                     gegevens["video_geluid"],
+                    gegevens["herhalingen"],
                     sponsor_id,
                 ),
             )
@@ -368,6 +377,7 @@ def register_routes(app):
             tekst_groottes=KIOSK_TEKST_GROOTTES,
             producten=_sjabloon_producten(db),
             video_info=video_info(sponsor["video"], sponsor["video_duur"]),
+            max_herhalingen=KIOSK_MAX_HERHALINGEN,
             VIDEO_ZWAAR_MBIT=VIDEO_ZWAAR_MBIT,
         )
 

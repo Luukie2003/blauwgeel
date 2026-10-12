@@ -19,6 +19,10 @@ KIOSK_SPONSOR_SJABLONEN = [
 ]
 
 
+# Hoe vaak een dia hooguit per ronde van de diashow in beeld mag komen.
+KIOSK_MAX_HERHALINGEN = 6
+
+
 KIOSK_SPONSOR_SJABLOON_SLEUTELS = {sleutel for sleutel, _ in KIOSK_SPONSOR_SJABLONEN}
 
 

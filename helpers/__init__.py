@@ -38,6 +38,7 @@ from helpers.video import (
 from helpers.kiosk_constanten import (
     HEX_KLEUR_PATROON,
     KIOSK_ELEMENT_TYPES,
+    KIOSK_MAX_HERHALINGEN,
     KIOSK_OVERGANGEN,
     KIOSK_OVERGANG_SLEUTELS,
     KIOSK_SPONSOR_SJABLONEN,

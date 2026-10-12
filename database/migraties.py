@@ -258,6 +258,8 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "club_van_20_aanmelden_aan", "INTEGER NOT NULL DEFAULT 1"),
     # Video op een dia (sjabloon 'video_volledig'): bestandsnaam in static/kiosk_videos, de lengte in seconden
     # (als die te lezen was), of de dia zo lang blijft staan als de video duurt, en of het geluid aan staat.
+    # Hoe vaak een dia per ronde van de diashow in beeld komt (gelijkmatig verspreid).
+    ("kiosk_sponsoren", "herhalingen", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_sponsoren", "video", "TEXT"),
     ("kiosk_sponsoren", "video_duur", "REAL"),
     ("kiosk_sponsoren", "video_hele_duur", "INTEGER NOT NULL DEFAULT 1"),

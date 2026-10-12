@@ -46,6 +46,7 @@ def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None):
     slide = {
         "type": "sponsor",
         "duur": duur,
+        "herhalingen": s["herhalingen"],
         "video": s["video"],
         "video_bytes": (video_info(s["video"], s["video_duur"]) or {}).get("bytes", 0),
         "video_geluid": bool(s["video_geluid"]),

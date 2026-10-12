@@ -45,7 +45,7 @@
     <div class="scherm">
         {% for slide in slides %}
         <section class="slide slide-{{ slide.type }}{% if slide.type.startswith('club_van_20') or slide.type == 'sponsorlogos' %} c20{% endif %}{% if slide.type == 'sponsor' %} sjabloon-{{ slide.sjabloon }} overgang-{{ slide.overgang }} tekst-{{ slide.tekst_grootte }}{% endif %}{% if loop.first %} actief{% endif %}"
-                 data-duur="{{ slide.duur }}"
+                 data-duur="{{ slide.duur }}"{% if slide.herhalingen and slide.herhalingen > 1 %} data-herhaal="{{ slide.herhalingen }}"{% endif %}
                  {% if slide.sjabloon == 'aangepast' and slide.custom_achtergrond_kleur %}style="background: {{ slide.custom_achtergrond_kleur }};"{% endif %}>
             {% if slide.type == 'sponsor' %}
                 {% if slide.sjabloon == 'afbeelding_volledig' %}
@@ -404,6 +404,19 @@
         });
     }
 
+    // Een dia die per ronde vaker in beeld moet komen (data-herhaal, instelbaar per dia) krijgt zijn extra plekken
+    // gelijkmatig verspreid over de ronde. Het blijft dezelfde dia (dus 1 video, 1x downloaden); alleen de volgorde
+    // verandert. Hooguit de helft van de dia's: zo komt een dia nooit direct na zichzelf.
+    function spreidDias(basis, aantalVan) {
+        var L = basis.length, lijst = [];
+        basis.forEach(function (s, i) {
+            var n = Math.max(1, Math.min(Math.floor(L / 2), aantalVan(s)));
+            for (var k = 0; k < n; k++) lijst.push({ pos: (i + k * L / n) % L, i: i, k: k, el: s });
+        });
+        lijst.sort(function (a, b) { return a.pos - b.pos || a.i - b.i || a.k - b.k; });
+        return lijst.map(function (x) { return x.el; });
+    }
+
     // Aftelklok op de wervingsdia: tikt elke seconde, los van de diashow.
     // Op nul verdwijnt de klok (de server geeft na dat moment de "na
     // afloop"-tekst of niets meer mee; de versiepoll hieronder herlaadt
@@ -444,7 +457,10 @@
         // elke 'sponsorsElke' gewone dia's tussendoor -- steeds de volgende
         // sponsor, ook over de rondes heen, zodat elke sponsor evenveel in
         // beeld komt (zie bouw_sponsor_dias in sponsoren.py).
-        var gewoon = slides.filter(function (s) { return !s.classList.contains('slide-sponsorlogos'); });
+        var gewoon = spreidDias(
+            slides.filter(function (s) { return !s.classList.contains('slide-sponsorlogos'); }),
+            function (s) { return parseInt(s.dataset.herhaal, 10) || 1; }
+        );
         var sponsors = slides.filter(function (s) { return s.classList.contains('slide-sponsorlogos'); });
         var sponsorsElke = Math.max(1, {{ sponsors_elke|default(2)|int }});
         var gewoonIndex = 0, sponsorIndex = 0, sindsSponsor = 1;

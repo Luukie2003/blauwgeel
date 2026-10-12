@@ -595,7 +595,7 @@
                     </td>
                     <td>{{ s.titel or '—' }}</td>
                     <td>{{ sjabloon_labels.get(s.sjabloon, s.sjabloon) }}</td>
-                    <td>{% if s.sjabloon == 'video_volledig' and s.video_hele_duur and s.video_duur %}{{ s.video_duur|round|int }}s (video){% else %}{{ s.weergave_duur_seconden }}s{% endif %}</td>
+                    <td>{% if s.sjabloon == 'video_volledig' and s.video_hele_duur and s.video_duur %}{{ s.video_duur|round|int }}s (video){% else %}{{ s.weergave_duur_seconden }}s{% endif %}{% if s.herhalingen > 1 %} <span class="tekst-zacht">&times;{{ s.herhalingen }} per ronde</span>{% endif %}</td>
                     <td>{{ s.volgorde }}</td>
                     <td>
                         {% if s.actief %}
