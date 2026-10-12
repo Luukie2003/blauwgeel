@@ -190,8 +190,6 @@ a:hover { text-decoration: underline; }
 .app-layout {
     display: flex;
     align-items: flex-start;
-    max-width: 1150px;
-    margin: 0 auto;
 }
 
 .app-zijbalk {

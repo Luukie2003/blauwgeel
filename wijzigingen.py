@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.42.0"
+HUIDIGE_VERSIE = "1.42.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.42.1",
+        "datum": "12 oktober 2026",
+        "punten": [
+            "Breder scherm: op een computer gebruikt de site nu de hele breedte van het scherm in plaats van een smalle kolom in het midden. Het menu staat links, onder het logo. Op telefoon en tablet verandert er niets.",
+        ],
+    },
     {
         "versie": "1.42.0",
         "datum": "12 oktober 2026",
