@@ -485,7 +485,7 @@ CREATE TABLE IF NOT EXISTS kaartjes_instellingen (
     zwartwit INTEGER NOT NULL DEFAULT 0
 );
 INSERT OR IGNORE INTO kaartjes_instellingen (id, hardlopers)
-VALUES (1, 'Pils tap' || char(10) || 'Hertog Jan Fles' || char(10) || 'Bozu' || char(10) || 'Powerrade' || char(10) || 'Bacardi Cola' || char(10) || 'Sonnema Cola');
+VALUES (1, 'Pils tap' || char(10) || 'Hertog Jan Fles' || char(10) || 'Bozu' || char(10) || 'Powerrade');
 
 -- Meldingen voor de schermen: een nieuw lid of een verlenging komt even groot in beeld (zie
 -- registreer_melding in club_van_20/administratie.py en welkom_wachtrij in club_van_20/scherm.py).

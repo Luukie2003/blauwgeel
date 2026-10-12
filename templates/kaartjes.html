@@ -42,6 +42,12 @@
 
         <fieldset class="groupbox">
             <legend>Hardlopers</legend>
+            {% if instellingen.hardlopers_over %}
+            <div class="flash flash-warning" style="margin-bottom:0.8rem">
+                Er passen maximaal {{ max_hardlopers }} hardlopers op een kaartje (zo blijft er meer vrije ruimte over om op te schrijven).
+                Niet meer op het kaartje: {{ instellingen.hardlopers_over|join(', ') }}. Pas de lijst hieronder aan en sla op.
+            </div>
+            {% endif %}
             <div class="veld">
                 <label for="hardlopers">De dranken die hard lopen (een per regel, maximaal {{ max_hardlopers }})</label>
                 <textarea id="hardlopers" name="hardlopers" rows="{{ max_hardlopers }}" style="font-family:inherit">{{ instellingen.hardlopers_tekst }}</textarea>

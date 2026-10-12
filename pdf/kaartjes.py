@@ -10,8 +10,9 @@ from fpdf import FPDF
 
 from pdf.basis import KLEUR_BLAUW, KLEUR_GEEL, LOGO_PAD
 
-# Meer hardlopers past niet: de ontwerpen hebben ruimte voor 2 kolommen van 3 (of 1 kolom van 6).
-MAX_HARDLOPERS = 6
+# Meer hardlopers past niet: de ontwerpen hebben ruimte voor 2 kolommen van 2 (of 1 kolom van 4). Bewust weinig:
+# hoe minder artikelen, hoe meer vrije regels er overblijven om op te schrijven.
+MAX_HARDLOPERS = 4
 MAX_TEKENS_HARDLOPER = 24
 
 GRIJS = (150, 150, 150)
@@ -23,25 +24,35 @@ Optie = namedtuple("Optie", "sleutel naam breedte hoogte kolommen rijen omschrij
 
 # In deze volgorde getoond. Het eerste ontwerp is de standaard.
 OPTIES = [
-    Optie("D", "Breed", 97, 52, 2, 5, "Twee kolommen met een lang, leeg turfvak achter elke hardloper, 3 lege regels."),
-    Optie("D2", "Breed met turflijn", 97, 60, 2, 4, "Een hardloper per rij met een turflijn over de hele breedte (ongeveer 55 stuks), 2 lege regels."),
-    Optie("A", "Vierkant, ruim", 65, 65, 3, 4, "Twee kolommen met een klein hokje, 4 lege regels. De meeste schrijfruimte van de vierkante."),
-    Optie("B", "Vierkant, met logo", 55, 55, 3, 5, "Met clublogo in een balk, klein hokje per hardloper, 2 lege regels."),
-    Optie("C", "Vierkant, klein", 48, 48, 4, 5, "Zwart-wit en zuinig met papier, 2 lege regels."),
+    Optie("D", "Breed", 97, 52, 2, 5, "Twee kolommen met een lang, leeg turfvak achter elke hardloper, 4 lege regels."),
+    Optie("D2", "Breed met turflijn", 97, 60, 2, 4, "Een hardloper per rij met een turflijn over de hele breedte (ongeveer 55 stuks), 4 lege regels."),
+    Optie("A", "Vierkant, ruim", 65, 65, 3, 4, "Twee kolommen met een klein hokje, 5 lege regels. De meeste schrijfruimte van de vierkante."),
+    Optie("B", "Vierkant, met logo", 55, 55, 3, 5, "Met clublogo in een balk, klein hokje per hardloper, 3 lege regels."),
+    Optie("C", "Vierkant, klein", 48, 48, 4, 5, "Zwart-wit en zuinig met papier, 3 lege regels."),
 ]
 OPTIE_PER_SLEUTEL = {o.sleutel: o for o in OPTIES}
 STANDAARD_OPTIE = OPTIES[0].sleutel
 
 
-def schoon_hardlopers(tekst):
-    """Een lijst namen uit een tekst met een naam per regel: lege regels weg, hooguit MAX_HARDLOPERS namen van
-    hooguit MAX_TEKENS_HARDLOPER tekens. Geeft (namen, aantal_weggelaten)."""
+def _alle_namen(tekst):
     namen = []
     for regel in (tekst or "").splitlines():
         naam = " ".join(regel.split())[:MAX_TEKENS_HARDLOPER]
         if naam and naam.lower() not in [n.lower() for n in namen]:
             namen.append(naam)
+    return namen
+
+
+def schoon_hardlopers(tekst):
+    """Een lijst namen uit een tekst met een naam per regel: lege regels weg, hooguit MAX_HARDLOPERS namen van
+    hooguit MAX_TEKENS_HARDLOPER tekens. Geeft (namen, aantal_weggelaten)."""
+    namen = _alle_namen(tekst)
     return namen[:MAX_HARDLOPERS], max(0, len(namen) - MAX_HARDLOPERS)
+
+
+def hardlopers_over(tekst):
+    """De namen uit de tekst die niet meer op het kaartje passen (na de eerste MAX_HARDLOPERS)."""
+    return _alle_namen(tekst)[MAX_HARDLOPERS:]
 
 
 def _veilig(tekst):
@@ -109,7 +120,7 @@ class _Tekenaar:
         return langste
 
     def hardlopers_hokje(self, x, y_eerste, breedte, rij_h, maat=6.2, vak_max=11.0):
-        """De hardlopers in 2 kolommen van 3: de naam en een hokje voor het aantal. Het hokje krijgt de ruimte
+        """De hardlopers in 2 kolommen van 2: de naam en een hokje voor het aantal. Het hokje krijgt de ruimte
         die de langste naam overlaat (tot vak_max breed)."""
         tussen = 5.0
         kol_b = (breedte - tussen) / 2
@@ -117,8 +128,8 @@ class _Tekenaar:
         vak = min(vak_max, max(4.0, kol_b - self._langste(maten) - 2.5))
         hoogte = min(3.6, rij_h - 1.0)  # bij krappe rijen een lager hokje, zodat ze elkaar niet raken
         for i, (naam, m) in enumerate(zip(self.hardlopers, maten)):
-            cx = x + (i // 3) * (kol_b + tussen)
-            cy = y_eerste + (i % 3) * rij_h
+            cx = x + (i // 2) * (kol_b + tussen)
+            cy = y_eerste + (i % 2) * rij_h
             self.pdf.set_font("Helvetica", "", m)
             self.pdf.set_text_color(*ZWART)
             self.pdf.text(cx, cy, naam)
@@ -154,8 +165,8 @@ class _Tekenaar:
         self.veld("Datum", split, x + w - p, y + 13.6)
         self.dubbele_lijn(x + p, x + w - p, y + 15.6)
         self.hardlopers_hokje(x + p, y + 24.6, w - 2 * p, 5.6)
-        for k in range(4):
-            self.stippel(x + p, x + w - p, y + 42.8 + k * 5.6)
+        for k in range(5):
+            self.stippel(x + p, x + w - p, y + 37.6 + k * 5.6)
 
     def kaart_b(self, x, y, w, h):
         pdf = self.pdf
@@ -176,8 +187,8 @@ class _Tekenaar:
         self.veld("Datum", split, x + w - p, y + 19.4, 6)
         self.label("HARDLOPERS", x + p, y + 24.7, 6.5, "B", self.blauw)
         self.hardlopers_hokje(x + p, y + 29.6, w - 2 * p, 4.6, 5.6)
-        for k in range(2):
-            self.stippel(x + p, x + w - p, y + 44.8 + k * 4.9)
+        for k in range(3):
+            self.stippel(x + p, x + w - p, y + 40.0 + k * 4.9)
 
     def kaart_c(self, x, y, w, h):
         p = 3.0
@@ -191,8 +202,8 @@ class _Tekenaar:
         self.lijn(x + p, x + w - p, y + 16.6, ZWART, 0.35)
         self.label("HARDLOPERS", x + p, y + 19.8, 5.8, "B", ZWART)
         self.hardlopers_hokje(x + p, y + 25.2, w - 2 * p, 4.2, 5.0)
-        for k in range(2):
-            self.stippel(x + p, x + w - p, y + 38.4 + k * 4.6)
+        for k in range(3):
+            self.stippel(x + p, x + w - p, y + 34.6 + k * 4.6)
 
     def kaart_d(self, x, y, w, h):
         p = 3.6
@@ -202,8 +213,8 @@ class _Tekenaar:
         self.veld("Datum", x + p + b * 0.80, x + w - p, y + 6.6)
         self.dubbele_lijn(x + p, x + w - p, y + 8.6)
         self.hardlopers_turf(x + p, y + 17.0, b, 6.0, 2, 6.0, 5.2)
-        for k in range(3):
-            self.stippel(x + p, x + w - p, y + 36.0 + k * 5.6)
+        for k in range(4):
+            self.stippel(x + p, x + w - p, y + 30.6 + k * 5.8)
 
     def kaart_d2(self, x, y, w, h):
         p = 3.6
@@ -213,8 +224,8 @@ class _Tekenaar:
         self.veld("Datum", x + p + b * 0.80, x + w - p, y + 6.4)
         self.dubbele_lijn(x + p, x + w - p, y + 8.4)
         self.hardlopers_turf(x + p, y + 16.0, b, 5.6, 1, 6.4, 4.8)
-        for k in range(2):
-            self.stippel(x + p, x + w - p, y + 50.6 + k * 5.4)
+        for k in range(4):
+            self.stippel(x + p, x + w - p, y + 40.4 + k * 5.4)
 
     # ---------- een vel ----------
 

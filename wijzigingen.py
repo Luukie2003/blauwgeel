@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.43.3"
+HUIDIGE_VERSIE = "1.43.4"
 WIJZIGINGEN = [
+    {
+        "versie": "1.43.4",
+        "datum": "12 oktober 2026",
+        "punten": [
+            "Kaartjes printen: er passen nu 4 hardlopers op een kaartje in plaats van 6, zodat er meer vrije ruimte overblijft. De ruimte van de twee weggevallen artikelen is schrijfruimte geworden: elk ontwerp heeft meer lege regels (bij het brede ontwerp 4, bij het brede met turflijn 4, bij het vierkante 'ruim' 5 en bij de andere twee 3). Had je er al meer ingesteld, dan staan de laatste hardlopers niet meer op het kaartje en zegt de pagina welke.",
+        ],
+    },
     {
         "versie": "1.43.3",
         "datum": "12 oktober 2026",
@@ -812,7 +819,7 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.9.4", "sinds": "0.1.0", "laatst": "1.43.3",
+    {"naam": "Voorraad & tellen", "versie": "1.9.5", "sinds": "0.1.0", "laatst": "1.43.4",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.6.3", "sinds": "0.4.0", "laatst": "1.43.2",
      "inhoud": "Bestellijst, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop, boodschappenlijst"},

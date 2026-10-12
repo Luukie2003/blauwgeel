@@ -5,7 +5,7 @@ De hardlopers typ je zelf; als hulp is er een lijst van wat dit seizoen het mees
 (alle Bozu-smaken samen), zodat je er met 1 klik een kunt overnemen."""
 
 from club_van_20 import huidig_seizoen
-from pdf.kaartjes import OPTIE_PER_SLEUTEL, STANDAARD_OPTIE, schoon_hardlopers
+from pdf.kaartjes import OPTIE_PER_SLEUTEL, STANDAARD_OPTIE, hardlopers_over, schoon_hardlopers
 from seizoensrapport import seizoen_start
 
 MAX_VELLEN = 50
@@ -20,7 +20,8 @@ def lees_instellingen(db):
     return {
         "optie": optie,
         "hardlopers": schoon_hardlopers(tekst)[0],
-        "hardlopers_tekst": tekst,
+        "hardlopers_over": hardlopers_over(tekst),  # opgeslagen, maar passen niet (meer) op het kaartje
+        "hardlopers_tekst": "\n".join(schoon_hardlopers(tekst)[0]),  # wat er op het kaartje komt
         "vellen": max(1, min(MAX_VELLEN, rij["vellen"])) if rij else 1,
         "zwartwit": bool(rij["zwartwit"]) if rij else False,
     }

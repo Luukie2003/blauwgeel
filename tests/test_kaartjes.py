@@ -17,7 +17,7 @@ from pdf.kaartjes import (
     schoon_hardlopers,
 )
 
-STANDAARD = ["Pils tap", "Hertog Jan Fles", "Bozu", "Powerrade", "Bacardi Cola", "Sonnema Cola"]
+STANDAARD = ["Pils tap", "Hertog Jan Fles", "Bozu", "Powerrade"]
 
 
 def _paginas(pdf_bytes):
@@ -38,9 +38,9 @@ def test_hardlopers_schoonmaken():
     assert schoon_hardlopers("Bozu\nbozu\nBOZU") == (["Bozu"], 0)  # dezelfde naam maar 1 keer
 
 
-def test_maximaal_zes_hardlopers_en_korte_namen():
+def test_maximaal_vier_hardlopers_en_korte_namen():
     namen, weggelaten = schoon_hardlopers("\n".join(f"Drank {i}" for i in range(9)))
-    assert len(namen) == MAX_HARDLOPERS == 6 and weggelaten == 3
+    assert len(namen) == MAX_HARDLOPERS == 4 and weggelaten == 5
     assert schoon_hardlopers("x" * 80)[0] == ["x" * MAX_TEKENS_HARDLOPER]
 
 
@@ -207,8 +207,8 @@ def test_opslaan_via_de_pagina(ingelogde_client, db):
 
 def test_te_veel_hardlopers_geeft_een_waarschuwing(ingelogde_client, db):
     resp = _opslaan(ingelogde_client, hardlopers="\n".join(f"Drank {i}" for i in range(8)))
-    assert "maximaal 6 hardlopers" in resp.data.decode() and "laatste 2" in resp.data.decode()
-    assert len(lees_instellingen(db)["hardlopers"]) == 6
+    assert "maximaal 4 hardlopers" in resp.data.decode() and "laatste 4" in resp.data.decode()
+    assert len(lees_instellingen(db)["hardlopers"]) == 4
 
 
 def test_vellen_zonder_getal_wordt_een(ingelogde_client, db):
@@ -253,3 +253,43 @@ def test_toegang_volgt_de_sectie_voorraad(client, db):
     _login(client, "telt_voorraad")
     assert client.get("/kaartjes").status_code == 200
     assert client.get("/kaartjes/pdf").status_code == 200
+
+
+# ---------- Vier hardlopers, meer vrije ruimte ----------
+
+
+def test_opgeslagen_hardlopers_die_niet_meer_passen_worden_gemeld(ingelogde_client, db):
+    """Eerder pasten er zes: wat er nu te veel is staat niet meer op het kaartje, en de pagina zegt wat."""
+    zes = "Pils tap\nHertog Jan Fles\nBozu\nBacardi Cola\nSonnema Cola\nPowerrade"
+    db.execute("UPDATE kaartjes_instellingen SET hardlopers = ? WHERE id = 1", (zes,))
+    db.commit()
+    i = lees_instellingen(db)
+    assert i["hardlopers"] == ["Pils tap", "Hertog Jan Fles", "Bozu", "Bacardi Cola"]
+    assert i["hardlopers_over"] == ["Sonnema Cola", "Powerrade"]
+    assert i["hardlopers_tekst"] == "Pils tap\nHertog Jan Fles\nBozu\nBacardi Cola"  # het veld toont wat er echt op komt
+
+    tekst = ingelogde_client.get("/kaartjes").data.decode()
+    assert "Niet meer op het kaartje: Sonnema Cola, Powerrade" in tekst
+    assert "Sonnema Cola\nPowerrade" not in tekst
+
+
+def test_geen_melding_als_alles_past(ingelogde_client, db):
+    assert lees_instellingen(db)["hardlopers_over"] == []
+    assert "Niet meer op het kaartje" not in ingelogde_client.get("/kaartjes").data.decode()
+
+
+def test_vier_hardlopers_staan_in_twee_kolommen_van_twee():
+    from pdf.kaartjes import hardlopers_over
+
+    inhoud = _ontvouw(kaartjes_pdf("D", ["Een", "Twee", "Drie", "Vier", "Vijf"]))
+    assert b"Vier" in inhoud and b"Vijf" not in inhoud  # de vijfde past niet
+    assert hardlopers_over("Een\nTwee\nDrie\nVier\nVijf\nZes") == ["Vijf", "Zes"]
+
+
+def test_er_zijn_meer_schrijfregels_dan_eerder():
+    """De ruimte van de twee weggevallen hardlopers is schrijfruimte geworden (stippellijnen per kaartje)."""
+    eerder = {"D": 3, "D2": 2, "A": 4, "B": 2, "C": 2}
+    nu = {"D": 4, "D2": 4, "A": 5, "B": 3, "C": 3}
+    for sleutel, aantal in nu.items():
+        assert aantal > eerder[sleutel]
+        assert f"{aantal} lege regels" in OPTIE_PER_SLEUTEL[sleutel].omschrijving
