@@ -1,4 +1,4 @@
-from flask import Response, flash, redirect, render_template, request, session, url_for
+from flask import Response, flash, g, redirect, render_template, request, session, url_for
 
 from database import get_db
 from helpers import (
@@ -64,10 +64,19 @@ def register_routes(app):
             "bestellijst.html",
             suggesties=suggesties,
             overige_producten=overige_producten,
-            voorspelde_tekorten=bereken_voorspelde_tekorten(db),
             meldingen=bereken_bestellijst_meldingen(db),
             open_bestellingen=open_bestellingen_met_regels,
             recent_ontvangen=recent_ontvangen_met_regels,
+        )
+
+    @app.route("/bestellijst/voorspeld")
+    def bestellijst_voorspeld():
+        """De kaart 'Voorspelde tekorten' van de bestellijst, apart opgehaald: het voorspelmodel rekent op de server soms
+        enkele seconden, dus de bestellijst zelf staat meteen klaar en deze kaart komt er na het laden bij (leeg als er
+        geen tekorten verwacht worden)."""
+        return render_template(
+            "_pda_bestellijst_voorspeld.html" if g.get("weergave_modus") == "pda" else "_bestellijst_voorspeld.html",
+            voorspelde_tekorten=bereken_voorspelde_tekorten(get_db()),
         )
 
     @app.route("/bestellijst/pdf")

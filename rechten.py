@@ -88,6 +88,13 @@ TABLET_CODE_UITGEZONDERD = {"tablet_code_instellen", "logout"}
 GEBRUIK_NIET_LOGGEN = {
     "static",
     "status_pagina",
+    # Delen van een pagina die na het laden apart worden opgehaald (zie data-lazy-bron in gedeeld.js), en het
+    # voorverwarmen van het voorspelmodel: dat is geen bezoek aan een pagina.
+    "dashboard_omzettrend",
+    "tellingen_cijfers",
+    "bestellijst_voorspeld",
+    "prognose_resultaat",
+    "voorspelling_opwarmen",
     # Typen in de zoekbalk haalt bij elke toetsslag resultaten op.
     "zoeken_live",
     "favicon_ico",
@@ -195,7 +202,10 @@ SECTIE_ENDPOINTS = {
         "telling_regel_corrigeren",
         "telling_pdf",
         "bestellijst",
+        "bestellijst_voorspeld",
         "prognose_pagina",
+        "prognose_resultaat",
+        "voorspelling_opwarmen",
         "wedstrijd_afgelast_wisselen",
         "prognose_verkoopdagen",
         "prognose_uitzondering_toevoegen",

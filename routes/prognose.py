@@ -45,12 +45,31 @@ def _verkoop_context(db):
 
 
 def register_routes(app):
+    def _horizon():
+        dagen = request.args.get("dagen", 7, type=int)
+        return dagen if dagen in HORIZONNEN else 7
+
     @app.route("/prognose")
     def prognose_pagina():
+        """De pagina zelf: de instellingen en de thuiswedstrijden staan meteen klaar. De prognose komt uit het
+        voorspelmodel en dat rekent op de server soms enkele seconden, dus die haalt de pagina na het laden apart op
+        (zie prognose_resultaat)."""
         db = get_db()
-        dagen = request.args.get("dagen", 7, type=int)
-        if dagen not in HORIZONNEN:
-            dagen = 7
+        return render_template(
+            "prognose.html",
+            dagen=_horizon(),
+            horizonnen=HORIZONNEN,
+            categorie=request.args.get("categorie") or "",
+            verkoop=_verkoop_context(db),
+            thuiswedstrijden=bereken_komende_thuiswedstrijden(db, dagen=14, inclusief_afgelast=True),
+        )
+
+    @app.route("/prognose/resultaat")
+    def prognose_resultaat():
+        """Het rekenwerk van de Prognose-pagina (verwachte omzet, dag voor dag, producten, wat het systeem heeft
+        geleerd), apart opgehaald. Krijgt dezelfde ?dagen= en ?categorie= als de pagina."""
+        db = get_db()
+        dagen = _horizon()
         prognose = maak_prognose(db, dagen=dagen)
         categorie = request.args.get("categorie") or ""
         if prognose["beschikbaar"]:
@@ -65,15 +84,23 @@ def register_routes(app):
         else:
             categorieen = []
         return render_template(
-            "prognose.html",
+            "_prognose_resultaat.html",
             prognose=prognose,
             dagen=dagen,
-            horizonnen=HORIZONNEN,
             categorie=categorie,
             categorieen=categorieen,
-            verkoop=_verkoop_context(db),
-            thuiswedstrijden=bereken_komende_thuiswedstrijden(db, dagen=14, inclusief_afgelast=True),
         )
+
+    @app.route("/voorspelling/opwarmen")
+    def voorspelling_opwarmen():
+        """Laat het voorspelmodel alvast rekenen (en bewaren), zodat Bestellijst, Prognose en Tellingen daarna meteen
+        openen. Het overzicht roept dit op zodra het zelf klaar is. Geeft niets terug; mislukt het, dan merkt niemand
+        er iets van (de pagina's rekenen het dan zelf wel)."""
+        try:
+            maak_prognose(get_db(), dagen=7)
+        except Exception as fout:
+            print(f"[voorspelling] voorverwarmen mislukt: {fout}")
+        return "", 204
 
     @app.route("/prognose/verkoopdagen", methods=["POST"])
     def prognose_verkoopdagen():

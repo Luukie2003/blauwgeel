@@ -1091,10 +1091,15 @@ def _verdeling(db, nu=None):
 # rekenen we opnieuw. Voor wat we over het hoofd zien geldt een maximumduur (CACHE_BUCKET_SECONDEN).
 
 CACHE_AAN = True  # de tests zetten dit uit (tests/conftest.py), behalve de tests van de cache zelf
-CACHE_BUCKET_SECONDEN = 600  # 'nu' wordt op 10 minuten afgerond: de uitkomst is binnen dat venster dezelfde
+# 'nu' wordt op een uur afgerond: binnen dat venster verschuift het voorspelvenster zo weinig (hooguit 1 uur van 7 dagen)
+# dat de uitkomst praktisch dezelfde is. Een nieuwe kantinedag (12.00 uur) rekent wel meteen opnieuw, want dan schuift
+# 'vandaag' op. Een uur i.p.v. de oude 10 minuten, omdat de eerste berekening op de server enkele seconden duurt en de
+# pagina's anders bijna elke keer na een pauze een koude start hadden.
+CACHE_BUCKET_SECONDEN = 3600
 CACHE_MAX_ITEMS = 24
 _CACHE = {}  # sleutel -> uitkomst, op volgorde van toevoegen
 _CACHE_SLOT = threading.Lock()
+_BEZIG = {}  # sleutel -> slot, zolang die berekening loopt: een tweede verzoek wacht daarop i.p.v. dubbel te rekenen
 
 
 def _hash_rijen(rijen):
@@ -1159,17 +1164,29 @@ def _bewaard(db, naam, nu, argumenten, bereken, vingerafdruk=None):
         naam,
         argumenten,
         int(nu.timestamp() // CACHE_BUCKET_SECONDEN),
+        (nu - timedelta(hours=DAG_BEGIN_UUR)).date().toordinal(),  # de kantinedag, die om 12.00 uur wisselt
         (vingerafdruk or data_vingerafdruk)(db),
     )
     with _CACHE_SLOT:
         if sleutel in _CACHE:
             return _CACHE[sleutel]
-    uitkomst = bereken()
-    with _CACHE_SLOT:
-        while len(_CACHE) >= CACHE_MAX_ITEMS:
-            _CACHE.pop(next(iter(_CACHE)))
-        _CACHE[sleutel] = uitkomst
-    return uitkomst
+        slot = _BEZIG.setdefault(sleutel, threading.Lock())
+    # Vraagt een tweede verzoek hetzelfde terwijl de eerste nog rekent (bijvoorbeeld de pagina en het voorverwarmen vanaf
+    # het overzicht), dan wacht die op de eerste in plaats van het nog eens uit te rekenen.
+    with slot:
+        with _CACHE_SLOT:
+            if sleutel in _CACHE:
+                return _CACHE[sleutel]
+        try:
+            uitkomst = bereken()
+            with _CACHE_SLOT:
+                while len(_CACHE) >= CACHE_MAX_ITEMS:
+                    _CACHE.pop(next(iter(_CACHE)))
+                _CACHE[sleutel] = uitkomst
+            return uitkomst
+        finally:
+            with _CACHE_SLOT:
+                _BEZIG.pop(sleutel, None)
 
 
 def wis_bewaarde_resultaten():

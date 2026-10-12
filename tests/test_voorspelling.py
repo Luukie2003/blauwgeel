@@ -486,7 +486,7 @@ def test_weer_wordt_bewaard_in_de_historie(app, tmp_path, monkeypatch):
 
 
 def test_prognosepagina_zonder_genoeg_tellingen(ingelogde_client):
-    tekst = ingelogde_client.get("/prognose").data.decode()
+    tekst = ingelogde_client.get("/prognose/resultaat").data.decode()  # de pagina haalt dit na het laden op
     assert "minstens twee tellingen" in tekst
 
 
@@ -497,17 +497,17 @@ def test_prognosepagina_toont_alles(ingelogde_client, db):
         db, {pils: 30},
         tijdstippen=[datetime.now().replace(minute=0, second=0, microsecond=0) - timedelta(days=7 * (8 - i)) for i in range(9)],
     )
-    tekst = ingelogde_client.get("/prognose").data.decode()
+    tekst = ingelogde_client.get("/prognose/resultaat").data.decode()  # de pagina haalt dit na het laden op
     for stuk in ("Verwachte omzet komende 7 dagen", "Dag voor dag", "Heineken krat", "Kans op tekort",
                  "Wat het systeem heeft geleerd", "Thuiswedstrijd", "Trainingsavond", "nog aanname"):
         assert stuk in tekst, stuk
     assert "Ongebruikt" not in tekst  # nooit verkocht, dus niets te voorspellen
     assert "Bestel" in tekst and "krat" in tekst
     # Horizon en categoriefilter.
-    assert "Verwachte omzet komende 14 dagen" in ingelogde_client.get("/prognose?dagen=14").data.decode()
-    assert "Verwachte omzet komende 7 dagen" in ingelogde_client.get("/prognose?dagen=99").data.decode()  # onbekend -> 7
-    assert "Heineken krat" in ingelogde_client.get("/prognose?categorie=Bier").data.decode()
-    assert "Heineken krat" not in ingelogde_client.get("/prognose?categorie=Bier&dagen=7").data.decode().split("Wat het systeem")[0].replace("Bier", "") or True
+    assert "Verwachte omzet komende 14 dagen" in ingelogde_client.get("/prognose/resultaat?dagen=14").data.decode()
+    assert "Verwachte omzet komende 7 dagen" in ingelogde_client.get("/prognose/resultaat?dagen=99").data.decode()  # onbekend -> 7
+    assert "Heineken krat" in ingelogde_client.get("/prognose/resultaat?categorie=Bier").data.decode()
+    assert "Heineken krat" in ingelogde_client.get("/prognose/resultaat?categorie=Bestaatniet").data.decode()  # onbekend: geen filter
 
 
 def test_prognosepagina_vereist_de_voorraadsectie(client, app, db):
@@ -541,7 +541,7 @@ def test_bestellijst_toont_voorspelde_tekorten_met_kans_en_advies(ingelogde_clie
         db, {pid: 40},
         tijdstippen=[datetime.now().replace(minute=0, second=0, microsecond=0) - timedelta(days=7 * (6 - i)) for i in range(7)],
     )
-    tekst = ingelogde_client.get("/bestellijst").data.decode()
+    tekst = ingelogde_client.get("/bestellijst/voorspeld").data.decode()  # de pagina haalt dit na het laden op
     assert "Voorspelde tekorten" in tekst and "Kans op tekort" in tekst and "Bekijk de volledige prognose" in tekst
     assert "Pils krat" in tekst
 

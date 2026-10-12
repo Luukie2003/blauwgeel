@@ -92,13 +92,13 @@ NAV_ITEMS = [
     },
     {
         "groep": "Bestellen",
-        "endpoints": ["bestellijst", "bestelling_aanmaken", "bestelling_nieuw", "bestelling_inboeken"],
+        "endpoints": ["bestellijst", "bestellijst_voorspeld", "bestelling_aanmaken", "bestelling_nieuw", "bestelling_inboeken"],
         "url_endpoint": "bestellijst",
         "label": "Bestellijst",
     },
     {
         "groep": "Bestellen",
-        "endpoints": ["prognose_pagina"],
+        "endpoints": ["prognose_pagina", "prognose_resultaat"],
         "url_endpoint": "prognose_pagina",
         "label": "Prognose",
     },

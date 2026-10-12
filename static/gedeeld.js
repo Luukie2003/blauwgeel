@@ -556,19 +556,26 @@ document.addEventListener("DOMContentLoaded", function () {
 // (HTML) in het blok zodra het er is. Het blok toont tot dan wat erin staat; mislukt het laden, dan wordt de tekst in het
 // element met data-lazy-status vervangen door data-lazy-fout. De berekeningen van het voorspelmodel duren op de server soms
 // enkele seconden; zo staat de pagina zelf meteen klaar.
+//
+// Is alles geladen (gelukt of niet), dan gaat er een "lazy-klaar"-seintje op document af; het overzicht gebruikt dat om
+// daarna het voorspelmodel alvast te laten rekenen zonder de eerste berekening in de weg te zitten.
 document.addEventListener("DOMContentLoaded", function () {
+    var laden = [];
     document.querySelectorAll("[data-lazy-bron]").forEach(function (blok) {
-        fetch(blok.dataset.lazyBron, { credentials: "same-origin" })
-            .then(function (antwoord) {
-                // redirected: de sessie is verlopen en we kregen de inlogpagina terug
-                if (!antwoord.ok || antwoord.redirected) throw new Error("niet gelukt");
-                return antwoord.text();
-            })
-            .then(function (html) { blok.innerHTML = html; })
-            .catch(function () {
-                var status = blok.querySelector("[data-lazy-status]");
-                if (status) status.textContent = blok.dataset.lazyFout || "Laden is niet gelukt. Ververs de pagina om het opnieuw te proberen.";
-            });
+        laden.push(
+            fetch(blok.dataset.lazyBron, { credentials: "same-origin" })
+                .then(function (antwoord) {
+                    // redirected: de sessie is verlopen en we kregen de inlogpagina terug
+                    if (!antwoord.ok || antwoord.redirected) throw new Error("niet gelukt");
+                    return antwoord.text();
+                })
+                .then(function (html) { blok.innerHTML = html; })
+                .catch(function () {
+                    var status = blok.querySelector("[data-lazy-status]");
+                    if (status) status.textContent = blok.dataset.lazyFout || "Laden is niet gelukt. Ververs de pagina om het opnieuw te proberen.";
+                })
+        );
     });
+    Promise.all(laden).then(function () { document.dispatchEvent(new Event("lazy-klaar")); });
 });
 

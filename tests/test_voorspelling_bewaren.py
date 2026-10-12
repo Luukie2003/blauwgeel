@@ -205,3 +205,70 @@ def test_dagoverzicht_van_een_aanroep_wijzigt_het_bewaarde_model_niet(db, beware
     db.commit()
     tweede = voorspelling.maak_prognose(db, dagen=7, nu=NU)
     assert tweede["dagen_overzicht"][0]["omzet"] != -1
+
+
+# ---------- Een uur bewaren, en niet dubbel rekenen ----------
+
+
+def test_binnen_een_uur_blijft_het_bewaarde_staan(db, bewaren):
+    voorspelling.maak_prognose(db, dagen=7, nu=NU)
+    voorspelling.maak_prognose(db, dagen=7, nu=NU + timedelta(minutes=50))
+    assert bewaren["aantal"]["prognose"] == 1  # eerder was dit na 10 minuten alweer een koude start
+    voorspelling.maak_prognose(db, dagen=7, nu=NU + timedelta(hours=1, minutes=1))
+    assert bewaren["aantal"]["prognose"] == 2
+
+
+def test_een_nieuwe_kantinedag_rekent_altijd_opnieuw_ook_bij_een_grotere_bewaartijd(db, bewaren, monkeypatch):
+    """De kantinedag wisselt om 12.00 uur: 'vandaag' schuift op, dus een uitkomst van daarvoor klopt niet meer."""
+    monkeypatch.setattr(voorspelling, "CACHE_BUCKET_SECONDEN", 24 * 3600)
+    dinsdag = datetime(2026, 10, 6, 11, 59)
+    voorspelling.verdeling(db, dinsdag)
+    voorspelling.verdeling(db, dinsdag + timedelta(minutes=1))  # 12.00 uur: een nieuwe kantinedag
+    assert bewaren["aantal"]["verdeling"] == 2
+    voorspelling.verdeling(db, dinsdag + timedelta(hours=3))  # nog dezelfde kantinedag
+    assert bewaren["aantal"]["verdeling"] == 2
+
+
+def test_twee_verzoeken_tegelijk_rekenen_maar_een_keer(app, monkeypatch):
+    import sqlite3
+    import threading
+    import time
+
+    aantal = {"n": 0}
+
+    def traag():
+        aantal["n"] += 1
+        time.sleep(0.3)
+        return {"antwoord": 42}
+
+    uitkomsten = []
+
+    def vraag():
+        conn = sqlite3.connect(app.config["DATABASE"])
+        conn.row_factory = sqlite3.Row
+        try:
+            uitkomsten.append(voorspelling._bewaard(conn, "test-tegelijk", NU, (), traag, lambda d: "vast"))
+        finally:
+            conn.close()
+
+    monkeypatch.setattr(voorspelling, "CACHE_AAN", True)
+    try:
+        draden = [threading.Thread(target=vraag) for _ in range(3)]
+        for d in draden:
+            d.start()
+        for d in draden:
+            d.join()
+    finally:
+        voorspelling.wis_bewaarde_resultaten()
+    assert aantal["n"] == 1 and uitkomsten == [{"antwoord": 42}] * 3
+    assert voorspelling._BEZIG == {}  # niets blijft hangen
+
+
+def test_een_mislukte_berekening_blokkeert_de_volgende_niet(db, bewaren):
+    def stuk():
+        raise RuntimeError("kapot")
+
+    with pytest.raises(RuntimeError):
+        voorspelling._bewaard(db, "test-stuk", NU, (), stuk, lambda d: "vast")
+    assert voorspelling._BEZIG == {}
+    assert voorspelling._bewaard(db, "test-stuk", NU, (), lambda: "gelukt", lambda d: "vast") == "gelukt"

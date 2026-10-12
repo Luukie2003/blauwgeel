@@ -1,0 +1,22 @@
+{# De kaart 'Voorspelde tekorten' van de bestellijst in de handterminal-weergave. #}
+{% if voorspelde_tekorten %}
+<div class="kaart">
+    <h2>Voorspelde tekorten</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Nog boven het minimum, maar waarschijnlijk op binnen 7 dagen.
+        <a href="{{ url_for('prognose_pagina') }}">Hele prognose</a>
+    </p>
+    {% for r in voorspelde_tekorten %}
+    <div class="pda-kaartje">
+        <div class="pda-regel-kop">
+            <strong><a href="{{ url_for('product_detail', product_id=r.product.id) }}">{{ r.product.naam }}</a></strong>
+            <span class="badge badge-laag">{% if r.kans_tekort > 0.99 %}&gt; 99%{% else %}{{ (r.kans_tekort * 100)|round|int }}%{% endif %} kans</span>
+        </div>
+        <div class="pda-regel-info">
+            <span class="tekst-zacht">nu {{ r.product.voorraad }} {{ r.product.eenheid }}, verwacht verbruik {{ r.verwacht_verbruik }}</span>
+            {% if r.advies_stuks %}<span>Bestel <strong>{% if r.advies_eenheden %}{{ r.advies_eenheden }} {{ r.besteleenheid }}{% else %}{{ r.advies_stuks }} {{ r.product.eenheid }}{% endif %}</strong></span>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}

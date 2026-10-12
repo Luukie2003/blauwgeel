@@ -219,6 +219,20 @@
     {% endif %}
 </div>
 
+{% if sectie_toegang.voorraad %}
+<script>
+    // Het voorspelmodel rekent op de server soms enkele seconden. Zodra het overzicht helemaal klaar is, laten we het
+    // alvast rekenen: Bestellijst, Prognose en Tellingen openen daarna meteen. Hooguit eens per 10 minuten per tabblad.
+    document.addEventListener('lazy-klaar', function () {
+        try {
+            var laatste = parseInt(sessionStorage.getItem('voorspelling-opgewarmd') || '0', 10);
+            if (Date.now() - laatste < 600000) return;
+            sessionStorage.setItem('voorspelling-opgewarmd', String(Date.now()));
+        } catch (e) { /* zonder opslag in de browser gewoon elke keer */ }
+        fetch('{{ url_for("voorspelling_opwarmen") }}', { credentials: 'same-origin' }).catch(function () {});
+    });
+</script>
+{% endif %}
 <div class="kaart" id="omzettrend-kaart" data-lazy-bron="{{ url_for('dashboard_omzettrend') }}"
      data-lazy-fout="De omzettrend kon niet worden geladen. Ververs de pagina om het opnieuw te proberen.">
     <div class="actiebalk">

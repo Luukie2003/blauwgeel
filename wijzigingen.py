@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.43.1"
+HUIDIGE_VERSIE = "1.43.2"
 WIJZIGINGEN = [
+    {
+        "versie": "1.43.2",
+        "datum": "12 oktober 2026",
+        "punten": [
+            "Bestellijst en Prognose openen meteen. De bestellijst zelf en de instellingen van de prognose staan direct klaar; de voorspelde tekorten en de prognose zelf worden erna berekend en komen er een paar seconden later bij.",
+            "Het voorspelmodel onthoudt zijn uitkomst nu een uur in plaats van tien minuten, en het overzicht laat het alvast rekenen zodra het klaar is. Daardoor zijn Bestellijst, Prognose en Tellingen meestal meteen volledig, ook na een pauze. Een nieuwe telling, boeking of wedstrijd rekent het nog steeds meteen opnieuw door.",
+            "Delen van een pagina die apart laden tellen niet meer mee als paginabezoek bij de gebruiksstatistieken.",
+        ],
+    },
     {
         "versie": "1.43.1",
         "datum": "12 oktober 2026",
@@ -798,7 +807,7 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.9.3", "sinds": "0.1.0", "laatst": "1.43.1",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.6.2", "sinds": "0.4.0", "laatst": "1.34.0",
+    {"naam": "Bestellen & prognose", "versie": "1.6.3", "sinds": "0.4.0", "laatst": "1.43.2",
      "inhoud": "Bestellijst, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.7.1", "sinds": "0.1.0", "laatst": "1.43.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen en alle verkoopprijzen in één keer aanpassen"},

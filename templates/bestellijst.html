@@ -200,34 +200,12 @@
     {% endif %}
 </div>
 
-{% if voorspelde_tekorten %}
-<div class="kaart">
-    <h2>Voorspelde tekorten</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Zit nog boven het minimum, maar op basis van de eerdere verkoop, de komende thuiswedstrijden,
-        de trainingsavond en het weer wordt geschat dat dit de komende 7 dagen opraakt. Het systeem leert
-        van elke telling bij. <a href="{{ url_for('prognose_pagina') }}">Bekijk de volledige prognose</a>.
-    </p>
-    <div class="tabel-wrap">
-        <table>
-            <thead>
-                <tr><th>Product</th><th>Huidige voorraad</th><th>Verwacht verbruik</th><th>Kans op tekort</th><th>Advies</th></tr>
-            </thead>
-            <tbody>
-                {% for r in voorspelde_tekorten %}
-                <tr>
-                    <td>{{ r.product.naam }}</td>
-                    <td>{{ r.product.voorraad }} {{ r.product.eenheid }}</td>
-                    <td>{{ r.verwacht_verbruik }} {{ r.product.eenheid }}</td>
-                    <td><span class="badge badge-laag">{% if r.kans_tekort > 0.99 %}&gt; 99%{% else %}{{ (r.kans_tekort * 100)|round|int }}%{% endif %}</span></td>
-                    <td>{% if r.advies_stuks %}Bestel {% if r.advies_eenheden %}{{ r.advies_eenheden }} {{ r.besteleenheid }}{% else %}{{ r.advies_stuks }} {{ r.product.eenheid }}{% endif %}{% else %}<span class="tekst-zacht">&ndash;</span>{% endif %}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+{# De kaart 'Voorspelde tekorten' komt uit _bestellijst_voorspeld.html en laadt na de rest: het voorspelmodel rekent op de
+   server soms enkele seconden (zie gedeeld.js, data-lazy-bron). Zijn er geen verwachte tekorten, dan verdwijnt dit blokje. #}
+<div data-lazy-bron="{{ url_for('bestellijst_voorspeld') }}"
+     data-lazy-fout="De voorspelde tekorten konden niet worden geladen. Ververs de pagina om het opnieuw te proberen.">
+    <p class="tekst-zacht" data-lazy-status style="margin:0 0 1rem">Verwachte tekorten worden berekend&hellip;</p>
 </div>
-{% endif %}
 
 {% if meldingen.producten or meldingen.teksten %}
 <div class="kaart">
@@ -311,27 +289,12 @@
     {% endif %}
 </div>
 
-{% if voorspelde_tekorten %}
-<div class="kaart">
-    <h2>Voorspelde tekorten</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Nog boven het minimum, maar waarschijnlijk op binnen 7 dagen.
-        <a href="{{ url_for('prognose_pagina') }}">Hele prognose</a>
-    </p>
-    {% for r in voorspelde_tekorten %}
-    <div class="pda-kaartje">
-        <div class="pda-regel-kop">
-            <strong><a href="{{ url_for('product_detail', product_id=r.product.id) }}">{{ r.product.naam }}</a></strong>
-            <span class="badge badge-laag">{% if r.kans_tekort > 0.99 %}&gt; 99%{% else %}{{ (r.kans_tekort * 100)|round|int }}%{% endif %} kans</span>
-        </div>
-        <div class="pda-regel-info">
-            <span class="tekst-zacht">nu {{ r.product.voorraad }} {{ r.product.eenheid }}, verwacht verbruik {{ r.verwacht_verbruik }}</span>
-            {% if r.advies_stuks %}<span>Bestel <strong>{% if r.advies_eenheden %}{{ r.advies_eenheden }} {{ r.besteleenheid }}{% else %}{{ r.advies_stuks }} {{ r.product.eenheid }}{% endif %}</strong></span>{% endif %}
-        </div>
-    </div>
-    {% endfor %}
+{# De kaart 'Voorspelde tekorten' komt uit _bestellijst_voorspeld.html en laadt na de rest: het voorspelmodel rekent op de
+   server soms enkele seconden (zie gedeeld.js, data-lazy-bron). Zijn er geen verwachte tekorten, dan verdwijnt dit blokje. #}
+<div data-lazy-bron="{{ url_for('bestellijst_voorspeld') }}"
+     data-lazy-fout="De voorspelde tekorten konden niet worden geladen. Ververs de pagina om het opnieuw te proberen.">
+    <p class="tekst-zacht" data-lazy-status style="margin:0 0 1rem">Verwachte tekorten worden berekend&hellip;</p>
 </div>
-{% endif %}
 
 {% if meldingen.producten or meldingen.teksten %}
 <div class="kaart">
