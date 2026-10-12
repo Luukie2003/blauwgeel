@@ -113,6 +113,14 @@ def _ontvouw(pdf):
     return uit
 
 
+def test_de_turfvakken_zijn_leeg_zonder_streepjes_erin():
+    """Je turft zelf: in een vak staan geen lichtgrijze scheidingsstreepjes (vroeger kleur 205/255 = 0.8039)."""
+    for sleutel in ("D", "D2"):
+        inhoud = _ontvouw(kaartjes_pdf(sleutel, STANDAARD))
+        assert b"0.8039 0.8039 0.8039 RG" not in inhoud, sleutel
+        assert b" re" in inhoud  # de vakken zelf zijn er nog (als rechthoek)
+
+
 def test_de_hardlopers_staan_op_de_kaartjes():
     inhoud = _ontvouw(kaartjes_pdf("D", ["Pils tap", "Bozu"]))
     assert b"Pils tap" in inhoud and b"Bozu" in inhoud and b"Sonnema" not in inhoud

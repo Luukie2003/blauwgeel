@@ -23,7 +23,7 @@ Optie = namedtuple("Optie", "sleutel naam breedte hoogte kolommen rijen omschrij
 
 # In deze volgorde getoond. Het eerste ontwerp is de standaard.
 OPTIES = [
-    Optie("D", "Breed", 97, 52, 2, 5, "Twee kolommen met een lang turfvak (4 vakjes) achter elke hardloper, 3 lege regels."),
+    Optie("D", "Breed", 97, 52, 2, 5, "Twee kolommen met een lang, leeg turfvak achter elke hardloper, 3 lege regels."),
     Optie("D2", "Breed met turflijn", 97, 60, 2, 4, "Een hardloper per rij met een turflijn over de hele breedte (ongeveer 55 stuks), 2 lege regels."),
     Optie("A", "Vierkant, ruim", 65, 65, 3, 4, "Twee kolommen met een klein hokje, 4 lege regels. De meeste schrijfruimte van de vierkante."),
     Optie("B", "Vierkant, met logo", 55, 55, 3, 5, "Met clublogo in een balk, klein hokje per hardloper, 2 lege regels."),
@@ -127,15 +127,12 @@ class _Tekenaar:
             self.pdf.rect(cx + kol_b - vak, cy + 0.6 - hoogte, vak, hoogte)
 
     def hardlopers_turf(self, x, y_eerste, breedte, rij_h, kolommen, maat=6.2, hoogte=4.0, cel_min=6.0, tussen=4.0):
-        """De hardlopers met een lang turfvak achter de naam: het vak loopt door tot de rand van de kolom en is
-        opgedeeld in vakjes van ongeveer 6-7 mm, zodat je per vakje een groepje van vijf turft."""
+        """De hardlopers met een lang turfvak achter de naam: een leeg vak dat doorloopt tot de rand van de kolom. Er
+        staan geen streepjes in: je turft zelf zoals je dat gewend bent."""
         per_kol = MAX_HARDLOPERS // kolommen
         kol_b = (breedte - tussen * (kolommen - 1)) / kolommen
-        maten = self._maten(maat, kol_b - 2 * cel_min - 2.0)  # minstens 2 vakjes over
-        ruimte = kol_b - self._langste(maten) - 2.0
-        aantal = max(2, int(ruimte // cel_min))
-        cel = ruimte / aantal  # de vakjes vullen de ruimte tot de kolomrand precies
-        vak_b = aantal * cel
+        maten = self._maten(maat, kol_b - 2 * cel_min - 2.0)  # het vak houdt minstens 2 x cel_min over
+        vak_b = kol_b - self._langste(maten) - 2.0  # het vak vult de ruimte tot de kolomrand
         for i, (naam, m) in enumerate(zip(self.hardlopers, maten)):
             cx = x + (i // per_kol) * (kol_b + tussen)
             cy = y_eerste + (i % per_kol) * rij_h
@@ -143,10 +140,6 @@ class _Tekenaar:
             self.pdf.set_text_color(*ZWART)
             self.pdf.text(cx, cy, naam)
             bx, by = cx + kol_b - vak_b, cy + 0.7 - hoogte
-            self.pdf.set_draw_color(205, 205, 205)  # lichte scheiding tussen de vakjes
-            self.pdf.set_line_width(0.15)
-            for k in range(1, aantal):
-                self.pdf.line(bx + k * cel, by + 0.4, bx + k * cel, by + hoogte - 0.4)
             self.pdf.set_draw_color(*LIJN)
             self.pdf.set_line_width(0.25)
             self.pdf.rect(bx, by, vak_b, hoogte)
