@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.43.4"
+HUIDIGE_VERSIE = "1.43.5"
 WIJZIGINGEN = [
+    {
+        "versie": "1.43.5",
+        "datum": "12 oktober 2026",
+        "punten": [
+            "Kaartjes printen: de andere vier ontwerpen zijn opnieuw opgezet, in dezelfde stijl als het brede kaartje (Naam, Team en Datum bovenaan, dubbele blauwe lijn, een leeg turfvak per hardloper, lege regels onderaan). 'Breed, hoog turfvak' heeft grote vakken en 3 lege regels; 'Vierkant' heeft per hardloper een lang turfvak en 3 lege regels; 'Vierkant, met logo' heeft een slanke logobalk en 2 lege regels; 'Staand, smal' (46 x 82 mm, 12 op een vel) heeft de naam boven een breed turfvak en 3 lege regels. De kleine hokjes waar je geen streepjes in kon zetten zijn overal weg.",
+        ],
+    },
     {
         "versie": "1.43.4",
         "datum": "12 oktober 2026",
@@ -819,7 +826,7 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.9.5", "sinds": "0.1.0", "laatst": "1.43.4",
+    {"naam": "Voorraad & tellen", "versie": "1.9.6", "sinds": "0.1.0", "laatst": "1.43.5",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.6.3", "sinds": "0.4.0", "laatst": "1.43.2",
      "inhoud": "Bestellijst, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop, boodschappenlijst"},

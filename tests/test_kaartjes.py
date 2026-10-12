@@ -286,10 +286,32 @@ def test_vier_hardlopers_staan_in_twee_kolommen_van_twee():
     assert hardlopers_over("Een\nTwee\nDrie\nVier\nVijf\nZes") == ["Vijf", "Zes"]
 
 
-def test_er_zijn_meer_schrijfregels_dan_eerder():
-    """De ruimte van de twee weggevallen hardlopers is schrijfruimte geworden (stippellijnen per kaartje)."""
-    eerder = {"D": 3, "D2": 2, "A": 4, "B": 2, "C": 2}
-    nu = {"D": 4, "D2": 4, "A": 5, "B": 3, "C": 3}
-    for sleutel, aantal in nu.items():
-        assert aantal > eerder[sleutel]
-        assert f"{aantal} lege regels" in OPTIE_PER_SLEUTEL[sleutel].omschrijving
+def test_het_aantal_lege_regels_klopt_met_de_omschrijving_en_ze_blijven_binnen_het_kaartje(monkeypatch):
+    """Per ontwerp: hoeveel schrijfregels er echt getekend worden, en dat de laatste ruim binnen de rand van het kaartje
+    blijft (zodat hij niet door de snijlijn gaat)."""
+    from pdf import kaartjes as k
+
+    getekend = []
+    echt = k._Tekenaar.stippel
+
+    def telt(self, x1, x2, y):
+        getekend.append(y)
+        return echt(self, x1, x2, y)
+
+    monkeypatch.setattr(k._Tekenaar, "stippel", telt)
+    for optie in OPTIES:
+        getekend.clear()
+        kaartjes_pdf(optie.sleutel, STANDAARD)
+        per_kaart = len(getekend) / (optie.kolommen * optie.rijen)
+        assert per_kaart == int(per_kaart) and f"{int(per_kaart)} lege regels" in optie.omschrijving, optie.sleutel
+        y0 = (297 - optie.rijen * optie.hoogte) / 2
+        relatief = [(y - y0) % optie.hoogte for y in getekend]
+        assert max(relatief) <= optie.hoogte - 3.0, f"{optie.sleutel}: de laatste regel zit te dicht op de rand"
+        assert min(relatief) >= optie.hoogte * 0.55, f"{optie.sleutel}: een lege regel zit boven in het kaartje"
+
+
+def test_de_vijf_ontwerpen_zijn_echt_verschillend_van_vorm():
+    maten = {o.sleutel: (o.breedte, o.hoogte) for o in OPTIES}
+    assert maten["D"][0] > maten["D"][1] and maten["D2"][0] > maten["D2"][1]  # twee brede
+    assert maten["A"][0] == maten["A"][1] and maten["B"][0] == maten["B"][1]  # twee vierkante
+    assert maten["C"][1] > maten["C"][0]  # een staand
