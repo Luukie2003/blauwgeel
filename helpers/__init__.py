@@ -29,6 +29,7 @@ from helpers.video import (
     VIDEO_UPLOAD_ENDPOINTS,
     VIDEO_UPLOAD_MAX_BYTES,
     VIDEO_ZWAAR_MBIT,
+    ffmpeg_beschikbaar,
     mp4_duur,
     sla_video_op,
     verwijder_video,
@@ -103,6 +104,7 @@ from helpers.omzet import (
     _aantal_dagen_met_weekdag,
     bereken_omzet_trend_periode,
     bereken_trend,
+    bouw_weektrend,
     bereken_week_overzicht,
 )
 from helpers.wedstrijden import (
@@ -205,6 +207,7 @@ __all__ = [
     "_aantal_dagen_met_weekdag",
     "bereken_omzet_trend_periode",
     "bereken_trend",
+    "bouw_weektrend",
     "bereken_week_overzicht",
     "MOTM_RESULTATEN",
     "_MAAND_KORT",

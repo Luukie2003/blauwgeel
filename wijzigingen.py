@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.41.0"
+HUIDIGE_VERSIE = "1.42.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.42.0",
+        "datum": "12 oktober 2026",
+        "punten": [
+            "Overzicht: de omzettrend staat nu per week (maandag t/m zondag) in plaats van per telling, met het aantal thuiswedstrijden per week en de vergelijking van vorige week met de week ervoor en met het gemiddelde. Dat voorkomt schijnbare dalen doordat de tijd tussen tellingen wisselt.",
+            "Nieuwe pagina Beheer → Opslag: hoeveel schijfruimte de site gebruikt, wat het meeste inneemt (video's, back-ups, foto's), bij welke dia een video hoort en welke video's nergens meer bij horen (met een knop om die op te ruimen). Vanaf 80% van de ingestelde ruimte staat er een melding bij 'Wat moet er nu?' (alleen voor beheerders).",
+            "Video's: een zware video (bijvoorbeeld een opname van een iPhone of Mac) wordt bij het uploaden automatisch verkleind naar 720p en ongeveer 3 Mbit/s, als de server ffmpeg heeft. Zo laadt hij snel op de tv en neemt hij weinig ruimte in. Bij een fout blijft het origineel gewoon bewaard.",
+        ],
+    },
     {
         "versie": "1.41.0",
         "datum": "12 oktober 2026",

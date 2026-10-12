@@ -118,6 +118,8 @@ BEHEERDER_ENDPOINTS = {
     "subcategorie_nieuw",
     "subcategorie_verwijderen",
     "backups_lijst",
+    "opslag_pagina",
+    "opslag_video_opruimen",
     "backup_nu",
     "backup_download",
     "backup_herstellen",

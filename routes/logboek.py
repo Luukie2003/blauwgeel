@@ -24,6 +24,7 @@ LOGBOEK_ACTIES = {
     "account_andere_toestellen_uitloggen": "Op alle andere toestellen uitgelogd",
     "account_overal_uitloggen": "Account op alle toestellen uitgelogd",
     "backup_nu": "Back-up gemaakt",
+    "opslag_video_opruimen": "Ongebruikte video's verwijderd",
     "backup_herstellen": "Back-up teruggezet",
     "instellingen_pagina": "Algemene instellingen gewijzigd",
     "club_agenda_toevoegen": "Teamagenda toegevoegd",

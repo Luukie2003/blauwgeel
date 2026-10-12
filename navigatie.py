@@ -342,6 +342,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Beheer",
+        "endpoints": ["opslag_pagina", "opslag_video_opruimen"],
+        "url_endpoint": "opslag_pagina",
+        "label": "Opslag",
+    },
+    {
+        "groep": "Beheer",
         "endpoints": ["instellingen_pagina"],
         "url_endpoint": "instellingen_pagina",
         "label": "Instellingen",

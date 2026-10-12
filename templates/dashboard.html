@@ -210,7 +210,18 @@
 <div class="kaart">
     <div class="actiebalk">
         <h2 style="margin:0">Omzettrend</h2>
-        {% if omzet_trend.verschil_percentage is not none %}
+        {% if omzet_trend.weektrend and omzet_trend.weektrend.samenvatting %}
+        {% set sv = omzet_trend.weektrend.samenvatting %}
+        <span class="tekst-zacht">
+            Vorige week (wk {{ sv.week }}): <strong>&euro; {{ '%.0f'|format(sv.omzet) }}</strong>
+            {% if sv.verschil_percentage is not none %}
+            <span class="omzet-delta {{ 'positief' if sv.verschil_percentage >= 0 else 'negatief' }}">
+                {{ '+' if sv.verschil_percentage >= 0 else '' }}{{ '%.0f'|format(sv.verschil_percentage) }}%
+            </span>
+            t.o.v. wk {{ sv.week_ervoor }}
+            {% endif %}
+        </span>
+        {% elif not omzet_trend.weektrend and omzet_trend.verschil_percentage is not none %}
         <span class="tekst-zacht">
             Laatste dag:
             <span class="omzet-delta {{ 'positief' if omzet_trend.verschil_percentage >= 0 else 'negatief' }}">
@@ -220,7 +231,36 @@
         </span>
         {% endif %}
     </div>
-    {% if omzet_trend.balken %}
+    {% if omzet_trend.weektrend and omzet_trend.weektrend.balken %}
+    {% set sv = omzet_trend.weektrend.samenvatting %}
+    {% if sv %}
+    <p class="tekst-zacht" style="margin:0.2rem 0 0">
+        {{ sv.thuiswedstrijden }} thuiswedstrijd{{ 'en' if sv.thuiswedstrijden != 1 }} in wk {{ sv.week }},
+        {{ sv.thuiswedstrijden_ervoor }} in wk {{ sv.week_ervoor }}.
+        {% if sv.verschil_gemiddelde_percentage is not none and sv.aantal_voor_gemiddelde >= 2 %}
+        Gemiddeld van de {{ sv.aantal_voor_gemiddelde }} weken daarvoor: &euro; {{ '%.0f'|format(sv.gemiddelde) }}
+        (<span class="omzet-delta {{ 'positief' if sv.verschil_gemiddelde_percentage >= 0 else 'negatief' }}">{{ '+' if sv.verschil_gemiddelde_percentage >= 0 else '' }}{{ '%.0f'|format(sv.verschil_gemiddelde_percentage) }}%</span>).
+        {% endif %}
+    </p>
+    {% else %}
+    <p class="tekst-zacht" style="margin:0.2rem 0 0">Nog te weinig volledige weken voor een vergelijking.</p>
+    {% endif %}
+    <div class="omzet-trend-grafiek">
+        {% for balk in omzet_trend.weektrend.balken %}
+        <div class="omzet-bar-kolom" title="Week {{ balk.week }} ({{ balk.van[8:10] }}-{{ balk.van[5:7] }} t/m {{ balk.tot[8:10] }}-{{ balk.tot[5:7] }}): &euro; {{ '%.2f'|format(balk.omzet) }}, {{ balk.thuiswedstrijden }} thuiswedstrijd{{ 'en' if balk.thuiswedstrijden != 1 }}{% if not balk.volledig %}, nog niet volledig{% endif %}">
+            <span class="omzet-bar-waarde">&euro;{{ '%.0f'|format(balk.omzet) }}</span>
+            <div class="omzet-bar{{ '' if balk.volledig else ' omzet-bar-afwijkend' }}" style="height: {{ balk.hoogte_pct }}%"></div>
+            <span class="omzet-bar-label">wk {{ balk.week }}</span>
+            <span class="omzet-bar-wedstrijden">{% if balk.thuiswedstrijden %}&#9917; {{ balk.thuiswedstrijden }}{% else %}&nbsp;{% endif %}</span>
+            <span class="omzet-bar-dagen">{{ 'loopt' if balk.lopend else ('nog onvolledig' if not balk.volledig else '') }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <p class="tekst-zacht" style="font-size:0.78rem; margin:0.4rem 0 0">
+        Per week, van maandag t/m zondag; de omzet is verdeeld over de dagen waarop is verkocht, dus het maakt niet uit
+        wanneer je telt. &#9917; = thuiswedstrijden. Gestippeld = nog niet af of de tellingen dekken de week niet helemaal.
+    </p>
+    {% elif omzet_trend.balken %}
     <div class="omzet-trend-grafiek">
         {% for balk in omzet_trend.balken %}
         <div class="omzet-bar-kolom">
@@ -230,8 +270,10 @@
         </div>
         {% endfor %}
     </div>
+    {% endif %}
+    {% if omzet_trend.balken or (omzet_trend.weektrend and omzet_trend.weektrend.balken) %}
     {% if omzet_trend.top_verkopers %}
-    <h3 style="margin-top:1.2rem">Top verkopers in deze periode</h3>
+    <h3 style="margin-top:1.2rem">Top verkopers in de laatste 8 tellingen</h3>
     <div class="tabel-wrap">
         <table>
             <thead>

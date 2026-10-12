@@ -195,6 +195,20 @@ def bouw_taken(db, rol, secties):
                 )
             )
 
+    if rol == "beheerder":
+        from opslag import groottetekst, opslag_status
+
+        opslag = opslag_status(db)
+        if opslag["niveau"] != "ok":
+            taken.append(
+                _taak(
+                    f"Opslag voor {opslag['percentage']:.0f}% vol",
+                    f"{groottetekst(opslag['totaal'])} in gebruik: kijk wat de meeste ruimte inneemt",
+                    "opslag_pagina",
+                    urgent=opslag["niveau"] == "kritiek",
+                )
+            )
+
     prikbord = db.execute(
         "SELECT COUNT(*) AS n, COALESCE(SUM(urgent), 0) AS urgent FROM mededelingen WHERE afgehandeld = 0"
     ).fetchone()

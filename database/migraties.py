@@ -31,6 +31,8 @@ KOLOM_MIGRATIES = [
     ("gebruikers", "mail_week_overzicht", "INTEGER NOT NULL DEFAULT 0"),
     ("gebruikers", "mail_club_aanmelding", "INTEGER NOT NULL DEFAULT 0"),
     ("instellingen", "banner_tekst", "TEXT"),
+    # Hoeveel schijfruimte de hosting voor deze site beschikbaar heeft (MB), voor de waarschuwing bij Beheer > Opslag.
+    ("instellingen", "opslag_quota_mb", "INTEGER NOT NULL DEFAULT 1024"),
     ("instellingen", "privacy_contact", "TEXT"),
     # Weekdagen waarop de kantine verkoopt, maandag = 0 ("2,5" = woensdag en
     # zaterdag), zie voorspelling.lees_verkoopdagen. Afwijkende datums staan in

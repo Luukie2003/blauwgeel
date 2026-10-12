@@ -116,8 +116,16 @@
                     </div>
                     {% endif %}
                     <input type="file" id="video" name="video" accept="video/mp4,video/quicktime,video/webm,.mp4,.m4v,.mov,.webm">
-                    <span class="tekst-zacht">Liefst een mp4 (H.264): die speelt overal af. Maximaal 80 MB, maar hoe kleiner hoe beter: het scherm haalt de hele video eerst binnen voordat de dia in beeld komt. Richtlijn: 720p en rond de 3 Mbit/s (ongeveer 20 MB per minuut). Een opname van een iPhone of Mac is vaak veel zwaarder; maak die kleiner met bijvoorbeeld QuickTime Player (Bestand, Exporteer als, 720p). Het kantinescherm speelt 'm schermvullend af.{% if sponsor and sponsor.video %} Kies je hier een nieuw bestand, dan vervangt dat de huidige video.{% endif %}</span>
+                    <span class="tekst-zacht">Liefst een mp4 (H.264): die speelt overal af. Maximaal 80 MB, maar hoe kleiner hoe beter: het scherm haalt de hele video eerst binnen voordat de dia in beeld komt. Richtlijn: 720p en rond de 3 Mbit/s (ongeveer 20 MB per minuut).{% if not ffmpeg_beschikbaar %} Een opname van een iPhone of Mac is vaak veel zwaarder; maak die kleiner met bijvoorbeeld QuickTime Player (Bestand, Exporteer als, 720p).{% endif %} Het kantinescherm speelt 'm schermvullend af.{% if sponsor and sponsor.video %} Kies je hier een nieuw bestand, dan vervangt dat de huidige video.{% endif %}</span>
                 </div>
+                {% if ffmpeg_beschikbaar %}
+                <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.4rem">
+                    <input type="checkbox" name="video_verkleinen" style="width:auto" checked>
+                    Een zware video automatisch verkleinen (720p, ongeveer 3 Mbit/s; kan bij een lange video even duren)
+                </label>
+                {% else %}
+                <p class="tekst-zacht" style="margin:0 0 0.4rem">Automatisch verkleinen is op deze server niet beschikbaar (ffmpeg ontbreekt): maak een zware video zelf kleiner voor je 'm uploadt.</p>
+                {% endif %}
                 <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.4rem">
                     <input type="checkbox" name="video_hele_duur" style="width:auto" {{ 'checked' if not sponsor or sponsor.video_hele_duur }}>
                     De dia zo lang laten staan als de video duurt (anders geldt de weergaveduur hierboven; een kortere video begint dan opnieuw)

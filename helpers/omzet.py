@@ -5,6 +5,59 @@ from datetime import datetime, timedelta
 from helpers.producten import bestel_suggesties, categorienamen_zonder_verkoopprijsplicht
 
 
+DASHBOARD_AANTAL_WEKEN = 8
+
+
+def bouw_weektrend(weken, wedstrijd_datums, vandaag, aantal=DASHBOARD_AANTAL_WEKEN):
+    """De omzettrend per week voor het dashboard. 'weken' komt uit voorspelling.omzet_per_week (nieuwste eerst, de
+    omzet is verdeeld over de dagen waarop is verkocht, dus het maakt niet uit wanneer er geteld is);
+    'wedstrijd_datums' zijn de thuiswedstrijden (YYYY-MM-DD, niet afgelast).
+
+    Geeft {'balken', 'samenvatting'}. Een balk is 1 week, met het aantal thuiswedstrijden erbij: zo zie je of een dal
+    of piek bij een wedstrijdweek hoort. De lopende week en een week waarvan de tellingen niet alles dekken zijn
+    'onvolledig' en tellen niet mee in de vergelijking. De samenvatting vergelijkt de laatste volledige week met de
+    week ervoor en met het gemiddelde van de weken daarvoor; None als er nog geen twee volledige weken zijn."""
+    huidige = vandaag.isocalendar()[:2]
+    chronologisch = sorted(weken, key=lambda w: (w["jaar"], w["week"]))[-aantal:]
+    hoogste = max((w["omzet"] for w in chronologisch), default=0)
+    balken = []
+    for w in chronologisch:
+        wedstrijden = sum(1 for d in wedstrijd_datums if w["van"] <= d <= w["tot"])
+        lopend = (w["jaar"], w["week"]) == huidige
+        balken.append(
+            {
+                "week": w["week"],
+                "jaar": w["jaar"],
+                "van": w["van"],
+                "tot": w["tot"],
+                "datum_kort": datetime.strptime(w["van"], "%Y-%m-%d").strftime("%d-%m"),
+                "omzet": w["omzet"],
+                "hoogte_pct": (w["omzet"] / hoogste * 100) if hoogste else 0,
+                "thuiswedstrijden": wedstrijden,
+                "lopend": lopend,
+                "volledig": w["status"] == "compleet" and not lopend,
+            }
+        )
+    volledig = [b for b in balken if b["volledig"]]
+    samenvatting = None
+    if len(volledig) >= 2:
+        laatste, ervoor = volledig[-1], volledig[-2]
+        eerdere = volledig[-5:-1]  # de weken voor de laatste, hooguit 4
+        gemiddelde = sum(b["omzet"] for b in eerdere) / len(eerdere)
+        samenvatting = {
+            "week": laatste["week"],
+            "omzet": laatste["omzet"],
+            "thuiswedstrijden": laatste["thuiswedstrijden"],
+            "week_ervoor": ervoor["week"],
+            "thuiswedstrijden_ervoor": ervoor["thuiswedstrijden"],
+            "verschil_percentage": (laatste["omzet"] - ervoor["omzet"]) / ervoor["omzet"] * 100 if ervoor["omzet"] > 0 else None,
+            "gemiddelde": gemiddelde,
+            "aantal_voor_gemiddelde": len(eerdere),
+            "verschil_gemiddelde_percentage": (laatste["omzet"] - gemiddelde) / gemiddelde * 100 if gemiddelde > 0 else None,
+        }
+    return {"balken": balken, "samenvatting": samenvatting}
+
+
 def bereken_trend(omzet_per_week, huidige_jaar, huidige_week):
     """Voortschrijdend gemiddelde + trendrichting op basis van volledig
     afgesloten weken (de lopende week telt niet mee, die is nog niet klaar).

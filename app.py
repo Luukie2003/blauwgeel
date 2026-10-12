@@ -447,6 +447,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         kiosk,
         kluis,
         logboek,
+        opslag,
         privacy,
         producten,
         prognose,
@@ -480,6 +481,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     kiosk.register_routes(app)
     kluis.register_routes(app)
     logboek.register_routes(app)
+    opslag.register_routes(app)
     producten.register_routes(app)
     seizoensrapport.register_routes(app)
     sponsoren.register_routes(app)

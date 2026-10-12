@@ -26,6 +26,7 @@ from helpers import (
     sla_video_op,
     verwijder_video,
     VIDEO_ZWAAR_MBIT,
+    ffmpeg_beschikbaar,
     video_info,
     zwaarte_melding,
 )
@@ -229,9 +230,11 @@ def register_routes(app):
                 achtergrond_afbeelding = sla_afbeelding_op(
                     request.files.get("achtergrond_afbeelding"), KIOSK_AFBEELDINGEN_MAP
                 )
-            video, video_duur, video_fout = None, None, None
+            video, video_duur, video_fout, video_meldingen = None, None, None, []
             if gegevens["sjabloon"] == "video_volledig":
-                video, video_duur, video_fout = sla_video_op(request.files.get("video"))
+                video, video_duur, video_fout = sla_video_op(
+                    request.files.get("video"), verkleinen=bool(request.form.get("video_verkleinen")), meldingen=video_meldingen
+                )
             db.execute(
                 """INSERT INTO kiosk_sponsoren
                    (sjabloon, custom_sjabloon_id, titel, tekst, afbeelding,
@@ -261,6 +264,8 @@ def register_routes(app):
             )
             db.commit()
             flash("Sponsor toegevoegd.", "success")
+            for tekst in video_meldingen:
+                flash(tekst, "success")
             if video_fout:
                 flash(f"De video is niet opgeslagen: {video_fout} Kies 'Bewerken' om het opnieuw te proberen.", "error")
             elif video and zwaarte_melding(video_info(video, video_duur), video_duur):
@@ -273,6 +278,7 @@ def register_routes(app):
             "kiosk_sponsor_form.html",
             sponsor=None,
             max_herhalingen=KIOSK_MAX_HERHALINGEN,
+            ffmpeg_beschikbaar=ffmpeg_beschikbaar(),
             sjablonen=KIOSK_SPONSOR_SJABLONEN,
             sjabloon_voorbeelden=KIOSK_SPONSOR_SJABLOON_VOORBEELDEN,
             sjablonen_custom=sjablonen_custom,
@@ -319,8 +325,11 @@ def register_routes(app):
             # Een andere layout kiezen laat een eerder geuploade video staan (je kunt terugschakelen);
             # alleen bij de videolayout vervang of verwijder je 'm.
             video, video_duur, video_fout, nieuwe_video = sponsor["video"], sponsor["video_duur"], None, None
+            video_meldingen = []
             if gegevens["sjabloon"] == "video_volledig":
-                nieuwe_video, nieuwe_duur, video_fout = sla_video_op(request.files.get("video"))
+                nieuwe_video, nieuwe_duur, video_fout = sla_video_op(
+                    request.files.get("video"), verkleinen=bool(request.form.get("video_verkleinen")), meldingen=video_meldingen
+                )
                 if nieuwe_video:
                     verwijder_video(video)
                     video, video_duur = nieuwe_video, nieuwe_duur
@@ -358,6 +367,8 @@ def register_routes(app):
             )
             db.commit()
             flash("Sponsor bijgewerkt.", "success")
+            for tekst in video_meldingen:
+                flash(tekst, "success")
             if video_fout:
                 flash(f"De nieuwe video is niet opgeslagen: {video_fout}", "error")
             elif nieuwe_video and zwaarte_melding(video_info(video, video_duur), video_duur):
@@ -378,6 +389,7 @@ def register_routes(app):
             producten=_sjabloon_producten(db),
             video_info=video_info(sponsor["video"], sponsor["video_duur"]),
             max_herhalingen=KIOSK_MAX_HERHALINGEN,
+            ffmpeg_beschikbaar=ffmpeg_beschikbaar(),
             VIDEO_ZWAAR_MBIT=VIDEO_ZWAAR_MBIT,
         )
 

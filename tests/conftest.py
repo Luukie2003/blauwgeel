@@ -69,6 +69,9 @@ def app(tmp_path, sjabloon_db):
     database._SCHEMA_TOEGEPAST_VOOR.add(str(pad))
     flask_app = create_app(database_path=str(pad), admin_wachtwoord="kantine123")
     flask_app.config["TESTING"] = True
+    # Beheer > Opslag meet in de tests een lege wegwerpmap, niet de hele repository (dat is traag en onvoorspelbaar).
+    (tmp_path / "site").mkdir()
+    flask_app.config["OPSLAG_MAP"] = tmp_path / "site"
     # In productie staat dit standaard aan (de site draait altijd over https),
     # maar de testclient praat over http -- anders verstuurt de browser het
     # sessiecookie nooit terug en blijft elke request "uitgelogd".

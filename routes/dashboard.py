@@ -13,6 +13,7 @@ from helpers import (
     bereken_komende_thuiswedstrijden,
     bereken_laatste_telling_status,
     bereken_omzet_trend_periode,
+    bouw_weektrend,
     bereken_pda_start,
     bereken_wedstrijd_geschiedenis,
     bereken_week_overzicht,
@@ -95,12 +96,29 @@ def register_routes(app):
             for d in dagen
         ]
 
+        # Per week is eerlijker dan per telling: de tijd tussen tellingen wisselt (3 of 6 dagen) en daarmee de omzet
+        # per balk. Lukt het rekenen niet (bijv. nog geen tellingen), dan blijven de balken per telling over.
+        weektrend = None
+        try:
+            import voorspelling
+
+            weken = voorspelling.omzet_per_week(db)
+            if weken:
+                wedstrijd_datums = [
+                    r["datum"][:10]
+                    for r in db.execute("SELECT datum FROM wedstrijden WHERE thuis = 1 AND afgelast = 0").fetchall()
+                ]
+                weektrend = bouw_weektrend(weken, wedstrijd_datums, datetime.now().date())
+        except Exception as fout:  # het dashboard mag nooit stuk gaan door de weekberekening
+            print(f"[dashboard] weektrend mislukt, terugval op tellingen: {fout}")
+
         return {
             "balken": balken,
             "top_verkopers": top_verkopers,
             "laatste_omzet": laatste_omzet,
             "gemiddelde_omzet": gemiddelde_omzet,
             "verschil_percentage": verschil_percentage,
+            "weektrend": weektrend,
         }
 
     @app.route("/")
