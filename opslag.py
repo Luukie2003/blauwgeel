@@ -3,23 +3,21 @@
 De hosting rekent per account met een vaste hoeveelheid schijfruimte. Video's en foto's nemen die snel in; dit overzicht
 laat zien waar het zit, waarschuwt op het dashboard als het bijna vol is en ruimt video's op die bij geen enkele dia
 meer horen. Gemeten wordt de map van de site zelf; de hosting telt soms meer mee (bijvoorbeeld geïnstalleerde
-pakketten), dus het getal bij "Beschikbaar" is een schatting die je zelf instelt."""
+pakketten), dus het getal bij "Beschikbaar" is een schatting die je zelf instelt.
+
+Alle bestanden langslopen duurt op de server enkele seconden. Het dashboard doet dat daarom nooit zelf: de dagelijkse
+back-uptaak (backup.py) en de pagina Beheer > Opslag meten en bewaren het totaal in de database, het dashboard leest
+alleen dat getal. Bovenin staat daarom alleen de standaardbibliotheek, want backup.py draait zonder virtualenv."""
 
 import os
-import time
+from datetime import datetime
 from pathlib import Path
 
-from flask import current_app
-
-import helpers.video as video_module
-from helpers import BASE_DIR
-
+BASE_DIR = Path(__file__).parent
 STANDAARD_QUOTA_MB = 1024
 WAARSCHUWING_PCT = 80
 KRITIEK_PCT = 95
 AANTAL_GROOTSTE = 10
-CACHE_SECONDEN = 300
-CACHE_AAN = True
 
 # Mappen die niet meetellen: lokaal staan er een virtuele omgeving en werkmappen, op de server niet.
 NEGEER = {"venv", ".claude", "node_modules"}
@@ -36,11 +34,11 @@ ONDERDELEN = [
 ]
 OVERIG = "Programma en overig"
 
-_cache = {}
-
 
 def opslag_map():
     """De map die gemeten wordt (in de tests een lege wegwerpmap)."""
+    from flask import current_app
+
     return Path(current_app.config.get("OPSLAG_MAP", BASE_DIR))
 
 
@@ -63,9 +61,16 @@ def _onderdeel_van(relatief):
     return OVERIG
 
 
+def _vulgraad(totaal, quota_mb):
+    """(quota in bytes, percentage, niveau): niveau is 'ok', 'let_op' (vanaf WAARSCHUWING_PCT) of 'kritiek'."""
+    quota = max(1, quota_mb) * 1024 * 1024
+    percentage = totaal / quota * 100
+    niveau = "kritiek" if percentage >= KRITIEK_PCT else "let_op" if percentage >= WAARSCHUWING_PCT else "ok"
+    return quota, percentage, niveau
+
+
 def bereken_opslag(basis, quota_mb):
-    """Meet de map 'basis': {'totaal', 'quota', 'percentage', 'niveau', 'onderdelen', 'grootste'}.
-    niveau is 'ok', 'let_op' (vanaf WAARSCHUWING_PCT) of 'kritiek' (vanaf KRITIEK_PCT)."""
+    """Meet de map 'basis': {'totaal', 'quota', 'percentage', 'niveau', 'onderdelen', 'grootste'}."""
     basis = Path(basis)
     per_onderdeel = {naam: [0, 0] for naam, _ in ONDERDELEN}
     per_onderdeel[OVERIG] = [0, 0]
@@ -86,14 +91,13 @@ def bereken_opslag(basis, quota_mb):
             teller[1] += 1
             bestanden.append((grootte, relatief))
     totaal = sum(g for g, _ in per_onderdeel.values())
-    quota = max(1, quota_mb) * 1024 * 1024
-    percentage = totaal / quota * 100
+    quota, percentage, niveau = _vulgraad(totaal, quota_mb)
     bestanden.sort(reverse=True)
     return {
         "totaal": totaal,
         "quota": quota,
         "percentage": percentage,
-        "niveau": "kritiek" if percentage >= KRITIEK_PCT else "let_op" if percentage >= WAARSCHUWING_PCT else "ok",
+        "niveau": niveau,
         "onderdelen": sorted(
             (
                 {"naam": naam, "bytes": g, "aantal": n, "aandeel": g / totaal * 100 if totaal else 0}
@@ -108,30 +112,39 @@ def bereken_opslag(basis, quota_mb):
 
 def lees_quota_mb(db):
     rij = db.execute("SELECT opslag_quota_mb FROM instellingen WHERE id = 1").fetchone()
-    return rij["opslag_quota_mb"] if rij and rij["opslag_quota_mb"] else STANDAARD_QUOTA_MB
+    return rij[0] if rij and rij[0] else STANDAARD_QUOTA_MB
 
 
-def opslag_status(db, vers=False):
-    """bereken_opslag voor de site, hooguit CACHE_SECONDEN oud (het dashboard vraagt dit bij elk bezoek)."""
-    basis, quota_mb = opslag_map(), lees_quota_mb(db)
-    sleutel = (str(basis), quota_mb)
-    if CACHE_AAN and not vers:
-        bewaard = _cache.get(sleutel)
-        if bewaard and time.monotonic() - bewaard[0] < CACHE_SECONDEN:
-            return bewaard[1]
-    uitkomst = bereken_opslag(basis, quota_mb)
-    _cache[sleutel] = (time.monotonic(), uitkomst)
+def meet_en_bewaar(db, basis):
+    """Meet de map 'basis' en bewaart het totaal in de database (zodat het dashboard het kan tonen zonder
+    zelf alle bestanden langs te lopen). db mag een gewone sqlite3-verbinding zijn."""
+    uitkomst = bereken_opslag(basis, lees_quota_mb(db))
+    db.execute(
+        "UPDATE instellingen SET opslag_gemeten_bytes = ?, opslag_gemeten_op = ? WHERE id = 1",
+        (uitkomst["totaal"], datetime.now().strftime("%Y-%m-%d %H:%M")),
+    )
+    db.commit()
     return uitkomst
 
 
-def wis_cache():
-    _cache.clear()
+def opslag_status(db):
+    """Meet de site nu (dat kan enkele seconden duren) en bewaart het totaal voor het dashboard."""
+    return meet_en_bewaar(db, opslag_map())
+
+
+def laatst_gemeten(db):
+    """{'totaal', 'quota', 'percentage', 'niveau', 'gemeten_op'} van de laatste meting, zonder iets te meten,
+    of None als er nog niet gemeten is. Het percentage volgt de huidige instelling van "Beschikbaar"."""
+    rij = db.execute("SELECT opslag_gemeten_bytes, opslag_gemeten_op FROM instellingen WHERE id = 1").fetchone()
+    if not rij or rij[0] is None:
+        return None
+    quota, percentage, niveau = _vulgraad(rij[0], lees_quota_mb(db))
+    return {"totaal": rij[0], "quota": quota, "percentage": percentage, "niveau": niveau, "gemeten_op": rij[1]}
 
 
 def bewaar_quota_mb(db, quota_mb):
     db.execute("UPDATE instellingen SET opslag_quota_mb = ? WHERE id = 1", (max(50, min(1_000_000, quota_mb)),))
     db.commit()
-    wis_cache()
 
 
 # ---------- Video's ----------
@@ -148,6 +161,8 @@ def video_gebruik(db):
 def ongebruikte_videos(db):
     """[(bestandsnaam, bytes)] van video's in de videomap die bij geen enkele dia horen (bijv. na een mislukte
     upload). Alleen bestanden die de site zelf heeft gemaakt."""
+    import helpers.video as video_module
+
     map_ = Path(video_module.KIOSK_VIDEOS_MAP)
     if not map_.exists():
         return []
@@ -161,8 +176,9 @@ def ongebruikte_videos(db):
 
 def verwijder_ongebruikte_videos(db):
     """Haalt ongebruikte video's weg; geeft (aantal, bytes) terug."""
+    import helpers.video as video_module
+
     weg = ongebruikte_videos(db)
     for naam, _ in weg:
         video_module.verwijder_video(naam)
-    wis_cache()
     return len(weg), sum(g for _, g in weg)

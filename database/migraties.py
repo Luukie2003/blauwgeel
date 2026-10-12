@@ -33,6 +33,9 @@ KOLOM_MIGRATIES = [
     ("instellingen", "banner_tekst", "TEXT"),
     # Hoeveel schijfruimte de hosting voor deze site beschikbaar heeft (MB), voor de waarschuwing bij Beheer > Opslag.
     ("instellingen", "opslag_quota_mb", "INTEGER NOT NULL DEFAULT 1024"),
+    # De laatste opslagmeting (zie opslag.py): het dashboard leest dit, zodat het niet zelf alle bestanden telt.
+    ("instellingen", "opslag_gemeten_bytes", "INTEGER"),
+    ("instellingen", "opslag_gemeten_op", "TEXT"),
     ("instellingen", "privacy_contact", "TEXT"),
     # Weekdagen waarop de kantine verkoopt, maandag = 0 ("2,5" = woensdag en
     # zaterdag), zie voorspelling.lees_verkoopdagen. Afwijkende datums staan in

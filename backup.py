@@ -28,6 +28,7 @@ from pathlib import Path
 
 import mail
 import onderhoud
+import opslag
 
 BASE_DIR = Path(__file__).parent
 BRON = BASE_DIR / "voorraad.db"
@@ -305,6 +306,20 @@ def ruim_gegevens_op():
     print(f"Oude gegevens opgeruimd: {totaal} regels" + (f" ({verwijderd})" if totaal else ""))
 
 
+def meet_opslag():
+    """Meet hoeveel schijfruimte de site gebruikt en bewaart dat in de database, voor de opslagmelding op het
+    dashboard (zie opslag.py). Mislukt dit, dan mag dat de rest van de taak niet tegenhouden."""
+    try:
+        conn = sqlite3.connect(BRON, timeout=30)
+        try:
+            totaal = opslag.meet_en_bewaar(conn, BASE_DIR)["totaal"]
+        finally:
+            conn.close()
+        print(f"Opslag gemeten: {opslag.groottetekst(totaal)}")
+    except (sqlite3.Error, OSError) as fout:
+        print(f"Opslag meten overgeslagen: {fout}")
+
+
 def dagelijkse_taak(argv=()):
     """Wat de PythonAnywhere-taak elke dag doet. Geeft de exitcode terug (0 = goed)."""
     if "--herstelcontrole" in argv:
@@ -333,6 +348,7 @@ def dagelijkse_taak(argv=()):
         voer_herstelcontrole_uit(pad)
     # Pas opruimen als de back-up van vandaag veilig staat.
     ruim_gegevens_op()
+    meet_opslag()
     return 0
 
 

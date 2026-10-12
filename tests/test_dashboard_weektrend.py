@@ -9,6 +9,7 @@ import voorspelling
 from helpers import bouw_weektrend
 
 VANDAAG = date(2026, 10, 14)  # woensdag in week 42
+KAART = "/dashboard/omzettrend"  # de kaart die het dashboard na het laden ophaalt
 
 
 def _week(maandag, omzet, status="compleet"):
@@ -112,7 +113,7 @@ def test_dashboard_toont_de_weekvergelijking(ingelogde_client, db, monkeypatch):
     )
     db.commit()
 
-    tekst = ingelogde_client.get("/").data.decode()
+    tekst = ingelogde_client.get(KAART).data.decode()
 
     assert f"Vorige week (wk {vorige['week']})" in tekst and "&euro; 1200" in tekst.replace("€", "&euro;")
     assert "+20%" in tekst  # 1200 tegen 1000
@@ -124,7 +125,7 @@ def test_dashboard_toont_de_weekvergelijking(ingelogde_client, db, monkeypatch):
 
 def test_dashboard_met_te_weinig_weken_zegt_dat(ingelogde_client, db, monkeypatch):
     _ga_uit_van(monkeypatch, [800, 50])
-    assert "Nog te weinig volledige weken voor een vergelijking" in ingelogde_client.get("/").data.decode()
+    assert "Nog te weinig volledige weken voor een vergelijking" in ingelogde_client.get(KAART).data.decode()
 
 
 def test_dashboard_valt_terug_op_tellingen_als_de_weekberekening_stuk_gaat(ingelogde_client, db, monkeypatch):
@@ -132,8 +133,8 @@ def test_dashboard_valt_terug_op_tellingen_als_de_weekberekening_stuk_gaat(ingel
         raise RuntimeError("kapot")
 
     monkeypatch.setattr(voorspelling, "omzet_per_week", stuk)
-    resp = ingelogde_client.get("/")
-    assert resp.status_code == 200  # het dashboard blijft werken
+    resp = ingelogde_client.get(KAART)
+    assert resp.status_code == 200  # de kaart blijft werken
     assert "Omzettrend" in resp.data.decode()
 
 
@@ -146,5 +147,33 @@ def test_top_verkopers_blijven_zichtbaar_bij_de_weektrend(ingelogde_client, db, 
         (cur.lastrowid, pid),
     )
     db.commit()
-    tekst = ingelogde_client.get("/").data.decode()
+    tekst = ingelogde_client.get(KAART).data.decode()
     assert "Top verkopers in de laatste 8 tellingen" in tekst and "Toppie" in tekst
+
+
+# ---------- Het dashboard zelf wacht niet op de weekcijfers ----------
+
+
+def test_het_dashboard_rekent_de_weekcijfers_niet_zelf_uit(ingelogde_client, monkeypatch):
+    def mag_niet(db, nu=None):
+        raise AssertionError("het dashboard mag het voorspelmodel niet aanroepen")
+
+    monkeypatch.setattr(voorspelling, "omzet_per_week", mag_niet)
+    resp = ingelogde_client.get("/")
+    tekst = resp.data.decode()
+    assert resp.status_code == 200
+    assert 'id="omzettrend-kaart"' in tekst and f'data-bron="{KAART}"' in tekst  # de plek waar de kaart in komt
+    assert "wordt berekend" in tekst  # tot de cijfers er zijn
+
+
+def test_de_kaart_is_er_voor_iedereen_die_is_ingelogd(client, db):
+    from test_secties_rechten import _login, _maak_vrijwilliger
+
+    _maak_vrijwilliger(db, "vrijwilliger", "voorraad")
+    _login(client, "vrijwilliger")
+    assert client.get(KAART).status_code == 200
+
+
+def test_de_kaart_vraagt_inloggen(client):
+    resp = client.get(KAART)
+    assert resp.status_code == 302 and "/login" in resp.headers["Location"]

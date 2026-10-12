@@ -26,7 +26,7 @@ def register_routes(app):
             except ValueError:
                 flash("Vul het aantal MB als getal in.", "error")
             return redirect(url_for("opslag_pagina"))
-        status = opslag_status(db, vers=True)
+        status = opslag_status(db)
         gebruik = video_gebruik(db)
         grootste = []
         for f in status["grootste"]:

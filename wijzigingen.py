@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.42.1"
+HUIDIGE_VERSIE = "1.42.2"
 WIJZIGINGEN = [
+    {
+        "versie": "1.42.2",
+        "datum": "12 oktober 2026",
+        "punten": [
+            "Het overzicht (startpagina) opent weer meteen. De omzettrend per week staat er een paar seconden later bij, en de opslagmelding wordt elke nacht gemeten in plaats van bij elk bezoek. Daardoor kon het openen van het overzicht, na een tijdje niet gebruikt te zijn, wel 8 seconden duren.",
+        ],
+    },
     {
         "versie": "1.42.1",
         "datum": "12 oktober 2026",

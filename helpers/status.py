@@ -196,14 +196,15 @@ def bouw_taken(db, rol, secties):
             )
 
     if rol == "beheerder":
-        from opslag import groottetekst, opslag_status
+        from opslag import groottetekst, laatst_gemeten
 
-        opslag = opslag_status(db)
-        if opslag["niveau"] != "ok":
+        opslag = laatst_gemeten(db)  # de bewaarde meting: het dashboard loopt zelf nooit alle bestanden langs
+        if opslag and opslag["niveau"] != "ok":
             taken.append(
                 _taak(
                     f"Opslag voor {opslag['percentage']:.0f}% vol",
-                    f"{groottetekst(opslag['totaal'])} in gebruik: kijk wat de meeste ruimte inneemt",
+                    f"{groottetekst(opslag['totaal'])} in gebruik (gemeten {opslag['gemeten_op'][8:10]}-{opslag['gemeten_op'][5:7]}): "
+                    "kijk wat de meeste ruimte inneemt",
                     "opslag_pagina",
                     urgent=opslag["niveau"] == "kritiek",
                 )

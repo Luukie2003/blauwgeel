@@ -148,7 +148,6 @@ def register_routes(app):
         open_bestellingen = db.execute(
             "SELECT COUNT(*) AS n FROM bestellingen WHERE status = 'besteld'"
         ).fetchone()["n"]
-        omzet_trend = bereken_omzet_trend(db)
         komende_thuiswedstrijden = bereken_komende_thuiswedstrijden(db)
         taken = [
             {**t, "url": url_for(t["endpoint"], **t["kwargs"])}
@@ -161,7 +160,6 @@ def register_routes(app):
             laag=laag,
             recente_mutaties=recente_mutaties,
             open_bestellingen=open_bestellingen,
-            omzet_trend=omzet_trend,
             komende_thuiswedstrijden=komende_thuiswedstrijden,
             laatste_telling_status=bereken_laatste_telling_status(db),
             kassa_telling_status=bereken_kassa_telling_status(db),
@@ -184,6 +182,12 @@ def register_routes(app):
                 else None
             ),
         )
+
+    @app.route("/dashboard/omzettrend")
+    def dashboard_omzettrend():
+        """De kaart 'Omzettrend' van het dashboard. Apart opgehaald, zodat het dashboard niet wacht op de weekcijfers
+        (die komen uit het voorspelmodel en dat rekent soms enkele seconden)."""
+        return render_template("_dashboard_omzettrend.html", omzet_trend=bereken_omzet_trend(get_db()))
 
     @app.route("/verkooprapport")
     def verkooprapport():

@@ -17,19 +17,15 @@ from opslag import (
     bereken_opslag,
     bewaar_quota_mb,
     groottetekst,
+    laatst_gemeten,
     lees_quota_mb,
+    meet_en_bewaar,
     ongebruikte_videos,
     opslag_status,
     verwijder_ongebruikte_videos,
 )
 
 MB = 1024 * 1024
-
-
-@pytest.fixture(autouse=True)
-def _zonder_bewaren(monkeypatch):
-    monkeypatch.setattr(opslag, "CACHE_AAN", False)
-    opslag.wis_cache()
 
 
 def _bestand(basis, pad, grootte):
@@ -97,17 +93,28 @@ def test_symbolische_links_tellen_niet_dubbel(tmp_path):
     assert bereken_opslag(tmp_path, 100)["totaal"] == 5 * MB
 
 
-def test_het_resultaat_wordt_even_bewaard_maar_ververst_op_verzoek(app, db, monkeypatch):
-    monkeypatch.setattr(opslag, "CACHE_AAN", True)
-    opslag.wis_cache()
+def test_een_meting_wordt_bewaard_en_laat_zich_zonder_meten_teruglezen(app, db, monkeypatch):
     basis = app.config["OPSLAG_MAP"]
-    _bestand(basis, "a.bin", 1 * MB)
-    eerst = opslag_status(db)["totaal"]
-    _bestand(basis, "b.bin", 2 * MB)
+    assert laatst_gemeten(db) is None  # nog nooit gemeten
+    _bestand(basis, "a.bin", 3 * MB)
 
-    assert opslag_status(db)["totaal"] == eerst  # nog het bewaarde resultaat
-    assert opslag_status(db, vers=True)["totaal"] == eerst + 2 * MB
-    assert opslag_status(db)["totaal"] == eerst + 2 * MB  # en dat is nu het bewaarde
+    assert opslag_status(db)["totaal"] == 3 * MB  # meet nu en bewaart het
+
+    def mag_niet(*args, **kwargs):
+        raise AssertionError("laatst_gemeten mag niets meten")
+
+    monkeypatch.setattr(opslag, "bereken_opslag", mag_niet)
+    gemeten = laatst_gemeten(db)
+    assert gemeten["totaal"] == 3 * MB and gemeten["niveau"] == "ok"
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}", gemeten["gemeten_op"])
+
+
+def test_het_percentage_van_een_bewaarde_meting_volgt_de_ingestelde_ruimte(app, db):
+    _bestand(app.config["OPSLAG_MAP"], "a.bin", 100 * MB)
+    meet_en_bewaar(db, app.config["OPSLAG_MAP"])
+    assert laatst_gemeten(db)["niveau"] == "ok"  # 100 MB van 1024
+    bewaar_quota_mb(db, 102)  # de hosting biedt toch minder aan: 98% vol
+    assert laatst_gemeten(db)["niveau"] == "kritiek"
 
 
 # ---------- Instelling ----------
@@ -230,8 +237,10 @@ def test_de_pagina_staat_in_het_menu_van_beheerders(ingelogde_client):
 
 
 def _vul_tot(app, db, procent):
+    """Zet de site op 'procent' vol en bewaart die meting (zoals de dagelijkse back-uptaak dat doet)."""
     quota = lees_quota_mb(db)
     _bestand(app.config["OPSLAG_MAP"], "static/kiosk_videos/groot.mp4", int(quota * MB * procent / 100))
+    meet_en_bewaar(db, app.config["OPSLAG_MAP"])
 
 
 def test_geen_melding_zolang_er_ruimte_is(ingelogde_client, app, db):
@@ -260,3 +269,74 @@ def test_vrijwilligers_krijgen_de_opslagtaak_niet(app, db):
 
     _vul_tot(app, db, 97)
     assert not any(t["titel"].startswith("Opslag voor") for t in bouw_taken(db, "vrijwilliger", "voorraad"))
+
+
+def test_het_dashboard_meet_zelf_nooit_alle_bestanden(ingelogde_client, app, db, monkeypatch):
+    _vul_tot(app, db, 85)
+
+    def mag_niet(*args, **kwargs):
+        raise AssertionError("het dashboard mag de schijf niet doorlopen")
+
+    monkeypatch.setattr(opslag, "bereken_opslag", mag_niet)
+    resp = ingelogde_client.get("/")
+    tekst = resp.data.decode()
+    assert resp.status_code == 200 and "Opslag voor 85% vol" in tekst and "gemeten" in tekst
+
+
+def test_zonder_meting_staat_er_geen_opslagtaak(ingelogde_client, app, db):
+    _bestand(app.config["OPSLAG_MAP"], "static/kiosk_videos/groot.mp4", 2000 * MB)  # wel vol, maar nog niet gemeten
+    assert "Opslag voor" not in ingelogde_client.get("/").data.decode()
+
+
+def test_de_opslagpagina_meet_en_bewaart_voor_het_dashboard(ingelogde_client, app, db):
+    quota = lees_quota_mb(db)
+    _bestand(app.config["OPSLAG_MAP"], "static/kiosk_videos/groot.mp4", int(quota * MB * 0.9))
+    assert "Opslag voor" not in ingelogde_client.get("/").data.decode()
+    ingelogde_client.get("/opslag")
+    assert "Opslag voor 90% vol" in ingelogde_client.get("/").data.decode()
+
+
+# ---------- De dagelijkse back-uptaak meet ook ----------
+
+
+def test_de_dagelijkse_taak_meet_de_opslag(tmp_path, monkeypatch):
+    import sqlite3
+
+    import backup
+
+    site = tmp_path / "site"
+    _bestand(site, "static/kiosk_videos/a.mp4", 7 * MB)
+    pad = tmp_path / "voorraad.db"
+    conn = sqlite3.connect(pad)
+    conn.execute("CREATE TABLE instellingen (id INTEGER PRIMARY KEY, opslag_quota_mb INTEGER, opslag_gemeten_bytes INTEGER, opslag_gemeten_op TEXT)")
+    conn.execute("INSERT INTO instellingen (id, opslag_quota_mb) VALUES (1, 100)")
+    conn.commit()
+    conn.close()
+    monkeypatch.setattr(backup, "BRON", pad)
+    monkeypatch.setattr(backup, "BASE_DIR", site)
+
+    backup.meet_opslag()
+
+    conn = sqlite3.connect(pad)
+    assert conn.execute("SELECT opslag_gemeten_bytes FROM instellingen").fetchone()[0] == 7 * MB
+    conn.close()
+
+
+def test_een_mislukte_meting_laat_de_back_uptaak_niet_stuk_gaan(tmp_path, monkeypatch, capsys):
+    import backup
+
+    monkeypatch.setattr(backup, "BRON", tmp_path / "bestaat-niet" / "voorraad.db")  # database niet te openen
+    backup.meet_opslag()  # geen uitzondering
+    assert "overgeslagen" in capsys.readouterr().out
+
+
+def test_opslag_kan_zonder_flask_worden_geimporteerd():
+    """backup.py draait op de server zonder virtualenv: opslag.py mag bovenin alleen de standaardbibliotheek gebruiken."""
+    import ast
+    from pathlib import Path
+
+    boom = ast.parse((Path(opslag.__file__)).read_text())
+    modules = {n.module for n in boom.body if isinstance(n, ast.ImportFrom)} | {
+        a.name for n in boom.body if isinstance(n, ast.Import) for a in n.names
+    }
+    assert modules <= {"os", "datetime", "pathlib"}
