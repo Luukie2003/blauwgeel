@@ -1,6 +1,7 @@
 """Derving: wat er uit de voorraad verdwijnt zonder dat het verkocht is (breuk, over de datum, gratis weggegeven).
 
-Bij het uitboeken kies je een reden; hier komt alles bij elkaar, met de waarde tegen inkoopprijs."""
+Bij het uitboeken kies je een reden; hier komt alles bij elkaar, met de waarde tegen inkoopprijs (per stuk: de
+inkoopprijs bij een product is per besteleenheid, dus gedeeld door het aantal stuks daarin)."""
 
 from datetime import timedelta
 
@@ -23,7 +24,7 @@ def bereken_derving(db, weken, vandaag):
     vanaf = (vandaag - timedelta(weeks=weken)).strftime("%Y-%m-%d 00:00")
     rijen = db.execute(
         """SELECT m.id, m.datum, m.aantal, m.naam, m.opmerking, m.reden, m.product_id,
-                  p.naam AS product_naam, p.eenheid, p.inkoopprijs
+                  p.naam AS product_naam, p.eenheid, p.inkoopprijs, p.besteleenheid_factor
            FROM mutaties m JOIN producten p ON p.id = m.product_id
            WHERE m.type = 'uit' AND m.reden IS NOT NULL AND m.reden != '' AND m.datum >= ?
            ORDER BY m.datum DESC, m.id DESC""",
@@ -32,7 +33,7 @@ def bereken_derving(db, weken, vandaag):
     per_reden = {sleutel: {"naam": naam, "boekingen": 0, "stuks": 0, "waarde": 0.0} for sleutel, naam in DERVING_REDENEN.items()}
     per_product = {}
     for r in rijen:
-        waarde = r["aantal"] * r["inkoopprijs"]
+        waarde = r["aantal"] * r["inkoopprijs"] / max(1, r["besteleenheid_factor"] or 1)
         reden = per_reden.get(r["reden"])
         if reden is None:
             continue  # een onbekende reden (bijvoorbeeld uit een oudere versie): niet meetellen

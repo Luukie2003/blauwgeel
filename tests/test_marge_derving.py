@@ -240,3 +240,27 @@ def test_derving_is_alleen_voor_beheerders(client, db):
     pid = _product(db, "Pils", voorraad=20)
     client.post("/boeken", data={"csrf_token": _csrf(client), "product_id": str(pid), "type": "uit", "aantal": "2", "reden": "breuk"})
     assert db.execute("SELECT reden FROM mutaties WHERE product_id = ?", (pid,)).fetchone()[0] == "breuk"
+
+
+# ---------- De inkoopprijs is per besteleenheid ----------
+
+
+def test_de_inkoopprijs_per_krat_wordt_per_stuk_gerekend(db):
+    """Bij een product staat de inkoopprijs per besteleenheid (een krat van 24), de verkoopprijs per stuk."""
+    pid = _product(db, "Pils krat", verkoop=2.0, inkoop=24.0, besteleenheid="krat", besteleenheid_factor=24)
+    _telling(db, 3, {pid: (48, 2.0)})
+    p = _regel(bereken_marge(db, 13, _vandaag()), "Pils krat")
+    assert p["inkoop_stuk"] == pytest.approx(1.0) and p["marge_stuk"] == pytest.approx(1.0) and p["marge_pct"] == pytest.approx(50)
+    assert p["omzet"] == pytest.approx(96) and p["winst"] == pytest.approx(96 - 48 * 1.0)
+
+
+def test_een_besteleenheid_van_een_stuk_blijft_gewoon(db):
+    pid = _product(db, "Los", verkoop=2.0, inkoop=1.0, besteleenheid_factor=1)
+    assert _regel(bereken_marge(db, 13, _vandaag()), "Los")["inkoop_stuk"] == pytest.approx(1.0)
+    assert pid
+
+
+def test_de_derving_rekent_ook_per_stuk(db):
+    pid = _product(db, "Pils krat", inkoop=24.0, besteleenheid="krat", besteleenheid_factor=24)
+    _uitboeking(db, pid, 12, "breuk")  # 12 flessen, geen 12 kratten
+    assert bereken_derving(db, 13, _vandaag())["totaal"]["waarde"] == pytest.approx(12.0)

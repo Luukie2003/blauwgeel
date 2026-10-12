@@ -1,8 +1,10 @@
 """Marge-overzicht: wat levert elk product en elke categorie op, en welke producten verdienen het minst.
 
 De omzet komt uit de tellingen (met de verkoopprijs van het moment van tellen). De winst is een schatting: omzet min
-het aantal verkochte stuks maal de huidige inkoopprijs, want per telling wordt alleen de verkoopprijs vastgelegd. Een
-product zonder inkoopprijs telt niet mee in de marge en staat apart genoemd."""
+het aantal verkochte stuks maal de huidige inkoopprijs, want per telling wordt alleen de verkoopprijs vastgelegd. De
+inkoopprijs staat bij een product per besteleenheid (bijvoorbeeld een krat van 24) en wordt hier door het aantal stuks per
+besteleenheid gedeeld, want de verkoopprijs is per stuk. Een product zonder inkoopprijs telt niet mee in de marge en staat
+apart genoemd."""
 
 from datetime import timedelta
 
@@ -24,7 +26,7 @@ def bereken_marge(db, weken, vandaag):
     weken (vandaag: een date)."""
     vanaf = (vandaag - timedelta(weeks=weken)).strftime("%Y-%m-%d 00:00")
     rijen = db.execute(
-        """SELECT p.id, p.naam, p.categorie, p.eenheid, p.verkoopprijs, p.inkoopprijs, p.actief,
+        """SELECT p.id, p.naam, p.categorie, p.eenheid, p.verkoopprijs, p.inkoopprijs, p.besteleenheid_factor, p.actief,
                   COALESCE(SUM(tr.verkocht), 0) AS aantal,
                   COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0) AS omzet
            FROM producten p
@@ -39,15 +41,17 @@ def bereken_marge(db, weken, vandaag):
         if r["verkoopprijs"] <= 0 and r["omzet"] <= 0:
             continue  # wordt niet los verkocht (bijvoorbeeld een fust): hier niets over te zeggen
         heeft_inkoop = r["inkoopprijs"] > 0
-        marge_stuk = r["verkoopprijs"] - r["inkoopprijs"] if heeft_inkoop and r["verkoopprijs"] > 0 else None
+        inkoop_stuk = r["inkoopprijs"] / max(1, r["besteleenheid_factor"] or 1)  # de inkoopprijs is per besteleenheid
+        marge_stuk = r["verkoopprijs"] - inkoop_stuk if heeft_inkoop and r["verkoopprijs"] > 0 else None
         producten.append(
             {
                 "id": r["id"], "naam": r["naam"], "categorie": r["categorie"], "eenheid": r["eenheid"], "actief": bool(r["actief"]),
-                "verkoopprijs": r["verkoopprijs"], "inkoopprijs": r["inkoopprijs"], "aantal": r["aantal"], "omzet": r["omzet"],
+                "verkoopprijs": r["verkoopprijs"], "inkoopprijs": r["inkoopprijs"], "inkoop_stuk": inkoop_stuk,
+                "aantal": r["aantal"], "omzet": r["omzet"],
                 "heeft_inkoop": heeft_inkoop,
                 "marge_stuk": marge_stuk,
                 "marge_pct": marge_stuk / r["verkoopprijs"] * 100 if marge_stuk is not None else None,
-                "winst": r["omzet"] - r["aantal"] * r["inkoopprijs"] if heeft_inkoop else None,
+                "winst": r["omzet"] - r["aantal"] * inkoop_stuk if heeft_inkoop else None,
             }
         )
     met_marge = [p for p in producten if p["marge_pct"] is not None]

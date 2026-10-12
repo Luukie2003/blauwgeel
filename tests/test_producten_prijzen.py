@@ -123,3 +123,11 @@ def test_alleen_beheerders_en_het_menu(client, db):
 
 def test_beheerder_ziet_prijzen_aanpassen_in_het_menu(ingelogde_client):
     assert re.search(r'href="/producten/prijzen"[^>]*>\s*Prijzen aanpassen', ingelogde_client.get("/").data.decode())
+
+
+def test_de_inkoopprijs_op_de_pagina_is_per_stuk_voor_de_marge(ingelogde_client, db):
+    """De inkoopprijs staat per krat (24 stuks): voor de marge moet hij per stuk gelezen worden."""
+    pid = _product(db, "Pils krat", verkoop=2.0, inkoop=24.0, besteleenheid="krat", besteleenheid_factor=24)
+    tekst = ingelogde_client.get("/producten/prijzen").data.decode()
+    assert re.search(r'data-inkoop="1\.0"[^>]*title="Inkoop per krat/doos: &euro; 24,00 \(24 stuks\)"[^>]*>&euro; 1,00', tekst)
+    assert pid

@@ -88,7 +88,7 @@
         <div class="tabel-wrap">
             <table id="prijzen-tabel">
                 <thead>
-                    <tr><th>Product</th><th>Inkoop</th><th>Verkoop</th><th>Marge</th></tr>
+                    <tr><th>Product</th><th>Inkoop per stuk</th><th>Verkoop</th><th>Marge</th></tr>
                 </thead>
                 <tbody>
                     {% set ns = namespace(categorie=None) %}
@@ -105,7 +105,9 @@
                             {{ p.naam }}{% if not p.actief %} <span class="badge badge-neutraal">Inactief</span>{% endif %}
                             {% if heeft_opties %}<div class="tekst-zacht" style="font-size:0.72rem">Op de tv staan de prijsopties hieronder, niet deze prijs.</div>{% endif %}
                         </td>
-                        <td data-inkoop="{{ p.inkoopprijs }}">{% if p.inkoopprijs %}&euro; {{ bedrag(p.inkoopprijs) }}{% else %}<span class="tekst-zacht">&mdash;</span>{% endif %}</td>
+                        {# De inkoopprijs staat per besteleenheid (een krat), de verkoopprijs per stuk: hier per stuk, voor de marge. #}
+                        {% set inkoop_stuk = (p.inkoopprijs / (p.besteleenheid_factor or 1)) if p.inkoopprijs else 0 %}
+                        <td data-inkoop="{{ inkoop_stuk }}" {% if p.besteleenheid_factor and p.besteleenheid_factor > 1 %}title="Inkoop per krat/doos: &euro; {{ bedrag(p.inkoopprijs) }} ({{ p.besteleenheid_factor }} stuks)"{% endif %}>{% if p.inkoopprijs %}&euro; {{ bedrag(inkoop_stuk) }}{% else %}<span class="tekst-zacht">&mdash;</span>{% endif %}</td>
                         <td>{{ prijsveld('prijs_' ~ p.id, p.verkoopprijs, 'Verkoopprijs ' ~ p.naam) }}
                             {% for g in gepland_per_prijs.get(('verkoopprijs', p.id, 0), []) %}
                             <div class="tekst-zacht" style="font-size:0.75rem">&rarr; &euro; {{ bedrag(g.nieuwe_prijs) }} per {{ g.ingangsdatum[8:10] }}-{{ g.ingangsdatum[5:7] }}</div>

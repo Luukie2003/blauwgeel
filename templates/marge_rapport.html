@@ -49,17 +49,17 @@
 
 <div class="kaart">
     <h2>Verdienen het minst</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">Per stuk: verkoopprijs min inkoopprijs. Onder de {{ lage_marge }}% is rood gemarkeerd.</p>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Per stuk: verkoopprijs min inkoopprijs (de inkoopprijs bij het product is per besteleenheid, hier omgerekend naar een stuk). Onder de {{ lage_marge }}% is rood gemarkeerd.</p>
     {% if rapport.laagste %}
     <div class="tabel-wrap">
         <table>
-            <thead><tr><th>Product</th><th>Categorie</th><th style="text-align:right">Inkoop</th><th style="text-align:right">Verkoop</th><th style="text-align:right">Per stuk</th><th style="text-align:right">Marge</th><th style="text-align:right">Verkocht</th></tr></thead>
+            <thead><tr><th>Product</th><th>Categorie</th><th style="text-align:right">Inkoop per stuk</th><th style="text-align:right">Verkoop</th><th style="text-align:right">Marge per stuk</th><th style="text-align:right">Marge</th><th style="text-align:right">Verkocht</th></tr></thead>
             <tbody>
                 {% for p in rapport.laagste %}
                 <tr>
                     <td>{{ p.naam }}{% if not p.actief %} <span class="badge badge-neutraal">Inactief</span>{% endif %}</td>
                     <td>{{ p.categorie }}</td>
-                    <td style="text-align:right">{{ euro(p.inkoopprijs) }}</td>
+                    <td style="text-align:right">{{ euro(p.inkoop_stuk) }}</td>
                     <td style="text-align:right">{{ euro(p.verkoopprijs) }}</td>
                     <td style="text-align:right">{{ euro(p.marge_stuk) }}</td>
                     <td style="text-align:right"><span class="badge {{ 'badge-laag' if p.marge_pct < lage_marge else 'badge-neutraal' }}">{{ pct(p.marge_pct) }}</span></td>

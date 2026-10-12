@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.44.0"
+HUIDIGE_VERSIE = "1.44.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.44.1",
+        "datum": "12 oktober 2026",
+        "punten": [
+            "Fix in het rapport Marge en bij Derving: de inkoopprijs bij een product is per besteleenheid (bijvoorbeeld een krat van 24), maar werd per stuk gerekend. Daardoor leek de winst sterk negatief en was de waarde van derving veel te hoog. Nu wordt de inkoopprijs eerst naar een stuk omgerekend.",
+        ],
+    },
     {
         "versie": "1.44.0",
         "datum": "12 oktober 2026",
@@ -866,7 +873,7 @@ MODULES = [
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.0", "sinds": "", "laatst": "",
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
-    {"naam": "Rapporten", "versie": "1.11.1", "sinds": "0.1.0", "laatst": "1.44.0",
+    {"naam": "Rapporten", "versie": "1.11.2", "sinds": "0.1.0", "laatst": "1.44.1",
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.4.0", "sinds": "1.5.0", "laatst": "1.44.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
