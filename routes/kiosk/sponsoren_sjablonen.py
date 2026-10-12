@@ -1,6 +1,7 @@
 """Sponsoren, mededelingen en de sjabloonbouwer voor de dia's."""
 
 import json
+from datetime import date
 
 from flask import flash, redirect, render_template, request, url_for
 
@@ -24,6 +25,7 @@ from helpers import (
     now_str,
     sla_afbeelding_op,
     sla_video_op,
+    vandaag_amsterdam,
     verwijder_video,
     VIDEO_ZWAAR_MBIT,
     ffmpeg_beschikbaar,
@@ -70,7 +72,15 @@ def _sponsor_uit_formulier():
     tekst_grootte = request.form.get("tekst_grootte", "").strip()
     if tekst_grootte not in KIOSK_TEKST_GROOTTE_SLEUTELS:
         tekst_grootte = "normaal"
+    vanaf, tot = _datum_of_none(request.form.get("zichtbaar_vanaf")), _datum_of_none(request.form.get("zichtbaar_tot"))
+    datum_melding = None
+    if vanaf and tot and tot < vanaf:
+        vanaf, tot = tot, vanaf
+        datum_melding = "De einddatum lag voor de begindatum: ik heb ze omgewisseld."
     return {
+        "zichtbaar_vanaf": vanaf,
+        "zichtbaar_tot": tot,
+        "datum_melding": datum_melding,
         "sjabloon": sjabloon,
         "custom_sjabloon_id": custom_sjabloon_id,
         "titel": request.form.get("titel", "").strip() or None,
@@ -84,6 +94,14 @@ def _sponsor_uit_formulier():
         "video_hele_duur": 1 if request.form.get("video_hele_duur") else 0,
         "video_geluid": 1 if request.form.get("video_geluid") else 0,
     }
+
+
+def _datum_of_none(tekst):
+    """'2026-12-01' -> '2026-12-01'; een lege of ongeldige datum -> None (dan geldt er geen grens)."""
+    try:
+        return date.fromisoformat((tekst or "").strip()).isoformat()
+    except ValueError:
+        return None
 
 
 def _sjablonen_custom_context(db):
@@ -204,6 +222,7 @@ def register_routes(app):
         return render_template(
             "kiosk_sponsoren_leden.html",
             sponsoren=sponsoren,
+            vandaag=vandaag_amsterdam().isoformat(),
             club_van_20=club_van_20,
             sjabloon_labels=dict(KIOSK_SPONSOR_SJABLONEN),
             sjablonen_custom=sjablonen_custom,
@@ -240,8 +259,9 @@ def register_routes(app):
                    (sjabloon, custom_sjabloon_id, titel, tekst, afbeelding,
                     achtergrond_afbeelding, overgang, tekst_grootte,
                     weergave_duur_seconden, volgorde, actief, aangemaakt_op,
-                    video, video_duur, video_hele_duur, video_geluid, herhalingen)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    video, video_duur, video_hele_duur, video_geluid, herhalingen,
+                    zichtbaar_vanaf, zichtbaar_tot)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     gegevens["sjabloon"],
                     gegevens["custom_sjabloon_id"],
@@ -260,10 +280,14 @@ def register_routes(app):
                     gegevens["video_hele_duur"],
                     gegevens["video_geluid"],
                     gegevens["herhalingen"],
+                    gegevens["zichtbaar_vanaf"],
+                    gegevens["zichtbaar_tot"],
                 ),
             )
             db.commit()
             flash("Sponsor toegevoegd.", "success")
+            if gegevens["datum_melding"]:
+                flash(gegevens["datum_melding"], "warning")
             for tekst in video_meldingen:
                 flash(tekst, "success")
             if video_fout:
@@ -343,7 +367,7 @@ def register_routes(app):
                        afbeelding = ?, achtergrond_afbeelding = ?, overgang = ?,
                        tekst_grootte = ?, weergave_duur_seconden = ?, volgorde = ?,
                        actief = ?, video = ?, video_duur = ?, video_hele_duur = ?,
-                       video_geluid = ?, herhalingen = ?
+                       video_geluid = ?, herhalingen = ?, zichtbaar_vanaf = ?, zichtbaar_tot = ?
                    WHERE id = ?""",
                 (
                     gegevens["sjabloon"],
@@ -362,11 +386,15 @@ def register_routes(app):
                     gegevens["video_hele_duur"],
                     gegevens["video_geluid"],
                     gegevens["herhalingen"],
+                    gegevens["zichtbaar_vanaf"],
+                    gegevens["zichtbaar_tot"],
                     sponsor_id,
                 ),
             )
             db.commit()
             flash("Sponsor bijgewerkt.", "success")
+            if gegevens["datum_melding"]:
+                flash(gegevens["datum_melding"], "warning")
             for tekst in video_meldingen:
                 flash(tekst, "success")
             if video_fout:

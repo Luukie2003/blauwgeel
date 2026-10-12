@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from flask import Response, flash, g, jsonify, redirect, render_template, request, session, url_for
 
@@ -13,6 +13,8 @@ from helpers import (
     bereken_komende_thuiswedstrijden,
     bereken_laatste_telling_status,
     bereken_omzet_trend_periode,
+    bereken_voorspelde_tekorten,
+    bestel_suggesties,
     bouw_weektrend,
     bereken_pda_start,
     bereken_wedstrijd_geschiedenis,
@@ -25,8 +27,12 @@ from helpers import (
     now_str,
     stuur_tag_notificaties,
 )
+from helpers.tijd import vandaag_amsterdam
 from pdf import periode_verkoop_pdf
+from voorspelling import maak_prognose
 from wijzigingen import HUIDIGE_VERSIE, MODULES, MODULES_UITLEG, WIJZIGINGEN
+
+_WEEKDAGEN = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
 
 
 def register_routes(app):
@@ -131,13 +137,11 @@ def register_routes(app):
             # De zware dashboard-cijfers (omzettrend, top-verkopers) zijn niet
             # relevant op de vloer; wel een paar korte regels met wat er nu
             # aandacht nodig heeft (zie bereken_pda_start).
-            return render_template(
-                "pda_start.html",
-                groet=dagdeel_groet(),
-                **bereken_pda_start(
-                    get_db(), session.get("gebruiker_rol"), session.get("gebruiker_secties")
-                ),
+            pda = bereken_pda_start(
+                get_db(), session.get("gebruiker_rol"), session.get("gebruiker_secties"), session.get("gebruiker_id")
             )
+            pda["eigen_taken"] = [{**t, "url": url_for(t["endpoint"], **t["kwargs"])} for t in pda["eigen_taken"]]
+            return render_template("pda_start.html", groet=dagdeel_groet(), **pda)
 
         db = get_db()
         producten = db.execute(
@@ -194,6 +198,41 @@ def register_routes(app):
         """De kaart 'Omzettrend' van het dashboard. Apart opgehaald, zodat het dashboard niet wacht op de weekcijfers
         (die komen uit het voorspelmodel en dat rekent soms enkele seconden)."""
         return render_template("_dashboard_omzettrend.html", omzet_trend=bereken_omzet_trend(get_db()))
+
+    @app.route("/dashboard/wedstrijddag")
+    def dashboard_wedstrijddag():
+        """De kaart 'Thuiswedstrijd' van het overzicht: de eerstvolgende thuiswedstrijd van de komende dagen, wat het
+        voorspelmodel die dag aan omzet verwacht en welke producten kunnen opraken, zodat je op tijd bestelt. Leeg als er
+        de komende dagen geen thuiswedstrijd is. Apart opgehaald omdat het voorspelmodel soms enkele seconden rekent."""
+        db = get_db()
+        komend = bereken_komende_thuiswedstrijden(db, dagen=5)
+        if not komend:
+            return ""
+        dag = komend[0]
+        datum = date.fromisoformat(dag["datum"])
+        dagen_tot = (datum - vandaag_amsterdam()).days
+        verwacht = None
+        try:
+            prognose = maak_prognose(db, dagen=7)
+            if prognose["beschikbaar"]:
+                dag_prognose = next((d for d in prognose["dagen_overzicht"] if d["datum"] == datum), None)
+                if dag_prognose and dag_prognose["open"]:
+                    verwacht = dag_prognose["omzet"]
+        except Exception as fout:  # de kaart mag het overzicht nooit stuk maken
+            print(f"[wedstrijddag] prognose mislukt: {fout}")
+        tekorten = bereken_voorspelde_tekorten(db)
+        onder_minimum = bestel_suggesties(db)
+        return render_template(
+            "_dashboard_wedstrijddag.html",
+            dag=dag,
+            weekdag=_WEEKDAGEN[datum.weekday()],
+            dagen_tot=dagen_tot,
+            verwacht=verwacht,
+            tekorten=tekorten[:5],
+            aantal_tekorten=len(tekorten),
+            onder_minimum=len(onder_minimum),
+            dringend=dagen_tot <= 3 and bool(tekorten or onder_minimum),
+        )
 
     @app.route("/verkooprapport")
     def verkooprapport():

@@ -1,0 +1,33 @@
+{# De kaart 'Thuiswedstrijd' op het overzicht (zie routes/dashboard.py, dashboard_wedstrijddag). #}
+<div class="kaart" style="border-left:4px solid {{ 'var(--rood, #c0392b)' if dringend else 'var(--geel-donker, #e0ba17)' }}">
+    <div class="actiebalk" style="margin-bottom:0.5rem">
+        <h2 style="margin:0">
+            Thuiswedstrijd {% if dagen_tot <= 0 %}vandaag{% elif dagen_tot == 1 %}morgen{% else %}{{ weekdag }} {{ dag.dag_nummer }} {{ dag.maand_kort }}{% endif %}
+        </h2>
+        <span class="tekst-zacht">{{ dag.wedstrijden|map(attribute='omschrijving')|join(' · ') }}</span>
+    </div>
+    <p style="margin:0 0 0.5rem">
+        {% if verwacht is not none %}Verwachte omzet die dag: <strong>&euro; {{ '%.0f'|format(verwacht) }}</strong>.{% endif %}
+        {% if dag.weer %}Weer: {{ dag.weer.label }}, {{ '%.0f'|format(dag.weer.max_temp) }}&deg;C ({{ dag.weer.neerslag_kans }}% neerslag).{% endif %}
+        {% if dag.wedstrijden|length > 1 %}<span class="badge badge-laag">{{ dag.wedstrijden|length }}x thuis, kan drukker zijn</span>{% endif %}
+    </p>
+    {% if tekorten or onder_minimum %}
+    <p style="margin:0 0 0.4rem">
+        <strong>{% if dringend %}Bestel nu: {% endif %}</strong>
+        {% if onder_minimum %}{{ onder_minimum }} {{ 'product zit' if onder_minimum == 1 else 'producten zitten' }} onder het minimum.{% endif %}
+        {% if aantal_tekorten %}{{ aantal_tekorten }} {{ 'product kan' if aantal_tekorten == 1 else 'producten kunnen' }} de komende 7 dagen opraken:{% endif %}
+    </p>
+    {% if tekorten %}
+    <ul style="margin:0 0 0.6rem; padding-left:1.2rem">
+        {% for t in tekorten %}
+        <li>{{ t.product.naam }}
+            <span class="tekst-zacht">(voorraad {{ t.product.voorraad }} {{ t.product.eenheid }}, {% if t.kans_tekort > 0.99 %}&gt; 99%{% else %}{{ (t.kans_tekort * 100)|round|int }}%{% endif %} kans op tekort{% if t.advies_stuks %}; bestel {% if t.advies_eenheden %}{{ t.advies_eenheden }} {{ t.besteleenheid }}{% else %}{{ t.advies_stuks }} {{ t.product.eenheid }}{% endif %}{% endif %})</span></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    <a href="{{ url_for('bestellijst') }}" class="btn {{ 'btn-geel' if dringend else 'btn-rand' }} btn-klein">Naar de bestellijst</a>
+    <a href="{{ url_for('prognose_pagina') }}" class="btn btn-rand btn-klein">Prognose</a>
+    {% else %}
+    <p class="tekst-zacht" style="margin:0">Alles ziet er goed uit: niets onder het minimum en niets dat waarschijnlijk opraakt.</p>
+    {% endif %}
+</div>

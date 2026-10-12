@@ -3,7 +3,7 @@
 Vroeger 1 bestand van ruim 900 regels; nu per onderwerp opgesplitst. Alle routes
 behouden hun eigen endpoint-namen."""
 
-from routes.producten import assortiment, categorieen, overzicht, prijzen, scannen, voorraadoverzicht
+from routes.producten import assortiment, categorieen, overzicht, prijslijst, prijzen, scannen, voorraadoverzicht
 from routes.producten.overzicht import render_producten_pagina, render_voorraad_pda
 
 
@@ -12,6 +12,7 @@ def register_routes(app):
     overzicht.register_routes(app)
     assortiment.register_routes(app)
     prijzen.register_routes(app)
+    prijslijst.register_routes(app)
     scannen.register_routes(app)
     categorieen.register_routes(app)
 

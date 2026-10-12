@@ -36,6 +36,16 @@ KOLOM_MIGRATIES = [
     # De laatste opslagmeting (zie opslag.py): het dashboard leest dit, zodat het niet zelf alle bestanden telt.
     ("instellingen", "opslag_gemeten_bytes", "INTEGER"),
     ("instellingen", "opslag_gemeten_op", "TEXT"),
+    # Waarom er iets is uitgeboekt zonder verkocht te zijn (breuk, over de datum, ...), voor het derving-overzicht.
+    ("mutaties", "reden", "TEXT"),
+    # Een dia op de kantine-tv alleen tonen tussen twee data (leeg: geen grens).
+    ("kiosk_sponsoren", "zichtbaar_vanaf", "TEXT"),
+    ("kiosk_sponsoren", "zichtbaar_tot", "TEXT"),
+    # Eigen taken: terugkerend (zie eigen_taken.py), pas zichtbaar vanaf een datum, en een checklist met stappen.
+    ("taken", "herhaling", "TEXT"),
+    ("taken", "start_op", "TEXT"),
+    ("taken", "stappen", "TEXT"),
+    ("taak_toewijzingen", "afgevinkt", "TEXT"),
     ("instellingen", "privacy_contact", "TEXT"),
     # Weekdagen waarop de kantine verkoopt, maandag = 0 ("2,5" = woensdag en
     # zaterdag), zie voorspelling.lees_verkoopdagen. Afwijkende datums staan in

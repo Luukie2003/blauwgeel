@@ -778,3 +778,18 @@ CREATE TABLE IF NOT EXISTS taak_toewijzingen (
     PRIMARY KEY (taak_id, gebruiker_id)
 );
 CREATE INDEX IF NOT EXISTS idx_taak_toewijzingen_gebruiker ON taak_toewijzingen(gebruiker_id);
+
+-- Prijswijzigingen die op een latere datum ingaan (Producten > Prijzen aanpassen, zie prijzen.py). Op de ingangsdatum
+-- wordt de prijs doorgevoerd (met een regel in de prijsgeschiedenis) en verdwijnt de rij hier. soort zegt welke prijs:
+-- de verkoopprijs van het product, de prijs per glas of een prijsoptie (optie_id).
+CREATE TABLE IF NOT EXISTS prijs_wijzigingen_gepland (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    soort TEXT NOT NULL CHECK (soort IN ('verkoopprijs', 'prijs_per_glas', 'prijsoptie')),
+    product_id INTEGER NOT NULL REFERENCES producten(id) ON DELETE CASCADE,
+    optie_id INTEGER REFERENCES product_prijsopties(id) ON DELETE CASCADE,
+    nieuwe_prijs REAL NOT NULL,
+    ingangsdatum TEXT NOT NULL,
+    aangemaakt_door TEXT,
+    aangemaakt_op TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_prijs_gepland_datum ON prijs_wijzigingen_gepland(ingangsdatum);

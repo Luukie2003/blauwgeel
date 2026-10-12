@@ -93,8 +93,9 @@
                             <td>{{ p.categorie }}</td>
                             <td>{{ p.voorraad }} {{ p.eenheid }}</td>
                             <td>
-                                <input type="number" name="geteld_{{ p.id }}" min="0" style="width:6rem"
-                                       placeholder="overslaan"> {{ p.eenheid }}
+                                <input type="number" name="geteld_{{ p.id }}" min="0" style="width:6rem" inputmode="numeric"
+                                       placeholder="overslaan" aria-label="{{ p.naam }}"
+                                       data-turf="1,5,{% if p.besteleenheid_factor and p.besteleenheid_factor > 1 %}{{ p.besteleenheid_factor }}:{{ p|besteleenheid_naam }}{% else %}10{% endif %}"> {{ p.eenheid }}
                             </td>
                         </tr>
                         {% endfor %}

@@ -122,7 +122,13 @@ NAV_ITEMS = [
     },
     {
         "groep": "Producten",
-        "endpoints": ["producten_prijzen"],
+        "endpoints": ["prijslijst_pagina", "prijslijst_pdf_route"],
+        "url_endpoint": "prijslijst_pagina",
+        "label": "Prijslijst",
+    },
+    {
+        "groep": "Producten",
+        "endpoints": ["producten_prijzen", "prijs_gepland_verwijderen"],
         "url_endpoint": "producten_prijzen",
         "label": "Prijzen aanpassen",
     },
@@ -318,6 +324,18 @@ NAV_ITEMS = [
     },
     {
         "groep": "Rapporten",
+        "endpoints": ["marge_rapport"],
+        "url_endpoint": "marge_rapport",
+        "label": "Marge",
+    },
+    {
+        "groep": "Rapporten",
+        "endpoints": ["derving_rapport"],
+        "url_endpoint": "derving_rapport",
+        "label": "Derving",
+    },
+    {
+        "groep": "Rapporten",
         "endpoints": ["week_overzicht"],
         "url_endpoint": "week_overzicht",
         "label": "Weekoverzicht",
@@ -400,6 +418,8 @@ NAV_GROEP_ALLEEN_BEHEERDER = {"Beheer"}
 # Losse items in een groep die voor iedereen zichtbaar is, maar zelf alleen voor beheerders
 # (de route staat dan ook in BEHEERDER_ENDPOINTS).
 NAV_ITEM_ALLEEN_BEHEERDER = {
+    "marge_rapport",
+    "derving_rapport",
     "eigen_taken_pagina",
     "producten_prijzen",
     "bardienstrapport",

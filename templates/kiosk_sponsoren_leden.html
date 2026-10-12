@@ -598,10 +598,15 @@
                     <td>{% if s.sjabloon == 'video_volledig' and s.video_hele_duur and s.video_duur %}{{ s.video_duur|round|int }}s (video){% else %}{{ s.weergave_duur_seconden }}s{% endif %}{% if s.herhalingen > 1 %} <span class="tekst-zacht">&times;{{ s.herhalingen }} per ronde</span>{% endif %}</td>
                     <td>{{ s.volgorde }}</td>
                     <td>
-                        {% if s.actief %}
-                        <span class="badge badge-ok">Actief</span>
-                        {% else %}
+                        {% if not s.actief %}
                         <span class="badge badge-neutraal">Uit</span>
+                        {% elif s.zichtbaar_vanaf and s.zichtbaar_vanaf > vandaag %}
+                        <span class="badge badge-neutraal" title="Staat pas in de diashow vanaf deze dag">Gepland vanaf {{ s.zichtbaar_vanaf[8:10] }}-{{ s.zichtbaar_vanaf[5:7] }}</span>
+                        {% elif s.zichtbaar_tot and s.zichtbaar_tot < vandaag %}
+                        <span class="badge badge-neutraal" title="Staat niet meer in de diashow">Verlopen op {{ s.zichtbaar_tot[8:10] }}-{{ s.zichtbaar_tot[5:7] }}</span>
+                        {% else %}
+                        <span class="badge badge-ok">Actief</span>
+                        {% if s.zichtbaar_tot %}<div class="tekst-zacht" style="font-size:0.75rem">t/m {{ s.zichtbaar_tot[8:10] }}-{{ s.zichtbaar_tot[5:7] }}</div>{% endif %}
                         {% endif %}
                     </td>
                     <td class="tabel-acties">

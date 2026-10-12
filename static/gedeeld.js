@@ -579,3 +579,37 @@ document.addEventListener("DOMContentLoaded", function () {
     Promise.all(laden).then(function () { document.dispatchEvent(new Event("lazy-klaar")); });
 });
 
+// Turven: een invoerveld met data-turf="1,5,24:krat" krijgt knoppen om er snel iets bij op te tellen, zoals je dat met
+// streepjes op papier doet (+1, +5, een hele krat) en een knop om er een af te halen. Een stap met een naam erachter
+// (24:krat) toont die naam op de knop. Het veld zelf blijft gewoon een getal dat je ook kunt typen.
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("input[data-turf]").forEach(function (veld) {
+        var groep = document.createElement("span");
+        groep.className = "turf-knoppen";
+
+        function knop(tekst, delta) {
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "btn btn-rand btn-klein turf-knop";
+            b.textContent = tekst;
+            b.setAttribute("aria-label", (delta > 0 ? "Tel er " + delta + " bij" : "Haal er 1 af") + (veld.getAttribute("aria-label") ? " bij " + veld.getAttribute("aria-label") : ""));
+            b.addEventListener("click", function () {
+                var huidig = parseInt(veld.value, 10);
+                if (isNaN(huidig)) huidig = 0;
+                veld.value = String(Math.max(0, huidig + delta));
+                veld.dispatchEvent(new Event("input", { bubbles: true }));
+                veld.dispatchEvent(new Event("change", { bubbles: true }));
+            });
+            return b;
+        }
+
+        veld.dataset.turf.split(",").forEach(function (stap) {
+            var delen = stap.split(":");
+            var aantal = parseInt(delen[0], 10);
+            if (aantal > 0) groep.appendChild(knop("+" + aantal + (delen[1] ? " " + delen[1] : ""), aantal));
+        });
+        groep.appendChild(knop("\u22121", -1));
+        veld.insertAdjacentElement("afterend", groep);
+    });
+});
+

@@ -1,12 +1,13 @@
 """Eigen taken in "Wat moet er nu?": toevoegen, afronden en de vraag "Taak afgerond?" na het opslaan."""
 
-from datetime import date
-
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import flash, jsonify, redirect, render_template, request, session, url_for
 
 import mail
 from database import get_db
+from helpers.tijd import vandaag_amsterdam
 from eigen_taken import (
+    CHECKLIST_VOORBEELDEN,
+    HERHALINGEN,
     SOORT_EIGEN,
     SOORT_PRESET,
     TAAK_ENDPOINTS,
@@ -17,10 +18,12 @@ from eigen_taken import (
     open_taken,
     pagina_keuzes,
     rond_af,
+    taak_voor_persoon,
     taken_voor_gebruiker,
     toewijsbare_gebruikers,
     verwijder_taak,
     vind_taak,
+    vink_stap,
     vraag_kandidaten,
 )
 
@@ -63,7 +66,9 @@ def register_routes(app):
             presets=[(f"{SOORT_PRESET}{sleutel}", s["label"]) for sleutel, s in TAAK_SOORTEN.items()],
             paginas=pagina_keuzes(),
             soort_eigen=SOORT_EIGEN,
-            vandaag=date.today().isoformat(),
+            herhalingen=list(HERHALINGEN.items()),
+            checklist_voorbeelden=CHECKLIST_VOORBEELDEN,
+            vandaag=vandaag_amsterdam().isoformat(),
         )
 
     @app.route("/taken/nieuw", methods=["POST"])
@@ -83,6 +88,8 @@ def register_routes(app):
             ids,
             request.form.get("wie_rondt_af") != "een",
             session.get("gebruiker_naam"),
+            request.form.get("herhaling") or None,
+            request.form.get("stappen"),
         )
         if fout:
             flash(fout, "error")
@@ -108,10 +115,34 @@ def register_routes(app):
         if taak is None:
             flash("Die taak staat niet (meer) open voor jou.", "error")
             return redirect(url_for("dashboard"))
+        if taak["stappen_lijst"]:
+            return redirect(url_for("eigen_taak_detail", taak_id=taak_id))
         if taak["doel"]:
             return redirect(url_for(taak["doel"]["endpoint"]))
         session["taak_vragen"] = [taak_id]
         return redirect(url_for("dashboard"))
+
+    @app.route("/taken/<int:taak_id>")
+    def eigen_taak_detail(taak_id):
+        """De checklist van een taak: de stappen om af te vinken, en pas als alles klaar is kun je de taak afronden."""
+        taak = taak_voor_persoon(get_db(), taak_id, session["gebruiker_id"])
+        if taak is None:
+            flash("Die taak staat niet (meer) open voor jou.", "error")
+            return redirect(url_for("dashboard"))
+        anderen = [m["naam"] for m in taak["mensen"] if m["id"] != session["gebruiker_id"]]
+        return render_template("eigen_taak_detail.html", taak=taak, anderen=anderen)
+
+    @app.route("/taken/<int:taak_id>/stap", methods=["POST"])
+    def eigen_taak_stap(taak_id):
+        """Een stap van de checklist aan- of uitvinken (wordt direct bewaard, zodat je halverwege kunt stoppen)."""
+        try:
+            index = int(request.form.get("stap", ""))
+        except ValueError:
+            return jsonify({"ok": False}), 400
+        uitkomst = vink_stap(get_db(), taak_id, session["gebruiker_id"], index, request.form.get("aan") == "1")
+        if uitkomst is None:
+            return jsonify({"ok": False}), 404
+        return jsonify({"ok": True, **uitkomst})
 
     @app.route("/taken/<int:taak_id>/afronden", methods=["POST"])
     def eigen_taak_afronden(taak_id):
@@ -120,8 +151,13 @@ def register_routes(app):
         taak = rond_af(db, taak_id, session["gebruiker_id"], session.get("gebruiker_naam"), voor_iedereen=voor_iedereen)
         if taak is None:
             flash("Die taak staat niet (meer) open voor jou.", "error")
+        elif taak.get("onvolledig"):
+            gedaan, totaal = taak["onvolledig"]
+            flash(f"Vink eerst alle stappen af ({gedaan} van {totaal}), dan kun je de taak afronden.", "error")
+            return redirect(url_for("eigen_taak_detail", taak_id=taak_id))
         elif taak["klaar"]:
-            flash(f"Taak \"{taak['titel']}\" is klaar.", "success")
+            volgende = f" De volgende keer is {taak['volgende'].strftime('%d-%m')}." if taak["volgende"] else ""
+            flash(f"Taak \"{taak['titel']}\" is klaar.{volgende}", "success")
         else:
             vind = vind_taak(db, taak_id)
             nog = ", ".join(m["naam"] for m in vind["mensen"] if m["afgerond_op"] is None)

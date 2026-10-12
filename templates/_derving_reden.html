@@ -1,0 +1,21 @@
+{# Alleen bij 'Uit': was het breuk of weggegooid? Dan komt het in het derving-overzicht (zie derving.py). #}
+<div class="veld derving-reden" hidden>
+    <label for="reden">Was het breuk, bedorven of weggegeven? (optioneel)</label>
+    <select id="reden" name="reden">
+        <option value="">Nee, gewoon verkocht of verbruikt</option>
+        {% for sleutel, naam in derving_redenen.items() %}<option value="{{ sleutel }}">{{ naam }}</option>{% endfor %}
+    </select>
+</div>
+<script>
+(function () {
+    var formulier = document.currentScript.closest('form');
+    var veld = formulier.querySelector('.derving-reden');
+    function bijwerken() {
+        var uit = formulier.querySelector('input[name=type][value=uit]');
+        veld.hidden = !(uit && uit.checked);
+        if (veld.hidden) veld.querySelector('select').value = '';
+    }
+    formulier.querySelectorAll('input[name=type]').forEach(function (r) { r.addEventListener('change', bijwerken); });
+    bijwerken();
+})();
+</script>

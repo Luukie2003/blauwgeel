@@ -106,7 +106,11 @@
                             {% if heeft_opties %}<div class="tekst-zacht" style="font-size:0.72rem">Op de tv staan de prijsopties hieronder, niet deze prijs.</div>{% endif %}
                         </td>
                         <td data-inkoop="{{ p.inkoopprijs }}">{% if p.inkoopprijs %}&euro; {{ bedrag(p.inkoopprijs) }}{% else %}<span class="tekst-zacht">&mdash;</span>{% endif %}</td>
-                        <td>{{ prijsveld('prijs_' ~ p.id, p.verkoopprijs, 'Verkoopprijs ' ~ p.naam) }}</td>
+                        <td>{{ prijsveld('prijs_' ~ p.id, p.verkoopprijs, 'Verkoopprijs ' ~ p.naam) }}
+                            {% for g in gepland_per_prijs.get(('verkoopprijs', p.id, 0), []) %}
+                            <div class="tekst-zacht" style="font-size:0.75rem">&rarr; &euro; {{ bedrag(g.nieuwe_prijs) }} per {{ g.ingangsdatum[8:10] }}-{{ g.ingangsdatum[5:7] }}</div>
+                            {% endfor %}
+                        </td>
                         <td class="marge"></td>
                     </tr>
                     {% if p.glazen_per_fust %}
@@ -126,7 +130,12 @@
             </table>
         </div>
         <div class="prijzen-opslaan">
-            <button type="submit" class="btn btn-geel">Alles opslaan</button>
+            <button type="submit" class="btn btn-geel" id="opslaan-knop">Alles opslaan</button>
+            <label for="ingangsdatum" style="display:flex; align-items:center; gap:0.4rem; font-weight:400; margin:0">
+                Ingaan op
+                <input type="date" id="ingangsdatum" name="ingangsdatum" min="{{ morgen }}" value="{{ ingevuld.get('ingangsdatum', '') }}" style="width:auto">
+            </label>
+            <span class="tekst-zacht" style="font-size:0.82rem">Leeg laten: de prijzen gaan meteen in. Met een datum staan ze klaar en gaan ze op die dag vanzelf in.</span>
             <span id="gewijzigd-aantal" class="tekst-zacht">Nog niets gewijzigd.</span>
         </div>
     </form>
@@ -134,6 +143,34 @@
     <p class="leeg">Nog geen producten toegevoegd.</p>
     {% endif %}
 </div>
+
+{% if gepland %}
+<div class="kaart">
+    <h2 style="margin-top:0">Klaargezette prijswijzigingen</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Deze gaan op de aangegeven dag vanzelf in. Een verkoopprijs komt dan ook in de prijsgeschiedenis.</p>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Ingaan op</th><th>Product</th><th>Nu</th><th>Wordt</th><th></th></tr></thead>
+            <tbody>
+                {% for g in gepland %}
+                <tr>
+                    <td>{{ g.ingangsdatum[8:10] }}-{{ g.ingangsdatum[5:7] }}-{{ g.ingangsdatum[:4] }}</td>
+                    <td>{{ g.product_naam }}{% if g.optie_naam %} <span class="tekst-zacht">&middot; {{ g.optie_naam }}</span>{% elif g.soort == 'prijs_per_glas' %} <span class="tekst-zacht">&middot; per glas</span>{% endif %}</td>
+                    <td>&euro; {{ bedrag(g.huidige_prijs) }}</td>
+                    <td><strong>&euro; {{ bedrag(g.nieuwe_prijs) }}</strong></td>
+                    <td>
+                        <form method="post" action="{{ url_for('prijs_gepland_verwijderen', gepland_id=g.id) }}" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-rand btn-klein">Verwijderen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 
 <script>
 (function () {
@@ -218,6 +255,11 @@
         gewijzigd();
         gewijzigdLabel.textContent += ' (' + raakt + ' ingevuld; kijk ze na en sla op)';
     });
+    var ingang = document.getElementById('ingangsdatum');
+    var opslaan = document.getElementById('opslaan-knop');
+    function knoptekst() { opslaan.textContent = ingang.value ? 'Klaarzetten voor ' + ingang.value.split('-').reverse().join('-') : 'Alles opslaan'; }
+    ingang.addEventListener('input', knoptekst);
+    knoptekst();
     document.getElementById('gr-herstellen').addEventListener('click', function () {
         invoeren.forEach(function (veld) { veld.value = veld.dataset.orig; });
         gewijzigd();

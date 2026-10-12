@@ -29,9 +29,9 @@ def test_elke_module_heeft_een_geldig_versienummer_en_bestaande_versies_erbij():
             assert _versie(m["sinds"]) <= _versie(m["laatst"]) <= _versie(HUIDIGE_VERSIE), m
 
 
-def test_een_nieuwe_module_begint_op_0_1_0():
+def test_een_nieuwe_module_heeft_hoofdnummer_0():
     taken = next(m for m in MODULES if m["naam"] == "Taken")
-    assert taken["versie"] == "0.1.0" and taken["sinds"] == "1.43.0"
+    assert taken["versie"].startswith("0.") and taken["sinds"] == "1.43.0"
 
 
 def test_elke_menugroep_komt_in_het_overzicht_voor():

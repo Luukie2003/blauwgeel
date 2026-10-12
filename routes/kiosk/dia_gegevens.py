@@ -14,6 +14,7 @@ from helpers import (
     bereken_komende_thuiswedstrijden,
     club_van_team_naam,
     motm_score_weergave,
+    vandaag_amsterdam,
 )
 from sponsoren import bouw_sponsor_dias
 from routes.kiosk.gedeeld import _scherm_instellingen
@@ -101,8 +102,14 @@ def _bouw_slides(db):
     blokken = []
 
     if instellingen["toon_sponsoren"]:
+        vandaag = vandaag_amsterdam().isoformat()  # een dia met een begin- of einddatum staat er alleen tussen die dagen
         sponsoren = db.execute(
-            "SELECT * FROM kiosk_sponsoren WHERE actief = 1 ORDER BY volgorde, id"
+            """SELECT * FROM kiosk_sponsoren
+               WHERE actief = 1
+                 AND (zichtbaar_vanaf IS NULL OR zichtbaar_vanaf <= ?)
+                 AND (zichtbaar_tot IS NULL OR zichtbaar_tot >= ?)
+               ORDER BY volgorde, id""",
+            (vandaag, vandaag),
         ).fetchall()
         # Eigen sjablonen alvast allemaal ophalen (klein aantal, geen
         # N+1 nodig) zodat _sponsor_slide er per sponsor zo 1 uit kan

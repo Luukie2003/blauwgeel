@@ -37,8 +37,11 @@
 </div>
 
 {# ---------- Even kijken: wat heeft nu aandacht nodig? ---------- #}
-{% if laag is not none or open_bestellingen or club_aanmeldingen_open or mededelingen_open %}
+{% if eigen_taken or laag is not none or open_bestellingen or club_aanmeldingen_open or mededelingen_open %}
 <div class="pda-status-lijst">
+    {% for t in eigen_taken %}
+    {{ status_regel('slecht' if t.urgent else 'oranje', t.titel, t.detail, t.url) }}
+    {% endfor %}
     {% if laag is not none %}
         {% if laag %}
         {{ status_regel('slecht', laag ~ (' product' if laag == 1 else ' producten') ~ ' onder het minimum', 'Bekijk welke het zijn', url_for('voorraadoverzicht', alleen='laag')) }}

@@ -38,10 +38,26 @@
             <label for="omschrijving">Toelichting (optioneel)</label>
             <textarea id="omschrijving" name="omschrijving" rows="2" maxlength="500" placeholder="Bijvoorbeeld: controleer ook de prijzen van de nieuwe Bozu-smaken"></textarea>
         </div>
+        <div class="veld">
+            <label for="stappen">Stappen (optioneel): een checklist, een stap per regel</label>
+            <textarea id="stappen" name="stappen" rows="3" placeholder="Bijvoorbeeld:&#10;Kassa tellen&#10;Tap afsluiten&#10;Licht uit"></textarea>
+            <span class="tekst-zacht" style="font-size:0.82rem">
+                Wie de taak krijgt, vinkt de stappen zelf af en kan de taak pas afronden als alles is afgevinkt. Een voorbeeld invullen:
+                {% for naam in checklist_voorbeelden %}<button type="button" class="btn btn-rand btn-klein voorbeeld-checklist" data-naam="{{ naam }}" data-stappen="{{ checklist_voorbeelden[naam]|join('\n') }}">{{ naam }}</button> {% endfor %}
+            </span>
+        </div>
         <div class="formgrid">
             <div class="veld">
                 <label for="deadline">Uiterlijk (optioneel)</label>
                 <input type="date" id="deadline" name="deadline" min="{{ vandaag }}">
+            </div>
+            <div class="veld">
+                <label for="herhaling">Terugkomen?</label>
+                <select id="herhaling" name="herhaling">
+                    <option value="">Nee, eenmalig</option>
+                    {% for sleutel, label in herhalingen %}<option value="{{ sleutel }}">{{ label }}</option>{% endfor %}
+                </select>
+                <span class="tekst-zacht" style="font-size:0.82rem">Zodra de taak klaar is, staat de volgende er. Vul dan ook &ldquo;Uiterlijk&rdquo; in voor de eerste keer.</span>
             </div>
         </div>
         <div class="veld" style="position:relative">
@@ -77,6 +93,8 @@
                     <td>
                         <strong>{{ t.titel }}</strong>
                         {% if t.omschrijving %}<div class="tekst-zacht" style="font-size:0.82rem">{{ t.omschrijving }}</div>{% endif %}
+                        {% if t.stappen_lijst %}<div class="tekst-zacht" style="font-size:0.82rem">Checklist met {{ t.stappen_lijst|length }} stappen</div>{% endif %}
+                        {% if t.herhaling_label %}<div style="font-size:0.82rem"><span class="badge badge-neutraal">&#8635; {{ t.herhaling_label }}</span>{% if t.gepland %} <span class="badge badge-neutraal" title="Staat pas op het overzicht vanaf {{ t.start_op[8:10] }}-{{ t.start_op[5:7] }}">gepland vanaf {{ t.start_op[8:10] }}-{{ t.start_op[5:7] }}</span>{% endif %}</div>{% endif %}
                         <div class="tekst-zacht" style="font-size:0.75rem">Toegevoegd door {{ t.aangemaakt_door or '?' }} op {{ t.aangemaakt_op|datum_nl }}</div>
                     </td>
                     <td>
@@ -102,7 +120,7 @@
                             <button type="submit" class="btn btn-rand btn-klein">Klaar voor iedereen</button>
                         </form>
                         <form method="post" action="{{ url_for('eigen_taak_verwijderen', taak_id=t.id) }}" style="display:inline"
-                              onsubmit="return confirm('Taak verwijderen?');">
+                              onsubmit="return confirm('{{ 'Taak verwijderen? Dit stopt ook het terugkomen.' if t.herhaling_label else 'Taak verwijderen?' }}');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-rand btn-klein">Verwijderen</button>
                         </form>
@@ -146,6 +164,15 @@
         laatsteVoorstel = voorstel;
     });
     soort.dispatchEvent(new Event('change'));
+    // De voorbeeldchecklists (openen/sluiten van de kantine) vullen naam en stappen in; je kunt ze nog aanpassen.
+    document.querySelectorAll('.voorbeeld-checklist').forEach(function (knop) {
+        knop.addEventListener('click', function () {
+            soort.value = '{{ soort_eigen }}';
+            laatsteVoorstel = knop.dataset.naam;
+            titel.value = knop.dataset.naam;
+            document.getElementById('stappen').value = knop.dataset.stappen;
+        });
+    });
 })();
 </script>
 {% endblock %}

@@ -9,6 +9,7 @@ import uitrollen as uitrollen_module
 from aanmeldingen import aantal_openstaand
 from club_van_20 import bereken_club_van_20_status  # noqa: F401 (tests importeren 'm via app)
 from database import get_db, init_db, register_db
+from derving import DERVING_REDENEN
 from foutmelding import Melder
 from helpers import (
     PRODUCT_AFBEELDINGEN_MAP,
@@ -103,6 +104,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     init_db(app, admin_wachtwoord=admin_wachtwoord)
 
     app.jinja_env.filters["datum_nl"] = format_datum
+    app.jinja_env.filters["reden_naam"] = lambda reden: DERVING_REDENEN.get(reden, "")
     app.jinja_env.filters["datum_kort"] = format_datum_kort
     app.jinja_env.filters["besteleenheid_naam"] = besteleenheid_naam
     app.jinja_env.filters["naar_besteleenheden"] = naar_besteleenheden
@@ -448,6 +450,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         kiosk,
         kluis,
         logboek,
+        marge_derving,
         opslag,
         privacy,
         producten,
@@ -483,6 +486,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     kiosk.register_routes(app)
     kluis.register_routes(app)
     logboek.register_routes(app)
+    marge_derving.register_routes(app)
     opslag.register_routes(app)
     producten.register_routes(app)
     seizoensrapport.register_routes(app)

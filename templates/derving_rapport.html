@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block titel %}Derving{% endblock %}
+{% macro euro(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Wat er uit de voorraad is verdwenen zonder verkocht te zijn: breuk, bedorven, gratis weggegeven. Je legt het vast door bij
+        <a href="{{ url_for('boeken') }}">In/uit boeken</a> 'Uit' te kiezen en een reden aan te geven. De waarde is tegen inkoopprijs.
+    </p>
+    <form method="get" style="margin:0; display:flex; gap:0.4rem; align-items:center">
+        <label for="weken" style="margin:0; font-weight:400">Periode</label>
+        <select id="weken" name="weken" onchange="this.form.submit()">
+            {% for w in weken_keuzes %}<option value="{{ w }}" {{ 'selected' if w == weken }}>Laatste {{ w }} weken</option>{% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="statgrid">
+    <div class="stat"><div class="getal">{{ rapport.totaal.boekingen }}</div><div class="label">Boekingen met een reden sinds {{ rapport.vanaf[8:10] }}-{{ rapport.vanaf[5:7] }}</div></div>
+    <div class="stat {{ 'waarschuwing' if rapport.totaal.waarde > 0 else '' }}"><div class="getal">{{ euro(rapport.totaal.waarde) }}</div><div class="label">Waarde tegen inkoopprijs</div></div>
+</div>
+
+{% if rapport.per_reden %}
+<div class="kaart">
+    <h2>Per reden</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Reden</th><th style="text-align:right">Boekingen</th><th style="text-align:right">Stuks</th><th style="text-align:right">Waarde</th></tr></thead>
+            <tbody>
+                {% for r in rapport.per_reden %}
+                <tr><td>{{ r.naam }}</td><td style="text-align:right">{{ r.boekingen }}</td><td style="text-align:right">{{ r.stuks }}</td><td style="text-align:right">{{ euro(r.waarde) }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="kaart">
+    <h2>Per product</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th style="text-align:right">Boekingen</th><th style="text-align:right">Stuks</th><th style="text-align:right">Waarde</th></tr></thead>
+            <tbody>
+                {% for p in rapport.per_product %}
+                <tr><td>{{ p.naam }}</td><td style="text-align:right">{{ p.boekingen }}</td><td style="text-align:right">{{ p.stuks }} {{ p.eenheid }}</td><td style="text-align:right">{{ euro(p.waarde) }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="kaart">
+    <h2>Laatste boekingen</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Datum</th><th>Product</th><th>Aantal</th><th>Reden</th><th>Door</th><th>Opmerking</th></tr></thead>
+            <tbody>
+                {% for m in rapport.recent %}
+                <tr>
+                    <td>{{ m.datum|datum_nl }}</td>
+                    <td>{{ m.product_naam }}</td>
+                    <td>{{ m.aantal }} {{ m.eenheid }}</td>
+                    <td>{{ m.reden_naam }}</td>
+                    <td>{{ m.naam or '—' }}</td>
+                    <td class="tekst-zacht">{{ m.opmerking or '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="kaart"><p class="leeg">In deze periode is er niets met een reden uitgeboekt.</p></div>
+{% endif %}
+{% endblock %}

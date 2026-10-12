@@ -4,6 +4,7 @@ from flask import Response, flash, jsonify, redirect, render_template, request, 
 
 import qr
 from database import get_db
+from derving import DERVING_REDENEN
 from helpers import PRODUCT_AFBEELDINGEN_MAP, now_str
 from pdf import schaplabels_pdf
 
@@ -100,7 +101,7 @@ def register_routes(app):
             (product_id,),
         ).fetchall()
         return render_template(
-            "product_detail.html", product=product, mutaties=mutaties
+            "product_detail.html", product=product, mutaties=mutaties, derving_redenen=DERVING_REDENEN
         )
 
     @app.route("/producten/<int:product_id>/label.pdf")

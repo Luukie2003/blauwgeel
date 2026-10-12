@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block titel %}Marge{% endblock %}
+{% macro euro(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% macro pct(x) %}{% if x is none %}&mdash;{% else %}{{ '%.0f'|format(x) }}%{% endif %}{% endmacro %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Wat elk product en elke categorie oplevert, en welke producten het minst verdienen. De omzet komt uit de tellingen; de
+        winst is een schatting met de huidige inkoopprijs.
+    </p>
+    <form method="get" style="margin:0; display:flex; gap:0.4rem; align-items:center">
+        <label for="weken" style="margin:0; font-weight:400">Periode</label>
+        <select id="weken" name="weken" onchange="this.form.submit()">
+            {% for w in weken_keuzes %}<option value="{{ w }}" {{ 'selected' if w == weken }}>Laatste {{ w }} weken</option>{% endfor %}
+        </select>
+    </form>
+</div>
+
+{% set t = rapport.totaal %}
+<div class="statgrid">
+    <div class="stat"><div class="getal">{{ euro(t.omzet) }}</div><div class="label">Omzet sinds {{ rapport.vanaf[8:10] }}-{{ rapport.vanaf[5:7] }}</div></div>
+    <div class="stat"><div class="getal">{{ euro(t.winst) }}</div><div class="label">Geschatte winst (alleen producten met een inkoopprijs)</div></div>
+    <div class="stat {{ 'waarschuwing' if t.marge_pct is not none and t.marge_pct < lage_marge else '' }}"><div class="getal">{{ pct(t.marge_pct) }}</div><div class="label">Marge over de omzet met een bekende inkoopprijs</div></div>
+    <div class="stat {{ 'waarschuwing' if t.dekking_pct is not none and t.dekking_pct < 90 else '' }}"><div class="getal">{{ pct(t.dekking_pct) }}</div><div class="label">Deel van de omzet met een inkoopprijs erbij</div></div>
+</div>
+
+<div class="kaart">
+    <h2>Per categorie</h2>
+    {% if rapport.categorieen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Categorie</th><th style="text-align:right">Omzet</th><th style="text-align:right">Geschatte winst</th><th style="text-align:right">Marge</th></tr></thead>
+            <tbody>
+                {% for c in rapport.categorieen %}
+                <tr>
+                    <td>{{ c.naam }}</td>
+                    <td style="text-align:right">{{ euro(c.omzet) }}</td>
+                    <td style="text-align:right">{{ euro(c.winst) }}</td>
+                    <td style="text-align:right">{% if c.marge_pct is not none and c.marge_pct < lage_marge %}<span class="badge badge-laag">{{ pct(c.marge_pct) }}</span>{% else %}{{ pct(c.marge_pct) }}{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen producten met een verkoopprijs.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Verdienen het minst</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Per stuk: verkoopprijs min inkoopprijs. Onder de {{ lage_marge }}% is rood gemarkeerd.</p>
+    {% if rapport.laagste %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th>Categorie</th><th style="text-align:right">Inkoop</th><th style="text-align:right">Verkoop</th><th style="text-align:right">Per stuk</th><th style="text-align:right">Marge</th><th style="text-align:right">Verkocht</th></tr></thead>
+            <tbody>
+                {% for p in rapport.laagste %}
+                <tr>
+                    <td>{{ p.naam }}{% if not p.actief %} <span class="badge badge-neutraal">Inactief</span>{% endif %}</td>
+                    <td>{{ p.categorie }}</td>
+                    <td style="text-align:right">{{ euro(p.inkoopprijs) }}</td>
+                    <td style="text-align:right">{{ euro(p.verkoopprijs) }}</td>
+                    <td style="text-align:right">{{ euro(p.marge_stuk) }}</td>
+                    <td style="text-align:right"><span class="badge {{ 'badge-laag' if p.marge_pct < lage_marge else 'badge-neutraal' }}">{{ pct(p.marge_pct) }}</span></td>
+                    <td style="text-align:right">{{ p.aantal }} {{ p.eenheid }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="tekst-zacht" style="font-size:0.82rem">Wil je een prijs aanpassen? Dat kan bij <a href="{{ url_for('producten_prijzen') }}">Prijzen aanpassen</a>.</p>
+    {% else %}
+    <p class="leeg">Geen producten met zowel een verkoopprijs als een inkoopprijs.</p>
+    {% endif %}
+</div>
+
+{% if rapport.beste %}
+<div class="kaart">
+    <h2>Leveren het meeste op</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th style="text-align:right">Verkocht</th><th style="text-align:right">Omzet</th><th style="text-align:right">Geschatte winst</th><th style="text-align:right">Marge</th></tr></thead>
+            <tbody>
+                {% for p in rapport.beste %}
+                <tr>
+                    <td>{{ p.naam }}</td>
+                    <td style="text-align:right">{{ p.aantal }} {{ p.eenheid }}</td>
+                    <td style="text-align:right">{{ euro(p.omzet) }}</td>
+                    <td style="text-align:right">{{ euro(p.winst) }}</td>
+                    <td style="text-align:right">{{ pct(p.marge_pct) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if rapport.zonder_inkoop %}
+<div class="kaart">
+    <h2>Zonder inkoopprijs</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Hier valt niets over de marge te zeggen. Vul de inkoopprijs in bij het product, dan telt het mee.</p>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th>Categorie</th><th style="text-align:right">Verkoop</th><th style="text-align:right">Omzet in deze periode</th></tr></thead>
+            <tbody>
+                {% for p in rapport.zonder_inkoop %}
+                <tr>
+                    <td><a href="{{ url_for('product_bewerken', product_id=p.id) }}">{{ p.naam }}</a></td>
+                    <td>{{ p.categorie }}</td>
+                    <td style="text-align:right">{{ euro(p.verkoopprijs) }}</td>
+                    <td style="text-align:right">{{ euro(p.omzet) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

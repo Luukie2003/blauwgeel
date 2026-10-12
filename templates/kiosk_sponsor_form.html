@@ -173,6 +173,17 @@
                        {{ 'checked' if not sponsor or sponsor.actief }}>
                 Actief (staat in de diashow)
             </label>
+            <div class="formgrid" style="margin-top:0.8rem">
+                <div class="veld">
+                    <label for="zichtbaar_vanaf">Tonen vanaf (optioneel)</label>
+                    <input type="date" id="zichtbaar_vanaf" name="zichtbaar_vanaf" value="{{ (sponsor.zichtbaar_vanaf if sponsor else '') or '' }}">
+                </div>
+                <div class="veld">
+                    <label for="zichtbaar_tot">Tonen tot en met (optioneel)</label>
+                    <input type="date" id="zichtbaar_tot" name="zichtbaar_tot" value="{{ (sponsor.zichtbaar_tot if sponsor else '') or '' }}">
+                </div>
+            </div>
+            <span class="tekst-zacht" style="font-size:0.82rem">Zo zet een actie of sponsordia zichzelf aan en uit. Leeg laten: altijd tonen zolang hij actief is.</span>
         </fieldset>
         <button type="submit" class="btn btn-geel">{{ 'Opslaan' if sponsor else 'Toevoegen' }}</button>
     </form>

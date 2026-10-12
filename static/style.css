@@ -2539,3 +2539,25 @@ a.pda-voorraad-rij:hover, a.pda-voorraad-rij:active { background: var(--kaart); 
     color: var(--groen, #2e7d32);
     font-weight: 600;
 }
+
+/* Turven: snelknoppen naast een invoerveld (zie data-turf in gedeeld.js). */
+.turf-knoppen {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+}
+
+.turf-knop {
+    min-width: 2.3rem;
+    white-space: nowrap;
+}
+
+
+/* Een knop die (nog) niet kan, ziet er ook zo uit. */
+button:disabled,
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

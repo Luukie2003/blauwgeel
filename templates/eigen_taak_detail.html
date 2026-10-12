@@ -1,0 +1,69 @@
+{% extends basis_template %}
+{% block titel %}{{ taak.titel }}{% endblock %}
+{% block inhoud %}
+<p class="subtitel"><a href="{{ url_for('dashboard') }}">&larr; Terug naar het overzicht</a></p>
+
+<div class="kaart" style="max-width:640px">
+    <h2 style="margin-top:0">{{ taak.titel }}</h2>
+    {% if taak.omschrijving %}<p>{{ taak.omschrijving }}</p>{% endif %}
+    <p class="tekst-zacht" style="margin-top:0">
+        {% if taak.deadline %}Uiterlijk {{ taak.deadline[8:10] }}-{{ taak.deadline[5:7] }}{% if taak.te_laat %} <span class="badge badge-laag">te laat</span>{% endif %}. {% endif %}
+        {% if anderen %}Samen met {{ anderen|join(', ') }}. {% endif %}
+        {% if taak.herhaling_label %}<span class="badge badge-neutraal">&#8635; {{ taak.herhaling_label }}</span>{% endif %}
+    </p>
+
+    <ul class="checklist" id="checklist" data-url="{{ url_for('eigen_taak_stap', taak_id=taak.id) }}" style="list-style:none; padding:0; margin:0.8rem 0">
+        {% for stap in taak.stappen_lijst %}
+        <li>
+            <label class="checklist-stap" style="display:flex; align-items:center; gap:0.7rem; padding:0.6rem 0.4rem; border-bottom:1px solid var(--rand-licht); font-weight:400; cursor:pointer; font-size:1.02rem">
+                <input type="checkbox" data-stap="{{ loop.index0 }}" style="width:1.35rem; height:1.35rem; flex:none" {{ 'checked' if loop.index0 in taak.mijn_afgevinkt }}>
+                <span>{{ stap }}</span>
+            </label>
+        </li>
+        {% endfor %}
+    </ul>
+    <p class="tekst-zacht" id="checklist-teller" style="margin:0 0 0.8rem"></p>
+
+    {% if taak.doel and taak.doel.endpoint %}
+    <p><a href="{{ url_for(taak.doel.endpoint) }}" class="btn btn-rand">Naar {{ taak.doel.label|lower }} &rsaquo;</a></p>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('eigen_taak_afronden', taak_id=taak.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="terug" value="{{ url_for('dashboard') }}">
+        <button type="submit" class="btn btn-geel" id="checklist-klaar">&#10003; Klaar</button>
+    </form>
+</div>
+
+<script>
+(function () {
+    var lijst = document.getElementById('checklist');
+    var teller = document.getElementById('checklist-teller');
+    var klaar = document.getElementById('checklist-klaar');
+    var boxen = Array.prototype.slice.call(lijst.querySelectorAll('input[type=checkbox]'));
+    var csrf = {{ csrf_token()|tojson }};
+
+    function bijwerken() {
+        var aan = boxen.filter(function (b) { return b.checked; }).length;
+        teller.textContent = aan + ' van ' + boxen.length + ' afgevinkt';
+        klaar.disabled = aan < boxen.length;
+        klaar.title = klaar.disabled ? 'Vink eerst alle stappen af' : '';
+    }
+
+    boxen.forEach(function (box) {
+        box.addEventListener('change', function () {
+            bijwerken();
+            var data = new URLSearchParams({ csrf_token: csrf, stap: box.dataset.stap, aan: box.checked ? '1' : '0' });
+            fetch(lijst.dataset.url, { method: 'POST', body: data, credentials: 'same-origin' }).then(function (r) {
+                if (!r.ok) throw new Error('niet bewaard');
+            }).catch(function () {
+                box.checked = !box.checked;  // niet bewaard: laat zien hoe het er echt voor staat
+                bijwerken();
+                alert('Dit vinkje kon niet worden bewaard. Probeer het nog eens.');
+            });
+        });
+    });
+    bijwerken();
+})();
+</script>
+{% endblock %}

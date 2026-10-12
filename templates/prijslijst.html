@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block titel %}Prijslijst{% endblock %}
+{% macro bedrag(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Alle verkoopprijzen om na te lopen. Klopt er iets niet? Zet het op het <a href="{{ url_for('bijzonderheden') }}">prikbord</a>.
+    </p>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+        <a href="{{ url_for('prijslijst_pdf_route') }}" class="btn btn-rand" target="_blank" rel="noopener">Prijslijst voor aan de bar (pdf)</a>
+        {% if huidige_gebruiker_rol == 'beheerder' %}
+        <a href="{{ url_for('producten_prijzen') }}" class="btn btn-geel">Prijzen aanpassen</a>
+        {% endif %}
+    </div>
+</div>
+
+{% for t in mijn_taken %}
+<div class="kaart" style="border-left:4px solid var(--geel-donker, #e0ba17)">
+    <form method="post" action="{{ url_for('eigen_taak_afronden', taak_id=t.id) }}" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap; justify-content:space-between">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="terug" value="{{ url_for('prijslijst_pagina') }}">
+        <span><strong>Taak: {{ t.titel }}</strong>{% if t.omschrijving %}<br><span class="tekst-zacht">{{ t.omschrijving }}</span>{% endif %}</span>
+        <button type="submit" class="btn btn-geel">&#10003; Prijzen nagelopen, taak afronden</button>
+    </form>
+</div>
+{% endfor %}
+
+{% if gepland %}
+<div class="kaart">
+    <h2 style="margin-top:0">Binnenkort veranderen</h2>
+    <ul style="margin:0; padding-left:1.2rem">
+        {% for g in gepland %}
+        <li>Per <strong>{{ g.ingangsdatum[8:10] }}-{{ g.ingangsdatum[5:7] }}</strong>: {{ g.product_naam }}{% if g.optie_naam %} ({{ g.optie_naam }}){% elif g.soort == 'prijs_per_glas' %} (per glas){% endif %}
+            van {{ bedrag(g.huidige_prijs) }} naar <strong>{{ bedrag(g.nieuwe_prijs) }}</strong></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% for categorie, producten in per_categorie %}
+<div class="kaart">
+    <h2 style="margin-top:0">{{ categorie }}</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th style="text-align:right">Prijs</th></tr></thead>
+            <tbody>
+                {% for p in producten %}
+                {% set heeft_opties = opties.get(p.id) %}
+                <tr>
+                    <td>{{ p.naam }}{% if p.subcategorie %} <span class="tekst-zacht">&middot; {{ p.subcategorie }}</span>{% endif %}</td>
+                    <td style="text-align:right">{% if p.verkoopprijs > 0 and not heeft_opties %}<strong>{{ bedrag(p.verkoopprijs) }}</strong>{% else %}<span class="tekst-zacht">&mdash;</span>{% endif %}</td>
+                </tr>
+                {% for o in (heeft_opties or []) %}
+                <tr>
+                    <td style="padding-left:1.6rem" class="tekst-zacht">&#8627; {{ o.naam }}</td>
+                    <td style="text-align:right"><strong>{{ bedrag(o.prijs) }}</strong></td>
+                </tr>
+                {% endfor %}
+                {% if p.glazen_per_fust and p.prijs_per_glas %}
+                <tr>
+                    <td style="padding-left:1.6rem" class="tekst-zacht">&#8627; per glas</td>
+                    <td style="text-align:right"><strong>{{ bedrag(p.prijs_per_glas) }}</strong></td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="kaart"><p class="leeg">Er zijn nog geen producten met een verkoopprijs.</p></div>
+{% endfor %}
+{% endblock %}

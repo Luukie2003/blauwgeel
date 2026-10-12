@@ -50,7 +50,7 @@ def bereken_bestelling_status(db):
     return {"status": status, "tekst": tekst, "laatste_bestelling": laatste_ontvangen}
 
 
-def bereken_pda_start(db, rol, secties):
+def bereken_pda_start(db, rol, secties, gebruiker_id=None):
     """Wat het handterminal-startscherm bovenaan laat zien: een paar korte
     regels met wat er nu aandacht nodig heeft. Alleen wat bij de rechten
     van de gebruiker past (voorraad, kassa, keuken), zodat een vrijwilliger
@@ -64,6 +64,7 @@ def bereken_pda_start(db, rol, secties):
         "bestelling_status": None,
         "frituurvet_status": None,
         "volgende_wedstrijd": None,
+        "eigen_taken": _eigen_taken(db, gebruiker_id) if gebruiker_id else [],  # door een beheerder voor jou klaargezet
     }
     if heeft("voorraad"):
         uitkomst["laag"] = db.execute(
@@ -123,6 +124,8 @@ def _eigen_taken(db, gebruiker_id):
     for t in taken_voor_gebruiker(db, gebruiker_id):
         anderen = [m["naam"] for m in t["mensen"] if m["id"] != gebruiker_id]
         delen = [t["omschrijving"]] if t["omschrijving"] else []
+        if t["stappen_lijst"]:
+            delen.append(f"{len(t['mijn_afgevinkt'])} van {len(t['stappen_lijst'])} stappen")
         if anderen:
             delen.append(f"Samen met {', '.join(anderen)}")
         if t["deadline"]:

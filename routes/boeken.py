@@ -2,6 +2,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 
 import mail
 from database import get_db
+from derving import DERVING_REDENEN, kies_reden
 from helpers import (
     besteleenheid_naam,
     format_datum,
@@ -23,6 +24,7 @@ def register_routes(app):
             naam = session.get("gebruiker_naam")
             gebruiker_id = session.get("gebruiker_id")
             opmerking = request.form.get("opmerking", "").strip()
+            reden = kies_reden(request.form.get("reden")) if mtype == "uit" else None  # alleen bij uitboeken
             terug_naar_product = request.form.get("terug_naar_product", type=int)
             volgende = (
                 url_for("product_detail", product_id=terug_naar_product)
@@ -46,9 +48,9 @@ def register_routes(app):
                 (nieuwe_voorraad, product_id),
             )
             db.execute(
-                """INSERT INTO mutaties (product_id, type, aantal, datum, naam, gebruiker_id, opmerking)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (product_id, mtype, aantal, now_str(), naam, gebruiker_id, opmerking),
+                """INSERT INTO mutaties (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, reden)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (product_id, mtype, aantal, now_str(), naam, gebruiker_id, opmerking, reden),
             )
             gedeactiveerd = verwerk_auto_inactief(db, product_id, nieuwe_voorraad)
             db.commit()
@@ -75,7 +77,7 @@ def register_routes(app):
                ORDER BY m.id DESC LIMIT 15"""
         ).fetchall()
         return render_template(
-            "boeken.html", producten=producten, recente_mutaties=recente_mutaties
+            "boeken.html", producten=producten, recente_mutaties=recente_mutaties, derving_redenen=DERVING_REDENEN
         )
 
     @app.route("/leveringen/inboeken", methods=["GET", "POST"])

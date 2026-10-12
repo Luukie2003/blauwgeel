@@ -24,7 +24,7 @@
                 <strong><a href="{{ url_for('product_detail', product_id=m.product_id) }}">{{ m.product_naam }}</a></strong>
                 <span class="tekst-zacht">{{ m.aantal }} {{ m.eenheid }}</span>
             </div>
-            <div class="tekst-zacht mutatie-lijst-opmerking">{{ m.datum|datum_nl }}{% if m.naam %} &middot; {{ m.naam }}{% endif %}{% if m.opmerking %} &middot; {{ m.opmerking }}{% endif %}</div>
+            <div class="tekst-zacht mutatie-lijst-opmerking">{{ m.datum|datum_nl }}{% if m.naam %} &middot; {{ m.naam }}{% endif %}{% if m.reden %} &middot; {{ m.reden|reden_naam }}{% endif %}{% if m.opmerking %} &middot; {{ m.opmerking }}{% endif %}</div>
         </li>
         {% endfor %}
     </ul>
@@ -42,7 +42,7 @@
                     <td><span class="badge badge-{{ m.type }}">{{ 'in' if m.type == 'in' else 'uit' }}</span></td>
                     <td>{{ m.aantal }} {{ m.eenheid }}</td>
                     <td>{{ m.naam or '—' }}</td>
-                    <td class="tekst-zacht">{{ m.opmerking or '' }}</td>
+                    <td class="tekst-zacht">{% if m.reden %}<span class="badge badge-uit">{{ m.reden|reden_naam }}</span> {% endif %}{{ m.opmerking or '' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

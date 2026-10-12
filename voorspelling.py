@@ -38,8 +38,13 @@ pakketten draait.
 import functools
 import hashlib
 import math
+import os
+import pickle
+import sqlite3
+import tempfile
 import threading
 from datetime import date, datetime, time, timedelta
+from pathlib import Path
 from statistics import NormalDist
 
 from helpers import TRAININGSDAG, bestel_suggesties
@@ -1153,6 +1158,84 @@ def data_vingerafdruk(db):
     return hashlib.sha1(repr(delen).encode()).hexdigest()
 
 
+# Naast het geheugen van elk serverproces bewaren we de uitkomsten ook in een map naast de database. De server draait met
+# meer dan een proces, en elk proces heeft zijn eigen geheugen: zonder dit rekent elk proces het (enkele seconden durende)
+# model zelf uit, en na elke update van de server opnieuw. De sleutel bevat de vingerafdruk van de gegevens en de versie van
+# de site, dus een bestand van oudere gegevens of oudere code wordt nooit gebruikt.
+SCHIJF_AAN = True
+SCHIJF_VERSIE = 1  # ophogen als de vorm van een uitkomst verandert zonder dat de siteversie meegaat
+SCHIJF_MAX_LEEFTIJD_SECONDEN = 3 * 24 * 3600
+SCHIJF_MAX_BESTANDEN = 60
+
+
+def _gewone_typen(obj):
+    """Zet sqlite-rijen om in gewone dicts (die zijn te bewaren); de rest blijft zoals het is. Een rij en een dict
+    gedragen zich in de pagina's hetzelfde (p['naam'], p.naam), dus dit verandert niets aan de weergave."""
+    if isinstance(obj, sqlite3.Row):
+        return {sleutel: obj[sleutel] for sleutel in obj.keys()}
+    if isinstance(obj, dict):
+        return {sleutel: _gewone_typen(waarde) for sleutel, waarde in obj.items()}
+    if isinstance(obj, list):
+        return [_gewone_typen(waarde) for waarde in obj]
+    if isinstance(obj, tuple):
+        return tuple(_gewone_typen(waarde) for waarde in obj)
+    if isinstance(obj, set):
+        return {_gewone_typen(waarde) for waarde in obj}
+    return obj
+
+
+def _schijf_pad(sleutel):
+    """Het bestand voor deze sleutel, of None (geen databasebestand, bijvoorbeeld een database in het geheugen)."""
+    if not sleutel[0]:
+        return None
+    from wijzigingen import HUIDIGE_VERSIE
+
+    naam = hashlib.sha1(repr((SCHIJF_VERSIE, HUIDIGE_VERSIE, sleutel)).encode()).hexdigest() + ".pkl"
+    return Path(sleutel[0]).parent / "voorspelling_cache" / naam
+
+
+def _lees_van_schijf(sleutel):
+    pad = _schijf_pad(sleutel) if SCHIJF_AAN else None
+    if pad is None or not pad.exists():
+        return None, False
+    try:
+        with open(pad, "rb") as f:
+            return pickle.load(f), True
+    except Exception as fout:  # een kapot of onleesbaar bestand is gewoon een gemiste: opnieuw rekenen
+        print(f"[voorspelling] bewaard bestand onleesbaar, opnieuw rekenen: {fout}")
+        return None, False
+
+
+def _schrijf_naar_schijf(sleutel, uitkomst):
+    pad = _schijf_pad(sleutel) if SCHIJF_AAN else None
+    if pad is None:
+        return
+    try:
+        pad.parent.mkdir(exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=pad.parent, suffix=".tmp", delete=False) as f:
+            pickle.dump(uitkomst, f, protocol=pickle.HIGHEST_PROTOCOL)
+            tijdelijk = f.name
+        os.replace(tijdelijk, pad)  # in een keer op zijn plek: een ander proces ziet nooit een half bestand
+        _ruim_schijf_op(pad.parent)
+    except Exception as fout:  # niet kunnen bewaren mag het rekenen nooit laten mislukken
+        print(f"[voorspelling] bewaren op schijf mislukt: {fout}")
+
+
+def _ruim_schijf_op(map_):
+    """Oude bestanden weg (en nooit meer dan SCHIJF_MAX_BESTANDEN), zodat de map klein blijft."""
+    nu = datetime.now().timestamp()
+    bestanden = sorted(map_.glob("*.pkl"), key=lambda p: p.stat().st_mtime)
+    for p in bestanden:
+        if nu - p.stat().st_mtime > SCHIJF_MAX_LEEFTIJD_SECONDEN:
+            p.unlink(missing_ok=True)
+    bestanden = sorted(map_.glob("*.pkl"), key=lambda p: p.stat().st_mtime)
+    for p in bestanden[: max(0, len(bestanden) - SCHIJF_MAX_BESTANDEN)]:
+        p.unlink(missing_ok=True)
+    for p in map_.glob("*.tmp"):  # restjes van een onderbroken schrijfactie
+        if nu - p.stat().st_mtime > 3600:
+            p.unlink(missing_ok=True)
+
+
 def _bewaard(db, naam, nu, argumenten, bereken, vingerafdruk=None):
     """Geeft de bewaarde uitkomst als de gegevens en het tijdvenster hetzelfde zijn, anders
     rekent het opnieuw (zie CACHE_AAN). vingerafdruk: de functie die bepaalt wanneer de gegevens
@@ -1178,7 +1261,10 @@ def _bewaard(db, naam, nu, argumenten, bereken, vingerafdruk=None):
             if sleutel in _CACHE:
                 return _CACHE[sleutel]
         try:
-            uitkomst = bereken()
+            uitkomst, van_schijf = _lees_van_schijf(sleutel)  # een ander proces kan het al hebben uitgerekend
+            if not van_schijf:
+                uitkomst = _gewone_typen(bereken())
+                _schrijf_naar_schijf(sleutel, uitkomst)
             with _CACHE_SLOT:
                 while len(_CACHE) >= CACHE_MAX_ITEMS:
                     _CACHE.pop(next(iter(_CACHE)))

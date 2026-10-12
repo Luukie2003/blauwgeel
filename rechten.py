@@ -91,6 +91,7 @@ GEBRUIK_NIET_LOGGEN = {
     # Delen van een pagina die na het laden apart worden opgehaald (zie data-lazy-bron in gedeeld.js), en het
     # voorverwarmen van het voorspelmodel: dat is geen bezoek aan een pagina.
     "dashboard_omzettrend",
+    "dashboard_wedstrijddag",
     "tellingen_cijfers",
     "bestellijst_voorspeld",
     "prognose_resultaat",
@@ -133,6 +134,10 @@ BEHEERDER_ENDPOINTS = {
     "eigen_taak_verwijderen",
     # Alle verkoopprijzen in één keer aanpassen.
     "producten_prijzen",
+    "prijs_gepland_verwijderen",
+    # Wat elk product oplevert (met de inkoopprijzen) en wat er zonder te verkopen uit de voorraad verdwijnt.
+    "marge_rapport",
+    "derving_rapport",
     "backup_nu",
     "backup_download",
     "backup_herstellen",
@@ -178,6 +183,8 @@ SECTIE_ENDPOINTS = {
         "voorraadoverzicht_pdf_route",
         "voorraadoverzicht_csv_route",
         "producten_lijst",
+        "prijslijst_pagina",
+        "prijslijst_pdf_route",
         "api_tablet_producten",
         "product_actief_wisselen",
         "product_zoeken",
@@ -203,6 +210,7 @@ SECTIE_ENDPOINTS = {
         "telling_pdf",
         "bestellijst",
         "bestellijst_voorspeld",
+        "dashboard_wedstrijddag",
         "prognose_pagina",
         "prognose_resultaat",
         "voorspelling_opwarmen",

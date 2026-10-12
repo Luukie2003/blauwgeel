@@ -109,7 +109,7 @@ def test_de_marge_en_het_gereedschap_voor_alles_tegelijk_staan_op_de_pagina(inge
 def test_het_staat_in_het_logboek(ingelogde_client, db):
     pid = _product(db, "Testbier", verkoop=2.0)
     _post(ingelogde_client, {f"prijs_{pid}": "2,10"})
-    assert db.execute("SELECT actie FROM logboek WHERE endpoint = 'producten_prijzen'").fetchone()[0] == "Verkoopprijzen in bulk gewijzigd"
+    assert db.execute("SELECT actie FROM logboek WHERE endpoint = 'producten_prijzen'").fetchone()[0] == "Verkoopprijzen in bulk gewijzigd of klaargezet"
 
 
 def test_alleen_beheerders_en_het_menu(client, db):

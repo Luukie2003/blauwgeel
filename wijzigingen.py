@@ -6,8 +6,25 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.43.6"
+HUIDIGE_VERSIE = "1.44.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.44.0",
+        "datum": "12 oktober 2026",
+        "punten": [
+            "Taken die terugkomen: bij een eigen taak kies je 'Terugkomen?' (elke week, elke 2 weken, elke maand of op elke verkoopdag). Zodra de taak klaar is, staat de volgende er, en pas een paar dagen voor de uiterste datum op het overzicht.",
+            "Checklists: een taak kan stappen hebben (bijvoorbeeld 'Kantine openen' of 'Kantine sluiten', met voorbeelden die je kunt aanpassen). Wie de taak krijgt vinkt de stappen zelf af; afronden kan pas als alles is afgevinkt.",
+            "Eigen taken staan nu ook op het startscherm van de handterminal.",
+            "Producten → Prijslijst: alle prijzen bekijken zonder ze te kunnen wijzigen (voor iedereen met de voorraadsectie), met wat er binnenkort verandert en een pdf van de prijslijst voor aan de bar. Er is een taak 'Prijzenlijst nalopen (alleen kijken)' om vrijwilligers de prijzen te laten nalopen.",
+            "Prijzen aanpassen: je kunt een 'Ingaan op'-datum invullen. De prijzen staan dan klaar en gaan op die dag vanzelf in (op de tv en in de prijsgeschiedenis).",
+            "Nieuw rapport Marge (beheerders): wat elk product en elke categorie oplevert, welke producten het minst verdienen en welke geen inkoopprijs hebben.",
+            "Derving: bij In/uit boeken → Uit kun je een reden kiezen (breuk, over de datum, gratis weggegeven, eigen gebruik). Het nieuwe rapport Derving (beheerders) laat zien wat er zonder verkocht te zijn uit de voorraad is verdwenen en wat dat kost.",
+            "Overzicht: een kaart 'Thuiswedstrijd' bij een thuiswedstrijd in de komende 5 dagen, met het weer, de verwachte omzet die dag en welke producten kunnen opraken ('Bestel nu' binnen 3 dagen).",
+            "Tellen: naast elk invulveld staan turfknoppen (+1, +5 en een hele krat of doos).",
+            "Kantine-tv: een dia kan een begin- en einddatum krijgen ('Tonen vanaf' en 'Tonen tot en met'), zodat hij zichzelf aan en uit zet.",
+            "Sneller: de berekeningen van het voorspelmodel worden ook op schijf bewaard, zodat de verschillende serverprocessen en een nieuwe start ze niet allemaal zelf opnieuw hoeven uit te rekenen.",
+        ],
+    },
     {
         "versie": "1.43.6",
         "datum": "12 oktober 2026",
@@ -833,34 +850,34 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.9.7", "sinds": "0.1.0", "laatst": "1.43.6",
+    {"naam": "Voorraad & tellen", "versie": "1.10.7", "sinds": "0.1.0", "laatst": "1.44.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.6.3", "sinds": "0.4.0", "laatst": "1.43.2",
+    {"naam": "Bestellen & prognose", "versie": "1.6.4", "sinds": "0.4.0", "laatst": "1.44.0",
      "inhoud": "Bestellijst, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop, boodschappenlijst"},
-    {"naam": "Producten & prijzen", "versie": "1.7.1", "sinds": "0.1.0", "laatst": "1.43.0",
+    {"naam": "Producten & prijzen", "versie": "1.9.1", "sinds": "0.1.0", "laatst": "1.44.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen en alle verkoopprijzen in één keer aanpassen"},
     {"naam": "Geld (kassa & kluis)", "versie": "1.3.1", "sinds": "1.0.0", "laatst": "1.33.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.2.0", "sinds": "1.6.0", "laatst": "1.7.0",
      "inhoud": "Keukenvoorraad en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.17.23", "sinds": "1.10.1", "laatst": "1.42.0",
+    {"naam": "Kantine-tv", "versie": "1.18.23", "sinds": "1.10.1", "laatst": "1.44.0",
      "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.0", "sinds": "", "laatst": "",
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
-    {"naam": "Rapporten", "versie": "1.9.1", "sinds": "0.1.0", "laatst": "1.42.0",
+    {"naam": "Rapporten", "versie": "1.11.1", "sinds": "0.1.0", "laatst": "1.44.0",
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
-    {"naam": "Handterminal", "versie": "1.3.0", "sinds": "1.5.0", "laatst": "1.25.0",
+    {"naam": "Handterminal", "versie": "1.4.0", "sinds": "1.5.0", "laatst": "1.44.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
     {"naam": "Accounts & rechten", "versie": "1.9.2", "sinds": "0.1.0", "laatst": "1.34.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.9.2", "sinds": "0.2.0", "laatst": "1.42.2",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
-    {"naam": "Overzicht & prikbord", "versie": "1.8.2", "sinds": "0.2.0", "laatst": "1.43.0",
+    {"naam": "Overzicht & prikbord", "versie": "1.9.2", "sinds": "0.2.0", "laatst": "1.44.0",
      "inhoud": "Dashboard, 'Wat moet er nu?', prikbord, zoekbalk en de tips-pagina"},
-    {"naam": "Taken", "versie": "0.1.0", "sinds": "1.43.0", "laatst": "1.43.0",
-     "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?', met de vraag 'Taak afgerond?' na het opslaan"},
-    {"naam": "Techniek & beveiliging", "versie": "1.4.0", "sinds": "1.1.0", "laatst": "1.34.0",
+    {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
+     "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
+    {"naam": "Techniek & beveiliging", "versie": "1.5.0", "sinds": "1.1.0", "laatst": "1.44.0",
      "inhoud": "Geautomatiseerde tests, beveiligingsheaders, bereikbaarheidscontrole, snelheid"},
 ]

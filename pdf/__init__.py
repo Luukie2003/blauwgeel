@@ -24,6 +24,7 @@ from pdf.basis import (
     _kort,
 )
 from pdf.voorraad import bestellijst_pdf, voorraadoverzicht_pdf
+from pdf.prijslijst import prijslijst_pdf
 from pdf.kas import kassa_pdf
 from pdf.kaartjes import (
     MAX_HARDLOPERS,
@@ -101,6 +102,7 @@ __all__ = [
     "compacte_uitdraai_pdf",
     "logboek_pdf",
     "MAX_HARDLOPERS",
+    "prijslijst_pdf",
     "KAARTJES_OPTIES",
     "kaartjes_overzicht_pdf",
     "kaartjes_pdf",

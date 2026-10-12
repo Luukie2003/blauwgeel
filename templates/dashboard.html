@@ -38,6 +38,11 @@
     {% endif %}
 </div>
 
+{% if sectie_toegang.voorraad %}
+{# De kaart 'Thuiswedstrijd' (komt er alleen als er de komende dagen een thuiswedstrijd is): zie dashboard_wedstrijddag. #}
+<div data-lazy-bron="{{ url_for('dashboard_wedstrijddag') }}"></div>
+{% endif %}
+
 <div class="statgrid">
     <div class="statuskaart {{ 'statuskaart-goed' if laatste_telling_status.ok else 'statuskaart-slecht' }}">
         <div class="statuskaart-titel">Telling</div>
