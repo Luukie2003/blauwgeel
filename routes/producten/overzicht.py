@@ -4,6 +4,7 @@ from flask import flash, jsonify, redirect, render_template, request, url_for
 
 from database import get_db
 from helpers import categorienamen_zonder_verkoopprijsplicht, is_ajax_verzoek
+from productkaart import NIET_GEARCHIVEERD
 
 
 def render_producten_pagina(categorie_vergrendeld=None):
@@ -18,7 +19,7 @@ def render_producten_pagina(categorie_vergrendeld=None):
     db = get_db()
     if categorie_vergrendeld:
         producten = db.execute(
-            "SELECT * FROM producten WHERE categorie = ? ORDER BY actief DESC, subcategorie, naam",
+            f"SELECT * FROM producten WHERE categorie = ? AND {NIET_GEARCHIVEERD} ORDER BY actief DESC, subcategorie, naam",
             (categorie_vergrendeld,),
         ).fetchall()
         categorieen = []
@@ -32,7 +33,7 @@ def render_producten_pagina(categorie_vergrendeld=None):
         # groupby-filter sorteert stabiel op alleen 'categorie', dus deze
         # volgorde blijft binnen elke groep behouden.
         producten = db.execute(
-            "SELECT * FROM producten ORDER BY categorie, actief DESC, subcategorie, naam"
+            f"SELECT * FROM producten WHERE {NIET_GEARCHIVEERD} ORDER BY categorie, actief DESC, subcategorie, naam"
         ).fetchall()
         categorieen = db.execute("SELECT naam FROM categorieen ORDER BY naam").fetchall()
         subcategorieen = db.execute(
@@ -45,7 +46,26 @@ def render_producten_pagina(categorie_vergrendeld=None):
         subcategorieen=subcategorieen,
         niet_verplicht_categorieen=categorienamen_zonder_verkoopprijsplicht(db),
         categorie_vergrendeld=categorie_vergrendeld,
+        met_geschiedenis=producten_met_geschiedenis(db),
+        aantal_inactief=sum(1 for p in producten if not p["actief"]),
+        aantal_gearchiveerd=db.execute(
+            "SELECT COUNT(*) FROM producten WHERE gearchiveerd = 1" + (" AND categorie = ?" if categorie_vergrendeld else ""),
+            (categorie_vergrendeld,) if categorie_vergrendeld else (),
+        ).fetchone()[0],
     )
+
+
+def producten_met_geschiedenis(db):
+    """Producten die in een telling of bestelling staan. Die kun je niet verwijderen (de omzet en de bestellingen van
+    toen zouden niet meer kloppen); op inactief zetten verbergt ze net zo goed."""
+    return {
+        r[0]
+        for r in db.execute(
+            """SELECT product_id FROM telling_regels
+               UNION SELECT product_id FROM keuken_telling_regels
+               UNION SELECT product_id FROM bestelregels"""
+        ).fetchall()
+    }
 
 
 def render_voorraad_pda(categorie=None, titel="Voorraad"):
@@ -98,7 +118,7 @@ def register_routes(app):
         echte voorraad/actief-status."""
         db = get_db()
         producten = db.execute(
-            """SELECT id, naam, categorie, actief, kiosk_uitverkocht FROM producten
+            f"""SELECT id, naam, categorie, actief, kiosk_uitverkocht FROM producten WHERE {NIET_GEARCHIVEERD}
                ORDER BY actief DESC, categorie, naam"""
         ).fetchall()
         return jsonify(
@@ -164,7 +184,7 @@ def register_routes(app):
             return redirect(url_for("producten_bulk_bewerken"))
 
         producten = db.execute(
-            "SELECT * FROM producten ORDER BY actief DESC, categorie, naam"
+            f"SELECT * FROM producten WHERE {NIET_GEARCHIVEERD} ORDER BY actief DESC, categorie, naam"
         ).fetchall()
         return render_template("producten_bulk_bewerken.html", producten=producten)
 

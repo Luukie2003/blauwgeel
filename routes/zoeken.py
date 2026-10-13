@@ -84,8 +84,9 @@ def zoek_alles(db, term, rol, secties, nav_items, limiet):
             "Producten",
             db.execute(
                 """SELECT id, naam, categorie, subcategorie, voorraad, eenheid, actief FROM producten
-                   WHERE naam LIKE :p ESCAPE '\\' OR artikelcode LIKE :p ESCAPE '\\'
-                      OR categorie LIKE :p ESCAPE '\\' OR subcategorie LIKE :p ESCAPE '\\'
+                   WHERE COALESCE(gearchiveerd, 0) = 0
+                     AND (naam LIKE :p ESCAPE '\\' OR artikelcode LIKE :p ESCAPE '\\'
+                          OR categorie LIKE :p ESCAPE '\\' OR subcategorie LIKE :p ESCAPE '\\')
                    ORDER BY actief DESC, (naam NOT LIKE :begin ESCAPE '\\'), naam
                    LIMIT :max""",
                 {"p": patroon, "begin": _like(term)[1:], "max": limiet + 1},

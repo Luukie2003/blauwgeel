@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block titel %}Gearchiveerde producten{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Oude producten die in tellingen of bestellingen staan en daarom niet weg kunnen. Ze staan in geen enkele lijst
+        meer, maar de tellingen, rapporten en prijsgeschiedenis van toen kloppen nog. Zet je er een terug, dan staat het
+        weer in de productlijst als inactief product.
+    </p>
+    <a href="{{ url_for('producten_lijst') }}" class="btn btn-rand">&larr; Terug naar producten</a>
+</div>
+<div class="kaart">
+    {% if producten %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th>Categorie</th><th>Gearchiveerd op</th><th style="text-align:right">Voorraad</th><th></th></tr></thead>
+            <tbody>
+                {% for p in producten %}
+                <tr>
+                    <td>{{ p.naam }}{% if p.artikelcode %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.artikelcode }}</div>{% endif %}</td>
+                    <td>{{ p.categorie }}</td>
+                    <td>{{ p.gearchiveerd_op|datum_nl if p.gearchiveerd_op else '—' }}</td>
+                    <td style="text-align:right">{{ p.voorraad }} {{ p.eenheid|lower }}</td>
+                    <td class="tabel-acties">
+                        <form method="post" action="{{ url_for('product_terugzetten', product_id=p.id) }}" style="margin:0">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-rand btn-klein">Terugzetten</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Er zijn geen gearchiveerde producten.</p>
+    {% endif %}
+</div>
+{% endblock %}

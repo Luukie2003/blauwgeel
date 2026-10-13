@@ -82,6 +82,9 @@ KOLOM_MIGRATIES = [
     ("producten", "merk", "TEXT"),
     ("producten", "niet_tellen", "INTEGER NOT NULL DEFAULT 0"),
     ("producten", "leverancier_id", "INTEGER REFERENCES leveranciers(id)"),
+    # Archiveren (1.45.1): een oud product dat in tellingen staat (dus niet weg kan) uit alle lijsten halen.
+    ("producten", "gearchiveerd", "INTEGER NOT NULL DEFAULT 0"),
+    ("producten", "gearchiveerd_op", "TEXT"),
     # Eenvoudige weergave (1.45.0): alleen de eigen favorieten in het menu en als grote knoppen op het overzicht.
     ("gebruikers", "eenvoudig", "INTEGER NOT NULL DEFAULT 0"),
     ("gebruikers", "favorieten", "TEXT"),

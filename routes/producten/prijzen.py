@@ -8,6 +8,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 from database import get_db
 from helpers import categorienamen_zonder_verkoopprijsplicht, now_str
 from helpers.tijd import vandaag_amsterdam
+from productkaart import NIET_GEARCHIVEERD
 from prijzen import (
     EINDE_ACTIE,
     SOORT_GLAS,
@@ -60,7 +61,7 @@ def register_routes(app):
         het bewerken van één product."""
         db = get_db()
         producten = db.execute(
-            "SELECT * FROM producten ORDER BY categorie, actief DESC, naam COLLATE NOCASE"
+            f"SELECT * FROM producten WHERE {NIET_GEARCHIVEERD} ORDER BY categorie, actief DESC, naam COLLATE NOCASE"
         ).fetchall()
         opties = {}
         for optie in db.execute("SELECT * FROM product_prijsopties ORDER BY product_id, volgorde, id").fetchall():

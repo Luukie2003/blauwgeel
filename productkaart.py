@@ -11,6 +11,11 @@ EENHEDEN = ["Fles", "Blik", "Zakje", "Reep", "Stuks", "Portie", "Fust", "Glas", 
 BESTELEENHEDEN = ["Krat", "Doos", "Karton", "Tray", "Zak", "Pak", "Fust", "Fles", "Los"]
 ANDERS = "__anders__"
 
+# Een gearchiveerd product (oud, staat nog in tellingen, dus kan niet weg) staat in geen enkele lijst meer: niet bij de
+# producten (ook niet met 'Inactieve tonen'), de prijzen, de gegevenscontrole of het zoeken. In tellingen, rapporten en
+# de prijsgeschiedenis blijft het gewoon staan. Terugzetten kan bij Producten > Gearchiveerd.
+NIET_GEARCHIVEERD = "COALESCE(gearchiveerd, 0) = 0"
+
 # De keuken heeft een eigen module met een eigen telling (zie keuken.py); die producten staan niet in de gewone telling.
 KEUKEN_CATEGORIE = "Keuken"
 

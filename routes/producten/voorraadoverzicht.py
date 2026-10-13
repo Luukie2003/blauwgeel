@@ -4,7 +4,7 @@ from flask import Response, g, render_template
 
 from database import get_db
 from helpers import bereken_fust_verkopen, categorienamen_zonder_verkoopprijsplicht, csv_response
-from productkaart import in_gewone_telling
+from productkaart import NIET_GEARCHIVEERD, in_gewone_telling
 from pdf import voorraadoverzicht_pdf
 from routes.producten.overzicht import render_voorraad_pda
 
@@ -12,7 +12,7 @@ from routes.producten.overzicht import render_voorraad_pda
 def bereken_voorraadoverzicht(db):
     """Verzamelt alle cijfers voor het voorraadoverzicht -- gebruikt door
     zowel de webpagina als de PDF, zodat ze altijd hetzelfde tonen."""
-    producten = db.execute("SELECT * FROM producten ORDER BY categorie, naam").fetchall()
+    producten = db.execute(f"SELECT * FROM producten WHERE {NIET_GEARCHIVEERD} ORDER BY categorie, naam").fetchall()
     niet_verplicht = categorienamen_zonder_verkoopprijsplicht(db)
 
     totale_waarde = sum(p["voorraad"] * p["verkoopprijs"] for p in producten)
@@ -155,7 +155,7 @@ def register_routes(app):
     def voorraadoverzicht_csv_route():
         db = get_db()
         producten = db.execute(
-            "SELECT * FROM producten ORDER BY categorie, subcategorie, naam"
+            f"SELECT * FROM producten WHERE {NIET_GEARCHIVEERD} ORDER BY categorie, subcategorie, naam"
         ).fetchall()
         rijen = [
             (

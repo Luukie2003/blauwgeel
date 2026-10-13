@@ -20,6 +20,14 @@
         </a>
         {% endif %}
         <button type="button" id="labels-printen-knop" class="btn btn-rand" disabled>Schaplabels printen</button>
+        {% if huidige_gebruiker_rol == 'beheerder' %}
+        <form method="post" action="{{ url_for('producten_archiveren') }}" id="archiveer-form" style="margin:0"
+              onsubmit="return bevestigEnVerstuur(this, 'De geselecteerde inactieve producten archiveren? Ze staan dan in geen enkele lijst meer; terugzetten kan onder Gearchiveerd.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="ids" id="archiveer-ids">
+            <button type="submit" id="archiveer-knop" class="btn btn-rand" disabled>Selectie archiveren</button>
+        </form>
+        {% endif %}
     </div>
 </div>
 
@@ -42,6 +50,12 @@
             <option value="{{ s.naam }}" data-categorie="{{ s.categorie }}">{{ s.naam }}</option>
             {% endfor %}
         </select>
+        {% endif %}
+        {% if aantal_inactief %}
+        <label style="display:flex; align-items:center; gap:0.35rem; font-weight:400; cursor:pointer; white-space:nowrap">
+            <input type="checkbox" id="filter-inactief" style="width:auto">
+            Inactieve tonen ({{ aantal_inactief }})
+        </label>
         {% endif %}
         <label style="display:flex; align-items:center; gap:0.35rem; font-weight:400; cursor:pointer; white-space:nowrap">
             <input type="checkbox" id="label-select-alles" style="width:auto">
@@ -67,7 +81,7 @@
                     </thead>
                     <tbody>
                         {% for p in producten_in_categorie %}
-                        <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie ~ ' ' ~ (p.subcategorie or ''))|lower }}" data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}">
+                        <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie ~ ' ' ~ (p.subcategorie or ''))|lower }}" data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}" data-actief="{{ 1 if p.actief else 0 }}">
                             <td><input type="checkbox" class="label-select-rij" value="{{ p.id }}" style="width:auto"></td>
                             <td>
                                 {% if p.afbeelding %}
@@ -122,11 +136,21 @@
                             <td class="tabel-acties">
                                 {% if huidige_gebruiker_rol == 'beheerder' %}
                                 <a href="{{ url_for('product_bewerken', product_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                                {# Staat het in een telling of bestelling, dan kan het niet weg (zie producten_met_geschiedenis). #}
+                                {% if p.id not in met_geschiedenis %}
                                 <form method="post" action="{{ url_for('product_verwijderen', product_id=p.id) }}"
                                       onsubmit="return bevestigEnVerstuur(this, 'Product \'{{ p.naam }}\' verwijderen? Dit verwijdert ook de boekingsgeschiedenis.');">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                                 </form>
+                                {% else %}
+                                {# Kan niet weg (staat in tellingen of bestellingen): archiveren haalt het uit alle lijsten. #}
+                                <form method="post" action="{{ url_for('product_archiveren', product_id=p.id) }}"
+                                      onsubmit="return bevestigEnVerstuur(this, 'Product \'{{ p.naam }}\' archiveren? Het staat dan in geen enkele lijst meer{{ ' en wordt inactief' if p.actief else '' }}; de tellingen van toen blijven kloppen. Terugzetten kan onder Gearchiveerd.');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-rand btn-klein">Archiveren</button>
+                                </form>
+                                {% endif %}
                                 {% endif %}
                             </td>
                         </tr>
@@ -138,6 +162,9 @@
         {% endfor %}
     </div>
     <p class="leeg" id="filter-leeg" style="display:none">Geen producten gevonden voor dit filter.</p>
+    {% if aantal_gearchiveerd and huidige_gebruiker_rol == 'beheerder' %}
+    <p class="tekst-zacht" style="margin-bottom:0"><a href="{{ url_for('producten_gearchiveerd') }}">{{ aantal_gearchiveerd }} gearchiveerd{{ '' if aantal_gearchiveerd == 1 else 'e' }} product{{ '' if aantal_gearchiveerd == 1 else 'en' }}</a> staan niet in deze lijst.</p>
+    {% endif %}
     {% else %}
     <p class="leeg">
         {% if categorie_vergrendeld %}
@@ -154,6 +181,7 @@
     var zoekVeld = document.getElementById('filter-zoek');
     var catVeld = document.getElementById('filter-categorie');
     var subVeld = document.getElementById('filter-subcategorie');
+    var inactiefVeld = document.getElementById('filter-inactief');
     var aantalLabel = document.getElementById('filter-aantal');
     var leegMelding = document.getElementById('filter-leeg');
     if (!zoekVeld) return;
@@ -188,7 +216,9 @@
             var matchZoek = !zoek || rij.dataset.zoek.indexOf(zoek) !== -1;
             var matchCategorie = !categorie || rij.dataset.categorie === categorie;
             var matchSubcategorie = !subcategorie || rij.dataset.subcategorie === subcategorie;
-            var toon = matchZoek && matchCategorie && matchSubcategorie;
+            // Inactieve producten staan standaard niet in de lijst; zoek je er een, dan wel.
+            var matchActief = rij.dataset.actief !== '0' || zoek || (inactiefVeld && inactiefVeld.checked);
+            var toon = matchZoek && matchCategorie && matchSubcategorie && matchActief;
             rij.style.display = toon ? '' : 'none';
             if (toon) zichtbaar++;
         });
@@ -199,17 +229,20 @@
         // zoeken/filteren) helemaal verbergen, i.p.v. een lege, openstaande
         // sectie te tonen.
         groepen.forEach(function (groep) {
-            var heeftZichtbare = Array.prototype.some.call(
+            var zichtbareRijen = Array.prototype.filter.call(
                 groep.querySelectorAll('tbody tr'),
                 function (rij) { return rij.style.display !== 'none'; }
             );
-            groep.style.display = heeftZichtbare ? '' : 'none';
+            groep.style.display = zichtbareRijen.length ? '' : 'none';
+            var teller = groep.querySelector('.categorie-groep-aantal');
+            if (teller) teller.textContent = zichtbareRijen.length;
         });
     }
 
     zoekVeld.addEventListener('input', filter);
     if (catVeld) catVeld.addEventListener('change', function () { filterSubOpties(); filter(); });
     if (subVeld) subVeld.addEventListener('change', filter);
+    if (inactiefVeld) inactiefVeld.addEventListener('change', filter);
     filter();
 })();
 
@@ -219,12 +252,22 @@
     if (!alles || !knop) return;
     var vakjes = Array.prototype.slice.call(document.querySelectorAll('.label-select-rij'));
 
+    var archiveerKnop = document.getElementById('archiveer-knop');
+    var archiveerIds = document.getElementById('archiveer-ids');
+
     function bijwerken() {
         var geselecteerd = vakjes.filter(function (v) { return v.checked; });
         knop.disabled = geselecteerd.length === 0;
         knop.textContent = geselecteerd.length
             ? 'Schaplabels printen (' + geselecteerd.length + ')'
             : 'Schaplabels printen';
+        if (archiveerKnop) {
+            // Alleen inactieve producten gaan in bulk naar het archief (zie producten_archiveren).
+            var inactief = geselecteerd.filter(function (v) { return v.closest('tr').dataset.actief === '0'; });
+            archiveerKnop.disabled = inactief.length === 0;
+            archiveerKnop.textContent = inactief.length ? 'Selectie archiveren (' + inactief.length + ' inactief)' : 'Selectie archiveren';
+            archiveerIds.value = inactief.map(function (v) { return v.value; }).join(',');
+        }
     }
 
     alles.addEventListener('change', function () {

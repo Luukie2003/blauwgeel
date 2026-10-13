@@ -9,11 +9,11 @@ Inkoop gaat per verpakking (de besteleenheid, bijvoorbeeld een doos frikandellen
 stuks: 'aantal per besteleenheid' zegt hoeveel er in een verpakking zit."""
 
 from helpers.producten import besteleenheid_factor, omzet_per_eenheid, verwerk_auto_inactief
-from productkaart import KEUKEN_CATEGORIE
+from productkaart import KEUKEN_CATEGORIE, NIET_GEARCHIVEERD
 
 
 def keuken_producten(db, alleen_actief=True):
-    voorwaarde = "AND actief = 1" if alleen_actief else ""
+    voorwaarde = "AND actief = 1" if alleen_actief else f"AND {NIET_GEARCHIVEERD}"
     return db.execute(
         f"SELECT * FROM producten WHERE categorie = ? {voorwaarde} ORDER BY subcategorie, naam COLLATE NOCASE",
         (KEUKEN_CATEGORIE,),

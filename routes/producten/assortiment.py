@@ -285,13 +285,96 @@ def register_routes(app):
                 # (bestellijst, tellen, kiosk) zonder de geschiedenis kwijt
                 # te raken.
                 db.rollback()
+                if product["actief"]:
+                    tekst = (
+                        "Zet het op inactief: dan staat het nergens meer (bestellijst, tellen, tv, productlijst) en "
+                        "blijft de geschiedenis kloppen."
+                    )
+                else:
+                    tekst = (
+                        "Het staat al op inactief, dus het telt nergens meer mee en staat niet meer in de productlijst "
+                        "(alleen als je 'Inactieve tonen' aanvinkt)."
+                    )
                 flash(
-                    f"'{product['naam']}' kan niet verwijderd worden: het staat nog in "
-                    "bestellingen en/of tellingen. Zet het product op inactief in plaats "
-                    "van te verwijderen -- dat verbergt 'm net zo goed.",
+                    f"'{product['naam']}' kan niet verwijderd worden, want het staat in oude tellingen of bestellingen "
+                    f"en die moeten blijven kloppen. {tekst}",
                     "error",
                 )
         return redirect(url_for("producten_lijst"))
+
+    # ---------- Archiveren: een oud product dat niet weg kan uit alle lijsten halen (zie productkaart.NIET_GEARCHIVEERD) ----------
+
+    def _archiveer(db, product_ids):
+        """Zet de producten op inactief en gearchiveerd; geeft de producten die dat werden."""
+        producten = db.execute(
+            f"SELECT id, naam, voorraad, eenheid FROM producten WHERE gearchiveerd = 0 AND id IN ({','.join('?' * len(product_ids))})",
+            product_ids,
+        ).fetchall() if product_ids else []
+        for p in producten:
+            db.execute(
+                "UPDATE producten SET actief = 0, gearchiveerd = 1, gearchiveerd_op = ? WHERE id = ?", (now_str(), p["id"])
+            )
+        db.commit()
+        return producten
+
+    @app.route("/producten/<int:product_id>/archiveren", methods=["POST"])
+    def product_archiveren(product_id):
+        db = get_db()
+        gedaan = _archiveer(db, [product_id])
+        if gedaan:
+            p = gedaan[0]
+            flash(
+                f"'{p['naam']}' is gearchiveerd: het staat in geen enkele lijst meer, maar de tellingen en rapporten van "
+                "toen blijven kloppen. Terugzetten kan onder Producten > Gearchiveerd."
+                + (f" Let op: er stond nog {p['voorraad']} {p['eenheid']} op voorraad." if p["voorraad"] > 0 else ""),
+                "success",
+            )
+        return redirect(url_for("producten_lijst"))
+
+    @app.route("/producten/archiveren", methods=["POST"])
+    def producten_archiveren():
+        """De selectie op de productpagina archiveren. Alleen producten die al inactief zijn: een actief product
+        archiveer je bewust, los bij het product zelf."""
+        db = get_db()
+        ids = [int(i) for i in request.form.get("ids", "").split(",") if i.strip().isdigit()]
+        inactief = [
+            r["id"]
+            for r in db.execute(
+                f"SELECT id FROM producten WHERE actief = 0 AND id IN ({','.join('?' * len(ids))})", ids
+            ).fetchall()
+        ] if ids else []
+        gedaan = _archiveer(db, inactief)
+        overgeslagen = len(ids) - len(inactief)
+        if gedaan:
+            flash(f"{len(gedaan)} {'product' if len(gedaan) == 1 else 'producten'} gearchiveerd.", "success")
+        if overgeslagen:
+            flash(
+                f"{overgeslagen} {'product is' if overgeslagen == 1 else 'producten zijn'} niet gearchiveerd, want "
+                f"{'het staat' if overgeslagen == 1 else 'ze staan'} nog op actief. Zet ze eerst op inactief, of "
+                "archiveer ze los bij het product.",
+                "warning",
+            )
+        if not ids:
+            flash("Selecteer eerst de producten die je wilt archiveren.", "error")
+        return redirect(url_for("producten_lijst"))
+
+    @app.route("/producten/gearchiveerd")
+    def producten_gearchiveerd():
+        producten = get_db().execute(
+            "SELECT * FROM producten WHERE gearchiveerd = 1 ORDER BY categorie, naam COLLATE NOCASE"
+        ).fetchall()
+        return render_template("producten_gearchiveerd.html", producten=producten)
+
+    @app.route("/producten/<int:product_id>/terugzetten", methods=["POST"])
+    def product_terugzetten(product_id):
+        """Terug uit het archief; het blijft inactief tot je het zelf weer aanzet."""
+        db = get_db()
+        product = db.execute("SELECT naam FROM producten WHERE id = ?", (product_id,)).fetchone()
+        db.execute("UPDATE producten SET gearchiveerd = 0, gearchiveerd_op = NULL WHERE id = ?", (product_id,))
+        db.commit()
+        if product:
+            flash(f"'{product['naam']}' staat weer in de productlijst, als inactief product.", "success")
+        return redirect(url_for("producten_gearchiveerd"))
 
     @app.route("/producten/snel-toevoegen", methods=["POST"])
     def product_snel_toevoegen():

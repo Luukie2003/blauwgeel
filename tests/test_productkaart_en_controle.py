@@ -218,3 +218,91 @@ def test_omzet_en_kassa_alleen_voor_beheerders(client, db):
     _login(client, "kassier")
     assert "alleen voor beheerders" in client.get("/kassa/omzet-en-kassa", follow_redirects=True).data.decode()
     assert client.get("/kassa/tellen").status_code == 200  # de kassa zelf mag wel
+
+
+# ---------- Verwijderen en inactieve producten ----------
+
+
+def _met_telling(db, pid):
+    t = db.execute("INSERT INTO tellingen (datum, naam) VALUES ('2026-10-01 10:00', 'T')").lastrowid
+    db.execute("INSERT INTO telling_regels (telling_id, product_id, voorraad_voor, geteld_aantal, verkocht, verkoopprijs) VALUES (?, ?, 5, 4, 1, 2)", (t, pid))
+    db.commit()
+
+
+def test_een_product_met_geschiedenis_heeft_geen_verwijderknop(ingelogde_client, db):
+    oud = _product(db, "Oud Product", actief=0)
+    _met_telling(db, oud)
+    nieuw = _product(db, "Nieuw Product")
+    tekst = ingelogde_client.get("/producten").data.decode()
+    assert f'/producten/{nieuw}/verwijderen' in tekst and f'/producten/{oud}/verwijderen' not in tekst
+
+
+def test_inactieve_producten_staan_standaard_niet_in_de_lijst(ingelogde_client, db):
+    _product(db, "Verborgen Product", actief=0)
+    tekst = ingelogde_client.get("/producten").data.decode()
+    assert 'id="filter-inactief"' in tekst and "Inactieve tonen (" in tekst
+    assert 'data-actief="0"' in tekst  # de rij staat er wel, het filter verbergt hem
+
+
+def test_de_melding_bij_verwijderen_past_zich_aan(ingelogde_client, db):
+    for actief, verwacht in ((0, "Het staat al op inactief"), (1, "Zet het op inactief")):
+        pid = _product(db, f"Geschiedenis {actief}", actief=actief)
+        _met_telling(db, pid)
+        resp = ingelogde_client.post(f"/producten/{pid}/verwijderen", data={"csrf_token": _csrf(ingelogde_client)}, follow_redirects=True)
+        tekst = resp.data.decode()
+        assert "kan niet verwijderd worden" in tekst and verwacht in tekst and " -- " not in tekst
+        assert db.execute("SELECT COUNT(*) FROM producten WHERE id = ?", (pid,)).fetchone()[0] == 1
+
+
+# ---------- Archiveren ----------
+
+
+def test_een_product_met_geschiedenis_kun_je_archiveren(ingelogde_client, db):
+    pid = _product(db, "Bozu Oud", actief=0, artikelcode="X9")
+    _met_telling(db, pid)
+    lijst = ingelogde_client.get("/producten").data.decode()
+    assert f"/producten/{pid}/archiveren" in lijst
+
+    resp = ingelogde_client.post(f"/producten/{pid}/archiveren", data={"csrf_token": _csrf(ingelogde_client)}, follow_redirects=True)
+
+    assert "is gearchiveerd" in resp.data.decode()
+    p = db.execute("SELECT actief, gearchiveerd, gearchiveerd_op FROM producten WHERE id = ?", (pid,)).fetchone()
+    assert (p["actief"], p["gearchiveerd"]) == (0, 1) and p["gearchiveerd_op"]
+    # Uit alle lijsten, maar de telling staat er nog.
+    assert "Bozu Oud" not in ingelogde_client.get("/producten").data.decode()
+    assert "Bozu Oud" not in ingelogde_client.get("/producten/prijzen").data.decode()
+    assert "Bozu Oud" not in ingelogde_client.get("/voorraadoverzicht").data.decode()
+    assert "Bozu Oud" not in ingelogde_client.get("/zoeken/live?q=Bozu").data.decode()
+    assert "Bozu Oud" not in {r["naam"] for c in controleer(db)["controles"] for r in c["regels"]}
+    assert db.execute("SELECT COUNT(*) FROM telling_regels WHERE product_id = ?", (pid,)).fetchone()[0] == 1
+    assert "1 gearchiveerd product" in ingelogde_client.get("/producten").data.decode()
+
+
+def test_archiveren_in_bulk_alleen_inactieve(ingelogde_client, db):
+    oud, ook_oud, actief = _product(db, "Oud A", actief=0), _product(db, "Oud B", actief=0), _product(db, "Nog Actief")
+    resp = ingelogde_client.post("/producten/archiveren", data={"csrf_token": _csrf(ingelogde_client), "ids": f"{oud},{ook_oud},{actief}"},
+                                 follow_redirects=True)
+    tekst = resp.data.decode()
+    assert "2 producten gearchiveerd" in tekst and "nog op actief" in tekst
+    gearchiveerd = {r[0] for r in db.execute("SELECT id FROM producten WHERE gearchiveerd = 1")}
+    assert gearchiveerd == {oud, ook_oud}
+
+
+def test_terugzetten_uit_het_archief(ingelogde_client, db):
+    pid = _product(db, "Terug Product", actief=0)
+    ingelogde_client.post(f"/producten/{pid}/archiveren", data={"csrf_token": _csrf(ingelogde_client)})
+    assert "Terug Product" in ingelogde_client.get("/producten/gearchiveerd").data.decode()
+    assert "Dit product is gearchiveerd" in ingelogde_client.get(f"/producten/{pid}/bewerken").data.decode()
+    ingelogde_client.post(f"/producten/{pid}/terugzetten", data={"csrf_token": _csrf(ingelogde_client)})
+    p = db.execute("SELECT actief, gearchiveerd FROM producten WHERE id = ?", (pid,)).fetchone()
+    assert (p["actief"], p["gearchiveerd"]) == (0, 0)  # terug, maar nog inactief
+    assert "Terug Product" in ingelogde_client.get("/producten").data.decode()
+
+
+def test_archiveren_alleen_voor_beheerders(client, db):
+    pid = _product(db, "Niet Van Jou", actief=0)
+    _maak_vrijwilliger(db, "vrijwilliger", "voorraad")
+    _login(client, "vrijwilliger")
+    resp = client.post(f"/producten/{pid}/archiveren", data={"csrf_token": _csrf(client)}, follow_redirects=True)
+    assert "alleen voor beheerders" in resp.data.decode()
+    assert db.execute("SELECT gearchiveerd FROM producten WHERE id = ?", (pid,)).fetchone()[0] == 0

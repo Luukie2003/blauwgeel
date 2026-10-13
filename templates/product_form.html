@@ -19,6 +19,16 @@
 <h1>{{ 'Product bewerken' if product else 'Nieuw product' }}</h1>
 <p class="subtitel"><a href="{{ url_for('producten_lijst') }}">&larr; Terug naar producten</a></p>
 
+{% if product and product.gearchiveerd %}
+<div class="flash flash-warning" style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; justify-content:space-between">
+    <span>Dit product is gearchiveerd: het staat in geen enkele lijst meer.</span>
+    <form method="post" action="{{ url_for('product_terugzetten', product_id=product.id) }}" style="margin:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-rand btn-klein">Terugzetten</button>
+    </form>
+</div>
+{% endif %}
+
 <div class="kaart">
     <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -5,7 +5,7 @@ zet ze onder elkaar, het belangrijkste eerst. De fout van 1.44.1 (inkoopprijs pe
 het tapbier dat nergens meetelde, hadden hier allebei tussen gestaan."""
 
 from helpers.producten import categorienamen_zonder_verkoopprijsplicht, inkoop_per_stuk, omzet_per_eenheid
-from productkaart import BESTELEENHEDEN, EENHEDEN, KEUKEN_CATEGORIE, in_gewone_telling, normaliseer
+from productkaart import BESTELEENHEDEN, EENHEDEN, KEUKEN_CATEGORIE, NIET_GEARCHIVEERD, in_gewone_telling, normaliseer
 
 HOGE_MARGE_PCT = 85  # daarboven is de inkoopprijs waarschijnlijk per stuk ingevuld in plaats van per krat
 ERNST_VOLGORDE = {"hoog": 0, "middel": 1, "laag": 2}
@@ -25,7 +25,9 @@ def _regel(p, detail=""):
 
 def controleer(db):
     """Alle controles, met de controles zonder bevindingen apart: {'controles': [...], 'in_orde': [...], 'aantal'}."""
-    producten = db.execute("SELECT * FROM producten ORDER BY categorie, naam COLLATE NOCASE").fetchall()
+    producten = db.execute(
+        f"SELECT * FROM producten WHERE {NIET_GEARCHIVEERD} ORDER BY categorie, naam COLLATE NOCASE"
+    ).fetchall()
     actief = [p for p in producten if p["actief"]]
     zonder_prijsplicht = categorienamen_zonder_verkoopprijsplicht(db)
     geteld = {r[0] for r in db.execute("SELECT DISTINCT product_id FROM telling_regels").fetchall()}

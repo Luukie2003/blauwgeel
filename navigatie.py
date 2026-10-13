@@ -128,6 +128,7 @@ NAV_ITEMS = [
             "product_bewerken",
             "categorieen_lijst",
             "producten_bulk_bewerken",
+            "producten_gearchiveerd",
         ],
         "url_endpoint": "producten_lijst",
         "label": "Producten",
