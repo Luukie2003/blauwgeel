@@ -317,9 +317,7 @@ def test_de_vijf_ontwerpen_zijn_echt_verschillend_van_vorm():
     assert maten["C"][1] > maten["C"][0]  # een staand
 
 
-def test_er_staat_nergens_een_datum_op_de_kaartjes():
+def test_op_elk_kaartje_staan_naam_team_en_datum():
     for optie in OPTIES:
         inhoud = _ontvouw(kaartjes_pdf(optie.sleutel, STANDAARD))
-        assert b"Datum" not in inhoud and b"DATUM" not in inhoud, optie.sleutel
-        assert b"Naam" in inhoud and b"Team" in inhoud, optie.sleutel
-        assert "Datum" not in optie.omschrijving
+        assert b"Naam" in inhoud and b"Team" in inhoud and b"Datum" in inhoud, optie.sleutel

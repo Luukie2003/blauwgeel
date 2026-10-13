@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.44.1"
+HUIDIGE_VERSIE = "1.44.2"
 WIJZIGINGEN = [
+    {
+        "versie": "1.44.2",
+        "datum": "13 oktober 2026",
+        "punten": [
+            "Kaartjes printen: het veld Datum staat weer op alle vijf de ontwerpen, naast Naam en Team. De hardlopers, de turfvakken en het aantal lege regels zijn zoals ze waren.",
+        ],
+    },
     {
         "versie": "1.44.1",
         "datum": "12 oktober 2026",
@@ -857,7 +864,7 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.10.7", "sinds": "0.1.0", "laatst": "1.44.0",
+    {"naam": "Voorraad & tellen", "versie": "1.10.8", "sinds": "0.1.0", "laatst": "1.44.2",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.6.4", "sinds": "0.4.0", "laatst": "1.44.0",
      "inhoud": "Bestellijst, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop, boodschappenlijst"},

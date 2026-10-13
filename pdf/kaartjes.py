@@ -1,4 +1,4 @@
-"""Voorgedrukte kaartjes op A4, om uit te knippen: Naam, Team, hardlopers en lege regels.
+"""Voorgedrukte kaartjes op A4, om uit te knippen: Naam, Team, Datum, hardlopers en lege regels.
 
 Vijf ontwerpen (zie OPTIES): twee brede, twee vierkante en een smal staand ontwerp. De hardlopers (de dranken die hard lopen, met een vak om bij te turven) en of het
 in kleur of zwart-wit moet, bepaalt de aanroeper (zie routes/kaartjes.py). Alle maten zijn in mm; de kaartjes
@@ -26,9 +26,9 @@ Optie = namedtuple("Optie", "sleutel naam breedte hoogte kolommen rijen omschrij
 OPTIES = [
     Optie("D", "Breed", 97, 52, 2, 5, "Twee kolommen met een lang, leeg turfvak achter elke hardloper, 4 lege regels."),
     Optie("D2", "Breed, hoog turfvak", 97, 60, 2, 4, "Een hardloper per rij met een extra hoog turfvak over de hele breedte, 3 lege regels."),
-    Optie("A", "Vierkant", 65, 65, 3, 4, "Een hardloper per rij met een lang turfvak, ruim opgezet, 4 lege regels."),
-    Optie("B", "Vierkant, met logo", 55, 55, 3, 5, "Met het clublogo in een slanke balk, een hardloper per rij met turfvak, 3 lege regels."),
-    Optie("C", "Staand, smal", 46, 82, 4, 3, "Smal en hoog: de naam boven een breed turfvak, Naam en Team onder elkaar, 4 lege regels."),
+    Optie("A", "Vierkant", 65, 65, 3, 4, "Een hardloper per rij met een lang turfvak, ruim opgezet, 3 lege regels."),
+    Optie("B", "Vierkant, met logo", 55, 55, 3, 5, "Met het clublogo in een slanke balk, een hardloper per rij met turfvak, 2 lege regels."),
+    Optie("C", "Staand, smal", 46, 82, 4, 3, "Smal en hoog: de naam boven een breed turfvak, Naam, Team en Datum onder elkaar, 3 lege regels."),
 ]
 OPTIE_PER_SLEUTEL = {o.sleutel: o for o in OPTIES}
 STANDAARD_OPTIE = OPTIES[0].sleutel
@@ -83,7 +83,7 @@ class _Tekenaar:
         self.pdf.set_dash_pattern()
 
     def dubbele_lijn(self, x1, x2, y):
-        """De dubbele blauwe scheiding tussen Naam/Team en de hardlopers."""
+        """De dubbele blauwe scheiding tussen Naam/Team/Datum en de hardlopers."""
         self.pdf.set_draw_color(*self.blauw)
         self.pdf.set_line_width(0.35)
         self.pdf.line(x1, y, x2, y)
@@ -155,12 +155,14 @@ class _Tekenaar:
     def kaart_a(self, x, y, w, h):
         p = 4.5
         b = w - 2 * p
-        self.veld("Naam", x + p, x + p + b * 0.58, y + 8.0)
-        self.veld("Team", x + p + b * 0.63, x + w - p, y + 8.0)
-        self.dubbele_lijn(x + p, x + w - p, y + 10.4)
-        self.hardlopers_turf(x + p, y + 17.8, b, 6.2, 1, 6.4, 5.0)
-        for k in range(4):
-            self.stippel(x + p, x + w - p, y + 43.4 + k * 5.6)
+        self.veld("Naam", x + p, x + w - p, y + 8.0)
+        split = x + p + b * 0.58
+        self.veld("Team", x + p, split - 2, y + 14.0)
+        self.veld("Datum", split, x + w - p, y + 14.0)
+        self.dubbele_lijn(x + p, x + w - p, y + 16.2)
+        self.hardlopers_turf(x + p, y + 23.6, b, 6.2, 1, 6.4, 5.0)
+        for k in range(3):
+            self.stippel(x + p, x + w - p, y + 49.0 + k * 5.6)
 
     def kaart_b(self, x, y, w, h):
         pdf = self.pdf
@@ -176,28 +178,32 @@ class _Tekenaar:
         pdf.text(x + w - 2.0 - pdf.get_string_width("kantine"), y + 4.0, "kantine")
         p = 3.5
         b = w - 2 * p
-        self.veld("Naam", x + p, x + p + b * 0.56, y + 11.8, 6)
-        self.veld("Team", x + p + b * 0.61, x + w - p, y + 11.8, 6)
-        self.dubbele_lijn(x + p, x + w - p, y + 13.8)
-        self.hardlopers_turf(x + p, y + 19.8, b, 5.3, 1, 5.8, 4.3)
-        for k in range(3):
-            self.stippel(x + p, x + w - p, y + 41.4 + k * 4.8)
+        self.veld("Naam", x + p, x + w - p, y + 11.6, 6)
+        split = x + p + b * 0.58
+        self.veld("Team", x + p, split - 1.5, y + 16.6, 6)
+        self.veld("Datum", split, x + w - p, y + 16.6, 6)
+        self.dubbele_lijn(x + p, x + w - p, y + 18.6)
+        self.hardlopers_turf(x + p, y + 24.6, b, 5.3, 1, 5.8, 4.3)
+        for k in range(2):
+            self.stippel(x + p, x + w - p, y + 46.0 + k * 4.6)
 
     def kaart_c(self, x, y, w, h):
         p = 3.2
         b = w - 2 * p
         self.veld("Naam", x + p, x + w - p, y + 7.0)
         self.veld("Team", x + p, x + w - p, y + 13.4)
-        self.dubbele_lijn(x + p, x + w - p, y + 16.0)
-        self.hardlopers_gestapeld(x + p, y + 23.2, b, 9.6, 5.2, 6.4)
-        for k in range(4):
-            self.stippel(x + p, x + w - p, y + 63.4 + k * 5.0)
+        self.veld("Datum", x + p, x + w - p, y + 19.8)
+        self.dubbele_lijn(x + p, x + w - p, y + 22.4)
+        self.hardlopers_gestapeld(x + p, y + 29.6, b, 9.6, 5.2, 6.4)
+        for k in range(3):
+            self.stippel(x + p, x + w - p, y + 68.4 + k * 5.0)
 
     def kaart_d(self, x, y, w, h):
         p = 3.6
         b = w - 2 * p
-        self.veld("Naam", x + p, x + p + b * 0.58, y + 6.6)
-        self.veld("Team", x + p + b * 0.63, x + w - p, y + 6.6)
+        self.veld("Naam", x + p, x + p + b * 0.46, y + 6.6)
+        self.veld("Team", x + p + b * 0.50, x + p + b * 0.76, y + 6.6)
+        self.veld("Datum", x + p + b * 0.80, x + w - p, y + 6.6)
         self.dubbele_lijn(x + p, x + w - p, y + 8.6)
         self.hardlopers_turf(x + p, y + 17.0, b, 6.0, 2, 6.0, 5.2)
         for k in range(4):
@@ -206,8 +212,9 @@ class _Tekenaar:
     def kaart_d2(self, x, y, w, h):
         p = 3.6
         b = w - 2 * p
-        self.veld("Naam", x + p, x + p + b * 0.58, y + 6.4)
-        self.veld("Team", x + p + b * 0.63, x + w - p, y + 6.4)
+        self.veld("Naam", x + p, x + p + b * 0.46, y + 6.4)
+        self.veld("Team", x + p + b * 0.50, x + p + b * 0.76, y + 6.4)
+        self.veld("Datum", x + p + b * 0.80, x + w - p, y + 6.4)
         self.dubbele_lijn(x + p, x + w - p, y + 8.4)
         self.hardlopers_turf(x + p, y + 16.5, b, 7.2, 1, 6.8, 5.6)
         for k in range(3):
