@@ -15,3 +15,6 @@ static/stem_afbeeldingen/
 static/kiosk_videos/
 uitrol_geheim.txt
 voorspelling_cache/
+# Verkleinde kopieën van de productfoto's: worden vanzelf gemaakt (helpers/afbeeldingen.py)
+static/product_afbeeldingen/klein/
+static/product_afbeeldingen/middel/

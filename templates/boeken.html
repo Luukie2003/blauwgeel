@@ -36,7 +36,7 @@
                         <select id="product_id" name="product_id" required style="flex:1">
                             <option value="" disabled selected>Kies een product</option>
                             {% for p in producten %}
-                            <option value="{{ p.id }}" data-afbeelding="{{ p.afbeelding or '' }}">{{ p.naam }} ({{ p.voorraad }} {{ p.eenheid }} op voorraad)</option>
+                            <option value="{{ p.id }}" data-afbeelding="{{ p.afbeelding|foto_klein }}">{{ p.naam }} ({{ p.voorraad }} {{ p.eenheid }} op voorraad)</option>
                             {% endfor %}
                         </select>
                     </div>

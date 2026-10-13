@@ -184,7 +184,7 @@ def test_de_pagina_toont_wat_de_ruimte_inneemt(ingelogde_client, app, db, videom
     _bestand(basis, "static/kiosk_videos/pad.mp4", 7 * MB)
     _bestand(basis, "backups/voorraad-2026-10-01.db", 2 * MB)
 
-    tekst = ingelogde_client.get("/opslag").data.decode()
+    tekst = ingelogde_client.get("/opslag/meting").data.decode()
 
     assert "9,0 MB van 1024 MB in gebruik" in tekst
     assert "Video&#39;s (kantine-tv)" in tekst or "Video's (kantine-tv)" in tekst
@@ -193,11 +193,27 @@ def test_de_pagina_toont_wat_de_ruimte_inneemt(ingelogde_client, app, db, videom
     assert "ffmpeg ontbreekt" in tekst or "automatisch verkleind" in tekst  # zegt of verkleinen kan
 
 
+def test_de_opslagpagina_zelf_meet_niets_en_haalt_de_meting_apart_op(ingelogde_client, app, monkeypatch):
+    def nooit(*args, **kwargs):
+        raise AssertionError("de pagina zelf mag niet meten")
+
+    monkeypatch.setattr("routes.opslag.opslag_status", nooit)
+    tekst = ingelogde_client.get("/opslag").data.decode()
+    assert 'data-lazy-bron="/opslag/meting"' in tekst and "wordt gemeten" in tekst
+
+
+def test_de_meting_wordt_niet_als_paginabezoek_geteld(ingelogde_client, db):
+    ingelogde_client.get("/opslag")
+    ingelogde_client.get("/opslag/meting")
+    eindpunten = {r[0] for r in db.execute("SELECT endpoint FROM paginabezoeken")}
+    assert "opslag_pagina" in eindpunten and "opslag_meting" not in eindpunten
+
+
 def test_een_video_van_een_dia_toont_de_naam_van_de_dia(ingelogde_client, app, db, videomap):
     naam = "a" * 32 + ".mp4"
     _bestand(app.config["OPSLAG_MAP"], f"static/kiosk_videos/{naam}", 3 * MB)
     _dia_met_video(db, naam, titel="Sponsorfilm", actief=0)
-    tekst = ingelogde_client.get("/opslag").data.decode()
+    tekst = ingelogde_client.get("/opslag/meting").data.decode()
     assert 'Video van dia "Sponsorfilm"' in tekst.replace("&#34;", '"') and "dia staat uit" in tekst
 
 
@@ -210,7 +226,7 @@ def test_de_hoeveelheid_instellen_via_de_pagina(ingelogde_client, db):
 
 def test_opruimen_via_de_pagina(ingelogde_client, db, videomap):
     wees, _, _ = sla_video_op(_bestandsopslag(_mp4(4)))
-    assert wees in ingelogde_client.get("/opslag").data.decode()  # staat in de lijst met ongebruikte video's
+    assert wees in ingelogde_client.get("/opslag/meting").data.decode()  # staat in de lijst met ongebruikte video's
 
     resp = ingelogde_client.post("/opslag/video-opruimen", data={"csrf_token": _csrf(ingelogde_client)}, follow_redirects=True)
 
@@ -224,6 +240,7 @@ def test_alleen_beheerders_komen_bij_opslag(client, db):
     _maak_vrijwilliger(db, "vrijwilliger", "voorraad")
     _login(client, "vrijwilliger")
     assert "alleen voor beheerders" in client.get("/opslag", follow_redirects=True).data.decode()
+    assert "alleen voor beheerders" in client.get("/opslag/meting", follow_redirects=True).data.decode()
     resp = client.post("/opslag/video-opruimen", data={"csrf_token": _csrf(client)}, follow_redirects=True)
     assert "alleen voor beheerders" in resp.data.decode()
 
@@ -292,7 +309,7 @@ def test_de_opslagpagina_meet_en_bewaart_voor_het_dashboard(ingelogde_client, ap
     quota = lees_quota_mb(db)
     _bestand(app.config["OPSLAG_MAP"], "static/kiosk_videos/groot.mp4", int(quota * MB * 0.9))
     assert "Opslag voor" not in ingelogde_client.get("/").data.decode()
-    ingelogde_client.get("/opslag")
+    ingelogde_client.get("/opslag/meting")
     assert "Opslag voor 90% vol" in ingelogde_client.get("/").data.decode()
 
 

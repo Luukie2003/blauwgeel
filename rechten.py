@@ -96,6 +96,7 @@ GEBRUIK_NIET_LOGGEN = {
     "bestellijst_voorspeld",
     "prognose_resultaat",
     "voorspelling_opwarmen",
+    "opslag_meting",
     # Typen in de zoekbalk haalt bij elke toetsslag resultaten op.
     "zoeken_live",
     "favicon_ico",
@@ -104,6 +105,9 @@ GEBRUIK_NIET_LOGGEN = {
     "kiosk_prijzen_versie",
     "kiosk_scherm_versie",
     "kiosk_tv_versie",
+    # De schermen vragen dit elke 5 seconden: geen bezoek, en zonder deze regel stond er per scherm elke 5 seconden
+    # een nieuwe regel in de database.
+    "kiosk_welkom",
 }
 
 # Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers
@@ -127,6 +131,7 @@ BEHEERDER_ENDPOINTS = {
     "subcategorie_verwijderen",
     "backups_lijst",
     "opslag_pagina",
+    "opslag_meting",
     "opslag_video_opruimen",
     # Eigen taken toevoegen en beheren; zelf afronden (eigen_taak_afronden/-openen) mag iedereen die is ingelogd.
     "eigen_taken_pagina",

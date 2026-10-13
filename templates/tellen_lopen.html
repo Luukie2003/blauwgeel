@@ -15,7 +15,7 @@
         {{ 'Bar tellen' if fase == 'bar' else 'Voorraadhok tellen' }}
     </span>
     {% if product.afbeelding %}
-    <img src="{{ url_for('static', filename='product_afbeeldingen/' + product.afbeelding) }}" alt="" class="product-thumb-groot">
+    <img src="{{ url_for('static', filename='product_afbeeldingen/' + (product.afbeelding|foto_middel)) }}" alt="" class="product-thumb-groot">
     {% endif %}
     <div class="loop-categorie">{{ product.categorie }}</div>
     <h1 class="loop-product">{{ product.naam }}</h1>

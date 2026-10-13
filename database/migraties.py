@@ -578,6 +578,13 @@ def _migreer_club_van_20_administratie(db):
     db.execute("UPDATE club_van_20_leden SET status = 'actief' WHERE status = 'niet_betaald'")
 
 
+def _migreer_welkom_polls_uit_statistiek(db):
+    """De kiosk-schermen vragen elke 5 seconden of er een nieuw lid is te verwelkomen (/kiosk/welkom). Tot versie 1.44.2
+    telde dat als paginabezoek: 9.000 regels op 1 wedstrijddag, en de gebruiksstatistiek bestond voor 64% uit dit verkeer.
+    Die regels zijn geen bezoek en gaan weg (zie GEBRUIK_NIET_LOGGEN in rechten.py)."""
+    db.execute("DELETE FROM paginabezoeken WHERE endpoint = 'kiosk_welkom'")
+
+
 def migreer_alles(db):
     """Past alle migraties toe, in de volgorde waarin ze zijn ontstaan (alle zijn
     zelfhelend: ze doen niets als het al gebeurd is)."""
@@ -593,3 +600,4 @@ def migreer_alles(db):
     _migreer_club_van_20_administratie(db)
     _migreer_stand_club_backfill(db)
     _migreer_stand_poules_backfill(db)
+    _migreer_welkom_polls_uit_statistiek(db)

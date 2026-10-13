@@ -20,6 +20,19 @@ from app import create_app  # noqa: E402
 from database import WACHTWOORD_HASH_METHODE, get_db  # noqa: E402
 
 
+@pytest.fixture(scope="session", autouse=True)
+def ruim_verkleinde_productfotos_op():
+    """Een paar tests uploaden een foto naar de echte map met productfoto's; de verkleinde kopieën die daarbij worden
+    gemaakt (klein/, middel/) horen daar na afloop niet te blijven staan."""
+    from helpers.afbeeldingen import KLEINE_FORMATEN, PRODUCT_AFBEELDINGEN_MAP
+
+    mappen = [(PRODUCT_AFBEELDINGEN_MAP / naam, (PRODUCT_AFBEELDINGEN_MAP / naam).exists()) for naam in KLEINE_FORMATEN]
+    yield
+    for map_, bestond in mappen:
+        if not bestond:
+            shutil.rmtree(map_, ignore_errors=True)
+
+
 def _maak_sjabloon_db(pad):
     """Bouwt de schone testdatabase: schema + seed-producten + seed-account."""
     # Vast wachtwoord i.p.v. het willekeurig gegenereerde standaardwachtwoord

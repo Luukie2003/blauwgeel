@@ -20,19 +20,10 @@ from routes.kiosk.dia_gegevens import (
     _stand_poule_sleutels,
     _unieke_poule_sleutel,
 )
-from routes.kiosk.gedeeld import _prijzen_instellingen, _scherm_instellingen, _versie
+from routes.kiosk.gedeeld import _scherm_instellingen, _versie, bewaarde_uitkomst
 from routes.kiosk.prijzen_gegevens import (
-    _acties_actief,
-    _bardiensten_vandaag,
-    _categorie_kolommen_indeling,
-    _eerstvolgende_bekende_tegenstander,
-    _prijzen_categorieen,
+    _prijzen_poll,
     _prijzen_render_kwargs,
-    _prijzen_sponsoren,
-    _prijzen_versie,
-    _uitgelicht_product,
-    _uitverkocht_namen,
-    _wedstrijddag_welkom_wedstrijden,
 )
 
 
@@ -400,7 +391,7 @@ def register_routes(app):
             "kiosk_scherm.html",
             slides=slides,
             sponsors_elke=_scherm_instellingen(db)["sponsors_elke_dias"],
-            versie=_versie(slides),
+            versie=bewaarde_uitkomst("scherm", lambda: _versie(slides)),
             versie_url=url_for("kiosk_scherm_versie"),
         )
 
@@ -416,7 +407,7 @@ def register_routes(app):
     @app.route("/kiosk/scherm/versie")
     def kiosk_scherm_versie():
         db = get_db()
-        return jsonify({"versie": _versie(_bouw_slides(db))})
+        return jsonify({"versie": bewaarde_uitkomst("scherm", lambda: _versie(_bouw_slides(db)))})
 
     # ---------- Gedeeld scherm: 1 fysiek scherm wisselen tussen prijzen/dia's ----------
     # Losstaand van de 2 vaste schermen hierboven (die blijven ongewijzigd
@@ -434,7 +425,7 @@ def register_routes(app):
                 "kiosk_scherm.html",
                 slides=slides,
                 sponsors_elke=instellingen["sponsors_elke_dias"],
-                versie=_versie("tv", slides),
+                versie=bewaarde_uitkomst("tv-dias", lambda: _versie("tv", slides)),
                 versie_url=url_for("kiosk_tv_versie"),
             )
         return render_template(
@@ -447,31 +438,8 @@ def register_routes(app):
         db = get_db()
         instellingen = _scherm_instellingen(db)
         if instellingen["actief_tv_scherm"] == "dias":
-            return jsonify({"versie": _versie("tv", _bouw_slides(db))})
-        prijzen_instellingen = _prijzen_instellingen(db)
-        uitgelicht = _uitgelicht_product(db, prijzen_instellingen)
-        categorieen = _prijzen_categorieen(
-            db, uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None
-        )
-        acties = _acties_actief(db)
-        bardiensten = _bardiensten_vandaag(db)
-        return jsonify(
-            {
-                "versie": _prijzen_versie(
-                    categorieen,
-                    acties,
-                    bardiensten,
-                    _wedstrijddag_welkom_wedstrijden(db, prijzen_instellingen),
-                    _categorie_kolommen_indeling(db, prijzen_instellingen),
-                    uitgelicht,
-                    "tv",
-                    sponsoren=_prijzen_sponsoren(db),
-                ),
-                "uitverkocht": _uitverkocht_namen(categorieen),
-                "wedstrijddag_test": prijzen_instellingen["wedstrijddag_test_teller"],
-                "wedstrijddag_test_tegenstander": _eerstvolgende_bekende_tegenstander(db),
-            }
-        )
+            return jsonify({"versie": bewaarde_uitkomst("tv-dias", lambda: _versie("tv", _bouw_slides(db)))})
+        return jsonify(_prijzen_poll(db, ("tv",)))
 
     @app.route("/kiosk/tv/wisselen", methods=["POST"])
     def kiosk_tv_wisselen():

@@ -30,7 +30,7 @@
             <div class="pda-kaartje pda-regel-kaartje{{ '' if start_binnen else ' pda-kaartje--manco' }}">
                 <div class="pda-kaartje-vink" style="cursor:default">
                     {% if r.afbeelding %}
-                    <img src="{{ url_for('static', filename='product_afbeeldingen/' + r.afbeelding) }}" alt="" class="product-thumb">
+                    <img src="{{ url_for('static', filename='product_afbeeldingen/' + (r.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
                     {% endif %}
                     <span class="pda-kaartje-naam">{{ r.product_naam }}</span>
                     <span class="badge badge-laag manco-badge" {{ 'hidden' if start_binnen else '' }}>Manco</span>
@@ -59,7 +59,7 @@
                     <option value="">Kies een product...</option>
                     {% for p in beschikbare_producten %}
                     <option value="{{ p.id }}" data-naam="{{ p.naam }}" data-eenheid="{{ p|besteleenheid_naam }}"
-                            data-afbeelding="{{ p.afbeelding or '' }}">{{ p.naam }}</option>
+                            data-afbeelding="{{ p.afbeelding|foto_klein }}">{{ p.naam }}</option>
                     {% endfor %}
                 </select>
                 <button type="button" id="product-toevoegen-knop" class="btn btn-rand btn-klein btn-icoon">
@@ -83,7 +83,7 @@
                     <tr>
                         <td>
                             {% if r.afbeelding %}
-                            <img src="{{ url_for('static', filename='product_afbeeldingen/' + r.afbeelding) }}" alt="" class="product-thumb">
+                            <img src="{{ url_for('static', filename='product_afbeeldingen/' + (r.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
                             {% endif %}
                         </td>
                         <td>{{ r.product_naam }}</td>
@@ -116,7 +116,7 @@
                 <option value="">+ Product toevoegen dat meekwam...</option>
                 {% for p in beschikbare_producten %}
                 <option value="{{ p.id }}" data-naam="{{ p.naam }}" data-eenheid="{{ p|besteleenheid_naam }}"
-                        data-afbeelding="{{ p.afbeelding or '' }}">{{ p.naam }}</option>
+                        data-afbeelding="{{ p.afbeelding|foto_klein }}">{{ p.naam }}</option>
                 {% endfor %}
             </select>
             <button type="button" id="product-toevoegen-knop" class="btn btn-rand btn-klein">Toevoegen</button>

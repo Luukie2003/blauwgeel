@@ -6,8 +6,18 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.44.2"
+HUIDIGE_VERSIE = "1.44.3"
 WIJZIGINGEN = [
+    {
+        "versie": "1.44.3",
+        "datum": "13 oktober 2026",
+        "punten": [
+            "Snellere pagina's met productfoto's: in lijsten (Producten, Bestellijst, Inboeken, Tellen, zoeken op de handterminal) worden de foto's nu als klein plaatje opgehaald. De pagina Producten haalde voorheen ruim 11 MB aan foto's op voor plaatjes van 32 pixels; alle foto's samen zijn nu 148 kB (13 MB eerst). De kleine versie wordt vanzelf gemaakt.",
+            "Beheer → Opslag staat meteen klaar en laat daarna de meting zien (alle bestanden langslopen duurt op de server een paar seconden).",
+            "De Kantine-tv-schermen vragen minder van de server: de controle of er iets veranderd is wordt bewaard zolang er niets verandert.",
+            "Gebruiksstatistieken: de melding-controle van de Kantine-tv (elke 5 seconden per scherm) telde als paginabezoek en was 64% van alle 'bezoeken'. Dat telt niet meer mee en de oude regels zijn opgeruimd.",
+        ],
+    },
     {
         "versie": "1.44.2",
         "datum": "13 oktober 2026",
@@ -864,17 +874,17 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.10.8", "sinds": "0.1.0", "laatst": "1.44.2",
+    {"naam": "Voorraad & tellen", "versie": "1.10.9", "sinds": "0.1.0", "laatst": "1.44.3",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.6.4", "sinds": "0.4.0", "laatst": "1.44.0",
+    {"naam": "Bestellen & prognose", "versie": "1.6.5", "sinds": "0.4.0", "laatst": "1.44.3",
      "inhoud": "Bestellijst, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop, boodschappenlijst"},
-    {"naam": "Producten & prijzen", "versie": "1.9.1", "sinds": "0.1.0", "laatst": "1.44.0",
+    {"naam": "Producten & prijzen", "versie": "1.9.2", "sinds": "0.1.0", "laatst": "1.44.3",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen en alle verkoopprijzen in één keer aanpassen"},
     {"naam": "Geld (kassa & kluis)", "versie": "1.3.1", "sinds": "1.0.0", "laatst": "1.33.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.2.0", "sinds": "1.6.0", "laatst": "1.7.0",
      "inhoud": "Keukenvoorraad en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.18.23", "sinds": "1.10.1", "laatst": "1.44.0",
+    {"naam": "Kantine-tv", "versie": "1.18.24", "sinds": "1.10.1", "laatst": "1.44.3",
      "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
@@ -882,16 +892,16 @@ MODULES = [
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
     {"naam": "Rapporten", "versie": "1.11.2", "sinds": "0.1.0", "laatst": "1.44.1",
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
-    {"naam": "Handterminal", "versie": "1.4.0", "sinds": "1.5.0", "laatst": "1.44.0",
+    {"naam": "Handterminal", "versie": "1.4.1", "sinds": "1.5.0", "laatst": "1.44.3",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
     {"naam": "Accounts & rechten", "versie": "1.9.2", "sinds": "0.1.0", "laatst": "1.34.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
-    {"naam": "Back-ups & beheer", "versie": "1.9.2", "sinds": "0.2.0", "laatst": "1.42.2",
+    {"naam": "Back-ups & beheer", "versie": "1.9.3", "sinds": "0.2.0", "laatst": "1.44.3",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
     {"naam": "Overzicht & prikbord", "versie": "1.9.2", "sinds": "0.2.0", "laatst": "1.44.0",
      "inhoud": "Dashboard, 'Wat moet er nu?', prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
-    {"naam": "Techniek & beveiliging", "versie": "1.5.0", "sinds": "1.1.0", "laatst": "1.44.0",
+    {"naam": "Techniek & beveiliging", "versie": "1.5.1", "sinds": "1.1.0", "laatst": "1.44.3",
      "inhoud": "Geautomatiseerde tests, beveiligingsheaders, bereikbaarheidscontrole, snelheid"},
 ]

@@ -1,0 +1,94 @@
+{# Het gemeten deel van Beheer > Opslag (zie routes/opslag.py): alle bestanden langslopen duurt op de server enkele seconden, dus de pagina haalt dit na het laden apart op. #}
+<div class="kaart">
+    <h2 style="margin-top:0">
+        {{ totaal_tekst }} van {{ quota_mb }} MB in gebruik
+        <span class="tekst-zacht">({{ '%.0f'|format(status.percentage) }}%)</span>
+        {% if status.niveau == 'kritiek' %}<span class="badge badge-laag">bijna vol</span>
+        {% elif status.niveau == 'let_op' %}<span class="badge badge-laag">let op</span>
+        {% else %}<span class="badge badge-ok">ruim voldoende</span>{% endif %}
+    </h2>
+    <div class="opslag-balk {{ status.niveau }}"><div style="width: {{ [status.percentage, 100]|min }}%"></div></div>
+    <form method="post" action="{{ url_for('opslag_pagina') }}" style="display:flex; gap:0.6rem; align-items:end; flex-wrap:wrap; margin-top:0.8rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld" style="margin:0">
+            <label for="quota_mb">Beschikbaar volgens je hosting (MB)</label>
+            <input type="number" id="quota_mb" name="quota_mb" min="50" value="{{ quota_mb }}" style="max-width:10rem">
+        </div>
+        <button type="submit" class="btn btn-rand">Opslaan</button>
+    </form>
+    <p class="tekst-zacht" style="margin-bottom:0">
+        Gemeten wordt de map van deze site. De hosting telt soms meer mee (bijvoorbeeld geïnstalleerde pakketten),
+        dus kies voor "beschikbaar" liever iets minder dan het abonnement toestaat. Vanaf 80% staat er een melding op
+        het dashboard.
+    </p>
+</div>
+
+<div class="kaart">
+    <h2 style="margin-top:0">Waar zit het?</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Onderdeel</th><th>Grootte</th><th>Bestanden</th><th></th></tr></thead>
+            <tbody>
+                {% for o in onderdelen %}
+                <tr>
+                    <td>{{ o.naam }}</td>
+                    <td>{{ o.tekst }}</td>
+                    <td>{{ o.aantal }}</td>
+                    <td><div class="opslag-mini"><div style="width: {{ o.aandeel }}%"></div></div></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="kaart">
+    <h2 style="margin-top:0">De grootste bestanden</h2>
+    {% if grootste %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Bestand</th><th>Grootte</th><th>Waar hoort het bij?</th></tr></thead>
+            <tbody>
+                {% for f in grootste %}
+                <tr>
+                    <td style="word-break:break-all">{{ f.pad }}</td>
+                    <td>{{ f.tekst }}</td>
+                    <td>
+                        {% if f.video %}
+                        Video van dia "{{ f.video.titel }}"
+                        {% if not f.video.actief %}<span class="badge badge-neutraal">dia staat uit</span>{% endif %}
+                        {% elif f.pad.startswith('static/kiosk_videos/') %}
+                        <span class="badge badge-laag">hoort bij geen dia</span>
+                        {% elif f.pad.startswith('backups/') %}Back-up
+                        {% elif f.pad.startswith('voorraad.db') %}Database
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="tekst-zacht" style="margin-bottom:0">
+        Een video die je niet meer gebruikt, haal je weg door de dia te verwijderen (Kantine-tv &rarr; Dia's) of er een
+        andere video voor in de plaats te zetten: het oude bestand verdwijnt dan vanzelf.
+        {% if ffmpeg_beschikbaar %}Zware video's worden bij het uploaden automatisch verkleind.
+        {% else %}Automatisch verkleinen van video's is op deze server niet beschikbaar (ffmpeg ontbreekt): maak een zware video zelf kleiner voor je 'm uploadt.{% endif %}
+    </p>
+    {% else %}
+    <p class="leeg">Nog geen bestanden.</p>
+    {% endif %}
+</div>
+
+{% if ongebruikte_videos %}
+<div class="kaart" style="border-left:4px solid var(--oranje, #e8890c)">
+    <h2 style="margin-top:0">Ongebruikte video's ({{ ongebruikt_tekst }})</h2>
+    <p>Deze video's horen bij geen enkele dia meer, bijvoorbeeld door een onderbroken upload. Ze nemen alleen ruimte in.</p>
+    <ul>
+        {% for naam, tekst in ongebruikte_videos %}<li>{{ naam }} <span class="tekst-zacht">({{ tekst }})</span></li>{% endfor %}
+    </ul>
+    <form method="post" action="{{ url_for('opslag_video_opruimen') }}" onsubmit="return bevestigEnVerstuur(this, 'Alle ongebruikte video\'s verwijderen?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-gevaar">Ongebruikte video's verwijderen</button>
+    </form>
+</div>
+{% endif %}

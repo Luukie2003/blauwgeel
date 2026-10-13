@@ -32,7 +32,7 @@
                         <tr>
                             <td>
                                 {% if p.afbeelding %}
-                                <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
+                                <img src="{{ url_for('static', filename='product_afbeeldingen/' + (p.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
                                 {% endif %}
                             </td>
                             <td>{{ p.naam }}</td>

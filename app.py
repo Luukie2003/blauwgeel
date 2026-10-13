@@ -39,6 +39,7 @@ from helpers import (
     SECTIES,
     heeft_sectie_toegang,
     is_ajax_verzoek,
+    kleine_afbeelding,
     met_tags_filter,
     naar_besteleenheden,
     naar_voorraadeenheden,
@@ -106,6 +107,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     app.jinja_env.filters["datum_nl"] = format_datum
     app.jinja_env.filters["reden_naam"] = lambda reden: DERVING_REDENEN.get(reden, "")
     app.jinja_env.filters["datum_kort"] = format_datum_kort
+    app.jinja_env.filters["foto_klein"] = lambda naam: kleine_afbeelding(naam, "klein")
+    app.jinja_env.filters["foto_middel"] = lambda naam: kleine_afbeelding(naam, "middel")
     app.jinja_env.filters["besteleenheid_naam"] = besteleenheid_naam
     app.jinja_env.filters["naar_besteleenheden"] = naar_besteleenheden
     app.jinja_env.filters["met_tags"] = met_tags_filter

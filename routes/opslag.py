@@ -26,6 +26,13 @@ def register_routes(app):
             except ValueError:
                 flash("Vul het aantal MB als getal in.", "error")
             return redirect(url_for("opslag_pagina"))
+        return render_template("opslag.html")
+
+    @app.route("/opslag/meting")
+    def opslag_meting():
+        """Het gemeten deel van de opslagpagina: alle bestanden langslopen duurt op de server enkele seconden, dus
+        de pagina zelf haalt dit na het laden apart op (zie data-lazy-bron in gedeeld.js)."""
+        db = get_db()
         status = opslag_status(db)
         gebruik = video_gebruik(db)
         grootste = []
@@ -34,7 +41,7 @@ def register_routes(app):
             grootste.append(dict(f, tekst=groottetekst(f["bytes"]), video=video))
         onbruikbaar = ongebruikte_videos(db)
         return render_template(
-            "opslag.html",
+            "_opslag_meting.html",
             status=status,
             totaal_tekst=groottetekst(status["totaal"]),
             quota_mb=lees_quota_mb(db),

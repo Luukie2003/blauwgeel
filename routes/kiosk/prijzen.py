@@ -10,19 +10,12 @@ from helpers import is_ajax_verzoek
 from routes.kiosk.acties import _actie_producten
 from routes.kiosk.gedeeld import _prijzen_instellingen, _scherm_instellingen
 from routes.kiosk.prijzen_gegevens import (
-    _acties_actief,
     _alle_kiosk_categorie_namen,
-    _bardiensten_vandaag,
     _categorie_kolommen_indeling,
-    _eerstvolgende_bekende_tegenstander,
-    _prijzen_categorieen,
+    _prijzen_poll,
     _prijzen_render_kwargs,
-    _prijzen_sponsoren,
-    _prijzen_versie,
     _uitgelicht_product,
-    _uitverkocht_namen,
     _verdeel_namen_over_kolommen,
-    _wedstrijddag_welkom_wedstrijden,
 )
 from routes.kiosk.sponsoren_sjablonen import _sjabloon_producten
 
@@ -264,27 +257,4 @@ def register_routes(app):
 
     @app.route("/kiosk/prijzen/versie")
     def kiosk_prijzen_versie():
-        db = get_db()
-        instellingen = _prijzen_instellingen(db)
-        uitgelicht = _uitgelicht_product(db, instellingen)
-        categorieen = _prijzen_categorieen(
-            db, uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None
-        )
-        acties = _acties_actief(db)
-        bardiensten = _bardiensten_vandaag(db)
-        return jsonify(
-            {
-                "versie": _prijzen_versie(
-                    categorieen,
-                    acties,
-                    bardiensten,
-                    _wedstrijddag_welkom_wedstrijden(db, instellingen),
-                    _categorie_kolommen_indeling(db, instellingen),
-                    uitgelicht,
-                    sponsoren=_prijzen_sponsoren(db),
-                ),
-                "uitverkocht": _uitverkocht_namen(categorieen),
-                "wedstrijddag_test": instellingen["wedstrijddag_test_teller"],
-                "wedstrijddag_test_tegenstander": _eerstvolgende_bekende_tegenstander(db),
-            }
-        )
+        return jsonify(_prijzen_poll(get_db()))

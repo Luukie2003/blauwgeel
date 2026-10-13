@@ -5,7 +5,7 @@
 
 <div class="kaart product-detail-kop">
     {% if product.afbeelding %}
-    <img src="{{ url_for('static', filename='product_afbeeldingen/' + product.afbeelding) }}" alt="" class="product-thumb-groot">
+    <img src="{{ url_for('static', filename='product_afbeeldingen/' + (product.afbeelding|foto_middel)) }}" alt="" class="product-thumb-groot">
     {% endif %}
     <h1>{{ product.naam }}</h1>
     <p class="tekst-zacht" style="margin:0.1rem 0 0.7rem">

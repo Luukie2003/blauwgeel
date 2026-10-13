@@ -14,7 +14,7 @@
                     <label for="afbeelding">Afbeelding</label>
                     {% if product and product.afbeelding %}
                     <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.4rem">
-                        <img src="{{ url_for('static', filename='product_afbeeldingen/' + product.afbeelding) }}"
+                        <img src="{{ url_for('static', filename='product_afbeeldingen/' + (product.afbeelding|foto_klein)) }}"
                              alt="" class="product-thumb-preview">
                         <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400; cursor:pointer">
                             <input type="checkbox" name="afbeelding_verwijderen" style="width:auto">

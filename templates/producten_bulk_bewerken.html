@@ -34,7 +34,7 @@
                     <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie)|lower }}">
                         <td>
                             {% if p.afbeelding %}
-                            <img src="{{ url_for('static', filename='product_afbeeldingen/' + p.afbeelding) }}" alt="" class="product-thumb">
+                            <img src="{{ url_for('static', filename='product_afbeeldingen/' + (p.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
                             {% endif %}
                         </td>
                         <td>{{ p.naam }}{% if not p.actief %} <span class="badge badge-neutraal">Inactief</span>{% endif %}</td>

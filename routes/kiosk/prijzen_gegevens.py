@@ -5,7 +5,7 @@ from datetime import date, timedelta
 
 from helpers import bepaal_tegenstander, vandaag_amsterdam
 from sponsoren import bouw_sponsor_dias
-from routes.kiosk.gedeeld import _prijzen_instellingen, _scherm_instellingen, _versie
+from routes.kiosk.gedeeld import _prijzen_instellingen, _scherm_instellingen, _versie, bewaarde_uitkomst
 
 
 def _prijzen_categorieen(db, uitgelicht_product_id=None):
@@ -320,6 +320,47 @@ def _prijzen_versie(
     )
 
 
+def _prijzen_poll_van(
+    db, instellingen, categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, uitgelicht, sponsoren, extra=()
+):
+    """Wat de versie-poll van een prijzenscherm teruggeeft, uit de gegevens die het scherm zelf ook gebruikt."""
+    return {
+        "versie": _prijzen_versie(
+            categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, uitgelicht, *extra, sponsoren=sponsoren
+        ),
+        "uitverkocht": _uitverkocht_namen(categorieen),
+        "wedstrijddag_test": instellingen["wedstrijddag_test_teller"],
+        "wedstrijddag_test_tegenstander": _eerstvolgende_bekende_tegenstander(db),
+    }
+
+
+def _prijzen_poll(db, extra=()):
+    """De versie-poll van /kiosk/prijzen (extra=()) of van de prijzen-stand van /kiosk/tv (extra=("tv",)). Wordt
+    bewaard zolang de database dezelfde is (zie bewaarde_uitkomst) en is dezelfde uitkomst als bij het laden van het
+    scherm zelf, zodat het scherm niet voor niets herlaadt."""
+
+    def bereken():
+        instellingen = _prijzen_instellingen(db)
+        uitgelicht = _uitgelicht_product(db, instellingen)
+        categorieen = _prijzen_categorieen(
+            db, uitgelicht_product_id=uitgelicht["product_id"] if uitgelicht else None
+        )
+        return _prijzen_poll_van(
+            db,
+            instellingen,
+            categorieen,
+            _acties_actief(db),
+            _bardiensten_vandaag(db),
+            _wedstrijddag_welkom_wedstrijden(db, instellingen),
+            _categorie_kolommen_indeling(db, instellingen),
+            uitgelicht,
+            _prijzen_sponsoren(db),
+            extra,
+        )
+
+    return bewaarde_uitkomst("prijzen" + "".join(extra), bereken)
+
+
 def _prijzen_render_kwargs(db, versie_url, extra_versie=None):
     """Gedeelde render-context voor zowel /kiosk/prijzen als de
     prijzen-stand van /kiosk/tv (zie kiosk_tv) -- 1 plek voor de opbouw
@@ -349,10 +390,13 @@ def _prijzen_render_kwargs(db, versie_url, extra_versie=None):
         "categorieen_kolommen": _verdeel_over_kolommen(categorieen, indeling),
         "acties": acties_voor_scherm,
         "uitgelicht": uitgelicht,
-        "versie": _prijzen_versie(
-            categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, uitgelicht, *extra,
-            sponsoren=sponsoren,
-        ),
+        "versie": bewaarde_uitkomst(
+            "prijzen" + "".join(extra),
+            lambda: _prijzen_poll_van(
+                db, instellingen, categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, uitgelicht,
+                sponsoren, extra,
+            ),
+        )["versie"],
         "versie_url": versie_url,
         "uitverkocht_namen": _uitverkocht_namen(categorieen),
         "bardiensten_vandaag": _bardiensten_voor_scherm(bardiensten),

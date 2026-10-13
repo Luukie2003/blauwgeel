@@ -26,7 +26,7 @@
                 <tr>
                     <td>
                         {% if a.product_afbeelding %}
-                        <img src="{{ url_for('static', filename='product_afbeeldingen/' + a.product_afbeelding) }}" alt="" class="product-thumb">
+                        <img src="{{ url_for('static', filename='product_afbeeldingen/' + (a.product_afbeelding|foto_klein)) }}" alt="" class="product-thumb">
                         {% endif %}
                     </td>
                     <td>{{ a.product_naam }} <span class="tekst-zacht">&euro; {{ '%.2f'|format(a.product_verkoopprijs) }}</span></td>

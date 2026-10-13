@@ -40,7 +40,7 @@
         {% if product %}
         <div class="kaart" style="text-align:center">
             {% if product.afbeelding %}
-            <img src="{{ url_for('static', filename='product_afbeeldingen/' + product.afbeelding) }}" alt=""
+            <img src="{{ url_for('static', filename='product_afbeeldingen/' + (product.afbeelding|foto_middel)) }}" alt=""
                  style="max-width:140px; max-height:140px; margin-bottom:0.8rem">
             {% endif %}
             <h1 style="margin:0 0 0.2rem">{{ product.naam }}</h1>

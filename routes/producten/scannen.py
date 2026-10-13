@@ -5,7 +5,7 @@ from flask import Response, flash, jsonify, redirect, render_template, request, 
 import qr
 from database import get_db
 from derving import DERVING_REDENEN
-from helpers import PRODUCT_AFBEELDINGEN_MAP, now_str
+from helpers import PRODUCT_AFBEELDINGEN_MAP, kleine_afbeelding, now_str
 from pdf import schaplabels_pdf
 
 
@@ -84,7 +84,9 @@ def register_routes(app):
                LIMIT 15""",
             (patroon, patroon, f"{term}%"),
         ).fetchall()
-        return jsonify({"resultaten": [dict(p) for p in rijen]})
+        # De foto staat in een zoeklijstje op 40 px: de verkleinde versie volstaat.
+        resultaten = [dict(p, afbeelding=kleine_afbeelding(p["afbeelding"])) for p in rijen]
+        return jsonify({"resultaten": resultaten})
 
     @app.route("/producten/<int:product_id>")
     def product_detail(product_id):

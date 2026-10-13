@@ -81,6 +81,45 @@ def sla_afbeelding_op(bestand, doelmap):
     return bestandsnaam
 
 
+# Een productfoto is tot 1600 px groot, maar staat in lijsten op 32 tot 112 px. Voor al die kleine plekken is er een
+# verkleinde kopie (WebP) in static/product_afbeeldingen/<formaat>/: dat scheelt op de productpagina ruim 11 MB.
+KLEINE_FORMATEN = {"klein": 128, "middel": 256}  # langste zijde in px
+
+
+def kleine_afbeelding(naam, formaat="klein"):
+    """Het pad van de verkleinde kopie van een productfoto, relatief aan de map met productfoto's
+    (bijv. 'klein/abc123.webp'), of "" als er geen foto is. De kopie wordt de eerste keer dat hij nodig is
+    gemaakt; lukt dat niet (of is het een gif), dan krijg je gewoon de originele bestandsnaam terug."""
+    if not naam:
+        return ""
+    if Path(naam).suffix.lower() == ".gif":
+        return naam
+    pad = f"{formaat}/{Path(naam).stem}.webp"
+    doel = PRODUCT_AFBEELDINGEN_MAP / pad
+    if doel.exists():
+        return pad
+    bron = PRODUCT_AFBEELDINGEN_MAP / naam
+    if not bron.is_file():
+        return naam
+    tijdelijk = doel.with_name(f".{doel.stem}.{secrets.token_hex(4)}.tmp")
+    try:
+        from PIL import Image, ImageOps
+
+        grens = KLEINE_FORMATEN[formaat]
+        with Image.open(bron) as origineel:
+            plaatje = ImageOps.exif_transpose(origineel)
+            plaatje.thumbnail((grens, grens), Image.LANCZOS)
+            heeft_alpha = plaatje.mode in ("RGBA", "LA") or (plaatje.mode == "P" and "transparency" in plaatje.info)
+            plaatje = plaatje.convert("RGBA" if heeft_alpha else "RGB")
+            doel.parent.mkdir(parents=True, exist_ok=True)
+            plaatje.save(tijdelijk, format="WEBP", quality=80)
+        tijdelijk.replace(doel)  # in 1 keer op zijn plek: twee serverprocessen kunnen tegelijk bezig zijn
+    except Exception:
+        tijdelijk.unlink(missing_ok=True)
+        return naam
+    return pad
+
+
 def sla_stemoptie_afbeelding_op(bestand):
     return sla_afbeelding_op(bestand, STEM_AFBEELDINGEN_MAP)
 
