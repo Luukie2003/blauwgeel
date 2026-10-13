@@ -4,6 +4,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 
 from database import get_db
 from helpers import now_str
+from productkaart import TELLEN_VOORWAARDE
 from voorspelling import (
     telling_ver_van_verwachting,
     verwachte_verkoop_sinds_telling,
@@ -34,7 +35,7 @@ def register_routes(app):
     def tellen_lopen():
         db = get_db()
         producten = db.execute(
-            "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
+            f"SELECT * FROM producten WHERE {TELLEN_VOORWAARDE} ORDER BY categorie, naam"
         ).fetchall()
         if not producten:
             flash("Geen actieve producten om te tellen.", "error")

@@ -1,0 +1,34 @@
+{% extends basis_template %}
+{% block titel %}Keuken tellen{% endblock %}
+{% block inhoud %}
+<h1>Keuken tellen</h1>
+{% include '_keuken_subnav.html' %}
+<p class="subtitel">
+    Tel wat er in de keuken ligt. Wat er minder is dan de voorraad hieronder (die al rekening houdt met wat je hebt
+    ingeboekt), telt als verkocht. Laat een veld leeg om dat product over te slaan. Deze telling staat los van de gewone telling.
+</p>
+{% if producten %}
+<form method="post" class="kaart">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th style="text-align:right">Voorraad nu</th><th>Geteld</th></tr></thead>
+            <tbody>
+                {% for p in producten %}
+                <tr>
+                    <td>{{ p.naam }}{% if p.besteleenheid and p.besteleenheid_factor > 1 %}<div class="tekst-zacht" style="font-size:0.75rem">{{ p.besteleenheid }} = {{ p.besteleenheid_factor }} {{ p.eenheid|lower }}</div>{% endif %}</td>
+                    <td style="text-align:right">{{ p.voorraad }} {{ p.eenheid|lower }}</td>
+                    <td><input type="number" inputmode="numeric" min="0" name="geteld_{{ p.id }}" id="geteld_{{ p.id }}" style="width:6rem"
+                               aria-label="Geteld {{ p.naam }}" data-turf="1,5{% if p.besteleenheid_factor > 1 %},{{ p.besteleenheid_factor }}:{{ p.besteleenheid|lower }}{% endif %}"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="veld" style="margin-top:0.8rem"><label for="opmerking">Opmerking (optioneel)</label><input type="text" id="opmerking" name="opmerking"></div>
+    <button type="submit" class="btn btn-geel">Telling opslaan</button>
+</form>
+{% else %}
+<p class="leeg">Nog geen actieve producten in de categorie Keuken.</p>
+{% endif %}
+{% endblock %}

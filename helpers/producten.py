@@ -34,6 +34,33 @@ def besteleenheid_factor(product):
     return factor if factor > 0 else 1
 
 
+def _veld(product, naam, standaard=0):
+    """Een veld van een productrij (sqlite3.Row of dict), of 'standaard' als het er niet in zit of leeg is."""
+    try:
+        waarde = product[naam]
+    except (IndexError, KeyError):
+        return standaard
+    return standaard if waarde is None else waarde
+
+
+def inkoop_per_stuk(product):
+    """De inkoopprijs van één stuk (de eenheid waarin de voorraad wordt geteld). Bij een product staat de inkoopprijs
+    per besteleenheid, bijvoorbeeld een krat van 24: die wordt hier door het aantal stuks erin gedeeld. Dit is de enige
+    plek waar dat gebeurt (marge, derving, prijzen); de fout van 1.44.1 kwam doordat dat op een plek vergeten was."""
+    return _veld(product, "inkoopprijs") / besteleenheid_factor(
+        {"besteleenheid_factor": _veld(product, "besteleenheid_factor", 1)}
+    )
+
+
+def omzet_per_eenheid(product):
+    """Wat één eenheid van dit product oplevert als hij verkocht is. Normaal de verkoopprijs; bij een fust (glazen per
+    fust ingevuld) het aantal glazen maal de prijs per glas, want een fust wordt nooit als geheel verkocht."""
+    glazen = _veld(product, "glazen_per_fust")
+    if glazen > 0:
+        return glazen * _veld(product, "prijs_per_glas")
+    return _veld(product, "verkoopprijs")
+
+
 def naar_besteleenheden(aantal_voorraadeenheden, product):
     """Rondt naar boven af naar hele besteleenheden (je bestelt geen halve krat)."""
     factor = besteleenheid_factor(product)
@@ -125,8 +152,10 @@ def vervang_product_prijsopties(db, product_id):
     db.execute("DELETE FROM product_prijsopties WHERE product_id = ?", (product_id,))
     namen = request.form.getlist("optie_naam")
     prijzen = request.form.getlist("optie_prijs")
+    # Het aantal glazen per optie (bijv. 4,5 in een pitcher) is optioneel; oudere formulieren sturen het niet mee.
+    glazen_lijst = request.form.getlist("optie_glazen") or [""] * len(namen)
     volgorde = 0
-    for naam, prijs in zip(namen, prijzen):
+    for naam, prijs, glazen in zip(namen, prijzen, glazen_lijst + [""] * (len(namen) - len(glazen_lijst))):
         naam = naam.strip()
         if not naam:
             continue
@@ -134,9 +163,13 @@ def vervang_product_prijsopties(db, product_id):
             prijs_waarde = float(prijs or 0)
         except ValueError:
             prijs_waarde = 0.0
+        try:
+            glazen_waarde = max(0.0, float((glazen or "0").replace(",", ".")))
+        except ValueError:
+            glazen_waarde = 0.0
         db.execute(
-            "INSERT INTO product_prijsopties (product_id, naam, prijs, volgorde) VALUES (?, ?, ?, ?)",
-            (product_id, naam, prijs_waarde, volgorde),
+            "INSERT INTO product_prijsopties (product_id, naam, prijs, volgorde, glazen) VALUES (?, ?, ?, ?, ?)",
+            (product_id, naam, prijs_waarde, volgorde, glazen_waarde),
         )
         volgorde += 1
 

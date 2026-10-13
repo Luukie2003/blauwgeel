@@ -58,6 +58,31 @@
     {% endif %}
 </div>
 
+{% if not pda_modus and per_leverancier %}
+<div class="kaart">
+    <h2>Bestellen per leverancier</h2>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Leverancier</th><th>Bestellen</th><th style="text-align:right">Producten</th><th style="text-align:right">Ongeveer</th><th></th></tr></thead>
+            <tbody>
+                {% for g in per_leverancier %}
+                <tr>
+                    <td><strong>{{ g.naam }}</strong>{% if g.vandaag %} <span class="badge badge-laag">vandaag besteldag</span>{% endif %}
+                        {% if g.leverancier and g.leverancier.telefoon %}<br><span class="tekst-zacht">{{ g.leverancier.telefoon }}</span>{% endif %}</td>
+                    <td>{{ g.besteldagen or '—' }}{% if g.leverancier and g.leverancier.levertijd_dagen %}<br><span class="tekst-zacht">levertijd {{ g.leverancier.levertijd_dagen }} {{ 'dag' if g.leverancier.levertijd_dagen == 1 else 'dagen' }}</span>{% endif %}</td>
+                    <td style="text-align:right">{{ g.producten|length }}</td>
+                    <td style="text-align:right">&euro; {{ '%.2f'|format(g.waarde)|replace('.', ',') }}
+                        {% if g.onder_minimum %}<br><span class="badge badge-neutraal" title="Minimum bestelbedrag">onder minimum van &euro; {{ '%.0f'|format(g.leverancier.minimum_bedrag) }}</span>{% endif %}</td>
+                    <td class="tabel-acties"><a href="{{ url_for('bestellijst_pdf_route', leverancier=g.sleutel) }}" class="btn btn-rand btn-klein">PDF</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="tekst-zacht" style="margin-bottom:0">Het bedrag is een schatting: de voorgestelde besteleenheden maal de inkoopprijs.</p>
+</div>
+{% endif %}
+
 {% if not pda_modus %}
 <div class="kaart">
     <h2>Voorgesteld om te bestellen</h2>
@@ -80,7 +105,8 @@
                             <img src="{{ url_for('static', filename='product_afbeeldingen/' + (p.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
                             {% endif %}
                         </td>
-                        <td>{{ p.naam }} <span class="badge badge-neutraal">Voorgesteld</span></td>
+                        <td>{{ p.naam }} <span class="badge badge-neutraal">Voorgesteld</span>
+                            {% if leverancier_namen.get(p.leverancier_id) %}<div class="tekst-zacht" style="font-size:0.72rem">bij {{ leverancier_namen[p.leverancier_id] }}</div>{% endif %}</td>
                         <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
                         <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
                         <td>

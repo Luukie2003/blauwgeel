@@ -1,4 +1,5 @@
 import secrets
+import time
 from datetime import timedelta
 from pathlib import Path
 
@@ -7,9 +8,11 @@ from flask import Flask, flash, g, redirect, render_template, request, send_from
 import mail
 import uitrollen as uitrollen_module
 from aanmeldingen import aantal_openstaand
+from bezoeken import TRAAG_MS, soort_bezoek
 from club_van_20 import bereken_club_van_20_status  # noqa: F401 (tests importeren 'm via app)
 from database import get_db, init_db, register_db
 from derving import DERVING_REDENEN
+from foutenlog import registreer_fout
 from foutmelding import Melder
 from helpers import (
     PRODUCT_AFBEELDINGEN_MAP,
@@ -38,6 +41,7 @@ from helpers import (
     format_datum_kort,
     SECTIES,
     heeft_sectie_toegang,
+    inkoop_per_stuk,
     is_ajax_verzoek,
     kleine_afbeelding,
     met_tags_filter,
@@ -48,6 +52,7 @@ from helpers import (
     stemming_is_open,
 )
 from navigatie import (  # noqa: F401
+    favoriete_items,
     NAV_GROEP_ALLEEN_BEHEERDER,
     NAV_GROEP_ICOON,
     NAV_GROEP_SECTIE,
@@ -107,6 +112,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     app.jinja_env.filters["datum_nl"] = format_datum
     app.jinja_env.filters["reden_naam"] = lambda reden: DERVING_REDENEN.get(reden, "")
     app.jinja_env.filters["datum_kort"] = format_datum_kort
+    app.jinja_env.filters["inkoop_per_stuk"] = inkoop_per_stuk
     app.jinja_env.filters["foto_klein"] = lambda naam: kleine_afbeelding(naam, "klein")
     app.jinja_env.filters["foto_middel"] = lambda naam: kleine_afbeelding(naam, "middel")
     app.jinja_env.filters["besteleenheid_naam"] = besteleenheid_naam
@@ -115,6 +121,11 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     app.jinja_env.filters["css_uitlijning"] = css_uitlijning
     app.jinja_env.globals["stemming_is_open"] = stemming_is_open
     app.jinja_env.globals["secties_lijst"] = secties_lijst
+
+    @app.before_request
+    def start_klok():
+        """Het begin van het verzoek, voor de laadtijd in de gebruiksstatistieken (zie log_paginabezoek)."""
+        g.verzoek_start = time.perf_counter()
 
     @app.before_request
     def zet_weergave_modus():
@@ -246,11 +257,18 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             None,
         )
         banner_tekst = None
+        eenvoudig, favorieten = False, []
         if "gebruiker_id" in session:
             rij = get_db().execute(
                 "SELECT banner_tekst FROM instellingen WHERE id = 1"
             ).fetchone()
             banner_tekst = rij["banner_tekst"] if rij else None
+            gebruiker = get_db().execute(
+                "SELECT eenvoudig, favorieten FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)
+            ).fetchone()
+            if gebruiker:
+                eenvoudig = bool(gebruiker["eenvoudig"])
+                favorieten = favoriete_items(zichtbare_nav_items, gebruiker["favorieten"])
         # Aantal aanmeldingen dat op goedkeuring wacht, als badge in de zijbalk.
         club_aanmeldingen_open = 0
         if "gebruiker_id" in session and heeft_sectie_toegang(
@@ -271,6 +289,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         }
         return {
             "nav_items": zichtbare_nav_items,
+            "eenvoudig": eenvoudig,
+            "favoriete_nav": favorieten,
             "nav_groep_icoon": NAV_GROEP_ICOON,
             "sectie_toegang": sectie_toegang,
             "club_aanmeldingen_open": club_aanmeldingen_open,
@@ -289,6 +309,13 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             "toon_welkom_popup": session.pop("toon_welkom_popup", False),
             "welkom_groet": dagdeel_groet(),
         }
+
+    @app.route("/robots.txt")
+    def robots_txt():
+        """Zoekmachines horen niet in het beheer van de kantine; alleen de openbare pagina van de Club van 20 mag."""
+        return app.response_class(
+            "User-agent: *\nAllow: /club-van-20/doe-mee\nDisallow: /\n", mimetype="text/plain"
+        )
 
     @app.route("/favicon.ico")
     def favicon_ico():
@@ -372,6 +399,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         JSON ophaalt), geen technisch/polling-verkeer (zie
         GEBRUIK_NIET_LOGGEN hierboven) en geen foutpagina's (status >= 400),
         want de view heeft dan mogelijk niet eens gecommit."""
+        start = g.get("verzoek_start")
+        duur_ms = round((time.perf_counter() - start) * 1000) if start is not None else None
         if (
             request.method == "GET"
             and response.status_code < 400
@@ -381,14 +410,24 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         ):
             db = get_db()
             db.execute(
-                """INSERT INTO paginabezoeken (endpoint, gebruiker_id, weergave_modus, datum)
-                   VALUES (?, ?, ?, ?)""",
+                """INSERT INTO paginabezoeken (endpoint, gebruiker_id, weergave_modus, datum, duur_ms, soort)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
                 (
                     request.endpoint,
                     session.get("gebruiker_id"),
                     g.get("weergave_modus", "desktop"),
                     now_str(),
+                    duur_ms,
+                    soort_bezoek(request.endpoint, request.headers.get("User-Agent", ""), request.args.get("next")),
                 ),
+            )
+            db.commit()
+        elif duur_ms is not None and duur_ms >= TRAAG_MS and request.endpoint not in (None, "static"):
+            # Geen paginabezoek (bijv. een deel van een pagina dat apart wordt opgehaald), maar wel traag: bewaren.
+            db = get_db()
+            db.execute(
+                "INSERT INTO trage_verzoeken (endpoint, duur_ms, datum) VALUES (?, ?, ?)",
+                (request.endpoint, duur_ms, now_str()),
             )
             db.commit()
         return response
@@ -417,6 +456,11 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     def interne_fout(fout):
         # Alleen echte (onverwachte) fouten melden, en niet tijdens de tests.
         origineel = getattr(fout, "original_exception", None)
+        if origineel is not None:
+            # Ook in de app zelf bewaren (Beheer > Foutmeldingen), los van de melding hieronder.
+            from wijzigingen import HUIDIGE_VERSIE as versie_nu
+
+            registreer_fout(get_db(), origineel, endpoint=request.endpoint, pad=request.path, versie=versie_nu)
         if origineel is not None and app.config.get("FOUTMELDING_MAIL", not app.testing):
             from wijzigingen import HUIDIGE_VERSIE
 
@@ -444,14 +488,17 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         club_van_20,
         dashboard,
         eigen_taken,
+        fouten,
         fusten,
         gebruik,
+        gegevenscontrole,
         instellingen,
         kaartjes,
         kassa,
         keuken,
         kiosk,
         kluis,
+        leveranciers,
         logboek,
         marge_derving,
         opslag,
@@ -480,14 +527,17 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     club_van_20.register_routes(app)
     dashboard.register_routes(app)
     eigen_taken.register_routes(app)
+    fouten.register_routes(app)
     fusten.register_routes(app)
     gebruik.register_routes(app)
+    gegevenscontrole.register_routes(app)
     instellingen.register_routes(app)
     kaartjes.register_routes(app)
     kassa.register_routes(app)
     keuken.register_routes(app)
     kiosk.register_routes(app)
     kluis.register_routes(app)
+    leveranciers.register_routes(app)
     logboek.register_routes(app)
     marge_derving.register_routes(app)
     opslag.register_routes(app)

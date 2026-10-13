@@ -35,6 +35,10 @@ Alles is gewoon Python (geen numpy), zodat het op de hosting zonder extra
 pakketten draait.
 """
 
+# De code staat in drie delen: voorspelling/basis.py (aannames en kalender), voorspelling/model.py (leren uit de
+# tellingen en kansrekening) en dit bestand (de prognose, de omzet per dag en week en het bewaren van uitkomsten). Alles
+# blijft bereikbaar als voorspelling.<naam>, zoals voorheen.
+
 import functools
 import hashlib
 import math
@@ -49,547 +53,52 @@ from statistics import NormalDist
 
 from helpers import TRAININGSDAG, bestel_suggesties
 
-# ---- Aannames waar het model mee begint en wat het erbij leert ----
-PRIOR = {"wedstrijd": 0.30, "training": 0.20, "weer": 0.12}
-# Hoe zeker we van de aanname zijn (standaardafwijking van het effect). Hoe
-# kleiner, hoe meer data er nodig is om ervan af te wijken.
-ONZEKERHEID = {"wedstrijd": 0.5, "training": 0.35, "weer": 0.15}
-GRENZEN = {"wedstrijd": (0.0, 1.5), "training": (0.0, 1.0), "weer": (-0.25, 0.5)}
-EFFECT_NAMEN = {
-    "wedstrijd": "Thuiswedstrijd",
-    "training": "Trainingsavond",
-    "weer": "Weer (mooi plus, regen min)",
-}
-
-DAG_BEGIN_UUR = 12  # een kantinedag loopt van 12.00 tot 12.00 uur
-HALVERING_WEKEN = 6.0  # recente verkoop telt zwaarder
-MAX_WEKEN_GESCHIEDENIS = 30  # oudere verkoop weegt toch bijna niets meer mee
-MODEL_MAX_PRODUCTEN = 30  # alleen de best verkopende producten leren de effecten
-MIN_RIJEN_PER_PRODUCT = 2
-TERUGTOETS_START = 4  # pas terugtoetsen vanaf de 4e telling
-
-MODEL_ONZEKERHEID_DAG = 0.12  # ruimte voor drukte die we niet kunnen voorspellen
-DEKKING_SERVICENIVEAU = 0.9  # bestelling dekt de vraag in 9 van de 10 gevallen
-
-_WEEKDAG = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
-_WEEKDAG_KORT = ["ma", "di", "wo", "do", "vr", "za", "zo"]
-
-VERKOOPDAGEN_STANDAARD = (2, 5)  # woensdag en zaterdag (maandag = 0)
-_LEGE_DAG = {"wedstrijden": 0, "training": False, "weer": None, "open": True}
-
-
-def lees_verkoopdagen(db):
-    """(weekdagen, uitzonderingen): de weekdagen waarop standaard verkocht wordt
-    (maandag = 0) en {datum-tekst: True/False} voor losse datums die daarvan
-    afwijken (True = wel open, False = dicht). Zonder instelling: woensdag
-    en zaterdag."""
-    tekst = None
-    try:
-        rij = db.execute("SELECT verkoopdagen FROM instellingen WHERE id = 1").fetchone()
-        tekst = rij["verkoopdagen"] if rij else None
-    except Exception:  # kolom bestaat nog niet (oude database)
-        pass
-    dagen = {int(x) for x in (tekst or "").split(",") if x.strip().isdigit() and 0 <= int(x) <= 6}
-    try:
-        uitzonderingen = {
-            r["datum"]: bool(r["open"]) for r in db.execute("SELECT datum, open FROM verkoop_uitzonderingen")
-        }
-    except Exception:  # tabel bestaat nog niet
-        uitzonderingen = {}
-    return (dagen or set(VERKOOPDAGEN_STANDAARD)), uitzonderingen
-
-
-def dag_is_open(dag, weekdagen, uitzonderingen):
-    """Wordt er op deze datum (date) verkocht?"""
-    return uitzonderingen.get(dag.isoformat(), dag.weekday() in weekdagen)
-
-
-# ---------------------------------------------------------------------------
-# Kalender: wat gebeurt er op welke dag?
-# ---------------------------------------------------------------------------
-
-
-def wedstrijd_gewicht(aantal):
-    """Drukte-gewicht van een dag met 'aantal' thuiswedstrijden: de eerste telt
-    voor 1, elke extra voor 0,25 erbij (met een maximum van 4 wedstrijden)."""
-    if aantal <= 0:
-        return 0.0
-    return 1.0 + 0.25 * (min(aantal, 4) - 1)
-
-
-def weer_score(max_temp, neerslag_kans):
-    """+1 bij mooi weer (warm en droog), -1 bij regen, anders 0. None als er
-    geen weergegevens zijn."""
-    if max_temp is None or neerslag_kans is None:
-        return None
-    if neerslag_kans >= 60:
-        return -1.0
-    if max_temp >= 18 and neerslag_kans < 30:
-        return 1.0
-    return 0.0
-
-
-def lees_kalender(db, van, tot):
-    """{datum: {wedstrijden, training, weer, open}} voor van t/m tot (date-objecten).
-    Wedstrijden komen uit de gekoppelde teamagenda's, het weer uit de
-    opgeslagen weergeschiedenis (laatst bekende verwachting per dag) en voor
-    de komende dagen uit de actuele verwachting."""
-    wedstrijden = {
-        r["datum"]: r["n"]
-        for r in db.execute(
-            """SELECT datum, COUNT(*) AS n FROM wedstrijden
-               WHERE thuis = 1 AND afgelast = 0 AND datum >= ? AND datum <= ? GROUP BY datum""",
-            (van.isoformat(), tot.isoformat()),
-        ).fetchall()
-    }
-    weer = {}
-    for tabel in ("weer_historie", "weer_voorspelling"):  # voorspelling wint (vers)
-        try:
-            rijen = db.execute(
-                f"SELECT datum, max_temp, neerslag_kans FROM {tabel} WHERE datum >= ? AND datum <= ?",
-                (van.isoformat(), tot.isoformat()),
-            ).fetchall()
-        except Exception:  # tabel bestaat nog niet (oude database)
-            rijen = []
-        for r in rijen:
-            weer[r["datum"]] = weer_score(r["max_temp"], r["neerslag_kans"])
-    weekdagen, uitzonderingen = lees_verkoopdagen(db)
-    kalender = {}
-    dag = van
-    while dag <= tot:
-        iso = dag.isoformat()
-        open_ = dag_is_open(dag, weekdagen, uitzonderingen)
-        kalender[dag] = {
-            "wedstrijden": wedstrijden.get(iso, 0),
-            "training": dag.weekday() == TRAININGSDAG,
-            "weer": weer.get(iso),
-            "open": open_,
-        }
-        dag += timedelta(days=1)
-    return kalender
-
-
-def _dag_venster(dag):
-    begin = datetime.combine(dag, time(DAG_BEGIN_UUR, 0))
-    return begin, begin + timedelta(days=1)
-
-
-def blootstelling(start, einde, kalender):
-    """Hoeveel 'dag-equivalent' een periode bevat, opgesplitst:
-    D = dagen, M = wedstrijddagen (gewogen), T = trainingsavonden, S = weerscore
-    (mooi +, regen -), W = dagen waarvan het weer bekend is. Een dag telt
-    mee naar rato van hoeveel van zijn 12-12-venster in de periode valt. Een dag
-    waarop niet verkocht wordt (zie lees_verkoopdagen) telt helemaal niet mee."""
-    D = M = T = S = W = 0.0
-    dag = (start - timedelta(hours=DAG_BEGIN_UUR)).date()
-    while True:
-        d_begin, d_eind = _dag_venster(dag)
-        if d_begin >= einde:
-            break
-        deel = (min(einde, d_eind) - max(start, d_begin)).total_seconds() / 86400
-        k = kalender.get(dag) or _LEGE_DAG
-        if deel > 0 and k.get("open", True):
-            D += deel
-            M += deel * wedstrijd_gewicht(k["wedstrijden"])
-            T += deel * (1.0 if k["training"] else 0.0)
-            if k["weer"] is not None:
-                S += deel * k["weer"]
-                W += deel
-        dag += timedelta(days=1)
-    return {"D": D, "M": M, "T": T, "S": S, "W": W}
-
-
-def drukte(b, effecten):
-    """Aantal 'normale dagen' dat deze blootstelling waard is."""
-    return b["D"] + effecten["wedstrijd"] * b["M"] + effecten["training"] * b["T"] + effecten["weer"] * b["S"]
-
-
-# ---------------------------------------------------------------------------
-# Data uit de tellingen
-# ---------------------------------------------------------------------------
-
-
-def _parse(datum):
-    return datetime.strptime(datum, "%Y-%m-%d %H:%M")
-
-
-def lees_rijen(db, nu, weken=MAX_WEKEN_GESCHIEDENIS, eerste_meenemen=False):
-    """Eén rij per product per telling: wat is er verkocht in de periode sinds
-    het vorige keer dat dit product geteld werd. De eerste telling van een
-    product is alleen een nulmeting. Periodes zonder enige verkoop in die hele
-    telling (bijv. een nulmeting of een dag waarop alles dicht was) tellen niet mee.
-    Met eerste_meenemen=True (voor het verdelen van omzet over dagen) telt de
-    eerste telling van een product met verkoop ook mee, als periode vanaf de
-    telling ervoor; dat is voor de weekomzet nodig om niets te missen, niet voor
-    het leren van snelheden."""
-    sinds = (nu - timedelta(weeks=weken)).strftime("%Y-%m-%d %H:%M")
-    tellingen = db.execute(
-        "SELECT id, datum FROM tellingen WHERE datum >= ? ORDER BY datum, id", (sinds,)
-    ).fetchall()
-    if len(tellingen) < 2:
-        return [], tellingen
-    datum_van = {t["id"]: _parse(t["datum"]) for t in tellingen}
-    positie = {t["id"]: i for i, t in enumerate(tellingen)}
-    regels = db.execute(
-        f"""SELECT telling_id, product_id, verkocht, geteld_aantal, verkoopprijs
-            FROM telling_regels
-            WHERE telling_id IN ({",".join("?" * len(datum_van))})""",
-        list(datum_van),
-    ).fetchall()
-    per_product = {}
-    for r in regels:
-        per_product.setdefault(r["product_id"], []).append(r)
-    totaal_per_telling = {}
-    for r in regels:
-        totaal_per_telling[r["telling_id"]] = totaal_per_telling.get(r["telling_id"], 0) + max(0, r["verkocht"])
-
-    rijen = []
-    for pid, lijst in per_product.items():
-        lijst.sort(key=lambda r: (datum_van[r["telling_id"]], r["telling_id"]))
-        if eerste_meenemen:
-            eerste = lijst[0]
-            i = positie[eerste["telling_id"]]
-            if i > 0 and eerste["verkocht"] > 0:
-                start, einde = datum_van[tellingen[i - 1]["id"]], datum_van[eerste["telling_id"]]
-                if einde > start and totaal_per_telling.get(eerste["telling_id"], 0) > 0:
-                    rijen.append(
-                        {
-                            "pid": pid,
-                            "tid": eerste["telling_id"],
-                            "start": start,
-                            "einde": einde,
-                            "V": max(0, eerste["verkocht"]),
-                            "afgekapt": eerste["geteld_aantal"] <= 0,
-                            "prijs": eerste["verkoopprijs"] or 0.0,
-                            "eerste": True,
-                        }
-                    )
-        for vorige, huidige in zip(lijst, lijst[1:]):
-            start, einde = datum_van[vorige["telling_id"]], datum_van[huidige["telling_id"]]
-            if einde <= start or totaal_per_telling.get(huidige["telling_id"], 0) <= 0:
-                continue
-            rijen.append(
-                {
-                    "pid": pid,
-                    "tid": huidige["telling_id"],
-                    "start": start,
-                    "einde": einde,
-                    "V": max(0, huidige["verkocht"]),
-                    "afgekapt": huidige["geteld_aantal"] <= 0 and huidige["verkocht"] > 0,
-                    "prijs": huidige["verkoopprijs"] or 0.0,
-                }
-            )
-    return rijen, tellingen
-
-
-def _gewicht(einde, nu):
-    weken = max(0.0, (nu - einde).total_seconds() / (7 * 86400))
-    return 0.5 ** (weken / HALVERING_WEKEN)
-
-
-def _voeg_blootstelling_toe(rijen, kalender, nu):
-    """Rekent per unieke periode de blootstelling uit (veel producten delen
-    dezelfde periode) en zet gewicht + blootstelling in elke rij."""
-    cache = {}
-    for r in rijen:
-        sleutel = (r["start"], r["einde"])
-        if sleutel not in cache:
-            cache[sleutel] = blootstelling(r["start"], r["einde"], kalender)
-        r["b"] = cache[sleutel]
-        r["w"] = _gewicht(r["einde"], nu)
-    # Een periode zonder enige open dag zegt niets over de snelheid per open dag
-    # (er is dan verkocht op een dag die als gesloten staat, bijvoorbeeld een
-    # evenement): buiten het model laten. Voor de weekomzet blijft de verkoop wel
-    # meetellen, zie verdeling().
-    rijen[:] = [r for r in rijen if r["b"]["D"] > 1e-9]
-    return rijen
-
-
-# ---------------------------------------------------------------------------
-# Leren van de effecten
-# ---------------------------------------------------------------------------
-
-
-def _snelheden(rijen, effecten):
-    """Basissnelheid per product (per normale dag): gewogen verkoop gedeeld
-    door gewogen blootstelling. Afgekapte periodes (uitverkocht) tellen niet
-    mee, tenzij er voor dat product niets anders is."""
-    per_product = {}
-    for r in rijen:
-        per_product.setdefault(r["pid"], []).append(r)
-    snelheid = {}
-    for pid, lijst in per_product.items():
-        goed = [r for r in lijst if not r["afgekapt"]] or lijst
-        teller = sum(r["w"] * r["V"] for r in goed)
-        noemer = sum(r["w"] * drukte(r["b"], effecten) for r in goed)
-        snelheid[pid] = teller / noemer if noemer > 1e-9 else 0.0
-    return snelheid
-
-
-def _voorbewerk(rijen):
-    """Zet de rijen per product om in kale lijsten, zodat de doelfunctie (die
-    honderden keren draait) niet steeds in dicts hoeft te zoeken."""
-    per_product = {}
-    for r in rijen:
-        per_product.setdefault(r["pid"], []).append(r)
-    return [
-        (
-            [r["w"] for r in lijst],
-            [r["V"] for r in lijst],
-            [r["b"]["D"] for r in lijst],
-            [r["b"]["M"] for r in lijst],
-            [r["b"]["T"] for r in lijst],
-            [r["b"]["S"] for r in lijst],
-        )
-        for lijst in per_product.values()
-    ]
-
-
-def _halve_afwijking(v, mu, k):
-    """Halve negatief-binomiale afwijking tussen waargenomen v en verwacht mu,
-    met relatieve overspreiding k (variantie = mu + k*mu^2). Voor grote
-    aantallen telt een gemiste voorspelling zo veel minder zwaar dan bij een
-    gewone Poisson, want daar is de dag-tot-dag-schommeling groter dan wat
-    Poisson aanneemt."""
-    if mu <= 1e-9:
-        return v * 10.0  # voorspeld 0 maar toch verkocht: flink straffen
-    if k < 1e-6:
-        return (v * math.log(v / mu) if v > 0 else 0.0) - v + mu
-    eerste = v * math.log(v / mu) if v > 0 else 0.0
-    return eerste - (v + 1.0 / k) * math.log((1 + k * v) / (1 + k * mu))
-
-
-def _doelfunctie(voorbewerkt, effecten, k):
-    """Gewogen afwijking van alle producten plus de strafterm voor het
-    afwijken van de aannames."""
-    a, b, c = effecten["wedstrijd"], effecten["training"], effecten["weer"]
-    afwijking = 0.0
-    for ws, vs, ds, ms, ts, ss in voorbewerkt:
-        es = [d + a * m + b * t + c * s for d, m, t, s in zip(ds, ms, ts, ss)]
-        noemer = sum(w * e for w, e in zip(ws, es))
-        if noemer <= 1e-9:
-            continue
-        r = sum(w * v for w, v in zip(ws, vs)) / noemer
-        for w, v, e in zip(ws, vs, es):
-            afwijking += w * _halve_afwijking(v, r * e, k)
-    straf = sum(0.5 * ((effecten[n] - PRIOR[n]) / ONZEKERHEID[n]) ** 2 for n in PRIOR)
-    return afwijking + straf
-
-
-def _leer_effecten(rijen, k, vrij, ronden=4):
-    """Coordinate descent per effect, met de aannames als startpunt: eerst een
-    grof raster over het hele toegestane bereik, daarna steeds fijner rond de
-    beste waarde. 'vrij' bepaalt welke effecten data hebben om van te leren;
-    de rest blijft bij de aanname."""
-    voorbewerkt = _voorbewerk(rijen)
-    effecten = dict(PRIOR)
-    beste = _doelfunctie(voorbewerkt, effecten, k)
-    for ronde in range(ronden):
-        veranderd = False
-        for naam in PRIOR:
-            if not vrij[naam]:
-                continue
-            laag, hoog = GRENZEN[naam]
-            if ronde == 0:
-                kandidaten = [laag + i * (hoog - laag) / 20 for i in range(21)]
-            else:
-                stap = (hoog - laag) / (20 * 3 ** ronde)
-                kandidaten = [effecten[naam] + i * stap for i in range(-5, 6)]
-            for waarde in kandidaten:
-                waarde = min(hoog, max(laag, waarde))
-                proef = dict(effecten, **{naam: waarde})
-                score = _doelfunctie(voorbewerkt, proef, k)
-                if score < beste - 1e-9:
-                    beste, effecten, veranderd = score, proef, True
-        if not veranderd and ronde >= 1:
-            break
-    return effecten
-
-
-START_OVERSPREIDING = 0.15
-
-
-def _schat_overspreiding(rijen, effecten, snelheid):
-    """Hoeveel meer de verkoop schommelt dan een zuivere Poisson, uitgedrukt
-    als relatieve overspreiding k (variantie = mu + k*mu^2), via de
-    momentenmethode. Een kantine heeft rustige en drukke weken die je niet
-    kunt voorspellen; dat zit hierin. Staat tussen 0,002 en 1,5."""
-    teller = noemer = 0.0
-    n = 0
-    for r in rijen:
-        mu = snelheid.get(r["pid"], 0.0) * drukte(r["b"], effecten)
-        if mu > 1e-9:
-            teller += r["w"] * ((r["V"] - mu) ** 2 - mu)
-            noemer += r["w"] * mu ** 2
-            n += 1
-    if n < 15 or noemer <= 1e-9:
-        return START_OVERSPREIDING
-    return min(1.5, max(0.002, teller / noemer))
-
-
-def pas_model_aan(rijen, licht=False):
-    """Leert de drie effecten + de overspreiding uit de rijen. Geeft ook terug
-    hoeveel er per effect te leren viel (voor de uitleg). 'licht' = sneller en
-    minder precies (voor de terugtoetsing, die het vaak achter elkaar doet)."""
-    # Alleen de best verkopende producten sturen het leren (sneller, en de
-    # zeldzame producten zijn te ruis-gevoelig om iets over drukte te zeggen).
-    totaal = {}
-    for r in rijen:
-        totaal[r["pid"]] = totaal.get(r["pid"], 0.0) + r["w"] * r["V"]
-    rijen_per_product = {}
-    for r in rijen:
-        if not r["afgekapt"]:
-            rijen_per_product[r["pid"]] = rijen_per_product.get(r["pid"], 0) + 1
-    kandidaten = {
-        pid
-        for pid, _ in sorted(totaal.items(), key=lambda x: -x[1])
-        if rijen_per_product.get(pid, 0) >= MIN_RIJEN_PER_PRODUCT
-    }
-    kandidaten = set(list(sorted(kandidaten, key=lambda pid: -totaal[pid]))[:MODEL_MAX_PRODUCTEN])
-    leer_rijen = [r for r in rijen if r["pid"] in kandidaten and not r["afgekapt"]]
-
-    informatie = {
-        "wedstrijd": sum(r["w"] * r["b"]["M"] for r in leer_rijen),
-        "training": sum(r["w"] * r["b"]["T"] for r in leer_rijen),
-        "weer": sum(r["w"] * abs(r["b"]["S"]) for r in leer_rijen),
-    }
-    vrij = {n: informatie[n] > 0.3 for n in PRIOR}
-    effecten = dict(PRIOR)
-    k = START_OVERSPREIDING
-    if leer_rijen:
-        for _ in range(2 if licht else 3):
-            if any(vrij.values()):
-                effecten = _leer_effecten(leer_rijen, k, vrij, ronden=3 if licht else 4)
-            k = _schat_overspreiding(leer_rijen, effecten, _snelheden(leer_rijen, effecten))
-    return effecten, k, informatie
-
-
-# ---------------------------------------------------------------------------
-# Kansrekening: negatief-binomiaal (Poisson met extra spreiding)
-# ---------------------------------------------------------------------------
-
-
-def _nb_parameters(mu, var):
-    if var <= mu * (1 + 1e-9):
-        return None  # gewone Poisson
-    r = mu * mu / (var - mu)
-    return r, r / (r + mu)
-
-
-def _cdf_stappen(mu, var):
-    """Genereert (k, P(D <= k)) voor k = 0, 1, 2, ... voor Poisson/neg-bin."""
-    params = _nb_parameters(mu, var)
-    if params is None:
-        pmf = math.exp(-mu)
-        k = 0
-        cdf = pmf
-        while True:
-            yield k, min(1.0, cdf)
-            pmf *= mu / (k + 1)
-            k += 1
-            cdf += pmf
-    else:
-        r, p = params
-        pmf = math.exp(r * math.log(p))
-        k = 0
-        cdf = pmf
-        while True:
-            yield k, min(1.0, cdf)
-            pmf *= (k + r) / (k + 1) * (1 - p)
-            k += 1
-            cdf += pmf
-
-
-def kans_meer_dan(mu, var, drempel):
-    """P(vraag > drempel)."""
-    if mu <= 0:
-        return 0.0
-    drempel = max(0, int(drempel))
-    if mu > 250:
-        return max(0.0, 1.0 - NormalDist(mu, math.sqrt(max(var, mu))).cdf(drempel + 0.5))
-    if drempel > mu + 12 * math.sqrt(max(var, mu)) + 20:
-        return 0.0
-    for k, cdf in _cdf_stappen(mu, var):
-        if k >= drempel:
-            return max(0.0, 1.0 - cdf)
-    return 0.0
-
-
-def kwantiel(mu, var, q):
-    """Kleinste aantal k met P(vraag <= k) >= q."""
-    if mu <= 0:
-        return 0
-    if mu > 250:
-        return max(0, int(math.ceil(NormalDist(mu, math.sqrt(max(var, mu))).inv_cdf(q) - 0.5)))
-    for k, cdf in _cdf_stappen(mu, var):
-        if cdf >= q or k > mu + 40 * math.sqrt(max(var, mu)) + 100:
-            return k
-    return 0
-
-
-# ---------------------------------------------------------------------------
-# Terugtoetsen: hoe goed zou het model het verleden hebben voorspeld?
-# ---------------------------------------------------------------------------
-
-
-def terugtoetsen(rijen, nu):
-    """Voor elke telling vanaf de 4e: leer alleen van wat toen al bekend was,
-    voorspel de omzet van die telling en vergelijk met de werkelijkheid. Als
-    maatstaf staat ernaast een 'naieve' voorspelling: de gemiddelde dagverkoop
-    per product tot dan toe, zonder iets van wedstrijden, training of weer te
-    weten. Geeft None als er te weinig tellingen zijn."""
-    tellingen = sorted({(r["einde"], r["tid"]) for r in rijen})
-    if len(tellingen) <= TERUGTOETS_START:
-        return None
-    afwijkingen_model, afwijkingen_naief = [], []
-    try:
-        for einde, tid in tellingen[TERUGTOETS_START:][-8:]:
-            trein = [r for r in rijen if r["einde"] < einde]
-            toets = [r for r in rijen if r["tid"] == tid]
-            werkelijk = sum(r["V"] * r["prijs"] for r in toets)
-            producten_in_trein = len({r["pid"] for r in trein})
-            if werkelijk <= 0 or len(trein) < 8 or len(toets) < max(1, 0.5 * producten_in_trein):
-                continue  # te weinig om iets zinnigs over te zeggen (bijv. een telling van 1 product)
-            for r in trein:
-                r["w"] = _gewicht(r["einde"], einde)
-            effecten, _, _ = pas_model_aan(trein, licht=True)
-            snelheid = _snelheden(trein, effecten)
-            naief_teller, naief_noemer = {}, {}
-            for r in trein:
-                naief_teller[r["pid"]] = naief_teller.get(r["pid"], 0.0) + r["w"] * r["V"]
-                naief_noemer[r["pid"]] = naief_noemer.get(r["pid"], 0.0) + r["w"] * r["b"]["D"]
-            voorspeld = naief = 0.0
-            for r in toets:
-                if r["pid"] not in snelheid:
-                    continue
-                voorspeld += snelheid[r["pid"]] * drukte(r["b"], effecten) * r["prijs"]
-                dagsnelheid = naief_teller[r["pid"]] / naief_noemer[r["pid"]] if naief_noemer[r["pid"]] > 1e-9 else 0.0
-                naief += dagsnelheid * r["b"]["D"] * r["prijs"]
-            werkelijk_vergelijkbaar = sum(r["V"] * r["prijs"] for r in toets if r["pid"] in snelheid)
-            if werkelijk_vergelijkbaar <= 0:
-                continue
-            afwijkingen_model.append(abs(voorspeld - werkelijk_vergelijkbaar) / werkelijk_vergelijkbaar)
-            afwijkingen_naief.append(abs(naief - werkelijk_vergelijkbaar) / werkelijk_vergelijkbaar)
-    finally:
-        for r in rijen:
-            r["w"] = _gewicht(r["einde"], nu)  # gewichten terugzetten
-    if not afwijkingen_model:
-        return None
-    def mediaan(waarden):
-        gesorteerd = sorted(waarden)
-        midden = len(gesorteerd) // 2
-        return gesorteerd[midden] if len(gesorteerd) % 2 else (gesorteerd[midden - 1] + gesorteerd[midden]) / 2
-
-    # De mediaan is eerlijker dan het gemiddelde: een enkele uitschieter (een
-    # uitzonderlijk stille of drukke week) trekt het gemiddelde anders omhoog.
-    mape_model, mape_naief = mediaan(afwijkingen_model), mediaan(afwijkingen_naief)
-    return {
-        "aantal": len(afwijkingen_model),
-        "mape_model": mape_model,
-        "mape_naief": mape_naief,
-        "gemiddeld_model": sum(afwijkingen_model) / len(afwijkingen_model),
-        "verbetering": (mape_naief - mape_model) / mape_naief if mape_naief > 1e-9 else 0.0,
-    }
+from voorspelling.basis import (  # noqa: F401
+    blootstelling,
+    DAG_BEGIN_UUR,
+    dag_is_open,
+    _dag_venster,
+    DEKKING_SERVICENIVEAU,
+    drukte,
+    EFFECT_NAMEN,
+    GRENZEN,
+    HALVERING_WEKEN,
+    lees_evenementen,
+    lees_kalender,
+    lees_verkoopdagen,
+    _LEGE_DAG,
+    MAX_WEKEN_GESCHIEDENIS,
+    MIN_RIJEN_PER_PRODUCT,
+    MODEL_MAX_PRODUCTEN,
+    MODEL_ONZEKERHEID_DAG,
+    ONZEKERHEID,
+    PRIOR,
+    TERUGTOETS_START,
+    VERKOOPDAGEN_STANDAARD,
+    wedstrijd_gewicht,
+    _WEEKDAG,
+    _WEEKDAG_KORT,
+    weer_score,
+)
+from voorspelling.model import (  # noqa: F401
+    _cdf_stappen,
+    _doelfunctie,
+    _gewicht,
+    _halve_afwijking,
+    kans_meer_dan,
+    kwantiel,
+    _leer_effecten,
+    lees_rijen,
+    _nb_parameters,
+    _parse,
+    pas_model_aan,
+    _schat_overspreiding,
+    _snelheden,
+    START_OVERSPREIDING,
+    terugtoetsen,
+    _voeg_blootstelling_toe,
+    _voorbewerk,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -615,7 +124,7 @@ def _waargenomen_dagen(rijen, kalender, soort):
             if k and k.get("open", True):
                 if (soort == "wedstrijd" and k["wedstrijden"]) or (soort == "training" and k["training"]) or (
                     soort == "weer" and k["weer"] not in (None, 0.0)
-                ):
+                ) or (soort == "evenement" and k.get("evenementen")):
                     dagen.add(dag)
             dag += timedelta(days=1)
     return len(dagen)
@@ -683,7 +192,9 @@ def _prognose_model(db, dagen, nu):
             open_ = kenmerken.get("open", True)
             m = 1 + effecten["wedstrijd"] * wedstrijd_gewicht(kenmerken["wedstrijden"]) + effecten["training"] * (
                 1.0 if kenmerken["training"] else 0.0
-            ) + effecten["weer"] * (kenmerken["weer"] or 0.0)
+            ) + effecten["weer"] * (kenmerken["weer"] or 0.0) + effecten["evenement"] * (
+                1.0 if kenmerken.get("evenementen") else 0.0
+            )
             if not open_:
                 m = 0.0  # gesloten: er wordt niets verkocht
             dagen_overzicht.append(
@@ -694,6 +205,7 @@ def _prognose_model(db, dagen, nu):
                     "weekdag_kort": _WEEKDAG_KORT[dag.weekday()],
                     "deel": min(1.0, deel),
                     "wedstrijden": kenmerken["wedstrijden"],
+                    "evenementen": kenmerken.get("evenementen", 0),
                     "training": kenmerken["training"],
                     "weer_score": kenmerken["weer"],
                     "drukte": m,
@@ -717,7 +229,7 @@ def _prognose_model(db, dagen, nu):
     }
 
     effect_lijst = []
-    for sleutel in ("wedstrijd", "training", "weer"):
+    for sleutel in ("wedstrijd", "training", "weer", "evenement"):
         waargenomen = _waargenomen_dagen(rijen, kalender, sleutel)
         effect_lijst.append(
             {
@@ -834,6 +346,7 @@ def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
                 "waarnemingen": aantal_waarnemingen,
                 "weinig_data": aantal_waarnemingen < 3,
                 "per_dag": per_dag,
+                "snelheid": snel,  # verwachte verkoop op een gewone open dag (drukte 1), zie koud_zetten
             }
         )
     volgorde = {"urgent": 0, "let_op": 1, "ok": 2}
@@ -1018,6 +531,7 @@ def _dagdrukte(dag, kalender, effecten):
         + effecten["wedstrijd"] * wedstrijd_gewicht(kenmerken["wedstrijden"])
         + effecten["training"] * (1.0 if kenmerken["training"] else 0.0)
         + effecten["weer"] * (kenmerken["weer"] or 0.0)
+        + effecten.get("evenement", 0.0) * (1.0 if kenmerken.get("evenementen") else 0.0)
     )
 
 
@@ -1131,6 +645,7 @@ def historie_vingerafdruk(db):
     try:
         delen.append(_hash_rijen(db.execute("SELECT * FROM verkoop_uitzonderingen ORDER BY datum")))
         delen.append(db.execute("SELECT verkoopdagen FROM instellingen WHERE id = 1").fetchone()[0])
+        delen.append(_hash_rijen(db.execute("SELECT datum, naam FROM evenementen ORDER BY id")))
     except Exception:  # oudere database zonder deze tabel/kolom
         pass
     return hashlib.sha1(repr(delen).encode()).hexdigest()
@@ -1163,7 +678,7 @@ def data_vingerafdruk(db):
 # model zelf uit, en na elke update van de server opnieuw. De sleutel bevat de vingerafdruk van de gegevens en de versie van
 # de site, dus een bestand van oudere gegevens of oudere code wordt nooit gebruikt.
 SCHIJF_AAN = True
-SCHIJF_VERSIE = 1  # ophogen als de vorm van een uitkomst verandert zonder dat de siteversie meegaat
+SCHIJF_VERSIE = 3  # ophogen als de vorm van een uitkomst verandert zonder dat de siteversie meegaat
 SCHIJF_MAX_LEEFTIJD_SECONDEN = 3 * 24 * 3600
 SCHIJF_MAX_BESTANDEN = 60
 
@@ -1398,3 +913,128 @@ def week_samenvatting(db, maandag, nu=None, data=None):
         "status": _week_status(maandag, data["eerste"], data["laatste"]),
         "geteld_tot": data["laatste"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Terugblik: wat voorspelde het model per telling, en wat werd er verkocht?
+# ---------------------------------------------------------------------------
+
+TERUGBLIK_MIN_EERDERE_TELLINGEN = 2  # met minder geschiedenis valt er nog niets te voorspellen
+TERUGBLIK_PRODUCTEN = 6  # per telling de producten waar het het verst naast zat
+
+
+def _terugblik(db, nu):
+    rijen, tellingen = lees_rijen(db, nu)
+    if not rijen:
+        return []
+    kalender = lees_kalender(
+        db, min(r["start"] for r in rijen).date() - timedelta(days=2), nu.date() + timedelta(days=1)
+    )
+    _voeg_blootstelling_toe(rijen, kalender, nu)
+    namen = {r["id"]: (r["naam"], r["eenheid"]) for r in db.execute("SELECT id, naam, eenheid FROM producten").fetchall()}
+    uitkomst = []
+    for nummer, (einde, tid) in enumerate(sorted({(r["einde"], r["tid"]) for r in rijen})):
+        trein = [dict(r, w=_gewicht(r["einde"], einde)) for r in rijen if r["einde"] < einde]
+        toets = [r for r in rijen if r["tid"] == tid]
+        if nummer < TERUGBLIK_MIN_EERDERE_TELLINGEN:
+            continue
+        effecten, _, _ = pas_model_aan(trein, licht=True)
+        snelheid = _snelheden(trein, effecten)
+        producten = []
+        for r in toets:
+            if r["pid"] not in snelheid:
+                continue
+            naam, eenheid = namen.get(r["pid"], ("?", ""))
+            producten.append(
+                {"naam": naam, "eenheid": eenheid, "prijs": r["prijs"], "verkocht": r["V"],
+                 "verwacht": snelheid[r["pid"]] * drukte(r["b"], effecten), "uitverkocht": r["afgekapt"]}
+            )
+        voorspeld = sum(p["verwacht"] * p["prijs"] for p in producten)
+        werkelijk = sum(p["verkocht"] * p["prijs"] for p in producten)
+        if voorspeld <= 0 and werkelijk <= 0:
+            continue
+        starts = [r["start"] for r in toets]
+        producten.sort(key=lambda p: -abs(p["verkocht"] - p["verwacht"]) * max(p["prijs"], 0.01))
+        uitkomst.append(
+            {
+                "van": max(set(starts), key=starts.count),  # meestal de telling ervoor
+                "tot": einde,
+                "voorspeld": voorspeld,
+                "werkelijk": werkelijk,
+                "verschil": werkelijk - voorspeld,
+                "pct": (werkelijk - voorspeld) / voorspeld * 100 if voorspeld > 0 else None,
+                "zonder_geschiedenis": sum(r["V"] * r["prijs"] for r in toets if r["pid"] not in snelheid),
+                "producten": producten[:TERUGBLIK_PRODUCTEN],
+            }
+        )
+    return list(reversed(uitkomst))
+
+
+def terugblik(db, nu=None):
+    """Per telling (nieuwste eerst): welke omzet het model voor die periode voorspelde met alleen de tellingen van
+    daarvoor, en wat er werkelijk verkocht is, met de producten waar het het verst naast zat. Zo zie je hoe goed de
+    prognose is. Wordt bewaard tot de telgeschiedenis verandert (zie historie_vingerafdruk)."""
+    nu = nu or datetime.now()
+    return _bewaard(db, "terugblik", nu, (), lambda: _terugblik(db, nu), historie_vingerafdruk)
+
+
+def vat_terugblik_samen(perioden):
+    """De middelste afwijking (in %, zonder plus of min), en hoe vaak het binnen 15% zat, te laag of te hoog was."""
+    met_pct = [p for p in perioden if p["pct"] is not None]
+    if not met_pct:
+        return None
+    afwijkingen = sorted(abs(p["pct"]) for p in met_pct)
+    return {
+        "aantal": len(met_pct),
+        "mediaan": afwijkingen[len(afwijkingen) // 2],
+        "binnen": sum(1 for p in met_pct if abs(p["pct"]) <= 15),
+        "meer_verkocht": sum(1 for p in met_pct if p["pct"] > 15),
+        "minder_verkocht": sum(1 for p in met_pct if p["pct"] < -15),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Koud zetten voor de eerstvolgende verkoopdag
+# ---------------------------------------------------------------------------
+
+KOUD_CATEGORIEEN = ("Bier", "Fris", "Voorgemixte Blik", "Wijn")
+NIET_KOUD_EENHEDEN = ("fust", "glas", "pitcher")
+KOUD_MARGE = 1.25  # een kwart extra koud, zodat je niet halverwege hoeft bij te vullen
+
+
+def koud_zetten(db, nu=None):
+    """Voor de eerstvolgende verkoopdag (vandaag of morgen): per drankje hoeveel er die dag waarschijnlijk wordt verkocht
+    en hoeveel je daarom koud zet (een kwart extra, nooit meer dan er op voorraad is). None als er vandaag of morgen
+    geen verkoopdag is of er nog geen prognose kan worden gemaakt."""
+    nu = nu or datetime.now()
+    prognose = maak_prognose(db, dagen=2, nu=nu)
+    if not prognose["beschikbaar"]:
+        return None
+    morgen = (nu - timedelta(hours=DAG_BEGIN_UUR)).date() + timedelta(days=1)
+    dag = next((d for d in prognose["dagen_overzicht"] if d["open"] and d["drukte"] > 0 and d["datum"] <= morgen), None)
+    if dag is None:
+        return None
+    regels = []
+    for p in prognose["producten"]:
+        product = p["product"]
+        if product["categorie"] not in KOUD_CATEGORIEEN or (product["eenheid"] or "").lower() in NIET_KOUD_EENHEDEN:
+            continue
+        verwacht = p.get("snelheid", 0.0) * dag["drukte"]
+        nodig = math.ceil(verwacht * KOUD_MARGE - 1e-9)
+        if verwacht < 0.5 or nodig < 1:
+            continue
+        factor = max(1, product["besteleenheid_factor"] or 1)
+        koud = min(nodig, max(0, product["voorraad"]))
+        regels.append(
+            {
+                "product": product,
+                "verwacht": verwacht,
+                "koud": koud,
+                "te_weinig": koud < nodig,
+                "hele": koud // factor if factor > 1 else 0,
+                "los": koud % factor if factor > 1 else koud,
+                "besteleenheid": product["besteleenheid"] if factor > 1 else None,
+            }
+        )
+    regels.sort(key=lambda r: (-r["koud"], r["product"]["naam"].lower()))
+    return {"dag": dag, "vandaag": dag["datum"] < morgen, "regels": regels}

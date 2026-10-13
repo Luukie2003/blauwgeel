@@ -150,10 +150,16 @@ helpers/        Gedeelde hulpfuncties, per onderwerp (tijd, kas, producten, ...)
 club_van_20/    Rekenregels van de Club van 20 (seizoenen, administratie, scherm, import)
 routes/         De pagina's, per onderdeel; grote onderdelen zijn een map
                 (producten/, tellen/, kiosk/, club_van_20/)
-voorspelling.py Prognose en omzetverdeling per dag
+voorspelling/   Prognose en omzetverdeling per dag: basis.py (aannames, kalender), model.py (leren
+                uit de tellingen, kansrekening) en __init__.py (prognose, weekomzet, bewaren)
 seizoensrapport.py, bardienstrapport.py   Omzet per seizoen en per bardienst
+marge.py, derving.py, niet_lopers.py      Rapporten over wat producten opleveren en wat er stil ligt
+productkaart.py, gegevenscontrole.py      Vaste eenheden, unieke artikelcode en de controle op de productgegevens
+leveranciers.py, keukenbeheer.py          Leveranciers (bestellijst per leverancier) en de keuken als eigen module
+foutenlog.py, bezoeken.py                 Foutmeldingen in de app; laadtijd en soort van een paginabezoek
 backup.py       Dagelijkse taak: back-up, herstelcontrole, opruimen (onderhoud.py)
-uitrollen.py    Het beveiligde "live zetten"-endpoint (scripts/zet_live.py is de andere kant)
+uitrollen.py    Het beveiligde "live zetten"-endpoint (scripts/zet_live.py is de andere kant); start
+                rooktest.py, die alle pagina's met de nieuwe code op een kopie van de database opent
 wijzigingen.py  Versie-logje voor de Help-pagina
 templates/      Pagina's (Jinja2)
 static/         Stijl (CSS) en scripts

@@ -87,6 +87,7 @@
     <table>
         <tbody>
             <tr><td>Contante omzet sinds vorige telling (volgens PayPal)</td><td>€ {{ '%.2f'|format(telling.contante_omzet) }}</td></tr>
+            <tr><td>Kaartbetalingen sinds vorige telling (volgens PayPal, niet in de la)</td><td>€ {{ '%.2f'|format(telling.kaart_omzet or 0) }}</td></tr>
             <tr><td>Verwacht bedrag (bekende stand + contante omzet)</td><td>€ {{ '%.2f'|format(telling.verwacht_bedrag) }}</td></tr>
             <tr><td>Geteld bedrag</td><td>€ {{ '%.2f'|format(telling.geteld_bedrag) }}</td></tr>
             <tr>
@@ -104,6 +105,24 @@
 </div>
 
 {% if telling.afgesloten %}
+<div class="kaart">
+    <h2>Kaartbetalingen</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Vergeten of verkeerd ingevuld? Pas het hier aan. De kassastand verandert er niet door; het telt alleen mee bij
+        <a href="{{ url_for('kassa_omzet_controle') }}">Omzet en kassa</a>.
+    </p>
+    <form method="post" action="{{ url_for('kassa_telling_kaartomzet', telling_id=telling.id) }}"
+          style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:flex-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld" style="max-width:180px; margin-bottom:0">
+            <label for="kaart_omzet_correctie">Kaartbetalingen volgens PayPal</label>
+            <input type="number" step="0.01" min="0" id="kaart_omzet_correctie" name="kaart_omzet"
+                   value="{{ '%.2f'|format(telling.kaart_omzet or 0) }}">
+        </div>
+        <button type="submit" class="btn btn-rand">Opslaan</button>
+    </form>
+</div>
+
 <div class="kaart">
     <h2>Contante omzet corrigeren</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">

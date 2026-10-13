@@ -78,6 +78,25 @@ KOLOM_MIGRATIES = [
     ("categorieen", "verkoopprijs_verplicht", "INTEGER NOT NULL DEFAULT 1"),
     ("producten", "glazen_per_fust", "INTEGER NOT NULL DEFAULT 0"),
     ("producten", "prijs_per_glas", "REAL NOT NULL DEFAULT 0"),
+    # Productkaart (1.45.0): het merk apart van de naam, en 'Niet tellen' voor bijv. een kassaknop zonder voorraad.
+    ("producten", "merk", "TEXT"),
+    ("producten", "niet_tellen", "INTEGER NOT NULL DEFAULT 0"),
+    ("producten", "leverancier_id", "INTEGER REFERENCES leveranciers(id)"),
+    # Eenvoudige weergave (1.45.0): alleen de eigen favorieten in het menu en als grote knoppen op het overzicht.
+    ("gebruikers", "eenvoudig", "INTEGER NOT NULL DEFAULT 0"),
+    ("gebruikers", "favorieten", "TEXT"),
+    # Gebruiksstatistieken (1.45.0): hoe lang een pagina duurde, en of een bezoek van een programma kwam (zoekmachine)
+    # of een doorverwijzing naar de inlogpagina was (zie log_paginabezoek in app.py).
+    ("paginabezoeken", "duur_ms", "INTEGER"),
+    ("paginabezoeken", "soort", "TEXT"),
+    # Kassa tellen (1.45.0): de kaartbetalingen uit het PayPal-overzicht, naast het contante bedrag.
+    ("kassa_tellingen", "kaart_omzet", "REAL NOT NULL DEFAULT 0"),
+    # Hoeveel glazen er in een prijsoptie gaan (bijv. een pitcher), voor de kostprijs in het rapport Marge.
+    ("product_prijsopties", "glazen", "REAL NOT NULL DEFAULT 0"),
+    # Een geplande prijs die een actie beëindigt (de oude prijs komt terug), zie prijzen.py.
+    ("prijs_wijzigingen_gepland", "opmerking", "TEXT"),
+    # Prijsadvies in het rapport Marge: onder deze marge (in %) stelt de site een nieuwe prijs voor.
+    ("instellingen", "doelmarge_pct", "INTEGER NOT NULL DEFAULT 30"),
     ("kassa_tellingen", "contante_omzet_voor_correctie", "REAL"),
     ("kassa_tellingen", "contante_omzet_gecorrigeerd_door_id", "INTEGER REFERENCES gebruikers(id)"),
     ("kassa_tellingen", "contante_omzet_gecorrigeerd_door", "TEXT"),
@@ -585,6 +604,63 @@ def _migreer_welkom_polls_uit_statistiek(db):
     db.execute("DELETE FROM paginabezoeken WHERE endpoint = 'kiosk_welkom'")
 
 
+# ---------- Genummerde migraties ----------
+# De stappen hierboven zijn zelfhelend en draaien bij elke start. Wat precies één keer mag gebeuren (vooral gegevens
+# omzetten) staat hieronder met een nummer: de database onthoudt tot welk nummer hij is (PRAGMA user_version). Voeg
+# alleen achteraan toe en verander nooit een stap die al live is gegaan.
+
+
+def _m1_tapbier_in_de_omzet(db):
+    """Een weggeteld fust telt voortaan als 60 glazen (33 cl) van € 2,00. Tot nu toe stond 'glazen per fust' nergens
+    ingevuld, waardoor het tapbier in geen enkele omzet meetelde. Ook de eerdere tellingen krijgen die € 120 per fust,
+    zodat de weekomzet, de trend en de prognose niet ineens verspringen."""
+    fusten = [
+        r["id"]
+        for r in db.execute(
+            "SELECT id FROM producten WHERE LOWER(TRIM(eenheid)) = 'fust' AND COALESCE(glazen_per_fust, 0) = 0"
+        ).fetchall()
+    ]
+    for product_id in fusten:
+        db.execute(
+            """UPDATE producten
+               SET glazen_per_fust = 60,
+                   prijs_per_glas = CASE WHEN COALESCE(prijs_per_glas, 0) > 0 THEN prijs_per_glas ELSE 2.0 END
+               WHERE id = ?""",
+            (product_id,),
+        )
+        db.execute(
+            """UPDATE telling_regels
+               SET verkoopprijs = (SELECT glazen_per_fust * prijs_per_glas FROM producten WHERE id = ?)
+               WHERE product_id = ? AND COALESCE(verkoopprijs, 0) = 0""",
+            (product_id, product_id),
+        )
+
+
+GENUMMERDE_MIGRATIES = [
+    (1, _m1_tapbier_in_de_omzet),
+]
+
+
+def migreer_genummerd(db):
+    """Voert de genummerde stappen uit die deze database nog niet heeft gehad, in één schrijftransactie: starten twee
+    serverprocessen tegelijk, dan wacht de tweede en ziet daarna dat het al gebeurd is."""
+    laatste = GENUMMERDE_MIGRATIES[-1][0]
+    if db.execute("PRAGMA user_version").fetchone()[0] >= laatste:
+        return
+    db.commit()
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        huidig = db.execute("PRAGMA user_version").fetchone()[0]
+        for nummer, stap in GENUMMERDE_MIGRATIES:
+            if nummer > huidig:
+                stap(db)
+                db.execute(f"PRAGMA user_version = {int(nummer)}")
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+
 def migreer_alles(db):
     """Past alle migraties toe, in de volgorde waarin ze zijn ontstaan (alle zijn
     zelfhelend: ze doen niets als het al gebeurd is)."""
@@ -601,3 +677,4 @@ def migreer_alles(db):
     _migreer_stand_club_backfill(db)
     _migreer_stand_poules_backfill(db)
     _migreer_welkom_polls_uit_statistiek(db)
+    migreer_genummerd(db)

@@ -5,6 +5,7 @@ import sqlite3
 from flask import flash, redirect, render_template, request, session, url_for
 
 from database import get_db
+from productkaart import BESTELEENHEDEN, EENHEDEN, artikelcode_in_gebruik, eenheid_uit_formulier
 from helpers import (
     PRODUCT_AFBEELDINGEN_MAP,
     bewaar_subcategorie,
@@ -22,6 +23,50 @@ TERUG_NAAR_ENDPOINTS = {
 }
 
 
+def _productkaart_velden(db, product_id=None, huidige_code=None):
+    """Eenheid, besteleenheid, merk, 'Niet tellen' en de artikelcode uit het formulier. Is de artikelcode al van een
+    ander product, dan blijft de oude staan (bij een nieuw product: geen) en komt er een melding."""
+    artikelcode = request.form.get("artikelcode", "").strip() or None
+    ander = artikelcode_in_gebruik(db, artikelcode, product_id)
+    if ander:
+        flash(
+            f"Artikelcode {artikelcode} hoort al bij '{ander}'. "
+            + ("De oude artikelcode is blijven staan." if product_id else "Het product is zonder artikelcode opgeslagen."),
+            "warning",
+        )
+        artikelcode = huidige_code
+    return {
+        "artikelcode": artikelcode,
+        "eenheid": eenheid_uit_formulier(request.form, "eenheid", EENHEDEN) or "Stuks",
+        "besteleenheid": eenheid_uit_formulier(request.form, "besteleenheid", BESTELEENHEDEN) or None,
+        "merk": " ".join(request.form.get("merk", "").split()) or None,
+        "niet_tellen": 1 if request.form.get("niet_tellen") else 0,
+        "leverancier_id": _leverancier_uit_formulier(db),
+    }
+
+
+def _leverancier_uit_formulier(db):
+    waarde = request.form.get("leverancier_id", "")
+    if not waarde.isdigit():
+        return None
+    return int(waarde) if db.execute("SELECT 1 FROM leveranciers WHERE id = ?", (int(waarde),)).fetchone() else None
+
+
+def _keuzelijsten(db):
+    """Wat de productkaart nodig heeft voor de keuzelijsten van eenheid, besteleenheid en merk."""
+    return {
+        "eenheden": EENHEDEN,
+        "besteleenheden": BESTELEENHEDEN,
+        "leveranciers": db.execute("SELECT id, naam, actief FROM leveranciers ORDER BY actief DESC, naam COLLATE NOCASE").fetchall(),
+        "merken": [
+            r["merk"]
+            for r in db.execute(
+                "SELECT DISTINCT merk FROM producten WHERE merk IS NOT NULL AND merk != '' ORDER BY merk COLLATE NOCASE"
+            ).fetchall()
+        ],
+    }
+
+
 def register_routes(app):
     @app.route("/producten/nieuw", methods=["GET", "POST"])
     def product_nieuw():
@@ -37,26 +82,28 @@ def register_routes(app):
             gedwongen_inactief = bool(auto_inactief_bij_nul and nieuwe_voorraad <= 0 and actief)
             if gedwongen_inactief:
                 actief = 0
+            kaart = _productkaart_velden(db)
             nieuw_id = db.execute(
                 """INSERT INTO producten
                    (artikelcode, naam, categorie, subcategorie, eenheid, voorraad, min_voorraad,
                     bestel_hoeveelheid, verkoopprijs, inkoopprijs, actief, besteleenheid,
                     besteleenheid_factor, opmerking, afbeelding, glazen_per_fust, prijs_per_glas,
-                    auto_inactief_bij_nul, toon_op_kiosk, kiosk_uitverkocht, kiosk_categorie)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    auto_inactief_bij_nul, toon_op_kiosk, kiosk_uitverkocht, kiosk_categorie, merk, niet_tellen,
+                    leverancier_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    request.form.get("artikelcode", "").strip() or None,
+                    kaart["artikelcode"],
                     request.form["naam"].strip(),
                     categorie,
                     subcategorie,
-                    request.form["eenheid"].strip() or "stuks",
+                    kaart["eenheid"],
                     nieuwe_voorraad,
                     int(request.form["min_voorraad"] or 0),
                     int(request.form["bestel_hoeveelheid"] or 0),
                     float(request.form["verkoopprijs"] or 0),
                     float(request.form.get("inkoopprijs") or 0),
                     actief,
-                    request.form.get("besteleenheid", "").strip() or None,
+                    kaart["besteleenheid"],
                     int(request.form.get("besteleenheid_factor") or 1),
                     request.form.get("opmerking", "").strip(),
                     afbeelding,
@@ -66,6 +113,9 @@ def register_routes(app):
                     1 if request.form.get("toon_op_kiosk") else 0,
                     1 if request.form.get("kiosk_uitverkocht") else 0,
                     request.form.get("kiosk_categorie", "").strip() or None,
+                    kaart["merk"],
+                    kaart["niet_tellen"],
+                    kaart["leverancier_id"],
                 ),
             ).lastrowid
             vervang_product_prijsopties(db, nieuw_id)
@@ -93,6 +143,7 @@ def register_routes(app):
             subcategorieen=subcategorieen,
             voorgestelde_categorie=request.args.get("categorie", "").strip(),
             prijsopties=[],
+            **_keuzelijsten(db),
         )
 
     @app.route("/producten/<int:product_id>/bewerken", methods=["GET", "POST"])
@@ -139,6 +190,7 @@ def register_routes(app):
             gedwongen_inactief = bool(auto_inactief_bij_nul and nieuwe_voorraad <= 0 and actief)
             if gedwongen_inactief:
                 actief = 0
+            kaart = _productkaart_velden(db, product_id, product["artikelcode"])
             db.execute(
                 """UPDATE producten
                    SET artikelcode = ?, naam = ?, categorie = ?, subcategorie = ?, eenheid = ?,
@@ -146,21 +198,21 @@ def register_routes(app):
                        inkoopprijs = ?, actief = ?, besteleenheid = ?, besteleenheid_factor = ?,
                        opmerking = ?, afbeelding = ?, glazen_per_fust = ?, prijs_per_glas = ?,
                        auto_inactief_bij_nul = ?, toon_op_kiosk = ?, kiosk_uitverkocht = ?,
-                       kiosk_categorie = ?
+                       kiosk_categorie = ?, merk = ?, niet_tellen = ?, leverancier_id = ?
                    WHERE id = ?""",
                 (
-                    request.form.get("artikelcode", "").strip() or None,
+                    kaart["artikelcode"],
                     request.form["naam"].strip(),
                     categorie,
                     subcategorie,
-                    request.form["eenheid"].strip() or "stuks",
+                    kaart["eenheid"],
                     nieuwe_voorraad,
                     int(request.form["min_voorraad"] or 0),
                     int(request.form["bestel_hoeveelheid"] or 0),
                     nieuwe_verkoopprijs,
                     nieuwe_inkoopprijs,
                     actief,
-                    request.form.get("besteleenheid", "").strip() or None,
+                    kaart["besteleenheid"],
                     int(request.form.get("besteleenheid_factor") or 1),
                     request.form.get("opmerking", "").strip(),
                     afbeelding,
@@ -170,6 +222,9 @@ def register_routes(app):
                     1 if request.form.get("toon_op_kiosk") else 0,
                     1 if request.form.get("kiosk_uitverkocht") else 0,
                     request.form.get("kiosk_categorie", "").strip() or None,
+                    kaart["merk"],
+                    kaart["niet_tellen"],
+                    kaart["leverancier_id"],
                     product_id,
                 ),
             )
@@ -207,6 +262,7 @@ def register_routes(app):
             subcategorieen=subcategorieen,
             prijs_geschiedenis=prijs_geschiedenis,
             prijsopties=prijsopties,
+            **_keuzelijsten(db),
         )
 
     @app.route("/producten/<int:product_id>/verwijderen", methods=["POST"])

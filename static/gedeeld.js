@@ -14,6 +14,13 @@ document.addEventListener("click", function (e) {
     if (e.target.closest("#zijbalk-toggle")) {
         document.getElementById("app-zijbalk").classList.toggle("open");
     }
+    // Eenvoudige weergave: "Alle onderdelen" klapt het hele menu onder de favorieten uit en weer in.
+    var alles = e.target.closest("#zijbalk-alles-knop");
+    if (alles) {
+        var open = document.getElementById("app-zijbalk").classList.toggle("alles");
+        alles.setAttribute("aria-expanded", open ? "true" : "false");
+        alles.textContent = open ? "Minder onderdelen" : "Alle onderdelen";
+    }
 });
 
 // ---------- Zijbalk: één groep tegelijk open ----------

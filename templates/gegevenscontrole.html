@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block titel %}Gegevenscontrole{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Wat er aan de productgegevens niet klopt of ontbreekt. Marge, bestellijst en prognose zijn zo goed als deze
+        gegevens: los eerst de rode punten op. Klik op een product om het aan te passen.
+    </p>
+</div>
+
+<div class="statgrid">
+    <div class="stat {{ 'waarschuwing' if uitkomst.aantal else '' }}"><div class="getal">{{ uitkomst.aantal }}</div><div class="label">Punten om na te kijken</div></div>
+    <div class="stat"><div class="getal">{{ uitkomst.in_orde|length }}</div><div class="label">Controles helemaal in orde</div></div>
+</div>
+
+{% for c in uitkomst.controles %}
+<div class="kaart controle-{{ c.ernst }}">
+    <h2 style="margin-bottom:0.2rem">
+        {{ c.titel }} <span class="tekst-zacht" style="font-weight:400">({{ c.regels|length }})</span>
+        {% if c.ernst == 'hoog' %}<span class="badge badge-laag">belangrijk</span>{% endif %}
+    </h2>
+    <p class="tekst-zacht" style="margin-top:0">{{ c.uitleg }}</p>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th>Categorie</th><th>Wat valt op</th><th></th></tr></thead>
+            <tbody>
+                {% for r in c.regels %}
+                <tr class="{{ '' if r.actief else 'inactief' }}">
+                    <td>{{ r.naam }}{% if not r.actief %} <span class="badge badge-neutraal">inactief</span>{% endif %}</td>
+                    <td>{{ r.categorie }}</td>
+                    <td>{{ r.detail }}</td>
+                    <td class="tabel-acties"><a href="{{ url_for('product_bewerken', product_id=r.id) }}" class="btn btn-rand btn-klein">Bewerken</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endfor %}
+
+{% if uitkomst.in_orde %}
+<div class="kaart">
+    <h2>In orde</h2>
+    <ul style="margin:0">
+        {% for c in uitkomst.in_orde %}<li>{{ c.titel }}</li>{% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% endblock %}

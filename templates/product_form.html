@@ -1,4 +1,19 @@
 {% extends basis_template %}
+{# Keuzelijst voor een eenheid uit de vaste lijst (productkaart.py), met 'Anders' voor een uitzondering. #}
+{% macro eenheid_keuze(veld, lijst, huidig, leeg=None) %}
+{% set ns = namespace(gekozen='') %}
+{% for e in lijst %}{% if huidig and e|lower == huidig|lower %}{% set ns.gekozen = e %}{% endif %}{% endfor %}
+{% set anders = huidig and not ns.gekozen %}
+<select id="{{ veld }}" name="{{ veld }}" data-anders="{{ veld }}_anders">
+    {% if leeg %}<option value="" {{ 'selected' if not huidig }}>{{ leeg }}</option>{% endif %}
+    {% for e in lijst %}
+    <option value="{{ e }}" {{ 'selected' if e == ns.gekozen }}>{{ e }}</option>
+    {% endfor %}
+    <option value="__anders__" {{ 'selected' if anders }}>Anders&hellip;</option>
+</select>
+<input type="text" id="{{ veld }}_anders" name="{{ veld }}_anders" value="{{ huidig if anders else '' }}"
+       placeholder="Typ de eenheid" aria-label="Andere eenheid" style="margin-top:0.4rem" {{ '' if anders else 'hidden' }}>
+{% endmacro %}
 {% block titel %}{{ 'Product bewerken' if product else 'Nieuw product' }}{% endblock %}
 {% block inhoud %}
 <h1>{{ 'Product bewerken' if product else 'Nieuw product' }}</h1>
@@ -34,6 +49,13 @@
                     <input type="text" id="naam" name="naam" required value="{{ product.naam if product else '' }}">
                 </div>
                 <div class="veld">
+                    <label for="merk">Merk</label>
+                    <input type="text" id="merk" name="merk" list="merk-opties" autocomplete="off" placeholder="Optioneel, bijv. Bozu"
+                           value="{{ product.merk if product and product.merk else '' }}">
+                    <datalist id="merk-opties">{% for m in merken %}<option value="{{ m }}">{% endfor %}</datalist>
+                    <span class="tekst-zacht">Producten van hetzelfde merk worden samen genomen, bijv. alle Bozu-smaken.</span>
+                </div>
+                <div class="veld">
                     <label for="categorie">Categorie</label>
                     <select id="categorie" name="categorie" required>
                         {% set huidige_categorie = product.categorie if product else (voorgestelde_categorie or '') %}
@@ -60,8 +82,8 @@
                 </div>
                 <div class="veld">
                     <label for="eenheid">Eenheid</label>
-                    <input type="text" id="eenheid" name="eenheid" placeholder="stuks, krat, fles, ..."
-                           value="{{ product.eenheid if product else 'stuks' }}">
+                    {{ eenheid_keuze('eenheid', eenheden, product.eenheid if product else 'Stuks') }}
+                    <span class="tekst-zacht">Waarin je de voorraad telt, bijv. Fles of Blik.</span>
                 </div>
                 <div class="veld">
                     <label for="verkoopprijs">Verkoopprijs per eenheid</label>
@@ -95,8 +117,7 @@
             <div class="formgrid">
                 <div class="veld">
                     <label for="besteleenheid">Besteleenheid</label>
-                    <input type="text" id="besteleenheid" name="besteleenheid" placeholder="Bijv. Krat (leeg = zelfde als voorraad-eenheid)"
-                           value="{{ product.besteleenheid if product and product.besteleenheid else '' }}">
+                    {{ eenheid_keuze('besteleenheid', besteleenheden, product.besteleenheid if product and product.besteleenheid else '', leeg='Zelfde als de eenheid') }}
                     <span class="tekst-zacht">De eenheid waarin je dit bij de leverancier bestelt.</span>
                 </div>
                 <div class="veld">
@@ -104,6 +125,16 @@
                     <input type="number" id="besteleenheid_factor" name="besteleenheid_factor" min="1"
                            value="{{ product.besteleenheid_factor if product else 1 }}">
                     <span class="tekst-zacht">Bijv. 24 als 1 krat = 24 flesjes voorraad-eenheid.</span>
+                </div>
+                <div class="veld">
+                    <label for="leverancier_id">Leverancier</label>
+                    <select id="leverancier_id" name="leverancier_id">
+                        <option value="">Geen</option>
+                        {% for l in leveranciers %}
+                        <option value="{{ l.id }}" {{ 'selected' if product and product.leverancier_id == l.id }}>{{ l.naam }}{{ '' if l.actief else ' (inactief)' }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if not leveranciers %}<span class="tekst-zacht">Nog geen leveranciers: <a href="{{ url_for('leveranciers_lijst') }}">voeg ze toe</a>.</span>{% endif %}
                 </div>
                 <div class="veld">
                     <label for="inkoopprijs">Inkoopprijs per besteleenheid</label>
@@ -126,20 +157,26 @@
                        {{ 'checked' if product and product.auto_inactief_bij_nul }}>
                 Automatisch op inactief zetten zodra de voorraad op 0 komt
             </label>
+            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-top:0.5rem">
+                <input type="checkbox" id="niet_tellen" name="niet_tellen" style="width:auto"
+                       {{ 'checked' if product and product.niet_tellen }}>
+                Niet tellen (bijv. een kassaknop zonder eigen voorraad): staat dan niet bij Voorraad tellen en in de looplijst
+            </label>
         </fieldset>
         <fieldset class="groupbox">
             <legend>Fust verkoop (optioneel)</legend>
             <p class="tekst-zacht" style="margin-top:-0.3rem">
-                Alleen invullen voor producten die per glas getapt worden. Zet
-                'm op het <a href="{{ url_for('voorraadoverzicht') }}">voorraadoverzicht</a>
-                zodra hier een aantal glazen per fust staat.
+                Alleen invullen voor producten die per glas getapt worden. Een fust dat bij een telling minder wordt
+                geteld, telt in de omzet als glazen per fust maal de prijs per glas (bijv. 60 &times; &euro; 2,00 =
+                &euro; 120), ook in de marge en de prognose. Het fust staat dan ook op het
+                <a href="{{ url_for('voorraadoverzicht') }}">voorraadoverzicht</a>.
             </p>
             <div class="formgrid">
                 <div class="veld">
                     <label for="glazen_per_fust">Glazen per fust</label>
                     <input type="number" id="glazen_per_fust" name="glazen_per_fust" min="0"
                            value="{{ product.glazen_per_fust if product else 0 }}">
-                    <span class="tekst-zacht">Bijv. 80 glazen uit 1 fust. Leeg/0 = geen fusten-sectie op het voorraadoverzicht.</span>
+                    <span class="tekst-zacht">Bijv. 60 glazen van 33 cl uit 1 fust. 0 = geen fust.</span>
                 </div>
                 <div class="veld">
                     <label for="prijs_per_glas">Verkoopprijs per glas</label>
@@ -188,7 +225,8 @@
                 (&euro; 2,00). Staat hier iets in, dan toont het
                 prijzenscherm deze regels in plaats van de gewone
                 verkoopprijs hierboven &mdash; het product zelf blijft
-                gewoon normaal tellen en bestellen.
+                gewoon normaal tellen en bestellen. Vul bij een pitcher in hoeveel glazen erin gaan: dan staat de
+                kostprijs ervan in het rapport Marge.
             </p>
             <div id="prijsopties-lijst">
                 {% for optie in prijsopties %}
@@ -200,6 +238,10 @@
                     <div class="veld">
                         <label>Prijs</label>
                         <input type="number" name="optie_prijs" min="0" step="0.01" value="{{ '%.2f'|format(optie.prijs) }}">
+                    </div>
+                    <div class="veld">
+                        <label>Glazen erin (optioneel)</label>
+                        <input type="number" name="optie_glazen" min="0" step="0.5" value="{{ ('%g'|format(optie.glazen)) if optie.glazen else '' }}" placeholder="Bijv. 4,5">
                     </div>
                     <div class="veld" style="justify-content:flex-end">
                         <button type="button" class="btn btn-gevaar btn-klein js-verwijder-optie">Verwijderen</button>
@@ -278,6 +320,10 @@
                 '<label>Prijs</label>' +
                 '<input type="number" name="optie_prijs" min="0" step="0.01" value="0.00">' +
             '</div>' +
+            '<div class="veld">' +
+                '<label>Glazen erin (optioneel)</label>' +
+                '<input type="number" name="optie_glazen" min="0" step="0.5" placeholder="Bijv. 4,5">' +
+            '</div>' +
             '<div class="veld" style="justify-content:flex-end">' +
                 '<button type="button" class="btn btn-gevaar btn-klein js-verwijder-optie">Verwijderen</button>' +
             '</div>';
@@ -290,5 +336,16 @@
         knop.closest('.prijsoptie-regel').remove();
     });
 })();
+</script>
+<script>
+// Eenheid en besteleenheid: bij 'Anders' verschijnt een tekstvak om zelf iets te typen.
+document.querySelectorAll('select[data-anders]').forEach(function (keuze) {
+    var vak = document.getElementById(keuze.dataset.anders);
+    if (!vak) return;
+    keuze.addEventListener('change', function () {
+        vak.hidden = keuze.value !== '__anders__';
+        if (!vak.hidden) vak.focus();
+    });
+});
 </script>
 {% endblock %}

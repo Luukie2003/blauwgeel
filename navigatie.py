@@ -104,9 +104,21 @@ NAV_ITEMS = [
     },
     {
         "groep": "Bestellen",
+        "endpoints": ["prognose_terugblik"],
+        "url_endpoint": "prognose_terugblik",
+        "label": "Prognose en verkoop",
+    },
+    {
+        "groep": "Bestellen",
         "endpoints": ["boodschappenlijst"],
         "url_endpoint": "boodschappenlijst",
         "label": "Boodschappenlijst",
+    },
+    {
+        "groep": "Bestellen",
+        "endpoints": ["leveranciers_lijst", "leverancier_nieuw", "leverancier_bewerken"],
+        "url_endpoint": "leveranciers_lijst",
+        "label": "Leveranciers",
     },
     {
         "groep": "Producten",
@@ -131,6 +143,12 @@ NAV_ITEMS = [
         "endpoints": ["producten_prijzen", "prijs_gepland_verwijderen"],
         "url_endpoint": "producten_prijzen",
         "label": "Prijzen aanpassen",
+    },
+    {
+        "groep": "Producten",
+        "endpoints": ["gegevenscontrole"],
+        "url_endpoint": "gegevenscontrole",
+        "label": "Gegevenscontrole",
     },
     {
         "groep": "Producten",
@@ -165,6 +183,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Geld",
+        "endpoints": ["kassa_omzet_controle"],
+        "url_endpoint": "kassa_omzet_controle",
+        "label": "Omzet en kassa",
+    },
+    {
+        "groep": "Geld",
         "endpoints": [
             "kluis_tellen",
             "kluis_telling_detail",
@@ -191,7 +215,31 @@ NAV_ITEMS = [
         "groep": "Keuken",
         "endpoints": ["keuken_voorraad"],
         "url_endpoint": "keuken_voorraad",
-        "label": "Voorraad",
+        "label": "Producten",
+    },
+    {
+        "groep": "Keuken",
+        "endpoints": ["keuken_tellen"],
+        "url_endpoint": "keuken_tellen",
+        "label": "Tellen",
+    },
+    {
+        "groep": "Keuken",
+        "endpoints": ["keuken_inboeken"],
+        "url_endpoint": "keuken_inboeken",
+        "label": "Inboeken",
+    },
+    {
+        "groep": "Keuken",
+        "endpoints": ["keuken_tellingen_overzicht"],
+        "url_endpoint": "keuken_tellingen_overzicht",
+        "label": "Tellingen",
+    },
+    {
+        "groep": "Keuken",
+        "endpoints": ["keuken_prijzen"],
+        "url_endpoint": "keuken_prijzen",
+        "label": "Prijzen",
     },
     {
         "groep": "Keuken",
@@ -336,6 +384,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Rapporten",
+        "endpoints": ["niet_lopers_rapport"],
+        "url_endpoint": "niet_lopers_rapport",
+        "label": "Niet-lopers",
+    },
+    {
+        "groep": "Rapporten",
         "endpoints": ["week_overzicht"],
         "url_endpoint": "week_overzicht",
         "label": "Weekoverzicht",
@@ -388,6 +442,12 @@ NAV_ITEMS = [
         "url_endpoint": "gebruiksstatistieken",
         "label": "Gebruiksstatistieken",
     },
+    {
+        "groep": "Beheer",
+        "endpoints": ["fouten_lijst"],
+        "url_endpoint": "fouten_lijst",
+        "label": "Foutmeldingen",
+    },
 ]
 
 # Groepen komen in deze volgorde in de zijbalk te staan (Python dicts noch
@@ -418,8 +478,13 @@ NAV_GROEP_ALLEEN_BEHEERDER = {"Beheer"}
 # Losse items in een groep die voor iedereen zichtbaar is, maar zelf alleen voor beheerders
 # (de route staat dan ook in BEHEERDER_ENDPOINTS).
 NAV_ITEM_ALLEEN_BEHEERDER = {
+    "keuken_prijzen",
+    # Omzet naast het afgerekende geld: een tekort kan op diefstal wijzen, dus alleen voor beheerders.
+    "kassa_omzet_controle",
     "marge_rapport",
+    "gegevenscontrole",
     "derving_rapport",
+    "niet_lopers_rapport",
     "eigen_taken_pagina",
     "producten_prijzen",
     "bardienstrapport",
@@ -450,6 +515,19 @@ NAV_GROEP_ICOON = {
 # Bewust een losse lijst i.p.v. een subset-vlag op NAV_ITEMS: die twee
 # navigaties verschillen te veel (geen groepen, kortere labels) om hetzelfde
 # datamodel te delen. De knoppen op het startscherm staan in pda_start.html.
+# Eenvoudige weergave (Mijn voorkeuren): wie dat aanzet, ziet in het menu alleen zijn favorieten (de rest achter
+# "Alle onderdelen") en op het overzicht grote knoppen. Zonder eigen keuze zijn dit de favorieten.
+STANDAARD_FAVORIETEN = ["tellen", "boeken", "bestellijst", "bijzonderheden"]
+
+
+def favoriete_items(zichtbare_items, favorieten):
+    """De menu-items uit 'favorieten' (een tekst met url_endpoints, komma's ertussen; leeg = de standaard), in die
+    volgorde, en alleen als dit account ze mag zien."""
+    gekozen = [f for f in (favorieten or "").split(",") if f] or STANDAARD_FAVORIETEN
+    per_endpoint = {item["url_endpoint"]: item for item in zichtbare_items}
+    return [per_endpoint[f] for f in gekozen if f in per_endpoint]
+
+
 PDA_NAV_ITEMS = [
     {"url_endpoint": "tellen", "pda_label": "Tellen"},
     {"url_endpoint": "boeken", "pda_label": "Boeken"},

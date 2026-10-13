@@ -1,12 +1,13 @@
 import secrets
 import sqlite3
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import current_app, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import mail
 from database import WACHTWOORD_HASH_METHODE, get_db
 from helpers import SECTIE_LABELS, SECTIES, genereer_wachtwoord_token, now_str
+from navigatie import favoriete_items
 
 
 def _secties_uit_formulier():
@@ -15,6 +16,11 @@ def _secties_uit_formulier():
     waarden (geknoei met het formulier) worden genegeerd."""
     gekozen = [s for s in request.form.getlist("secties") if s in SECTIES]
     return ",".join(gekozen)
+
+
+def nav_voor_sessie():
+    """De menu-items die het ingelogde account ziet (zie app.py, zichtbare_nav_items)."""
+    return current_app.extensions["zichtbare_nav_items"]()
 
 
 def register_routes(app):
@@ -342,4 +348,22 @@ def register_routes(app):
         gebruiker = db.execute(
             "SELECT * FROM gebruikers WHERE id = ?", (gebruiker_id,)
         ).fetchone()
-        return render_template("account_voorkeuren.html", gebruiker=gebruiker)
+        return render_template(
+            "account_voorkeuren.html",
+            gebruiker=gebruiker,
+            gekozen_favorieten={item["url_endpoint"] for item in favoriete_items(nav_voor_sessie(), gebruiker["favorieten"])},
+        )
+
+    @app.route("/account/weergave", methods=["POST"])
+    def account_weergave():
+        """Mijn voorkeuren > Weergave: de eenvoudige weergave aan of uit, en welke onderdelen favoriet zijn."""
+        zichtbaar = {item["url_endpoint"] for item in nav_voor_sessie()}
+        favorieten = [e for e in request.form.getlist("favoriet") if e in zichtbaar]
+        db = get_db()
+        db.execute(
+            "UPDATE gebruikers SET eenvoudig = ?, favorieten = ? WHERE id = ?",
+            (1 if request.form.get("eenvoudig") else 0, ",".join(favorieten) or None, session["gebruiker_id"]),
+        )
+        db.commit()
+        flash("Weergave opgeslagen.", "success")
+        return redirect(url_for("account_voorkeuren"))

@@ -13,7 +13,9 @@ Staat er op de server geen `uitrol_geheim.txt`, dan is het endpoint uitgeschakel
 
 import hashlib
 import hmac
+import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -28,6 +30,8 @@ STANDAARD_WSGI_BESTAND = "/var/www/www_kantineblauwgeel_nl_wsgi.py"
 MAX_LEEFTIJD_SECONDEN = 300
 GIT_TIMEOUT_SECONDEN = 60
 PIP_TIMEOUT_SECONDEN = 240
+# De rooktest (rooktest.py) opent na het ophalen alle pagina's met de nieuwe code en een kopie van de echte database.
+ROOKTEST_TIMEOUT_SECONDEN = 150
 PAKKETTENBESTAND = "requirements-vast.txt"
 # Wijzigt een van deze bestanden, dan moeten de pakketten op de server worden bijgewerkt.
 PAKKETBESTANDEN = ("requirements.txt", PAKKETTENBESTAND)
@@ -101,12 +105,43 @@ def installeer_pakketten(repo=BASE_DIR):
     return uit.returncode == 0, (uit.stdout + uit.stderr).strip()[-1500:]
 
 
-def werk_code_bij(repo=BASE_DIR):
+def draai_rooktest(repo, database):
+    """Start rooktest.py met de nieuwe code als los proces (de draaiende web-app heeft nog de oude code in het geheugen).
+    Geeft {"afgerond", "paginas", "doorverwezen", "fouten", "duur"}; "afgerond" is False als de test zelf niet kon
+    draaien of te lang duurde: dat zegt niets over de nieuwe code en is dus geen reden om terug te draaien."""
+    script = Path(repo) / "rooktest.py"
+    if not script.exists():
+        return {"afgerond": False, "paginas": 0, "doorverwezen": 0, "fouten": ["rooktest.py ontbreekt"]}
+    # In de web-app is sys.executable de webserver en niet python zelf: zoek python op versienummer (zie maak_pip_commando).
+    python = shutil.which(f"python{sys.version_info.major}.{sys.version_info.minor}") or sys.executable
+    try:
+        uit = subprocess.run(
+            [python, str(script), str(database)],
+            cwd=repo, capture_output=True, text=True, timeout=ROOKTEST_TIMEOUT_SECONDEN, check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {"afgerond": False, "paginas": 0, "doorverwezen": 0, "fouten": [f"duurde langer dan {ROOKTEST_TIMEOUT_SECONDEN} s"]}
+    except (OSError, subprocess.SubprocessError) as fout:
+        return {"afgerond": False, "paginas": 0, "doorverwezen": 0, "fouten": [f"kon niet starten: {fout}"]}
+    regels = [r for r in uit.stdout.splitlines() if r.strip().startswith("{")]
+    try:
+        return json.loads(regels[-1])
+    except (IndexError, ValueError):
+        # Geen uitkomst: het proces is onderweg gecrasht (bijvoorbeeld bij het importeren van de nieuwe code).
+        return {"afgerond": True, "paginas": 0, "doorverwezen": 0,
+                "fouten": ["de rooktest crashte: " + (uit.stderr or uit.stdout).strip()[-600:]]}
+
+
+def werk_code_bij(repo=BASE_DIR, rooktest_database=None):
     """Haalt de nieuwste code op met `git pull --ff-only` (dus nooit een merge of overschrijven) en
     installeert zo nodig de vastgezette pakketten. Mislukt dat laatste, dan wordt de code teruggezet.
 
-    Geeft {"ok", "oud", "nieuw", "gewijzigd", "pakketten", "teruggedraaid", "uitvoer"} terug; "pakketten"
-    is None (niet nodig), "geinstalleerd" of "mislukt"."""
+    Met 'rooktest_database' opent de server daarna alle pagina's met de nieuwe code op een kopie van die database
+    (rooktest.py). Geeft een pagina een serverfout, dan gaat de code (en zo nodig de pakketten) terug naar de vorige
+    versie en wordt er niet herstart.
+
+    Geeft {"ok", "oud", "nieuw", "gewijzigd", "pakketten", "teruggedraaid", "uitvoer", "rooktest"} terug; "pakketten"
+    is None (niet nodig), "geinstalleerd" of "mislukt"; "rooktest" is None als die niet is gedraaid."""
     resultaat = {
         "ok": False,
         "oud": huidige_commit(repo),
@@ -115,6 +150,7 @@ def werk_code_bij(repo=BASE_DIR):
         "pakketten": None,
         "teruggedraaid": False,
         "uitvoer": "",
+        "rooktest": None,
     }
     try:
         pull = _git(repo, "pull", "--ff-only")
@@ -141,6 +177,18 @@ def werk_code_bij(repo=BASE_DIR):
                 resultaat["uitvoer"] = "Pakketten installeren mislukt:\n" + uitvoer
                 return resultaat
             resultaat["uitvoer"] = (resultaat["uitvoer"] + "\n" + uitvoer).strip()[-1500:]
+    if resultaat["gewijzigd"] and resultaat["oud"] and rooktest_database:
+        rooktest = draai_rooktest(repo, rooktest_database)
+        resultaat["rooktest"] = rooktest
+        if rooktest.get("afgerond") and rooktest.get("fouten"):
+            terug = _git(repo, "reset", "--hard", resultaat["oud"])
+            resultaat["teruggedraaid"] = terug.returncode == 0
+            if resultaat["pakketten"] == "geinstalleerd":
+                installeer_pakketten(repo)  # de pakketten van de vorige versie weer terug
+            resultaat["gewijzigd"] = False
+            resultaat["nieuw"] = huidige_commit(repo)
+            resultaat["uitvoer"] = "De rooktest vond fouten met de nieuwe code:\n" + "\n".join(rooktest["fouten"])
+            return resultaat
     resultaat["ok"] = True
     return resultaat
 

@@ -293,6 +293,40 @@ a:hover { text-decoration: underline; }
     font-weight: 700;
 }
 
+/* ---------- Eenvoudige weergave (Mijn voorkeuren): favorieten bovenaan, de rest achter een knop ---------- */
+.app-zijbalk.eenvoudig:not(.alles) .zijbalk-groep { display: none; }
+.zijbalk-favorieten { list-style: none; margin: 0; padding: 0.4rem 0; }
+.app-zijbalk .zijbalk-favorieten a { padding: 0.7rem 0.9rem; font-size: 1rem; font-weight: 700; }
+.zijbalk-alles-knop {
+    display: block;
+    width: calc(100% - 1.8rem);
+    margin: 0.2rem 0.9rem 0.6rem;
+    padding: 0.45rem 0.6rem;
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--accent);
+    background: transparent;
+    border: 1px dashed var(--rand);
+    border-radius: var(--radius);
+    cursor: pointer;
+}
+.grote-knoppen { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.8rem; margin-bottom: 1rem; }
+.grote-knop {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 5.5rem;
+    padding: 1rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--blauw-donker);
+    background: var(--kaart);
+    border: 2px solid var(--blauw);
+    border-radius: 8px;
+}
+.grote-knop:hover { background: var(--geel); text-decoration: none; }
+
 .zijbalk-toggle {
     display: none;
     width: 100%;

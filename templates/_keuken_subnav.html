@@ -1,0 +1,8 @@
+{# Knoppen bovenaan de keukenpagina's (zie routes/keuken.py). #}
+<div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-bottom:1rem">
+    {% for endpoint, label in [('keuken_voorraad', 'Producten'), ('keuken_tellen', 'Tellen'), ('keuken_inboeken', 'Inboeken'), ('keuken_tellingen_overzicht', 'Tellingen'), ('keuken_prijzen', 'Prijzen')] %}
+    {% if endpoint != 'keuken_prijzen' or huidige_gebruiker_rol == 'beheerder' %}
+    <a href="{{ url_for(endpoint) }}" class="btn {{ 'btn-geel' if request.endpoint == endpoint else 'btn-rand' }} btn-klein">{{ label }}</a>
+    {% endif %}
+    {% endfor %}
+</div>

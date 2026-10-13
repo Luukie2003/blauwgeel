@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block titel %}Omzet en kassa{% endblock %}
+{% macro euro(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% macro pct(x) %}{% if x is none %}&mdash;{% else %}{{ '%+.0f'|format(x) }}%{% endif %}{% endmacro %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Wat PayPal zegt dat er is betaald (contant plus kaart) naast wat er volgens de voorraadtellingen is verkocht,
+        per periode tussen twee kassatellingen. Is de omzet uit de voorraad hoger, dan is er meer weg dan er is
+        afgerekend: een telfout, iets dat niet is aangeslagen, derving of diefstal.
+    </p>
+</div>
+
+{% set t = uitkomst.totaal %}
+<div class="statgrid">
+    <div class="stat"><div class="getal">{{ euro(t.paypal) }}</div><div class="label">Volgens PayPal (contant + kaart)</div></div>
+    <div class="stat"><div class="getal">{{ euro(t.voorraad) }}</div><div class="label">Volgens de voorraadtellingen</div></div>
+    <div class="stat {{ 'waarschuwing' if t.pct is not none and t.pct|abs > 5 else '' }}">
+        <div class="getal">{{ euro(t.verschil) }}</div>
+        <div class="label">Verschil ({{ pct(t.pct) }}): {{ 'meer verkocht dan afgerekend' if t.verschil > 0 else 'meer afgerekend dan geteld' if t.verschil < 0 else 'sluit precies' }}</div>
+    </div>
+</div>
+
+{% if t.zonder_kaart %}
+<p class="melding melding-warning">
+    Bij {{ t.zonder_kaart }} van de periodes staan geen kaartbetalingen ingevuld. Dan lijkt er te weinig te zijn
+    afgerekend. Vul ze in bij de kassatelling (ook achteraf kan dat).
+</p>
+{% endif %}
+
+<div class="kaart">
+    <h2>Per periode</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Per periode schommelt het, want de voorraad wordt niet op hetzelfde moment geteld als de kassa. Het totaal
+        hierboven zegt het meest.
+    </p>
+    {% if uitkomst.periodes %}
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Periode</th><th style="text-align:right">Contant</th><th style="text-align:right">Kaart</th>
+                    <th style="text-align:right">PayPal</th><th style="text-align:right">Voorraad</th>
+                    <th style="text-align:right">Verschil</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in uitkomst.periodes %}
+                <tr>
+                    <td>{{ p.van|datum_kort }} &ndash; {{ p.tot|datum_kort }}</td>
+                    <td style="text-align:right">{{ euro(p.contant) }}</td>
+                    <td style="text-align:right">{% if p.kaart_leeg %}<span class="badge badge-neutraal">niet ingevuld</span>{% else %}{{ euro(p.kaart) }}{% endif %}</td>
+                    <td style="text-align:right">{{ euro(p.paypal) }}</td>
+                    <td style="text-align:right">{{ euro(p.voorraad) }}</td>
+                    <td style="text-align:right">{{ euro(p.verschil) }} <span class="tekst-zacht">{{ pct(p.pct) }}</span></td>
+                    <td class="tabel-acties"><a href="{{ url_for('kassa_telling_detail', telling_id=p.id) }}" class="btn btn-rand btn-klein">Kassatelling</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Er zijn minstens twee afgesloten kassatellingen nodig voor een eerste periode.</p>
+    {% endif %}
+</div>
+{% endblock %}

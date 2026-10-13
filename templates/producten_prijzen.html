@@ -25,6 +25,13 @@
     <a href="{{ url_for('producten_lijst') }}">&larr; Terug naar producten</a>
 </p>
 
+{% if voorgesteld %}
+<div class="flash flash-success">
+    {{ voorgesteld }} voorgestelde {{ 'prijs is' if voorgesteld == 1 else 'prijzen zijn' }} ingevuld vanuit het rapport Marge
+    (geel gemarkeerd). Er is nog niets opgeslagen: kijk ze na en kies &ldquo;Alles opslaan&rdquo;, eventueel met een ingangsdatum.
+</div>
+{% endif %}
+
 {% if fouten %}
 <div class="flash flash-error">
     <strong>Er is niets opgeslagen:</strong>
@@ -106,7 +113,7 @@
                             {% if heeft_opties %}<div class="tekst-zacht" style="font-size:0.72rem">Op de tv staan de prijsopties hieronder, niet deze prijs.</div>{% endif %}
                         </td>
                         {# De inkoopprijs staat per besteleenheid (een krat), de verkoopprijs per stuk: hier per stuk, voor de marge. #}
-                        {% set inkoop_stuk = (p.inkoopprijs / (p.besteleenheid_factor or 1)) if p.inkoopprijs else 0 %}
+                        {% set inkoop_stuk = p|inkoop_per_stuk %}
                         <td data-inkoop="{{ inkoop_stuk }}" {% if p.besteleenheid_factor and p.besteleenheid_factor > 1 %}title="Inkoop per krat/doos: &euro; {{ bedrag(p.inkoopprijs) }} ({{ p.besteleenheid_factor }} stuks)"{% endif %}>{% if p.inkoopprijs %}&euro; {{ bedrag(inkoop_stuk) }}{% else %}<span class="tekst-zacht">&mdash;</span>{% endif %}</td>
                         <td>{{ prijsveld('prijs_' ~ p.id, p.verkoopprijs, 'Verkoopprijs ' ~ p.naam) }}
                             {% for g in gepland_per_prijs.get(('verkoopprijs', p.id, 0), []) %}
@@ -137,7 +144,11 @@
                 Ingaan op
                 <input type="date" id="ingangsdatum" name="ingangsdatum" min="{{ morgen }}" value="{{ ingevuld.get('ingangsdatum', '') }}" style="width:auto">
             </label>
-            <span class="tekst-zacht" style="font-size:0.82rem">Leeg laten: de prijzen gaan meteen in. Met een datum staan ze klaar en gaan ze op die dag vanzelf in.</span>
+            <label for="einddatum" style="display:flex; align-items:center; gap:0.4rem; font-weight:400; margin:0">
+                Actie tot en met
+                <input type="date" id="einddatum" name="einddatum" min="{{ vandaag }}" value="{{ ingevuld.get('einddatum', '') }}" style="width:auto">
+            </label>
+            <span class="tekst-zacht" style="font-size:0.82rem">Leeg laten: de prijzen gaan meteen in. Met een datum staan ze klaar en gaan ze op die dag vanzelf in. Met &ldquo;actie tot en met&rdquo; komt de dag erna de huidige prijs vanzelf terug.</span>
             <span id="gewijzigd-aantal" class="tekst-zacht">Nog niets gewijzigd.</span>
         </div>
     </form>
@@ -157,7 +168,7 @@
                 {% for g in gepland %}
                 <tr>
                     <td>{{ g.ingangsdatum[8:10] }}-{{ g.ingangsdatum[5:7] }}-{{ g.ingangsdatum[:4] }}</td>
-                    <td>{{ g.product_naam }}{% if g.optie_naam %} <span class="tekst-zacht">&middot; {{ g.optie_naam }}</span>{% elif g.soort == 'prijs_per_glas' %} <span class="tekst-zacht">&middot; per glas</span>{% endif %}</td>
+                    <td>{{ g.product_naam }}{% if g.optie_naam %} <span class="tekst-zacht">&middot; {{ g.optie_naam }}</span>{% elif g.soort == 'prijs_per_glas' %} <span class="tekst-zacht">&middot; per glas</span>{% endif %}{% if g.opmerking == 'einde actie' %} <span class="badge badge-neutraal">einde actie</span>{% endif %}</td>
                     <td>&euro; {{ bedrag(g.huidige_prijs) }}</td>
                     <td><strong>&euro; {{ bedrag(g.nieuwe_prijs) }}</strong></td>
                     <td>

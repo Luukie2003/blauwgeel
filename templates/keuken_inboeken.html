@@ -1,0 +1,35 @@
+{% extends basis_template %}
+{% block titel %}Keuken inboeken{% endblock %}
+{% block inhoud %}
+<h1>Keuken inboeken</h1>
+{% include '_keuken_subnav.html' %}
+<p class="subtitel">
+    Vul in hoeveel verpakkingen er binnen zijn gekomen; de voorraad gaat omhoog met het aantal porties of stuks dat erin
+    zit. Is de inkoopprijs veranderd, pas hem dan meteen aan (per verpakking): dan klopt de marge.
+</p>
+{% if producten %}
+<form method="post" class="kaart">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th>Verpakking</th><th>Aantal binnen</th><th>Inkoop per verpakking</th></tr></thead>
+            <tbody>
+                {% for p in producten %}
+                <tr>
+                    <td>{{ p.naam }}<div class="tekst-zacht" style="font-size:0.75rem">voorraad {{ p.voorraad }} {{ p.eenheid|lower }}</div></td>
+                    <td>{% if p.besteleenheid_factor > 1 %}{{ p.besteleenheid or 'verpakking' }} van {{ p.besteleenheid_factor }}{% else %}per {{ p.eenheid|lower }}{% endif %}</td>
+                    <td><input type="number" inputmode="numeric" min="0" name="aantal_{{ p.id }}" style="width:5rem" aria-label="Aantal {{ p.naam }}"></td>
+                    <td>&euro; <input type="text" inputmode="decimal" name="inkoop_{{ p.id }}" style="width:6rem; text-align:right"
+                                      value="{{ '%.2f'|format(p.inkoopprijs)|replace('.', ',') }}" aria-label="Inkoopprijs {{ p.naam }}"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <button type="submit" class="btn btn-geel" style="margin-top:0.8rem">Inboeken</button>
+</form>
+<p class="tekst-zacht">Staat het aantal per verpakking niet goed? Pas het aan bij het product (&ldquo;Aantal per besteleenheid&rdquo;).</p>
+{% else %}
+<p class="leeg">Nog geen actieve producten in de categorie Keuken.</p>
+{% endif %}
+{% endblock %}

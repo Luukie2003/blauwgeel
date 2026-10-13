@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block titel %}Foutmeldingen{% endblock %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Fouten waarbij iemand een foutpagina kreeg, samengevoegd per soort fout. Een fout die je hebt opgelost markeer je
+        als opgelost; treedt hij opnieuw op, dan staat hij hier weer.
+    </p>
+    <a href="{{ url_for('fouten_lijst', alles=None if alles else '1') }}" class="btn btn-rand btn-klein">{{ 'Alleen open' if alles else 'Ook opgeloste tonen' }}</a>
+</div>
+<div class="kaart">
+    {% if fouten %}
+    {% for f in fouten %}
+    <div style="border-top:1px solid var(--rand-licht); padding:0.7rem 0">
+        <div class="actiebalk" style="margin:0">
+            <div>
+                <strong>{{ f.fouttype }}</strong> bij <code>{{ f.pad or f.endpoint or '?' }}</code>
+                {% if f.opgelost %}<span class="badge badge-ok">opgelost</span>{% endif %}
+                <div class="tekst-zacht">{{ f.aantal }}&times;, eerst {{ f.eerste_op|datum_nl }}, laatst {{ f.laatste_op|datum_nl }} &middot; versie {{ f.versie or '?' }} &middot; {{ f.plek or '' }}</div>
+                {% if f.melding %}<div style="margin-top:0.2rem">{{ f.melding }}</div>{% endif %}
+            </div>
+            {% if not f.opgelost %}
+            <form method="post" action="{{ url_for('fout_opgelost', fout_id=f.id) }}" style="margin:0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-rand btn-klein">Opgelost</button>
+            </form>
+            {% endif %}
+        </div>
+        {% if f.technisch %}
+        <details style="margin-top:0.4rem"><summary class="tekst-zacht" style="cursor:pointer">Technische melding</summary>
+            <pre style="white-space:pre-wrap; font-size:0.78rem; overflow-x:auto">{{ f.technisch }}</pre>
+        </details>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="leeg">Geen {{ '' if alles else 'open ' }}foutmeldingen. 👍</p>
+    {% endif %}
+</div>
+{% endblock %}

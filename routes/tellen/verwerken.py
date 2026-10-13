@@ -2,7 +2,7 @@
 
 from flask import flash
 
-from helpers import verwerk_auto_inactief
+from helpers import omzet_per_eenheid, verwerk_auto_inactief
 
 
 def signaleer_afwijkende_telling(db, product_id, voorraad_voor, geteld, limiet=8):
@@ -70,7 +70,7 @@ def verwerk_telling(db, waarden, naam, opmerking, datum, gebruiker_id=None):
                 geteld,
                 verkocht,
                 correctie,
-                product["verkoopprijs"],
+                omzet_per_eenheid(product),  # bij een fust: glazen maal de prijs per glas
             ),
         )
         db.execute(

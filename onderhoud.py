@@ -22,6 +22,10 @@ BEWAARTERMIJNEN = [
     ("tablet_code_pogingen", "laatste_poging", 30, "(geblokkeerd_tot IS NULL OR geblokkeerd_tot < :nu)"),
     # Teller voor het vooraf bekijken van het aanmeldformulier.
     ("club_van_20_voorbeeld_pogingen", "sinds", 30, None),
+    # Trage verzoeken en opgeloste foutmeldingen: technisch, alleen voor de beheerder (Beheer > Foutmeldingen,
+    # Gebruiksstatistieken).
+    ("trage_verzoeken", "datum", 90, None),
+    ("fouten", "laatste_op", 180, "opgelost = 1"),
 ]
 
 DATUM_FORMAAT = "%Y-%m-%d %H:%M"

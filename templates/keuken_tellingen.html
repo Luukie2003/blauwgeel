@@ -1,0 +1,32 @@
+{% extends basis_template %}
+{% block titel %}Keukentellingen{% endblock %}
+{% macro euro(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% block inhoud %}
+<h1>Keukentellingen</h1>
+{% include '_keuken_subnav.html' %}
+<p class="subtitel">Wat er per keukentelling is verkocht en wat dat opbracht. Deze omzet staat los van de weekomzet van de kantine, maar telt wel mee in Marge en in Omzet en kassa.</p>
+<div class="kaart">
+    {% if tellingen %}
+    {% for t in tellingen %}
+    <details style="border-top:1px solid var(--rand-licht); padding:0.6rem 0">
+        <summary style="cursor:pointer"><strong>{{ t.datum|datum_nl }}</strong> &middot; {{ t.naam or '—' }} &middot; {{ t.aantal_producten }} producten &middot; <strong>{{ euro(t.omzet) }}</strong></summary>
+        <div class="tabel-wrap" style="margin-top:0.5rem">
+            <table>
+                <thead><tr><th>Product</th><th style="text-align:right">Was</th><th style="text-align:right">Geteld</th><th style="text-align:right">Verkocht</th><th style="text-align:right">Omzet</th></tr></thead>
+                <tbody>
+                    {% for r in t.regels %}
+                    <tr><td>{{ r.product_naam }}</td><td style="text-align:right">{{ r.voorraad_voor }}</td><td style="text-align:right">{{ r.geteld_aantal }}</td>
+                        <td style="text-align:right">{{ r.verkocht }}{% if r.correctie %} <span class="tekst-zacht">(+{{ r.correctie }} meer)</span>{% endif %}</td>
+                        <td style="text-align:right">{{ euro(r.verkocht * r.verkoopprijs) }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if t.opmerking %}<p class="tekst-zacht" style="margin:0.4rem 0 0">{{ t.opmerking }}</p>{% endif %}
+    </details>
+    {% endfor %}
+    {% else %}
+    <p class="leeg">Nog geen keukentellingen. <a href="{{ url_for('keuken_tellen') }}">Tel de keuken</a>.</p>
+    {% endif %}
+</div>
+{% endblock %}

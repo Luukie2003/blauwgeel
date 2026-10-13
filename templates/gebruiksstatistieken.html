@@ -112,4 +112,59 @@
     <p class="leeg">Nog geen bezoeken geregistreerd in deze periode.</p>
     {% endif %}
 </div>
+<div class="kaart">
+    <h2 style="margin-top:0">Snelheid</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Hoe lang de server over een pagina doet (zonder het laden in de browser). De meeste pagina's horen onder de halve seconde te zitten.</p>
+    {% if statistieken.snelheid %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Pagina</th><th style="text-align:right">Bezoeken</th><th style="text-align:right">Meestal</th><th style="text-align:right">1 op 10 duurt</th></tr></thead>
+            <tbody>
+                {% for r in statistieken.snelheid %}
+                <tr>
+                    <td>{{ r.label }}</td><td style="text-align:right">{{ r.aantal }}</td>
+                    <td style="text-align:right">{{ '%.2f'|format(r.mediaan / 1000)|replace('.', ',') }} s</td>
+                    <td style="text-align:right">{% if r.p90 >= 2000 %}<span class="badge badge-laag">{% endif %}{{ '%.1f'|format(r.p90 / 1000)|replace('.', ',') }} s{% if r.p90 >= 2000 %}</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen laadtijden gemeten (dat gebeurt sinds versie 1.45.0).</p>
+    {% endif %}
+    {% if statistieken.trage_verzoeken %}
+    <h3>Trage delen van pagina's</h3>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Wat los van een paginabezoek langer dan 3 seconden duurde, bijvoorbeeld het rekenwerk van de prognose.</p>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Onderdeel</th><th style="text-align:right">Keer</th><th style="text-align:right">Gemiddeld</th><th style="text-align:right">Langste</th></tr></thead>
+            <tbody>
+                {% for r in statistieken.trage_verzoeken %}
+                <tr><td>{{ r.label }}</td><td style="text-align:right">{{ r.aantal }}</td>
+                    <td style="text-align:right">{{ '%.1f'|format(r.gemiddeld / 1000)|replace('.', ',') }} s</td>
+                    <td style="text-align:right">{{ '%.1f'|format(r.langste / 1000)|replace('.', ',') }} s</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+{% set inlog = statistieken.inloggen %}
+<div class="kaart">
+    <h2 style="margin-top:0">Inlogpagina</h2>
+    {% if inlog.totaal %}
+    <p style="margin-top:0">{{ inlog.totaal }} keer geopend in deze periode:</p>
+    <ul>
+        <li><strong>{{ inlog.doorverwezen }}</strong> keer door iemand die een pagina opende zonder (nog) ingelogd te zijn, bijvoorbeeld een tablet waarvan de sessie verlopen was</li>
+        <li><strong>{{ inlog.direct }}</strong> keer rechtstreeks naar de inlogpagina</li>
+        <li><strong>{{ inlog.bot }}</strong> keer door een zoekmachine of ander programma (die tellen verder nergens mee)</li>
+        {% if inlog.onbekend %}<li><strong>{{ inlog.onbekend }}</strong> keer van voor versie 1.45.0, toen dit nog niet werd bijgehouden</li>{% endif %}
+    </ul>
+    {% else %}
+    <p class="leeg">De inlogpagina is in deze periode niet geopend.</p>
+    {% endif %}
+    {% if inlog.bots_totaal %}<p class="tekst-zacht" style="margin-bottom:0">In totaal kwamen er {{ inlog.bots_totaal }} bezoeken van programma's; die staan niet in de cijfers hierboven.</p>{% endif %}
+</div>
 {% endblock %}

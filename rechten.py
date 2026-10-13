@@ -8,6 +8,7 @@ nieuwe pagina toe die niet voor iedereen is, dan moet het endpoint hier in."""
 
 OPEN_ENDPOINTS = {
     "login",
+    "robots_txt",
     "static",
     "favicon_ico",
     "service_worker",
@@ -92,14 +93,17 @@ GEBRUIK_NIET_LOGGEN = {
     # voorverwarmen van het voorspelmodel: dat is geen bezoek aan een pagina.
     "dashboard_omzettrend",
     "dashboard_wedstrijddag",
+    "dashboard_koud_zetten",
     "tellingen_cijfers",
     "bestellijst_voorspeld",
     "prognose_resultaat",
+    "prognose_terugblik_resultaat",
     "voorspelling_opwarmen",
     "opslag_meting",
     # Typen in de zoekbalk haalt bij elke toetsslag resultaten op.
     "zoeken_live",
     "favicon_ico",
+    "robots_txt",
     "service_worker",
     "offline_pagina",
     "kiosk_prijzen_versie",
@@ -143,6 +147,21 @@ BEHEERDER_ENDPOINTS = {
     # Wat elk product oplevert (met de inkoopprijzen) en wat er zonder te verkopen uit de voorraad verdwijnt.
     "marge_rapport",
     "derving_rapport",
+    "marge_doelmarge",
+    # Verkoopprijzen van de keuken (de keuken zelf tellen en inboeken mag iedereen met de keukensectie).
+    "keuken_prijzen",
+    "leverancier_nieuw",
+    "leverancier_bewerken",
+    "leverancier_verwijderen",
+    # Wat er al weken niet verkocht is, met de waarde tegen inkoopprijs.
+    "niet_lopers_rapport",
+    # De serverfouten van de site (Beheer > Foutmeldingen).
+    "fouten_lijst",
+    "fout_opgelost",
+    # Wat er aan de productgegevens niet klopt (met inkoopprijzen).
+    "gegevenscontrole",
+    # De omzet uit de voorraad naast het afgerekende geld (een tekort kan op diefstal wijzen).
+    "kassa_omzet_controle",
     "backup_nu",
     "backup_download",
     "backup_herstellen",
@@ -208,6 +227,8 @@ SECTIE_ENDPOINTS = {
         "tellingen_overzicht",
         "tellingen_cijfers",
         "tellingen_gecombineerd_pdf",
+        # Leveranciers bekijken (contact, besteldag) mag iedereen die bestelt; beheren alleen een beheerder.
+        "leveranciers_lijst",
         "kaartjes_pagina",
         "kaartjes_pdf_route",
         "telling_detail",
@@ -216,6 +237,7 @@ SECTIE_ENDPOINTS = {
         "bestellijst",
         "bestellijst_voorspeld",
         "dashboard_wedstrijddag",
+        "dashboard_koud_zetten",
         "prognose_pagina",
         "prognose_resultaat",
         "voorspelling_opwarmen",
@@ -223,6 +245,10 @@ SECTIE_ENDPOINTS = {
         "prognose_verkoopdagen",
         "prognose_uitzondering_toevoegen",
         "prognose_uitzondering_verwijderen",
+        "prognose_evenement_toevoegen",
+        "prognose_evenement_verwijderen",
+        "prognose_terugblik",
+        "prognose_terugblik_resultaat",
         "bestellijst_pdf_route",
         "bestelling_aanmaken",
         "bestelling_nieuw",
@@ -247,6 +273,7 @@ SECTIE_ENDPOINTS = {
         "kassa_telling_detail",
         "kassa_telling_heropenen",
         "kassa_telling_omzet_corrigeren",
+        "kassa_telling_kaartomzet",
         "kassa_telling_coupures_corrigeren",
         "kassa_telling_bewerken",
         "kassa_telling_goedkeuren",
@@ -259,6 +286,10 @@ SECTIE_ENDPOINTS = {
         "frituurvet_vervangen",
         "keuken_voorraad",
         "keuken_instellingen",
+        "keuken_tellen",
+        "keuken_inboeken",
+        "keuken_tellingen_overzicht",
+        "keuken_prijzen",
     },
     "stemmen": {
         "stemmen_overzicht",

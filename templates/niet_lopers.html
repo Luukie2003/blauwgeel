@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block titel %}Niet-lopers{% endblock %}
+{% macro euro(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% block inhoud %}
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Producten met voorraad die in deze periode wel zijn geteld, maar niet verkocht. Het geld zit vast in het hok:
+        bestel minder, zet het in de aanbieding of haal het uit het assortiment. De waarde is tegen inkoopprijs.
+    </p>
+    <form method="get" style="margin:0; display:flex; gap:0.4rem; align-items:center">
+        <label for="weken" style="margin:0; font-weight:400">Periode</label>
+        <select id="weken" name="weken" onchange="this.form.submit()">
+            {% for w in weken_keuzes %}<option value="{{ w }}" {{ 'selected' if w == weken }}>Laatste {{ w }} weken</option>{% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="statgrid">
+    <div class="stat {{ 'waarschuwing' if uitkomst.niet_lopers else '' }}"><div class="getal">{{ uitkomst.niet_lopers|length }}</div><div class="label">Niet verkocht sinds {{ uitkomst.vanaf[8:10] }}-{{ uitkomst.vanaf[5:7] }}</div></div>
+    <div class="stat"><div class="getal">{{ euro(uitkomst.waarde) }}</div><div class="label">Zit daarin vast (tegen inkoopprijs)</div></div>
+</div>
+
+<div class="kaart">
+    <h2>Niet verkocht</h2>
+    {% if uitkomst.niet_lopers %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th>Categorie</th><th style="text-align:right">Voorraad</th><th style="text-align:right">Waarde</th><th>Laatst verkocht</th><th></th></tr></thead>
+            <tbody>
+                {% for r in uitkomst.niet_lopers %}
+                <tr>
+                    <td>{{ r.naam }}</td>
+                    <td>{{ r.categorie }}</td>
+                    <td style="text-align:right">{{ r.voorraad }} {{ r.eenheid }}</td>
+                    <td style="text-align:right">{% if r.heeft_inkoop %}{{ euro(r.waarde) }}{% else %}<span class="tekst-zacht">geen inkoopprijs</span>{% endif %}</td>
+                    <td>{{ r.laatst_verkocht|datum_kort if r.laatst_verkocht else 'nog nooit' }}</td>
+                    <td class="tabel-acties"><a href="{{ url_for('product_bewerken', product_id=r.id) }}" class="btn btn-rand btn-klein">Bewerken</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Alles met voorraad is in deze periode verkocht.</p>
+    {% endif %}
+</div>
+
+{% if uitkomst.niet_geteld %}
+<div class="kaart">
+    <h2>In deze periode niet geteld</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Daarvan is niet te zeggen of het verkoopt. Tel ze bij de volgende telling mee.</p>
+    <ul style="margin:0">
+        {% for r in uitkomst.niet_geteld %}<li>{{ r.naam }} <span class="tekst-zacht">({{ r.voorraad }} {{ r.eenheid }})</span></li>{% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% endblock %}

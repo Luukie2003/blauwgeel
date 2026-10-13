@@ -49,11 +49,21 @@
 
 <div class="kaart">
     <h2>Verdienen het minst</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">Per stuk: verkoopprijs min inkoopprijs (de inkoopprijs bij het product is per besteleenheid, hier omgerekend naar een stuk). Onder de {{ lage_marge }}% is rood gemarkeerd.</p>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Per stuk: verkoopprijs min inkoopprijs (de inkoopprijs bij het product is per besteleenheid, hier omgerekend naar een stuk). Onder de doelmarge van {{ lage_marge }}% is rood gemarkeerd, met een voorgestelde prijs (naar boven afgerond op 10 cent; bij een fust de prijs per glas).</p>
+    <form method="post" action="{{ url_for('marge_doelmarge') }}" style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; margin-bottom:0.8rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="weken" value="{{ weken }}">
+        <label for="doelmarge" style="margin:0; font-weight:400">Doelmarge</label>
+        <input type="number" id="doelmarge" name="doelmarge" min="5" max="90" value="{{ lage_marge }}" style="width:5rem"> %
+        <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
+        {% if alle_voorstellen %}
+        <a href="{{ url_for('producten_prijzen', voorstel=alle_voorstellen) }}" class="btn btn-geel btn-klein">Alle {{ advies|length }} voorgestelde prijzen klaarzetten</a>
+        {% endif %}
+    </form>
     {% if rapport.laagste %}
     <div class="tabel-wrap">
         <table>
-            <thead><tr><th>Product</th><th>Categorie</th><th style="text-align:right">Inkoop per stuk</th><th style="text-align:right">Verkoop</th><th style="text-align:right">Marge per stuk</th><th style="text-align:right">Marge</th><th style="text-align:right">Verkocht</th></tr></thead>
+            <thead><tr><th>Product</th><th>Categorie</th><th style="text-align:right">Inkoop per stuk</th><th style="text-align:right">Verkoop</th><th style="text-align:right">Marge per stuk</th><th style="text-align:right">Marge</th><th style="text-align:right">Verkocht</th><th style="text-align:right">Advies</th></tr></thead>
             <tbody>
                 {% for p in rapport.laagste %}
                 <tr>
@@ -64,12 +74,16 @@
                     <td style="text-align:right">{{ euro(p.marge_stuk) }}</td>
                     <td style="text-align:right"><span class="badge {{ 'badge-laag' if p.marge_pct < lage_marge else 'badge-neutraal' }}">{{ pct(p.marge_pct) }}</span></td>
                     <td style="text-align:right">{{ p.aantal }} {{ p.eenheid }}</td>
+                    <td style="text-align:right; white-space:nowrap">
+                        {% set a = advies.get(p.id) %}
+                        {% if a %}<a href="{{ url_for('producten_prijzen', voorstel=a[0] ~ ':' ~ '%.2f'|format(a[1])) }}" title="Zet deze prijs klaar bij Prijzen aanpassen">{{ euro(a[1]) }}{% if a[0].startswith('glas_') %} per glas{% endif %}</a>{% else %}&mdash;{% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    <p class="tekst-zacht" style="font-size:0.82rem">Wil je een prijs aanpassen? Dat kan bij <a href="{{ url_for('producten_prijzen') }}">Prijzen aanpassen</a>.</p>
+    <p class="tekst-zacht" style="font-size:0.82rem">Een voorgestelde prijs wordt pas opgeslagen als je hem bij <a href="{{ url_for('producten_prijzen') }}">Prijzen aanpassen</a> nakijkt en opslaat (eventueel met een ingangsdatum).</p>
     {% else %}
     <p class="leeg">Geen producten met zowel een verkoopprijs als een inkoopprijs.</p>
     {% endif %}
@@ -94,6 +108,53 @@
             </tbody>
         </table>
     </div>
+</div>
+{% endif %}
+
+{% if tap %}
+<div class="kaart">
+    <h2>Tapbier: per glas en per fust</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Wat een glas kost (inkoop van het fust gedeeld door het aantal glazen) en wat er per fust overblijft. Er gaat
+        altijd wat verloren aan schuim, spoelen en proeven: de kolommen rechts laten zien wat dat per fust kost.
+    </p>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fust</th><th style="text-align:right">Inkoop</th><th style="text-align:right">Glazen</th>
+                    <th style="text-align:right">Kost per glas</th><th style="text-align:right">Prijs per glas</th>
+                    <th style="text-align:right">Marge</th><th style="text-align:right">Terugverdiend na</th>
+                    {% for v in verlies_glazen %}<th style="text-align:right">Winst{% if v %}, {{ v }} glazen weg{% else %} per fust{% endif %}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in tap %}
+                <tr class="{{ '' if f.actief else 'inactief' }}">
+                    <td><a href="{{ url_for('product_bewerken', product_id=f.id) }}">{{ f.naam }}</a></td>
+                    <td style="text-align:right">{{ euro(f.inkoop_fust) }}</td>
+                    <td style="text-align:right">{{ f.glazen }}</td>
+                    <td style="text-align:right">{{ euro(f.kostprijs_glas) }}</td>
+                    <td style="text-align:right">{{ euro(f.prijs_glas) }}</td>
+                    <td style="text-align:right">{{ pct(f.marge_glas_pct) }}</td>
+                    <td style="text-align:right">{% if f.terugverdiend_na %}{{ '%d'|format(f.terugverdiend_na) }} glazen{% else %}&mdash;{% endif %}</td>
+                    {% for v in f.verlies %}<td style="text-align:right">{{ euro(v.winst) }}</td>{% endfor %}
+                </tr>
+                {% for o in f.opties %}
+                <tr>
+                    <td style="padding-left:1.6rem" class="tekst-zacht">{{ o.naam }} ({{ '%g'|format(o.glazen)|replace('.', ',') }} glazen)</td>
+                    <td></td><td></td>
+                    <td style="text-align:right">{{ euro(o.kostprijs) }}</td>
+                    <td style="text-align:right">{{ euro(o.prijs) }}</td>
+                    <td style="text-align:right">{{ pct(o.marge_pct) }}</td>
+                    <td colspan="{{ 1 + f.verlies|length }}"></td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="tekst-zacht" style="margin-bottom:0">Een pitcher of andere prijsoptie staat hier als je bij het product invult hoeveel glazen erin gaan.</p>
 </div>
 {% endif %}
 

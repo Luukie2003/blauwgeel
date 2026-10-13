@@ -1,6 +1,7 @@
 """Prijswijzigingen die op een afgesproken datum ingaan, bijvoorbeeld aan het begin van het seizoen.
 
-Je zet ze klaar bij Producten > Prijzen aanpassen met een ingangsdatum. Op die dag worden ze vanzelf doorgevoerd:
+Je zet ze klaar bij Producten > Prijzen aanpassen met een ingangsdatum. Met een einddatum erbij is het een actie: de
+dag na de einddatum komt de oude prijs vanzelf terug. Op die dag worden ze vanzelf doorgevoerd:
 de prijs verandert (de tv en de prijslijst volgen), en bij een verkoopprijs komt er een regel in de prijsgeschiedenis.
 Er draait geen apart taakje voor: elke paar minuten dat iemand de site of de tv gebruikt, wordt gekeken of er iets aan
 de beurt is (zie routes/producten/prijzen.py)."""
@@ -14,9 +15,12 @@ SOORT_GLAS = "prijs_per_glas"
 SOORT_OPTIE = "prijsoptie"
 
 
-def plan_prijs(db, soort, product_id, nieuwe_prijs, ingangsdatum, door, optie_id=None):
+EINDE_ACTIE = "einde actie"
+
+
+def plan_prijs(db, soort, product_id, nieuwe_prijs, ingangsdatum, door, optie_id=None, opmerking=None):
     """Zet een prijswijziging klaar voor 'ingangsdatum' (tekst JJJJ-MM-DD). Een eerdere gepland voor dezelfde prijs op
-    dezelfde datum wordt vervangen."""
+    dezelfde datum wordt vervangen. 'opmerking' is EINDE_ACTIE als dit de oude prijs na een actie terugzet."""
     db.execute(
         """DELETE FROM prijs_wijzigingen_gepland
            WHERE soort = ? AND product_id = ? AND COALESCE(optie_id, 0) = ? AND ingangsdatum = ?""",
@@ -24,9 +28,10 @@ def plan_prijs(db, soort, product_id, nieuwe_prijs, ingangsdatum, door, optie_id
     )
     db.execute(
         """INSERT INTO prijs_wijzigingen_gepland
-           (soort, product_id, optie_id, nieuwe_prijs, ingangsdatum, aangemaakt_door, aangemaakt_op)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (soort, product_id, optie_id, nieuwe_prijs, ingangsdatum, door, datetime.now().strftime("%Y-%m-%d %H:%M")),
+           (soort, product_id, optie_id, nieuwe_prijs, ingangsdatum, aangemaakt_door, aangemaakt_op, opmerking)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (soort, product_id, optie_id, nieuwe_prijs, ingangsdatum, door, datetime.now().strftime("%Y-%m-%d %H:%M"),
+         opmerking),
     )
 
 

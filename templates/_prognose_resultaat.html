@@ -73,10 +73,11 @@
                     <td>
                         {% if not dag.open %}<span class="badge badge-neutraal" title="Op deze dag wordt niet verkocht, zie Verkoopdagen hierboven">gesloten</span>{% endif %}
                         {% if dag.wedstrijden %}<span class="badge badge-ok">&#9917; {{ dag.wedstrijden }}x thuis</span>{% endif %}
+                        {% if dag.evenementen %}<span class="badge badge-laag" title="Zie Evenementen hierboven">evenement</span>{% endif %}
                         {% if dag.training %}<span class="badge badge-neutraal">Training</span>{% endif %}
                         {% if dag.weer_score == 1 %}<span class="badge badge-in" title="Warm en droog">&#9728;&#65039; mooi weer</span>
                         {% elif dag.weer_score == -1 %}<span class="badge badge-uit" title="Veel kans op regen">&#127783;&#65039; regen</span>{% endif %}
-                        {% if dag.open and not dag.wedstrijden and not dag.training and dag.weer_score in (none, 0) %}<span class="tekst-zacht">gewone dag</span>{% endif %}
+                        {% if dag.open and not dag.wedstrijden and not dag.evenementen and not dag.training and dag.weer_score in (none, 0) %}<span class="tekst-zacht">gewone dag</span>{% endif %}
                     </td>
                     <td>{% if dag.open %}{{ '%+.0f'|format((dag.drukte - 1) * 100) }}%{% else %}&ndash;{% endif %}</td>
                     <td>{% if dag.open %}&euro; {{ '%.0f'|format(dag.omzet) }}{% else %}&ndash;{% endif %}</td>
@@ -165,7 +166,7 @@
         <strong>Nauwkeurigheid:</strong> in de laatste {{ m.nauwkeurigheid.aantal }} tellingen zat de omzetvoorspelling er
         meestal <strong>{{ '%.0f'|format(m.nauwkeurigheid.mape_model * 100) }}%</strong> naast (de middelste afwijking), op basis van alleen wat toen al bekend was.
         Een simpele schatting op basis van de gemiddelde dagverkoop zat er {{ '%.0f'|format(m.nauwkeurigheid.mape_naief * 100) }}% naast{% if m.nauwkeurigheid.verbetering > 0.02 %},
-        dus de slimmere aanpak is ongeveer {{ '%.0f'|format(m.nauwkeurigheid.verbetering * 100) }}% nauwkeuriger{% endif %}.
+        dus de slimmere aanpak is ongeveer {{ '%.0f'|format(m.nauwkeurigheid.verbetering * 100) }}% nauwkeuriger{% endif %}. <a href="{{ url_for('prognose_terugblik') }}">Bekijk per telling wat er voorspeld en verkocht is</a>.
         Dat het niet beter gaat komt vooral door grote verschillen tussen weken die niemand kan voorzien; met meer tellingen worden vooral de effecten van wedstrijden en weer scherper.
     </p>
     {% endif %}

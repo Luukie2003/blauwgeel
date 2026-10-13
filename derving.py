@@ -5,6 +5,8 @@ inkoopprijs bij een product is per besteleenheid, dus gedeeld door het aantal st
 
 from datetime import timedelta
 
+from helpers.producten import inkoop_per_stuk
+
 DERVING_REDENEN = {
     "breuk": "Breuk of gemorst",
     "over_datum": "Over de datum of bedorven",
@@ -33,7 +35,7 @@ def bereken_derving(db, weken, vandaag):
     per_reden = {sleutel: {"naam": naam, "boekingen": 0, "stuks": 0, "waarde": 0.0} for sleutel, naam in DERVING_REDENEN.items()}
     per_product = {}
     for r in rijen:
-        waarde = r["aantal"] * r["inkoopprijs"] / max(1, r["besteleenheid_factor"] or 1)
+        waarde = r["aantal"] * inkoop_per_stuk(r)
         reden = per_reden.get(r["reden"])
         if reden is None:
             continue  # een onbekende reden (bijvoorbeeld uit een oudere versie): niet meetellen

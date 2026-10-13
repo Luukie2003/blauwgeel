@@ -1,6 +1,7 @@
 {% extends "base_pda.html" %}
 {% block titel %}{{ titel }}{% endblock %}
 {% block inhoud %}
+{% if categorie_vergrendeld == 'Keuken' %}{% include '_keuken_subnav.html' %}{% endif %}
 <div class="pda-cijferrij">
     <div class="pda-cijfer {{ 'pda-cijfer--let-op' if aantal_laag else '' }}">
         <span class="pda-cijfer-getal">{{ aantal_laag }}</span>

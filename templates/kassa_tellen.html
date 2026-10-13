@@ -29,10 +29,17 @@
     <form method="post" id="kassa-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <fieldset class="groupbox">
-            <legend>Contante omzet sinds vorige telling</legend>
-            <div class="veld" style="max-width:260px">
-                <label for="contante_omzet">Bedrag volgens PayPal (contant)</label>
-                <input type="text" inputmode="decimal" id="contante_omzet" name="contante_omzet" value="0,00">
+            <legend>Omzet volgens PayPal sinds vorige telling</legend>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="contante_omzet">Bedrag volgens PayPal (contant)</label>
+                    <input type="text" inputmode="decimal" id="contante_omzet" name="contante_omzet" value="0,00">
+                </div>
+                <div class="veld">
+                    <label for="kaart_omzet">Kaartbetalingen volgens PayPal</label>
+                    <input type="text" inputmode="decimal" id="kaart_omzet" name="kaart_omzet" value="0,00">
+                    <span class="tekst-zacht">Telt niet mee voor de kassalade, wel voor Geld &rarr; Omzet en kassa.</span>
+                </div>
             </div>
         </fieldset>
 

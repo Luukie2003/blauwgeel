@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block titel %}{{ categorie_vergrendeld or 'Producten' }}{% endblock %}
 {% block inhoud %}
+{% if categorie_vergrendeld == 'Keuken' %}{% include '_keuken_subnav.html' %}{% endif %}
 <div class="actiebalk">
     {% if categorie_vergrendeld %}
     <p class="subtitel" style="margin:0">Voorraad van {{ categorie_vergrendeld|lower }}producten.</p>

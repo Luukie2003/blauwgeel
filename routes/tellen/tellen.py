@@ -4,6 +4,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 
 from database import get_db
 from helpers import now_datetime_local, now_str
+from productkaart import TELLEN_VOORWAARDE
 from routes.tellen.looplijst_opslag import loop_onderbroken
 from routes.tellen.verwerken import verwerk_telling
 
@@ -20,7 +21,7 @@ def register_routes(app):
             datum = datum_input.replace("T", " ") if datum_input else now_str()
 
             producten = db.execute(
-                "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
+                f"SELECT * FROM producten WHERE {TELLEN_VOORWAARDE} ORDER BY categorie, naam"
             ).fetchall()
 
             waarden = {}
@@ -48,7 +49,7 @@ def register_routes(app):
             return redirect(url_for("telling_detail", telling_id=telling_id))
 
         producten = db.execute(
-            "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
+            f"SELECT * FROM producten WHERE {TELLEN_VOORWAARDE} ORDER BY categorie, naam"
         ).fetchall()
         return render_template(
             "tellen.html",

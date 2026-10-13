@@ -78,7 +78,7 @@ def bereken_kassa_verschil_trend(db, limiet=20):
     afgesloten tellingen: een nog open (concept) telling heeft geen
     definitief verschil."""
     ruw = db.execute(
-        """SELECT id, datum, naam, contante_omzet, verschil FROM kassa_tellingen
+        """SELECT id, datum, naam, contante_omzet, kaart_omzet, verschil FROM kassa_tellingen
            WHERE afgesloten = 1 ORDER BY datum DESC, id DESC LIMIT ?""",
         (limiet + 1,),
     ).fetchall()
@@ -108,10 +108,12 @@ def bereken_kassa_verschil_trend(db, limiet=20):
             verkoop_omzet = sum(
                 r["omzet"] for r in voorraad_omzet if vorige_datum < r["datum"] <= kt["datum"]
             )
+        # PayPal-omzet: contant plus de kaartbetalingen (die laatste zijn er pas sinds 1.45.0, daarvoor 0).
+        paypal = kt["contante_omzet"] + (kt["kaart_omzet"] or 0)
         afwijkend = (
             verkoop_omzet is not None
             and verkoop_omzet > 0
-            and abs(kt["contante_omzet"] - verkoop_omzet) > max(verkoop_omzet * 0.15, 25)
+            and abs(paypal - verkoop_omzet) > max(verkoop_omzet * 0.15, 25)
         )
         balken.append(
             {
@@ -244,3 +246,64 @@ def bereken_kassa_telling_status(db):
         tekst = "Meer dan 7 dagen niet geteld" if laatste_kassatelling else "Nog nooit geteld"
 
     return {"status": status, "tekst": tekst, "laatste_kassatelling": laatste_kassatelling}
+
+
+def _voorraad_omzet_tussen(db, van, tot):
+    """De omzet uit de voorraadtellingen en de keukentellingen met een datum na 'van' tot en met 'tot'."""
+    omzet = db.execute(
+        """SELECT COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0)
+           FROM tellingen t JOIN telling_regels tr ON tr.telling_id = t.id
+           WHERE t.datum > ? AND t.datum <= ?""",
+        (van, tot),
+    ).fetchone()[0]
+    omzet += db.execute(
+        """SELECT COALESCE(SUM(kr.verkocht * kr.verkoopprijs), 0)
+           FROM keuken_tellingen k JOIN keuken_telling_regels kr ON kr.telling_id = k.id
+           WHERE k.datum > ? AND k.datum <= ?""",
+        (van, tot),
+    ).fetchone()[0]
+    return round(omzet, 2)
+
+
+def bereken_omzet_en_kassa(db, limiet=30):
+    """Per afgesloten kassatelling (nieuwste eerst): de omzet volgens PayPal (contant plus kaart) naast de omzet uit de
+    voorraadtellingen in dezelfde periode (sinds de vorige kassatelling). Een verschil wijst op een telfout, iets dat
+    niet is aangeslagen, derving of diefstal. Per periode schommelt het, want de voorraad wordt niet op hetzelfde moment
+    geteld als de kassa; over meerdere periodes samen middelt dat uit, dus het totaal zegt het meest."""
+    tellingen = db.execute(
+        """SELECT id, datum, naam, contante_omzet, kaart_omzet FROM kassa_tellingen
+           WHERE afgesloten = 1 ORDER BY datum, id"""
+    ).fetchall()
+    periodes = []
+    for vorige, kt in zip(tellingen, tellingen[1:]):
+        paypal = round(kt["contante_omzet"] + (kt["kaart_omzet"] or 0), 2)
+        voorraad = _voorraad_omzet_tussen(db, vorige["datum"], kt["datum"])
+        verschil = round(voorraad - paypal, 2)
+        periodes.append(
+            {
+                "id": kt["id"],
+                "van": vorige["datum"],
+                "tot": kt["datum"],
+                "naam": kt["naam"],
+                "contant": kt["contante_omzet"],
+                "kaart": kt["kaart_omzet"] or 0,
+                "paypal": paypal,
+                "voorraad": voorraad,
+                "verschil": verschil,
+                "pct": verschil / voorraad * 100 if voorraad > 0 else None,
+                "kaart_leeg": not kt["kaart_omzet"],
+            }
+        )
+    periodes = periodes[-limiet:]
+    paypal = round(sum(p["paypal"] for p in periodes), 2)
+    voorraad = round(sum(p["voorraad"] for p in periodes), 2)
+    return {
+        "periodes": list(reversed(periodes)),
+        "totaal": {
+            "paypal": paypal,
+            "voorraad": voorraad,
+            "verschil": round(voorraad - paypal, 2),
+            "pct": (voorraad - paypal) / voorraad * 100 if voorraad > 0 else None,
+            "zonder_kaart": sum(1 for p in periodes if p["kaart_leeg"]),
+        },
+    }

@@ -40,7 +40,7 @@ def test_menu_heeft_elf_onderdelen_in_de_afgesproken_volgorde(ingelogde_client):
 def test_kassa_en_kluis_zitten_samen_onder_geld(ingelogde_client):
     geld = _menu(ingelogde_client.get("/").data.decode())["Geld"]
     assert geld == [
-        "Kassa tellen", "Kassa geschiedenis", "Afdracht / toevoeging",
+        "Kassa tellen", "Kassa geschiedenis", "Afdracht / toevoeging", "Omzet en kassa",
         "Kluis tellen", "Kluis geschiedenis", "Storting / opname",
     ]
 

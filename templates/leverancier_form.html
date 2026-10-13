@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block titel %}{{ 'Leverancier bewerken' if leverancier else 'Nieuwe leverancier' }}{% endblock %}
+{% macro waarde(veld, standaard='') %}{{ ingevuld.get(veld, leverancier[veld] if leverancier and leverancier[veld] is not none else standaard) }}{% endmacro %}
+{% block inhoud %}
+<h1>{{ 'Leverancier bewerken' if leverancier else 'Nieuwe leverancier' }}</h1>
+<p class="subtitel"><a href="{{ url_for('leveranciers_lijst') }}">&larr; Terug naar leveranciers</a></p>
+
+<form method="post" class="kaart">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <fieldset class="groupbox">
+        <legend>Gegevens</legend>
+        <div class="formgrid">
+            <div class="veld"><label for="naam">Naam</label><input type="text" id="naam" name="naam" required value="{{ waarde('naam') }}"></div>
+            <div class="veld"><label for="klantnummer">Ons klantnummer</label><input type="text" id="klantnummer" name="klantnummer" value="{{ waarde('klantnummer') }}"></div>
+            <div class="veld"><label for="contactpersoon">Contactpersoon</label><input type="text" id="contactpersoon" name="contactpersoon" value="{{ waarde('contactpersoon') }}"></div>
+            <div class="veld"><label for="telefoon">Telefoon</label><input type="tel" id="telefoon" name="telefoon" value="{{ waarde('telefoon') }}"></div>
+            <div class="veld"><label for="website">Website of bestelportaal</label><input type="text" id="website" name="website" value="{{ waarde('website') }}" placeholder="Bijv. www.leverancier.nl"></div>
+        </div>
+    </fieldset>
+    <fieldset class="groupbox">
+        <legend>Bestellen</legend>
+        <div class="veld">
+            <span class="label-tekst" style="font-weight:600">Besteldagen</span>
+            <div style="display:flex; flex-wrap:wrap; gap:0.4rem 1rem; margin-top:0.3rem">
+                {% for d in dagen %}
+                <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer">
+                    <input type="checkbox" name="dag_{{ loop.index0 }}" style="width:auto"
+                           {{ 'checked' if (ingevuld and ingevuld.get('dag_' ~ loop.index0)) or (not ingevuld and loop.index0 in gekozen_dagen) }}> {{ d }}
+                </label>
+                {% endfor %}
+            </div>
+            <span class="tekst-zacht">Op deze dagen staat &ldquo;Vandaag bestellen bij &hellip;&rdquo; op het overzicht als er iets onder het minimum is.</span>
+        </div>
+        <div class="formgrid">
+            <div class="veld"><label for="bestellen_voor">Bestellen vóór (tijd)</label><input type="time" id="bestellen_voor" name="bestellen_voor" value="{{ waarde('bestellen_voor') }}"></div>
+            <div class="veld"><label for="levertijd_dagen">Levertijd (dagen)</label><input type="number" min="0" id="levertijd_dagen" name="levertijd_dagen" value="{{ waarde('levertijd_dagen', 0) }}"></div>
+            <div class="veld"><label for="minimum_bedrag">Minimum bestelbedrag (&euro;)</label><input type="number" min="0" step="0.01" id="minimum_bedrag" name="minimum_bedrag" value="{{ waarde('minimum_bedrag', 0) }}"></div>
+            <div class="veld"><label for="bestelwijze">Hoe bestel je?</label><input type="text" id="bestelwijze" name="bestelwijze" value="{{ waarde('bestelwijze') }}" placeholder="Bijv. via de website, of bellen"></div>
+        </div>
+        <div class="veld"><label for="opmerking">Opmerking</label><textarea id="opmerking" name="opmerking" rows="2">{{ waarde('opmerking') }}</textarea></div>
+        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer">
+            <input type="checkbox" name="actief" style="width:auto" {{ 'checked' if not leverancier or leverancier.actief }}> Actief
+        </label>
+    </fieldset>
+    <fieldset class="groupbox">
+        <legend>Producten die je hier bestelt</legend>
+        <p class="tekst-zacht" style="margin-top:-0.3rem">Vink aan wat bij deze leverancier hoort. Een product hoort bij één leverancier: vink je iets aan dat nu bij een andere staat, dan verhuist het hierheen.</p>
+        <input type="search" id="product-zoek" placeholder="Zoek een product..." style="max-width:20rem; margin-bottom:0.5rem" aria-label="Zoek een product">
+        <div class="tabel-wrap" style="max-height:24rem; overflow-y:auto">
+            <table id="product-keuze">
+                <thead><tr><th></th><th>Product</th><th>Categorie</th><th>Nu bij</th></tr></thead>
+                <tbody>
+                    {% for p in producten %}
+                    {% set gekozen = (leverancier and p.leverancier_id == leverancier.id) %}
+                    <tr data-zoek="{{ (p.naam ~ ' ' ~ p.categorie ~ ' ' ~ (p.artikelcode or ''))|lower }}">
+                        <td><input type="checkbox" name="product_id" value="{{ p.id }}" id="p{{ p.id }}" style="width:auto" {{ 'checked' if gekozen }}></td>
+                        <td><label for="p{{ p.id }}" style="font-weight:400; cursor:pointer">{{ p.naam }}</label></td>
+                        <td>{{ p.categorie }}</td>
+                        <td class="tekst-zacht">{{ p.leverancier_naam or '' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </fieldset>
+    <div style="display:flex; gap:0.6rem; flex-wrap:wrap">
+        <button type="submit" class="btn btn-geel">Opslaan</button>
+    </div>
+</form>
+
+{% if leverancier %}
+<form method="post" action="{{ url_for('leverancier_verwijderen', leverancier_id=leverancier.id) }}" class="kaart"
+      onsubmit="return bevestigEnVerstuur(this, 'Leverancier {{ leverancier.naam }} verwijderen? De producten blijven bestaan.');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-gevaar">Leverancier verwijderen</button>
+</form>
+{% endif %}
+
+<script>
+(function () {
+    var zoek = document.getElementById('product-zoek');
+    if (!zoek) return;
+    zoek.addEventListener('input', function () {
+        var term = zoek.value.trim().toLowerCase();
+        document.querySelectorAll('#product-keuze tbody tr').forEach(function (rij) {
+            rij.hidden = term && rij.dataset.zoek.indexOf(term) === -1;
+        });
+    });
+})();
+</script>
+{% endblock %}

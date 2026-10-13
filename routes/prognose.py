@@ -5,14 +5,16 @@ verkoopdagen (standaard woensdag en zaterdag, met uitzonderingen per datum)."""
 
 from datetime import date, timedelta
 
-from flask import flash, redirect, render_template, request, url_for
+from flask import flash, redirect, render_template, request, session, url_for
 
 from database import get_db
-from helpers import bereken_komende_thuiswedstrijden
+from helpers import bereken_komende_thuiswedstrijden, now_str
 from voorspelling import (
     _WEEKDAG,
     lees_verkoopdagen,
     maak_prognose,
+    terugblik,
+    vat_terugblik_samen,
     wedstrijden_op_gesloten_dagen,
 )
 
@@ -44,6 +46,15 @@ def _verkoop_context(db):
     }
 
 
+def _evenementen(db):
+    """De evenementen vanaf acht weken geleden: [{id, datum (date), naam, geweest}]."""
+    grens = (date.today() - timedelta(days=UITZONDERINGEN_TERUG_DAGEN)).isoformat()
+    return [
+        {"id": r["id"], "datum": date.fromisoformat(r["datum"]), "naam": r["naam"], "geweest": r["datum"] < date.today().isoformat()}
+        for r in db.execute("SELECT id, datum, naam FROM evenementen WHERE datum >= ? ORDER BY datum, id", (grens,)).fetchall()
+    ]
+
+
 def register_routes(app):
     def _horizon():
         dagen = request.args.get("dagen", 7, type=int)
@@ -62,6 +73,7 @@ def register_routes(app):
             categorie=request.args.get("categorie") or "",
             verkoop=_verkoop_context(db),
             thuiswedstrijden=bereken_komende_thuiswedstrijden(db, dagen=14, inclusief_afgelast=True),
+            evenementen=_evenementen(db),
         )
 
     @app.route("/prognose/resultaat")
@@ -152,3 +164,44 @@ def register_routes(app):
         db.commit()
         flash("Uitzondering verwijderd: die dag volgt weer de vaste verkoopdagen.", "success")
         return redirect(url_for("prognose_pagina") + "#verkoopdagen")
+
+    @app.route("/prognose/evenement", methods=["POST"])
+    def prognose_evenement_toevoegen():
+        """Een toernooi, feest of verhuur: de prognose rekent die dag als verkoopdag met een eigen drukte-effect, dat
+        ze na een paar keer zelf bijleert uit de tellingen."""
+        try:
+            datum = date.fromisoformat((request.form.get("datum") or "").strip())
+        except ValueError:
+            flash("Kies een geldige datum.", "error")
+            return redirect(url_for("prognose_pagina") + "#evenementen")
+        naam = " ".join((request.form.get("naam") or "").split())[:80]
+        if not naam:
+            flash("Geef het evenement een naam, bijvoorbeeld 'Jeugdtoernooi'.", "error")
+            return redirect(url_for("prognose_pagina") + "#evenementen")
+        db = get_db()
+        db.execute(
+            "INSERT INTO evenementen (datum, naam, aangemaakt_door, aangemaakt_op) VALUES (?, ?, ?, ?)",
+            (datum.isoformat(), naam, session.get("gebruiker_naam"), now_str()),
+        )
+        db.commit()
+        flash(f"{naam} op {_WEEKDAG[datum.weekday()]} {datum.day}-{datum.month}-{datum.year} telt mee in de prognose.", "success")
+        return redirect(url_for("prognose_pagina") + "#evenementen")
+
+    @app.route("/prognose/evenement/<int:evenement_id>/verwijderen", methods=["POST"])
+    def prognose_evenement_verwijderen(evenement_id):
+        db = get_db()
+        db.execute("DELETE FROM evenementen WHERE id = ?", (evenement_id,))
+        db.commit()
+        flash("Evenement verwijderd.", "success")
+        return redirect(url_for("prognose_pagina") + "#evenementen")
+
+    @app.route("/prognose/terugblik")
+    def prognose_terugblik():
+        """Bestellen > Prognose en verkoop: per telling wat de prognose was en wat er werkelijk verkocht is. Het
+        terugrekenen gebruikt het voorspelmodel, dus dat haalt de pagina na het laden apart op (zie data-lazy-bron)."""
+        return render_template("prognose_terugblik.html")
+
+    @app.route("/prognose/terugblik/resultaat")
+    def prognose_terugblik_resultaat():
+        perioden = terugblik(get_db())
+        return render_template("_prognose_terugblik.html", perioden=perioden, samenvatting=vat_terugblik_samen(perioden))

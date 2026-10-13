@@ -9,6 +9,7 @@ from database import get_db
 from helpers import categorienamen_zonder_verkoopprijsplicht, now_str
 from helpers.tijd import vandaag_amsterdam
 from prijzen import (
+    EINDE_ACTIE,
     SOORT_GLAS,
     SOORT_OPTIE,
     SOORT_VERKOOPPRIJS,
@@ -79,7 +80,18 @@ def register_routes(app):
                     fouten.append(f"De ingangsdatum ('{ingang_tekst}') is geen geldige datum.")
             if ingang is not None and ingang <= vandaag_amsterdam():
                 ingang = None  # vandaag of eerder: gewoon nu doorvoeren
+            # Met een einddatum is het een actie: de dag erna komt de huidige prijs vanzelf terug.
+            einde = None
+            einde_tekst = (request.form.get("einddatum") or "").strip()
+            if einde_tekst:
+                try:
+                    einde = date.fromisoformat(einde_tekst)
+                except ValueError:
+                    fouten.append(f"De einddatum ('{einde_tekst}') is geen geldige datum.")
+                if einde is not None and einde < (ingang or vandaag_amsterdam()):
+                    fouten.append("De actie kan niet eindigen voordat hij begint: kies een latere einddatum.")
             prijs_updates, optie_updates, glas_updates, geschiedenis = [], [], [], []
+            terugzetten = []  # (soort, product_id, optie_id, huidige prijs) voor het einde van een actie
             for p in producten:
                 velden = [(f"prijs_{p['id']}", p["verkoopprijs"], "verkoopprijs")]
                 if p["glazen_per_fust"]:
@@ -95,10 +107,19 @@ def register_routes(app):
                         if veld.startswith("prijs_"):
                             prijs_updates.append((nieuw, p["id"]))
                             geschiedenis.append((p["id"], "verkoopprijs", huidig, nieuw, datum, naam, gebruiker_id))
+                            terugzetten.append((SOORT_VERKOOPPRIJS, p["id"], None, huidig))
                         elif veld.startswith("glas_"):
                             glas_updates.append((nieuw, p["id"]))
+                            terugzetten.append((SOORT_GLAS, p["id"], None, huidig))
                         else:
-                            optie_updates.append((nieuw, int(veld.split("_")[1])))
+                            optie_id = int(veld.split("_")[1])
+                            optie_updates.append((nieuw, optie_id))
+                            terugzetten.append((SOORT_OPTIE, p["id"], optie_id, huidig))
+            if not fouten and einde is not None:
+                terug_op = (einde + timedelta(days=1)).isoformat()
+                for soort, product_id, optie_id, huidig in terugzetten:
+                    plan_prijs(db, soort, product_id, huidig, terug_op, naam, optie_id=optie_id, opmerking=EINDE_ACTIE)
+            actie_tekst = f" Na {einde.strftime('%d-%m-%Y')} komt de oude prijs vanzelf terug." if einde and terugzetten else ""
             if not fouten and ingang is not None:
                 for nieuw, pid in prijs_updates:
                     plan_prijs(db, SOORT_VERKOOPPRIJS, pid, nieuw, ingang.isoformat(), naam)
@@ -112,7 +133,7 @@ def register_routes(app):
                 if aantal:
                     flash(
                         f"{aantal} {'prijs staat' if aantal == 1 else 'prijzen staan'} klaar en "
-                        f"{'gaat' if aantal == 1 else 'gaan'} in op {ingang.strftime('%d-%m-%Y')}.",
+                        f"{'gaat' if aantal == 1 else 'gaan'} in op {ingang.strftime('%d-%m-%Y')}.{actie_tekst}",
                         "success",
                     )
                 else:
@@ -130,11 +151,21 @@ def register_routes(app):
                 db.commit()
                 aantal = len(prijs_updates) + len(glas_updates) + len(optie_updates)
                 if aantal:
-                    flash(f"{aantal} {'prijs' if aantal == 1 else 'prijzen'} aangepast.", "success")
+                    flash(f"{aantal} {'prijs' if aantal == 1 else 'prijzen'} aangepast.{actie_tekst}", "success")
                 else:
                     flash("Geen prijzen gewijzigd: alles klopte al.", "success")
                 return redirect(url_for("producten_prijzen"))
 
+        voorgesteld = 0
+        if request.method == "GET" and request.args.get("voorstel"):
+            # Uit het rapport Marge: 'prijs_12:2.40,glas_5:2.20'. Alleen invullen; opslaan doe je zelf.
+            ingevuld = {}
+            for deel in request.args["voorstel"].split(","):
+                veld, _, prijs = deel.partition(":")
+                waarde = _lees_prijs(prijs)
+                if waarde is not None and veld.split("_")[0] in ("prijs", "glas") and veld.split("_")[-1].isdigit():
+                    ingevuld[veld] = f"{waarde:.2f}".replace(".", ",")
+            voorgesteld = len(ingevuld)
         gepland = geplande_wijzigingen(db)
         gepland_per_prijs = {}
         for g in gepland:
@@ -146,10 +177,12 @@ def register_routes(app):
             gepland=gepland,
             gepland_per_prijs=gepland_per_prijs,
             morgen=(vandaag_amsterdam() + timedelta(days=1)).isoformat(),
+            vandaag=vandaag_amsterdam().isoformat(),
             categorieen=sorted({p["categorie"] for p in producten}),
             niet_verplicht=set(categorienamen_zonder_verkoopprijsplicht(db)),
             fouten=fouten,
             ingevuld=ingevuld,
+            voorgesteld=voorgesteld,
         )
 
     @app.route("/producten/prijzen/gepland/<int:gepland_id>/verwijderen", methods=["POST"])

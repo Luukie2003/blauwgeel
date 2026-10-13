@@ -1,0 +1,61 @@
+{# Het berekende deel van Prognose en verkoop (zie prognose_terugblik_resultaat in routes/prognose.py). #}
+{% macro euro(x) %}&euro; {{ '%.0f'|format(x) }}{% endmacro %}
+{% if perioden %}
+{% set s = samenvatting %}
+{% if s %}
+<div class="statgrid">
+    <div class="stat"><div class="getal">{{ '%.0f'|format(s.mediaan) }}%</div><div class="label">Zat er meestal naast (de middelste van {{ s.aantal }} tellingen)</div></div>
+    <div class="stat"><div class="getal">{{ s.binnen }} van {{ s.aantal }}</div><div class="label">Binnen 15% van de werkelijke verkoop</div></div>
+    <div class="stat"><div class="getal">{{ s.meer_verkocht }} / {{ s.minder_verkocht }}</div><div class="label">Meer / minder verkocht dan voorspeld (meer dan 15%)</div></div>
+</div>
+{% endif %}
+{% set maximum = [perioden|map(attribute='voorspeld')|max, perioden|map(attribute='werkelijk')|max]|max or 1 %}
+<div class="kaart">
+    <h2>Per telling</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        <span style="display:inline-block; width:0.8rem; height:0.8rem; background:var(--rand-licht); vertical-align:middle"></span> voorspeld
+        &nbsp; <span style="display:inline-block; width:0.8rem; height:0.8rem; background:var(--accent); vertical-align:middle"></span> verkocht.
+        Klik op een telling voor de producten waar het het verst naast zat.
+    </p>
+    {% for p in perioden %}
+    {% set afwijking = p.pct|abs if p.pct is not none else 0 %}
+    <details style="border-top:1px solid var(--rand-licht); padding:0.55rem 0">
+        <summary style="cursor:pointer; list-style:none">
+            <div style="display:flex; flex-wrap:wrap; gap:0.3rem 1rem; align-items:baseline">
+                <strong style="min-width:8.5rem">{{ p.van.strftime('%d-%m') }} &ndash; {{ p.tot.strftime('%d-%m') }}</strong>
+                <span>voorspeld {{ euro(p.voorspeld) }}</span>
+                <span>verkocht <strong>{{ euro(p.werkelijk) }}</strong></span>
+                <span class="badge {{ 'badge-ok' if afwijking <= 15 else 'badge-neutraal' if afwijking <= 30 else 'badge-laag' }}">
+                    {% if p.pct is none %}&mdash;{% else %}{{ '%+.0f'|format(p.pct) }}%{% endif %}
+                </span>
+            </div>
+            <div style="margin-top:0.35rem; display:grid; gap:0.15rem; max-width:32rem">
+                <div style="height:0.45rem; width:{{ (p.voorspeld / maximum * 100)|round(1) }}%; background:var(--rand-licht); border-radius:2px"></div>
+                <div style="height:0.45rem; width:{{ (p.werkelijk / maximum * 100)|round(1) }}%; background:var(--accent); border-radius:2px"></div>
+            </div>
+        </summary>
+        {% if p.producten %}
+        <div class="tabel-wrap" style="margin-top:0.5rem">
+            <table>
+                <thead><tr><th>Product</th><th style="text-align:right">Voorspeld</th><th style="text-align:right">Verkocht</th></tr></thead>
+                <tbody>
+                    {% for pr in p.producten %}
+                    <tr>
+                        <td>{{ pr.naam }}{% if pr.uitverkocht %} <span class="badge badge-neutraal" title="Op het eind was het op: er had misschien meer verkocht kunnen worden">op</span>{% endif %}</td>
+                        <td style="text-align:right">{{ '%.0f'|format(pr.verwacht) }} {{ pr.eenheid|lower }}</td>
+                        <td style="text-align:right">{{ pr.verkocht }} {{ pr.eenheid|lower }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        {% if p.zonder_geschiedenis > 0.5 %}<p class="tekst-zacht" style="margin:0.3rem 0 0">Plus {{ euro(p.zonder_geschiedenis) }} aan producten die toen nog niet vaak genoeg geteld waren om te voorspellen.</p>{% endif %}
+    </details>
+    {% endfor %}
+</div>
+{% else %}
+<div class="kaart">
+    <p class="leeg" style="margin:0">Er zijn nog te weinig tellingen om de prognose met de verkoop te vergelijken. Na een paar tellingen verschijnt hier per telling wat er voorspeld en verkocht is.</p>
+</div>
+{% endif %}

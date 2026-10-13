@@ -793,3 +793,79 @@ CREATE TABLE IF NOT EXISTS prijs_wijzigingen_gepland (
     aangemaakt_op TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_prijs_gepland_datum ON prijs_wijzigingen_gepland(ingangsdatum);
+
+-- Leveranciers (1.45.0): bij wie je wat bestelt, op welke dag en vóór hoe laat. producten.leverancier_id wijst hierheen
+-- (zie leveranciers.py).
+CREATE TABLE IF NOT EXISTS leveranciers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    naam TEXT NOT NULL UNIQUE,
+    contactpersoon TEXT,
+    telefoon TEXT,
+    website TEXT,
+    klantnummer TEXT,
+    bestelwijze TEXT,
+    besteldagen TEXT NOT NULL DEFAULT '',
+    bestellen_voor TEXT,
+    levertijd_dagen INTEGER NOT NULL DEFAULT 0,
+    minimum_bedrag REAL NOT NULL DEFAULT 0,
+    opmerking TEXT,
+    actief INTEGER NOT NULL DEFAULT 1,
+    aangemaakt_op TEXT NOT NULL
+);
+
+-- Keuken (1.45.0): een eigen telling, los van de gewone telling, voor de producten in de categorie Keuken
+-- (zie keukenbeheer.py). Zelfde vorm als tellingen/telling_regels.
+CREATE TABLE IF NOT EXISTS keuken_tellingen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    datum TEXT NOT NULL,
+    naam TEXT,
+    gebruiker_id INTEGER REFERENCES gebruikers(id),
+    opmerking TEXT
+);
+
+CREATE TABLE IF NOT EXISTS keuken_telling_regels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telling_id INTEGER NOT NULL REFERENCES keuken_tellingen(id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES producten(id),
+    voorraad_voor INTEGER NOT NULL,
+    geteld_aantal INTEGER NOT NULL,
+    verkocht INTEGER NOT NULL DEFAULT 0,
+    correctie INTEGER NOT NULL DEFAULT 0,
+    verkoopprijs REAL NOT NULL DEFAULT 0
+);
+
+-- Evenementen (1.45.0): een toernooi, feest of verhuur. De prognose rekent zo'n dag als verkoopdag met een eigen,
+-- bijgeleerd drukte-effect (zie voorspelling.lees_evenementen).
+CREATE TABLE IF NOT EXISTS evenementen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    datum TEXT NOT NULL,
+    naam TEXT NOT NULL,
+    aangemaakt_door TEXT,
+    aangemaakt_op TEXT NOT NULL
+);
+
+-- Foutmeldingen (1.45.0): elke serverfout komt hier, per soort fout en plek in de code samengevoegd (zie foutenlog.py).
+CREATE TABLE IF NOT EXISTS fouten (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sleutel TEXT NOT NULL UNIQUE,
+    fouttype TEXT NOT NULL,
+    melding TEXT,
+    plek TEXT,
+    endpoint TEXT,
+    pad TEXT,
+    versie TEXT,
+    technisch TEXT,
+    eerste_op TEXT NOT NULL,
+    laatste_op TEXT NOT NULL,
+    aantal INTEGER NOT NULL DEFAULT 1,
+    opgelost INTEGER NOT NULL DEFAULT 0
+);
+
+-- Trage verzoeken (1.45.0): alles wat langer dan een paar seconden duurde, ook wat geen paginabezoek is (een deel
+-- van een pagina dat apart wordt opgehaald). Zie gebruik.py; wordt na 90 dagen opgeruimd (onderhoud.py).
+CREATE TABLE IF NOT EXISTS trage_verzoeken (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint TEXT NOT NULL,
+    duur_ms INTEGER NOT NULL,
+    datum TEXT NOT NULL
+);

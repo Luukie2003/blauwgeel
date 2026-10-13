@@ -4,6 +4,7 @@ from flask import Response, g, render_template
 
 from database import get_db
 from helpers import bereken_fust_verkopen, categorienamen_zonder_verkoopprijsplicht, csv_response
+from productkaart import in_gewone_telling
 from pdf import voorraadoverzicht_pdf
 from routes.producten.overzicht import render_voorraad_pda
 
@@ -77,12 +78,13 @@ def bereken_voorraadoverzicht(db):
            GROUP BY tr.product_id"""
     ).fetchall()
     laatste_per_product = {r["product_id"]: r["laatste_datum"] for r in laatste_tellingen}
-    nooit_geteld = [p for p in producten if p["actief"] and p["id"] not in laatste_per_product]
+    # Alleen wat in de gewone telling hoort: de keuken telt apart en een kassaknop wordt niet geteld.
+    nooit_geteld = [p for p in producten if in_gewone_telling(p) and p["id"] not in laatste_per_product]
     langst_niet_geteld = sorted(
         (
             {"product": p, "laatste_datum": laatste_per_product[p["id"]]}
             for p in producten
-            if p["actief"] and p["id"] in laatste_per_product
+            if in_gewone_telling(p) and p["id"] in laatste_per_product
         ),
         key=lambda x: x["laatste_datum"],
     )[:5]

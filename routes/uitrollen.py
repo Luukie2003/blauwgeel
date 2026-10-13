@@ -1,4 +1,4 @@
-from flask import jsonify, request
+from flask import current_app, jsonify, request
 
 import uitrollen
 
@@ -26,7 +26,8 @@ def register_routes(app):
         ):
             return jsonify({"fout": "ongeldige handtekening"}), 403
 
-        resultaat = uitrollen.werk_code_bij(uitrollen.BASE_DIR)
+        # Met de rooktest: na het ophalen worden alle pagina's met de nieuwe code geopend op een kopie van de database.
+        resultaat = uitrollen.werk_code_bij(uitrollen.BASE_DIR, rooktest_database=current_app.config["DATABASE"])
         antwoord = jsonify(resultaat)
         antwoord.status_code = 200 if resultaat["ok"] else 500
         if resultaat["ok"] and resultaat["gewijzigd"]:

@@ -1,7 +1,8 @@
 from flask import flash, g, redirect, render_template, request, session, url_for
 
 from database import get_db
-from helpers import bereken_frituurvet_status, now_str
+from helpers import bereken_frituurvet_status, inkoop_per_stuk, now_str
+from keukenbeheer import boek_keuken_in, keuken_producten, keuken_tellingen, verwerk_keuken_telling, zet_keuken_prijzen
 from routes.producten import render_producten_pagina, render_voorraad_pda
 
 
@@ -57,3 +58,67 @@ def register_routes(app):
             frituurvet_status=bereken_frituurvet_status(db),
             vervangingen=vervangingen,
         )
+
+    # ---------- De keuken als eigen module: tellen, inboeken, prijzen (zie keukenbeheer.py) ----------
+
+    def _getal(waarde, soort=int):
+        try:
+            return soort((waarde or "").strip().replace(",", "."))
+        except ValueError:
+            return None
+
+    @app.route("/keuken/tellen", methods=["GET", "POST"])
+    def keuken_tellen():
+        db = get_db()
+        if request.method == "POST":
+            waarden = {}
+            for p in keuken_producten(db):
+                geteld = _getal(request.form.get(f"geteld_{p['id']}"))
+                if geteld is not None and geteld >= 0:
+                    waarden[p["id"]] = geteld
+            telling_id = verwerk_keuken_telling(
+                db, waarden, session.get("gebruiker_naam"), now_str(), session.get("gebruiker_id"),
+                request.form.get("opmerking", "").strip(),
+            )
+            if telling_id is None:
+                flash("Geen aantallen ingevuld: er is niets geteld.", "error")
+                return redirect(url_for("keuken_tellen"))
+            flash(f"Keukentelling #{telling_id} opgeslagen ({len(waarden)} {'product' if len(waarden) == 1 else 'producten'}).", "success")
+            return redirect(url_for("keuken_tellingen_overzicht"))
+        return render_template("keuken_tellen.html", producten=keuken_producten(db))
+
+    @app.route("/keuken/inboeken", methods=["GET", "POST"])
+    def keuken_inboeken():
+        db = get_db()
+        if request.method == "POST":
+            verpakkingen, inkoop = {}, {}
+            for p in keuken_producten(db):
+                n = _getal(request.form.get(f"aantal_{p['id']}"))
+                if n:
+                    verpakkingen[p["id"]] = n
+                prijs = _getal(request.form.get(f"inkoop_{p['id']}"), float)
+                if prijs is not None and prijs >= 0:
+                    inkoop[p["id"]] = round(prijs, 2)
+            aantal = boek_keuken_in(db, verpakkingen, session.get("gebruiker_naam"), now_str(), session.get("gebruiker_id"), inkoop)
+            flash(f"{aantal} {'product' if aantal == 1 else 'producten'} ingeboekt." if aantal else "Inkoopprijzen opgeslagen; er is niets ingeboekt.", "success")
+            return redirect(url_for("keuken_inboeken"))
+        return render_template("keuken_inboeken.html", producten=keuken_producten(db))
+
+    @app.route("/keuken/prijzen", methods=["GET", "POST"])
+    def keuken_prijzen():
+        db = get_db()
+        if request.method == "POST":
+            prijzen = {}
+            for p in keuken_producten(db, alleen_actief=False):
+                prijs = _getal(request.form.get(f"prijs_{p['id']}"), float)
+                if prijs is not None and prijs >= 0:
+                    prijzen[p["id"]] = round(prijs, 2)
+            aantal = zet_keuken_prijzen(db, prijzen, session.get("gebruiker_naam"), now_str(), session.get("gebruiker_id"))
+            flash(f"{aantal} {'prijs' if aantal == 1 else 'prijzen'} aangepast." if aantal else "Geen prijzen gewijzigd.", "success")
+            return redirect(url_for("keuken_prijzen"))
+        producten = [dict(p, inkoop_stuk=inkoop_per_stuk(p)) for p in keuken_producten(db, alleen_actief=False)]
+        return render_template("keuken_prijzen.html", producten=producten)
+
+    @app.route("/keuken/tellingen")
+    def keuken_tellingen_overzicht():
+        return render_template("keuken_tellingen.html", tellingen=keuken_tellingen(get_db()))

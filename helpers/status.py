@@ -4,6 +4,7 @@ from datetime import datetime
 
 from helpers.kas import bereken_kassa_telling_status
 from helpers.producten import bereken_bestellijst_meldingen
+from helpers.tijd import vandaag_amsterdam
 from helpers.toegang import heeft_sectie_toegang
 from helpers.wedstrijden import bereken_komende_thuiswedstrijden
 
@@ -172,6 +173,19 @@ def bouw_taken(db, rol, secties, gebruiker_id=None):
                     urgent=laag >= 5,
                 )
             )
+        # Vaste besteldag van een leverancier (zie leveranciers.py) en er is iets onder het minimum.
+        from leveranciers import vandaag_bestellen
+
+        for lev, aantal in vandaag_bestellen(db, vandaag_amsterdam()):
+            taken.append(
+                _taak(
+                    f"Vandaag bestellen bij {lev['naam']}",
+                    (f"Vóór {lev['bestellen_voor']} · " if lev["bestellen_voor"] else "")
+                    + f"{aantal} {'product' if aantal == 1 else 'producten'} onder het minimum",
+                    "bestellijst",
+                    urgent=True,
+                )
+            )
         meldingen = bereken_bestellijst_meldingen(db)
         aantal_meldingen = len(meldingen["producten"]) + len(meldingen["teksten"])
         if aantal_meldingen:
@@ -221,7 +235,18 @@ def bouw_taken(db, rol, secties, gebruiker_id=None):
             )
 
     if rol == "beheerder":
+        from foutenlog import recente_open_fouten
         from opslag import groottetekst, laatst_gemeten
+
+        fouten = recente_open_fouten(db)
+        if fouten:
+            taken.append(
+                _taak(
+                    f"{fouten} {'foutmelding' if fouten == 1 else 'foutmeldingen'} deze week",
+                    "Iemand kreeg een foutpagina: kijk wat er misging",
+                    "fouten_lijst",
+                )
+            )
 
         opslag = laatst_gemeten(db)  # de bewaarde meting: het dashboard loopt zelf nooit alle bestanden langs
         if opslag and opslag["niveau"] != "ok":

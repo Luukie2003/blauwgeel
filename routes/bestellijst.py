@@ -11,6 +11,8 @@ from helpers import (
     regels_per_bestelling,
     verwerk_auto_inactief,
 )
+from helpers.tijd import vandaag_amsterdam
+from leveranciers import GEEN, filter_suggesties, per_leverancier
 from pdf import bestellijst_pdf
 
 
@@ -67,6 +69,8 @@ def register_routes(app):
             meldingen=bereken_bestellijst_meldingen(db),
             open_bestellingen=open_bestellingen_met_regels,
             recent_ontvangen=recent_ontvangen_met_regels,
+            per_leverancier=per_leverancier(db, suggesties, vandaag_amsterdam()),
+            leverancier_namen={r["id"]: r["naam"] for r in db.execute("SELECT id, naam FROM leveranciers").fetchall()},
         )
 
     @app.route("/bestellijst/voorspeld")
@@ -81,13 +85,23 @@ def register_routes(app):
 
     @app.route("/bestellijst/pdf")
     def bestellijst_pdf_route():
+        """De bestellijst als pdf; met ?leverancier=<id> (of 'geen') alleen wat bij die leverancier besteld wordt."""
         db = get_db()
-        suggesties = bestel_suggesties(db)
-        pdf_bytes = bestellijst_pdf(suggesties)
+        sleutel = request.args.get("leverancier", "").strip()
+        suggesties = filter_suggesties(bestel_suggesties(db), sleutel)
+        ondertitel, bestandsnaam = "Producten onder de minimumvoorraad", "bestellijst.pdf"
+        if sleutel == GEEN:
+            ondertitel = "Producten zonder leverancier"
+        elif sleutel.isdigit():
+            lev = db.execute("SELECT naam, klantnummer FROM leveranciers WHERE id = ?", (int(sleutel),)).fetchone()
+            if lev:
+                ondertitel = f"Bestellen bij {lev['naam']}" + (f" (klantnummer {lev['klantnummer']})" if lev["klantnummer"] else "")
+                bestandsnaam = "bestellijst-" + "".join(c for c in lev["naam"].lower().replace(" ", "-") if c.isalnum() or c == "-") + ".pdf"
+        pdf_bytes = bestellijst_pdf(suggesties, ondertitel)
         return Response(
             pdf_bytes,
             mimetype="application/pdf",
-            headers={"Content-Disposition": "attachment; filename=bestellijst.pdf"},
+            headers={"Content-Disposition": f"attachment; filename={bestandsnaam}"},
         )
 
     @app.route("/bestellijst/aanmaken", methods=["POST"])

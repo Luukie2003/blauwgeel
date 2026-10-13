@@ -6,11 +6,20 @@ from helpers import (
     bereken_kassa_coupure_bedrag,
     bereken_kassa_verschil_trend,
     bereken_kassalade_stand,
+    bereken_omzet_en_kassa,
     bereken_kluis_stand,
     kassa_telling_is_zelf_goedgekeurd,
     now_str,
 )
 from pdf import kassa_pdf
+
+
+def _kaart_omzet():
+    """De kaartbetalingen uit het formulier (uit hetzelfde PayPal-overzicht als het contante bedrag), 0 als leeg."""
+    try:
+        return max(0.0, round(float((request.form.get("kaart_omzet") or "0").replace(",", ".")), 2))
+    except ValueError:
+        return 0.0
 
 
 def register_routes(app):
@@ -60,6 +69,9 @@ def register_routes(app):
                     opmerking,
                 ),
             )
+            # De kaartbetalingen tellen niet mee voor de kassalade (dat geld komt nooit in de la), alleen voor de
+            # vergelijking met de omzet uit de voorraadtellingen (Geld > Omzet en kassa).
+            db.execute("UPDATE kassa_tellingen SET kaart_omzet = ? WHERE id = ?", (_kaart_omzet(), cur.lastrowid))
             # Nog niet in instellingen.kassalade_stand verrekenen -- dat gebeurt
             # pas bij het afsluiten, zodat de telling tot die tijd nog
             # aangepast kan worden zonder de lopende stand te verstoren.
@@ -353,6 +365,7 @@ def register_routes(app):
                     telling_id,
                 ),
             )
+            db.execute("UPDATE kassa_tellingen SET kaart_omzet = ? WHERE id = ?", (_kaart_omzet(), telling_id))
             db.commit()
             flash("Kassatelling bijgewerkt.", "success")
             return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
@@ -364,6 +377,31 @@ def register_routes(app):
             coupures=KASSA_COUPURES,
             kassalade_stand=kassalade_stand,
         )
+
+    @app.route("/kassa/tellingen/<int:telling_id>/kaartomzet", methods=["POST"])
+    def kassa_telling_kaartomzet(telling_id):
+        """De kaartbetalingen van een telling invullen of verbeteren, ook als hij al is afgesloten: ze raken de
+        kassalade niet (dat geld komt nooit in de la), alleen de vergelijking in Omzet en kassa."""
+        db = get_db()
+        telling = db.execute("SELECT id, kaart_omzet FROM kassa_tellingen WHERE id = ?", (telling_id,)).fetchone()
+        if telling is None:
+            flash("Kassatelling niet gevonden.", "error")
+            return redirect(url_for("kassa_geschiedenis"))
+        nieuw = _kaart_omzet()
+        db.execute("UPDATE kassa_tellingen SET kaart_omzet = ? WHERE id = ?", (nieuw, telling_id))
+        db.commit()
+        flash(
+            f"Kaartbetalingen aangepast van € {telling['kaart_omzet']:.2f} naar € {nieuw:.2f}. "
+            "De kassastand verandert hier niet door.",
+            "success",
+        )
+        return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
+
+    @app.route("/kassa/omzet-en-kassa")
+    def kassa_omzet_controle():
+        """Geld > Omzet en kassa: per kassatelling wat PayPal zegt (contant plus kaart) naast de omzet uit de
+        voorraadtellingen in dezelfde periode."""
+        return render_template("kassa_omzet_controle.html", uitkomst=bereken_omzet_en_kassa(get_db()))
 
     @app.route("/kassa/tellingen/<int:telling_id>/goedkeuren", methods=["POST"])
     def kassa_telling_goedkeuren(telling_id):

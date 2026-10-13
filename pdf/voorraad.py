@@ -3,8 +3,8 @@
 from pdf.basis import Rapport, _euro, _kort
 
 
-def bestellijst_pdf(suggesties):
-    pdf = Rapport("Bestellijst", "Producten onder de minimumvoorraad")
+def bestellijst_pdf(suggesties, ondertitel="Producten onder de minimumvoorraad"):
+    pdf = Rapport("Bestellijst", ondertitel)
     kolommen = [
         ("Product", 60, "L"),
         ("Categorie", 28, "L"),

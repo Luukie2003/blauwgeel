@@ -1,0 +1,32 @@
+{% extends basis_template %}
+{% block titel %}Keuken prijzen{% endblock %}
+{% macro bedrag(x) %}{{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% block inhoud %}
+<h1>Keuken prijzen</h1>
+{% include '_keuken_subnav.html' %}
+<p class="subtitel">De verkoopprijs per portie of stuk. Een gewijzigde prijs komt in de prijsgeschiedenis van het product; de tv volgt vanzelf.</p>
+{% if producten %}
+<form method="post" class="kaart">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th style="text-align:right">Inkoop per {{ 'portie/stuk' }}</th><th>Verkoopprijs</th><th style="text-align:right">Marge</th></tr></thead>
+            <tbody>
+                {% for p in producten %}
+                <tr class="{{ '' if p.actief else 'inactief' }}">
+                    <td>{{ p.naam }}{% if not p.actief %} <span class="badge badge-neutraal">inactief</span>{% endif %}</td>
+                    <td style="text-align:right">{% if p.inkoopprijs %}&euro; {{ bedrag(p.inkoop_stuk) }}{% else %}<span class="tekst-zacht">geen inkoopprijs</span>{% endif %}</td>
+                    <td>&euro; <input type="text" inputmode="decimal" name="prijs_{{ p.id }}" style="width:6rem; text-align:right"
+                                      value="{{ bedrag(p.verkoopprijs) }}" aria-label="Verkoopprijs {{ p.naam }}"></td>
+                    <td style="text-align:right">{% if p.inkoopprijs and p.verkoopprijs > 0 %}{{ '%.0f'|format((p.verkoopprijs - p.inkoop_stuk) / p.verkoopprijs * 100) }}%{% else %}&mdash;{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <button type="submit" class="btn btn-geel" style="margin-top:0.8rem">Prijzen opslaan</button>
+</form>
+{% else %}
+<p class="leeg">Nog geen producten in de categorie Keuken.</p>
+{% endif %}
+{% endblock %}

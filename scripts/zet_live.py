@@ -8,8 +8,9 @@ Wat het doet:
   2. draait de code-controle (ruff) en alle tests -- faalt er iets, dan stopt het;
   3. pusht naar GitHub;
   4. vraagt de server (POST /uitrollen, ondertekend) de nieuwste code op te halen, zo nodig de
-     vastgezette pakketten te installeren (lukt dat niet, dan zet de server de vorige versie terug) en
-     de web-app te herstarten;
+     vastgezette pakketten te installeren, alle pagina's met de nieuwe code op een kopie van de echte
+     database te openen (de rooktest; lukt iets daarvan niet, dan zet de server de vorige versie terug)
+     en de web-app te herstarten;
   5. wacht tot /status laat zien dat de nieuwe versie echt draait.
 
 Eenmalig instellen (zie ook uitrollen.py):
@@ -176,6 +177,13 @@ def main():
     if code != 200 or not antwoord.get("ok"):
         extra = "\nDe server heeft de vorige versie teruggezet; er is niets veranderd." if antwoord.get("teruggedraaid") else ""
         return fout(f"de server kon de code niet bijwerken (HTTP {code}):\n{antwoord.get('uitvoer', '')}{extra}")
+
+    rooktest = antwoord.get("rooktest")
+    if rooktest and rooktest.get("afgerond"):
+        print(f"✓ Rooktest op de server: {rooktest['paginas']} pagina's met de echte gegevens geopend, zonder fouten "
+              f"({rooktest.get('duur', '?')} s).")
+    elif rooktest:
+        print(f"! Rooktest op de server niet afgerond ({'; '.join(rooktest.get('fouten', []))}); de nieuwe versie gaat wel live.")
 
     if antwoord.get("pakketten") == "geinstalleerd":
         print("✓ Pakketten op de server bijgewerkt (requirements-vast.txt).")

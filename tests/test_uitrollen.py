@@ -271,3 +271,81 @@ def test_status_is_openbaar_en_toont_versie_en_commit(client):
 def test_status_telt_niet_mee_in_de_gebruiksstatistieken(ingelogde_client, db):
     ingelogde_client.get("/status")
     assert db.execute("SELECT COUNT(*) AS n FROM paginabezoeken WHERE endpoint = 'status_pagina'").fetchone()["n"] == 0
+
+
+# ---------- Rooktest na het ophalen ----------
+
+
+def _nep_rooktest(monkeypatch, uitkomst):
+    aanroepen = []
+    monkeypatch.setattr(uitrollen, "draai_rooktest", lambda repo, db: aanroepen.append(db) or uitkomst)
+    return aanroepen
+
+
+def test_een_geslaagde_rooktest_laat_de_nieuwe_code_staan(repos, monkeypatch):
+    aanroepen = _nep_rooktest(monkeypatch, {"afgerond": True, "paginas": 120, "doorverwezen": 9, "fouten": [], "duur": 4.2})
+    _nieuwe_commit(repos["laptop"])
+    resultaat = uitrollen.werk_code_bij(repos["server"], rooktest_database="/data/voorraad.db")
+    assert resultaat["ok"] and resultaat["gewijzigd"] and not resultaat["teruggedraaid"]
+    assert aanroepen == ["/data/voorraad.db"] and resultaat["rooktest"]["paginas"] == 120
+
+
+def test_fouten_in_de_rooktest_zetten_de_vorige_versie_terug(repos, monkeypatch):
+    _nep_rooktest(monkeypatch, {"afgerond": True, "paginas": 40, "doorverwezen": 0, "fouten": ["/rapporten/marge: HTTP 500"]})
+    _nieuwe_commit(repos["laptop"])
+    resultaat = uitrollen.werk_code_bij(repos["server"], rooktest_database="/data/voorraad.db")
+    assert not resultaat["ok"] and resultaat["teruggedraaid"] and not resultaat["gewijzigd"]
+    assert resultaat["nieuw"] == resultaat["oud"] and (repos["server"] / "app.txt").read_text() == "1"
+    assert "/rapporten/marge: HTTP 500" in resultaat["uitvoer"]
+
+
+def test_een_rooktest_die_niet_kon_draaien_houdt_de_uitrol_niet_tegen(repos, monkeypatch):
+    _nep_rooktest(monkeypatch, {"afgerond": False, "paginas": 0, "doorverwezen": 0, "fouten": ["duurde langer dan 150 s"]})
+    _nieuwe_commit(repos["laptop"])
+    resultaat = uitrollen.werk_code_bij(repos["server"], rooktest_database="/data/voorraad.db")
+    assert resultaat["ok"] and resultaat["gewijzigd"]
+
+
+def test_zonder_nieuwe_code_geen_rooktest(repos, monkeypatch):
+    aanroepen = _nep_rooktest(monkeypatch, {"afgerond": True, "fouten": []})
+    uitrollen.werk_code_bij(repos["server"], rooktest_database="/data/voorraad.db")
+    assert aanroepen == []
+
+
+def test_de_echte_rooktest_op_een_kopie_van_de_database(app, db, monkeypatch):
+    import mail
+    import rooktest
+
+    monkeypatch.setattr(mail, "MAIL_BESCHIKBAAR", False)
+    voor = db.execute("SELECT COUNT(*) FROM paginabezoeken").fetchone()[0]
+
+    uitkomst = rooktest.draai(app.config["DATABASE"])
+
+    assert uitkomst["afgerond"] and uitkomst["fouten"] == [] and uitkomst["paginas"] > 80
+    assert db.execute("SELECT COUNT(*) FROM paginabezoeken").fetchone()[0] == voor  # de echte database is niet aangeraakt
+
+
+def test_de_rooktest_vindt_een_kapotte_pagina(app, monkeypatch):
+    import app as app_module
+    import mail
+    import rooktest
+
+    monkeypatch.setattr(mail, "MAIL_BESCHIKBAAR", False)
+    echte_create_app = app_module.create_app
+
+    def met_kapotte_pagina(**kwargs):
+        nieuwe = echte_create_app(**kwargs)
+
+        @nieuwe.route("/kapot")
+        def kapot():
+            raise ZeroDivisionError("door nul gedeeld")
+
+        return nieuwe
+
+    monkeypatch.setattr(app_module, "create_app", met_kapotte_pagina)
+    uitkomst = rooktest.draai(app.config["DATABASE"])
+    assert uitkomst["afgerond"] and any("/kapot: ZeroDivisionError" in f for f in uitkomst["fouten"])
+
+
+def test_draai_rooktest_zonder_script_is_niet_afgerond(tmp_path):
+    assert uitrollen.draai_rooktest(tmp_path, tmp_path / "x.db")["afgerond"] is False
