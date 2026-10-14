@@ -1,0 +1,114 @@
+{% extends basis_template %}
+{% block titel %}Agenda{% endblock %}
+{% block inhoud %}
+<style>
+    .agenda-week { margin-top: 1.2rem; }
+    .agenda-week h2 { font-size: 1rem; margin: 0 0 0.5rem; color: var(--tekst-zacht); text-transform: uppercase; letter-spacing: 0.04em; }
+    .agenda-dag { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr) auto; gap: 0.4rem 1rem; align-items: start;
+        padding: 0.8rem 1rem; background: var(--kaart); border: 1px solid var(--rand-licht); border-left: 4px solid var(--rand-licht);
+        border-radius: var(--radius); margin-bottom: 0.5rem; }
+    .agenda-dag.open { border-left-color: var(--accent); }
+    .agenda-dag.dicht { opacity: 0.7; }
+    .agenda-dag.vandaag { box-shadow: 0 0 0 2px var(--geel); }
+    .agenda-datum { text-align: center; line-height: 1.1; }
+    .agenda-datum .nummer { font-size: 1.6rem; font-weight: 700; color: var(--blauw); }
+    .agenda-datum .weekdag { font-size: 0.75rem; text-transform: uppercase; color: var(--tekst-zacht); letter-spacing: 0.04em; }
+    .agenda-items { display: grid; gap: 0.3rem; min-width: 0; }
+    .agenda-item { display: flex; flex-wrap: wrap; gap: 0.2rem 0.5rem; align-items: baseline; }
+    .agenda-item .soort { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--tekst-zacht); min-width: 6.5rem; }
+    .agenda-rechts { text-align: right; display: grid; gap: 0.2rem; font-size: 0.85rem; white-space: nowrap; }
+    .agenda-omzet { font-weight: 700; }
+    @media (max-width: 34rem) {
+        .agenda-dag { grid-template-columns: 3.4rem minmax(0, 1fr); }
+        .agenda-rechts { grid-column: 2; text-align: left; display: flex; gap: 0.8rem; }
+        .agenda-item .soort { min-width: 0; }
+    }
+</style>
+
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Wat er de komende weken in de kantine gebeurt: verkoopdagen, thuiswedstrijden, evenementen, bardiensten en het weer.
+    </p>
+    <form method="get" style="margin:0; display:flex; gap:0.4rem; align-items:center">
+        <label for="dagen" style="margin:0; font-weight:400">Periode</label>
+        <select id="dagen" name="dagen" onchange="this.form.submit()">
+            {% for d in dagen_keuzes %}<option value="{{ d }}" {{ 'selected' if d == dagen }}>{{ d // 7 }} weken</option>{% endfor %}
+        </select>
+    </form>
+</div>
+
+{% if sectie_toegang.voorraad %}
+{# De verwachte omzet per dag: apart opgehaald, het script hieronder zet de bedragen bij de dagen. #}
+<div data-lazy-bron="{{ url_for('agenda_omzet', dagen=dagen) }}" hidden></div>
+{% endif %}
+
+{% for week in weken %}
+<section class="agenda-week">
+    <h2>Week {{ week.week }} &middot; {{ week.van.day }}-{{ week.van.month }} t/m {{ week.tot.day }}-{{ week.tot.month }}</h2>
+    {% for d in week.dagen %}
+    <div class="agenda-dag {{ 'open' if d.open else 'dicht' }}{{ ' vandaag' if d.vandaag else '' }}">
+        <div class="agenda-datum">
+            <div class="weekdag">{{ 'vandaag' if d.vandaag else 'morgen' if d.morgen else d.weekdag[:2] }}</div>
+            <div class="nummer">{{ d.dag.day }}</div>
+            <div class="weekdag">{{ d.datum_tekst.split(' ')[1][:3] }}</div>
+        </div>
+        <div class="agenda-items">
+            {% if not d.open %}
+            <div class="agenda-item"><span class="soort">Kantine</span><span class="badge badge-neutraal">dicht</span>{% if d.uitzondering_tekst %} <span class="tekst-zacht">{{ d.uitzondering_tekst }}</span>{% endif %}</div>
+            {% elif d.uitzondering == 'open' %}
+            <div class="agenda-item"><span class="soort">Kantine</span><span class="badge badge-ok">extra open</span>{% if d.uitzondering_tekst %} <span class="tekst-zacht">{{ d.uitzondering_tekst }}</span>{% endif %}</div>
+            {% endif %}
+            {% for w in d.wedstrijden %}
+            <div class="agenda-item"{% if w.afgelast %} style="text-decoration:line-through; opacity:0.6"{% endif %}>
+                <span class="soort">&#9917; Thuis</span>
+                <span>{% if w.tijd %}<strong>{{ w.tijd }}</strong> {% endif %}{{ w.omschrijving }}</span>
+                {% if w.afgelast %}<span class="badge badge-neutraal">afgelast</span>{% endif %}
+            </div>
+            {% endfor %}
+            {% for e in d.evenementen %}
+            <div class="agenda-item">
+                <span class="soort">{{ 'Activiteit' if e.soort == 'rustig' else 'Evenement' }}</span>
+                <span><strong>{{ e.naam }}</strong>{% if e.groep and e.groep|lower not in e.naam|lower %} <span class="tekst-zacht">({{ e.groep }})</span>{% endif %}</span>
+                <span class="badge {{ 'badge-neutraal' if e.soort == 'rustig' else 'badge-laag' }}">{{ 'rustig' if e.soort == 'rustig' else 'druk' }}</span>
+            </div>
+            {% endfor %}
+            {% for b in d.bardiensten %}
+            <div class="agenda-item"><span class="soort">Bardienst</span><span>{{ b.start_tijd }}&ndash;{{ b.eind_tijd }} &middot; {{ b.namen }}</span></div>
+            {% endfor %}
+            {% if d.training %}
+            <div class="agenda-item"><span class="soort">Training</span><span class="tekst-zacht">trainingsavond</span></div>
+            {% endif %}
+            {% if d.open and not d.wedstrijden and not d.evenementen and not d.bardiensten and not d.training and not d.uitzondering %}
+            <div class="agenda-item"><span class="soort">Kantine</span><span class="tekst-zacht">gewone verkoopdag</span></div>
+            {% endif %}
+        </div>
+        <div class="agenda-rechts">
+            {% if d.weer %}<span title="{{ d.weer.label }}">{{ d.weer.icoon }} {{ '%.0f'|format(d.weer.max_temp) }}&deg;{% if d.weer.neerslag_kans %} <span class="tekst-zacht">{{ d.weer.neerslag_kans }}%</span>{% endif %}</span>{% endif %}
+            {% if d.open and sectie_toegang.voorraad %}<span class="agenda-omzet tekst-zacht" data-omzet-dag="{{ d.datum }}" title="Verwachte omzet volgens de prognose"></span>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</section>
+{% else %}
+<div class="kaart"><p class="leeg" style="margin:0">Er staat de komende {{ dagen // 7 }} weken niets op de agenda.</p></div>
+{% endfor %}
+
+<p class="tekst-zacht" style="margin-top:1rem">
+    {% if sectie_toegang.voorraad %}Een evenement of rustige activiteit zet je bij <a href="{{ url_for('prognose_pagina') }}#evenementen">Prognose &rarr; Evenementen</a>, een dag dat de kantine dicht of extra open is bij <a href="{{ url_for('prognose_pagina') }}#verkoopdagen">Verkoopdagen</a>.{% endif %}
+    {% if sectie_toegang.kantine_tv %}Bardiensten staan bij <a href="{{ url_for('kiosk_bardienst') }}">Kantine-tv &rarr; Bardienst</a>.{% endif %}
+    Thuiswedstrijden komen uit de gekoppelde teamagenda's.
+</p>
+
+<script>
+document.addEventListener('lazy-klaar', function () {
+    var bron = document.getElementById('agenda-omzet');
+    if (!bron) return;
+    var omzet = {};
+    try { omzet = JSON.parse(bron.dataset.omzet || '{}'); } catch (e) { return; }
+    document.querySelectorAll('[data-omzet-dag]').forEach(function (el) {
+        var bedrag = omzet[el.dataset.omzetDag];
+        if (bedrag) el.textContent = '≈ € ' + bedrag;
+    });
+});
+</script>
+{% endblock %}

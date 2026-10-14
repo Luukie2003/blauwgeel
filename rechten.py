@@ -98,6 +98,7 @@ GEBRUIK_NIET_LOGGEN = {
     "bestellijst_voorspeld",
     "prognose_resultaat",
     "prognose_terugblik_resultaat",
+    "agenda_omzet",
     "voorspelling_opwarmen",
     "opslag_meting",
     # Typen in de zoekbalk haalt bij elke toetsslag resultaten op.
@@ -253,6 +254,8 @@ SECTIE_ENDPOINTS = {
         "prognose_evenement_verwijderen",
         "prognose_terugblik",
         "prognose_terugblik_resultaat",
+        # De verwachte omzet in de agenda (de agenda zelf mag iedereen zien).
+        "agenda_omzet",
         "bestellijst_pdf_route",
         "bestelling_aanmaken",
         "bestelling_nieuw",

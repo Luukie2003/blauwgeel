@@ -38,6 +38,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Start",
+        "endpoints": ["agenda"],
+        "url_endpoint": "agenda",
+        "label": "Agenda",
+    },
+    {
+        "groep": "Start",
         "endpoints": ["bijzonderheden"],
         "url_endpoint": "bijzonderheden",
         "label": "Prikbord",

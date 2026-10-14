@@ -480,6 +480,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     from routes import (
         aanmeldingen,
         accounts,
+        activiteiten,
         auth,
         bardienstrapport,
         bestellijst,
@@ -519,6 +520,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     privacy.register_routes(app)
     prognose.register_routes(app)
     accounts.register_routes(app)
+    activiteiten.register_routes(app)
     auth.register_routes(app)
     bardienstrapport.register_routes(app)
     bestellijst.register_routes(app)

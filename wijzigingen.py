@@ -6,8 +6,16 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.45.2"
+HUIDIGE_VERSIE = "1.46.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.46.0",
+        "datum": "14 oktober 2026",
+        "punten": [
+            "Nieuwe pagina Start → Agenda: per dag wat er de komende 2, 3 of 4 weken in de kantine gebeurt. Of de kantine open of dicht is (met de reden), de thuiswedstrijden met aanvangstijd, evenementen en rustige activiteiten met voor wie, de bardiensten, de trainingsavond, het weer en de verwachte omzet. Werkt ook op de telefoon.",
+            "De melding over een evenement in de komende 7 dagen op het overzicht gaat nu naar de agenda.",
+        ],
+    },
     {
         "versie": "1.45.2",
         "datum": "14 oktober 2026",
@@ -938,8 +946,8 @@ MODULES = [
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
-    {"naam": "Overzicht & prikbord", "versie": "1.11.0", "sinds": "0.2.0", "laatst": "1.45.2",
-     "inhoud": "Dashboard, 'Wat moet er nu?', prikbord, zoekbalk en de tips-pagina"},
+    {"naam": "Overzicht & prikbord", "versie": "1.12.0", "sinds": "0.2.0", "laatst": "1.46.0",
+     "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
     {"naam": "Techniek & beveiliging", "versie": "1.6.0", "sinds": "1.1.0", "laatst": "1.45.0",
