@@ -28,11 +28,13 @@ from helpers import (
     stuur_tag_notificaties,
 )
 from helpers.tijd import vandaag_amsterdam
+from helpers.wedstrijden import OVERIG_TEAM, agenda_teams, voeg_thuiswedstrijd_toe
 from pdf import periode_verkoop_pdf
 from voorspelling import koud_zetten, maak_prognose
 from wijzigingen import HUIDIGE_VERSIE, MODULES, MODULES_UITLEG, WIJZIGINGEN
 
 _WEEKDAGEN = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
+WEDSTRIJDEN_VOORUIT_DAGEN = 60  # zo ver vooruit toont de Wedstrijden-pagina de thuiswedstrijden
 
 
 def register_routes(app):
@@ -267,14 +269,51 @@ def register_routes(app):
     @app.route("/wedstrijden")
     def wedstrijden_overzicht():
         db = get_db()
-        # Ook afgelaste wedstrijden, zodat je een afgelasting hier kunt terugdraaien.
-        komende_thuiswedstrijden = bereken_komende_thuiswedstrijden(db, inclusief_afgelast=True)
+        # Ook afgelaste wedstrijden, zodat je een afgelasting hier kunt terugdraaien. Verder vooruit dan elders, zodat
+        # een zelf toegevoegde wedstrijd over een paar weken hier ook al staat.
+        komende_thuiswedstrijden = bereken_komende_thuiswedstrijden(
+            db, dagen=WEDSTRIJDEN_VOORUIT_DAGEN, inclusief_afgelast=True
+        )
         wedstrijd_geschiedenis = bereken_wedstrijd_geschiedenis(db, inclusief_afgelast=True)
         return render_template(
             "wedstrijden.html",
             komende_thuiswedstrijden=komende_thuiswedstrijden,
             wedstrijd_geschiedenis=wedstrijd_geschiedenis,
+            vooruit_dagen=WEDSTRIJDEN_VOORUIT_DAGEN,
+            teams=agenda_teams(db),
+            overig_team=OVERIG_TEAM,
         )
+
+    @app.route("/wedstrijden/toevoegen", methods=["POST"])
+    def wedstrijd_toevoegen():
+        """Zelf een thuiswedstrijd toevoegen die (nog) niet in de teamagenda staat. Telt daarna mee zoals elke andere:
+        in de prognose, op een dag die alleen bij een thuiswedstrijd open is, en op de agenda."""
+        db = get_db()
+        fout = voeg_thuiswedstrijd_toe(
+            db,
+            request.form.get("datum"),
+            request.form.get("tijd"),
+            request.form.get("team"),
+            request.form.get("omschrijving"),
+        )
+        if fout:
+            flash(fout, "error")
+        else:
+            flash("Thuiswedstrijd toegevoegd. De prognose en de agenda rekenen er meteen mee.", "success")
+        return redirect(url_for("wedstrijden_overzicht") + "#toevoegen")
+
+    @app.route("/wedstrijden/<int:wedstrijd_id>/verwijderen", methods=["POST"])
+    def wedstrijd_verwijderen(wedstrijd_id):
+        """Alleen een zelf toegevoegde wedstrijd kan weg; een wedstrijd uit de teamagenda zet je op afgelast."""
+        db = get_db()
+        wedstrijd = db.execute("SELECT * FROM wedstrijden WHERE id = ?", (wedstrijd_id,)).fetchone()
+        if wedstrijd is None or not wedstrijd["handmatig"]:
+            flash("Alleen een zelf toegevoegde wedstrijd kun je verwijderen; zet een andere op 'Afgelast?'.", "error")
+            return redirect(url_for("wedstrijden_overzicht"))
+        db.execute("DELETE FROM wedstrijden WHERE id = ? AND handmatig = 1", (wedstrijd_id,))
+        db.commit()
+        flash(f"'{wedstrijd['omschrijving']}' is verwijderd.", "success")
+        return redirect(url_for("wedstrijden_overzicht"))
 
     @app.route("/wedstrijden/<int:wedstrijd_id>/afgelast", methods=["POST"])
     def wedstrijd_afgelast_wisselen(wedstrijd_id):

@@ -92,6 +92,7 @@ def bereken_wedstrijd_geschiedenis(db, limiet=25, inclusief_afgelast=False):
             "omschrijving": w["omschrijving"],
             "thuis": w["thuis"],
             "afgelast": w["afgelast"],
+            "handmatig": w["handmatig"],
         }
         for w in db.execute(
             f"""SELECT * FROM wedstrijden WHERE datum < ? {"" if inclusief_afgelast else "AND afgelast = 0"}
@@ -99,6 +100,45 @@ def bereken_wedstrijd_geschiedenis(db, limiet=25, inclusief_afgelast=False):
             (date.today().isoformat(), limiet),
         ).fetchall()
     ]
+
+
+OVERIG_TEAM = "Overig"  # een zelf toegevoegde wedstrijd van een team zonder gekoppelde agenda
+
+
+def agenda_teams(db):
+    """De teams met een gekoppelde agenda (Club instellingen), op naam."""
+    return [r[0] for r in db.execute(
+        "SELECT DISTINCT team FROM agenda_feeds WHERE team IS NOT NULL AND team != '' ORDER BY team COLLATE NOCASE"
+    ).fetchall()]
+
+
+def voeg_thuiswedstrijd_toe(db, datum, tijd="", team="", omschrijving=""):
+    """Zet zelf een thuiswedstrijd in de lijst, voor als de teamagenda 'm (nog) niet heeft. Geeft een foutmelding
+    terug, of None als het gelukt is. Zie agenda.py: komt de wedstrijd later in de agenda van hetzelfde team, dan
+    vervangt die deze."""
+    try:
+        dag = date.fromisoformat((datum or "").strip())
+    except ValueError:
+        return "Vul een geldige datum in."
+    tijd = (tijd or "").strip()
+    if tijd and not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", tijd):
+        return "Vul de aanvangstijd in als uu:mm, of laat 'm leeg."
+    team = " ".join((team or "").split()) or OVERIG_TEAM
+    omschrijving = " ".join((omschrijving or "").split()) or (
+        "Thuiswedstrijd" if team == OVERIG_TEAM else f"{team} thuis"
+    )
+    bestaat = db.execute(
+        "SELECT 1 FROM wedstrijden WHERE team = ? AND datum = ? AND omschrijving = ?", (team, dag.isoformat(), omschrijving)
+    ).fetchone()
+    if bestaat:
+        return f"'{omschrijving}' staat op {dag.strftime('%d-%m-%Y')} al in de lijst."
+    db.execute(
+        """INSERT INTO wedstrijden (team, datum, omschrijving, thuis, tijd, afgelast, afgelast_bron, handmatig)
+           VALUES (?, ?, ?, 1, ?, 0, 'handmatig', 1)""",
+        (team, dag.isoformat(), omschrijving, tijd or None),
+    )
+    db.commit()
+    return None
 
 
 _WEEKDAG_KORT = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"]
@@ -122,7 +162,7 @@ def bereken_komende_thuiswedstrijden(db, dagen=14, inclusief_afgelast=False):
     vandaag = date.today().isoformat()
     grens = (date.today() + timedelta(days=dagen)).isoformat()
     rijen = db.execute(
-        f"""SELECT id, datum, team, omschrijving, afgelast FROM wedstrijden
+        f"""SELECT id, datum, team, omschrijving, afgelast, handmatig FROM wedstrijden
            WHERE thuis = 1 AND datum >= ? AND datum <= ?
            {"" if inclusief_afgelast else "AND afgelast = 0"}
            ORDER BY datum, team""",

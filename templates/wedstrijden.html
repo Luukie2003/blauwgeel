@@ -2,11 +2,12 @@
 {% block titel %}Wedstrijden{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
-    Uit de gekoppelde teamagenda's en de weersverwachting. Ververst automatisch elke nacht.
+    Uit de gekoppelde teamagenda's en de weersverwachting. Ververst automatisch elke nacht. Staat een thuiswedstrijd
+    (nog) niet in de agenda? Voeg 'm hieronder zelf toe.
 </p>
 
 <div class="kaart">
-    <h2>Komende thuiswedstrijden</h2>
+    <h2>Komende thuiswedstrijden <span class="tekst-zacht" style="font-size:0.8rem; font-weight:400">(komende {{ vooruit_dagen }} dagen)</span></h2>
     {% if komende_thuiswedstrijden %}
     <div class="tabel-wrap">
         <table>
@@ -21,13 +22,22 @@
                         {% for w in dag.wedstrijden %}
                         <span style="{{ 'text-decoration:line-through; opacity:0.6' if w.afgelast else '' }}">{{ w.omschrijving }}</span>
                         {% if w.afgelast %}<span class="badge badge-neutraal">afgelast</span>{% endif %}
+                        {% if w.handmatig %}<span class="badge badge-neutraal" title="Zelf toegevoegd, niet uit de teamagenda">zelf toegevoegd</span>{% endif %}
                         {% if sectie_toegang.voorraad %}
+                        {% if w.handmatig %}
+                        <form method="post" action="{{ url_for('wedstrijd_verwijderen', wedstrijd_id=w.id) }}" style="display:inline; margin:0"
+                              onsubmit="return confirm('Deze zelf toegevoegde wedstrijd verwijderen?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-tekstlink" style="font-size:0.78rem">Verwijderen</button>
+                        </form>
+                        {% else %}
                         <form method="post" action="{{ url_for('wedstrijd_afgelast_wisselen', wedstrijd_id=w.id) }}" style="display:inline; margin:0">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="terug" value="wedstrijden">
                             <input type="hidden" name="afgelast" value="{{ 0 if w.afgelast else 1 }}">
                             <button type="submit" class="btn-tekstlink" style="font-size:0.78rem">{{ 'Toch spelen' if w.afgelast else 'Afgelast?' }}</button>
                         </form>
+                        {% endif %}
                         {% endif %}
                         {% if not loop.last %}<br>{% endif %}
                         {% endfor %}
@@ -56,6 +66,42 @@
     {% endif %}
 </div>
 
+{% if sectie_toegang.voorraad %}
+<div class="kaart" id="toevoegen">
+    <h2>Thuiswedstrijd zelf toevoegen</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Voor een thuiswedstrijd die niet in de teamagenda staat, bijvoorbeeld omdat de agenda nog niet verder vooruit
+        loopt. Hij telt daarna mee in de prognose, op de agenda en op een dag die alleen bij een thuiswedstrijd open is.
+        Komt de wedstrijd later toch in de agenda van hetzelfde team, dan vervangt die deze vanzelf.
+    </p>
+    <form method="post" action="{{ url_for('wedstrijd_toevoegen') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(11rem, 1fr)); gap:0.5rem 1rem">
+            <div class="veld" style="margin:0">
+                <label for="wedstrijd_datum">Datum</label>
+                <input type="date" id="wedstrijd_datum" name="datum" required>
+            </div>
+            <div class="veld" style="margin:0">
+                <label for="wedstrijd_tijd">Aanvang <span class="tekst-zacht">(mag leeg)</span></label>
+                <input type="time" id="wedstrijd_tijd" name="tijd">
+            </div>
+            <div class="veld" style="margin:0">
+                <label for="wedstrijd_team">Team</label>
+                <select id="wedstrijd_team" name="team">
+                    {% for team in teams %}<option value="{{ team }}">{{ team }}</option>{% endfor %}
+                    <option value="{{ overig_team }}">Ander team / weet ik niet</option>
+                </select>
+            </div>
+            <div class="veld" style="margin:0">
+                <label for="wedstrijd_omschrijving">Tegen wie <span class="tekst-zacht">(mag leeg)</span></label>
+                <input type="text" id="wedstrijd_omschrijving" name="omschrijving" maxlength="120" placeholder="bijv. Blauw Geel'15 1 - VV Tegenstander">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-geel" style="margin-top:0.7rem">Toevoegen</button>
+    </form>
+</div>
+{% endif %}
+
 <div class="kaart">
     <h2>Gespeelde wedstrijden</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
@@ -78,6 +124,7 @@
                         {% if w.thuis %}<span class="badge badge-ok">Thuis</span>
                         {% else %}<span class="badge badge-neutraal">Uit</span>{% endif %}
                         {% if w.afgelast %}<span class="badge badge-neutraal">afgelast</span>{% endif %}
+                        {% if w.handmatig %}<span class="badge badge-neutraal">zelf toegevoegd</span>{% endif %}
                         {% if w.thuis and sectie_toegang.voorraad %}
                         <form method="post" action="{{ url_for('wedstrijd_afgelast_wisselen', wedstrijd_id=w.id) }}" style="display:inline; margin:0">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

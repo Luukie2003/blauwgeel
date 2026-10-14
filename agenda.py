@@ -164,7 +164,7 @@ def _markeer_verdwenen_wedstrijden(conn, team, wedstrijden, dagen_vooruit=14, va
     laatste_in_feed = max(w["datum"] for w in wedstrijden)
     for rij in conn.execute(
         """SELECT id, datum, omschrijving FROM wedstrijden
-           WHERE team = ? AND afgelast = 0 AND afgelast_bron IS NOT 'handmatig'
+           WHERE team = ? AND afgelast = 0 AND afgelast_bron IS NOT 'handmatig' AND handmatig = 0
                  AND datum >= ? AND datum <= ?""",
         (team, vandaag.isoformat(), grens),
     ).fetchall():
@@ -172,6 +172,18 @@ def _markeer_verdwenen_wedstrijden(conn, team, wedstrijden, dagen_vooruit=14, va
             conn.execute(
                 "UPDATE wedstrijden SET afgelast = 1, afgelast_bron = 'agenda' WHERE id = ?", (rij["id"],)
             )
+
+
+def _vervang_handmatige_wedstrijden(conn, team, wedstrijden):
+    """Een zelf toegevoegde thuiswedstrijd (Wedstrijden-pagina) was een plaatshouder: heeft de agenda van hetzelfde
+    team op die dag nu zelf een thuiswedstrijd, dan maakt de handmatige plaats voor de echte. Gebeurt vóór het
+    toevoegen, zodat een handmatige met precies dezelfde omschrijving de echte niet tegenhoudt."""
+    datums = {w["datum"] for w in wedstrijden if w["thuis"]}
+    if datums:
+        conn.execute(
+            f"DELETE FROM wedstrijden WHERE handmatig = 1 AND team = ? AND datum IN ({','.join('?' * len(datums))})",
+            (team, *sorted(datums)),
+        )
 
 
 def ververs_wedstrijden(db_pad=None):
@@ -205,6 +217,7 @@ def ververs_wedstrijden(db_pad=None):
             print(f"[agenda] Ophalen mislukt voor feed #{feed['id']}: {fout}")
             continue
         conn.execute("UPDATE agenda_feeds SET team = ? WHERE id = ?", (team, feed["id"]))
+        _vervang_handmatige_wedstrijden(conn, team, wedstrijden)
         for wedstrijd in wedstrijden:
             cursor = conn.execute(
                 """INSERT OR IGNORE INTO wedstrijden (team, datum, omschrijving, thuis, tijd, afgelast, afgelast_bron)

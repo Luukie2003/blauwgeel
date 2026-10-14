@@ -96,6 +96,8 @@ KOLOM_MIGRATIES = [
     ("evenementen", "soort", "TEXT NOT NULL DEFAULT 'druk'"),
     # Voor wie het evenement is (bijv. 'UC'): 'UC Lunch' en 'UC Activiteit' leren dan samen een eigen bijstelling.
     ("evenementen", "groep", "TEXT"),
+    # Verkoopdagen (1.46.1): weekdagen waarop de kantine alleen open is als er een thuiswedstrijd is (bijv. zaterdag).
+    ("instellingen", "verkoopdagen_wedstrijd", "TEXT NOT NULL DEFAULT ''"),
     # Kassa tellen (1.45.0): de kaartbetalingen uit het PayPal-overzicht, naast het contante bedrag.
     ("kassa_tellingen", "kaart_omzet", "REAL NOT NULL DEFAULT 0"),
     # Hoeveel glazen er in een prijsoptie gaan (bijv. een pitcher), voor de kostprijs in het rapport Marge.
@@ -185,6 +187,10 @@ KOLOM_MIGRATIES = [
     # "toch spelen"); een handmatige keuze overschrijft de synchronisatie nooit.
     ("wedstrijden", "afgelast", "INTEGER NOT NULL DEFAULT 0"),
     ("wedstrijden", "afgelast_bron", "TEXT"),
+    # handmatig = 1: zelf toegevoegd op de Wedstrijden-pagina, omdat de teamagenda 'm (nog) niet heeft. Zo'n wedstrijd
+    # raakt de synchronisatie niet aan; zodra de agenda van hetzelfde team op die dag wel een thuiswedstrijd heeft,
+    # vervangt die de handmatige (zie agenda.py).
+    ("wedstrijden", "handmatig", "INTEGER NOT NULL DEFAULT 0"),
     # Welke categorie-kop in welke van de 3 vaste kolommen van het
     # prijzenscherm staat, en in welke volgorde -- JSON {"1": [...namen],
     # "2": [...], "3": [...]}, versleept via de drag-and-drop-indeling op

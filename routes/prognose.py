@@ -11,7 +11,9 @@ from database import get_db
 from helpers import bereken_komende_thuiswedstrijden, now_str
 from voorspelling import (
     _WEEKDAG,
+    dag_is_open,
     lees_verkoopdagen,
+    lees_wedstrijddagen,
     maak_prognose,
     terugblik,
     vat_terugblik_samen,
@@ -25,13 +27,17 @@ UITZONDERINGEN_TERUG_DAGEN = 56  # zo ver terug staan uitzonderingen nog in het 
 def _verkoop_context(db):
     """Alles voor het blokje "Verkoopdagen" op de pagina."""
     weekdagen, uitzonderingen = lees_verkoopdagen(db)
+    wedstrijddagen = lees_wedstrijddagen(db) - weekdagen
     grens = (date.today() - timedelta(days=UITZONDERINGEN_TERUG_DAGEN)).isoformat()
+    thuis = {r[0] for r in db.execute(
+        "SELECT DISTINCT datum FROM wedstrijden WHERE thuis = 1 AND afgelast = 0 AND datum >= ?", (grens,)
+    ).fetchall()}
     lijst = [
         {
             "datum": date.fromisoformat(r["datum"]),
             "open": bool(r["open"]),
             "opmerking": r["opmerking"],
-            "standaard_open": date.fromisoformat(r["datum"]).weekday() in weekdagen,
+            "standaard_open": dag_is_open(date.fromisoformat(r["datum"]), weekdagen, {}, wedstrijddagen, r["datum"] in thuis),
         }
         for r in db.execute(
             "SELECT datum, open, opmerking FROM verkoop_uitzonderingen WHERE datum >= ? ORDER BY datum", (grens,)
@@ -39,8 +45,12 @@ def _verkoop_context(db):
     ]
     return {
         "weekdagen": weekdagen,
+        "wedstrijddagen": wedstrijddagen,
         "dagnamen": [(i, naam) for i, naam in enumerate(_WEEKDAG)],
-        "samenvatting": ", ".join(_WEEKDAG[i] for i in sorted(weekdagen)),
+        "samenvatting": ", ".join(_WEEKDAG[i] for i in sorted(weekdagen)) + (
+            "; " + ", ".join(_WEEKDAG[i] for i in sorted(wedstrijddagen)) + " alleen bij een thuiswedstrijd"
+            if wedstrijddagen else ""
+        ),
         "uitzonderingen": lijst,
         "onbeslist": wedstrijden_op_gesloten_dagen(db),
     }
@@ -143,18 +153,24 @@ def register_routes(app):
 
     @app.route("/prognose/verkoopdagen", methods=["POST"])
     def prognose_verkoopdagen():
-        """De vaste weekdagen waarop verkocht wordt."""
-        gekozen = sorted(i for i in range(7) if request.form.get(f"dag_{i}"))
-        if not gekozen:
-            flash("Kies minstens één dag waarop je verkoopt.", "error")
+        """Per weekdag: dicht, altijd open, of alleen open als er een thuiswedstrijd is. Oudere formulieren sturen
+        alleen een vinkje ('on'): dat telt als altijd open."""
+        keuzes = {i: request.form.get(f"dag_{i}", "") for i in range(7)}
+        altijd = sorted(i for i, k in keuzes.items() if k in ("altijd", "on"))
+        bij_wedstrijd = sorted(i for i, k in keuzes.items() if k == "wedstrijd")
+        if not altijd:
+            flash("Kies minstens één dag waarop de kantine altijd open is.", "error")
             return redirect(url_for("prognose_pagina") + "#verkoopdagen")
         db = get_db()
-        db.execute("UPDATE instellingen SET verkoopdagen = ? WHERE id = 1", (",".join(str(i) for i in gekozen),))
-        db.commit()
-        flash(
-            "Verkoopdagen opgeslagen: " + ", ".join(_WEEKDAG[i] for i in gekozen) + ". De prognose rekent hier meteen mee.",
-            "success",
+        db.execute(
+            "UPDATE instellingen SET verkoopdagen = ?, verkoopdagen_wedstrijd = ? WHERE id = 1",
+            (",".join(str(i) for i in altijd), ",".join(str(i) for i in bij_wedstrijd)),
         )
+        db.commit()
+        tekst = ", ".join(_WEEKDAG[i] for i in altijd)
+        if bij_wedstrijd:
+            tekst += "; alleen bij een thuiswedstrijd: " + ", ".join(_WEEKDAG[i] for i in bij_wedstrijd)
+        flash(f"Verkoopdagen opgeslagen: {tekst}. De prognose rekent hier meteen mee.", "success")
         return redirect(url_for("prognose_pagina") + "#verkoopdagen")
 
     @app.route("/prognose/uitzondering", methods=["POST"])

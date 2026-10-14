@@ -96,7 +96,8 @@
 <p class="tekst-zacht" style="margin-top:1rem">
     {% if sectie_toegang.voorraad %}Een evenement of rustige activiteit zet je bij <a href="{{ url_for('prognose_pagina') }}#evenementen">Prognose &rarr; Evenementen</a>, een dag dat de kantine dicht of extra open is bij <a href="{{ url_for('prognose_pagina') }}#verkoopdagen">Verkoopdagen</a>.{% endif %}
     {% if sectie_toegang.kantine_tv %}Bardiensten staan bij <a href="{{ url_for('kiosk_bardienst') }}">Kantine-tv &rarr; Bardienst</a>.{% endif %}
-    Thuiswedstrijden komen uit de gekoppelde teamagenda's.
+    Thuiswedstrijden komen uit de gekoppelde teamagenda's; staat er een niet in, voeg 'm dan toe bij
+    <a href="{{ url_for('wedstrijden_overzicht') }}#toevoegen">Wedstrijden</a>.
 </p>
 
 <script>

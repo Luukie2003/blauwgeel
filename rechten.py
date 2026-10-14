@@ -247,6 +247,8 @@ SECTIE_ENDPOINTS = {
         "prognose_resultaat",
         "voorspelling_opwarmen",
         "wedstrijd_afgelast_wisselen",
+        "wedstrijd_toevoegen",
+        "wedstrijd_verwijderen",
         "prognose_verkoopdagen",
         "prognose_uitzondering_toevoegen",
         "prognose_uitzondering_verwijderen",

@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.46.0"
+HUIDIGE_VERSIE = "1.47.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.47.0",
+        "datum": "14 oktober 2026",
+        "punten": [
+            "Prognose → Verkoopdagen: kies per weekdag 'dicht', 'altijd open' of 'alleen bij een thuiswedstrijd'. Staat zaterdag op 'alleen bij een thuiswedstrijd', dan is de kantine op een zaterdag zonder thuiswedstrijd dicht: de prognose verwacht dan niets en de agenda laat de dag weg.",
+            "Rapporten → Wedstrijden: zelf een thuiswedstrijd toevoegen die (nog) niet in de teamagenda staat. Hij telt meteen mee in de prognose en op de agenda; komt hij later toch in de agenda van hetzelfde team, dan vervangt die de jouwe. Een zelf toegevoegde wedstrijd kun je ook weer verwijderen.",
+            "De Wedstrijden-pagina toont de thuiswedstrijden van de komende 60 dagen in plaats van 14.",
+        ],
+    },
     {
         "versie": "1.46.0",
         "datum": "14 oktober 2026",
@@ -924,7 +933,7 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.11.0", "sinds": "0.1.0", "laatst": "1.45.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.10.0", "sinds": "0.4.0", "laatst": "1.45.2",
+    {"naam": "Bestellen & prognose", "versie": "1.11.0", "sinds": "0.4.0", "laatst": "1.47.0",
      "inhoud": "Bestellijst (ook per leverancier), leveranciers, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, koud zetten, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.12.1", "sinds": "0.1.0", "laatst": "1.45.1",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
@@ -938,7 +947,7 @@ MODULES = [
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.0", "sinds": "", "laatst": "",
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
-    {"naam": "Rapporten", "versie": "1.13.0", "sinds": "0.1.0", "laatst": "1.45.0",
+    {"naam": "Rapporten", "versie": "1.14.0", "sinds": "0.1.0", "laatst": "1.47.0",
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.4.2", "sinds": "1.5.0", "laatst": "1.45.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
@@ -946,7 +955,7 @@ MODULES = [
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
-    {"naam": "Overzicht & prikbord", "versie": "1.12.0", "sinds": "0.2.0", "laatst": "1.46.0",
+    {"naam": "Overzicht & prikbord", "versie": "1.12.1", "sinds": "0.2.0", "laatst": "1.47.0",
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},

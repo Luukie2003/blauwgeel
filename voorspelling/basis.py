@@ -88,9 +88,22 @@ def lees_verkoopdagen(db):
     return (dagen or set(VERKOOPDAGEN_STANDAARD)), uitzonderingen
 
 
-def dag_is_open(dag, weekdagen, uitzonderingen):
-    """Wordt er op deze datum (date) verkocht?"""
-    return uitzonderingen.get(dag.isoformat(), dag.weekday() in weekdagen)
+def lees_wedstrijddagen(db):
+    """De weekdagen (maandag = 0) waarop de kantine alleen open is als er een thuiswedstrijd is, bijvoorbeeld zaterdag:
+    zonder thuiswedstrijd is het dan dicht. Staat apart van de vaste verkoopdagen (zie lees_verkoopdagen)."""
+    try:
+        rij = db.execute("SELECT verkoopdagen_wedstrijd FROM instellingen WHERE id = 1").fetchone()
+    except Exception:  # kolom bestaat nog niet (oude database)
+        return set()
+    tekst = rij[0] if rij else ""
+    return {int(x) for x in (tekst or "").split(",") if x.strip().isdigit() and 0 <= int(x) <= 6}
+
+
+def dag_is_open(dag, weekdagen, uitzonderingen, wedstrijddagen=(), thuiswedstrijd=False):
+    """Wordt er op deze datum (date) verkocht? Een uitzondering wint; anders een vaste verkoopdag, of een dag die
+    alleen bij een thuiswedstrijd open is en waarop er een is."""
+    standaard = dag.weekday() in weekdagen or (dag.weekday() in wedstrijddagen and thuiswedstrijd)
+    return uitzonderingen.get(dag.isoformat(), standaard)
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +157,7 @@ def lees_kalender(db, van, tot):
             weer[r["datum"]] = weer_score(r["max_temp"], r["neerslag_kans"])
     evenementen = lees_evenementen(db, van, tot)
     weekdagen, uitzonderingen = lees_verkoopdagen(db)
+    wedstrijddagen = lees_wedstrijddagen(db)
     kalender = {}
     dag = van
     while dag <= tot:
@@ -152,7 +166,7 @@ def lees_kalender(db, van, tot):
         # (toernooi, feest) maakt de dag drukker; een rustige activiteit (lunch, vergadering) op een dag dat de kantine
         # anders dicht is, telt als een klein deel van een gewone dag. Op een gewone verkoopdag verandert die niets.
         soorten = [soort for _, soort, _ in evenementen.get(iso, [])]
-        gewoon_open = dag_is_open(dag, weekdagen, uitzonderingen)
+        gewoon_open = dag_is_open(dag, weekdagen, uitzonderingen, wedstrijddagen, bool(wedstrijden.get(iso)))
         # De bijstelling van een groep geldt waar het effect van zijn evenement geldt: een druk evenement altijd, een
         # rustige activiteit alleen op een dag dat de kantine anders dicht is.
         groepen = tuple(sorted({

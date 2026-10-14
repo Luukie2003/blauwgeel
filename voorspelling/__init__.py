@@ -55,6 +55,7 @@ from helpers import TRAININGSDAG, bestel_suggesties
 
 from voorspelling.basis import (  # noqa: F401
     aanname,
+    lees_wedstrijddagen,
     blootstelling,
     GROEP_PREFIX,
     groep_sleutel,
@@ -415,6 +416,7 @@ def wedstrijden_op_gesloten_dagen(db, nu=None, weken_terug=8, dagen_vooruit=21):
     wedstrijd op bijvoorbeeld zondag levert meestal wel omzet op."""
     nu = nu or datetime.now()
     weekdagen, uitzonderingen = lees_verkoopdagen(db)
+    weekdagen = weekdagen | lees_wedstrijddagen(db)  # daar is een thuiswedstrijd vanzelf een verkoopdag
     van = nu.date() - timedelta(weeks=weken_terug)
     tot = nu.date() + timedelta(days=dagen_vooruit)
     per_datum = {}
@@ -669,7 +671,7 @@ def historie_vingerafdruk(db):
     ]
     try:
         delen.append(_hash_rijen(db.execute("SELECT * FROM verkoop_uitzonderingen ORDER BY datum")))
-        delen.append(db.execute("SELECT verkoopdagen FROM instellingen WHERE id = 1").fetchone()[0])
+        delen.append(tuple(db.execute("SELECT verkoopdagen, verkoopdagen_wedstrijd FROM instellingen WHERE id = 1").fetchone()))
         delen.append(_hash_rijen(db.execute("SELECT datum, naam, soort, groep FROM evenementen ORDER BY id")))
     except Exception:  # oudere database zonder deze tabel/kolom
         pass

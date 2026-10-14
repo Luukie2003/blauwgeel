@@ -9,7 +9,7 @@ from datetime import timedelta
 
 import weer
 from helpers.omzet import TRAININGSDAG
-from voorspelling.basis import dag_is_open, lees_verkoopdagen
+from voorspelling.basis import dag_is_open, lees_verkoopdagen, lees_wedstrijddagen
 
 DAG_NAMEN = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
 MAAND_NAMEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober",
@@ -39,6 +39,7 @@ def bouw_agenda(db, vandaag, dagen=STANDAARD_DAGEN):
     tot = vandaag + timedelta(days=dagen - 1)
     van_iso, tot_iso = vandaag.isoformat(), tot.isoformat()
     weekdagen, uitzonderingen = lees_verkoopdagen(db)
+    wedstrijddagen = lees_wedstrijddagen(db)
     opmerkingen = {
         r["datum"]: r["opmerking"]
         for r in db.execute("SELECT datum, opmerking FROM verkoop_uitzonderingen WHERE datum >= ? AND datum <= ?", (van_iso, tot_iso))
@@ -67,7 +68,8 @@ def bouw_agenda(db, vandaag, dagen=STANDAARD_DAGEN):
         dag = vandaag + timedelta(days=i)
         iso = dag.isoformat()
         vast_open = dag.weekday() in weekdagen
-        open_ = dag_is_open(dag, weekdagen, uitzonderingen) or iso in evenementen
+        thuis = any(not w["afgelast"] for w in wedstrijden.get(iso, []))
+        open_ = dag_is_open(dag, weekdagen, uitzonderingen, wedstrijddagen, thuis) or iso in evenementen
         w = weer_per_dag.get(iso)
         regel = {
             "datum": iso,

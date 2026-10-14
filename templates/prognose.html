@@ -94,17 +94,24 @@
 
     <p class="tekst-zacht">
         Op een dag waarop je niet verkoopt, verwacht de prognose niets en telt die dag niet mee bij het leren van de
-        verkoop. Geef hieronder de vaste dagen aan, en daaronder uitzonderingen voor losse datums (een wedstrijd op
-        zondag, of een woensdag dat de kantine dicht is). Uitzonderingen kunnen ook voor datums in het verleden.
+        verkoop. Geef per weekdag aan of de kantine dicht is, altijd open, of alleen open als er een thuiswedstrijd is
+        (bijvoorbeeld zaterdag). Staat een thuiswedstrijd niet in de teamagenda, voeg 'm dan zelf toe op
+        <a href="{{ url_for('wedstrijden_overzicht') }}#toevoegen">Wedstrijden</a>. Daaronder uitzonderingen voor losse
+        datums (een woensdag dat de kantine dicht is). Uitzonderingen kunnen ook voor datums in het verleden.
     </p>
 
     <form method="post" action="{{ url_for('prognose_verkoopdagen') }}" style="margin-bottom:1.2rem">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div style="display:flex; flex-wrap:wrap; gap:0.4rem 1.1rem; margin-bottom:0.7rem">
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(11rem, 1fr)); gap:0.5rem 1rem; margin-bottom:0.7rem">
             {% for i, naam in verkoop.dagnamen %}
-            <label style="display:flex; align-items:center; gap:0.35rem; font-weight:400">
-                <input type="checkbox" name="dag_{{ i }}" style="width:auto" {{ 'checked' if i in verkoop.weekdagen }}> {{ naam|capitalize }}
-            </label>
+            <div class="veld" style="margin:0">
+                <label for="dag_{{ i }}">{{ naam|capitalize }}</label>
+                <select id="dag_{{ i }}" name="dag_{{ i }}">
+                    <option value="" {{ 'selected' if i not in verkoop.weekdagen and i not in verkoop.wedstrijddagen }}>Dicht</option>
+                    <option value="altijd" {{ 'selected' if i in verkoop.weekdagen }}>Altijd open</option>
+                    <option value="wedstrijd" {{ 'selected' if i in verkoop.wedstrijddagen }}>Alleen bij een thuiswedstrijd</option>
+                </select>
+            </div>
             {% endfor %}
         </div>
         <button type="submit" class="btn btn-geel btn-klein">Vaste dagen opslaan</button>
