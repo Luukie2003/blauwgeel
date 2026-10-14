@@ -46,12 +46,38 @@ def _verkoop_context(db):
     }
 
 
+def bekende_groepen(db):
+    """De groepen die al eens bij een evenement zijn ingevuld (bijv. 'UC'), op naam."""
+    return [r[0] for r in db.execute(
+        "SELECT DISTINCT groep FROM evenementen WHERE groep IS NOT NULL AND groep != '' ORDER BY groep COLLATE NOCASE"
+    ).fetchall()]
+
+
+def groep_voor(db, naam, ingevuld):
+    """De groep van een nieuw evenement: wat is ingevuld, of anders een bekende groep waarmee de naam begint
+    ('UC Activiteit' -> 'UC'). Een bekende groep krijgt altijd dezelfde schrijfwijze als eerder."""
+    bekend = bekende_groepen(db)
+    groep = " ".join((ingevuld or "").split())[:40]
+    if groep:
+        return next((g for g in bekend if g.lower() == groep.lower()), groep)
+    woorden = naam.lower().split()
+    for g in sorted(bekend, key=len, reverse=True):  # de langste eerst: 'UC JO17' wint van 'UC'
+        if woorden[: len(g.split())] == g.lower().split():
+            return g
+    return None
+
+
 def _evenementen(db):
     """De evenementen vanaf acht weken geleden: [{id, datum (date), naam, geweest}]."""
     grens = (date.today() - timedelta(days=UITZONDERINGEN_TERUG_DAGEN)).isoformat()
     return [
-        {"id": r["id"], "datum": date.fromisoformat(r["datum"]), "naam": r["naam"], "geweest": r["datum"] < date.today().isoformat()}
-        for r in db.execute("SELECT id, datum, naam FROM evenementen WHERE datum >= ? ORDER BY datum, id", (grens,)).fetchall()
+        {"id": r["id"], "datum": date.fromisoformat(r["datum"]), "naam": r["naam"], "soort": r["soort"],
+         "groep": r["groep"], "geweest": r["datum"] < date.today().isoformat()}
+        for r in db.execute(
+            """SELECT id, datum, naam, COALESCE(soort, 'druk') AS soort, groep FROM evenementen
+               WHERE datum >= ? ORDER BY datum, id""",
+            (grens,),
+        ).fetchall()
     ]
 
 
@@ -74,6 +100,7 @@ def register_routes(app):
             verkoop=_verkoop_context(db),
             thuiswedstrijden=bereken_komende_thuiswedstrijden(db, dagen=14, inclusief_afgelast=True),
             evenementen=_evenementen(db),
+            evenement_groepen=bekende_groepen(db),
         )
 
     @app.route("/prognose/resultaat")
@@ -167,8 +194,8 @@ def register_routes(app):
 
     @app.route("/prognose/evenement", methods=["POST"])
     def prognose_evenement_toevoegen():
-        """Een toernooi, feest of verhuur: de prognose rekent die dag als verkoopdag met een eigen drukte-effect, dat
-        ze na een paar keer zelf bijleert uit de tellingen."""
+        """Een toernooi, feest of verhuur ('druk'), of een lunch, vergadering of teamactiviteit ('rustig'): de prognose
+        rekent die dag als verkoopdag met een eigen effect per soort, dat ze na een paar keer zelf bijleert."""
         try:
             datum = date.fromisoformat((request.form.get("datum") or "").strip())
         except ValueError:
@@ -178,13 +205,20 @@ def register_routes(app):
         if not naam:
             flash("Geef het evenement een naam, bijvoorbeeld 'Jeugdtoernooi'.", "error")
             return redirect(url_for("prognose_pagina") + "#evenementen")
+        soort = "rustig" if request.form.get("soort") == "rustig" else "druk"
         db = get_db()
+        groep = groep_voor(db, naam, request.form.get("groep"))
         db.execute(
-            "INSERT INTO evenementen (datum, naam, aangemaakt_door, aangemaakt_op) VALUES (?, ?, ?, ?)",
-            (datum.isoformat(), naam, session.get("gebruiker_naam"), now_str()),
+            "INSERT INTO evenementen (datum, naam, soort, groep, aangemaakt_door, aangemaakt_op) VALUES (?, ?, ?, ?, ?, ?)",
+            (datum.isoformat(), naam, soort, groep, session.get("gebruiker_naam"), now_str()),
         )
         db.commit()
-        flash(f"{naam} op {_WEEKDAG[datum.weekday()]} {datum.day}-{datum.month}-{datum.year} telt mee in de prognose.", "success")
+        flash(
+            f"{naam} op {_WEEKDAG[datum.weekday()]} {datum.day}-{datum.month}-{datum.year} telt mee in de prognose"
+            + (" als rustige dag" if soort == "rustig" else "")
+            + (f", bij {groep}." if groep else "."),
+            "success",
+        )
         return redirect(url_for("prognose_pagina") + "#evenementen")
 
     @app.route("/prognose/evenement/<int:evenement_id>/verwijderen", methods=["POST"])

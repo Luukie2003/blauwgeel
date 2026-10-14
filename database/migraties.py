@@ -92,6 +92,10 @@ KOLOM_MIGRATIES = [
     # of een doorverwijzing naar de inlogpagina was (zie log_paginabezoek in app.py).
     ("paginabezoeken", "duur_ms", "INTEGER"),
     ("paginabezoeken", "soort", "TEXT"),
+    # Evenementen (1.45.2): 'druk' (toernooi, feest, verhuur) of 'rustig' (lunch, vergadering, teamactiviteit).
+    ("evenementen", "soort", "TEXT NOT NULL DEFAULT 'druk'"),
+    # Voor wie het evenement is (bijv. 'UC'): 'UC Lunch' en 'UC Activiteit' leren dan samen een eigen bijstelling.
+    ("evenementen", "groep", "TEXT"),
     # Kassa tellen (1.45.0): de kaartbetalingen uit het PayPal-overzicht, naast het contante bedrag.
     ("kassa_tellingen", "kaart_omzet", "REAL NOT NULL DEFAULT 0"),
     # Hoeveel glazen er in een prijsoptie gaan (bijv. een pitcher), voor de kostprijs in het rapport Marge.

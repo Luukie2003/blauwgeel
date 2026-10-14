@@ -1,12 +1,14 @@
 """Statuskaarten voor het dashboard en de handterminal."""
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 from helpers.kas import bereken_kassa_telling_status
 from helpers.producten import bereken_bestellijst_meldingen
 from helpers.tijd import vandaag_amsterdam
 from helpers.toegang import heeft_sectie_toegang
 from helpers.wedstrijden import bereken_komende_thuiswedstrijden
+
+_WEEKDAGEN = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
 
 
 def bereken_laatste_telling_status(db):
@@ -184,6 +186,26 @@ def bouw_taken(db, rol, secties, gebruiker_id=None):
                     + f"{aantal} {'product' if aantal == 1 else 'producten'} onder het minimum",
                     "bestellijst",
                     urgent=True,
+                )
+            )
+        # Evenementen in de komende 7 dagen (zie Prognose > Evenementen).
+        vandaag = vandaag_amsterdam()
+        for e in db.execute(
+            """SELECT datum, naam, COALESCE(soort, 'druk') AS soort, groep FROM evenementen
+               WHERE datum >= ? AND datum <= ? ORDER BY datum, id LIMIT 5""",
+            (vandaag.isoformat(), (vandaag + timedelta(days=7)).isoformat()),
+        ).fetchall():
+            dag = date.fromisoformat(e["datum"])
+            wanneer = "vandaag" if dag == vandaag else "morgen" if dag == vandaag + timedelta(days=1) else (
+                f"{_WEEKDAGEN[dag.weekday()]} {dag.day}-{dag.month}"
+            )
+            taken.append(
+                _taak(
+                    f"{e['naam']} {wanneer}",
+                    ("Rustige activiteit" if e["soort"] == "rustig" else "Evenement")
+                    + (f" van {e['groep']}" if e["groep"] and e["groep"].lower() not in e["naam"].lower() else "")
+                    + ": telt mee in de prognose en het koud zetten",
+                    "prognose_pagina",
                 )
             )
         meldingen = bereken_bestellijst_meldingen(db)

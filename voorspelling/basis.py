@@ -8,16 +8,22 @@ from datetime import datetime, time, timedelta
 from helpers import TRAININGSDAG
 
 # ---- Aannames waar het model mee begint en wat het erbij leert ----
-PRIOR = {"wedstrijd": 0.30, "training": 0.20, "weer": 0.12, "evenement": 1.0}
+PRIOR = {"wedstrijd": 0.30, "training": 0.20, "weer": 0.12, "evenement": 1.0, "rustig": -0.7}
 # Hoe zeker we van de aanname zijn (standaardafwijking van het effect). Hoe
 # kleiner, hoe meer data er nodig is om ervan af te wijken.
-ONZEKERHEID = {"wedstrijd": 0.5, "training": 0.35, "weer": 0.15, "evenement": 1.0}
-GRENZEN = {"wedstrijd": (0.0, 1.5), "training": (0.0, 1.0), "weer": (-0.25, 0.5), "evenement": (0.0, 4.0)}
+ONZEKERHEID = {"wedstrijd": 0.5, "training": 0.35, "weer": 0.15, "evenement": 1.0, "rustig": 0.3}
+GRENZEN = {
+    "wedstrijd": (0.0, 1.5), "training": (0.0, 1.0), "weer": (-0.25, 0.5), "evenement": (0.0, 4.0),
+    # Een rustige activiteit (lunch, vergadering) op een dag dat de kantine anders dicht is: een fractie van een gewone
+    # verkoopdag. -0,7 betekent 'ongeveer 30% van een gewone dag'.
+    "rustig": (-0.95, 0.5),
+}
 EFFECT_NAMEN = {
     "wedstrijd": "Thuiswedstrijd",
     "training": "Trainingsavond",
     "weer": "Weer (mooi plus, regen min)",
     "evenement": "Evenement (toernooi, feest, verhuur)",
+    "rustig": "Rustige activiteit (lunch, vergadering)",
 }
 
 DAG_BEGIN_UUR = 12  # een kantinedag loopt van 12.00 tot 12.00 uur
@@ -34,7 +40,31 @@ _WEEKDAG = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"
 _WEEKDAG_KORT = ["ma", "di", "wo", "do", "vr", "za", "zo"]
 
 VERKOOPDAGEN_STANDAARD = (2, 5)  # woensdag en zaterdag (maandag = 0)
-_LEGE_DAG = {"wedstrijden": 0, "training": False, "weer": None, "open": True, "evenementen": 0}
+_LEGE_DAG = {"wedstrijden": 0, "training": False, "weer": None, "open": True, "evenementen": 0, "rustig": False, "groepen": ()}
+
+# Per groep (bijv. 'UC', zie Prognose > Evenementen) leert het model een bijstelling bovenop de soort (druk of rustig):
+# een effect 'groep:uc' dat bij 0 begint. Zo leren 'UC Lunch' en 'UC Activiteit' samen hoe UC afwijkt van een
+# gemiddeld evenement van die soort, zonder dat er een aantal personen nodig is.
+GROEP_PREFIX = "groep:"
+GROEP_ONZEKERHEID = 0.5
+GROEP_GRENZEN = (-0.3, 2.0)
+
+
+def groep_sleutel(groep):
+    return GROEP_PREFIX + groep.strip().lower()
+
+
+def aanname(naam):
+    """De aanname (voorkennis) van een effect: uit PRIOR, of 0 voor de bijstelling van een groep."""
+    return PRIOR.get(naam, 0.0)
+
+
+def onzekerheid(naam):
+    return ONZEKERHEID.get(naam, GROEP_ONZEKERHEID)
+
+
+def grenzen(naam):
+    return GRENZEN.get(naam, GROEP_GRENZEN)
 
 
 def lees_verkoopdagen(db):
@@ -118,31 +148,44 @@ def lees_kalender(db, van, tot):
     dag = van
     while dag <= tot:
         iso = dag.isoformat()
-        # Een evenement (toernooi, feest, verhuur) is altijd een verkoopdag, ook op een dag dat de kantine anders dicht is.
-        open_ = dag_is_open(dag, weekdagen, uitzonderingen) or iso in evenementen
+        # Een evenement is altijd een verkoopdag, ook op een dag dat de kantine anders dicht is. Een druk evenement
+        # (toernooi, feest) maakt de dag drukker; een rustige activiteit (lunch, vergadering) op een dag dat de kantine
+        # anders dicht is, telt als een klein deel van een gewone dag. Op een gewone verkoopdag verandert die niets.
+        soorten = [soort for _, soort, _ in evenementen.get(iso, [])]
+        gewoon_open = dag_is_open(dag, weekdagen, uitzonderingen)
+        # De bijstelling van een groep geldt waar het effect van zijn evenement geldt: een druk evenement altijd, een
+        # rustige activiteit alleen op een dag dat de kantine anders dicht is.
+        groepen = tuple(sorted({
+            groep_sleutel(groep) for _, soort, groep in evenementen.get(iso, [])
+            if groep and (soort != "rustig" or not gewoon_open)
+        }))
         kalender[dag] = {
             "wedstrijden": wedstrijden.get(iso, 0),
             "training": dag.weekday() == TRAININGSDAG,
             "weer": weer.get(iso),
-            "open": open_,
-            "evenementen": len(evenementen.get(iso, [])),
+            "open": gewoon_open or bool(soorten),
+            "evenementen": sum(1 for soort in soorten if soort != "rustig"),
+            "rustig": bool(soorten) and not gewoon_open and all(soort == "rustig" for soort in soorten),
+            "groepen": groepen,
         }
         dag += timedelta(days=1)
     return kalender
 
 
 def lees_evenementen(db, van, tot):
-    """{datum (tekst): [naam, ...]} van de evenementen van van t/m tot (date-objecten), zie Prognose > Evenementen."""
+    """{datum (tekst): [(naam, soort, groep), ...]} van de evenementen van van t/m tot (date-objecten), zie Prognose >
+    Evenementen. Soort is 'druk' of 'rustig'; groep is bijv. 'UC' of None."""
     uitkomst = {}
     try:
         rijen = db.execute(
-            "SELECT datum, naam FROM evenementen WHERE datum >= ? AND datum <= ? ORDER BY datum, id",
+            """SELECT datum, naam, COALESCE(soort, 'druk') AS soort, groep FROM evenementen
+               WHERE datum >= ? AND datum <= ? ORDER BY datum, id""",
             (van.isoformat(), tot.isoformat()),
         ).fetchall()
     except sqlite3.OperationalError:  # oudere database zonder deze tabel
         rijen = []
     for r in rijen:
-        uitkomst.setdefault(r["datum"], []).append(r["naam"])
+        uitkomst.setdefault(r["datum"], []).append((r["naam"], r["soort"], r["groep"]))
     return uitkomst
 
 
@@ -157,7 +200,8 @@ def blootstelling(start, einde, kalender):
     (mooi +, regen -), W = dagen waarvan het weer bekend is. Een dag telt
     mee naar rato van hoeveel van zijn 12-12-venster in de periode valt. Een dag
     waarop niet verkocht wordt (zie lees_verkoopdagen) telt helemaal niet mee."""
-    D = M = T = S = W = E = 0.0
+    D = M = T = S = W = E = R = 0.0
+    G = {}
     dag = (start - timedelta(hours=DAG_BEGIN_UUR)).date()
     while True:
         d_begin, d_eind = _dag_venster(dag)
@@ -170,16 +214,21 @@ def blootstelling(start, einde, kalender):
             M += deel * wedstrijd_gewicht(k["wedstrijden"])
             T += deel * (1.0 if k["training"] else 0.0)
             E += deel * (1.0 if k.get("evenementen") else 0.0)
+            R += deel * (1.0 if k.get("rustig") else 0.0)
+            for groep in k.get("groepen", ()):
+                G[groep] = G.get(groep, 0.0) + deel
             if k["weer"] is not None:
                 S += deel * k["weer"]
                 W += deel
         dag += timedelta(days=1)
-    return {"D": D, "M": M, "T": T, "S": S, "W": W, "E": E}
+    return {"D": D, "M": M, "T": T, "S": S, "W": W, "E": E, "R": R, "G": G}
 
 
 def drukte(b, effecten):
-    """Aantal 'normale dagen' dat deze blootstelling waard is."""
-    return (
+    """Aantal 'normale dagen' dat deze blootstelling waard is (nooit minder dan 0)."""
+    return max(0.0, (
         b["D"] + effecten["wedstrijd"] * b["M"] + effecten["training"] * b["T"] + effecten["weer"] * b["S"]
         + effecten.get("evenement", 0.0) * b.get("E", 0.0)
-    )
+        + effecten.get("rustig", 0.0) * b.get("R", 0.0)
+        + sum(effecten.get(groep, 0.0) * deel for groep, deel in b.get("G", {}).items())
+    ))

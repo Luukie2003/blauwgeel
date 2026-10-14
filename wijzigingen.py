@@ -6,8 +6,18 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.45.1"
+HUIDIGE_VERSIE = "1.45.2"
 WIJZIGINGEN = [
+    {
+        "versie": "1.45.2",
+        "datum": "14 oktober 2026",
+        "punten": [
+            "Overzicht: de kaart 'Koud zetten' staat ingeklapt; de kop zegt voor welke dag en hoeveel drankjes, klik voor de lijst.",
+            "Prognose → Evenementen: kies 'druk' (toernooi, feest, verhuur) of 'rustig' (lunch van een team, vergadering). Een rustige activiteit op een dag dat de kantine anders dicht is, telt als een klein deel van een gewone verkoopdag in plaats van als een drukke dag; ook dat leert de prognose zelf bij.",
+            "Evenementen: vul bij 'Voor wie' het team of de groep in (bijvoorbeeld UC). 'UC Lunch' en 'UC Activiteit' leren dan samen hoe UC afwijkt van een gemiddelde dag van die soort; een aantal personen is niet nodig. Begint de naam met een bekende groep, dan vult de site die zelf in.",
+            "Overzicht: een evenement in de komende 7 dagen staat in 'Wat moet er nu?', zodat je er op tijd rekening mee houdt.",
+        ],
+    },
     {
         "versie": "1.45.1",
         "datum": "13 oktober 2026",
@@ -906,7 +916,7 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.11.0", "sinds": "0.1.0", "laatst": "1.45.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.9.0", "sinds": "0.4.0", "laatst": "1.45.0",
+    {"naam": "Bestellen & prognose", "versie": "1.10.0", "sinds": "0.4.0", "laatst": "1.45.2",
      "inhoud": "Bestellijst (ook per leverancier), leveranciers, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, koud zetten, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.12.1", "sinds": "0.1.0", "laatst": "1.45.1",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
@@ -928,7 +938,7 @@ MODULES = [
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
-    {"naam": "Overzicht & prikbord", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
+    {"naam": "Overzicht & prikbord", "versie": "1.11.0", "sinds": "0.2.0", "laatst": "1.45.2",
      "inhoud": "Dashboard, 'Wat moet er nu?', prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},

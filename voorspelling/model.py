@@ -6,14 +6,15 @@ from datetime import datetime, timedelta
 from statistics import NormalDist
 
 from voorspelling.basis import (
+    aanname,
     blootstelling,
     drukte,
-    GRENZEN,
+    grenzen,
     HALVERING_WEKEN,
     MAX_WEKEN_GESCHIEDENIS,
     MIN_RIJEN_PER_PRODUCT,
     MODEL_MAX_PRODUCTEN,
-    ONZEKERHEID,
+    onzekerheid,
     PRIOR,
     TERUGTOETS_START,
 )
@@ -156,6 +157,8 @@ def _voorbewerk(rijen):
             [r["b"]["T"] for r in lijst],
             [r["b"]["S"] for r in lijst],
             [r["b"].get("E", 0.0) for r in lijst],
+            [r["b"].get("R", 0.0) for r in lijst],
+            [r["b"].get("G") or {} for r in lijst],
         )
         for lijst in per_product.values()
     ]
@@ -178,17 +181,21 @@ def _halve_afwijking(v, mu, k):
 def _doelfunctie(voorbewerkt, effecten, k):
     """Gewogen afwijking van alle producten plus de strafterm voor het
     afwijken van de aannames."""
-    a, b, c, f = effecten["wedstrijd"], effecten["training"], effecten["weer"], effecten["evenement"]
+    a, b, c, f, g = effecten["wedstrijd"], effecten["training"], effecten["weer"], effecten["evenement"], effecten["rustig"]
     afwijking = 0.0
-    for ws, vs, ds, ms, ts, ss, evs in voorbewerkt:
-        es = [d + a * m + b * t + c * s + f * ev for d, m, t, s, ev in zip(ds, ms, ts, ss, evs)]
+    for ws, vs, ds, ms, ts, ss, evs, rs, gs in voorbewerkt:
+        es = [
+            max(0.0, d + a * m + b * t + c * s + f * ev + g * r
+                + (sum(effecten.get(groep, 0.0) * deel for groep, deel in gr.items()) if gr else 0.0))
+            for d, m, t, s, ev, r, gr in zip(ds, ms, ts, ss, evs, rs, gs)
+        ]
         noemer = sum(w * e for w, e in zip(ws, es))
         if noemer <= 1e-9:
             continue
         r = sum(w * v for w, v in zip(ws, vs)) / noemer
         for w, v, e in zip(ws, vs, es):
             afwijking += w * _halve_afwijking(v, r * e, k)
-    straf = sum(0.5 * ((effecten[n] - PRIOR[n]) / ONZEKERHEID[n]) ** 2 for n in PRIOR)
+    straf = sum(0.5 * ((effecten[n] - aanname(n)) / onzekerheid(n)) ** 2 for n in effecten)
     return afwijking + straf
 
 
@@ -198,14 +205,14 @@ def _leer_effecten(rijen, k, vrij, ronden=4):
     beste waarde. 'vrij' bepaalt welke effecten data hebben om van te leren;
     de rest blijft bij de aanname."""
     voorbewerkt = _voorbewerk(rijen)
-    effecten = dict(PRIOR)
+    effecten = {**PRIOR, **{naam: aanname(naam) for naam in vrij}}
     beste = _doelfunctie(voorbewerkt, effecten, k)
     for ronde in range(ronden):
         veranderd = False
-        for naam in PRIOR:
+        for naam in vrij:
             if not vrij[naam]:
                 continue
-            laag, hoog = GRENZEN[naam]
+            laag, hoog = grenzen(naam)
             if ronde == 0:
                 kandidaten = [laag + i * (hoog - laag) / 20 for i in range(21)]
             else:
@@ -269,8 +276,13 @@ def pas_model_aan(rijen, licht=False):
         "training": sum(r["w"] * r["b"]["T"] for r in leer_rijen),
         "weer": sum(r["w"] * abs(r["b"]["S"]) for r in leer_rijen),
         "evenement": sum(r["w"] * r["b"].get("E", 0.0) for r in leer_rijen),
+        "rustig": sum(r["w"] * r["b"].get("R", 0.0) for r in leer_rijen),
     }
-    vrij = {n: informatie[n] > 0.3 for n in PRIOR}
+    # De bijstelling per groep (zie basis.GROEP_PREFIX): alleen voor groepen die in de tellingen voorkomen.
+    for r in leer_rijen:
+        for groep, deel in (r["b"].get("G") or {}).items():
+            informatie[groep] = informatie.get(groep, 0.0) + r["w"] * deel
+    vrij = {n: informatie.get(n, 0.0) > 0.3 for n in [*PRIOR, *(n for n in informatie if n not in PRIOR)]}
     effecten = dict(PRIOR)
     k = START_OVERSPREIDING
     if leer_rijen:

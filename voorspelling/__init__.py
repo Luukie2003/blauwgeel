@@ -54,7 +54,12 @@ from statistics import NormalDist
 from helpers import TRAININGSDAG, bestel_suggesties
 
 from voorspelling.basis import (  # noqa: F401
+    aanname,
     blootstelling,
+    GROEP_PREFIX,
+    groep_sleutel,
+    grenzen,
+    onzekerheid,
     DAG_BEGIN_UUR,
     dag_is_open,
     _dag_venster,
@@ -124,7 +129,9 @@ def _waargenomen_dagen(rijen, kalender, soort):
             if k and k.get("open", True):
                 if (soort == "wedstrijd" and k["wedstrijden"]) or (soort == "training" and k["training"]) or (
                     soort == "weer" and k["weer"] not in (None, 0.0)
-                ) or (soort == "evenement" and k.get("evenementen")):
+                ) or (soort == "evenement" and k.get("evenementen")) or (soort == "rustig" and k.get("rustig")) or (
+                    soort in k.get("groepen", ())
+                ):
                     dagen.add(dag)
             dag += timedelta(days=1)
     return len(dagen)
@@ -152,6 +159,16 @@ def _gemeenschappelijke_schommeling(rijen, effecten, snelheid):
         return 0.30
     gemiddeld = sum(a * w for a, w in afwijkingen) / sum(w for _, w in afwijkingen)
     return min(0.70, max(0.10, math.sqrt(gemiddeld) * 1.15))
+
+
+def _groep_namen(db):
+    """{groep_sleutel: naam zoals ingevuld} voor de uitleg op de prognosepagina ('groep:uc' -> 'UC')."""
+    try:
+        return {groep_sleutel(r["groep"]): r["groep"] for r in db.execute(
+            "SELECT DISTINCT groep FROM evenementen WHERE groep IS NOT NULL AND groep != ''"
+        ).fetchall()}
+    except sqlite3.OperationalError:
+        return {}
 
 
 def _prognose_model(db, dagen, nu):
@@ -194,6 +211,8 @@ def _prognose_model(db, dagen, nu):
                 1.0 if kenmerken["training"] else 0.0
             ) + effecten["weer"] * (kenmerken["weer"] or 0.0) + effecten["evenement"] * (
                 1.0 if kenmerken.get("evenementen") else 0.0
+            ) + effecten["rustig"] * (1.0 if kenmerken.get("rustig") else 0.0) + sum(
+                effecten.get(groep, 0.0) for groep in kenmerken.get("groepen", ())
             )
             if not open_:
                 m = 0.0  # gesloten: er wordt niets verkocht
@@ -206,6 +225,8 @@ def _prognose_model(db, dagen, nu):
                     "deel": min(1.0, deel),
                     "wedstrijden": kenmerken["wedstrijden"],
                     "evenementen": kenmerken.get("evenementen", 0),
+                    "rustig": kenmerken.get("rustig", False),
+                    "groepen": kenmerken.get("groepen", ()),
                     "training": kenmerken["training"],
                     "weer_score": kenmerken["weer"],
                     "drukte": m,
@@ -229,14 +250,16 @@ def _prognose_model(db, dagen, nu):
     }
 
     effect_lijst = []
-    for sleutel in ("wedstrijd", "training", "weer", "evenement"):
+    groepen = sorted(n for n in effecten if n.startswith(GROEP_PREFIX))
+    groep_namen = _groep_namen(db)
+    for sleutel in ("wedstrijd", "training", "weer", "evenement", "rustig", *groepen):
         waargenomen = _waargenomen_dagen(rijen, kalender, sleutel)
         effect_lijst.append(
             {
                 "sleutel": sleutel,
-                "naam": EFFECT_NAMEN[sleutel],
+                "naam": EFFECT_NAMEN.get(sleutel) or f"{groep_namen.get(sleutel, sleutel[len(GROEP_PREFIX):])} (bovenop de soort)",
                 "waarde": effecten[sleutel],
-                "aanname": PRIOR[sleutel],
+                "aanname": aanname(sleutel),
                 "waargenomen_dagen": waargenomen,
                 "status": _status(waargenomen) if informatie[sleutel] > 0.3 else "aanname",
             }
@@ -532,6 +555,8 @@ def _dagdrukte(dag, kalender, effecten):
         + effecten["training"] * (1.0 if kenmerken["training"] else 0.0)
         + effecten["weer"] * (kenmerken["weer"] or 0.0)
         + effecten.get("evenement", 0.0) * (1.0 if kenmerken.get("evenementen") else 0.0)
+        + effecten.get("rustig", 0.0) * (1.0 if kenmerken.get("rustig") else 0.0)
+        + sum(effecten.get(groep, 0.0) for groep in kenmerken.get("groepen", ()))
     )
 
 
@@ -645,7 +670,7 @@ def historie_vingerafdruk(db):
     try:
         delen.append(_hash_rijen(db.execute("SELECT * FROM verkoop_uitzonderingen ORDER BY datum")))
         delen.append(db.execute("SELECT verkoopdagen FROM instellingen WHERE id = 1").fetchone()[0])
-        delen.append(_hash_rijen(db.execute("SELECT datum, naam FROM evenementen ORDER BY id")))
+        delen.append(_hash_rijen(db.execute("SELECT datum, naam, soort, groep FROM evenementen ORDER BY id")))
     except Exception:  # oudere database zonder deze tabel/kolom
         pass
     return hashlib.sha1(repr(delen).encode()).hexdigest()
@@ -678,7 +703,7 @@ def data_vingerafdruk(db):
 # model zelf uit, en na elke update van de server opnieuw. De sleutel bevat de vingerafdruk van de gegevens en de versie van
 # de site, dus een bestand van oudere gegevens of oudere code wordt nooit gebruikt.
 SCHIJF_AAN = True
-SCHIJF_VERSIE = 3  # ophogen als de vorm van een uitkomst verandert zonder dat de siteversie meegaat
+SCHIJF_VERSIE = 5  # ophogen als de vorm van een uitkomst verandert zonder dat de siteversie meegaat
 SCHIJF_MAX_LEEFTIJD_SECONDEN = 3 * 24 * 3600
 SCHIJF_MAX_BESTANDEN = 60
 

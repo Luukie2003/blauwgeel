@@ -1,11 +1,12 @@
 {# De kaart 'Koud zetten' op het overzicht en de handterminal (zie routes/dashboard.py, dashboard_koud_zetten). #}
 {% set dag = advies.dag %}
-<div class="kaart" style="border-left:4px solid var(--accent, #4061af)">
-    <div class="actiebalk" style="margin-bottom:0.4rem">
-        <h2 style="margin:0">Koud zetten voor {{ 'vandaag' if advies.vandaag else 'morgen' }} ({{ dag.weekdag }})</h2>
-        <span class="tekst-zacht">{% if dag.wedstrijden %}thuiswedstrijd{% if dag.wedstrijden > 1 %} ({{ dag.wedstrijden }}x){% endif %}{% elif dag.training %}trainingsavond{% else %}gewone verkoopdag{% endif %}</span>
-    </div>
-    <p class="tekst-zacht" style="margin:0 0 0.5rem">Wat er die dag waarschijnlijk verkocht wordt, met een kwart extra. Wat er al koud staat, hoef je natuurlijk niet nog eens te zetten.</p>
+{# Standaard ingeklapt: de kop zegt al voor welke dag en hoeveel; klik om de lijst te zien. #}
+<details class="kaart" style="border-left:4px solid var(--accent, #4061af)">
+    <summary style="cursor:pointer">
+        <h2 style="display:inline; margin:0">Koud zetten voor {{ 'vandaag' if advies.vandaag else 'morgen' }} ({{ dag.weekdag }})</h2>
+        <span class="tekst-zacht">&middot; {{ advies.regels|length }} {{ 'drankje' if advies.regels|length == 1 else 'drankjes' }} &middot; {% if dag.wedstrijden %}thuiswedstrijd{% if dag.wedstrijden > 1 %} ({{ dag.wedstrijden }}x){% endif %}{% elif dag.evenementen %}evenement{% elif dag.klein %}rustige activiteit{% elif dag.training %}trainingsavond{% else %}gewone verkoopdag{% endif %}{% if advies.regels|selectattr('te_weinig')|list %} &middot; <span class="badge badge-laag">te weinig voorraad</span>{% endif %}</span>
+    </summary>
+    <p class="tekst-zacht" style="margin:0.6rem 0 0.5rem">Wat er die dag waarschijnlijk verkocht wordt, met een kwart extra. Wat er al koud staat, hoef je natuurlijk niet nog eens te zetten.</p>
     <div class="tabel-wrap">
         <table>
             <thead><tr><th>Drankje</th><th style="text-align:right">Koud zetten</th><th style="text-align:right">Verwacht</th></tr></thead>
@@ -22,4 +23,4 @@
             </tbody>
         </table>
     </div>
-</div>
+</details>

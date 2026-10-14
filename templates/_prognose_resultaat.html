@@ -74,10 +74,11 @@
                         {% if not dag.open %}<span class="badge badge-neutraal" title="Op deze dag wordt niet verkocht, zie Verkoopdagen hierboven">gesloten</span>{% endif %}
                         {% if dag.wedstrijden %}<span class="badge badge-ok">&#9917; {{ dag.wedstrijden }}x thuis</span>{% endif %}
                         {% if dag.evenementen %}<span class="badge badge-laag" title="Zie Evenementen hierboven">evenement</span>{% endif %}
+                        {% if dag.rustig %}<span class="badge badge-neutraal" title="Zie Evenementen hierboven">rustige activiteit</span>{% endif %}
                         {% if dag.training %}<span class="badge badge-neutraal">Training</span>{% endif %}
                         {% if dag.weer_score == 1 %}<span class="badge badge-in" title="Warm en droog">&#9728;&#65039; mooi weer</span>
                         {% elif dag.weer_score == -1 %}<span class="badge badge-uit" title="Veel kans op regen">&#127783;&#65039; regen</span>{% endif %}
-                        {% if dag.open and not dag.wedstrijden and not dag.evenementen and not dag.training and dag.weer_score in (none, 0) %}<span class="tekst-zacht">gewone dag</span>{% endif %}
+                        {% if dag.open and not dag.wedstrijden and not dag.evenementen and not dag.rustig and not dag.training and dag.weer_score in (none, 0) %}<span class="tekst-zacht">gewone dag</span>{% endif %}
                     </td>
                     <td>{% if dag.open %}{{ '%+.0f'|format((dag.drukte - 1) * 100) }}%{% else %}&ndash;{% endif %}</td>
                     <td>{% if dag.open %}&euro; {{ '%.0f'|format(dag.omzet) }}{% else %}&ndash;{% endif %}</td>

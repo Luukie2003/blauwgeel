@@ -50,13 +50,17 @@
     <summary style="cursor:pointer"><strong>Evenementen</strong>
         <span class="tekst-zacht">&middot; {{ evenementen|length if evenementen else 'nog geen' }}{{ '' if not evenementen else (' evenement' if evenementen|length == 1 else ' evenementen') }}</span></summary>
     <p class="tekst-zacht">
-        Een toernooi, kampioensfeest of verhuur van de kantine. Die dag telt als verkoopdag en de prognose rekent hem
-        drukker (eerst dubbel zo druk als een gewone dag). Na een paar evenementen leert ze uit de tellingen hoeveel
-        drukker het echt is, net als bij een thuiswedstrijd.
+        Een dag waarop de kantine voor iets bijzonders open is. Een <strong>druk</strong> evenement (toernooi,
+        kampioensfeest, verhuur) rekent de prognose eerst dubbel zo druk als een gewone verkoopdag. Een
+        <strong>rustige</strong> activiteit (de lunch van een team, een vergadering) op een dag dat de kantine anders
+        dicht is, telt als een klein deel van een gewone dag. Vul bij &ldquo;Voor wie&rdquo; het team of de groep in
+        (bijvoorbeeld UC): dan leren &ldquo;UC Lunch&rdquo; en &ldquo;UC Activiteit&rdquo; samen hoe UC afwijkt van
+        een gemiddelde dag van die soort. Na een paar keer leert de prognose uit de tellingen hoe het echt zit.
     </p>
     {% for e in evenementen %}
     <div style="display:flex; align-items:center; justify-content:space-between; gap:0.8rem; flex-wrap:wrap; padding:0.45rem 0; border-top:1px solid var(--rand-licht)">
-        <div{% if e.geweest %} class="tekst-zacht"{% endif %}><strong>{{ e.datum.day }}-{{ e.datum.month }}-{{ e.datum.year }}</strong> {{ e.naam }}{% if e.geweest %} (geweest){% endif %}</div>
+        <div{% if e.geweest %} class="tekst-zacht"{% endif %}><strong>{{ e.datum.day }}-{{ e.datum.month }}-{{ e.datum.year }}</strong> {{ e.naam }}{% if e.groep %} <span class="tekst-zacht">&middot; {{ e.groep }}</span>{% endif %}
+            <span class="badge {{ 'badge-neutraal' if e.soort == 'rustig' else 'badge-laag' }}">{{ 'rustig' if e.soort == 'rustig' else 'druk' }}</span>{% if e.geweest %} (geweest){% endif %}</div>
         <form method="post" action="{{ url_for('prognose_evenement_verwijderen', evenement_id=e.id) }}" style="margin:0">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-rand btn-klein">Verwijderen</button>
@@ -66,7 +70,17 @@
     <form method="post" action="{{ url_for('prognose_evenement_toevoegen') }}" style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:flex-end; margin-top:0.6rem">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="veld" style="margin:0"><label for="evenement_datum">Datum</label><input type="date" id="evenement_datum" name="datum" required></div>
-        <div class="veld" style="margin:0; flex:1 1 14rem; min-width:0"><label for="evenement_naam">Wat is het?</label><input type="text" id="evenement_naam" name="naam" required placeholder="Bijv. Jeugdtoernooi"></div>
+        <div class="veld" style="margin:0; flex:1 1 14rem; min-width:0"><label for="evenement_naam">Wat is het?</label><input type="text" id="evenement_naam" name="naam" required placeholder="Bijv. Jeugdtoernooi of Lunch JO17"></div>
+        <div class="veld" style="margin:0"><label for="evenement_groep">Voor wie</label>
+            <input type="text" id="evenement_groep" name="groep" list="evenement-groepen" autocomplete="off" placeholder="Bijv. UC" style="width:8rem">
+            <datalist id="evenement-groepen">{% for g in evenement_groepen %}<option value="{{ g }}">{% endfor %}</datalist>
+        </div>
+        <div class="veld" style="margin:0"><label for="evenement_soort">Soort</label>
+            <select id="evenement_soort" name="soort">
+                <option value="druk">Druk (toernooi, feest, verhuur)</option>
+                <option value="rustig">Rustig (lunch, vergadering, teamactiviteit)</option>
+            </select>
+        </div>
         <button type="submit" class="btn btn-geel">Toevoegen</button>
     </form>
 </details>
@@ -176,4 +190,22 @@
      data-lazy-fout="De prognose kon niet worden geladen. Ververs de pagina om het opnieuw te proberen.">
     <div class="kaart"><p class="tekst-zacht" data-lazy-status>De prognose wordt berekend&hellip;</p></div>
 </div>
+<script>
+// Evenementen: begint de naam met een bekende groep ('UC Lunch'), dan staat die groep alvast bij 'Voor wie'.
+(function () {
+    var naam = document.getElementById('evenement_naam');
+    var groep = document.getElementById('evenement_groep');
+    if (!naam || !groep) return;
+    var bekend = {{ evenement_groepen|tojson }};
+    var zelfIngevuld = false;
+    groep.addEventListener('input', function () { zelfIngevuld = groep.value.trim() !== ''; });
+    naam.addEventListener('input', function () {
+        if (zelfIngevuld) return;
+        var tekst = naam.value.trim().toLowerCase();
+        var gevonden = bekend.filter(function (g) { return tekst === g.toLowerCase() || tekst.indexOf(g.toLowerCase() + ' ') === 0; })
+            .sort(function (a, b) { return b.length - a.length; })[0];
+        groep.value = gevonden || '';
+    });
+})();
+</script>
 {% endblock %}
