@@ -70,7 +70,7 @@
                             {% if w.jaar == huidige_jaar and w.week == huidige_week %}loopt nog{% else %}geteld t/m {{ w.geteld_tot.strftime('%d-%m') }}{% endif %}
                         </span>
                         {% elif w.status == 'begin' %}
-                        <span class="badge badge-neutraal" title="De eerste telling viel midden in deze week, dus de dagen ervoor zijn niet gemeten.">begin meting</span>
+                        <span class="badge badge-neutraal" title="Er was in deze week al een verkoopdag vóór de eerste telling; die is niet gemeten. Was de kantine toen dicht? Zet die dag dan bij Prognose → Verkoopdagen als uitzondering op dicht.">begin meting</span>
                         {% endif %}
                     </td>
                     <td>{{ w.van }} t/m {{ w.tot }}</td>

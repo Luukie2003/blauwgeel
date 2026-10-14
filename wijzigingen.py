@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.47.1"
+HUIDIGE_VERSIE = "1.47.2"
 WIJZIGINGEN = [
+    {
+        "versie": "1.47.2",
+        "datum": "14 oktober 2026",
+        "punten": [
+            "Omzet per week (overzicht en Tellingen): een week telt als volledig zodra alle verkoopdagen ervan geteld zijn. Een dag dat de kantine dicht is, zoals een zaterdag zonder thuiswedstrijd of een dag vóór de eerste telling die als dicht staat, hoeft niet meer gedekt te zijn. Zo kan de eerste week (week 34) ook als volledig meetellen.",
+        ],
+    },
     {
         "versie": "1.47.1",
         "datum": "14 oktober 2026",
@@ -938,7 +945,7 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.11.0", "sinds": "0.1.0", "laatst": "1.45.0",
+    {"naam": "Voorraad & tellen", "versie": "1.11.1", "sinds": "0.1.0", "laatst": "1.47.2",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.11.0", "sinds": "0.4.0", "laatst": "1.47.0",
      "inhoud": "Bestellijst (ook per leverancier), leveranciers, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, koud zetten, boodschappenlijst"},
@@ -962,7 +969,7 @@ MODULES = [
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
-    {"naam": "Overzicht & prikbord", "versie": "1.12.1", "sinds": "0.2.0", "laatst": "1.47.0",
+    {"naam": "Overzicht & prikbord", "versie": "1.12.2", "sinds": "0.2.0", "laatst": "1.47.2",
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},

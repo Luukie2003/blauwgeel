@@ -847,19 +847,25 @@ def omzet_per_dag(db, nu=None):
     return data["omzet"], data["eerste"], data["laatste"]
 
 
-def _week_status(maandag, eerste, laatste):
-    """'compleet' als de tellingen de hele week dekken, 'begin' als de eerste
-    telling pas midden in de week viel en 'loopt_nog' als de laatste telling
-    vóór het einde van de week ligt. Een week loopt in de kantine van maandag
-    12.00 uur tot maandag 12.00 uur; een telling na maandag 00.00 uur telt als
-    'tot en met zondag', want daartussen verkoopt niemand meer iets."""
-    venster_begin = datetime.combine(maandag, time(DAG_BEGIN_UUR, 0))
-    venster_eind = venster_begin + timedelta(days=7)
-    if eerste > venster_begin:
+def _week_status(maandag, eerste, laatste, open_dagen=None):
+    """'compleet' als de tellingen alle verkoopdagen van de week dekken, 'begin' als er vóór de eerste telling al een
+    verkoopdag van die week was en 'loopt_nog' als er na de laatste telling nog een komt. Een dag loopt in de kantine
+    van 12.00 uur tot middernacht: een telling na middernacht dekt de dag ervoor, een telling na 12.00 uur niet meer
+    de hele dag. Een dag waarop de kantine dicht is (open_dagen: de open datums, zie lees_kalender) hoeft niet gedekt
+    te zijn; zonder open_dagen telt elke dag."""
+    dagen = [maandag + timedelta(days=i) for i in range(7)]
+    if open_dagen is not None:
+        dagen = [d for d in dagen if d in open_dagen]
+    if any(eerste > datetime.combine(d, time(DAG_BEGIN_UUR, 0)) for d in dagen):
         return "begin"
-    if laatste < venster_eind - timedelta(hours=DAG_BEGIN_UUR):
+    if any(laatste < datetime.combine(d + timedelta(days=1), time(0, 0)) for d in dagen):
         return "loopt_nog"
     return "compleet"
+
+
+def _open_dagen(db, van, tot):
+    """De datums van van t/m tot waarop de kantine open is (vaste dagen, uitzonderingen, wedstrijden, evenementen)."""
+    return {dag for dag, k in lees_kalender(db, van, tot).items() if k["open"]}
 
 
 def omzet_per_week(db, nu=None):
@@ -881,9 +887,11 @@ def omzet_per_week(db, nu=None):
         weken.setdefault((jaar, week), 0.0)
         dag += timedelta(days=7)
     resultaat = []
+    maandagen = [date.fromisocalendar(jaar, week, 1) for jaar, week in weken]
+    open_dagen = _open_dagen(db, min(maandagen), max(maandagen) + timedelta(days=6)) if maandagen else set()
     for (jaar, week), omzet in weken.items():
         maandag = date.fromisocalendar(jaar, week, 1)
-        status = _week_status(maandag, eerste, laatste)
+        status = _week_status(maandag, eerste, laatste, open_dagen)
         resultaat.append(
             {
                 "jaar": jaar,
@@ -937,7 +945,7 @@ def week_samenvatting(db, maandag, nu=None, data=None):
     return {
         "omzet": omzet,
         "top_verkopers": top,
-        "status": _week_status(maandag, data["eerste"], data["laatste"]),
+        "status": _week_status(maandag, data["eerste"], data["laatste"], _open_dagen(db, maandag, maandag + timedelta(days=6))),
         "geteld_tot": data["laatste"],
     }
 

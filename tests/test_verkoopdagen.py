@@ -14,6 +14,7 @@ from voorspelling import (
     lees_verkoopdagen,
     maak_prognose,
     omzet_per_dag,
+    omzet_per_week,
     wedstrijden_op_gesloten_dagen,
 )
 
@@ -139,6 +140,37 @@ def test_verkoop_op_alleen_gesloten_dagen_verdwijnt_niet_uit_de_omzet(db):
     db.commit()  # maandag 14.00 uur tot dinsdag 14.00 uur: allebei gesloten
     omzet, _, _ = omzet_per_dag(db, nu=datetime(2026, 9, 20))
     assert abs(sum(omzet.values()) - 60.0) < 1e-6
+
+
+# ---------- Wanneer een week volledig is ----------
+
+
+def _weken(db, tijden, open_dagen="2,5"):
+    a = _product(db, "A")
+    laatste = _bouw_geschiedenis(db, {a: 20}, tijdstippen=tijden, open_dagen=open_dagen)
+    return lambda: {w["van"]: w["status"] for w in omzet_per_week(db, laatste + timedelta(hours=1))}
+
+
+def test_eerste_week_is_volledig_als_er_voor_de_nulmeting_geen_verkoopdag_was(db):
+    """Nulmeting op vrijdag: alleen de woensdag ervoor is niet gemeten. Was de kantine die woensdag dicht, dan is de
+    week toch volledig."""
+    tijden = [datetime(2026, 8, 21, 16, 19), datetime(2026, 8, 24, 9, 35), datetime(2026, 8, 31, 9, 0), datetime(2026, 9, 7, 9, 0)]
+    status = _weken(db, tijden)
+    assert status()["2026-08-17"] == "begin"
+
+    _uitzondering(db, date(2026, 8, 19), False, "Voor de eerste telling")
+    assert status()["2026-08-17"] == "compleet"
+
+
+def test_week_is_af_als_er_na_de_laatste_telling_geen_verkoopdag_meer_komt(db):
+    tijden = [datetime(2026, 8, 24, 9, 0), datetime(2026, 8, 31, 9, 0), datetime(2026, 9, 7, 9, 0), datetime(2026, 9, 10, 15, 0)]
+    status = _weken(db, tijden)
+    db.execute("UPDATE instellingen SET verkoopdagen = '2', verkoopdagen_wedstrijd = '5' WHERE id = 1")
+    db.commit()
+    assert status()["2026-09-07"] == "compleet"  # woensdag geteld, zaterdag dicht (geen thuiswedstrijd)
+
+    _wedstrijd(db, date(2026, 9, 12))
+    assert status()["2026-09-07"] == "loopt_nog"  # met een thuiswedstrijd is de zaterdag open en nog niet geteld
 
 
 # ---------- Wedstrijden op een gesloten dag ----------
