@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.47.0"
+HUIDIGE_VERSIE = "1.47.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.47.1",
+        "datum": "14 oktober 2026",
+        "punten": [
+            "Accounts beheren toont per account wanneer iemand voor het laatst actief was op de site (bijvoorbeeld 'Actief vandaag 14:05' of '3 dagen geleden') in plaats van de laatste inlog, die bij 'Ingelogd blijven' weinig zegt. Uitgeklapt staan de precieze tijd en de laatste inlog.",
+        ],
+    },
     {
         "versie": "1.47.0",
         "datum": "14 oktober 2026",
@@ -951,7 +958,7 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.4.2", "sinds": "1.5.0", "laatst": "1.45.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Accounts & rechten", "versie": "1.10.0", "sinds": "0.1.0", "laatst": "1.45.0",
+    {"naam": "Accounts & rechten", "versie": "1.10.1", "sinds": "0.1.0", "laatst": "1.47.1",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},

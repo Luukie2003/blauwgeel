@@ -253,3 +253,43 @@ def test_wachtwoord_link_versturen_zonder_email_geeft_foutmelding(ingelogde_clie
     assert db.execute(
         "SELECT reset_token_hash FROM gebruikers WHERE id = ?", (gebruiker_id,)
     ).fetchone()["reset_token_hash"] is None
+
+
+# ---------- Laatst actief ----------
+
+
+def test_laatst_actief_leesbaar():
+    from datetime import datetime
+
+    from helpers import format_laatst_actief
+
+    nu = datetime(2026, 10, 14, 15, 0)
+    assert format_laatst_actief("2026-10-14 09:05", nu) == "vandaag 09:05"
+    assert format_laatst_actief("2026-10-13 21:40", nu) == "gisteren 21:40"
+    assert format_laatst_actief("2026-10-10 12:00", nu) == "4 dagen geleden"
+    assert format_laatst_actief("2026-09-01 12:00", nu) == "01-09-2026"
+    assert format_laatst_actief(None, nu) == ""
+
+
+def test_accounts_toont_de_laatste_activiteit_in_plaats_van_de_laatste_inlog(ingelogde_client, db):
+    """Wie ingelogd blijft, logt niet opnieuw in: het laatste paginabezoek zegt meer dan de laatste inlog."""
+    gebruiker_id = _maak_vrijwilliger(db, "blijftingelogd")
+    db.execute("UPDATE gebruikers SET laatste_login = '2026-08-01 10:00' WHERE id = ?", (gebruiker_id,))
+    db.execute(
+        "INSERT INTO paginabezoeken (endpoint, gebruiker_id, weergave_modus, datum) VALUES ('dashboard', ?, 'desktop', '2026-10-12 19:30')",
+        (gebruiker_id,),
+    )
+    _maak_vrijwilliger(db, "nooitgeweest")
+    db.commit()
+
+    tekst = ingelogde_client.get("/accounts").data.decode()
+    assert "laatst actief op 12-10-2026 19:30" in tekst
+    assert "laatst ingelogd op 01-08-2026 10:00" in tekst
+    assert "Nog nooit ingelogd" in tekst
+
+
+def test_zonder_paginabezoek_telt_de_laatste_inlog(ingelogde_client, db):
+    gebruiker_id = _maak_vrijwilliger(db, "alleeningelogd")
+    db.execute("UPDATE gebruikers SET laatste_login = '2026-09-20 08:15' WHERE id = ?", (gebruiker_id,))
+    db.commit()
+    assert "laatst actief op 20-09-2026 08:15" in ingelogde_client.get("/accounts").data.decode()

@@ -12,6 +12,23 @@ def format_datum(value):
     return dt.strftime("%d-%m-%Y %H:%M")
 
 
+def format_laatst_actief(value, nu=None):
+    """'vandaag 14:05', 'gisteren 20:13', '3 dagen geleden' of anders de datum, voor een tijdstip in het formaat van
+    now_str() (dezelfde klok, zodat 'vandaag' klopt met wat er is opgeslagen)."""
+    if not value:
+        return ""
+    dt = datetime.strptime(value, "%Y-%m-%d %H:%M")
+    nu = nu or datetime.strptime(now_str(), "%Y-%m-%d %H:%M")
+    dagen = (nu.date() - dt.date()).days
+    if dagen <= 0:
+        return f"vandaag {dt:%H:%M}"
+    if dagen == 1:
+        return f"gisteren {dt:%H:%M}"
+    if dagen < 7:
+        return f"{dagen} dagen geleden"
+    return dt.strftime("%d-%m-%Y")
+
+
 def format_datum_kort(value):
     """Zet een kale ISO-datum (YYYY-MM-DD, geen tijdstip) om naar
     dd-mm-jjjj -- voor de looptijd van een Club van 20-lidmaatschap."""

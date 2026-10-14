@@ -688,6 +688,8 @@ CREATE TABLE IF NOT EXISTS paginabezoeken (
 );
 CREATE INDEX IF NOT EXISTS idx_paginabezoeken_datum ON paginabezoeken(datum);
 CREATE INDEX IF NOT EXISTS idx_paginabezoeken_endpoint ON paginabezoeken(endpoint);
+-- Voor 'laatst actief' per account op Accounts beheren (het laatste paginabezoek van iemand).
+CREATE INDEX IF NOT EXISTS idx_paginabezoeken_gebruiker ON paginabezoeken(gebruiker_id, datum);
 
 -- Instellingen (1 rij) voor het prijzenscherm zelf -- los van
 -- kiosk_scherm_instellingen hierboven, dat gaat over het andere scherm

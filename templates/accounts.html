@@ -27,12 +27,15 @@
             {% else %}
             <span class="badge badge-laag">Geblokkeerd</span>
             {% endif %}
-            <span class="categorie-groep-aantal tekst-zacht" style="margin-left:auto">
-                {{ g.laatste_login|datum_nl if g.laatste_login else 'Nog nooit ingelogd' }}
+            <span class="categorie-groep-aantal tekst-zacht" style="margin-left:auto"
+                  {% if g.laatst_actief %}title="Laatst actief op {{ g.laatst_actief|datum_nl }}"{% endif %}>
+                {{ ('Actief ' ~ g.laatst_actief|laatst_actief) if g.laatst_actief else 'Nog nooit ingelogd' }}
             </span>
         </summary>
         <div style="padding:0 0.2rem 1.3rem 1.6rem; display:flex; flex-direction:column; gap:1.1rem">
-            <p class="tekst-zacht" style="margin:0">Aangemaakt op {{ g.aangemaakt_op|datum_nl }}</p>
+            <p class="tekst-zacht" style="margin:0">
+                Aangemaakt op {{ g.aangemaakt_op|datum_nl }}{% if g.laatst_actief %} &middot; laatst actief op {{ g.laatst_actief|datum_nl }}{% endif %}{% if g.laatste_login %} &middot; laatst ingelogd op {{ g.laatste_login|datum_nl }}{% endif %}
+            </p>
 
             <form method="post" action="{{ url_for('account_email_wijzigen', gebruiker_id=g.id) }}"
                   style="display:flex; gap:0.5rem; align-items:flex-end; flex-wrap:wrap">

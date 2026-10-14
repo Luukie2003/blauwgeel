@@ -27,10 +27,17 @@ def register_routes(app):
     @app.route("/accounts")
     def accounts_lijst():
         db = get_db()
-        gebruikers = db.execute(
-            "SELECT id, naam, email, rol, secties, aangemaakt_op, laatste_login, actief "
-            "FROM gebruikers ORDER BY naam"
-        ).fetchall()
+        # Laatst actief: het laatste paginabezoek, want wie ingelogd blijft logt niet opnieuw in. Valt terug op de
+        # laatste inlog (bijv. iemand die na het inloggen niets meer opende).
+        gebruikers = []
+        for r in db.execute(
+            """SELECT id, naam, email, rol, secties, aangemaakt_op, laatste_login, actief,
+                      (SELECT MAX(datum) FROM paginabezoeken p WHERE p.gebruiker_id = gebruikers.id) AS laatste_bezoek
+               FROM gebruikers ORDER BY naam"""
+        ).fetchall():
+            gebruiker = dict(r)
+            gebruiker["laatst_actief"] = max(filter(None, (r["laatste_bezoek"], r["laatste_login"])), default=None)
+            gebruikers.append(gebruiker)
         aantal_beheerders = db.execute(
             "SELECT COUNT(*) AS n FROM gebruikers WHERE rol = 'beheerder'"
         ).fetchone()["n"]
