@@ -149,8 +149,16 @@
                 <div class="veld">
                     <label for="inkoopprijs">Inkoopprijs per besteleenheid</label>
                     <input type="number" id="inkoopprijs" name="inkoopprijs" min="0" step="0.01"
-                           value="{{ '%.2f'|format(product.inkoopprijs) if product else '0.00' }}">
+                           value="{{ '%.2f'|format(product.inkoopprijs) if product else '0.00' }}" {{ 'readonly' if inkoop_artikelen }}>
+                    {% if inkoop_artikelen %}
+                    <span class="tekst-zacht">
+                        Komt uit de <a href="#artikelen">artikelen</a>: gemiddeld &euro; {{ '%.2f'|format(inkoop_artikelen.per_eenheid)|replace('.', ',') }} per {{ product.eenheid }}
+                        ({% for naam, prijs in inkoop_artikelen.artikelen %}{{ naam }} &euro; {{ '%.2f'|format(prijs)|replace('.', ',') }}{{ ', ' if not loop.last }}{% endfor %}){% if (product.besteleenheid_factor or 1) > 1 %}, maal {{ product.besteleenheid_factor }} per besteleenheid{% endif %}.
+                        Pas de prijs aan bij het artikel.
+                    </span>
+                    {% else %}
                     <span class="tekst-zacht">Wat de leverancier rekent per krat/doos/fust (niet per los stuk).</span>
+                    {% endif %}
                 </div>
             </div>
             <div class="veld">
@@ -264,6 +272,40 @@
         <button type="submit" class="btn btn-geel">{{ 'Opslaan' if product else 'Toevoegen' }}</button>
     </form>
 </div>
+
+{% if product %}
+<div class="kaart" id="artikelen">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:0.6rem; flex-wrap:wrap">
+        <h2 style="margin:0">Artikelen en barcodes</h2>
+        <a href="{{ url_for('artikel_nieuw', product_id=product.id, terug='product') }}" class="btn btn-rand btn-klein">Artikel toevoegen</a>
+    </div>
+    <p class="tekst-zacht">
+        Wat je precies inkoopt voor dit product, met de barcode van de verpakking en van de doos. Meerdere artikelen
+        (andere merken of winkels) mogen bij hetzelfde product horen; op de overzichten blijft het &eacute;&eacute;n product.
+    </p>
+    {% if artikelen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Artikel</th><th>Barcode</th><th>Erin</th><th>Inkoop</th><th>Doos</th><th></th></tr></thead>
+            <tbody>
+                {% for a in artikelen %}
+                <tr>
+                    <td><strong>{{ a.naam }}</strong>{% if a.leverancier_naam %}<br><span class="tekst-zacht">{{ a.leverancier_naam }}</span>{% endif %}</td>
+                    <td><code>{{ a.ean or '—' }}</code></td>
+                    <td>{{ a.aantal_per_verpakking }} {{ product.eenheid }}</td>
+                    <td>{% if a.inkoopprijs %}&euro; {{ '%.2f'|format(a.inkoopprijs)|replace('.', ',') }}{% if a.aantal_per_verpakking > 1 %}<br><span class="tekst-zacht">&euro; {{ '%.2f'|format(per_eenheid(a))|replace('.', ',') }} per {{ product.eenheid }}</span>{% endif %}{% else %}<span class="tekst-zacht">&mdash;</span>{% endif %}</td>
+                    <td>{% if a.ean_omverpakking or a.per_omverpakking %}<code>{{ a.ean_omverpakking or '—' }}</code><br><span class="tekst-zacht">{{ a.per_omverpakking }} per doos</span>{% else %}<span class="tekst-zacht">&mdash;</span>{% endif %}</td>
+                    <td><a href="{{ url_for('artikel_bewerken', artikel_id=a.id, terug='product') }}" class="btn btn-rand btn-klein">Bewerken</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg" style="margin-bottom:0">Nog geen artikelen met een barcode.</p>
+    {% endif %}
+</div>
+{% endif %}
 
 {% if product and prijs_geschiedenis %}
 <div class="kaart">

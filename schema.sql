@@ -871,3 +871,27 @@ CREATE TABLE IF NOT EXISTS trage_verzoeken (
     duur_ms INTEGER NOT NULL,
     datum TEXT NOT NULL
 );
+
+-- Artikelen met barcode (1.48.0): wat je precies inkoopt (merk, verpakking, barcode, inkoopprijs) en bij welk product
+-- het hoort. Meerdere artikelen per product ('AH frikandellen' en 'Plus frikandellen' horen allebei bij 'Frikandel').
+-- ean = de barcode van de verpakking zelf, aantal_per_verpakking in de eenheid van het product, inkoopprijs per
+-- verpakking; ean_omverpakking = de barcode van de doos, met per_omverpakking verpakkingen erin. Een barcode hoort bij
+-- precies één artikel (ook niet als artikel én als doos). Zie barcodes.py.
+CREATE TABLE IF NOT EXISTS artikelen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL REFERENCES producten(id) ON DELETE CASCADE,
+    naam TEXT NOT NULL,
+    merk TEXT,
+    leverancier_id INTEGER REFERENCES leveranciers(id) ON DELETE SET NULL,
+    ean TEXT,
+    aantal_per_verpakking INTEGER NOT NULL DEFAULT 1,
+    inkoopprijs REAL NOT NULL DEFAULT 0,
+    ean_omverpakking TEXT,
+    per_omverpakking INTEGER NOT NULL DEFAULT 0,
+    opmerking TEXT,
+    aangemaakt_op TEXT NOT NULL,
+    bijgewerkt_op TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_artikelen_product ON artikelen(product_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_artikelen_ean ON artikelen(ean) WHERE ean IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_artikelen_ean_omverpakking ON artikelen(ean_omverpakking) WHERE ean_omverpakking IS NOT NULL;

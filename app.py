@@ -484,6 +484,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         accounts,
         activiteiten,
         auth,
+        barcodes,
         bardienstrapport,
         bestellijst,
         boeken,
@@ -524,6 +525,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     accounts.register_routes(app)
     activiteiten.register_routes(app)
     auth.register_routes(app)
+    barcodes.register_routes(app)
     bardienstrapport.register_routes(app)
     bestellijst.register_routes(app)
     boeken.register_routes(app)

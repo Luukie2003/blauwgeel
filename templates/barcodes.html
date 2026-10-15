@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block titel %}Barcodes{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Welke artikelen je inkoopt, met hun barcode (EAN) en die van de doos. Een artikel hoort bij een product: &lsquo;AH
+    frikandellen&rsquo; en &lsquo;Plus frikandellen&rsquo; horen allebei bij &lsquo;Frikandel&rsquo;, met elk een eigen
+    barcode, aantal en inkoopprijs. Op de overzichten zie je alleen het product.
+</p>
+
+<div class="kaart">
+    <h2 style="margin-top:0">Barcode opzoeken</h2>
+    <form method="get" action="{{ url_for('barcode_zoeken') }}" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end">
+        <div class="veld" style="margin:0; flex:1 1 14rem">
+            <label for="code">Scan of typ een barcode</label>
+            <input type="text" id="code" name="code" inputmode="numeric" autocomplete="off" autofocus placeholder="Bijv. 8710398527622">
+        </div>
+        <button type="submit" class="btn btn-geel">Opzoeken</button>
+    </form>
+    <p class="tekst-zacht" style="margin-bottom:0">Met een scanner (ook die van de handterminal) komt de code vanzelf in het veld. Is hij onbekend, dan kun je hem meteen toevoegen.</p>
+</div>
+
+<div class="kaart">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:0.6rem; flex-wrap:wrap">
+        <h2 style="margin:0">Artikelen <span class="tekst-zacht" style="font-size:0.85rem; font-weight:400">({{ aantal }})</span></h2>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+            <form method="get" style="display:flex; gap:0.4rem; margin:0">
+                <input type="search" name="q" value="{{ zoekterm }}" placeholder="Zoek op naam, merk, product of barcode" aria-label="Zoek een artikel" style="min-width:14rem">
+                <button type="submit" class="btn btn-rand btn-klein">Zoeken</button>
+            </form>
+            <a href="{{ url_for('artikel_nieuw') }}" class="btn btn-geel btn-klein">Nieuw artikel</a>
+        </div>
+    </div>
+
+    {% if per_product %}
+    {% for groep in per_product %}
+    <h3 style="margin:1.1rem 0 0.4rem">{{ groep.naam }} <span class="tekst-zacht" style="font-weight:400; font-size:0.85rem">{{ groep.categorie }} &middot; geteld per {{ groep.eenheid }}{% if groep.inkoop %} &middot; inkoop gemiddeld &euro; {{ '%.2f'|format(groep.inkoop.per_eenheid)|replace('.', ',') }} per {{ groep.eenheid }}{% endif %}</span></h3>
+    <div class="tabel-wrap">
+        <table>
+            <thead>
+                <tr><th>Artikel</th><th>Barcode</th><th>Erin</th><th>Inkoop</th><th>Doos</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for a in groep.artikelen %}
+                <tr id="artikel-{{ a.id }}">
+                    <td>
+                        <strong>{{ a.naam }}</strong>
+                        {% if a.merk %}<span class="tekst-zacht">{{ a.merk }}</span>{% endif %}
+                        {% if a.leverancier_naam %}<br><span class="tekst-zacht">{{ a.leverancier_naam }}</span>{% endif %}
+                    </td>
+                    <td><code>{{ a.ean or '—' }}</code></td>
+                    <td>{{ a.aantal_per_verpakking }} {{ groep.eenheid }}</td>
+                    <td>
+                        {% if a.inkoopprijs %}&euro; {{ '%.2f'|format(a.inkoopprijs)|replace('.', ',') }}
+                        {% if a.aantal_per_verpakking > 1 %}<br><span class="tekst-zacht">&euro; {{ '%.2f'|format(per_eenheid(a))|replace('.', ',') }} per {{ groep.eenheid }}</span>{% endif %}
+                        {% else %}<span class="tekst-zacht">&mdash;</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if a.ean_omverpakking or a.per_omverpakking %}
+                        <code>{{ a.ean_omverpakking or '—' }}</code><br>
+                        <span class="tekst-zacht">{{ a.per_omverpakking }} &times; = {{ a.per_omverpakking * a.aantal_per_verpakking }} {{ groep.eenheid }}</span>
+                        {% else %}<span class="tekst-zacht">&mdash;</span>{% endif %}
+                    </td>
+                    <td><a href="{{ url_for('artikel_bewerken', artikel_id=a.id) }}" class="btn btn-rand btn-klein">Bewerken</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+    {% elif zoekterm %}
+    <p class="leeg">Niets gevonden voor &ldquo;{{ zoekterm }}&rdquo;.</p>
+    {% else %}
+    <p class="leeg">Nog geen artikelen met een barcode. Scan er een hierboven, of voeg er een toe met &ldquo;Nieuw artikel&rdquo;.</p>
+    {% endif %}
+</div>
+{% endblock %}

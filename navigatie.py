@@ -141,6 +141,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Producten",
+        "endpoints": ["barcodes_overzicht", "barcode_zoeken", "artikel_nieuw", "artikel_bewerken"],
+        "url_endpoint": "barcodes_overzicht",
+        "label": "Barcodes",
+    },
+    {
+        "groep": "Producten",
         "endpoints": ["prijslijst_pagina", "prijslijst_pdf_route"],
         "url_endpoint": "prijslijst_pagina",
         "label": "Prijslijst",

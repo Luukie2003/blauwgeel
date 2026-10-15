@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block titel %}Barcode {{ uitkomst.code }}{% endblock %}
+{% block inhoud %}
+<p class="subtitel"><a href="{{ url_for('barcodes_overzicht') }}">&larr; Barcodes</a></p>
+
+<div class="kaart">
+    <form method="get" action="{{ url_for('barcode_zoeken') }}" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end; margin:0">
+        <div class="veld" style="margin:0; flex:1 1 14rem">
+            <label for="code">Volgende barcode</label>
+            <input type="text" id="code" name="code" inputmode="numeric" autocomplete="off" autofocus placeholder="Scan of typ een barcode">
+        </div>
+        <button type="submit" class="btn btn-rand">Opzoeken</button>
+    </form>
+</div>
+
+{% if not uitkomst.geldig %}
+<div class="kaart">
+    <h2 style="margin-top:0">Geen geldige barcode</h2>
+    <p>{{ uitkomst.melding }}</p>
+</div>
+
+{% elif uitkomst.bekend %}
+{% set a = uitkomst.artikel %}
+<div class="kaart">
+    <p class="tekst-zacht" style="margin:0">{{ 'Doos' if uitkomst.niveau == 'omverpakking' else 'Artikel' }} &middot; <code>{{ uitkomst.code }}</code></p>
+    <h2 style="margin:0.2rem 0 0.4rem">{{ a.naam }}</h2>
+    <p style="font-size:1.15rem; margin:0 0 0.6rem">
+        <strong>{{ uitkomst.aantal }} {{ a.eenheid }}</strong> {{ a.product_naam }}
+        {% if uitkomst.inkoopprijs %}&middot; inkoop <strong>&euro; {{ '%.2f'|format(uitkomst.inkoopprijs)|replace('.', ',') }}</strong>{% endif %}
+    </p>
+    <ul style="margin:0 0 0.8rem; padding-left:1.1rem">
+        <li>Hoort bij product <strong>{{ a.product_naam }}</strong> ({{ a.categorie }}), nu {{ a.voorraad }} {{ a.eenheid }} op voorraad{% if a.product_gearchiveerd %} <span class="badge badge-laag">gearchiveerd</span>{% elif not a.product_actief %} <span class="badge badge-neutraal">inactief</span>{% endif %}</li>
+        {% if uitkomst.niveau == 'omverpakking' %}
+        <li>Doos met {{ a.per_omverpakking }} &times; {{ a.aantal_per_verpakking }} {{ a.eenheid }}</li>
+        {% endif %}
+        {% if a.inkoopprijs %}<li>&euro; {{ '%.2f'|format(per_eenheid(a))|replace('.', ',') }} per {{ a.eenheid }}</li>{% endif %}
+        {% if a.merk %}<li>Merk: {{ a.merk }}</li>{% endif %}
+        {% if a.leverancier_naam %}<li>Leverancier: {{ a.leverancier_naam }}</li>{% endif %}
+    </ul>
+    <a href="{{ url_for('artikel_bewerken', artikel_id=a.id, terug='zoeken', zoekcode=uitkomst.code) }}" class="btn btn-rand btn-klein">Bewerken</a>
+    {% if uitkomst.niveau == 'verpakking' and not a.ean_omverpakking %}
+    <span class="tekst-zacht">&middot; De doos heeft nog geen barcode: scan de doos, dan kun je hem hier koppelen.</span>
+    {% endif %}
+</div>
+
+{% else %}
+<div class="kaart">
+    <h2 style="margin-top:0">Onbekende barcode <code>{{ uitkomst.code }}</code></h2>
+    <p style="margin-top:0">Deze barcode staat nog niet in de site. Wat heb je gescand?</p>
+    <div style="display:flex; gap:0.6rem; flex-wrap:wrap">
+        <a href="{{ url_for('artikel_nieuw', ean=uitkomst.code, terug='zoeken', zoekcode=uitkomst.code) }}" class="btn btn-geel">Het artikel zelf (zak, fles, blik)</a>
+        <a href="{{ url_for('artikel_nieuw', ean_omverpakking=uitkomst.code, terug='zoeken', zoekcode=uitkomst.code) }}" class="btn btn-rand">Een doos van een nieuw artikel</a>
+    </div>
+</div>
+
+{% if artikelen %}
+<div class="kaart">
+    <h2 style="margin-top:0">Of: de doos van een artikel dat al bekend is</h2>
+    {% if uitkomst.suggestie %}
+    <p style="margin-top:0">Deze code lijkt op de doos van <strong>{{ uitkomst.suggestie.naam }}</strong> ({{ uitkomst.suggestie.product_naam }}).</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('barcode_doos_koppelen') }}" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="code" value="{{ uitkomst.code }}">
+        <div class="veld" style="margin:0; flex:1 1 16rem; min-width:0">
+            <label for="artikel_id">Welk artikel zit erin?</label>
+            <select id="artikel_id" name="artikel_id" required style="width:100%">
+                <option value="">Kies&hellip;</option>
+                {% for art in artikelen %}
+                <option value="{{ art.id }}" {{ 'selected' if uitkomst.suggestie and uitkomst.suggestie.id == art.id }}>{{ art.product_naam }} &middot; {{ art.naam }}{{ ' (heeft al een doos-barcode)' if art.ean_omverpakking }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="veld" style="margin:0; width:9rem">
+            <label for="per_omverpakking">Hoeveel erin?</label>
+            <input type="number" id="per_omverpakking" name="per_omverpakking" min="1" step="1" required placeholder="Bijv. 6">
+        </div>
+        <button type="submit" class="btn btn-rand">Koppelen</button>
+    </form>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block titel %}{{ 'Artikel bewerken' if artikel else 'Nieuw artikel met barcode' }}{% endblock %}
+{% macro waarde(veld, standaard='') %}{{ waarden.get(veld) if waarden.get(veld) not in (none, '') else (artikel[veld] if artikel and artikel[veld] is not none else standaard) }}{% endmacro %}
+{% block inhoud %}
+<p class="subtitel">
+    <a href="{{ url_for('barcode_zoeken', code=zoekcode) if zoekcode else url_for('barcodes_overzicht') }}">&larr; Terug</a>
+    &middot; Een artikel is wat je precies inkoopt (merk, verpakking, barcode en prijs). Het hoort bij een product: op de
+    overzichten zie je alleen het product, bijvoorbeeld &lsquo;Witte wijn&rsquo; of &lsquo;Frikandel&rsquo;, ook als er
+    meerdere artikelen bij horen.
+</p>
+
+<form method="post" class="kaart" id="artikel-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="terug" value="{{ terug }}">
+    <input type="hidden" name="zoekcode" value="{{ zoekcode }}">
+    {% set gekozen_product = waarde('product_id')|string %}
+    <fieldset class="groupbox">
+        <legend>Wat is het?</legend>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="product_id">Hoort bij product</label>
+                <select id="product_id" name="product_id" required>
+                    <option value="">Kies een product&hellip;</option>
+                    {% for categorie, rijen in producten|groupby('categorie') %}
+                    <optgroup label="{{ categorie }}">
+                        {% for p in rijen %}
+                        <option value="{{ p.id }}" data-eenheid="{{ p.eenheid }}" {{ 'selected' if p.id|string == gekozen_product }}>{{ p.naam }}{{ '' if p.actief else ' (inactief)' }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+                <span class="tekst-zacht">Staat het product er niet tussen? Maak het eerst aan bij
+                    {% if huidige_gebruiker_rol == 'beheerder' %}<a href="{{ url_for('product_nieuw') }}" target="_blank" rel="noopener">Nieuw product</a>{% else %}Producten (een beheerder){% endif %}.</span>
+            </div>
+            <div class="veld">
+                <label for="naam">Naam van het artikel</label>
+                <input type="text" id="naam" name="naam" required maxlength="120" value="{{ waarde('naam') }}" placeholder="Bijv. AH frikandellen of Chardonnay Les Jamelles">
+            </div>
+            <div class="veld">
+                <label for="merk">Merk <span class="tekst-zacht">(mag leeg)</span></label>
+                <input type="text" id="merk" name="merk" maxlength="80" value="{{ waarde('merk') }}">
+            </div>
+            <div class="veld">
+                <label for="leverancier_id">Leverancier <span class="tekst-zacht">(mag leeg)</span></label>
+                {% set gekozen_lev = waarde('leverancier_id')|string %}
+                <select id="leverancier_id" name="leverancier_id">
+                    <option value="">&mdash;</option>
+                    {% for lev in leveranciers %}
+                    <option value="{{ lev.id }}" {{ 'selected' if lev.id|string == gekozen_lev }}>{{ lev.naam }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset class="groupbox">
+        <legend>De verpakking zelf (zak, fles, blik)</legend>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="ean">Barcode (EAN)</label>
+                <input type="text" id="ean" name="ean" inputmode="numeric" autocomplete="off" maxlength="20" value="{{ waarde('ean') }}" placeholder="Scan of typ de cijfers">
+            </div>
+            <div class="veld">
+                <label for="aantal_per_verpakking">Hoeveel zit erin? <span class="tekst-zacht">(in <span class="eenheid-tekst">de eenheid van het product</span>)</span></label>
+                <input type="number" id="aantal_per_verpakking" name="aantal_per_verpakking" min="1" step="1" required value="{{ waarde('aantal_per_verpakking', 1) }}">
+            </div>
+            <div class="veld">
+                <label for="inkoopprijs">Inkoopprijs per verpakking (&euro;)</label>
+                <input type="number" id="inkoopprijs" name="inkoopprijs" min="0" step="0.01" value="{{ waarde('inkoopprijs', '') }}" placeholder="0,00">
+                <span class="tekst-zacht" id="per-eenheid"></span>
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset class="groupbox">
+        <legend>De omverpakking (doos, tray, krat) <span class="tekst-zacht" style="font-weight:400">&mdash; mag leeg</span></legend>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="ean_omverpakking">Barcode van de doos</label>
+                <input type="text" id="ean_omverpakking" name="ean_omverpakking" inputmode="numeric" autocomplete="off" maxlength="20" value="{{ waarde('ean_omverpakking') }}" placeholder="Scan of typ de cijfers">
+            </div>
+            <div class="veld">
+                <label for="per_omverpakking">Hoeveel verpakkingen in de doos?</label>
+                <input type="number" id="per_omverpakking" name="per_omverpakking" min="0" step="1" value="{{ waarde('per_omverpakking', '') }}" placeholder="Bijv. 6">
+            </div>
+            <div class="veld">
+                <label for="prijs_doos">Inkoopprijs per doos (&euro;)</label>
+                <input type="number" id="prijs_doos" min="0" step="0.01" placeholder="Rekent de prijs per verpakking uit">
+                <span class="tekst-zacht" id="doos-uitleg"></span>
+            </div>
+        </div>
+    </fieldset>
+
+    <div class="veld"><label for="opmerking">Opmerking <span class="tekst-zacht">(mag leeg)</span></label><textarea id="opmerking" name="opmerking" rows="2">{{ waarde('opmerking') }}</textarea></div>
+    <button type="submit" class="btn btn-geel">Opslaan</button>
+</form>
+
+{% if artikel %}
+<form method="post" action="{{ url_for('artikel_verwijderen', artikel_id=artikel.id) }}" style="margin-top:0.8rem"
+      onsubmit="return confirm('Dit artikel en zijn barcodes verwijderen? Het product zelf blijft.')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="terug" value="{{ terug }}">
+    <button type="submit" class="btn btn-rand btn-klein">Artikel verwijderen</button>
+</form>
+{% endif %}
+
+<script>
+(function () {
+    const product = document.getElementById('product_id');
+    const aantal = document.getElementById('aantal_per_verpakking');
+    const prijs = document.getElementById('inkoopprijs');
+    const perDoos = document.getElementById('per_omverpakking');
+    const prijsDoos = document.getElementById('prijs_doos');
+    const euro = (w) => '€ ' + w.toFixed(2).replace('.', ',');
+    const getal = (el) => parseFloat((el.value || '').replace(',', '.')) || 0;
+
+    function eenheid() {
+        const optie = product.options[product.selectedIndex];
+        return (optie && optie.dataset.eenheid) || 'de eenheid van het product';
+    }
+    function bijwerken() {
+        document.querySelectorAll('.eenheid-tekst').forEach((el) => { el.textContent = eenheid(); });
+        const n = Math.max(1, getal(aantal));
+        document.getElementById('per-eenheid').textContent = getal(prijs) > 0 ? euro(getal(prijs) / n) + ' per ' + eenheid() : '';
+        const d = getal(perDoos);
+        document.getElementById('doos-uitleg').textContent = d > 0
+            ? 'Doos = ' + d + ' × ' + n + ' = ' + (d * n) + ' ' + eenheid() + (getal(prijs) > 0 ? ', ' + euro(getal(prijs) * d) : '')
+            : '';
+    }
+    // De prijs per doos is een hulpje: wat je daar invult, wordt omgerekend naar de prijs per verpakking (die wordt
+    // opgeslagen), en andersom.
+    prijsDoos.addEventListener('input', () => {
+        if (getal(perDoos) > 0 && getal(prijsDoos) > 0) prijs.value = (getal(prijsDoos) / getal(perDoos)).toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+        bijwerken();
+    });
+    [prijs, perDoos].forEach((el) => el.addEventListener('input', () => {
+        prijsDoos.value = getal(perDoos) > 0 && getal(prijs) > 0 ? (getal(prijs) * getal(perDoos)).toFixed(2) : '';
+        bijwerken();
+    }));
+    [product, aantal].forEach((el) => el.addEventListener('input', bijwerken));
+    product.addEventListener('change', bijwerken);
+    if (getal(perDoos) > 0 && getal(prijs) > 0) prijsDoos.value = (getal(prijs) * getal(perDoos)).toFixed(2);
+    bijwerken();
+})();
+</script>
+{% endblock %}

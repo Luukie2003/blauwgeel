@@ -4,6 +4,7 @@ import sqlite3
 
 from flask import flash, redirect, render_template, request, session, url_for
 
+import barcodes
 from database import get_db
 from productkaart import BESTELEENHEDEN, EENHEDEN, artikelcode_in_gebruik, eenheid_uit_formulier
 from helpers import (
@@ -156,9 +157,13 @@ def register_routes(app):
             flash("Product niet gevonden.", "error")
             return redirect(url_for("producten_lijst"))
 
+        # Met artikelen met een inkoopprijs (Barcodes) rekent de site de inkoopprijs zelf uit; dan telt het veld niet.
+        inkoop_artikelen = barcodes.inkoop_uit_artikelen(db, product_id)
         if request.method == "POST":
             nieuwe_verkoopprijs = float(request.form["verkoopprijs"] or 0)
-            nieuwe_inkoopprijs = float(request.form.get("inkoopprijs") or 0)
+            nieuwe_inkoopprijs = (
+                product["inkoopprijs"] if inkoop_artikelen else float(request.form.get("inkoopprijs") or 0)
+            )
             nieuwe_afbeelding = sla_afbeelding_op(request.files.get("afbeelding"), PRODUCT_AFBEELDINGEN_MAP)
             if nieuwe_afbeelding:
                 afbeelding = nieuwe_afbeelding
@@ -229,6 +234,7 @@ def register_routes(app):
                 ),
             )
             vervang_product_prijsopties(db, product_id)
+            barcodes.werk_inkoopprijs_bij(db, product_id, naam, gebruiker_id)  # een andere besteleenheid telt mee
             db.commit()
             flash(f"Product '{request.form['naam']}' bijgewerkt.", "success")
             if gedwongen_inactief:
@@ -262,6 +268,9 @@ def register_routes(app):
             subcategorieen=subcategorieen,
             prijs_geschiedenis=prijs_geschiedenis,
             prijsopties=prijsopties,
+            artikelen=barcodes.artikelen_van(db, product_id),
+            inkoop_artikelen=inkoop_artikelen,
+            per_eenheid=barcodes.per_eenheid,
             **_keuzelijsten(db),
         )
 

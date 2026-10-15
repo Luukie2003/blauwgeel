@@ -89,6 +89,8 @@ TABLET_CODE_UITGEZONDERD = {"tablet_code_instellen", "logout"}
 GEBRUIK_NIET_LOGGEN = {
     "static",
     "status_pagina",
+    # Een barcode opzoeken vanuit de app op de handterminal (JSON): geen paginabezoek.
+    "api_barcode",
     # Delen van een pagina die na het laden apart worden opgehaald (zie data-lazy-bron in gedeeld.js), en het
     # voorverwarmen van het voorspelmodel: dat is geen bezoek aan een pagina.
     "dashboard_omzettrend",
@@ -223,6 +225,14 @@ SECTIE_ENDPOINTS = {
         "producten_labels_pdf",
         "boeken",
         "levering_inboeken",
+        # Barcodes (EAN) van de artikelen die je inkoopt: opzoeken, toevoegen en bijwerken (zie barcodes.py).
+        "barcodes_overzicht",
+        "barcode_zoeken",
+        "artikel_nieuw",
+        "artikel_bewerken",
+        "artikel_verwijderen",
+        "barcode_doos_koppelen",
+        "api_barcode",
         "geschiedenis",
         "tellen",
         "tellen_lopen_starten",

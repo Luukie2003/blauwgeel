@@ -2,6 +2,7 @@ import re
 
 from flask import current_app, jsonify, render_template, request, session, url_for
 
+import barcodes
 from database import get_db
 from helpers import heeft_sectie_toegang
 
@@ -41,6 +42,12 @@ def _nl_datum(tekst):
 def _kort(tekst, lengte=90):
     tekst = " ".join((tekst or "").split())
     return tekst if len(tekst) <= lengte else tekst[: lengte - 1].rstrip() + "…"
+
+
+def _artikel_url(r, code):
+    """Naar de gescande barcode als die het is, anders naar een barcode van het artikel, of naar het artikel zelf."""
+    gevonden = code if code in (r["ean"], r["ean_omverpakking"]) else (r["ean"] or r["ean_omverpakking"])
+    return url_for("barcode_zoeken", code=gevonden) if gevonden else url_for("artikel_bewerken", artikel_id=r["id"])
 
 
 def zoek_alles(db, term, rol, secties, nav_items, limiet):
@@ -95,6 +102,24 @@ def zoek_alles(db, term, rol, secties, nav_items, limiet):
                 "titel": r["naam"],
                 "detail": f"{r['categorie']} · {r['voorraad']} {r['eenheid']}" + ("" if r["actief"] else " · inactief"),
                 "url": url_for("product_detail", product_id=r["id"]),
+            },
+        )
+        # Een gescande barcode in de zoekbalk vindt het artikel (zie barcodes.py), net als een naam of merk.
+        code = barcodes.normaliseer(term)
+        toevoegen(
+            "Barcodes",
+            db.execute(
+                """SELECT a.id, a.naam, a.ean, a.ean_omverpakking, p.naam AS product_naam FROM artikelen a
+                   JOIN producten p ON p.id = a.product_id
+                   WHERE a.naam LIKE :p ESCAPE '\\' OR a.merk LIKE :p ESCAPE '\\' OR a.ean = :c OR a.ean_omverpakking = :c
+                         OR a.ean LIKE :p ESCAPE '\\' OR a.ean_omverpakking LIKE :p ESCAPE '\\'
+                   ORDER BY a.naam COLLATE NOCASE LIMIT :max""",
+                {"p": patroon, "c": code, "max": limiet + 1},
+            ).fetchall(),
+            lambda r: {
+                "titel": r["naam"],
+                "detail": f"{r['product_naam']} · {r['ean'] or r['ean_omverpakking'] or 'geen barcode'}",
+                "url": _artikel_url(r, code),
             },
         )
         toevoegen(
