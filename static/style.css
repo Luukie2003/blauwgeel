@@ -1607,20 +1607,123 @@ footer {
     display: block;
 }
 
-/* ---------- Productpagina (foto, voorraad, snel boeken, geschiedenis) ---------- */
+/* ---------- Productpagina (zie product_detail.html): kop, kerncijfers, boeken en de informatie per onderwerp ---------- */
 
-.product-detail-kop {
-    text-align: center;
+.product-kop {
+    display: flex;
+    gap: 1.1rem;
+    align-items: flex-start;
 }
 
-.product-detail-kop h1 {
+.product-kop-foto {
+    width: 7rem;
+    height: 7rem;
+    object-fit: cover;
+    border-radius: 14px;
+    border: 1px solid var(--rand-licht);
+    flex-shrink: 0;
+}
+
+.product-kop-tekst {
+    flex: 1;
+    min-width: 0;
+}
+
+.product-kop-tekst h1 {
     margin: 0;
-    font-size: 1.3rem;
+    font-size: 1.4rem;
 }
 
-.product-detail-voorraad {
-    font-size: 0.95rem;
-    padding: 0.35rem 0.7rem;
+.product-kop-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.product-kop-opmerking {
+    margin: 0.7rem 0 0;
+    padding: 0.45rem 0.7rem;
+    background: #f6f7f9;
+    border-left: 3px solid var(--rand);
+    border-radius: 4px;
+    font-size: 0.88rem;
+    white-space: pre-line;
+}
+
+.product-kop-acties {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.8rem;
+}
+
+.stat .stat-eenheid {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--tekst-zacht);
+}
+
+/* Op een smal scherm (de handterminal) eerst boeken, daarna de informatie; op een breed scherm de informatie links
+   en boeken rechts. */
+.product-info-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0 1.25rem;
+}
+
+@media (min-width: 1100px) {
+    .product-info-grid {
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+        grid-template-areas: "hoofd zij";
+        align-items: start;
+    }
+    .product-info-hoofd { grid-area: hoofd; }
+    .product-info-zij { grid-area: zij; }
+}
+
+.info-lijst {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.35rem 1rem;
+    margin: 0;
+}
+
+.info-lijst dt {
+    color: var(--tekst-zacht);
+    font-size: 0.85rem;
+}
+
+.info-lijst dd {
+    margin: 0;
+}
+
+.info-kopje {
+    font-size: 0.9rem;
+    margin: 1rem 0 0.4rem;
+}
+
+.info-opsomming {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+.info-opsomming li {
+    margin-bottom: 0.35rem;
+}
+
+.product-week-grafiek {
+    height: 130px;
+    gap: 0.4rem;
+}
+
+@media (max-width: 520px) {
+    .product-week-grafiek { gap: 0.2rem; }
+    .product-week-grafiek .week-voorvoegsel { display: none; }
+    .product-info-hoofd .kolom-breed { display: none; }
+    .product-kop { flex-direction: column; align-items: center; text-align: center; }
+    .product-kop-badges, .product-kop-acties { justify-content: center; }
+    .info-lijst { grid-template-columns: minmax(0, 1fr); gap: 0.1rem; }
+    .info-lijst dd { margin-bottom: 0.45rem; }
 }
 
 .mutatie-lijst {

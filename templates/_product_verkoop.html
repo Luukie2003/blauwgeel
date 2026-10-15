@@ -1,0 +1,63 @@
+{# Het blok 'Verkoop en verwachting' van de productpagina, apart opgehaald (zie product_detail_verkoop). #}
+{% macro getal(waarde) %}{{ ('%.1f'|format(waarde)).replace('.0', '').replace('.', ',') }}{% endmacro %}
+<div class="kaart">
+    <h2>Verkoop en verwachting</h2>
+    {% if not verkoop %}
+    <p class="leeg" style="margin:0">Nog geen tellingen: zodra er twee tellingen zijn, staat hier hoeveel er per week verkocht wordt.</p>
+    {% else %}
+    {% set v = verkoop.verwachting %}
+    {% if verkoop.zonder_verkoop %}
+    <p class="flash flash-warning" style="margin-top:0">Al {{ verkoop.zonder_verkoop }} weken niets van verkocht. Blijft het liggen, overweeg dan om het minimum te verlagen of het product uit het assortiment te halen.</p>
+    {% endif %}
+    <div class="statgrid">
+        <div class="stat">
+            <div class="getal">{{ getal(verkoop.per_week) if verkoop.per_week is not none else '—' }} <span class="stat-eenheid">{{ product.eenheid }}</span></div>
+            <div class="label">Gemiddeld per week{% if verkoop.weken_gemiddeld %} (laatste {{ verkoop.weken_gemiddeld }} we{{ 'ken' if verkoop.weken_gemiddeld != 1 else 'ek' }}){% endif %}{% if verkoop.omzet_recent %}<br>samen &euro; {{ '%.0f'|format(verkoop.omzet_recent) }} omzet{% endif %}</div>
+        </div>
+        {% if v %}
+        <div class="stat">
+            <div class="getal">{{ '%.0f'|format(v.verwacht) }} <span class="stat-eenheid">{{ product.eenheid }}</span></div>
+            <div class="label">Verwacht de komende {{ verkoop.prognose_dagen }} dagen<br>waarschijnlijk {{ '%.0f'|format(v.laag) }} tot {{ '%.0f'|format(v.hoog) }}</div>
+        </div>
+        <div class="stat {{ 'waarschuwing' if v.status == 'urgent' }}">
+            {% if v.nu_op %}
+            <div class="getal">Op</div>
+            <div class="label">Er is niets meer op voorraad</div>
+            {% elif v.dekking_dagen is not none %}
+            <div class="getal">{{ '%.0f'|format(v.dekking_dagen) if v.dekking_dagen < 100 else '100+' }} <span class="stat-eenheid">dagen</span></div>
+            <div class="label">Zo lang doe je met de voorraad<br>{% if v.kans_tekort >= 0.05 %}{{ '%.0f'|format(v.kans_tekort * 100) }}% kans dat het deze week opraakt{% else %}raakt deze week waarschijnlijk niet op{% endif %}{% if v.onderweg %}, met de {{ v.onderweg }} {{ product.eenheid }} die besteld is{% endif %}</div>
+            {% else %}
+            <div class="getal">&mdash;</div>
+            <div class="label">Wordt nauwelijks verkocht</div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% if v and v.status != 'ok' and v.advies_stuks %}
+    <p style="margin:-0.3rem 0 0.8rem">
+        <strong>Advies:</strong> bestel {% if v.advies_eenheden %}{{ v.advies_eenheden }} {{ v.besteleenheid or 'besteleenheid' }} ({{ v.advies_stuks }} {{ product.eenheid }}){% else %}{{ v.advies_stuks }} {{ product.eenheid }}{% endif %}.
+        {% if v.onderweg %}<span class="tekst-zacht">Er is al {{ v.onderweg }} {{ product.eenheid }} besteld.</span>{% endif %}
+        {% if v.al_op_bestellijst %}<span class="tekst-zacht">Staat al op de bestellijst.</span>{% endif %}
+    </p>
+    {% endif %}
+
+    {% if verkoop.weken %}
+    <h3 class="info-kopje">Verkocht per week</h3>
+    <div class="omzet-trend-grafiek product-week-grafiek">
+        {% for w in verkoop.weken %}
+        {% set hoogte = ((w.aantal / verkoop.hoogste * 100) if verkoop.hoogste else 0) %}
+        <div class="omzet-bar-kolom" title="Week {{ w.week }}: {{ getal(w.aantal) }} {{ product.eenheid }}, &euro; {{ '%.2f'|format(w.omzet)|replace('.', ',') }}{{ ' (nog niet af)' if w.nog_niet_af }}">
+            <div class="omzet-bar-waarde">{{ '%.0f'|format(w.aantal) }}</div>
+            <div class="omzet-bar{{ ' omzet-bar-afwijkend' if w.nog_niet_af }}" style="height:{{ '%.1f'|format(hoogte) }}%"></div>
+            <div class="omzet-bar-label"><span class="week-voorvoegsel">wk </span>{{ w.week }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    <p class="tekst-zacht" style="margin:0.5rem 0 0; font-size:0.78rem">
+        Uit de tellingen, verdeeld over de dagen waarop verkocht is (een thuiswedstrijd telt zwaarder). Geteld tot
+        {{ verkoop.geteld_tot.strftime('%d-%m-%Y') }}; een gestippelde week is nog niet helemaal geteld.
+        {% if v and v.weinig_data %}De verwachting is nog grof: er zijn nog weinig tellingen van dit product.{% endif %}
+    </p>
+    {% endif %}
+    {% endif %}
+</div>

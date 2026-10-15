@@ -1,86 +1,266 @@
 {% extends basis_template %}
 {% block titel %}{{ product.naam }}{% endblock %}
+{% macro euro(bedrag) %}&euro; {{ '%.2f'|format(bedrag)|replace('.', ',') }}{% endmacro %}
+{% macro getal(waarde) %}{{ ('%.1f'|format(waarde)).replace('.0', '').replace('.', ',') }}{% endmacro %}
+{% set beheerder = huidige_gebruiker_rol == 'beheerder' %}
 {% block inhoud %}
 <p class="subtitel"><a href="javascript:history.back()">&larr; Terug</a></p>
 
-<div class="kaart product-detail-kop">
+{# ---------- Kop: foto, naam, kenmerken en wat je ermee kunt ---------- #}
+<div class="kaart product-kop">
     {% if product.afbeelding %}
-    <img src="{{ url_for('static', filename='product_afbeeldingen/' + (product.afbeelding|foto_middel)) }}" alt="" class="product-thumb-groot">
+    <img src="{{ url_for('static', filename='product_afbeeldingen/' + (product.afbeelding|foto_middel)) }}" alt="" class="product-kop-foto">
     {% endif %}
-    <h1>{{ product.naam }}</h1>
-    <p class="tekst-zacht" style="margin:0.1rem 0 0.7rem">
-        {{ product.categorie }}{% if product.subcategorie %} &middot; {{ product.subcategorie }}{% endif %}
-        {% if product.artikelcode %} &middot; {{ product.artikelcode }}{% endif %}
-    </p>
-    {% if product.voorraad < product.min_voorraad %}
-    <span class="badge badge-laag product-detail-voorraad">{{ product.voorraad }} {{ product.eenheid }} op voorraad</span>
-    {% else %}
-    <span class="badge badge-ok product-detail-voorraad">{{ product.voorraad }} {{ product.eenheid }} op voorraad</span>
-    {% endif %}
-    <p class="tekst-zacht" style="margin:0.4rem 0 0">minimum: {{ product.min_voorraad }} {{ product.eenheid }}</p>
-    <p style="margin-top:0.7rem; display:flex; gap:1rem; flex-wrap:wrap">
-        <a href="{{ url_for('product_label_pdf', product_id=product.id) }}">Schaplabel printen &rarr;</a>
-        {% if huidige_gebruiker_rol == 'beheerder' %}
-        <a href="{{ url_for('product_bewerken', product_id=product.id) }}">Product bewerken &rarr;</a>
-        {% endif %}
-    </p>
-</div>
-
-<div class="kaart">
-    <h2>Boeken</h2>
-    <form method="post" action="{{ url_for('boeken') }}" class="boeking-formulier" data-offline-wachtrij="Boeking">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="product_id" value="{{ product.id }}">
-        <input type="hidden" name="terug_naar_product" value="{{ product.id }}">
-        <div class="toggle-type">
-            <label><input type="radio" name="type" value="in" checked><span>In (levering / aanvulling)</span></label>
-            <label><input type="radio" name="type" value="uit"><span>Uit (verkocht / verbruikt)</span></label>
+    <div class="product-kop-tekst">
+        <h1>{{ product.naam }}</h1>
+        <p class="tekst-zacht" style="margin:0.15rem 0 0.5rem">
+            {% if product.merk %}{{ product.merk }} &middot; {% endif %}{{ product.categorie }}{% if product.subcategorie %} &rsaquo; {{ product.subcategorie }}{% endif %}
+            {% if product.artikelcode %} &middot; <code>{{ product.artikelcode }}</code>{% endif %}
+        </p>
+        <div class="product-kop-badges">
+            {% if product.gearchiveerd %}<span class="badge badge-laag">Gearchiveerd</span>
+            {% elif not product.actief %}<span class="badge badge-neutraal">Inactief</span>{% endif %}
+            {% if product.voorraad <= 0 %}<span class="badge badge-laag">Op</span>
+            {% elif product.voorraad < product.min_voorraad %}<span class="badge badge-laag">Onder het minimum</span>
+            {% else %}<span class="badge badge-ok">Genoeg op voorraad</span>{% endif %}
+            {% if info.open_bestellingen %}<span class="badge badge-in">Besteld</span>{% endif %}
+            {% if info.meldingen %}<span class="badge badge-neutraal">Gemeld voor de bestellijst{% if info.meldingen > 1 %} ({{ info.meldingen }}&times;){% endif %}</span>{% endif %}
+            {% if product.toon_op_kiosk %}<span class="badge badge-neutraal">Op het prijzenscherm{% if product.kiosk_uitverkocht %}, als uitverkocht{% endif %}</span>{% endif %}
+            {% if product.niet_tellen %}<span class="badge badge-neutraal">Telt niet mee in de telling</span>{% endif %}
         </div>
-        <div class="formgrid">
-            <div class="veld">
-                <label for="aantal">Aantal ({{ product.eenheid }})</label>
-                <input type="number" id="aantal" name="aantal" min="1" required autofocus>
-            </div>
-            <div class="veld">
-                <label>Geboekt door</label>
-                <p class="veld-waarde">{{ huidige_gebruiker }}</p>
-            </div>
+        {% if product.opmerking %}<p class="product-kop-opmerking">{{ product.opmerking }}</p>{% endif %}
+        <div class="product-kop-acties">
+            {% if beheerder %}<a href="{{ url_for('product_bewerken', product_id=product.id) }}" class="btn btn-rand btn-klein">Bewerken</a>{% endif %}
+            <form method="post" action="{{ url_for('product_melden', product_id=product.id) }}" style="margin:0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-rand btn-klein" title="Zet het op de bestellijst, bijvoorbeeld als het bijna op is">Op de bestellijst</button>
+            </form>
+            <a href="{{ url_for('product_label_pdf', product_id=product.id) }}" class="btn btn-rand btn-klein">Schaplabel</a>
+            <a href="{{ url_for('geschiedenis', product_id=product.id) }}" class="btn btn-rand btn-klein">Alle boekingen</a>
         </div>
-        <div class="veld">
-            <label for="opmerking">Opmerking (optioneel)</label>
-            <input type="text" id="opmerking" name="opmerking" placeholder="Bijv. kapotte krat, telling gecorrigeerd, ...">
-        </div>
-        {% include "_derving_reden.html" %}
-        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
-            {% if pda_modus %}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-            {% endif %}
-            Boeken
-        </button>
-    </form>
-</div>
-
-<div class="kaart">
-    <div class="actiebalk">
-        <h2 style="margin:0">Laatste boekingen</h2>
-        <a href="{{ url_for('geschiedenis', product_id=product.id) }}" style="font-size:0.82rem">Volledige geschiedenis &rarr;</a>
     </div>
-    {% if mutaties %}
-    <ul class="mutatie-lijst">
-        {% for m in mutaties %}
-        <li>
-            <div class="mutatie-lijst-regel">
-                <span class="badge badge-{{ m.type }}">{{ 'in' if m.type == 'in' else 'uit' }}</span>
-                <strong>{{ m.aantal }} {{ product.eenheid }}</strong>
-                <span class="tekst-zacht">{{ m.datum|datum_nl }}{% if m.naam %} &middot; {{ m.naam }}{% endif %}</span>
-            </div>
-            {% if m.opmerking or m.reden %}<div class="tekst-zacht mutatie-lijst-opmerking">{% if m.reden %}{{ m.reden|reden_naam }}{% if m.opmerking %} &middot; {% endif %}{% endif %}{{ m.opmerking or '' }}</div>{% endif %}
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p class="leeg">Nog geen boekingen voor dit product.</p>
+</div>
+
+{# ---------- Kerncijfers ---------- #}
+<div class="statgrid product-cijfers">
+    <div class="stat {{ 'waarschuwing' if product.voorraad < product.min_voorraad }}">
+        <div class="getal">{{ product.voorraad }} <span class="stat-eenheid">{{ product.eenheid }}</span></div>
+        <div class="label">
+            Op voorraad &middot; minimum {{ product.min_voorraad }}
+            {% if info.in_besteleenheden is not none %}<br>= {{ getal(info.in_besteleenheden) }} {{ product|besteleenheid_naam }}{% endif %}
+        </div>
+    </div>
+    <div class="stat">
+        {% if product.glazen_per_fust %}
+        <div class="getal">{{ euro(product.prijs_per_glas) }}</div>
+        <div class="label">Per glas &middot; {{ product.glazen_per_fust }} glazen per fust = {{ euro(info.verkoop_stuk) }}</div>
+        {% else %}
+        <div class="getal">{{ euro(product.verkoopprijs) if product.verkoopprijs else '—' }}</div>
+        <div class="label">Verkoopprijs per {{ product.eenheid }}{% if info.prijsopties %} &middot; {{ info.prijsopties|length }} prijsoptie{{ 's' if info.prijsopties|length > 1 }}{% endif %}</div>
+        {% endif %}
+    </div>
+    {% if beheerder %}
+    <div class="stat {{ 'waarschuwing' if info.marge and info.marge.onder_doel }}">
+        {% if info.marge %}
+        <div class="getal">{{ '%.0f'|format(info.marge.pct) }}%</div>
+        <div class="label">Marge &middot; {{ euro(info.marge.stuk) }} per {{ product.eenheid }}<br>{{ 'onder' if info.marge.onder_doel else 'boven' }} de doelmarge van {{ info.marge.doel }}%</div>
+        {% else %}
+        <div class="getal">&mdash;</div>
+        <div class="label">Marge: {{ 'nog geen inkoopprijs' if not info.inkoop_stuk else 'nog geen verkoopprijs' }}</div>
+        {% endif %}
+    </div>
     {% endif %}
+    <div class="stat">
+        {% if info.laatste_telling %}
+        <div class="getal" style="font-size:1.25rem">{{ leeftijd(info.laatste_telling.datum)|capitalize }}</div>
+        <div class="label">Laatst geteld ({{ info.laatste_telling.datum|datum_nl }})<br>{{ info.laatste_telling.geteld_aantal }} geteld, {{ info.laatste_telling.verkocht }} verkocht</div>
+        {% else %}
+        <div class="getal">&mdash;</div>
+        <div class="label">Nog niet geteld</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="product-info-grid">
+    {# Boeken staat op een smal scherm (de handterminal) bovenaan, op een breed scherm rechts. #}
+    <div class="product-info-zij">
+        <div class="kaart">
+            <h2>Boeken</h2>
+            <form method="post" action="{{ url_for('boeken') }}" class="boeking-formulier" data-offline-wachtrij="Boeking">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="product_id" value="{{ product.id }}">
+                <input type="hidden" name="terug_naar_product" value="{{ product.id }}">
+                <div class="toggle-type">
+                    <label><input type="radio" name="type" value="in" checked><span>In (levering / aanvulling)</span></label>
+                    <label><input type="radio" name="type" value="uit"><span>Uit (verkocht / verbruikt)</span></label>
+                </div>
+                <div class="formgrid">
+                    <div class="veld">
+                        <label for="aantal">Aantal ({{ product.eenheid }})</label>
+                        <input type="number" id="aantal" name="aantal" min="1" required {{ 'autofocus' if pda_modus }}>
+                    </div>
+                    <div class="veld">
+                        <label>Geboekt door</label>
+                        <p class="veld-waarde">{{ huidige_gebruiker }}</p>
+                    </div>
+                </div>
+                <div class="veld">
+                    <label for="opmerking">Opmerking (optioneel)</label>
+                    <input type="text" id="opmerking" name="opmerking" placeholder="Bijv. kapotte krat, telling gecorrigeerd, ...">
+                </div>
+                {% include "_derving_reden.html" %}
+                <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
+                    {% if pda_modus %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    {% endif %}
+                    Boeken
+                </button>
+            </form>
+        </div>
+
+        <div class="kaart">
+            <div class="actiebalk">
+                <h2 style="margin:0">Laatste boekingen</h2>
+                <a href="{{ url_for('geschiedenis', product_id=product.id) }}" style="font-size:0.82rem">Alles &rarr;</a>
+            </div>
+            {% if mutaties %}
+            <ul class="mutatie-lijst">
+                {% for m in mutaties %}
+                <li>
+                    <div class="mutatie-lijst-regel">
+                        <span class="badge badge-{{ m.type }}">{{ 'in' if m.type == 'in' else 'uit' }}</span>
+                        <strong>{{ m.aantal }} {{ product.eenheid }}</strong>
+                        <span class="tekst-zacht">{{ m.datum|datum_nl }}{% if m.naam %} &middot; {{ m.naam }}{% endif %}</span>
+                    </div>
+                    {% if m.opmerking or m.reden %}<div class="tekst-zacht mutatie-lijst-opmerking">{% if m.reden %}{{ m.reden|reden_naam }}{% if m.opmerking %} &middot; {% endif %}{% endif %}{{ m.opmerking or '' }}</div>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="leeg">Nog geen boekingen voor dit product.</p>
+            {% endif %}
+            {% if info.derving.aantal %}
+            <p class="tekst-zacht" style="margin:0.6rem 0 0">
+                Derving de laatste {{ info.derving_dagen }} dagen: {{ info.derving.aantal }} {{ product.eenheid }} ({{ info.derving.keer }}&times; afgeboekt met een reden){% if info.inkoop_stuk %}, {{ euro(info.derving.aantal * info.inkoop_stuk) }} tegen inkoopprijs{% endif %}.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="product-info-hoofd">
+        {# ---------- Verkoop en verwachting (voorspelmodel, apart opgehaald) ---------- #}
+        <div data-lazy-bron="{{ url_for('product_detail_verkoop', product_id=product.id) }}">
+            <div class="kaart">
+                <h2>Verkoop en verwachting</h2>
+                <p class="tekst-zacht" data-lazy-status style="margin:0">Even rekenen&hellip;</p>
+            </div>
+        </div>
+
+        {# ---------- Prijzen ---------- #}
+        <div class="kaart">
+            <h2>Prijzen</h2>
+            <dl class="info-lijst">
+                {% if product.glazen_per_fust %}
+                <dt>Per glas</dt><dd>{{ euro(product.prijs_per_glas) }} <span class="tekst-zacht">&middot; {{ product.glazen_per_fust }} glazen per fust = {{ euro(info.verkoop_stuk) }} per fust</span></dd>
+                {% else %}
+                <dt>Verkoopprijs</dt><dd>{{ euro(product.verkoopprijs) if product.verkoopprijs else 'nog niet ingevuld' }} <span class="tekst-zacht">per {{ product.eenheid }}</span></dd>
+                {% endif %}
+                {% for o in info.prijsopties %}
+                <dt>{{ o.naam }}</dt><dd>{{ euro(o.prijs) }}{% if o.glazen %} <span class="tekst-zacht">&middot; {{ o.glazen }} glazen</span>{% endif %}</dd>
+                {% endfor %}
+                {% if info.inkoop_stuk %}
+                <dt>Inkoop</dt>
+                <dd>{{ euro(info.inkoop_stuk) }} <span class="tekst-zacht">per {{ product.eenheid }}{% if info.factor > 1 %} &middot; {{ euro(product.inkoopprijs) }} per {{ product|besteleenheid_naam }}{% endif %}{% if info.artikelen|selectattr('inkoopprijs')|list %} &middot; gemiddelde van de artikelen{% endif %}</span></dd>
+                <dt>Voorraadwaarde</dt><dd>{{ euro(info.voorraadwaarde) }} <span class="tekst-zacht">tegen inkoopprijs</span></dd>
+                {% endif %}
+            </dl>
+            {% if info.gepland %}
+            <h3 class="info-kopje">Gepland</h3>
+            <ul class="info-opsomming">
+                {% for g in info.gepland %}
+                <li>Vanaf {{ g.ingangsdatum|datum_kort }}: {{ g.optie_naam or ('prijs per glas' if g.soort == 'prijs_per_glas' else 'verkoopprijs') }} {{ euro(g.nieuwe_prijs) }}{% if g.opmerking %} <span class="tekst-zacht">&middot; {{ g.opmerking }}</span>{% endif %}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if info.prijs_geschiedenis %}
+            <h3 class="info-kopje">Laatste prijswijzigingen</h3>
+            <ul class="info-opsomming">
+                {% for w in info.prijs_geschiedenis %}
+                <li>{{ w.datum|datum_nl }}: {{ 'inkoop' if w.veld == 'inkoopprijs' else 'verkoop' }} {{ euro(w.oude_prijs) }} &rarr; {{ euro(w.nieuwe_prijs) }}{% if w.naam %} <span class="tekst-zacht">&middot; {{ w.naam }}</span>{% endif %}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+
+        {# ---------- Inkoop en bestellen ---------- #}
+        <div class="kaart">
+            <h2>Inkoop en bestellen</h2>
+            <dl class="info-lijst">
+                <dt>Leverancier</dt>
+                <dd>{% if info.leverancier %}{{ info.leverancier.naam }}{% if info.besteldagen %} <span class="tekst-zacht">&middot; bestellen op {{ info.besteldagen }}</span>{% endif %}{% else %}<span class="tekst-zacht">niet ingevuld</span>{% endif %}</dd>
+                <dt>Bestellen per</dt>
+                <dd>{{ product|besteleenheid_naam }}{% if info.factor > 1 %} <span class="tekst-zacht">van {{ info.factor }} {{ product.eenheid }}</span>{% endif %}{% if product.bestel_hoeveelheid %} <span class="tekst-zacht">&middot; vaste bestelling {{ product.bestel_hoeveelheid }} {{ product.eenheid }}</span>{% endif %}</dd>
+                <dt>Minimum</dt><dd>{{ product.min_voorraad }} {{ product.eenheid }}</dd>
+                <dt>Laatst binnen</dt>
+                <dd>{% if info.laatste_levering %}{{ info.laatste_levering.aantal }} {{ product.eenheid }} op {{ info.laatste_levering.datum|datum_nl }} <span class="tekst-zacht">&middot; {{ leeftijd(info.laatste_levering.datum) }}</span>{% else %}<span class="tekst-zacht">nog niets ingeboekt</span>{% endif %}</dd>
+            </dl>
+            {% if info.open_bestellingen %}
+            <h3 class="info-kopje">Onderweg</h3>
+            <ul class="info-opsomming">
+                {% for b in info.open_bestellingen %}
+                <li>{{ b.aantal_besteld|naar_besteleenheden(product) }} {{ product|besteleenheid_naam }}{% if info.factor > 1 %} ({{ b.aantal_besteld }} {{ product.eenheid }}){% endif %} &middot; bestelling #{{ b.id }}{% if b.referentie %} ({{ b.referentie }}){% endif %} van {{ b.aangemaakt_op|datum_nl }}
+                    &middot; <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}">inboeken</a></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+
+        {# ---------- Barcodes ---------- #}
+        <div class="kaart">
+            <div class="actiebalk">
+                <h2 style="margin:0">Artikelen en barcodes</h2>
+                <a href="{{ url_for('artikel_nieuw', product_id=product.id) }}" style="font-size:0.82rem">Artikel toevoegen &rarr;</a>
+            </div>
+            {% if info.artikelen %}
+            <ul class="info-opsomming">
+                {% for a in info.artikelen %}
+                <li>
+                    <a href="{{ url_for('artikel_bewerken', artikel_id=a.id) }}"><strong>{{ a.naam }}</strong></a>
+                    <span class="tekst-zacht">&middot; {{ a.aantal_per_verpakking }} {{ product.eenheid }}{% if a.inkoopprijs %} voor {{ euro(a.inkoopprijs) }} ({{ euro(per_eenheid(a)) }} per {{ product.eenheid }}){% endif %}{% if a.leverancier_naam %} &middot; {{ a.leverancier_naam }}{% endif %}</span>
+                    <br><code>{{ a.ean or '—' }}</code>{% if a.ean_omverpakking %} <span class="tekst-zacht">&middot; doos ({{ a.per_omverpakking }}&times;)</span> <code>{{ a.ean_omverpakking }}</code>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="leeg" style="margin:0">Nog geen barcodes. Voeg een artikel toe om het later met de handterminal te kunnen scannen.</p>
+            {% endif %}
+        </div>
+
+        {# ---------- Tellingen ---------- #}
+        <div class="kaart">
+            <h2>Laatste tellingen</h2>
+            {% if info.tellingen %}
+            <div class="tabel-wrap">
+                <table>
+                    <thead><tr><th>Datum</th><th class="kolom-breed" style="text-align:right">Voor</th><th style="text-align:right">Geteld</th><th style="text-align:right">Verkocht</th><th class="kolom-breed" style="text-align:right">Omzet</th></tr></thead>
+                    <tbody>
+                        {% for t in info.tellingen %}
+                        <tr>
+                            <td style="white-space:nowrap"><a href="{{ url_for('telling_detail', telling_id=t.id) }}">{{ t.datum[:10]|datum_kort }}</a></td>
+                            <td class="kolom-breed" style="text-align:right">{{ t.voorraad_voor }}</td>
+                            <td style="text-align:right">{{ t.geteld_aantal }}</td>
+                            <td style="text-align:right"><strong>{{ t.verkocht }}</strong></td>
+                            <td class="kolom-breed" style="text-align:right">{{ euro(t.verkocht * t.verkoopprijs) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="leeg" style="margin:0">Nog niet geteld.</p>
+            {% endif %}
+        </div>
+    </div>
 </div>
 {% include "_boeking_formulier_script.html" %}
 {% endblock %}

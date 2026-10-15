@@ -1,7 +1,9 @@
 """QR-codes en schaplabels: scannen, de landingspagina, zoeken en de label-PDF's."""
 
-from flask import Response, flash, jsonify, redirect, render_template, request, url_for
+from flask import Response, flash, jsonify, redirect, render_template, request, session, url_for
 
+import barcodes
+import productinfo
 import qr
 from database import get_db
 from derving import DERVING_REDENEN
@@ -103,8 +105,45 @@ def register_routes(app):
             (product_id,),
         ).fetchall()
         return render_template(
-            "product_detail.html", product=product, mutaties=mutaties, derving_redenen=DERVING_REDENEN
+            "product_detail.html",
+            product=product,
+            mutaties=mutaties,
+            derving_redenen=DERVING_REDENEN,
+            info=productinfo.productinfo(db, product),
+            leeftijd=productinfo.leeftijd,
+            per_eenheid=barcodes.per_eenheid,
         )
+
+    @app.route("/producten/<int:product_id>/verkoop")
+    def product_detail_verkoop(product_id):
+        """Het blok 'Verkoop en verwachting' van de productpagina: apart opgehaald, want het voorspelmodel rekent op de
+        server soms enkele seconden."""
+        db = get_db()
+        product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+        if product is None:
+            return ""
+        try:
+            verkoop = productinfo.verkoopinfo(db, product_id)
+        except Exception as fout:  # het blok mag de productpagina nooit stuk maken
+            print(f"[productpagina] verkoop van {product_id} mislukt: {fout}")
+            verkoop = None
+        return render_template("_product_verkoop.html", product=product, verkoop=verkoop)
+
+    @app.route("/producten/<int:product_id>/melden", methods=["POST"])
+    def product_melden(product_id):
+        """'Op de bestellijst': net als de QR-code op het schaplabel, maar dan vanaf de productpagina."""
+        db = get_db()
+        product = db.execute("SELECT id, naam FROM producten WHERE id = ?", (product_id,)).fetchone()
+        if product is None:
+            flash("Product niet gevonden.", "error")
+            return redirect(url_for("producten_lijst"))
+        db.execute(
+            "INSERT INTO bestellijst_meldingen (product_id, tekst, bron, aangemaakt_op) VALUES (?, ?, 'productpagina', ?)",
+            (product_id, f"Gemeld door {session.get('gebruiker_naam') or 'onbekend'}", now_str()),
+        )
+        db.commit()
+        flash(f"'{product['naam']}' staat op de bestellijst.", "success")
+        return redirect(url_for("product_detail", product_id=product_id))
 
     @app.route("/producten/<int:product_id>/label.pdf")
     def product_label_pdf(product_id):

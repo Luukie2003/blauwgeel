@@ -91,6 +91,8 @@ GEBRUIK_NIET_LOGGEN = {
     "status_pagina",
     # Een barcode opzoeken vanuit de app op de handterminal (JSON): geen paginabezoek.
     "api_barcode",
+    # Het blok 'Verkoop en verwachting' van de productpagina (apart opgehaald).
+    "product_detail_verkoop",
     # Delen van een pagina die na het laden apart worden opgehaald (zie data-lazy-bron in gedeeld.js), en het
     # voorverwarmen van het voorspelmodel: dat is geen bezoek aan een pagina.
     "dashboard_omzettrend",
@@ -220,6 +222,8 @@ SECTIE_ENDPOINTS = {
         "product_actief_wisselen",
         "product_zoeken",
         "product_detail",
+        "product_detail_verkoop",
+        "product_melden",
         "product_snel_toevoegen",
         "product_label_pdf",
         "producten_labels_pdf",

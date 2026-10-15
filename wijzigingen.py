@@ -6,8 +6,18 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.48.0"
+HUIDIGE_VERSIE = "1.49.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.49.0",
+        "datum": "16 oktober 2026",
+        "punten": [
+            "De productpagina (wat je ziet als je een product zoekt of aanklikt) is flink uitgebreid: kerncijfers bovenaan (voorraad, ook in kratten; verkoopprijs; marge voor beheerders; wanneer het laatst geteld is), de verkoop per week met een grafiekje van de laatste 12 weken, de verwachting voor de komende 7 dagen en hoe lang je met de voorraad doet, met een besteladvies als het krap wordt.",
+            "Ook op de productpagina: prijzen en geplande prijswijzigingen, de laatste prijswijzigingen, inkoop en voorraadwaarde, de leverancier met besteldagen, wat er al besteld is (met een knop om het in te boeken), wanneer het laatst binnenkwam, de barcodes, de laatste tellingen en de derving van de afgelopen 3 maanden. Wordt iets al weken niet verkocht, dan staat dat erbij.",
+            "Nieuwe knop 'Op de bestellijst' op de productpagina, net als de QR-code op het schaplabel.",
+            "Op een breed scherm staat de informatie links en het boeken rechts; op de handterminal staat het boeken bovenaan.",
+        ],
+    },
     {
         "versie": "1.48.0",
         "datum": "15 oktober 2026",
@@ -960,7 +970,7 @@ MODULES = [
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.11.0", "sinds": "0.4.0", "laatst": "1.47.0",
      "inhoud": "Bestellijst (ook per leverancier), leveranciers, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, koud zetten, boodschappenlijst"},
-    {"naam": "Producten & prijzen", "versie": "1.13.0", "sinds": "0.1.0", "laatst": "1.48.0",
+    {"naam": "Producten & prijzen", "versie": "1.14.0", "sinds": "0.1.0", "laatst": "1.49.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
     {"naam": "Geld (kassa & kluis)", "versie": "1.4.0", "sinds": "1.0.0", "laatst": "1.45.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
