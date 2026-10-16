@@ -370,7 +370,7 @@ def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
                 "waarnemingen": aantal_waarnemingen,
                 "weinig_data": aantal_waarnemingen < 3,
                 "per_dag": per_dag,
-                "snelheid": snel,  # verwachte verkoop op een gewone open dag (drukte 1), zie koud_zetten
+                "snelheid": snel,  # verwachte verkoop op een gewone open dag (drukte 1)
             }
         )
     volgorde = {"urgent": 0, "let_op": 1, "ok": 2}
@@ -1026,50 +1026,3 @@ def vat_terugblik_samen(perioden):
         "meer_verkocht": sum(1 for p in met_pct if p["pct"] > 15),
         "minder_verkocht": sum(1 for p in met_pct if p["pct"] < -15),
     }
-
-
-# ---------------------------------------------------------------------------
-# Koud zetten voor de eerstvolgende verkoopdag
-# ---------------------------------------------------------------------------
-
-KOUD_CATEGORIEEN = ("Bier", "Fris", "Voorgemixte Blik", "Wijn")
-NIET_KOUD_EENHEDEN = ("fust", "glas", "pitcher")
-KOUD_MARGE = 1.25  # een kwart extra koud, zodat je niet halverwege hoeft bij te vullen
-
-
-def koud_zetten(db, nu=None):
-    """Voor de eerstvolgende verkoopdag (vandaag of morgen): per drankje hoeveel er die dag waarschijnlijk wordt verkocht
-    en hoeveel je daarom koud zet (een kwart extra, nooit meer dan er op voorraad is). None als er vandaag of morgen
-    geen verkoopdag is of er nog geen prognose kan worden gemaakt."""
-    nu = nu or datetime.now()
-    prognose = maak_prognose(db, dagen=2, nu=nu)
-    if not prognose["beschikbaar"]:
-        return None
-    morgen = (nu - timedelta(hours=DAG_BEGIN_UUR)).date() + timedelta(days=1)
-    dag = next((d for d in prognose["dagen_overzicht"] if d["open"] and d["drukte"] > 0 and d["datum"] <= morgen), None)
-    if dag is None:
-        return None
-    regels = []
-    for p in prognose["producten"]:
-        product = p["product"]
-        if product["categorie"] not in KOUD_CATEGORIEEN or (product["eenheid"] or "").lower() in NIET_KOUD_EENHEDEN:
-            continue
-        verwacht = p.get("snelheid", 0.0) * dag["drukte"]
-        nodig = math.ceil(verwacht * KOUD_MARGE - 1e-9)
-        if verwacht < 0.5 or nodig < 1:
-            continue
-        factor = max(1, product["besteleenheid_factor"] or 1)
-        koud = min(nodig, max(0, product["voorraad"]))
-        regels.append(
-            {
-                "product": product,
-                "verwacht": verwacht,
-                "koud": koud,
-                "te_weinig": koud < nodig,
-                "hele": koud // factor if factor > 1 else 0,
-                "los": koud % factor if factor > 1 else koud,
-                "besteleenheid": product["besteleenheid"] if factor > 1 else None,
-            }
-        )
-    regels.sort(key=lambda r: (-r["koud"], r["product"]["naam"].lower()))
-    return {"dag": dag, "vandaag": dag["datum"] < morgen, "regels": regels}

@@ -47,8 +47,6 @@
 {% if sectie_toegang.voorraad %}
 {# De kaart 'Thuiswedstrijd' (komt er alleen als er de komende dagen een thuiswedstrijd is): zie dashboard_wedstrijddag. #}
 <div data-lazy-bron="{{ url_for('dashboard_wedstrijddag') }}"></div>
-{# De kaart 'Koud zetten' (alleen op de dag voor en de dag van een verkoopdag): zie dashboard_koud_zetten. #}
-<div data-lazy-bron="{{ url_for('dashboard_koud_zetten') }}"></div>
 {% endif %}
 
 <div class="statgrid">

@@ -97,7 +97,6 @@ GEBRUIK_NIET_LOGGEN = {
     # voorverwarmen van het voorspelmodel: dat is geen bezoek aan een pagina.
     "dashboard_omzettrend",
     "dashboard_wedstrijddag",
-    "dashboard_koud_zetten",
     "tellingen_cijfers",
     "bestellijst_voorspeld",
     "prognose_resultaat",
@@ -257,7 +256,6 @@ SECTIE_ENDPOINTS = {
         "bestellijst",
         "bestellijst_voorspeld",
         "dashboard_wedstrijddag",
-        "dashboard_koud_zetten",
         "prognose_pagina",
         "prognose_resultaat",
         "voorspelling_opwarmen",

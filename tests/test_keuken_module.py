@@ -1,11 +1,8 @@
-"""De keuken als eigen module (tellen, inboeken, prijzen, apart van de gewone telling) en het koud-zet-advies."""
-
-from datetime import datetime
+"""De keuken als eigen module (tellen, inboeken, prijzen, apart van de gewone telling)."""
 
 from conftest import stel_csrf_token_in as _csrf
 from test_secties_rechten import _login, _maak_vrijwilliger
 
-import voorspelling
 from helpers import bereken_omzet_en_kassa
 from keukenbeheer import boek_keuken_in, verwerk_keuken_telling
 from marge import bereken_marge
@@ -84,55 +81,7 @@ def test_vrijwilliger_met_keuken_mag_tellen_maar_geen_prijzen(client, db):
     assert 'href="/keuken/prijzen"' not in client.get("/keuken/tellen").data.decode()
 
 
-# ---------- Koud zetten ----------
-
-
-def _nep_prognose(monkeypatch, dagen, producten):
-    uitkomst = {"beschikbaar": True, "dagen_overzicht": dagen, "producten": producten}
-    monkeypatch.setattr(voorspelling, "maak_prognose", lambda db, **kwargs: uitkomst)
-
-
-def _product(naam, categorie="Bier", eenheid="Fles", voorraad=100, factor=24, besteleenheid="Krat"):
-    return {"naam": naam, "categorie": categorie, "eenheid": eenheid, "voorraad": voorraad,
-            "besteleenheid_factor": factor, "besteleenheid": besteleenheid}
-
-
-def test_koud_zetten_voor_de_volgende_verkoopdag(db, monkeypatch):
-    nu = datetime(2026, 10, 9, 18, 0)  # vrijdagavond
-    zaterdag = {"datum": datetime(2026, 10, 10).date(), "open": True, "drukte": 1.5, "weekdag": "zaterdag",
-                "wedstrijden": 1, "training": False}
-    _nep_prognose(monkeypatch, [{"datum": nu.date(), "open": False, "drukte": 0.0}, zaterdag], [
-        {"product": _product("Hertog Jan"), "snelheid": 40.0},           # 60 verwacht -> 75 koud = 3 krat + 3
-        {"product": _product("Cola", "Fris", voorraad=10), "snelheid": 10.0},  # 15 verwacht, maar 10 op voorraad
-        {"product": _product("Fust HJ", eenheid="Fust", factor=1, besteleenheid=None), "snelheid": 1.0},
-        {"product": _product("Chips", "Chips"), "snelheid": 10.0},
-        {"product": _product("Zelden", "Fris"), "snelheid": 0.2},
-    ])
-
-    advies = voorspelling.koud_zetten(db, nu)
-
-    assert not advies["vandaag"] and advies["dag"]["weekdag"] == "zaterdag"
-    regels = {r["product"]["naam"]: r for r in advies["regels"]}
-    assert set(regels) == {"Hertog Jan", "Cola"}  # geen fust, geen chips, niet wat bijna niet verkoopt
-    assert (regels["Hertog Jan"]["koud"], regels["Hertog Jan"]["hele"], regels["Hertog Jan"]["los"]) == (75, 3, 3)
-    assert regels["Cola"]["koud"] == 10 and regels["Cola"]["te_weinig"]
-
-
-def test_geen_koud_zetten_zonder_verkoopdag_vandaag_of_morgen(db, monkeypatch):
-    nu = datetime(2026, 10, 12, 18, 0)  # maandag; woensdag is te ver weg
-    _nep_prognose(monkeypatch, [{"datum": datetime(2026, 10, 14).date(), "open": True, "drukte": 1.0}],
-                  [{"product": _product("Hertog Jan"), "snelheid": 40.0}])
-    assert voorspelling.koud_zetten(db, nu) is None
-
-
-def test_de_kaart_op_het_overzicht(ingelogde_client, monkeypatch):
-    monkeypatch.setattr("routes.dashboard.koud_zetten", lambda db: {
-        "dag": {"weekdag": "zaterdag", "wedstrijden": 2, "training": False}, "vandaag": False,
-        "regels": [{"product": {"naam": "Hertog Jan", "eenheid": "Fles"}, "verwacht": 60.0, "koud": 75, "te_weinig": False,
-                    "hele": 3, "los": 3, "besteleenheid": "Krat"}],
-    })
-    tekst = ingelogde_client.get("/dashboard/koud-zetten").data.decode()
-    assert "Koud zetten voor morgen (zaterdag)" in tekst and "3 krat + 3" in tekst
-    assert 'data-lazy-bron="/dashboard/koud-zetten"' in ingelogde_client.get("/").data.decode()
-    monkeypatch.setattr("routes.dashboard.koud_zetten", lambda db: None)
-    assert ingelogde_client.get("/dashboard/koud-zetten").data.decode() == ""
+def test_koud_zetten_is_weg(ingelogde_client):
+    """Er is geen koelcel: het koud-zet-advies staat niet meer op het overzicht en de handterminal."""
+    assert "koud-zetten" not in ingelogde_client.get("/").data.decode()
+    assert ingelogde_client.get("/dashboard/koud-zetten").status_code == 404

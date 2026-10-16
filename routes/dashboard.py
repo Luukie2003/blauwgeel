@@ -30,7 +30,7 @@ from helpers import (
 from helpers.tijd import vandaag_amsterdam
 from helpers.wedstrijden import OVERIG_TEAM, agenda_teams, voeg_thuiswedstrijd_toe
 from pdf import periode_verkoop_pdf
-from voorspelling import koud_zetten, maak_prognose
+from voorspelling import maak_prognose
 from wijzigingen import HUIDIGE_VERSIE, MODULES, MODULES_UITLEG, WIJZIGINGEN
 
 _WEEKDAGEN = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
@@ -200,20 +200,6 @@ def register_routes(app):
         """De kaart 'Omzettrend' van het dashboard. Apart opgehaald, zodat het dashboard niet wacht op de weekcijfers
         (die komen uit het voorspelmodel en dat rekent soms enkele seconden)."""
         return render_template("_dashboard_omzettrend.html", omzet_trend=bereken_omzet_trend(get_db()))
-
-    @app.route("/dashboard/koud-zetten")
-    def dashboard_koud_zetten():
-        """De kaart 'Koud zetten' van het overzicht en de handterminal: op de dag voor een verkoopdag en op de dag zelf
-        hoeveel van elk drankje er koud moet. Leeg als er vandaag of morgen geen verkoopdag is. Apart opgehaald omdat het
-        voorspelmodel soms enkele seconden rekent."""
-        try:
-            advies = koud_zetten(get_db())
-        except Exception as fout:  # de kaart mag het overzicht nooit stuk maken
-            print(f"[koud zetten] prognose mislukt: {fout}")
-            return ""
-        if not advies or not advies["regels"]:
-            return ""
-        return render_template("_dashboard_koud_zetten.html", advies=advies)
 
     @app.route("/dashboard/wedstrijddag")
     def dashboard_wedstrijddag():

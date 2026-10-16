@@ -61,10 +61,6 @@
 </div>
 {% endif %}
 
-{% if sectie_toegang.voorraad %}
-{# Op de dag voor en de dag van een verkoopdag: wat er koud moet (zie dashboard_koud_zetten). #}
-<div data-lazy-bron="{{ url_for('dashboard_koud_zetten') }}"></div>
-{% endif %}
 
 <div class="pda-menu">
     {% if sectie_toegang.voorraad %}

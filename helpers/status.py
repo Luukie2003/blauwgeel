@@ -204,7 +204,7 @@ def bouw_taken(db, rol, secties, gebruiker_id=None):
                     f"{e['naam']} {wanneer}",
                     ("Rustige activiteit" if e["soort"] == "rustig" else "Evenement")
                     + (f" van {e['groep']}" if e["groep"] and e["groep"].lower() not in e["naam"].lower() else "")
-                    + ": telt mee in de prognose en het koud zetten",
+                    + ": telt mee in de prognose",
                     "agenda",
                 )
             )
