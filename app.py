@@ -156,9 +156,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         if not toestand["actief"]:
             return None
         g.noodstop = toestand
-        if session.get("gebruiker_id") and noodstop.is_eigenaar(db, session["gebruiker_id"]):
-            return None  # de eigenaar werkt gewoon door (vereis_login controleert de sessie nog)
-        session.clear()  # wie anders nog een sessie had, is bij het afsluiten al uitgelogd
+        # De tv-schermen gaan altijd op slot, ook als er op dat toestel iemand (zelfs de eigenaar) is ingelogd: een
+        # scherm dat via een ingelogde browser of de tablet-app draait, moet net zo goed het vergrendel-scherm tonen.
         if request.endpoint in KIOSK_SCHERMEN:
             antwoord = app.make_response(render_template("noodstop_tv.html", toestand=toestand))
             antwoord.headers["Cache-Control"] = "no-store"
@@ -166,6 +165,14 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         if request.endpoint in KIOSK_POLLS:
             # Een scherm dat nog de oude pagina toont, herlaadt bij een andere versie en krijgt dan het vergrendel-scherm.
             return jsonify({"versie": "noodstop", "noodstop": True, "meldingen": [], "laatste": 0, "duur": 12})
+        # De eigenaar werkt gewoon door, maar alleen met een sessie die na het afsluiten nog geldig is (zie
+        # noodstop.vergrendel: sessie_versie omhoog). Een oude sessie van de eigenaar op een ander toestel telt niet,
+        # ook niet op een publieke pagina waar vereis_login de sessie verder niet controleert.
+        if session.get("gebruiker_id") and noodstop.is_eigenaar(db, session["gebruiker_id"]):
+            rij = db.execute("SELECT sessie_versie FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)).fetchone()
+            if rij is not None and session.get("sessie_versie", 0) == (rij["sessie_versie"] or 0):
+                return None
+        session.clear()  # wie anders nog een sessie had, is bij het afsluiten al uitgelogd
         if request.path.startswith("/api/") or is_app_api():
             return jsonify({"fout": "noodstop", "melding": "De site is tijdelijk afgesloten."}), 503
         antwoord = app.make_response((render_template("noodstop_afgesloten.html"), 503))

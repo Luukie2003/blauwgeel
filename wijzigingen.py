@@ -6,8 +6,16 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.52.0"
+HUIDIGE_VERSIE = "1.52.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.52.1",
+        "datum": "17 oktober 2026",
+        "punten": [
+            "Noodstop: de tv-schermen gaan nu altijd op slot, ook als ze draaien via een browser of de tablet-app waar iemand (zelfs de eigenaar) is ingelogd.",
+            "Noodstop: alleen het venster waarin de eigenaar de noodstop indrukte blijft werken; een oudere sessie van de eigenaar op een ander toestel is ook uitgelogd.",
+        ],
+    },
     {
         "versie": "1.52.0",
         "datum": "16 oktober 2026",
@@ -1042,6 +1050,6 @@ MODULES = [
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
-    {"naam": "Techniek & beveiliging", "versie": "1.7.0", "sinds": "1.1.0", "laatst": "1.52.0",
+    {"naam": "Techniek & beveiliging", "versie": "1.7.1", "sinds": "1.1.0", "laatst": "1.52.1",
      "inhoud": "Geautomatiseerde tests, beveiligingsheaders, bereikbaarheidscontrole, snelheid"},
 ]

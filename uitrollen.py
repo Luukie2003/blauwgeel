@@ -31,7 +31,7 @@ MAX_LEEFTIJD_SECONDEN = 300
 GIT_TIMEOUT_SECONDEN = 60
 PIP_TIMEOUT_SECONDEN = 240
 # De rooktest (rooktest.py) opent na het ophalen alle pagina's met de nieuwe code en een kopie van de echte database.
-ROOKTEST_TIMEOUT_SECONDEN = 150
+ROOKTEST_TIMEOUT_SECONDEN = 200  # zet_live.py wacht zelf 300 s op het antwoord
 PAKKETTENBESTAND = "requirements-vast.txt"
 # Wijzigt een van deze bestanden, dan moeten de pakketten op de server worden bijgewerkt.
 PAKKETBESTANDEN = ("requirements.txt", PAKKETTENBESTAND)

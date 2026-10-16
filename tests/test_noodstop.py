@@ -185,3 +185,26 @@ def test_live_zetten_blijft_mogelijk_tijdens_een_noodstop(app, afgesloten, db, m
     uitkomst = rooktest.draai(app.config["DATABASE"])
     assert uitkomst["afgerond"] and uitkomst["fouten"] == []
     assert noodstop.is_actief(db)  # de echte site blijft dicht
+
+
+# ---------- De schermen gaan altijd op slot ----------
+
+
+def test_schermen_ook_op_slot_als_de_eigenaar_daar_is_ingelogd(afgesloten, ingelogde_client):
+    """Een tv-scherm dat via een ingelogde browser (of de tablet-app met de code van de eigenaar) draait."""
+    for url in ("/kiosk/scherm", "/kiosk/prijzen", "/kiosk/tv"):
+        assert "Systeem <span>vergrendeld</span>" in ingelogde_client.get(url).data.decode(), url
+    assert ingelogde_client.get("/kiosk/prijzen/versie").get_json()["versie"] == "noodstop"
+    assert ingelogde_client.get("/beheer/noodstop").status_code == 200  # de eigenaar kan zelf wel verder
+
+
+def test_een_oude_sessie_van_de_eigenaar_komt_er_niet_meer_in(app, db):
+    """Op een tweede toestel ingelogd als eigenaar, daarna de noodstop vanaf het eerste: het tweede is uitgelogd, ook
+    op publieke pagina's."""
+    eerste, tweede = app.test_client(), app.test_client()
+    for client in (eerste, tweede):
+        assert client.post("/login", data={"naam": "admin", "wachtwoord": WACHTWOORD, "csrf_token": _csrf(client)}).status_code == 302
+    _dicht(eerste)
+    assert tweede.get("/club-van-20/doe-mee").status_code == 503
+    assert "Tijdelijk afgesloten" in tweede.get("/").data.decode()
+    assert eerste.get("/").status_code == 200

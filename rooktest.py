@@ -27,16 +27,18 @@ MAX_FOUTEN = 10
 # Pagina's met een nummer in het adres (een product, een telling, ...) opent de rooktest met echte nummers uit de
 # database: per soort een of een paar voorbeelden. Een nummer dat niet bestaat geeft hooguit een doorverwijzing.
 VOORBEELDEN = {
-    # Van elke categorie het eerste actieve product, plus een fust, een gearchiveerd product, een product met barcodes
-    # en het product dat het vaakst geteld is: zo komen de verschillende soorten productpagina's langs.
-    "product_id": """SELECT id FROM (
-            SELECT MIN(id) AS id FROM producten WHERE COALESCE(gearchiveerd, 0) = 0 AND actief = 1 GROUP BY categorie
-            UNION SELECT MIN(id) FROM producten WHERE glazen_per_fust > 0
-            UNION SELECT MIN(id) FROM producten WHERE gearchiveerd = 1
-            UNION SELECT MIN(product_id) FROM artikelen
-            UNION SELECT product_id FROM (SELECT product_id, COUNT(*) AS n FROM telling_regels GROUP BY product_id
+    # Zes soorten productpagina's: het product dat het vaakst geteld is, een fust, een gearchiveerd product, een product
+    # met barcodes, een keukenproduct en het eerste gewone actieve product. Meer maakt de rooktest alleen langzamer
+    # (elke productpagina laat ook het voorspelmodel rekenen).
+    "product_id": """SELECT DISTINCT id FROM (
+            SELECT product_id AS id FROM (SELECT product_id, COUNT(*) AS n FROM telling_regels GROUP BY product_id
                                           ORDER BY n DESC LIMIT 1)
-        ) WHERE id IS NOT NULL ORDER BY id LIMIT 12""",
+            UNION ALL SELECT MIN(id) FROM producten WHERE glazen_per_fust > 0
+            UNION ALL SELECT MIN(id) FROM producten WHERE gearchiveerd = 1
+            UNION ALL SELECT MIN(product_id) FROM artikelen
+            UNION ALL SELECT MIN(id) FROM producten WHERE categorie = 'Keuken'
+            UNION ALL SELECT MIN(id) FROM producten WHERE COALESCE(gearchiveerd, 0) = 0 AND actief = 1
+        ) WHERE id IS NOT NULL LIMIT 6""",
     "telling_id": "SELECT id FROM tellingen ORDER BY datum DESC, id DESC LIMIT 2",
     "bestelling_id": "SELECT id FROM bestellingen ORDER BY id DESC LIMIT 2",
     "artikel_id": "SELECT id FROM artikelen ORDER BY id LIMIT 1",
