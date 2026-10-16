@@ -98,6 +98,16 @@ KOLOM_MIGRATIES = [
     ("evenementen", "groep", "TEXT"),
     # Verkoopdagen (1.46.1): weekdagen waarop de kantine alleen open is als er een thuiswedstrijd is (bijv. zaterdag).
     ("instellingen", "verkoopdagen_wedstrijd", "TEXT NOT NULL DEFAULT ''"),
+    # De noodstop (zie noodstop.py): de hele site en de schermen afsluiten. Alleen de eigenaar (gebruikers.eigenaar)
+    # kan afsluiten en weer openen; openen vraagt ook de noodcode (alleen als hash bewaard).
+    ("instellingen", "noodstop_actief", "INTEGER NOT NULL DEFAULT 0"),
+    ("instellingen", "noodstop_sinds", "TEXT"),
+    ("instellingen", "noodstop_door", "TEXT"),
+    ("instellingen", "noodstop_reden", "TEXT"),
+    ("instellingen", "noodstop_code_hash", "TEXT"),
+    ("instellingen", "noodstop_pogingen", "INTEGER NOT NULL DEFAULT 0"),
+    ("instellingen", "noodstop_geblokkeerd_tot", "TEXT"),
+    ("gebruikers", "eigenaar", "INTEGER NOT NULL DEFAULT 0"),
     # Kassa tellen (1.45.0): de kaartbetalingen uit het PayPal-overzicht, naast het contante bedrag.
     ("kassa_tellingen", "kaart_omzet", "REAL NOT NULL DEFAULT 0"),
     # Hoeveel glazen er in een prijsoptie gaan (bijv. een pitcher), voor de kostprijs in het rapport Marge.
@@ -655,9 +665,24 @@ def _m2_opmerking_none_leegmaken(db):
     db.execute("UPDATE producten SET opmerking = NULL WHERE TRIM(opmerking) IN ('None', '')")
 
 
+def _m3_eigenaar_aanwijzen(db):
+    """De noodstop (noodstop.py) mag alleen door de eigenaar worden bediend. Dat wordt het beheerdersaccount 'Luuk'
+    (wie de site beheert), of als dat er niet is het oudste actieve beheerdersaccount. Veranderen kan daarna alleen op
+    de server: python3 noodstop.py eigenaar NAAM."""
+    if db.execute("SELECT 1 FROM gebruikers WHERE eigenaar = 1").fetchone():
+        return
+    rij = db.execute(
+        """SELECT id FROM gebruikers WHERE rol = 'beheerder' AND actief = 1
+           ORDER BY (naam = 'Luuk' COLLATE NOCASE) DESC, id LIMIT 1"""
+    ).fetchone()
+    if rij:
+        db.execute("UPDATE gebruikers SET eigenaar = 1 WHERE id = ?", (rij[0],))
+
+
 GENUMMERDE_MIGRATIES = [
     (1, _m1_tapbier_in_de_omzet),
     (2, _m2_opmerking_none_leegmaken),
+    (3, _m3_eigenaar_aanwijzen),
 ]
 
 

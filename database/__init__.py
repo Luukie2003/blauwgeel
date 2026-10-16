@@ -142,6 +142,11 @@ def init_db(app, admin_wachtwoord=None):
                     datetime.now().strftime("%Y-%m-%d %H:%M"),
                 ),
             )
+            # Het eerste beheerdersaccount is ook de eigenaar van de noodstop (zie noodstop.py).
+            db.execute(
+                "UPDATE gebruikers SET eigenaar = 1 WHERE naam = ? AND NOT EXISTS (SELECT 1 FROM gebruikers WHERE eigenaar = 1)",
+                (STANDAARD_GEBRUIKER,),
+            )
             db.commit()
 
 

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+{# Het vergrendel-scherm op de tv-schermen tijdens een noodstop (zie noodstop.py en noodstop_bewaken in app.py).
+   Staat los van de rest van de site en laat bewust niets zien over waarom: alleen dat het systeem veilig dicht is.
+   Vraagt elke 15 seconden of de noodstop nog actief is, en laadt het gewone scherm weer zodra de site open is. #}
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Systeem vergrendeld</title>
+    <style>
+        :root {
+            --nacht: #0b1530;
+            --navy: #1c2b4a;
+            --geel: #f5c400;
+            --wit: #f3f5fb;
+            --zacht: #a9b3cc;
+        }
+        * { box-sizing: border-box; margin: 0; }
+        html, body { height: 100%; }
+        body {
+            background: radial-gradient(ellipse at 50% 38%, #22345c 0%, var(--navy) 38%, var(--nacht) 100%);
+            color: var(--wit);
+            font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Een fijn raster en een langzaam scannende lijn: rustig, maar je ziet dat het scherm leeft. */
+        .raster {
+            position: fixed; inset: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(245, 196, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(245, 196, 0, 0.05) 1px, transparent 1px);
+            background-size: 4vw 4vw;
+            mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+        }
+        .scan {
+            position: fixed; left: 0; right: 0; height: 18vh; pointer-events: none;
+            background: linear-gradient(180deg, transparent, rgba(245, 196, 0, 0.07), transparent);
+            animation: scan 7s linear infinite;
+        }
+        @keyframes scan { from { top: -20vh; } to { top: 110vh; } }
+
+        .boven {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 3vh 4vw 0;
+            color: var(--zacht);
+            font-size: 1.6vw;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .status { display: flex; align-items: center; gap: 0.8vw; color: var(--geel); font-weight: 700; }
+        .status-stip {
+            width: 1vw; height: 1vw; border-radius: 50%; background: var(--geel);
+            box-shadow: 0 0 0 0 rgba(245, 196, 0, 0.7); animation: stip 2s infinite;
+        }
+        @keyframes stip {
+            0% { box-shadow: 0 0 0 0 rgba(245, 196, 0, 0.6); }
+            70% { box-shadow: 0 0 0 1.2vw rgba(245, 196, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 196, 0, 0); }
+        }
+
+        main {
+            flex: 1;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; gap: 2.2vh; padding: 0 6vw;
+        }
+        .schild-wrap { position: relative; width: 16vw; height: 16vw; margin-bottom: 1vh; }
+        .ring {
+            position: absolute; inset: 0; border-radius: 50%;
+            border: 0.35vw solid rgba(245, 196, 0, 0.55);
+            animation: ring 3.2s ease-out infinite;
+        }
+        .ring:nth-child(2) { animation-delay: 1.07s; }
+        .ring:nth-child(3) { animation-delay: 2.14s; }
+        @keyframes ring { from { transform: scale(0.7); opacity: 0.9; } to { transform: scale(1.55); opacity: 0; } }
+        .schild {
+            position: absolute; inset: 12%; border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #ffd84d, var(--geel) 55%, #c99f00);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 1.5vw 4vw rgba(0, 0, 0, 0.45), inset 0 -0.6vw 1.2vw rgba(0, 0, 0, 0.18);
+        }
+        .schild svg { width: 55%; height: 55%; color: var(--navy); }
+
+        h1 { font-size: 5vw; font-weight: 800; letter-spacing: -0.01em; line-height: 1.05; }
+        h1 span { color: var(--geel); }
+        .uitleg { font-size: 2vw; color: var(--zacht); max-width: 62vw; line-height: 1.4; }
+
+        .punten { display: flex; gap: 1.5vw; margin-top: 2vh; flex-wrap: wrap; justify-content: center; }
+        .punt {
+            display: flex; align-items: center; gap: 0.9vw;
+            padding: 1.3vh 1.6vw; border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
+            font-size: 1.5vw;
+        }
+        .punt svg { width: 1.8vw; height: 1.8vw; color: var(--geel); flex-shrink: 0; }
+
+        .onder {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            padding: 0 4vw 3.5vh;
+        }
+        .club { display: flex; align-items: center; gap: 1.2vw; font-size: 1.5vw; color: var(--zacht); }
+        .club img { width: 4.2vw; height: 4.2vw; object-fit: contain; }
+        .club strong { color: var(--wit); display: block; font-size: 1.7vw; }
+        .tijd { text-align: right; }
+        .klok { font-size: 4.6vw; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+        .sinds { font-size: 1.3vw; color: var(--zacht); margin-top: 0.6vh; }
+    </style>
+</head>
+<body>
+    <div class="raster"></div>
+    <div class="scan"></div>
+
+    <div class="boven">
+        <span>Kantinesysteem</span>
+        <span class="status"><span class="status-stip"></span>Vergrendeld</span>
+    </div>
+
+    <main>
+        <div class="schild-wrap" aria-hidden="true">
+            <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+            <div class="schild">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2.5l7.5 3v6c0 4.6-3.2 8.6-7.5 10-4.3-1.4-7.5-5.4-7.5-10v-6z"/>
+                    <rect x="8.6" y="11" width="6.8" height="5.4" rx="1"/>
+                    <path d="M10 11V9.4a2 2 0 0 1 4 0V11"/>
+                </svg>
+            </div>
+        </div>
+        <h1>Systeem <span>vergrendeld</span></h1>
+        <p class="uitleg">Het kantinesysteem is uit voorzorg tijdelijk afgesloten. Alles is veilig opgeslagen; zodra het weer open is, verschijnt hier vanzelf het gewone scherm.</p>
+        <div class="punten">
+            <span class="punt">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l7.5 3v6c0 4.6-3.2 8.6-7.5 10-4.3-1.4-7.5-5.4-7.5-10v-6z"/><path d="M9 12l2 2 4-4"/></svg>
+                Gegevens beveiligd
+            </span>
+            <span class="punt">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M6 2v2"/><path d="M10 2v2"/><path d="M14 2v2"/></svg>
+                De bar blijft gewoon open
+            </span>
+            <span class="punt">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4"/><path d="M12 17h.01"/></svg>
+                Prijzen? Vraag het de bardienst
+            </span>
+        </div>
+    </main>
+
+    <div class="onder">
+        <div class="club">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="">
+            <div><strong>s.v. Blauw-Geel 1915</strong>Kantine Beheer</div>
+        </div>
+        <div class="tijd">
+            <div class="klok" id="klok">--:--</div>
+            {% if toestand.sinds %}<div class="sinds">Vergrendeld sinds {{ toestand.sinds[8:10] }}-{{ toestand.sinds[5:7] }} {{ toestand.sinds[11:16] }}</div>{% endif %}
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        var klok = document.getElementById('klok');
+        function tik() {
+            var nu = new Date();
+            klok.textContent = String(nu.getHours()).padStart(2, '0') + ':' + String(nu.getMinutes()).padStart(2, '0');
+        }
+        tik();
+        setInterval(tik, 1000);
+        // Zodra de noodstop eraf is: het gewone scherm terug (dezelfde pagina opnieuw laden).
+        setInterval(function () {
+            fetch('{{ url_for("noodstop_status") }}', { cache: 'no-store' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) { if (data && data.actief === false) window.location.reload(); })
+                .catch(function () {});
+        }, 15000);
+    })();
+    </script>
+</body>
+</html>

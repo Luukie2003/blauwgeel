@@ -134,6 +134,12 @@ def draai(bron_db):
             return {"afgerond": True, "paginas": 0, "doorverwezen": 0, "fouten": [f"de site start niet: {type(fout).__name__}: {fout}"],
                     "duur": round(time.monotonic() - begin, 1)}
         with sqlite3.connect(kopie) as db:
+            # Staat de noodstop aan (zie noodstop.py), dan zou elke pagina 'afgesloten' geven: in deze kopie gaat hij
+            # uit, zodat een herstel nog live kan. De echte site blijft gewoon dicht.
+            try:
+                db.execute("UPDATE instellingen SET noodstop_actief = 0")
+            except sqlite3.OperationalError:
+                pass
             db.row_factory = sqlite3.Row
             beheerder = db.execute(
                 "SELECT id, naam, rol, secties, sessie_versie FROM gebruikers WHERE rol = 'beheerder' AND actief = 1 ORDER BY id LIMIT 1"

@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.51.0"
+HUIDIGE_VERSIE = "1.52.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.52.0",
+        "datum": "16 oktober 2026",
+        "punten": [
+            "Nieuw: Beheer → Noodstop, alleen voor de eigenaar van de site. Met één knop (en je wachtwoord) sluit je bij een vermoeden van een hack alles af: iedereen wordt overal uitgelogd, alleen de eigenaar kan nog inloggen, en de publieke pagina's, de apps en 'wachtwoord vergeten' gaan dicht.",
+            "De tv-schermen tonen tijdens een noodstop een vergrendel-scherm ('Systeem vergrendeld', met de klok, dat de gegevens veilig zijn en dat de bar gewoon open blijft) en springen vanzelf terug zodra alles weer open is.",
+            "Weer openen vraagt het wachtwoord én een aparte noodcode, met een korte wachttijd na te veel foute pogingen. Afsluiten en openen staan in het logboek. Vanaf de server kan het altijd: python3 noodstop.py open.",
+        ],
+    },
     {
         "versie": "1.51.0",
         "datum": "16 oktober 2026",
@@ -1015,7 +1024,7 @@ MODULES = [
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.3.0", "sinds": "1.6.0", "laatst": "1.45.0",
      "inhoud": "Keukenvoorraad met een eigen telling, inboeken en prijzen, en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.18.24", "sinds": "1.10.1", "laatst": "1.44.3",
+    {"naam": "Kantine-tv", "versie": "1.18.25", "sinds": "1.10.1", "laatst": "1.52.0",
      "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
@@ -1025,7 +1034,7 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.0", "sinds": "1.5.0", "laatst": "1.51.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Accounts & rechten", "versie": "1.10.1", "sinds": "0.1.0", "laatst": "1.47.1",
+    {"naam": "Accounts & rechten", "versie": "1.10.2", "sinds": "0.1.0", "laatst": "1.52.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
@@ -1033,6 +1042,6 @@ MODULES = [
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
-    {"naam": "Techniek & beveiliging", "versie": "1.6.1", "sinds": "1.1.0", "laatst": "1.50.0",
+    {"naam": "Techniek & beveiliging", "versie": "1.7.0", "sinds": "1.1.0", "laatst": "1.52.0",
      "inhoud": "Geautomatiseerde tests, beveiligingsheaders, bereikbaarheidscontrole, snelheid"},
 ]

@@ -1,0 +1,87 @@
+{% extends basis_template %}
+{% block titel %}Noodstop{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Bij een vermoeden van een hack of misbruik sluit je hier met één knop de hele site en de tv-schermen af. Alleen
+    jij kunt daarna nog inloggen en de boel weer openen.
+</p>
+
+{% if toestand.actief %}
+<div class="kaart noodstop-kaart noodstop-kaart--dicht">
+    <h2 style="margin-top:0">De site is afgesloten</h2>
+    <p style="margin-top:0">Sinds {{ toestand.sinds|datum_nl }}{% if toestand.door %}, door {{ toestand.door }}{% endif %}.{% if toestand.reden %} Reden: {{ toestand.reden }}{% endif %}</p>
+    <ul class="info-opsomming">
+        <li>Iedereen is uitgelogd; alleen jij kunt inloggen.</li>
+        <li>De tv-schermen tonen het vergrendel-scherm; de publieke pagina's, de apps en &lsquo;wachtwoord vergeten&rsquo; zijn dicht.</li>
+        <li>Back-ups blijven gewoon draaien, en een herstel kun je nog live zetten.</li>
+    </ul>
+    <h3 class="info-kopje">Weer openen</h3>
+    {% if wachten %}
+    <p class="flash flash-error">Te veel foute pogingen. Probeer het over {{ wachten }} minuut/minuten opnieuw.</p>
+    {% else %}
+    <form method="post" action="{{ url_for('noodstop_open') }}" class="formgrid" style="align-items:end"
+          onsubmit="return bevestigEnVerstuur(this, 'De site en de schermen weer openen? Iedereen kan dan weer inloggen.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld" style="margin:0"><label for="open_wachtwoord">Je wachtwoord</label><input type="password" id="open_wachtwoord" name="wachtwoord" autocomplete="current-password" required></div>
+        {% if toestand.code_ingesteld %}
+        <div class="veld" style="margin:0"><label for="open_code">Noodcode</label><input type="password" id="open_code" name="code" autocomplete="off" required></div>
+        {% endif %}
+        <div><button type="submit" class="btn btn-geel">Site weer openen</button></div>
+    </form>
+    {% endif %}
+</div>
+{% else %}
+<div class="kaart noodstop-kaart">
+    <h2 style="margin-top:0">Alles is open</h2>
+    <p style="margin-top:0">Druk je op de noodstop, dan gebeurt dit meteen:</p>
+    <ul class="info-opsomming">
+        <li>Iedereen wordt overal uitgelogd, ook op de handterminal en de tablet. Daarna kan alleen jij nog inloggen.</li>
+        <li>De tv-schermen tonen een vergrendel-scherm (&lsquo;Systeem vergrendeld&rsquo;) tot je de site weer opent.</li>
+        <li>De publieke pagina's (Club van 20, stemmen, de QR-codes), de apps en &lsquo;wachtwoord vergeten&rsquo; gaan dicht.</li>
+        <li>Weer openen kan alleen met je wachtwoord{{ ' en je noodcode' if toestand.code_ingesteld }}.</li>
+    </ul>
+    <form method="post" action="{{ url_for('noodstop_dicht') }}" class="formgrid" style="align-items:end; margin-top:0.8rem"
+          onsubmit="return bevestigEnVerstuur(this, 'Nu de hele site en alle schermen afsluiten? Iedereen wordt uitgelogd.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld" style="margin:0"><label for="reden">Reden <span class="tekst-zacht">(alleen voor jezelf, mag leeg)</span></label><input type="text" id="reden" name="reden" maxlength="200"></div>
+        <div class="veld" style="margin:0"><label for="dicht_wachtwoord">Je wachtwoord</label><input type="password" id="dicht_wachtwoord" name="wachtwoord" autocomplete="current-password" required></div>
+        <div><button type="submit" class="btn noodstop-knop">Noodstop: alles afsluiten</button></div>
+    </form>
+</div>
+{% endif %}
+
+<div class="kaart">
+    <h2 style="margin-top:0">Noodcode</h2>
+    {% if toestand.code_ingesteld %}
+    <p style="margin-top:0">Er is een noodcode ingesteld. Die heb je, naast je wachtwoord, nodig om de site weer te openen. Zo is een gestolen wachtwoord alleen niet genoeg.</p>
+    {% else %}
+    <p class="flash flash-warning" style="margin-top:0">Er is nog geen noodcode. Stel er nu een in: dan is naast je wachtwoord ook de noodcode nodig om de site weer te openen.</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('noodstop_code') }}" class="formgrid" style="align-items:end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld" style="margin:0"><label for="code_wachtwoord">Je wachtwoord</label><input type="password" id="code_wachtwoord" name="wachtwoord" autocomplete="current-password" required></div>
+        {% if toestand.code_ingesteld %}
+        <div class="veld" style="margin:0"><label for="oude_code">Huidige noodcode</label><input type="password" id="oude_code" name="oude_code" autocomplete="off" required></div>
+        {% endif %}
+        <div class="veld" style="margin:0"><label for="code">Nieuwe noodcode <span class="tekst-zacht">(minstens {{ min_code }} tekens)</span></label><input type="password" id="code" name="code" minlength="{{ min_code }}" autocomplete="new-password" required></div>
+        <div class="veld" style="margin:0"><label for="code_herhalen">Nog een keer</label><input type="password" id="code_herhalen" name="code_herhalen" minlength="{{ min_code }}" autocomplete="new-password" required></div>
+        <div><button type="submit" class="btn btn-rand">{{ 'Noodcode veranderen' if toestand.code_ingesteld else 'Noodcode instellen' }}</button></div>
+    </form>
+    <p class="tekst-zacht" style="margin:0.8rem 0 0; font-size:0.82rem">
+        Bewaar de noodcode ergens anders dan je wachtwoord. Kwijt, of kom je er niet meer in? Op de server (een
+        Bash-console op PythonAnywhere) kan het altijd: <code>cd ~/Voorraadbeheer &amp;&amp; python3 noodstop.py open</code>
+        opent de site, <code>python3 noodstop.py code-wissen</code> wist de noodcode.
+    </p>
+</div>
+
+{% if gebeurtenissen %}
+<div class="kaart">
+    <h2 style="margin-top:0">Laatste keren</h2>
+    <ul class="info-opsomming">
+        {% for e in gebeurtenissen %}
+        <li>{{ e.datum|datum_nl }} &middot; {{ e.actie }}{% if e.gebruiker_naam %} <span class="tekst-zacht">&middot; {{ e.gebruiker_naam }}</span>{% endif %}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% endblock %}

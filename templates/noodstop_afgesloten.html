@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+{# Wat iedereen (behalve de eigenaar) ziet tijdens een noodstop: zie noodstop.py en noodstop_bewaken in app.py.
+   Staat los van base.html, zodat er niets van de site (menu, namen, gegevens) op komt. #}
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Tijdelijk afgesloten · Kantine Beheer</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; }
+        body {
+            min-height: 100vh; min-height: 100dvh;
+            display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+            background: radial-gradient(ellipse at 50% 30%, #22345c 0%, #1c2b4a 45%, #0b1530 100%);
+            color: #f3f5fb; font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+        }
+        .kaart {
+            width: 100%; max-width: 30rem; text-align: center;
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 18px; padding: 2.2rem 1.6rem 1.8rem;
+        }
+        .schild {
+            width: 5.5rem; height: 5.5rem; margin: 0 auto 1.2rem; border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #ffd84d, #f5c400 55%, #c99f00);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 0 0.6rem rgba(245, 196, 0, 0.15);
+        }
+        .schild svg { width: 55%; height: 55%; color: #1c2b4a; }
+        h1 { font-size: 1.6rem; margin-bottom: 0.6rem; }
+        p { color: #a9b3cc; line-height: 1.5; }
+        a { color: #f5c400; }
+        .klein { font-size: 0.82rem; margin-top: 1.4rem; }
+        img.logo { width: 2.6rem; height: 2.6rem; object-fit: contain; margin-top: 1.4rem; opacity: 0.85; }
+    </style>
+</head>
+<body>
+    <div class="kaart">
+        <div class="schild" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2.5l7.5 3v6c0 4.6-3.2 8.6-7.5 10-4.3-1.4-7.5-5.4-7.5-10v-6z"/>
+                <rect x="8.6" y="11" width="6.8" height="5.4" rx="1"/>
+                <path d="M10 11V9.4a2 2 0 0 1 4 0V11"/>
+            </svg>
+        </div>
+        <h1>Tijdelijk afgesloten</h1>
+        <p>Kantine Beheer is uit voorzorg even dicht. Alle gegevens zijn veilig. Probeer het later opnieuw.</p>
+        <p class="klein"><a href="{{ url_for('login') }}">Inloggen</a> (alleen voor de beheerder van de site)</p>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="logo">
+    </div>
+</body>
+</html>

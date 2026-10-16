@@ -70,7 +70,20 @@ OPEN_ENDPOINTS = {
     "club_van_20_aanmelden_voorbeeld_stop",
     # De privacyverklaring moet voor iedereen te lezen zijn, ook zonder account.
     "privacyverklaring",
+    # Het vergrendel-scherm op de tv vraagt hier na of de noodstop nog actief is (zie noodstop.py).
+    "noodstop_status",
 }
+
+# Tijdens een noodstop (zie noodstop.py en noodstop_bewaken in app.py) blijven alleen deze bereikbaar voor iedereen:
+# inloggen (dat lukt dan alleen de eigenaar), de statuspagina en het live zetten met handtekening (zodat een herstel
+# nog live kan), en wat het vergrendel-scherm zelf nodig heeft.
+NOODSTOP_ALTIJD_OPEN = {
+    "static", "favicon_ico", "service_worker", "robots_txt", "offline_pagina",
+    "login", "logout", "status_pagina", "uitrollen_endpoint", "noodstop_status",
+}
+# De tv-schermen en hun polls: die krijgen tijdens een noodstop het vergrendel-scherm.
+KIOSK_SCHERMEN = {"kiosk_prijzen_scherm", "kiosk_scherm", "kiosk_tv"}
+KIOSK_POLLS = {"kiosk_prijzen_versie", "kiosk_scherm_versie", "kiosk_tv_versie", "kiosk_welkom"}
 
 # Iedereen moet bij de eerste keer inloggen een eigen 6-cijferige tablet-code
 # instellen (zie tablet_code_instellen in routes/auth.py) -- die code wordt
@@ -93,6 +106,8 @@ GEBRUIK_NIET_LOGGEN = {
     "api_barcode",
     # Het blok 'Verkoop en verwachting' van de productpagina (apart opgehaald).
     "product_detail_verkoop",
+    # Het vergrendel-scherm vraagt elke 15 seconden of de noodstop nog actief is.
+    "noodstop_status",
     # De JSON-adressen voor de app op de handterminal (facturen inboeken): geen paginabezoeken.
     "api_facturen",
     "api_factuur",
@@ -173,6 +188,11 @@ BEHEERDER_ENDPOINTS = {
     "gegevenscontrole",
     # De omzet uit de voorraad naast het afgerekende geld (een tekort kan op diefstal wijzen).
     "kassa_omzet_controle",
+    # De noodstop (zie noodstop.py): de routes controleren zelf nog dat het de eigenaar is.
+    "noodstop_pagina",
+    "noodstop_dicht",
+    "noodstop_open",
+    "noodstop_code",
     "backup_nu",
     "backup_download",
     "backup_herstellen",

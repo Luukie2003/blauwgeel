@@ -6,6 +6,7 @@ from pathlib import Path
 from flask import Flask, flash, g, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 
 import mail
+import noodstop
 import uitrollen as uitrollen_module
 from aanmeldingen import aantal_openstaand
 from bezoeken import TRAAG_MS, soort_bezoek
@@ -66,6 +67,9 @@ from rechten import (  # noqa: F401
     BEHEERDER_ENDPOINTS,
     ENDPOINT_SECTIE,
     GEBRUIK_NIET_LOGGEN,
+    KIOSK_POLLS,
+    KIOSK_SCHERMEN,
+    NOODSTOP_ALTIJD_OPEN,
     OPEN_ENDPOINTS,
     SECTIE_ENDPOINTS,
     TABLET_CODE_UITGEZONDERD,
@@ -140,6 +144,35 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         g.weergave_modus = bepaal_weergave_modus()
 
     @app.before_request
+    def noodstop_bewaken():
+        """De noodstop (zie noodstop.py): is de site afgesloten, dan kan alleen de eigenaar er nog in. De tv-schermen
+        tonen het vergrendel-scherm, de apps krijgen een JSON-antwoord en alle andere pagina's (ook de publieke, het
+        inloggen voor anderen en wachtwoord vergeten) een afgesloten-pagina. Live zetten (met handtekening) en de
+        statuspagina blijven werken, zodat een herstel nog live kan."""
+        if request.endpoint is None or request.endpoint in NOODSTOP_ALTIJD_OPEN:
+            return None
+        db = get_db()
+        toestand = noodstop.toestand(db)
+        if not toestand["actief"]:
+            return None
+        g.noodstop = toestand
+        if session.get("gebruiker_id") and noodstop.is_eigenaar(db, session["gebruiker_id"]):
+            return None  # de eigenaar werkt gewoon door (vereis_login controleert de sessie nog)
+        session.clear()  # wie anders nog een sessie had, is bij het afsluiten al uitgelogd
+        if request.endpoint in KIOSK_SCHERMEN:
+            antwoord = app.make_response(render_template("noodstop_tv.html", toestand=toestand))
+            antwoord.headers["Cache-Control"] = "no-store"
+            return antwoord
+        if request.endpoint in KIOSK_POLLS:
+            # Een scherm dat nog de oude pagina toont, herlaadt bij een andere versie en krijgt dan het vergrendel-scherm.
+            return jsonify({"versie": "noodstop", "noodstop": True, "meldingen": [], "laatste": 0, "duur": 12})
+        if request.path.startswith("/api/") or is_app_api():
+            return jsonify({"fout": "noodstop", "melding": "De site is tijdelijk afgesloten."}), 503
+        antwoord = app.make_response((render_template("noodstop_afgesloten.html"), 503))
+        antwoord.headers["Retry-After"] = "3600"
+        return antwoord
+
+    @app.before_request
     def ruim_uploadlimiet_op_voor_video():
         """Een dia met een video is veel groter dan de gewone uploadlimiet (MAX_CONTENT_LENGTH). Alleen de twee
         dia-formulieren, en alleen voor wie is ingelogd, mogen daarom groter zijn. Moet vóór
@@ -200,7 +233,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         # van vóór de blokkade dateert.
         db = get_db()
         gebruiker = db.execute(
-            "SELECT rol, secties, actief, tablet_code_hash, sessie_versie FROM gebruikers WHERE id = ?",
+            "SELECT rol, secties, actief, tablet_code_hash, sessie_versie, eigenaar FROM gebruikers WHERE id = ?",
             (session["gebruiker_id"],),
         ).fetchone()
         if gebruiker is None or not gebruiker["actief"]:
@@ -214,6 +247,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             session.clear()
             flash("Je bent uitgelogd, want je account is op alle toestellen uitgelogd. Log opnieuw in.", "error")
             return redirect(url_for("login"))
+        session["eigenaar"] = bool(gebruiker["eigenaar"])  # alleen de eigenaar ziet Beheer > Noodstop
         if "gebruiker_rol" not in session or "gebruiker_secties" not in session:
             # Sessie is aangemaakt voor rollen/secties bestonden (of
             # anderszins verouderd) -- alsnog ophalen zodat je niet
@@ -243,6 +277,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         # hieronder -- daarmee kan 1 item uit een verder beheerder-only groep
         # (bijv. "Club instellingen" in de groep "Beheer") toch aan een
         # vrijwilliger met de juiste sectie getoond worden.
+        if item["url_endpoint"] == "noodstop_pagina":
+            return bool(session.get("eigenaar"))
         if item["url_endpoint"] in NAV_ITEM_ALLEEN_BEHEERDER:
             return gebruiker_rol == "beheerder"
         sectie = NAV_ITEM_SECTIE.get(item["url_endpoint"]) or NAV_GROEP_SECTIE.get(item["groep"])
@@ -322,6 +358,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             "pda_modus": pda_modus,
             "basis_template": "base_pda.html" if pda_modus else "base.html",
             "toon_welkom_popup": session.pop("toon_welkom_popup", False),
+            "noodstop_toestand": g.get("noodstop"),
             "welkom_groet": dagdeel_groet(),
         }
 
@@ -519,6 +556,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         leveranciers,
         logboek,
         marge_derving,
+        noodstop as noodstop_routes,
         opslag,
         privacy,
         producten,
@@ -561,6 +599,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     leveranciers.register_routes(app)
     logboek.register_routes(app)
     marge_derving.register_routes(app)
+    noodstop_routes.register_routes(app)
     opslag.register_routes(app)
     producten.register_routes(app)
     seizoensrapport.register_routes(app)

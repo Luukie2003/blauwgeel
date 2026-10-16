@@ -5,6 +5,7 @@ from flask import current_app, flash, jsonify, redirect, render_template, reques
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import mail
+import noodstop
 from database import WACHTWOORD_HASH_METHODE, get_db
 from helpers import csrf_token, genereer_wachtwoord_token, now_str, veilig_redirect_pad, vind_gebruiker_bij_token
 
@@ -79,6 +80,10 @@ def register_routes(app):
                 )
                 return render_template("login.html")
             if gebruiker and check_password_hash(gebruiker["wachtwoord_hash"], wachtwoord):
+                if noodstop.is_actief(db) and not noodstop.is_eigenaar(db, gebruiker["id"]):
+                    # Noodstop (zie noodstop.py): alleen de eigenaar komt er nu in.
+                    flash("De site is tijdelijk afgesloten. Probeer het later opnieuw.", "error")
+                    return render_template("login.html")
                 if not gebruiker["wachtwoord_hash"].startswith(WACHTWOORD_HASH_METHODE + "$"):
                     # Hash met een ouder/trager aantal iteraties (werkzeug's
                     # eigen pbkdf2-standaard duurde hier ruim 0,6s per
@@ -104,6 +109,7 @@ def register_routes(app):
                 session["sessie_versie"] = gebruiker["sessie_versie"]  # zie vereis_login (app.py)
                 session["gebruiker_naam"] = gebruiker["naam"]
                 session["gebruiker_rol"] = gebruiker["rol"]
+                session["eigenaar"] = bool(gebruiker["eigenaar"])
                 # Eenmalig vlaggetje (net als flash()) -- inject_nav() haalt
                 # 'm er weer af zodra de eerste pagina na het inloggen is
                 # gerenderd, zodat de welkom-pop-up maar 1x verschijnt.

@@ -2893,3 +2893,29 @@ button:disabled,
     border-color: var(--blauw-donker);
     color: #fff;
 }
+
+/* ---------- Noodstop (noodstop.html, en de balk bovenaan zolang hij actief is) ---------- */
+
+.noodstop-balk {
+    display: block;
+    padding: 0.6rem 1rem;
+    background: var(--rood);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+.noodstop-balk:hover { color: #fff; text-decoration: underline; }
+
+.noodstop-kaart { border-left: 5px solid var(--groen); }
+.noodstop-kaart--dicht { border-left-color: var(--rood); background: var(--rood-bg); }
+
+.noodstop-knop {
+    background: var(--rood);
+    border-color: var(--rood);
+    color: #fff;
+    font-weight: 800;
+}
+
+.noodstop-knop:hover { filter: brightness(1.1); }

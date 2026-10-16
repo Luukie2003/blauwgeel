@@ -427,6 +427,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Beheer",
+        "endpoints": ["noodstop_pagina"],
+        "url_endpoint": "noodstop_pagina",
+        "label": "Noodstop",
+    },
+    {
+        "groep": "Beheer",
         "endpoints": ["club_instellingen"],
         "url_endpoint": "club_instellingen",
         "label": "Club instellingen",
