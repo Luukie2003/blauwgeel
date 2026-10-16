@@ -17,13 +17,18 @@
 <body class="pda-body">
     <div class="pda-kop-wrap">
         <header class="pda-kop">
-            <a href="{{ url_for('dashboard') }}" class="pda-kop-menuknop" aria-label="Naar het menu">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-                <span>Menu</span>
+            {% if request.endpoint == 'dashboard' %}
+            <span class="pda-kop-menuknop"><img src="{{ url_for('static', filename='logo.png') }}" alt="" class="pda-kop-logo"> BG 1915</span>
+            {% else %}
+            {# Terug naar de vorige pagina; kwam je hier rechtstreeks (geen geschiedenis), dan naar het startscherm. #}
+            <a href="{{ url_for('dashboard') }}" class="pda-kop-menuknop" aria-label="Terug"
+               onclick="if (window.history.length > 1) { window.history.back(); return false; }">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+                <span>Terug</span>
             </a>
-            <span class="pda-kop-titel">{{ pda_actieve_label or 'BG 1915' }}</span>
+            {% endif %}
+            <span class="pda-kop-titel">{{ pda_actieve_label or (self.titel() if request.endpoint != 'dashboard' else 'Start') }}</span>
             <div class="pda-kop-acties">
-                <a href="{{ url_for('logout') }}">Uitloggen</a>
                 <a href="{{ url_for('weergave_desktop') }}" class="btn btn-rand btn-klein">Volledige site</a>
             </div>
         </header>
@@ -31,7 +36,7 @@
         {% if sectie_toegang.voorraad %}
         <div class="pda-zoek">
             <div class="pda-zoek-rij">
-                <input type="search" id="pda-zoek-invoer" placeholder="Zoek een product..." autocomplete="off" aria-label="Zoek een product">
+                <input type="search" id="pda-zoek-invoer" placeholder="Scan of zoek een product..." autocomplete="off" aria-label="Scan of zoek een product">
                 <a href="{{ url_for('scannen') }}" class="pda-zoek-scan-knop" aria-label="QR-code scannen">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2"/><path d="M17 4h2a1 1 0 0 1 1 1v2"/><path d="M20 17v2a1 1 0 0 1-1 1h-2"/><path d="M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
                 </a>
@@ -177,5 +182,48 @@
         {% endwith %}
         {% block inhoud %}{% endblock %}
     </main>
+
+    {# De tabbalk onderin: altijd binnen handbereik, op elke pagina. #}
+    {% set tab_actief = {
+        'dashboard': 'start',
+        'tellen': 'tellen', 'tellen_lopen': 'tellen', 'tellen_lopen_starten': 'tellen', 'tellen_lopen_hervatten': 'tellen',
+        'facturen_overzicht': 'factuur', 'factuur_ronde': 'factuur',
+        'boeken': 'boeken', 'product_detail': 'boeken',
+        'bijzonderheden': 'prikbord', 'kassa_tellen': 'kassa', 'keuken_voorraad': 'keuken',
+    }.get(request.endpoint) %}
+    {% macro tab(url, naam, label, pad) %}
+    <a href="{{ url }}" class="pda-tab{{ ' actief' if tab_actief == naam }}"{{ ' aria-current=page' if tab_actief == naam }}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ pad|safe }}</svg>
+        <span>{{ label }}</span>
+    </a>
+    {% endmacro %}
+    <nav class="pda-tabbalk" aria-label="Snel naar">
+        {{ tab(url_for('dashboard'), 'start', 'Start', '<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>') }}
+        {% if sectie_toegang.voorraad %}
+        <button type="button" class="pda-tab" id="pda-tab-zoek">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
+            <span>Zoeken</span>
+        </button>
+        {{ tab(url_for('tellen'), 'tellen', 'Tellen', '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 13l2 2 4-4"/>') }}
+        {{ tab(url_for('facturen_overzicht'), 'factuur', 'Factuur', '<path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6"/><path d="M9 13h6"/>') }}
+        {{ tab(url_for('boeken'), 'boeken', 'Boeken', '<path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/>') }}
+        {% else %}
+        {{ tab(url_for('bijzonderheden'), 'prikbord', 'Prikbord', '<path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1-5a8 8 0 1 1 17-6z"/>') }}
+        {% if sectie_toegang.kassa %}{{ tab(url_for('kassa_tellen'), 'kassa', 'Kassa', '<rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 11h20"/>') }}{% endif %}
+        {% if sectie_toegang.keuken %}{{ tab(url_for('keuken_voorraad'), 'keuken', 'Keuken', '<path d="M7 14a4 4 0 1 1 1-7.9A4 4 0 0 1 16 6a4 4 0 1 1 1 8"/><path d="M7 14v6h10v-6"/>') }}{% endif %}
+        {% endif %}
+    </nav>
+    <script>
+    (function () {
+        // 'Zoeken' in de tabbalk: naar boven en de cursor in het zoekveld (waar de scanner de barcode in typt).
+        var knop = document.getElementById('pda-tab-zoek');
+        var veld = document.getElementById('pda-zoek-invoer');
+        if (!knop || !veld) return;
+        knop.addEventListener('click', function () {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            veld.focus();
+        });
+    })();
+    </script>
 </body>
 </html>

@@ -21,7 +21,24 @@ from voorspelling import (
 )
 
 HORIZONNEN = (3, 7, 14)
+MAX_PERIODE_DAGEN = 366  # een uitzondering voor een periode (bijv. de winterstop) is hooguit een jaar
 UITZONDERINGEN_TERUG_DAGEN = 56  # zo ver terug staan uitzonderingen nog in het overzicht
+
+
+def _als_perioden(uitzonderingen):
+    """Aaneengesloten dagen met dezelfde uitzondering (open of dicht, dezelfde opmerking) worden één periode, zoals een
+    winterstop: [{datum (de eerste dag), tot (de laatste), dagen, open, opmerking, standaard_open}]. Een losse dag blijft
+    een losse dag (tot is dan gelijk aan datum)."""
+    perioden = []
+    for u in uitzonderingen:
+        vorige = perioden[-1] if perioden else None
+        if (vorige and vorige["tot"] + timedelta(days=1) == u["datum"] and vorige["open"] == u["open"]
+                and vorige["opmerking"] == u["opmerking"]):
+            vorige["tot"] = u["datum"]
+            vorige["dagen"] += 1
+        else:
+            perioden.append({**u, "tot": u["datum"], "dagen": 1})
+    return perioden
 
 
 def _verkoop_context(db):
@@ -32,7 +49,7 @@ def _verkoop_context(db):
     thuis = {r[0] for r in db.execute(
         "SELECT DISTINCT datum FROM wedstrijden WHERE thuis = 1 AND afgelast = 0 AND datum >= ?", (grens,)
     ).fetchall()}
-    lijst = [
+    lijst = _als_perioden([
         {
             "datum": date.fromisoformat(r["datum"]),
             "open": bool(r["open"]),
@@ -42,7 +59,7 @@ def _verkoop_context(db):
         for r in db.execute(
             "SELECT datum, open, opmerking FROM verkoop_uitzonderingen WHERE datum >= ? ORDER BY datum", (grens,)
         ).fetchall()
-    ]
+    ])
     return {
         "weekdagen": weekdagen,
         "wedstrijddagen": wedstrijddagen,
@@ -175,25 +192,50 @@ def register_routes(app):
 
     @app.route("/prognose/uitzondering", methods=["POST"])
     def prognose_uitzondering_toevoegen():
-        """Een losse datum waarop je wel of juist niet verkoopt, afwijkend van de vaste dagen."""
+        """Een losse datum waarop je wel of juist niet verkoopt, afwijkend van de vaste dagen. Met 'tot' erbij geldt het
+        voor elke dag van die periode, bijvoorbeeld de winterstop."""
         try:
             datum = date.fromisoformat((request.form.get("datum") or "").strip())
+            tot_tekst = (request.form.get("tot") or "").strip()
+            tot = date.fromisoformat(tot_tekst) if tot_tekst else datum
         except ValueError:
             flash("Kies een geldige datum.", "error")
+            return redirect(url_for("prognose_pagina") + "#verkoopdagen")
+        if tot < datum:
+            flash("De einddatum ligt vóór de begindatum.", "error")
+            return redirect(url_for("prognose_pagina") + "#verkoopdagen")
+        dagen = (tot - datum).days + 1
+        if dagen > MAX_PERIODE_DAGEN:
+            flash(f"Een periode kan hooguit {MAX_PERIODE_DAGEN} dagen zijn.", "error")
             return redirect(url_for("prognose_pagina") + "#verkoopdagen")
         open_ = 1 if request.form.get("status") == "open" else 0
         opmerking = (request.form.get("opmerking") or "").strip()[:80] or None
         db = get_db()
-        db.execute(
+        db.executemany(
             "INSERT OR REPLACE INTO verkoop_uitzonderingen (datum, open, opmerking) VALUES (?, ?, ?)",
-            (datum.isoformat(), open_, opmerking),
+            [((datum + timedelta(days=i)).isoformat(), open_, opmerking) for i in range(dagen)],
         )
         db.commit()
-        flash(
-            f"{_WEEKDAG[datum.weekday()].capitalize()} {datum.day}-{datum.month}-{datum.year} staat als "
-            f"{'open' if open_ else 'gesloten'}.",
-            "success",
-        )
+        if dagen == 1:
+            wanneer = f"{_WEEKDAG[datum.weekday()].capitalize()} {datum.day}-{datum.month}-{datum.year} staat"
+        else:
+            wanneer = (f"{_WEEKDAG[datum.weekday()].capitalize()} {datum.day}-{datum.month}-{datum.year} t/m "
+                       f"{_WEEKDAG[tot.weekday()]} {tot.day}-{tot.month}-{tot.year} ({dagen} dagen) staan")
+        flash(f"{wanneer} als {'open' if open_ else 'gesloten'}.", "success")
+        return redirect(url_for("prognose_pagina") + "#verkoopdagen")
+
+    @app.route("/prognose/uitzondering/periode/verwijderen", methods=["POST"])
+    def prognose_uitzondering_periode_verwijderen():
+        """Een hele periode weer laten vervallen (bijv. de winterstop)."""
+        try:
+            van = date.fromisoformat((request.form.get("van") or "").strip())
+            tot = date.fromisoformat((request.form.get("tot") or "").strip())
+        except ValueError:
+            return redirect(url_for("prognose_pagina") + "#verkoopdagen")
+        db = get_db()
+        db.execute("DELETE FROM verkoop_uitzonderingen WHERE datum >= ? AND datum <= ?", (van.isoformat(), tot.isoformat()))
+        db.commit()
+        flash("Periode verwijderd: die dagen volgen weer de vaste verkoopdagen.", "success")
         return redirect(url_for("prognose_pagina") + "#verkoopdagen")
 
     @app.route("/prognose/uitzondering/<datum>/verwijderen", methods=["POST"])

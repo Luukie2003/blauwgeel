@@ -57,15 +57,16 @@ def test_start_toont_wat_aandacht_nodig_heeft(ingelogde_client, db):
     assert f"{laag} {'product' if laag == 1 else 'producten'} onder het minimum" in tekst
     assert "/voorraadoverzicht?alleen=laag" in tekst
     assert "1 bestelling om in te boeken" in tekst
-    assert "Prikbord: 1 open" in tekst and "1 urgent" in tekst
+    assert "Prikbord: 1 urgent" in tekst and "1 open in totaal" in tekst
     assert "Nog nooit geteld" in tekst
     assert "Vet vervangen" in tekst  # beheerder heeft ook de keuken-sectie
 
 
 def test_start_menu_heeft_de_nieuwe_ingangen_voor_een_beheerder(ingelogde_client):
     tekst = _pda(ingelogde_client).get("/").data.decode()
-    for label in ["Voorraad", "Prognose", "Tellingen", "Keuken", "Kluis", "Aanmeldingen", "Scannen", "Kiosk"]:
-        assert f'pda-menu-label">{label}<' in tekst, label
+    for label in ["Voorraad", "Prognose", "Tellingen", "Keuken", "Kluis", "Club van 20", "QR scannen", "Kantine-tv",
+                  "Barcodes", "Agenda", "Facturen"]:
+        assert f'pda-tegel-label">{label}<' in tekst, label
     assert "Tips &amp; functies" in tekst
 
 
@@ -76,10 +77,11 @@ def test_start_toont_een_vrijwilliger_alleen_wat_bij_de_rechten_past(client, db)
 
     tekst = _pda(client).get("/").data.decode()
 
-    assert "Vet vervangen" in tekst and 'pda-menu-label">Keuken<' in tekst
-    assert "onder het minimum" not in tekst and "Voorraad op orde" not in tekst
-    for label in ["Voorraad", "Tellen", "Kluis", "Aanmeldingen", "Prognose"]:
-        assert f'pda-menu-label">{label}<' not in tekst, label
+    assert "Vet vervangen" in tekst and 'pda-tegel-label">Keuken<' in tekst
+    assert "onder het minimum" not in tekst and "Alles op orde" not in tekst
+    for label in ["Voorraad", "Kluis", "Club van 20", "Prognose", "Facturen"]:
+        assert f'pda-tegel-label">{label}<' not in tekst, label
+    assert 'href="/tellen"' not in tekst  # geen snelle knop en geen tab voor tellen
 
 
 # ---------- Voorraadlijst ----------

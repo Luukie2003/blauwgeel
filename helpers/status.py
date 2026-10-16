@@ -62,6 +62,7 @@ def bereken_pda_start(db, rol, secties, gebruiker_id=None):
     uitkomst = {
         "laag": None,
         "open_bestellingen": None,
+        "open_facturen": None,
         "telling_status": None,
         "kassa_status": None,
         "bestelling_status": None,
@@ -75,6 +76,9 @@ def bereken_pda_start(db, rol, secties, gebruiker_id=None):
         ).fetchone()["n"]
         uitkomst["open_bestellingen"] = db.execute(
             "SELECT COUNT(*) AS n FROM bestellingen WHERE status = 'besteld'"
+        ).fetchone()["n"]
+        uitkomst["open_facturen"] = db.execute(
+            "SELECT COUNT(*) AS n FROM inboekrondes WHERE status = 'open'"
         ).fetchone()["n"]
         uitkomst["telling_status"] = bereken_laatste_telling_status(db)
         uitkomst["bestelling_status"] = bereken_bestelling_status(db)

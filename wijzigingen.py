@@ -6,8 +6,18 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.50.0"
+HUIDIGE_VERSIE = "1.51.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.51.0",
+        "datum": "16 oktober 2026",
+        "punten": [
+            "Handterminal: nieuw startscherm met vier grote knoppen voor het dagelijkse werk (Factuur inboeken, Tellen, Boeken, Voorraad), daaronder wat aandacht nodig heeft en alles per onderwerp (Voorraad, Bestellen, Kantine, Beheer). Nieuw erbij: Barcodes, Facturen en de Agenda.",
+            "Handterminal: een tabbalk onderin op elke pagina (Start, Zoeken, Tellen, Factuur, Boeken) en een knop Terug bovenin. Het zoekveld zegt nu 'Scan of zoek'; uitloggen staat onderaan het startscherm.",
+            "Handterminal: in de voorraadlijst kies je met de knoppen bovenaan één categorie. De barcodepagina's en de foutpagina openen nu ook in de handterminal-weergave.",
+            "Prognose → Verkoopdagen: een uitzondering kan nu voor een hele periode gelden (vul 'tot en met' in), zoals de winterstop. In de lijst staat zo'n periode als één regel, die je ook in één keer verwijdert.",
+        ],
+    },
     {
         "versie": "1.50.0",
         "datum": "16 oktober 2026",
@@ -997,7 +1007,7 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.11.2", "sinds": "0.1.0", "laatst": "1.49.1",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.12.0", "sinds": "0.4.0", "laatst": "1.50.0",
+    {"naam": "Bestellen & prognose", "versie": "1.12.1", "sinds": "0.4.0", "laatst": "1.51.0",
      "inhoud": "Bestellijst (ook per leverancier), leveranciers, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.15.0", "sinds": "0.1.0", "laatst": "1.50.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
@@ -1013,7 +1023,7 @@ MODULES = [
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
     {"naam": "Rapporten", "versie": "1.14.0", "sinds": "0.1.0", "laatst": "1.47.0",
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
-    {"naam": "Handterminal", "versie": "1.5.0", "sinds": "1.5.0", "laatst": "1.50.0",
+    {"naam": "Handterminal", "versie": "1.6.0", "sinds": "1.5.0", "laatst": "1.51.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
     {"naam": "Accounts & rechten", "versie": "1.10.1", "sinds": "0.1.0", "laatst": "1.47.1",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},

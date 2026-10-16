@@ -562,4 +562,7 @@ PDA_NAV_ITEMS = [
     {"url_endpoint": "keuken_voorraad", "pda_label": "Keuken"},
     {"url_endpoint": "kluis_tellen", "pda_label": "Kluis"},
     {"url_endpoint": "club_van_20_aanmeldingen", "pda_label": "Club 20"},
+    {"url_endpoint": "facturen_overzicht", "pda_label": "Factuur"},
+    {"url_endpoint": "barcodes_overzicht", "pda_label": "Barcodes"},
+    {"url_endpoint": "agenda", "pda_label": "Agenda"},
 ]

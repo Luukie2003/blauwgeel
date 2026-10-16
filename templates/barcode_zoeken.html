@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends basis_template %}
 {% block titel %}Barcode {{ uitkomst.code }}{% endblock %}
 {% block inhoud %}
 <p class="subtitel"><a href="{{ url_for('barcodes_overzicht') }}">&larr; Barcodes</a></p>

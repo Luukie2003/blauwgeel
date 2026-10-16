@@ -199,7 +199,7 @@ def test_pda_kop_toont_merknaam_op_startscherm(ingelogde_client):
     ingelogde_client.get("/weergave/pda")
     resp = ingelogde_client.get("/")
     body = resp.data.decode()
-    assert 'class="pda-kop-titel">BG 1915<' in body
+    assert 'class="pda-kop-logo"> BG 1915</span>' in body and 'class="pda-kop-titel">Start<' in body
 
 
 def test_kassa_telling_detail_werkt_ook_in_pda_modus(ingelogde_client, db):

@@ -288,6 +288,7 @@ SECTIE_ENDPOINTS = {
         "prognose_verkoopdagen",
         "prognose_uitzondering_toevoegen",
         "prognose_uitzondering_verwijderen",
+        "prognose_uitzondering_periode_verwijderen",
         "prognose_evenement_toevoegen",
         "prognose_evenement_verwijderen",
         "prognose_terugblik",

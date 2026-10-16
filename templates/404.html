@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends basis_template|default("base.html") %}
 {% block titel %}Pagina niet gevonden{% endblock %}
 {% block inhoud %}
 <div class="kaart" style="max-width:480px; text-align:center">

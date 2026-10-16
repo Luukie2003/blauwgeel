@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends basis_template %}
 {% block titel %}{{ 'Artikel bewerken' if artikel else 'Nieuw artikel met barcode' }}{% endblock %}
 {% macro waarde(veld, standaard='') %}{{ waarden.get(veld) if waarden.get(veld) not in (none, '') else (artikel[veld] if artikel and artikel[veld] is not none else standaard) }}{% endmacro %}
 {% block inhoud %}

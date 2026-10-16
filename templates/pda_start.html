@@ -1,20 +1,50 @@
 {% extends "base_pda.html" %}
 {% block titel %}Start{% endblock %}
 
-{# Eén menuknop: cirkel met icoon, label en eventueel een teller. 'pad' is de
-   binnenkant van het svg-icoon. #}
-{% macro menu_knop(url, label, pad, teller=None, teller_waarschuwing=False) %}
-<a href="{{ url }}" class="pda-menu-knop">
+{# De iconen (binnenkant van een svg van 24x24), op één plek zodat de snelle knoppen, de tegels en de tabbalk dezelfde
+   gebruiken. #}
+{% set ICOON = {
+    'factuur': '<path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h4"/>',
+    'tellen': '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 13l2 2 4-4"/>',
+    'boeken': '<path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
+    'voorraad': '<path d="M4 20V10l8-6 8 6v10"/><path d="M9 20v-6h6v6"/>',
+    'scannen': '<path d="M4 7V5a1 1 0 0 1 1-1h2"/><path d="M17 4h2a1 1 0 0 1 1 1v2"/><path d="M20 17v2a1 1 0 0 1-1 1h-2"/><path d="M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/>',
+    'barcodes': '<path d="M4 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M14 5v14"/><path d="M18 5v14"/><path d="M20 5v14"/>',
+    'tellingen': '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6l1 1 2-2"/><path d="M3 12l1 1 2-2"/><path d="M3 18l1 1 2-2"/>',
+    'geschiedenis': '<path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/>',
+    'bestellijst': '<circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/><path d="M3 4h2l2.4 11.6a2 2 0 0 0 2 1.6h7.4a2 2 0 0 0 2-1.6L21 8H6"/>',
+    'boodschappen': '<path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/>',
+    'prognose': '<path d="M3 17l6-6 4 4 8-9"/><path d="M15 6h6v6"/>',
+    'agenda': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/>',
+    'prikbord': '<path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1-5a8 8 0 1 1 17-6z"/>',
+    'kassa': '<rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 11h20"/><circle cx="12" cy="15" r="2"/>',
+    'keuken': '<path d="M7 14a4 4 0 1 1 1-7.9A4 4 0 0 1 16 6a4 4 0 1 1 1 8"/><path d="M7 14v6h10v-6"/>',
+    'kiosk': '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 9l2.5 2.5L14 7"/>',
+    'kluis': '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M12 9v-2"/><path d="M12 17v-2"/>',
+    'aanmeldingen': '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M19 8v6"/><path d="M16 11h6"/>',
+} %}
+
+{# Een grote knop voor het dagelijkse werk: icoon, naam, een korte regel en eventueel een teller. #}
+{% macro snel_knop(url, icoon, label, tekst, teller=None, let_op=False) %}
+<a href="{{ url }}" class="pda-snel-knop">
     <span class="pda-menu-icoon-cirkel">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">{{ pad|safe }}</svg>
-        {% if teller %}<span class="pda-menu-teller{{ ' pda-menu-teller--let-op' if teller_waarschuwing else '' }}">{{ teller }}</span>{% endif %}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">{{ ICOON[icoon]|safe }}</svg>
+        {% if teller %}<span class="pda-menu-teller{{ ' pda-menu-teller--let-op' if let_op else '' }}">{{ teller }}</span>{% endif %}
     </span>
-    <span class="pda-menu-label">{{ label }}</span>
+    <span class="pda-snel-tekst"><strong>{{ label }}</strong><span class="tekst-zacht">{{ tekst }}</span></span>
 </a>
 {% endmacro %}
 
-{# Eén statusregel: gekleurde rand links (goed/slecht/oranje/neutraal), tekst en
-   eventueel een link. #}
+{# Een tegel binnen een categorie: klein icoon, naam en eventueel een teller rechts. #}
+{% macro tegel(url, icoon, label, teller=None, let_op=False) %}
+<a href="{{ url }}" class="pda-tegel">
+    <span class="pda-tegel-icoon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">{{ ICOON[icoon]|safe }}</svg></span>
+    <span class="pda-tegel-label">{{ label }}</span>
+    {% if teller %}<span class="pda-tegel-teller{{ ' pda-tegel-teller--let-op' if let_op else '' }}">{{ teller }}</span>{% endif %}
+</a>
+{% endmacro %}
+
+{# Eén statusregel: gekleurde rand links (goed/slecht/oranje/neutraal), tekst en eventueel een link. #}
 {% macro status_regel(klasse, titel, tekst, url=None) %}
 {% set inhoud %}
     <span class="pda-status-tekst"><strong>{{ titel }}</strong><span class="tekst-zacht">{{ tekst }}</span></span>
@@ -32,66 +62,83 @@
     <img src="{{ url_for('static', filename='logo.png') }}" alt="" class="pda-groet-logo">
     <div class="pda-groet-tekst">
         <strong>{{ groet }}, {{ huidige_gebruiker }}</strong>
-        <span class="tekst-zacht">Wat wil je doen?</span>
+        <span class="tekst-zacht">Scan een barcode bovenin, of kies hieronder.</span>
     </div>
 </div>
 
-{# ---------- Even kijken: wat heeft nu aandacht nodig? ---------- #}
-{% if eigen_taken or laag is not none or open_bestellingen or club_aanmeldingen_open or mededelingen_open %}
+{# ---------- Het dagelijkse werk ---------- #}
+{% if sectie_toegang.voorraad %}
+<div class="pda-snel">
+    {{ snel_knop(url_for('facturen_overzicht'), 'factuur', 'Factuur inboeken', (open_facturen ~ ' bezig') if open_facturen else 'Dozen scannen', open_facturen or None) }}
+    {{ snel_knop(url_for('tellen'), 'tellen', 'Tellen', 'Telling lopen') }}
+    {{ snel_knop(url_for('boeken'), 'boeken', 'Boeken', 'Erin of eruit') }}
+    {{ snel_knop(url_for('voorraadoverzicht'), 'voorraad', 'Voorraad', (laag ~ ' onder minimum') if laag else 'Alles op orde', laag or None, true) }}
+</div>
+{% endif %}
+
+{# ---------- Wat heeft nu aandacht nodig? ---------- #}
+{% if eigen_taken or laag or open_bestellingen or club_aanmeldingen_open or mededelingen_urgent %}
+<h2 class="pda-categorie-kop">Let op</h2>
 <div class="pda-status-lijst">
     {% for t in eigen_taken %}
     {{ status_regel('slecht' if t.urgent else 'oranje', t.titel, t.detail, t.url) }}
     {% endfor %}
-    {% if laag is not none %}
-        {% if laag %}
-        {{ status_regel('slecht', laag ~ (' product' if laag == 1 else ' producten') ~ ' onder het minimum', 'Bekijk welke het zijn', url_for('voorraadoverzicht', alleen='laag')) }}
-        {% else %}
-        {{ status_regel('goed', 'Voorraad op orde', 'Niets onder het minimum', url_for('voorraadoverzicht')) }}
-        {% endif %}
+    {% if laag %}
+    {{ status_regel('slecht', laag ~ (' product' if laag == 1 else ' producten') ~ ' onder het minimum', 'Bekijk welke het zijn', url_for('voorraadoverzicht', alleen='laag')) }}
     {% endif %}
     {% if open_bestellingen %}
-    {{ status_regel('oranje', open_bestellingen ~ (' bestelling' if open_bestellingen == 1 else ' bestellingen') ~ ' om in te boeken', 'Boek in zodra de levering binnen is', url_for('bestellijst')) }}
+    {{ status_regel('oranje', open_bestellingen ~ (' bestelling' if open_bestellingen == 1 else ' bestellingen') ~ ' om in te boeken', 'Scan de levering bij Factuur inboeken, of boek in via de bestellijst', url_for('facturen_overzicht')) }}
     {% endif %}
     {% if club_aanmeldingen_open %}
     {{ status_regel('oranje', club_aanmeldingen_open ~ (' aanmelding' if club_aanmeldingen_open == 1 else ' aanmeldingen') ~ ' Club van 20', 'Wacht op goedkeuring', url_for('club_van_20_aanmeldingen')) }}
     {% endif %}
-    {% if mededelingen_open %}
-    {{ status_regel('slecht' if mededelingen_urgent else 'neutraal', 'Prikbord: ' ~ mededelingen_open ~ ' open', (mededelingen_urgent ~ ' urgent' if mededelingen_urgent else 'Niets urgents'), url_for('bijzonderheden')) }}
+    {% if mededelingen_urgent %}
+    {{ status_regel('slecht', 'Prikbord: ' ~ mededelingen_urgent ~ ' urgent', mededelingen_open ~ ' open in totaal', url_for('bijzonderheden')) }}
     {% endif %}
 </div>
 {% endif %}
 
-
-<div class="pda-menu">
-    {% if sectie_toegang.voorraad %}
-    {{ menu_knop(url_for('tellen'), 'Tellen', '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 13l2 2 4-4"/>') }}
-    {{ menu_knop(url_for('boeken'), 'Boeken', '<path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>') }}
-    {{ menu_knop(url_for('scannen'), 'Scannen', '<path d="M4 7V5a1 1 0 0 1 1-1h2"/><path d="M17 4h2a1 1 0 0 1 1 1v2"/><path d="M20 17v2a1 1 0 0 1-1 1h-2"/><path d="M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/>') }}
-    {{ menu_knop(url_for('voorraadoverzicht'), 'Voorraad', '<path d="M4 20V10l8-6 8 6v10"/><path d="M9 20v-6h6v6"/>', laag, true) }}
-    {{ menu_knop(url_for('bestellijst'), 'Bestellijst', '<circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/><path d="M3 4h2l2.4 11.6a2 2 0 0 0 2 1.6h7.4a2 2 0 0 0 2-1.6L21 8H6"/>', open_bestellingen) }}
-    {{ menu_knop(url_for('prognose_pagina'), 'Prognose', '<path d="M3 17l6-6 4 4 8-9"/><path d="M15 6h6v6"/>') }}
-    {{ menu_knop(url_for('boodschappenlijst'), 'Boodschappen', '<path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M4 6h.01"/><path d="M4 12h.01"/><path d="M4 18h.01"/>') }}
-    {{ menu_knop(url_for('geschiedenis'), 'Geschiedenis', '<path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/>') }}
-    {{ menu_knop(url_for('tellingen_overzicht'), 'Tellingen', '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6l1 1 2-2"/><path d="M3 12l1 1 2-2"/><path d="M3 18l1 1 2-2"/>') }}
-    {% endif %}
-    {{ menu_knop(url_for('bijzonderheden'), 'Prikbord', '<path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1-5a8 8 0 1 1 17-6z"/>', mededelingen_open or None, mededelingen_urgent > 0) }}
-    {% if sectie_toegang.kassa %}
-    {{ menu_knop(url_for('kassa_tellen'), 'Kassa', '<rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 11h20"/><circle cx="12" cy="15" r="2"/>') }}
-    {% endif %}
-    {% if sectie_toegang.keuken %}
-    {{ menu_knop(url_for('keuken_voorraad'), 'Keuken', '<path d="M7 14a4 4 0 1 1 1-7.9A4 4 0 0 1 16 6a4 4 0 1 1 1 8"/><path d="M7 14v6h10v-6"/>') }}
-    {% endif %}
-    {% if huidige_gebruiker_rol == 'beheerder' %}
-    {{ menu_knop(url_for('kluis_tellen'), 'Kluis', '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M12 9v-2"/><path d="M12 17v-2"/>') }}
-    {{ menu_knop(url_for('kiosk_prijzen_instellingen'), 'Kiosk', '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 9l2.5 2.5L14 7"/>') }}
-    {% endif %}
-    {% if sectie_toegang.club_van_20 %}
-    {{ menu_knop(url_for('club_van_20_aanmeldingen'), 'Aanmeldingen', '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M19 8v6"/><path d="M16 11h6"/>', club_aanmeldingen_open or None) }}
-    {% endif %}
+{# ---------- Alles, per onderwerp ---------- #}
+{% if sectie_toegang.voorraad %}
+<h2 class="pda-categorie-kop">Voorraad</h2>
+<div class="pda-tegels">
+    {{ tegel(url_for('voorraadoverzicht'), 'voorraad', 'Voorraad', laag or None, true) }}
+    {{ tegel(url_for('tellingen_overzicht'), 'tellingen', 'Tellingen') }}
+    {{ tegel(url_for('geschiedenis'), 'geschiedenis', 'Geschiedenis') }}
+    {{ tegel(url_for('barcodes_overzicht'), 'barcodes', 'Barcodes') }}
+    {{ tegel(url_for('scannen'), 'scannen', 'QR scannen') }}
 </div>
 
-{# ---------- Verder: telling, kassa, wedstrijd en frituurvet ---------- #}
-<div class="pda-status-lijst pda-status-lijst--onder">
+<h2 class="pda-categorie-kop">Bestellen</h2>
+<div class="pda-tegels">
+    {{ tegel(url_for('bestellijst'), 'bestellijst', 'Bestellijst', open_bestellingen or None) }}
+    {{ tegel(url_for('facturen_overzicht'), 'factuur', 'Facturen', open_facturen or None) }}
+    {{ tegel(url_for('boodschappenlijst'), 'boodschappen', 'Boodschappen') }}
+    {{ tegel(url_for('prognose_pagina'), 'prognose', 'Prognose') }}
+    {{ tegel(url_for('agenda'), 'agenda', 'Agenda') }}
+</div>
+{% endif %}
+
+<h2 class="pda-categorie-kop">Kantine</h2>
+<div class="pda-tegels">
+    {{ tegel(url_for('bijzonderheden'), 'prikbord', 'Prikbord', mededelingen_open or None, mededelingen_urgent > 0) }}
+    {% if sectie_toegang.kassa %}{{ tegel(url_for('kassa_tellen'), 'kassa', 'Kassa') }}{% endif %}
+    {% if sectie_toegang.keuken %}{{ tegel(url_for('keuken_voorraad'), 'keuken', 'Keuken') }}{% endif %}
+    {% if huidige_gebruiker_rol == 'beheerder' %}{{ tegel(url_for('kiosk_prijzen_instellingen'), 'kiosk', 'Kantine-tv') }}{% endif %}
+</div>
+
+{% if huidige_gebruiker_rol == 'beheerder' or sectie_toegang.club_van_20 %}
+<h2 class="pda-categorie-kop">Beheer</h2>
+<div class="pda-tegels">
+    {% if huidige_gebruiker_rol == 'beheerder' %}{{ tegel(url_for('kluis_tellen'), 'kluis', 'Kluis') }}{% endif %}
+    {% if sectie_toegang.club_van_20 %}{{ tegel(url_for('club_van_20_aanmeldingen'), 'aanmeldingen', 'Club van 20', club_aanmeldingen_open or None) }}{% endif %}
+</div>
+{% endif %}
+
+{# ---------- Hoe staat het ervoor: telling, kassa, wedstrijd en frituurvet ---------- #}
+{% if telling_status or kassa_status or volgende_wedstrijd or frituurvet_status %}
+<h2 class="pda-categorie-kop">Zo staat het</h2>
+<div class="pda-status-lijst">
     {% if telling_status %}
         {% if telling_status.laatste %}
         {{ status_regel('goed' if telling_status.ok else 'slecht', 'Laatst geteld: ' ~ telling_status.laatste.datum|datum_nl, ('vandaag' if telling_status.dagen_geleden == 0 else telling_status.dagen_geleden ~ (' dag' if telling_status.dagen_geleden == 1 else ' dagen') ~ ' geleden') ~ (' door ' ~ telling_status.laatste.naam if telling_status.laatste.naam else ''), url_for('tellen')) }}
@@ -104,7 +151,7 @@
     {% endif %}
     {% if volgende_wedstrijd %}
     {% set w = volgende_wedstrijd %}
-    {{ status_regel('neutraal', 'Thuiswedstrijd ' ~ w.dag_kort ~ ' ' ~ w.dag_nummer ~ ' ' ~ w.maand_kort, (w.wedstrijden|map(attribute='team')|join(', ')) ~ (' · ' ~ w.weer.label ~ ', ' ~ w.weer.max_temp|round|int ~ '°' if w.weer and w.weer.max_temp is not none else '')) }}
+    {{ status_regel('neutraal', 'Thuiswedstrijd ' ~ w.dag_kort ~ ' ' ~ w.dag_nummer ~ ' ' ~ w.maand_kort, (w.wedstrijden|map(attribute='team')|join(', ')) ~ (' · ' ~ w.weer.label ~ ', ' ~ w.weer.max_temp|round|int ~ '°' if w.weer and w.weer.max_temp is not none else ''), url_for('agenda') if sectie_toegang.voorraad else None) }}
     {% endif %}
     {% if frituurvet_status %}
     <div class="pda-status pda-status--{{ 'goed' if frituurvet_status.ok else 'slecht' }}">
@@ -119,8 +166,10 @@
     </div>
     {% endif %}
 </div>
+{% endif %}
 
 <div class="pda-start-footer">
+    <p style="margin:0 0 0.6rem">Ingelogd als <strong>{{ huidige_gebruiker }}</strong> &middot; <a href="{{ url_for('logout') }}">Uitloggen</a></p>
     <a href="{{ url_for('weergave_desktop') }}" class="btn-icoon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
         Desktop versie openen

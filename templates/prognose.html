@@ -97,7 +97,8 @@
         verkoop. Geef per weekdag aan of de kantine dicht is, altijd open, of alleen open als er een thuiswedstrijd is
         (bijvoorbeeld zaterdag). Staat een thuiswedstrijd niet in de teamagenda, voeg 'm dan zelf toe op
         <a href="{{ url_for('wedstrijden_overzicht') }}#toevoegen">Wedstrijden</a>. Daaronder uitzonderingen voor losse
-        datums (een woensdag dat de kantine dicht is). Uitzonderingen kunnen ook voor datums in het verleden.
+        datums (een woensdag dat de kantine dicht is) of een hele periode (de winterstop: vul ook &ldquo;tot en met&rdquo;
+        in). Uitzonderingen kunnen ook voor datums in het verleden.
     </p>
 
     <form method="post" action="{{ url_for('prognose_verkoopdagen') }}" style="margin-bottom:1.2rem">
@@ -149,17 +150,30 @@
             <tbody>
                 {% for u in verkoop.uitzonderingen %}
                 <tr>
-                    <td>{{ verkoop.dagnamen[u.datum.weekday()][1]|capitalize }} {{ u.datum.day }}-{{ u.datum.month }}-{{ u.datum.year }}</td>
+                    <td>
+                        {{ verkoop.dagnamen[u.datum.weekday()][1]|capitalize }} {{ u.datum.day }}-{{ u.datum.month }}-{{ u.datum.year }}
+                        {% if u.dagen > 1 %}t/m {{ verkoop.dagnamen[u.tot.weekday()][1] }} {{ u.tot.day }}-{{ u.tot.month }}-{{ u.tot.year }} <span class="tekst-zacht">({{ u.dagen }} dagen)</span>{% endif %}
+                    </td>
                     <td>
                         {% if u.open %}<span class="badge badge-in">open</span>{% else %}<span class="badge badge-neutraal">gesloten</span>{% endif %}
-                        {% if u.open == u.standaard_open %}<span class="tekst-zacht">(zoals gewoonlijk)</span>{% endif %}
+                        {% if u.dagen == 1 and u.open == u.standaard_open %}<span class="tekst-zacht">(zoals gewoonlijk)</span>{% endif %}
                     </td>
                     <td class="tekst-zacht">{{ u.opmerking or '' }}</td>
                     <td>
+                        {% if u.dagen > 1 %}
+                        <form method="post" action="{{ url_for('prognose_uitzondering_periode_verwijderen') }}" style="margin:0"
+                              onsubmit="return bevestigEnVerstuur(this, 'De hele periode ({{ u.dagen }} dagen) verwijderen?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="van" value="{{ u.datum.isoformat() }}">
+                            <input type="hidden" name="tot" value="{{ u.tot.isoformat() }}">
+                            <button type="submit" class="btn btn-rand btn-klein">Verwijderen</button>
+                        </form>
+                        {% else %}
                         <form method="post" action="{{ url_for('prognose_uitzondering_verwijderen', datum=u.datum.isoformat()) }}" style="margin:0">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-rand btn-klein">Verwijderen</button>
                         </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -173,11 +187,15 @@
     <form method="post" action="{{ url_for('prognose_uitzondering_toevoegen') }}" style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap; margin-top:0.8rem">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="veld" style="margin:0">
-            <label for="uitz-datum">Datum</label>
+            <label for="uitz-datum">Datum (of vanaf)</label>
             <input type="date" id="uitz-datum" name="datum" required>
         </div>
         <div class="veld" style="margin:0">
-            <label for="uitz-status">Op die dag</label>
+            <label for="uitz-tot">Tot en met <span class="tekst-zacht">(voor een periode)</span></label>
+            <input type="date" id="uitz-tot" name="tot">
+        </div>
+        <div class="veld" style="margin:0">
+            <label for="uitz-status">Op die dag(en)</label>
             <select id="uitz-status" name="status">
                 <option value="open">wel verkocht</option>
                 <option value="dicht">niet verkocht</option>
@@ -185,7 +203,7 @@
         </div>
         <div class="veld" style="margin:0; flex:1; min-width:10rem">
             <label for="uitz-opmerking">Opmerking (optioneel)</label>
-            <input type="text" id="uitz-opmerking" name="opmerking" maxlength="80" placeholder="Bijv. zondagwedstrijd, toernooi">
+            <input type="text" id="uitz-opmerking" name="opmerking" maxlength="80" placeholder="Bijv. winterstop, zondagwedstrijd">
         </div>
         <button type="submit" class="btn btn-rand">Uitzondering toevoegen</button>
     </form>

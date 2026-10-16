@@ -20,12 +20,20 @@
         <button type="button" class="pda-wissel-knop{{ '' if alleen_laag else ' actief' }}" data-modus="alles">Alles</button>
         <button type="button" class="pda-wissel-knop{{ ' actief' if alleen_laag else '' }}" data-modus="laag">Alleen laag</button>
     </div>
+    {% set categorienamen = producten|map(attribute='categorie')|unique|list %}
+    {% if categorienamen|length > 1 %}
+    {# Per categorie: tik er een aan om alleen die te zien, 'Alle' voor alles. #}
+    <div class="pda-chips" role="group" aria-label="Categorie">
+        <button type="button" class="pda-chip actief" data-categorie="">Alle</button>
+        {% for c in categorienamen %}<button type="button" class="pda-chip" data-categorie="{{ c }}">{{ c }}</button>{% endfor %}
+    </div>
+    {% endif %}
     <span id="pda-voorraad-aantal" class="tekst-zacht"></span>
 </div>
 
 <div id="pda-voorraad-groepen">
     {% for categorie, producten_in_categorie in producten|groupby('categorie') %}
-    <details class="pda-groep" open data-groep>
+    <details class="pda-groep" open data-groep data-categorie="{{ categorie }}">
         <summary class="pda-groep-kop">
             <span>{{ categorie }}</span>
             <span class="tekst-zacht pda-groep-aantal"></span>
@@ -57,6 +65,8 @@
     var aantalLabel = document.getElementById('pda-voorraad-aantal');
     var leeg = document.getElementById('pda-voorraad-leeg');
     var alleenLaag = {{ 'true' if alleen_laag else 'false' }};
+    var chips = Array.prototype.slice.call(document.querySelectorAll('.pda-chip'));
+    var categorie = '';
 
     function filter() {
         var term = zoek.value.trim().toLowerCase();
@@ -66,10 +76,13 @@
             rij.style.display = toon ? '' : 'none';
             if (toon) zichtbaar++;
         });
+        zichtbaar = 0;
         groepen.forEach(function (groep) {
-            var n = groep.querySelectorAll('.pda-voorraad-rij:not([style*="display: none"])').length;
+            var andereCategorie = categorie && groep.dataset.categorie !== categorie;
+            var n = andereCategorie ? 0 : groep.querySelectorAll('.pda-voorraad-rij:not([style*="display: none"])').length;
             groep.style.display = n ? '' : 'none';
             groep.querySelector('.pda-groep-aantal').textContent = n;
+            zichtbaar += n;
         });
         aantalLabel.textContent = zichtbaar + ' van ' + rijen.length + ' producten';
         leeg.style.display = zichtbaar ? 'none' : '';
@@ -79,6 +92,13 @@
         knop.addEventListener('click', function () {
             alleenLaag = knop.dataset.modus === 'laag';
             knoppen.forEach(function (k) { k.classList.toggle('actief', k === knop); });
+            filter();
+        });
+    });
+    chips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            categorie = chip.dataset.categorie;
+            chips.forEach(function (c) { c.classList.toggle('actief', c === chip); });
             filter();
         });
     });
