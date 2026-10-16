@@ -252,6 +252,7 @@ SECTIE_ENDPOINTS = {
         "kaartjes_pdf_route",
         "telling_detail",
         "telling_regel_corrigeren",
+        "telling_regel_voorraad_bijwerken",
         "telling_pdf",
         "bestellijst",
         "bestellijst_voorspeld",

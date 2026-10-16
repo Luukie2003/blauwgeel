@@ -649,8 +649,15 @@ def _m1_tapbier_in_de_omzet(db):
         )
 
 
+def _m2_opmerking_none_leegmaken(db):
+    """Het bewerkformulier van een product zette een lege opmerking in het veld als het woord 'None', en bij opslaan
+    werd dat de opmerking. Die worden weer leeg."""
+    db.execute("UPDATE producten SET opmerking = NULL WHERE TRIM(opmerking) IN ('None', '')")
+
+
 GENUMMERDE_MIGRATIES = [
     (1, _m1_tapbier_in_de_omzet),
+    (2, _m2_opmerking_none_leegmaken),
 ]
 
 

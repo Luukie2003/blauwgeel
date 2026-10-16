@@ -143,3 +143,20 @@ def test_leeftijd():
     assert productinfo.leeftijd("2026-10-15 22:00", vandaag) == "gisteren"
     assert productinfo.leeftijd("2026-10-10 22:00", vandaag) == "6 dagen geleden"
     assert productinfo.leeftijd("2026-09-01 22:00", vandaag) == "6 weken geleden"
+
+
+def test_lege_opmerking_wordt_geen_none(ingelogde_client, db):
+    """Het bewerkformulier zette een lege opmerking als het woord 'None' in het veld."""
+    pid = _hertog(db)
+    db.execute("UPDATE producten SET opmerking = NULL WHERE id = ?", (pid,))
+    db.commit()
+    tekst = ingelogde_client.get(f"/producten/{pid}/bewerken").data.decode()
+    assert 'rows="2"></textarea>' in tekst and ">None</textarea>" not in tekst
+
+
+def test_migratie_maakt_none_opmerkingen_leeg(db):
+    from database.migraties import _m2_opmerking_none_leegmaken
+
+    pid = _hertog(db, opmerking="None")
+    _m2_opmerking_none_leegmaken(db)
+    assert db.execute("SELECT opmerking FROM producten WHERE id = ?", (pid,)).fetchone()[0] is None

@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import Response, flash, g, redirect, render_template, request, session, url_for
 
 from database import get_db
-from helpers import bereken_trend, bestel_suggesties, format_datum, now_str
+from helpers import bereken_trend, bestel_suggesties, format_datum, now_str, verwerk_auto_inactief
 from pdf import periode_verkoop_pdf, verkoop_pdf
 from voorspelling import maak_prognose, omzet_per_week as omzet_per_week_berekend
 
@@ -113,6 +113,50 @@ def register_routes(app):
             },
         )
 
+    def _later_geteld(db, telling):
+        """De producten uit deze telling die daarna nog eens geteld zijn. Voor die producten is deze telling niet meer
+        de laatste: de voorraad is sindsdien opnieuw vastgesteld, dus een correctie hier raakt de voorraad niet."""
+        return {
+            r[0]
+            for r in db.execute(
+                """SELECT DISTINCT tr.product_id FROM telling_regels tr JOIN tellingen t ON t.id = tr.telling_id
+                   WHERE (t.datum > ? OR (t.datum = ? AND t.id > ?))
+                     AND tr.product_id IN (SELECT product_id FROM telling_regels WHERE telling_id = ?)""",
+                (telling["datum"], telling["datum"], telling["id"], telling["id"]),
+            ).fetchall()
+        }
+
+    def _voorraad_volgens_telling(db, regel, telling):
+        """Wat de voorraad zou moeten zijn volgens deze telling: het getelde aantal plus alles wat daarna is in- en
+        uitgeboekt. Alleen zinvol als dit de laatste telling van het product is."""
+        rij = db.execute(
+            """SELECT COALESCE(SUM(CASE WHEN type = 'in' THEN aantal ELSE -aantal END), 0) FROM mutaties
+               WHERE product_id = ? AND datum >= ? AND (telling_id IS NULL OR telling_id != ?)""",
+            (regel["product_id"], telling["datum"], telling["id"]),
+        ).fetchone()
+        return regel["geteld_aantal"] + rij[0]
+
+    def _voorraad_afwijkingen(db, telling, regels, later_geteld):
+        """{regel_id: (huidige voorraad, volgens de telling)} voor de gecorrigeerde regels van producten waarvan dit de
+        laatste telling is en waar de voorraad niet klopt met de telling en de boekingen daarna. Zo blijft er bij een
+        correctie waarbij de voorraad niet meeging (van vóór 1.49.1, of met het vinkje uit) een knop staan om het recht
+        te zetten; is de voorraad al met de hand goed gezet, dan niet."""
+        uitkomst = {}
+        for r in regels:
+            if r["geteld_aantal_voor_correctie"] is None or r["product_id"] in later_geteld:
+                continue
+            huidig = db.execute("SELECT voorraad FROM producten WHERE id = ?", (r["product_id"],)).fetchone()[0]
+            verwacht = _voorraad_volgens_telling(db, r, telling)
+            if huidig != verwacht:
+                uitkomst[r["id"]] = (huidig, verwacht)
+        return uitkomst
+
+    def _pas_voorraad_aan(db, product_id, verschil):
+        """Telt 'verschil' bij de voorraad op; geeft (oud, nieuw, gedeactiveerde naam of None) terug."""
+        oud = db.execute("SELECT voorraad FROM producten WHERE id = ?", (product_id,)).fetchone()["voorraad"]
+        db.execute("UPDATE producten SET voorraad = voorraad + ? WHERE id = ?", (verschil, product_id))
+        return oud, oud + verschil, verwerk_auto_inactief(db, product_id, oud + verschil)
+
     @app.route("/tellingen/<int:telling_id>")
     def telling_detail(telling_id):
         db = get_db()
@@ -131,6 +175,7 @@ def register_routes(app):
         ).fetchall()
         totaal_omzet = sum(r["verkocht"] * r["verkoopprijs"] for r in regels)
         besteladvies = bestel_suggesties(db)
+        later_geteld = _later_geteld(db, telling)
 
         return render_template(
             "pda_telling_detail.html" if g.get("weergave_modus") == "pda" else "telling_detail.html",
@@ -138,6 +183,8 @@ def register_routes(app):
             regels=regels,
             totaal_omzet=totaal_omzet,
             besteladvies=besteladvies,
+            later_geteld=later_geteld,
+            voorraad_afwijking=_voorraad_afwijkingen(db, telling, regels, later_geteld),
         )
 
     @app.route("/tellingen/regels/<int:regel_id>/corrigeren", methods=["POST"])
@@ -145,10 +192,12 @@ def register_routes(app):
         """Corrigeert het geteld aantal (en dus verkocht/correctie) van 1
         productregel binnen een eerder afgeronde telling -- bijv. omdat er
         iets over het hoofd is gezien bij het tellen (een krat die nog in de
-        koelkast stond). Raakt bewust nooit de actuele voorraad: die had je
-        al apart via boeken in/uit rechtgezet. Dit corrigeert alleen het
-        historische verkocht/correctie-cijfer (en daarmee de omzetcijfers)
-        van deze ene telling."""
+        koelkast stond). Past het verkocht/correctie-cijfer (en daarmee de
+        omzet) van deze telling aan. Is dit de laatste telling van het
+        product, dan gaat de huidige voorraad mee met het verschil (vinkje
+        'voorraad_aanpassen', standaard aan): die was bij het tellen op het
+        getelde aantal gezet. Bij een oudere telling niet, want daarna is
+        de voorraad opnieuw geteld."""
         db = get_db()
         regel = db.execute(
             """SELECT tr.*, p.naam AS product_naam, p.eenheid, t.datum AS telling_datum
@@ -178,6 +227,9 @@ def register_routes(app):
         verschil = nieuw_geteld - regel["voorraad_voor"]
         nieuw_verkocht = max(0, -verschil)
         nieuw_correctie = max(0, verschil)
+        telling = db.execute("SELECT * FROM tellingen WHERE id = ?", (regel["telling_id"],)).fetchone()
+        is_laatste = regel["product_id"] not in _later_geteld(db, telling)
+        voorraad_mee = is_laatste and bool(request.form.get("voorraad_aanpassen"))
 
         db.execute(
             """UPDATE telling_regels
@@ -202,6 +254,12 @@ def register_routes(app):
                 regel_id,
             ),
         )
+        voorraad_tekst = ""
+        if voorraad_mee and nieuw_geteld != regel["geteld_aantal"]:
+            oud, nieuw, gedeactiveerd = _pas_voorraad_aan(db, regel["product_id"], nieuw_geteld - regel["geteld_aantal"])
+            voorraad_tekst = f" De voorraad is aangepast van {oud} naar {nieuw} {regel['eenheid']}."
+            if gedeactiveerd:
+                voorraad_tekst += f" '{gedeactiveerd}' staat nu op inactief (voorraad op 0)."
 
         # De mutatie die destijds voor dit product bij deze telling is
         # aangemaakt moet meeveranderen, anders blijft de geschiedenis het
@@ -244,10 +302,44 @@ def register_routes(app):
 
         flash(
             f"Telling voor '{regel['product_naam']}' gecorrigeerd: {regel['geteld_aantal']} → "
-            f"{nieuw_geteld} {regel['eenheid']} geteld.",
+            f"{nieuw_geteld} {regel['eenheid']} geteld." + (voorraad_tekst or (
+                "" if is_laatste else " De huidige voorraad is niet aangepast: dit product is daarna opnieuw geteld."
+            )),
             "success",
         )
         return redirect(url_for("telling_detail", telling_id=regel["telling_id"]))
+
+    @app.route("/tellingen/regels/<int:regel_id>/voorraad-bijwerken", methods=["POST"])
+    def telling_regel_voorraad_bijwerken(regel_id):
+        """Zet de voorraad op wat hij volgens deze (gecorrigeerde) telling en de boekingen daarna zou moeten zijn, voor
+        als die bij de correctie niet meeging. Alleen bij de laatste telling van het product (zie _voorraad_afwijkingen)."""
+        db = get_db()
+        regel = db.execute(
+            """SELECT tr.*, p.naam AS product_naam, p.eenheid FROM telling_regels tr
+               JOIN producten p ON p.id = tr.product_id WHERE tr.id = ?""",
+            (regel_id,),
+        ).fetchone()
+        if regel is None:
+            flash("Tellingregel niet gevonden.", "error")
+            return redirect(url_for("tellen"))
+        telling = db.execute("SELECT * FROM tellingen WHERE id = ?", (regel["telling_id"],)).fetchone()
+        terug = redirect(url_for("telling_detail", telling_id=regel["telling_id"]))
+        if regel["product_id"] in _later_geteld(db, telling):
+            flash(f"'{regel['product_naam']}' is daarna opnieuw geteld; de voorraad klopt daarmee al.", "error")
+            return terug
+        afwijking = _voorraad_afwijkingen(db, telling, [regel], set()).get(regel_id)
+        if afwijking is None:
+            flash(f"De voorraad van '{regel['product_naam']}' klopt al met de telling.", "success")
+            return terug
+        huidig, verwacht = afwijking
+        oud, nieuw, gedeactiveerd = _pas_voorraad_aan(db, regel["product_id"], verwacht - huidig)
+        db.commit()
+        flash(
+            f"Voorraad van '{regel['product_naam']}' aangepast van {oud} naar {nieuw} {regel['eenheid']}."
+            + (f" '{gedeactiveerd}' staat nu op inactief (voorraad op 0)." if gedeactiveerd else ""),
+            "success",
+        )
+        return terug
 
     @app.route("/tellingen/<int:telling_id>/pdf")
     def telling_pdf(telling_id):

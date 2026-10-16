@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.49.0"
+HUIDIGE_VERSIE = "1.49.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.49.1",
+        "datum": "16 oktober 2026",
+        "punten": [
+            "Een telling achteraf corrigeren past nu ook de huidige voorraad aan, als het de laatste telling van dat product is (vinkje 'Ook de huidige voorraad aanpassen', standaard aan). Tot nu toe veranderde alleen de verkoop en de omzet van de telling, niet de voorraad.",
+            "Klopt de voorraad na een correctie niet met de telling en wat er daarna is geboekt (bijvoorbeeld bij een correctie van vóór deze versie), dan staat dat bij die regel van de telling, met een knop om de voorraad op het juiste aantal te zetten. Heb je de voorraad al zelf goed gezet, dan verschijnt er niets.",
+            "Bij producten met een lege opmerking stond soms 'None' als opmerking (een foutje in het bewerkformulier). Dat is opgelost en weggehaald.",
+        ],
+    },
     {
         "versie": "1.49.0",
         "datum": "16 oktober 2026",
@@ -966,7 +975,7 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.11.1", "sinds": "0.1.0", "laatst": "1.47.2",
+    {"naam": "Voorraad & tellen", "versie": "1.11.2", "sinds": "0.1.0", "laatst": "1.49.1",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.11.0", "sinds": "0.4.0", "laatst": "1.47.0",
      "inhoud": "Bestellijst (ook per leverancier), leveranciers, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, koud zetten, boodschappenlijst"},

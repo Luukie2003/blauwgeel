@@ -1,4 +1,5 @@
 {% extends "base_pda.html" %}
+{% import "_telling_correctie.html" as correctie with context %}
 {% block titel %}Telling #{{ telling.id }}{% endblock %}
 {% block inhoud %}
 <div class="pda-paginakop">
@@ -47,7 +48,7 @@
     <details class="pda-corrigeren">
         <summary>Corrigeren</summary>
         <form method="post" action="{{ url_for('telling_regel_corrigeren', regel_id=r.id) }}"
-              onsubmit="return bevestigEnVerstuur(this, 'Telling voor \'{{ r.product_naam }}\' corrigeren? Dit past het verkocht/correctie-cijfer (en de omzet) van deze telling aan, niet de actuele voorraad.');">
+              onsubmit="return bevestigEnVerstuur(this, '{{ correctie.bevestiging(r, later_geteld) }}');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="veld">
                 <label for="geteld-{{ r.id }}">Werkelijk geteld ({{ r.eenheid }})</label>
@@ -57,6 +58,7 @@
                 <label for="reden-{{ r.id }}">Reden (optioneel)</label>
                 <input type="text" id="reden-{{ r.id }}" name="correctie_opmerking" placeholder="Bijv. krat over het hoofd gezien">
             </div>
+            {{ correctie.voorraad_vinkje(r, later_geteld) }}
             <button type="submit" class="btn btn-rand">Opslaan</button>
         </form>
         {% if r.geteld_aantal_voor_correctie is not none %}
@@ -65,6 +67,7 @@
             (was {{ r.geteld_aantal_voor_correctie }} {{ r.eenheid }} geteld){% if r.correctie_opmerking %}: {{ r.correctie_opmerking }}{% endif %}
         </p>
         {% endif %}
+        {{ correctie.voorraad_alsnog(r, voorraad_afwijking) }}
     </details>
 </div>
 {% endfor %}

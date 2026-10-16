@@ -1,0 +1,28 @@
+{# Bij het corrigeren van een telling (telling_detail.html en pda_telling_detail.html): of de huidige voorraad meegaat.
+   Alleen bij de laatste telling van een product; daarna is de voorraad opnieuw geteld (zie telling_regel_corrigeren). #}
+{% macro voorraad_vinkje(r, later_geteld) %}
+{% if r.product_id not in later_geteld %}
+<label style="display:flex; align-items:center; gap:0.4rem; font-weight:400; cursor:pointer; margin:0.2rem 0">
+    <input type="checkbox" name="voorraad_aanpassen" value="1" checked style="width:auto">
+    Ook de huidige voorraad aanpassen met het verschil
+</label>
+{% endif %}
+{% endmacro %}
+
+{% macro bevestiging(r, later_geteld) -%}
+Telling voor \'{{ r.product_naam }}\' corrigeren? Dit past het verkocht/correctie-cijfer (en de omzet) van deze telling aan{{ ', en met het vinkje aan ook de huidige voorraad' if r.product_id not in later_geteld else '. De huidige voorraad blijft zoals hij is: dit product is daarna opnieuw geteld' }}.
+{%- endmacro %}
+
+{# Bij een gecorrigeerde regel waar de huidige voorraad niet klopt met de telling en de boekingen daarna (zie
+   _voorraad_afwijkingen): een knop om de voorraad daarop te zetten. #}
+{% macro voorraad_alsnog(r, voorraad_afwijking) %}
+{% if r.id in voorraad_afwijking %}
+{% set huidig, verwacht = voorraad_afwijking[r.id] %}
+<form method="post" action="{{ url_for('telling_regel_voorraad_bijwerken', regel_id=r.id) }}" style="margin:0.3rem 0 0.5rem"
+      onsubmit="return bevestigEnVerstuur(this, 'De voorraad van \'{{ r.product_naam }}\' van {{ huidig }} op {{ verwacht }} {{ r.eenheid }} zetten?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <span class="tekst-zacht" style="font-size:0.8rem">De huidige voorraad is {{ huidig }} {{ r.eenheid }}; volgens deze telling en de boekingen daarna hoort het {{ verwacht }} te zijn.</span>
+    <button type="submit" class="btn btn-rand btn-klein">Voorraad op {{ verwacht }} zetten</button>
+</form>
+{% endif %}
+{% endmacro %}
