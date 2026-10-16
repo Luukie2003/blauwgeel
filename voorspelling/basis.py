@@ -40,7 +40,10 @@ _WEEKDAG = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"
 _WEEKDAG_KORT = ["ma", "di", "wo", "do", "vr", "za", "zo"]
 
 VERKOOPDAGEN_STANDAARD = (2, 5)  # woensdag en zaterdag (maandag = 0)
-_LEGE_DAG = {"wedstrijden": 0, "training": False, "weer": None, "open": True, "evenementen": 0, "rustig": False, "groepen": ()}
+_LEGE_DAG = {
+    "wedstrijden": 0, "training": False, "weer": None, "open": True, "evenementen": 0, "rustig": False, "groepen": (),
+    "teams": (),
+}
 
 # Per groep (bijv. 'UC', zie Prognose > Evenementen) leert het model een bijstelling bovenop de soort (druk of rustig):
 # een effect 'groep:uc' dat bij 0 begint. Zo leren 'UC Lunch' en 'UC Activiteit' samen hoe UC afwijkt van een
@@ -54,16 +57,32 @@ def groep_sleutel(groep):
     return GROEP_PREFIX + groep.strip().lower()
 
 
+# Per team leert het model hoeveel drukker (of rustiger) een thuiswedstrijd van dat team is dan een gemiddelde
+# thuiswedstrijd: een effect 'team:blauw geel'15 2' dat bij 0 begint, bovenop het effect van een thuiswedstrijd. Zo
+# trekt het eerste elftal na een tijdje meer publiek dan een jeugdteam, zonder dat je dat hoeft in te stellen.
+TEAM_PREFIX = "team:"
+TEAM_ONZEKERHEID = 0.4
+TEAM_GRENZEN = (-0.3, 1.0)
+
+
+def team_sleutel(team):
+    return TEAM_PREFIX + (team or "").strip().lower()
+
+
 def aanname(naam):
     """De aanname (voorkennis) van een effect: uit PRIOR, of 0 voor de bijstelling van een groep."""
     return PRIOR.get(naam, 0.0)
 
 
 def onzekerheid(naam):
+    if naam.startswith(TEAM_PREFIX):
+        return TEAM_ONZEKERHEID
     return ONZEKERHEID.get(naam, GROEP_ONZEKERHEID)
 
 
 def grenzen(naam):
+    if naam.startswith(TEAM_PREFIX):
+        return TEAM_GRENZEN
     return GRENZEN.get(naam, GROEP_GRENZEN)
 
 
@@ -136,14 +155,14 @@ def lees_kalender(db, van, tot):
     Wedstrijden komen uit de gekoppelde teamagenda's, het weer uit de
     opgeslagen weergeschiedenis (laatst bekende verwachting per dag) en voor
     de komende dagen uit de actuele verwachting."""
-    wedstrijden = {
-        r["datum"]: r["n"]
-        for r in db.execute(
-            """SELECT datum, COUNT(*) AS n FROM wedstrijden
-               WHERE thuis = 1 AND afgelast = 0 AND datum >= ? AND datum <= ? GROUP BY datum""",
-            (van.isoformat(), tot.isoformat()),
-        ).fetchall()
-    }
+    wedstrijden, teams = {}, {}
+    for r in db.execute(
+        """SELECT datum, team FROM wedstrijden
+           WHERE thuis = 1 AND afgelast = 0 AND datum >= ? AND datum <= ?""",
+        (van.isoformat(), tot.isoformat()),
+    ).fetchall():
+        wedstrijden[r["datum"]] = wedstrijden.get(r["datum"], 0) + 1
+        teams.setdefault(r["datum"], set()).add(team_sleutel(r["team"]))
     weer = {}
     for tabel in ("weer_historie", "weer_voorspelling"):  # voorspelling wint (vers)
         try:
@@ -181,6 +200,7 @@ def lees_kalender(db, van, tot):
             "evenementen": sum(1 for soort in soorten if soort != "rustig"),
             "rustig": bool(soorten) and not gewoon_open and all(soort == "rustig" for soort in soorten),
             "groepen": groepen,
+            "teams": tuple(sorted(teams.get(iso, ()))) if gewoon_open or soorten else (),
         }
         dag += timedelta(days=1)
     return kalender
@@ -214,7 +234,7 @@ def blootstelling(start, einde, kalender):
     (mooi +, regen -), W = dagen waarvan het weer bekend is. Een dag telt
     mee naar rato van hoeveel van zijn 12-12-venster in de periode valt. Een dag
     waarop niet verkocht wordt (zie lees_verkoopdagen) telt helemaal niet mee."""
-    D = M = T = S = W = E = R = 0.0
+    D = M = MD = T = S = W = E = R = 0.0
     G = {}
     dag = (start - timedelta(hours=DAG_BEGIN_UUR)).date()
     while True:
@@ -226,16 +246,17 @@ def blootstelling(start, einde, kalender):
         if deel > 0 and k.get("open", True):
             D += deel
             M += deel * wedstrijd_gewicht(k["wedstrijden"])
+            MD += deel * (1.0 if k["wedstrijden"] else 0.0)  # wedstrijddagen, ongewogen (zie model: team-effecten)
             T += deel * (1.0 if k["training"] else 0.0)
             E += deel * (1.0 if k.get("evenementen") else 0.0)
             R += deel * (1.0 if k.get("rustig") else 0.0)
-            for groep in k.get("groepen", ()):
-                G[groep] = G.get(groep, 0.0) + deel
+            for sleutel in (*k.get("groepen", ()), *k.get("teams", ())):  # bijstellingen per groep en per team
+                G[sleutel] = G.get(sleutel, 0.0) + deel
             if k["weer"] is not None:
                 S += deel * k["weer"]
                 W += deel
         dag += timedelta(days=1)
-    return {"D": D, "M": M, "T": T, "S": S, "W": W, "E": E, "R": R, "G": G}
+    return {"D": D, "M": M, "MD": MD, "T": T, "S": S, "W": W, "E": E, "R": R, "G": G}
 
 
 def drukte(b, effecten):

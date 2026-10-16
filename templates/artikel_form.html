@@ -3,7 +3,7 @@
 {% macro waarde(veld, standaard='') %}{{ waarden.get(veld) if waarden.get(veld) not in (none, '') else (artikel[veld] if artikel and artikel[veld] is not none else standaard) }}{% endmacro %}
 {% block inhoud %}
 <p class="subtitel">
-    <a href="{{ url_for('barcode_zoeken', code=zoekcode) if zoekcode else url_for('barcodes_overzicht') }}">&larr; Terug</a>
+    <a href="{{ url_for('factuur_ronde', ronde_id=ronde_id) if ronde_id else (url_for('barcode_zoeken', code=zoekcode) if zoekcode else url_for('barcodes_overzicht')) }}">&larr; Terug</a>
     &middot; Een artikel is wat je precies inkoopt (merk, verpakking, barcode en prijs). Het hoort bij een product: op de
     overzichten zie je alleen het product, bijvoorbeeld &lsquo;Witte wijn&rsquo; of &lsquo;Frikandel&rsquo;, ook als er
     meerdere artikelen bij horen.
@@ -13,6 +13,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="terug" value="{{ terug }}">
     <input type="hidden" name="zoekcode" value="{{ zoekcode }}">
+    <input type="hidden" name="ronde_id" value="{{ ronde_id }}">
     {% set gekozen_product = waarde('product_id')|string %}
     <fieldset class="groupbox">
         <legend>Wat is het?</legend>

@@ -62,8 +62,19 @@
             resultaten.innerHTML = '';
         }
 
-        function tonen(producten) {
+        function tonen(producten, data) {
             resultaten.innerHTML = '';
+            data = data || {};
+            if (data.onbekende_barcode) {
+                // Een gescande barcode die nog niet bekend is: meteen de weg naar toevoegen.
+                var nieuw = document.createElement('a');
+                nieuw.className = 'pda-zoek-resultaat';
+                nieuw.href = '/barcodes/zoek?code=' + encodeURIComponent(data.onbekende_barcode);
+                nieuw.textContent = 'Onbekende barcode ' + data.onbekende_barcode + ': toevoegen';
+                resultaten.appendChild(nieuw);
+                resultaten.hidden = false;
+                return;
+            }
             if (!producten.length) {
                 var leeg = document.createElement('div');
                 leeg.className = 'pda-zoek-leeg';
@@ -89,7 +100,7 @@
                 tekst.appendChild(naam);
                 var details = document.createElement('span');
                 details.className = 'tekst-zacht';
-                details.textContent = p.voorraad + ' ' + p.eenheid + ' op voorraad';
+                details.textContent = (data.barcode ? data.barcode.omschrijving + ' · ' : '') + p.voorraad + ' ' + p.eenheid + ' op voorraad';
                 tekst.appendChild(details);
                 link.appendChild(tekst);
                 if (p.voorraad < p.min_voorraad) {
@@ -115,11 +126,35 @@
                 lopendVerzoek = new AbortController();
                 fetch('/producten/zoeken?q=' + encodeURIComponent(term), { signal: lopendVerzoek.signal })
                     .then(function (resp) { return resp.json(); })
-                    .then(function (data) { tonen(data.resultaten || []); })
+                    .then(function (data) { tonen(data.resultaten || [], data); })
                     .catch(function (fout) {
                         if (fout.name !== 'AbortError') verbergen();
                     });
             }, 220);
+        });
+
+        // Een scanner (zoals die van de Zebra) typt de barcode en drukt op Enter: dan meteen naar het product, of naar
+        // het toevoegen van een onbekende barcode. Bij gewoon zoeken met precies één uitkomst ook.
+        invoer.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            var term = invoer.value.trim();
+            if (term.length < 2) return;
+            e.preventDefault();
+            clearTimeout(timer);
+            if (lopendVerzoek) lopendVerzoek.abort();
+            fetch('/producten/zoeken?q=' + encodeURIComponent(term))
+                .then(function (resp) { return resp.json(); })
+                .then(function (data) {
+                    var lijst = data.resultaten || [];
+                    if (data.onbekende_barcode) {
+                        window.location.href = '/barcodes/zoek?code=' + encodeURIComponent(data.onbekende_barcode);
+                    } else if (data.barcode || lijst.length === 1) {
+                        window.location.href = '/producten/' + lijst[0].id;
+                    } else {
+                        tonen(lijst, data);
+                    }
+                })
+                .catch(function () {});
         });
 
         document.addEventListener('click', function (e) {

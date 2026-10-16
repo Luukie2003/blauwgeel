@@ -895,3 +895,39 @@ CREATE TABLE IF NOT EXISTS artikelen (
 CREATE INDEX IF NOT EXISTS idx_artikelen_product ON artikelen(product_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_artikelen_ean ON artikelen(ean) WHERE ean IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_artikelen_ean_omverpakking ON artikelen(ean_omverpakking) WHERE ean_omverpakking IS NOT NULL;
+
+-- Facturen inboeken (1.50.0): een inboekronde per factuur, waarin je dozen en verpakkingen scant (zie facturen.py).
+-- Een regel per gescande barcode (vaker gescand = aantal hoger) of per handmatig toegevoegd product; eenheden_per_stuk
+-- in de eenheid van het product, prijs_per_stuk wat die doos of verpakking kost. Bij het afronden gaat de voorraad
+-- omhoog en staat een gekoppelde bestelling op ontvangen.
+CREATE TABLE IF NOT EXISTS inboekrondes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'afgerond', 'geannuleerd')),
+    leverancier_id INTEGER REFERENCES leveranciers(id) ON DELETE SET NULL,
+    bestelling_id INTEGER REFERENCES bestellingen(id) ON DELETE SET NULL,
+    factuurnummer TEXT,
+    factuurbedrag REAL,
+    opmerking TEXT,
+    bron TEXT NOT NULL DEFAULT 'site',
+    gestart_door TEXT,
+    gestart_door_id INTEGER REFERENCES gebruikers(id),
+    gestart_op TEXT NOT NULL,
+    afgerond_door TEXT,
+    afgerond_op TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_inboekrondes_status ON inboekrondes(status);
+
+CREATE TABLE IF NOT EXISTS inboekronde_regels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ronde_id INTEGER NOT NULL REFERENCES inboekrondes(id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES producten(id),
+    artikel_id INTEGER REFERENCES artikelen(id) ON DELETE SET NULL,
+    code TEXT,
+    niveau TEXT NOT NULL,
+    omschrijving TEXT NOT NULL,
+    aantal INTEGER NOT NULL DEFAULT 1,
+    eenheden_per_stuk INTEGER NOT NULL,
+    prijs_per_stuk REAL NOT NULL DEFAULT 0,
+    laatst_gescand_op TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_inboekronde_regels_ronde ON inboekronde_regels(ronde_id);

@@ -4,6 +4,7 @@
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
 
 import barcodes
+import facturen
 from database import get_db
 from leveranciers import alle_leveranciers
 
@@ -29,6 +30,7 @@ def _formulier(db, artikel=None, waarden=None):
         leveranciers=alle_leveranciers(db),
         terug=waarden.get("terug") or request.args.get("terug", ""),
         zoekcode=waarden.get("zoekcode") or request.args.get("zoekcode", ""),
+        ronde_id=waarden.get("ronde_id") or request.args.get("ronde_id", ""),
     )
 
 
@@ -36,7 +38,17 @@ def _door():
     return {"door": session.get("gebruiker_naam"), "gebruiker_id": session.get("gebruiker_id")}
 
 
+def _terug_naar_ronde(db, ronde_id, code):
+    """Vanuit een inboekronde (Factuur inboeken): de net gekoppelde barcode telt meteen mee, en terug naar de ronde."""
+    uitkomst = facturen.scan(db, int(ronde_id), code)
+    if uitkomst["status"] == "toegevoegd":
+        flash(f"+ {uitkomst['melding']}", "success")
+    return redirect(url_for("factuur_ronde", ronde_id=int(ronde_id)))
+
+
 def _na_opslaan(form, artikel_id):
+    if form.get("terug") == "ronde" and str(form.get("ronde_id", "")).isdigit() and form.get("zoekcode"):
+        return _terug_naar_ronde(get_db(), form["ronde_id"], form["zoekcode"])
     if form.get("terug") == "zoeken" and form.get("zoekcode"):
         return redirect(url_for("barcode_zoeken", code=form["zoekcode"]))
     if form.get("terug") == "product" and form.get("product_id"):
@@ -127,10 +139,15 @@ def register_routes(app):
         code = request.form.get("code", "")
         artikel_id = request.form.get("artikel_id", "")
         fout = barcodes.koppel_doos(db, int(artikel_id) if artikel_id.isdigit() else 0, code, request.form.get("per_omverpakking"))
+        ronde_id = request.form.get("ronde_id", "")
         if fout:
             flash(fout, "error")
         else:
             flash("Doos-barcode toegevoegd.", "success")
+            if ronde_id.isdigit():
+                return _terug_naar_ronde(db, ronde_id, code)
+        if ronde_id.isdigit():
+            return redirect(url_for("factuur_ronde", ronde_id=int(ronde_id), onbekend=code) + "#onbekend")
         return redirect(url_for("barcode_zoeken", code=code))
 
     @app.route("/api/barcode/<code>")

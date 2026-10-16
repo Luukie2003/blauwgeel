@@ -1,0 +1,179 @@
+{% extends basis_template %}
+{% set r = g_ronde.ronde %}
+{% set open = r.status == 'open' %}
+{% block titel %}{{ 'Factuur ' ~ r.factuurnummer if r.factuurnummer else 'Inboekronde #' ~ r.id }}{% endblock %}
+{% macro euro(bedrag) %}&euro; {{ '%.2f'|format(bedrag)|replace('.', ',') }}{% endmacro %}
+{% block inhoud %}
+<p class="subtitel">
+    <a href="{{ url_for('facturen_overzicht') }}">&larr; Factuur inboeken</a>
+    &middot; {{ r.leverancier_naam or 'geen leverancier' }}
+    {% if r.bestelling_id %}&middot; bestelling #{{ r.bestelling_id }}{% if r.bestelling_referentie %} ({{ r.bestelling_referentie }}){% endif %}{% endif %}
+    &middot; {% if r.status == 'afgerond' %}<span class="badge badge-ok">ingeboekt {{ r.afgerond_op|datum_nl }}</span>{% elif r.status == 'geannuleerd' %}<span class="badge badge-neutraal">geannuleerd</span>{% else %}<span class="badge badge-in">bezig</span>{% endif %}
+</p>
+
+{% if open %}
+<div class="kaart">
+    <form method="post" action="{{ url_for('factuur_scan', ronde_id=r.id) }}" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end; margin:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld" style="margin:0; flex:1 1 14rem; min-width:0">
+            <label for="code">Scan een doos, krat of verpakking</label>
+            <input type="text" id="code" name="code" inputmode="numeric" autocomplete="off" autofocus required placeholder="Scan of typ de barcode">
+        </div>
+        <button type="submit" class="btn btn-geel">Toevoegen</button>
+    </form>
+    <p class="tekst-zacht" style="margin:0.5rem 0 0; font-size:0.82rem">Dezelfde doos nog een keer scannen telt er een bij. Een verkeerde scan haal je hieronder weer weg.</p>
+</div>
+{% endif %}
+
+{% if onbekende_barcode and open %}
+<div class="kaart" id="onbekend" style="border-left:4px solid var(--oranje, #b45309)">
+    <h2 style="margin-top:0">Onbekende barcode <code>{{ onbekende_barcode.code }}</code></h2>
+    <p style="margin-top:0">Koppel hem aan een product; daarna telt deze scan meteen mee. Wat heb je gescand?</p>
+    <div style="display:flex; gap:0.6rem; flex-wrap:wrap">
+        <a href="{{ url_for('artikel_nieuw', ean=onbekende_barcode.code, terug='ronde', ronde_id=r.id, zoekcode=onbekende_barcode.code) }}" class="btn btn-geel">Een verpakking (zak, fles, blik)</a>
+        <a href="{{ url_for('artikel_nieuw', ean_omverpakking=onbekende_barcode.code, terug='ronde', ronde_id=r.id, zoekcode=onbekende_barcode.code) }}" class="btn btn-rand">Een doos van een nieuw artikel</a>
+        <a href="{{ url_for('factuur_ronde', ronde_id=r.id) }}" class="btn btn-rand">Overslaan</a>
+    </div>
+    {% if artikelen %}
+    <form method="post" action="{{ url_for('barcode_doos_koppelen') }}" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end; margin-top:0.9rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="code" value="{{ onbekende_barcode.code }}">
+        <input type="hidden" name="ronde_id" value="{{ r.id }}">
+        <div class="veld" style="margin:0; flex:1 1 16rem; min-width:0">
+            <label for="artikel_id">Of: de doos van een bekend artikel</label>
+            <select id="artikel_id" name="artikel_id" required style="width:100%">
+                <option value="">Kies&hellip;</option>
+                {% for art in artikelen %}
+                <option value="{{ art.id }}" {{ 'selected' if onbekende_barcode.suggestie and onbekende_barcode.suggestie.id == art.id }}>{{ art.product_naam }} &middot; {{ art.naam }}{{ ' (heeft al een doos-barcode)' if art.ean_omverpakking }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="veld" style="margin:0; width:9rem">
+            <label for="per_omverpakking">Hoeveel erin?</label>
+            <input type="number" id="per_omverpakking" name="per_omverpakking" min="1" step="1" required placeholder="Bijv. 24">
+        </div>
+        <button type="submit" class="btn btn-rand">Koppelen</button>
+    </form>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">Wat er binnenkomt</h2>
+        <span class="tekst-zacht">{{ g_ronde.scans }} gescand &middot; {{ euro(g_ronde.totaal) }}</span>
+    </div>
+    {% if g_ronde.per_product %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th style="text-align:right">Erbij</th><th style="text-align:right">Inkoop</th></tr></thead>
+            <tbody>
+                {% for p in g_ronde.per_product %}
+                <tr><td>{{ p.naam }}</td><td style="text-align:right"><strong>+{{ p.eenheden }}</strong> {{ p.eenheid }}</td><td style="text-align:right">{{ euro(p.bedrag) }}</td></tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr><th>Totaal</th><th></th><th style="text-align:right">{{ euro(g_ronde.totaal) }}</th></tr>
+                {% if r.factuurbedrag is not none %}
+                <tr><td>Op de factuur</td><td></td><td style="text-align:right">{{ euro(r.factuurbedrag) }}</td></tr>
+                <tr><td>Verschil</td><td></td><td style="text-align:right">
+                    {% if g_ronde.verschil|abs < 0.01 %}<span class="badge badge-ok">klopt</span>
+                    {% else %}<span class="badge badge-laag">{{ euro(g_ronde.verschil) }}</span>{% endif %}</td></tr>
+                {% endif %}
+            </tfoot>
+        </table>
+    </div>
+    <p class="tekst-zacht" style="font-size:0.8rem; margin:0.5rem 0 0">De inkoop komt uit de prijzen bij de artikelen (Producten &rarr; Barcodes); ontbreekt er een, dan telt die als &euro; 0.</p>
+    {% else %}
+    <p class="leeg" style="margin:0">Nog niets gescand.</p>
+    {% endif %}
+</div>
+
+{% if g_ronde.regels %}
+<div class="kaart">
+    <h2 style="margin-top:0">Scans</h2>
+    <ul class="mutatie-lijst">
+        {% for g in g_ronde.regels %}
+        <li style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center; flex-wrap:wrap">
+            <div style="min-width:0">
+                <strong>{{ g.omschrijving }}</strong>
+                <div class="tekst-zacht" style="font-size:0.8rem">{{ g.product_naam }} &middot; {{ g.aantal }} &times; {{ g.eenheden_per_stuk }} = {{ g.aantal * g.eenheden_per_stuk }} {{ g.eenheid }}{% if g.code %} &middot; <code>{{ g.code }}</code>{% endif %}</div>
+            </div>
+            {% if open %}
+            <form method="post" action="{{ url_for('factuur_regel_aantal', ronde_id=r.id, regel_id=g.id) }}" style="display:flex; gap:0.3rem; align-items:center; margin:0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="number" name="aantal" value="{{ g.aantal }}" min="0" step="1" style="width:4.5rem" aria-label="Aantal keer gescand" onchange="this.form.submit()">
+                <button type="submit" name="weg" value="1" class="btn btn-rand btn-klein" title="Deze scan weghalen">Weg</button>
+            </form>
+            {% else %}
+            <span>{{ g.aantal }}&times;</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if open %}
+<details class="kaart">
+    <summary style="cursor:pointer"><strong>Iets zonder barcode toevoegen</strong></summary>
+    <form method="post" action="{{ url_for('factuur_handmatig', ronde_id=r.id) }}" style="margin-top:0.7rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="formgrid">
+            <div class="veld">
+                <label for="product_id">Product</label>
+                <select id="product_id" name="product_id" required>
+                    <option value="">Kies&hellip;</option>
+                    {% for categorie, rijen in producten|groupby('categorie') %}
+                    <optgroup label="{{ categorie }}">{% for p in rijen %}<option value="{{ p.id }}">{{ p.naam }} ({{ p.eenheid }})</option>{% endfor %}</optgroup>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="veld"><label for="eenheden">Aantal (in de eenheid van het product)</label><input type="number" id="eenheden" name="eenheden" min="1" step="1" required></div>
+            <div class="veld"><label for="prijs">Inkoop samen (&euro;, mag leeg)</label><input type="number" id="prijs" name="prijs" min="0" step="0.01"></div>
+        </div>
+        <button type="submit" class="btn btn-rand">Toevoegen</button>
+    </form>
+</details>
+
+<details class="kaart">
+    <summary style="cursor:pointer"><strong>Gegevens van de factuur</strong> <span class="tekst-zacht">&middot; leverancier, nummer, bedrag, bestelling</span></summary>
+    <form method="post" action="{{ url_for('factuur_gegevens', ronde_id=r.id) }}" style="margin-top:0.7rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="formgrid">
+            <div class="veld">
+                <label for="g_leverancier">Leverancier</label>
+                <select id="g_leverancier" name="leverancier_id">
+                    <option value="">&mdash;</option>
+                    {% for lev in leveranciers %}<option value="{{ lev.id }}" {{ 'selected' if lev.id == r.leverancier_id }}>{{ lev.naam }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="veld"><label for="g_nummer">Factuurnummer</label><input type="text" id="g_nummer" name="factuurnummer" maxlength="60" value="{{ r.factuurnummer or '' }}"></div>
+            <div class="veld"><label for="g_bedrag">Totaal op de factuur (&euro;)</label><input type="number" id="g_bedrag" name="factuurbedrag" min="0" step="0.01" value="{{ '%.2f'|format(r.factuurbedrag) if r.factuurbedrag is not none else '' }}"></div>
+            <div class="veld">
+                <label for="g_bestelling">Hoort bij bestelling</label>
+                <select id="g_bestelling" name="bestelling_id">
+                    <option value="">&mdash;</option>
+                    {% for b in bestellingen %}<option value="{{ b.id }}" {{ 'selected' if b.id == r.bestelling_id }}>#{{ b.id }}{% if b.referentie %} ({{ b.referentie }}){% endif %} van {{ b.aangemaakt_op|datum_nl }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="veld"><label for="g_opmerking">Opmerking</label><input type="text" id="g_opmerking" name="opmerking" value="{{ r.opmerking or '' }}"></div>
+        <button type="submit" class="btn btn-rand">Opslaan</button>
+    </form>
+</details>
+
+<div class="kaart" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center">
+    <form method="post" action="{{ url_for('factuur_afronden', ronde_id=r.id) }}" style="margin:0"
+          onsubmit="return bevestigEnVerstuur(this, 'Alles inboeken? De voorraad gaat omhoog{{ ' en bestelling #' ~ r.bestelling_id ~ ' komt op ontvangen te staan' if r.bestelling_id }}.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-geel" {{ 'disabled' if not g_ronde.regels }}>Afronden en inboeken</button>
+    </form>
+    <form method="post" action="{{ url_for('factuur_annuleren', ronde_id=r.id) }}" style="margin:0"
+          onsubmit="return bevestigEnVerstuur(this, 'Deze inboekronde annuleren? Er wordt niets ingeboekt.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-rand">Annuleren</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

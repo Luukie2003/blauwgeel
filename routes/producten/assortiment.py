@@ -6,6 +6,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 
 import barcodes
 from database import get_db
+from productinfo import HANDMATIG_AANGEPAST
 from productkaart import BESTELEENHEDEN, EENHEDEN, artikelcode_in_gebruik, eenheid_uit_formulier
 from helpers import (
     PRODUCT_AFBEELDINGEN_MAP,
@@ -235,6 +236,16 @@ def register_routes(app):
             )
             vervang_product_prijsopties(db, product_id)
             barcodes.werk_inkoopprijs_bij(db, product_id, naam, gebruiker_id)  # een andere besteleenheid telt mee
+            # Een andere voorraad hier is een boeking zonder formulier: leg 'm vast, anders is later niet na te gaan
+            # waar het verschil vandaan komt.
+            verschil = nieuwe_voorraad - product["voorraad"]
+            if verschil:
+                db.execute(
+                    """INSERT INTO mutaties (product_id, type, aantal, datum, naam, gebruiker_id, opmerking)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (product_id, "in" if verschil > 0 else "uit", abs(verschil), datum, naam, gebruiker_id,
+                     f"{HANDMATIG_AANGEPAST} ({product['voorraad']} → {nieuwe_voorraad})"),
+                )
             db.commit()
             flash(f"Product '{request.form['naam']}' bijgewerkt.", "success")
             if gedwongen_inactief:

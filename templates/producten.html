@@ -31,10 +31,47 @@
     </div>
 </div>
 
+{% if producten and samenvatting.actief %}
+{# Kerncijfers: een klik zet het bijbehorende snelfilter aan. #}
+<div class="statgrid producten-kerncijfers">
+    <button type="button" class="stat stat-knop" data-snel="">
+        <div class="getal">{{ samenvatting.actief }}</div>
+        <div class="label">Actieve producten</div>
+    </button>
+    {% if not categorie_vergrendeld %}
+    <div class="stat">
+        <div class="getal">&euro; {{ '{:,.0f}'.format(samenvatting.waarde).replace(',', '.') }}</div>
+        <div class="label">Voorraadwaarde tegen inkoopprijs</div>
+    </div>
+    {% endif %}
+    <button type="button" class="stat stat-knop {{ 'waarschuwing' if samenvatting.onder_minimum }}" data-snel="laag">
+        <div class="getal">{{ samenvatting.onder_minimum }}</div>
+        <div class="label">Onder het minimum</div>
+    </button>
+    <button type="button" class="stat stat-knop {{ 'waarschuwing' if samenvatting.zonder_prijs }}" data-snel="zonder-prijs">
+        <div class="getal">{{ samenvatting.zonder_prijs }}</div>
+        <div class="label">Zonder verkoop- of inkoopprijs</div>
+    </button>
+    <button type="button" class="stat stat-knop" data-snel="zonder-barcode">
+        <div class="getal">{{ samenvatting.zonder_barcode }}</div>
+        <div class="label">Zonder barcode</div>
+    </button>
+</div>
+{% endif %}
+
 <div class="kaart">
     {% if producten %}
+    <div class="snelfilters" role="group" aria-label="Snelfilter">
+        <button type="button" class="snelfilter actief" data-snel="">Alles</button>
+        <button type="button" class="snelfilter" data-snel="laag">Onder minimum</button>
+        <button type="button" class="snelfilter" data-snel="op">Op</button>
+        <button type="button" class="snelfilter" data-snel="zonder-prijs">Zonder prijs</button>
+        <button type="button" class="snelfilter" data-snel="zonder-barcode">Zonder barcode</button>
+        <button type="button" class="snelfilter" data-snel="kiosk">Op het prijzenscherm</button>
+        {% if aantal_inactief %}<button type="button" class="snelfilter" data-snel="inactief">Inactief</button>{% endif %}
+    </div>
     <div class="filterbalk">
-        <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">
+        <input type="text" id="filter-zoek" placeholder="Zoek op naam, merk, artikelcode of barcode...">
         {% if not categorie_vergrendeld %}
         <select id="filter-categorie">
             <option value="">Alle categorieën</option>
@@ -57,6 +94,15 @@
             Inactieve tonen ({{ aantal_inactief }})
         </label>
         {% endif %}
+        <select id="filter-sorteren" aria-label="Sorteren">
+            <option value="">Sorteren: standaard</option>
+            <option value="naam">Naam (A-Z)</option>
+            <option value="voorraad">Voorraad (laagste eerst)</option>
+            <option value="tekort">Tekort t.o.v. minimum (grootste eerst)</option>
+            {% if not categorie_vergrendeld %}<option value="waarde">Voorraadwaarde (hoogste eerst)</option>{% endif %}
+            {% if huidige_gebruiker_rol == 'beheerder' and not categorie_vergrendeld %}<option value="marge">Marge (laagste eerst)</option>{% endif %}
+            <option value="verkoop">Verkoopprijs (hoogste eerst)</option>
+        </select>
         <label style="display:flex; align-items:center; gap:0.35rem; font-weight:400; cursor:pointer; white-space:nowrap">
             <input type="checkbox" id="label-select-alles" style="width:auto">
             Alles selecteren
@@ -74,25 +120,38 @@
                 <table class="producten-tabel">
                     <thead>
                         <tr>
-                            <th></th><th></th><th>Product</th><th>Status</th><th>Categorie</th><th>Voorraad</th>
-                            {% if not categorie_vergrendeld %}<th>Inkoop</th>{% endif %}
-                            <th>Verkoop</th><th></th>
+                            <th></th><th class="kolom-breed"></th><th>Product</th><th class="kolom-breed">Status</th><th>Voorraad</th>
+                            {% if not categorie_vergrendeld %}<th class="kolom-breed">Inkoop</th>{% endif %}
+                            <th>Verkoop</th>
+                            {% if huidige_gebruiker_rol == 'beheerder' and not categorie_vergrendeld %}<th class="kolom-breed">Marge</th>{% endif %}
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for p in producten_in_categorie %}
-                        <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie ~ ' ' ~ (p.subcategorie or ''))|lower }}" data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}" data-actief="{{ 1 if p.actief else 0 }}">
+                        <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie ~ ' ' ~ (p.subcategorie or '') ~ ' ' ~ (p.merk or '') ~ ' ' ~ (p.leverancier_naam or '') ~ ' ' ~ p.barcode_tekst)|lower }}"
+                            data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}" data-actief="{{ 1 if p.actief else 0 }}"
+                            data-laag="{{ 1 if p.voorraad < p.min_voorraad else 0 }}" data-op="{{ 1 if p.voorraad <= 0 else 0 }}"
+                            data-zonder-prijs="{{ 1 if p.zonder_verkoop or p.zonder_inkoop else 0 }}" data-zonder-barcode="{{ 0 if p.aantal_barcodes else 1 }}"
+                            data-kiosk="{{ 1 if p.toon_op_kiosk else 0 }}"
+                            data-naam="{{ p.naam|lower }}" data-voorraad="{{ p.voorraad }}" data-tekort="{{ p.min_voorraad - p.voorraad }}"
+                            data-waarde="{{ '%.2f'|format(p.waarde) }}" data-verkoop="{{ '%.2f'|format(p.verkoopprijs) }}"
+                            data-marge="{{ '%.1f'|format(p.marge_pct) if p.marge_pct is not none else '999' }}">
                             <td><input type="checkbox" class="label-select-rij" value="{{ p.id }}" style="width:auto"></td>
-                            <td>
+                            <td class="kolom-breed">
                                 {% if p.afbeelding %}
                                 <img src="{{ url_for('static', filename='product_afbeeldingen/' + (p.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
                                 {% endif %}
                             </td>
                             <td>
-                                {{ p.naam }}{% if not p.actief %} <span class="badge badge-neutraal">Inactief</span>{% endif %}
-                                {% if p.artikelcode %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.artikelcode }}</div>{% endif %}
+                                <a href="{{ url_for('product_detail', product_id=p.id) }}" class="product-lijst-naam">{{ p.naam }}</a>{% if not p.actief %} <span class="badge badge-neutraal">Inactief</span>{% endif %}
+                                <div class="tekst-zacht" style="font-size:0.72rem">
+                                    {{ [p.merk, p.subcategorie, p.leverancier_naam]|select|join(' · ') }}{% if p.artikelcode %}{{ ' · ' if p.merk or p.subcategorie or p.leverancier_naam }}{{ p.artikelcode }}{% endif %}
+                                    {% if p.aantal_barcodes %} &middot; <span title="{{ p.aantal_barcodes }} artikel{{ 'en' if p.aantal_barcodes > 1 }} met barcode">&#9783; {{ p.aantal_barcodes }}</span>{% endif %}
+                                    {% if p.toon_op_kiosk %} &middot; prijzenscherm{% endif %}
+                                </div>
                             </td>
-                            <td>
+                            <td class="kolom-breed">
                                 {% if huidige_gebruiker_rol == 'beheerder' %}
                                 <form method="post" action="{{ url_for('product_actief_wisselen', product_id=p.id) }}" class="inline js-ajax-form">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -106,10 +165,6 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {{ p.categorie }}
-                                {% if p.subcategorie %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.subcategorie }}</div>{% endif %}
-                            </td>
-                            <td>
                                 {% if p.voorraad < p.min_voorraad %}
                                 <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
                                 {% else %}
@@ -118,7 +173,7 @@
                                 <div class="tekst-zacht" style="font-size:0.72rem">min. {{ p.min_voorraad }} {{ p.eenheid }}</div>
                             </td>
                             {% if not categorie_vergrendeld %}
-                            <td>
+                            <td class="kolom-breed">
                                 {% if p.actief and p.inkoopprijs == 0 %}
                                 <span class="badge badge-uit" title="Nog geen inkoopprijs ingevuld">€ 0.00 ontbreekt</span>
                                 {% else %}
@@ -129,10 +184,19 @@
                             <td>
                                 {% if p.actief and p.verkoopprijs == 0 and p.categorie not in niet_verplicht_categorieen %}
                                 <span class="badge badge-laag" title="Nog geen verkoopprijs ingevuld">€ 0.00 ontbreekt</span>
+                                {% elif p.glazen_per_fust %}
+                                {{ "€ %.2f"|format(p.prijs_per_glas) }} <span class="tekst-zacht">/ glas</span>
                                 {% else %}
                                 {{ "€ %.2f"|format(p.verkoopprijs) }}
                                 {% endif %}
                             </td>
+                            {% if huidige_gebruiker_rol == 'beheerder' and not categorie_vergrendeld %}
+                            <td class="kolom-breed">
+                                {% if p.marge_pct is not none %}
+                                <span class="{{ 'tekst-rood' if p.marge_pct < doelmarge else '' }}" title="{{ 'Onder' if p.marge_pct < doelmarge else 'Boven' }} de doelmarge van {{ doelmarge }}%">{{ '%.0f'|format(p.marge_pct) }}%</span>
+                                {% else %}<span class="tekst-zacht">&mdash;</span>{% endif %}
+                            </td>
+                            {% endif %}
                             <td class="tabel-acties">
                                 {% if huidige_gebruiker_rol == 'beheerder' %}
                                 <a href="{{ url_for('product_bewerken', product_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
@@ -192,6 +256,53 @@
         document.querySelectorAll('.categorie-groep')
     );
     var alleSubOpties = subVeld ? Array.prototype.slice.call(subVeld.options) : [];
+    var sorteerVeld = document.getElementById('filter-sorteren');
+    var snel = '';  // het gekozen snelfilter (zie de knoppen boven de lijst en de kerncijfers)
+    rijen.forEach(function (rij, i) { rij.dataset.volgorde = i; });
+
+    // Wat elk snelfilter laat zien. Inactieve producten tellen alleen bij 'Inactief' mee.
+    var SNELFILTERS = {
+        'laag': function (r) { return r.dataset.laag === '1' && r.dataset.actief === '1'; },
+        'op': function (r) { return r.dataset.op === '1' && r.dataset.actief === '1'; },
+        'zonder-prijs': function (r) { return r.dataset.zonderPrijs === '1'; },
+        'zonder-barcode': function (r) { return r.dataset.zonderBarcode === '1' && r.dataset.actief === '1'; },
+        'kiosk': function (r) { return r.dataset.kiosk === '1'; },
+        'inactief': function (r) { return r.dataset.actief === '0'; }
+    };
+
+    function kiesSnelfilter(waarde) {
+        snel = waarde;
+        document.querySelectorAll('.snelfilter').forEach(function (knop) {
+            knop.classList.toggle('actief', knop.dataset.snel === waarde);
+        });
+        filter();
+    }
+    document.querySelectorAll('[data-snel]').forEach(function (knop) {
+        knop.addEventListener('click', function () { kiesSnelfilter(knop.dataset.snel); });
+    });
+
+    // Sorteren gebeurt binnen elke categorie; 'standaard' zet de oorspronkelijke volgorde terug.
+    var SORTERING = {
+        'naam': function (r) { return r.dataset.naam; },
+        'voorraad': function (r) { return parseFloat(r.dataset.voorraad); },
+        'tekort': function (r) { return -parseFloat(r.dataset.tekort); },
+        'waarde': function (r) { return -parseFloat(r.dataset.waarde); },
+        'marge': function (r) { return parseFloat(r.dataset.marge); },
+        'verkoop': function (r) { return -parseFloat(r.dataset.verkoop); },
+        '': function (r) { return parseInt(r.dataset.volgorde, 10); }
+    };
+    function sorteren() {
+        var sleutel = SORTERING[sorteerVeld ? sorteerVeld.value : ''] || SORTERING[''];
+        document.querySelectorAll('#producten-groepen tbody').forEach(function (tbody) {
+            Array.prototype.slice.call(tbody.children)
+                .sort(function (a, b) {
+                    var x = sleutel(a), y = sleutel(b);
+                    return x < y ? -1 : x > y ? 1 : parseInt(a.dataset.volgorde, 10) - parseInt(b.dataset.volgorde, 10);
+                })
+                .forEach(function (rij) { tbody.appendChild(rij); });
+        });
+    }
+    if (sorteerVeld) sorteerVeld.addEventListener('change', sorteren);
 
     function filterSubOpties() {
         if (!catVeld || !subVeld) return;
@@ -217,8 +328,9 @@
             var matchCategorie = !categorie || rij.dataset.categorie === categorie;
             var matchSubcategorie = !subcategorie || rij.dataset.subcategorie === subcategorie;
             // Inactieve producten staan standaard niet in de lijst; zoek je er een, dan wel.
-            var matchActief = rij.dataset.actief !== '0' || zoek || (inactiefVeld && inactiefVeld.checked);
-            var toon = matchZoek && matchCategorie && matchSubcategorie && matchActief;
+            var matchActief = rij.dataset.actief !== '0' || zoek || (inactiefVeld && inactiefVeld.checked) || snel === 'inactief';
+            var matchSnel = !snel || SNELFILTERS[snel](rij);
+            var toon = matchZoek && matchCategorie && matchSubcategorie && matchActief && matchSnel;
             rij.style.display = toon ? '' : 'none';
             if (toon) zichtbaar++;
         });

@@ -18,6 +18,7 @@ DERVING_DAGEN = 90
 WEKEN_GRAFIEK = 12
 WEKEN_GEMIDDELD = 4
 WEKEN_NIET_VERKOCHT = 3  # vanaf zoveel weken zonder verkoop staat er een melding
+HANDMATIG_AANGEPAST = "Voorraad aangepast via Bewerken"  # de opmerking bij zo'n boeking (zie product_bewerken)
 
 
 def productinfo(db, product):
@@ -81,8 +82,9 @@ def productinfo(db, product):
         ).fetchall(),
         "laatste_levering": db.execute(
             """SELECT datum, aantal, naam, opmerking FROM mutaties
-               WHERE product_id = ? AND type = 'in' AND telling_id IS NULL ORDER BY datum DESC, id DESC LIMIT 1""",
-            (pid,),
+               WHERE product_id = ? AND type = 'in' AND telling_id IS NULL AND COALESCE(opmerking, '') NOT LIKE ?
+               ORDER BY datum DESC, id DESC LIMIT 1""",
+            (pid, HANDMATIG_AANGEPAST + "%"),
         ).fetchone(),
         "meldingen": db.execute(
             "SELECT COUNT(*) FROM bestellijst_meldingen WHERE product_id = ? AND afgehandeld = 0", (pid,)

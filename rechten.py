@@ -93,6 +93,13 @@ GEBRUIK_NIET_LOGGEN = {
     "api_barcode",
     # Het blok 'Verkoop en verwachting' van de productpagina (apart opgehaald).
     "product_detail_verkoop",
+    # De JSON-adressen voor de app op de handterminal (facturen inboeken): geen paginabezoeken.
+    "api_facturen",
+    "api_factuur",
+    "api_factuur_scan",
+    "api_factuur_koppelen",
+    "api_factuur_regel",
+    "api_factuur_afronden",
     # Delen van een pagina die na het laden apart worden opgehaald (zie data-lazy-bron in gedeeld.js), en het
     # voorverwarmen van het voorspelmodel: dat is geen bezoek aan een pagina.
     "dashboard_omzettrend",
@@ -236,6 +243,22 @@ SECTIE_ENDPOINTS = {
         "artikel_verwijderen",
         "barcode_doos_koppelen",
         "api_barcode",
+        # Facturen inboeken door te scannen (zie facturen.py), in de browser en via de app.
+        "facturen_overzicht",
+        "factuur_start",
+        "factuur_ronde",
+        "factuur_scan",
+        "factuur_handmatig",
+        "factuur_regel_aantal",
+        "factuur_gegevens",
+        "factuur_afronden",
+        "factuur_annuleren",
+        "api_facturen",
+        "api_factuur",
+        "api_factuur_scan",
+        "api_factuur_koppelen",
+        "api_factuur_regel",
+        "api_factuur_afronden",
         "geschiedenis",
         "tellen",
         "tellen_lopen_starten",

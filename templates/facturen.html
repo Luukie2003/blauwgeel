@@ -1,0 +1,68 @@
+{% extends basis_template %}
+{% block titel %}Factuur inboeken{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Scan de dozen, kratten en losse verpakkingen van een levering: de site weet per barcode wat het is en hoeveel erin
+    zit, en telt alles op. Klopt het met de factuur, dan rond je af en gaat alles in &eacute;&eacute;n keer in de voorraad.
+    Hoort het bij een bestelling, dan staat die daarna op ontvangen.
+</p>
+
+{% if open_rondes %}
+<div class="kaart">
+    <h2 style="margin-top:0">Verder met</h2>
+    <ul class="info-opsomming">
+        {% for r in open_rondes %}
+        <li>
+            <a href="{{ url_for('factuur_ronde', ronde_id=r.id) }}"><strong>{{ 'Factuur ' ~ r.factuurnummer if r.factuurnummer else 'Inboekronde #' ~ r.id }}</strong></a>
+            <span class="tekst-zacht">&middot; {{ r.leverancier_naam or 'geen leverancier' }} &middot; {{ r.scans }} gescand &middot; begonnen {{ r.gestart_op|datum_nl }}{% if r.gestart_door %} door {{ r.gestart_door }}{% endif %}{% if r.bron == 'app' %} (app){% endif %}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="kaart">
+    <h2 style="margin-top:0">Nieuwe factuur</h2>
+    <form method="post" action="{{ url_for('factuur_start') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="formgrid">
+            <div class="veld">
+                <label for="leverancier_id">Leverancier <span class="tekst-zacht">(mag leeg)</span></label>
+                <select id="leverancier_id" name="leverancier_id">
+                    <option value="">&mdash;</option>
+                    {% for lev in leveranciers %}<option value="{{ lev.id }}">{{ lev.naam }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="veld">
+                <label for="factuurnummer">Factuurnummer <span class="tekst-zacht">(mag leeg)</span></label>
+                <input type="text" id="factuurnummer" name="factuurnummer" maxlength="60">
+            </div>
+            {% if bestellingen %}
+            <div class="veld">
+                <label for="bestelling_id">Hoort bij bestelling <span class="tekst-zacht">(mag leeg)</span></label>
+                <select id="bestelling_id" name="bestelling_id">
+                    <option value="">&mdash;</option>
+                    {% for b in bestellingen %}<option value="{{ b.id }}">#{{ b.id }}{% if b.referentie %} ({{ b.referentie }}){% endif %} van {{ b.aangemaakt_op|datum_nl }}</option>{% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn btn-geel">Begin met scannen</button>
+    </form>
+</div>
+
+{% if recente_rondes %}
+<div class="kaart">
+    <h2 style="margin-top:0">Eerder ingeboekt</h2>
+    <ul class="info-opsomming">
+        {% for r in recente_rondes %}
+        <li>
+            <a href="{{ url_for('factuur_ronde', ronde_id=r.id) }}">{{ 'Factuur ' ~ r.factuurnummer if r.factuurnummer else 'Inboekronde #' ~ r.id }}</a>
+            <span class="tekst-zacht">&middot; {{ r.leverancier_naam or 'geen leverancier' }} &middot;
+                {% if r.status == 'afgerond' %}ingeboekt {{ r.afgerond_op|datum_nl }}{% if r.afgerond_door %} door {{ r.afgerond_door }}{% endif %}{% else %}geannuleerd{% endif %}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% endblock %}

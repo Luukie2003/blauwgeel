@@ -149,3 +149,30 @@ def test_bulk_bewerken_laat_leeg_veld_ongemoeid(ingelogde_client, db):
     ).fetchone()
     assert bijgewerkt["min_voorraad"] == oude_min
     assert bijgewerkt["besteleenheid_factor"] == 12
+
+
+# ---------- Kerncijfers, snelfilters en marge (1.50.0) ----------
+
+
+def test_productenlijst_kerncijfers_en_marge(ingelogde_client, db):
+    db.execute(
+        """INSERT INTO producten (naam, categorie, eenheid, voorraad, min_voorraad, verkoopprijs, inkoopprijs, actief,
+                                  besteleenheid, besteleenheid_factor)
+           VALUES ('Lijsttest Pils', 'Bier', 'Fles', 5, 24, 2.5, 19.2, 1, 'Krat', 24)"""
+    )
+    db.commit()
+    pid = db.execute("SELECT id FROM producten WHERE naam = 'Lijsttest Pils'").fetchone()[0]
+    tekst = ingelogde_client.get("/producten").data.decode()
+    assert "Actieve producten" in tekst and "Onder het minimum" in tekst and "Zonder barcode" in tekst
+    assert f'href="/producten/{pid}" class="product-lijst-naam"' in tekst
+    assert 'data-snel="laag"' in tekst and 'data-laag="1"' in tekst
+    assert ">68%<" in tekst  # (2,50 - 0,80) / 2,50
+
+
+def test_vrijwilliger_ziet_geen_marge_in_de_lijst(client, db):
+    from test_secties_rechten import _login, _maak_vrijwilliger
+
+    _maak_vrijwilliger(db, "lijsthulp", "voorraad")
+    _login(client, "lijsthulp")
+    tekst = client.get("/producten").data.decode()
+    assert "Actieve producten" in tekst and "<th class=\"kolom-breed\">Marge</th>" not in tekst

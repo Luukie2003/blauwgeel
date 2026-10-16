@@ -24,6 +24,40 @@ OVERSLAAN = {"logout", "uitloggen", "weergave_wisselen", "uitrollen_endpoint", "
 OVERSLAAN_DELEN = ("pdf", "csv", "download", "export", "uitlog", "xlsx", "zip")
 MAX_FOUTEN = 10
 
+# Pagina's met een nummer in het adres (een product, een telling, ...) opent de rooktest met echte nummers uit de
+# database: per soort een of een paar voorbeelden. Een nummer dat niet bestaat geeft hooguit een doorverwijzing.
+VOORBEELDEN = {
+    # Van elke categorie het eerste actieve product, plus een fust, een gearchiveerd product, een product met barcodes
+    # en het product dat het vaakst geteld is: zo komen de verschillende soorten productpagina's langs.
+    "product_id": """SELECT id FROM (
+            SELECT MIN(id) AS id FROM producten WHERE COALESCE(gearchiveerd, 0) = 0 AND actief = 1 GROUP BY categorie
+            UNION SELECT MIN(id) FROM producten WHERE glazen_per_fust > 0
+            UNION SELECT MIN(id) FROM producten WHERE gearchiveerd = 1
+            UNION SELECT MIN(product_id) FROM artikelen
+            UNION SELECT product_id FROM (SELECT product_id, COUNT(*) AS n FROM telling_regels GROUP BY product_id
+                                          ORDER BY n DESC LIMIT 1)
+        ) WHERE id IS NOT NULL ORDER BY id LIMIT 12""",
+    "telling_id": "SELECT id FROM tellingen ORDER BY datum DESC, id DESC LIMIT 2",
+    "bestelling_id": "SELECT id FROM bestellingen ORDER BY id DESC LIMIT 2",
+    "artikel_id": "SELECT id FROM artikelen ORDER BY id LIMIT 1",
+    "leverancier_id": "SELECT id FROM leveranciers ORDER BY id LIMIT 1",
+    "lid_id": "SELECT id FROM club_van_20_leden ORDER BY id DESC LIMIT 1",
+    "project_id": "SELECT id FROM club_van_20_projecten ORDER BY id DESC LIMIT 1",
+    "actie_id": "SELECT id FROM kiosk_acties ORDER BY id DESC LIMIT 1",
+    "bardienst_id": "SELECT id FROM kiosk_bardiensten ORDER BY id DESC LIMIT 1",
+    "sjabloon_id": "SELECT id FROM kiosk_sjablonen_custom ORDER BY id DESC LIMIT 1",
+    "sponsor_id": "SELECT id FROM kiosk_sponsoren ORDER BY id DESC LIMIT 1",
+    "item_id": "SELECT id FROM verbruiksvoorwerpen ORDER BY id DESC LIMIT 1",
+    "stemvraag_id": "SELECT id FROM stemvragen ORDER BY id DESC LIMIT 1",
+    "taak_id": "SELECT id FROM taken ORDER BY id DESC LIMIT 1",
+}
+# Waar dezelfde naam bij een ander soort pagina naar een andere tabel wijst (begin van de endpointnaam -> {naam: sql}).
+VOORBEELDEN_PER_SOORT = {
+    "kassa_": {"telling_id": "SELECT id FROM kassa_tellingen ORDER BY id DESC LIMIT 2"},
+    "kluis_": {"telling_id": "SELECT id FROM kluis_tellingen ORDER BY id DESC LIMIT 2"},
+    "kiosk_sponsorlogo": {"sponsor_id": "SELECT id FROM kiosk_sponsorlogos ORDER BY id DESC LIMIT 1"},
+}
+
 
 def te_openen(app):
     """(endpoint, url) van elke pagina zonder variabele delen in het adres die je met GET opent."""
@@ -37,6 +71,37 @@ def te_openen(app):
             if any(deel in regel.endpoint for deel in OVERSLAAN_DELEN):
                 continue
             paginas.append((regel.endpoint, url_for(regel.endpoint)))
+    return paginas
+
+
+def te_openen_met_nummer(app, db):
+    """(endpoint, url) van de GET-pagina's met nummers in het adres, ingevuld met voorbeelden uit de database. Een
+    pagina waarvoor geen voorbeeld is (bijv. nog geen enkele bestelling), slaat de rooktest over."""
+    from flask import url_for
+
+    def voorbeelden(endpoint, naam):
+        sql = next((s[naam] for begin, s in VOORBEELDEN_PER_SOORT.items() if endpoint.startswith(begin) and naam in s),
+                   VOORBEELDEN.get(naam))
+        if sql is None:
+            return []
+        try:
+            return [r[0] for r in db.execute(sql).fetchall()]
+        except sqlite3.Error:  # een tabel die (in deze database) nog niet bestaat
+            return []
+
+    paginas = []
+    with app.test_request_context("/"):
+        for regel in sorted(app.url_map.iter_rules(), key=lambda r: r.rule):
+            if "GET" not in regel.methods or not regel.arguments or regel.endpoint in OVERSLAAN:
+                continue
+            if any(deel in regel.endpoint for deel in OVERSLAAN_DELEN):
+                continue
+            # Alleen pagina's met één nummer erin; een code of token in het adres (bijv. een wachtwoordlink) niet.
+            if len(regel.arguments) != 1:
+                continue
+            naam = next(iter(regel.arguments))
+            for waarde in voorbeelden(regel.endpoint, naam):
+                paginas.append((regel.endpoint, url_for(regel.endpoint, **{naam: waarde})))
     return paginas
 
 
@@ -81,8 +146,10 @@ def draai(bron_db):
                 gebruiker_id=beheerder["id"], gebruiker_naam=beheerder["naam"], gebruiker_rol=beheerder["rol"],
                 gebruiker_secties=beheerder["secties"], sessie_versie=beheerder["sessie_versie"] or 0,
             )
+        with sqlite3.connect(kopie) as db:
+            met_nummer = te_openen_met_nummer(app, db)
         paginas, doorverwezen, fouten = 0, 0, []
-        for endpoint, url in te_openen(app):
+        for endpoint, url in te_openen(app) + met_nummer:
             try:
                 antwoord = client.get(url)
                 if antwoord.status_code >= 500:

@@ -72,11 +72,25 @@ def register_routes(app):
     @app.route("/producten/zoeken")
     def product_zoeken():
         """Live zoeken op productnaam/artikelcode voor de zoekbalk boven in
-        de handterminal-weergave -- geeft JSON terug, geen pagina."""
+        de handterminal-weergave -- geeft JSON terug, geen pagina. Een
+        gescande barcode (zie barcodes.py) geeft het product van dat artikel
+        ("barcode": wat het is), of "onbekende_barcode" als hij nog niet
+        bekend is; de zoekbalk springt daar bij Enter meteen naartoe."""
         db = get_db()
         term = request.args.get("q", "").strip()
         if len(term) < 2:
             return jsonify({"resultaten": []})
+        code = barcodes.normaliseer(term)
+        gevonden = barcodes.zoek_barcode(db, term) if code and len(code) >= 8 else None
+        if gevonden and gevonden["bekend"]:
+            product = db.execute(
+                "SELECT id, naam, categorie, voorraad, min_voorraad, eenheid, afbeelding FROM producten WHERE id = ?",
+                (gevonden["artikel"]["product_id"],),
+            ).fetchone()
+            return jsonify({
+                "resultaten": [dict(product, afbeelding=kleine_afbeelding(product["afbeelding"]))],
+                "barcode": {"code": gevonden["code"], "omschrijving": gevonden["omschrijving"]},
+            })
         patroon = f"%{term}%"
         rijen = db.execute(
             """SELECT id, naam, categorie, voorraad, min_voorraad, eenheid, afbeelding
@@ -86,6 +100,9 @@ def register_routes(app):
                LIMIT 15""",
             (patroon, patroon, f"{term}%"),
         ).fetchall()
+        if not rijen and gevonden and gevonden["geldig"]:
+            # Een geldige barcode die nergens bij hoort (ook niet als artikelcode): die kun je toevoegen.
+            return jsonify({"resultaten": [], "onbekende_barcode": gevonden["code"]})
         # De foto staat in een zoeklijstje op 40 px: de verkleinde versie volstaat.
         resultaten = [dict(p, afbeelding=kleine_afbeelding(p["afbeelding"])) for p in rijen]
         return jsonify({"resultaten": resultaten})

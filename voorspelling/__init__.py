@@ -58,7 +58,9 @@ from voorspelling.basis import (  # noqa: F401
     lees_wedstrijddagen,
     blootstelling,
     GROEP_PREFIX,
+    TEAM_PREFIX,
     groep_sleutel,
+    team_sleutel,
     grenzen,
     onzekerheid,
     DAG_BEGIN_UUR,
@@ -131,7 +133,7 @@ def _waargenomen_dagen(rijen, kalender, soort):
                 if (soort == "wedstrijd" and k["wedstrijden"]) or (soort == "training" and k["training"]) or (
                     soort == "weer" and k["weer"] not in (None, 0.0)
                 ) or (soort == "evenement" and k.get("evenementen")) or (soort == "rustig" and k.get("rustig")) or (
-                    soort in k.get("groepen", ())
+                    soort in k.get("groepen", ()) or soort in k.get("teams", ())
                 ):
                     dagen.add(dag)
             dag += timedelta(days=1)
@@ -170,6 +172,18 @@ def _groep_namen(db):
         ).fetchall()}
     except sqlite3.OperationalError:
         return {}
+
+
+def _team_namen(db):
+    """{team_sleutel: teamnaam} voor de uitleg op de prognosepagina ('team:blauw geel'15 2' -> 'Blauw Geel'15 2')."""
+    return {team_sleutel(r[0]): r[0] for r in db.execute(
+        "SELECT DISTINCT team FROM wedstrijden WHERE team IS NOT NULL AND team != ''"
+    ).fetchall()}
+
+
+def _bijstellingen(kenmerken, effecten):
+    """De bijstelling van de groepen en teams van een dag (zie basis.GROEP_PREFIX en basis.TEAM_PREFIX)."""
+    return sum(effecten.get(s, 0.0) for s in (*kenmerken.get("groepen", ()), *kenmerken.get("teams", ())))
 
 
 def _prognose_model(db, dagen, nu):
@@ -212,9 +226,7 @@ def _prognose_model(db, dagen, nu):
                 1.0 if kenmerken["training"] else 0.0
             ) + effecten["weer"] * (kenmerken["weer"] or 0.0) + effecten["evenement"] * (
                 1.0 if kenmerken.get("evenementen") else 0.0
-            ) + effecten["rustig"] * (1.0 if kenmerken.get("rustig") else 0.0) + sum(
-                effecten.get(groep, 0.0) for groep in kenmerken.get("groepen", ())
-            )
+            ) + effecten["rustig"] * (1.0 if kenmerken.get("rustig") else 0.0) + _bijstellingen(kenmerken, effecten)
             if not open_:
                 m = 0.0  # gesloten: er wordt niets verkocht
             dagen_overzicht.append(
@@ -228,6 +240,7 @@ def _prognose_model(db, dagen, nu):
                     "evenementen": kenmerken.get("evenementen", 0),
                     "rustig": kenmerken.get("rustig", False),
                     "groepen": kenmerken.get("groepen", ()),
+                    "teams": kenmerken.get("teams", ()),
                     "training": kenmerken["training"],
                     "weer_score": kenmerken["weer"],
                     "drukte": m,
@@ -252,13 +265,23 @@ def _prognose_model(db, dagen, nu):
 
     effect_lijst = []
     groepen = sorted(n for n in effecten if n.startswith(GROEP_PREFIX))
+    teams = sorted(n for n in effecten if n.startswith(TEAM_PREFIX))
     groep_namen = _groep_namen(db)
-    for sleutel in ("wedstrijd", "training", "weer", "evenement", "rustig", *groepen):
+    team_namen = _team_namen(db)
+
+    def effect_naam(sleutel):
+        if sleutel in EFFECT_NAMEN:
+            return EFFECT_NAMEN[sleutel]
+        if sleutel.startswith(TEAM_PREFIX):
+            return f"Thuiswedstrijd van {team_namen.get(sleutel, sleutel[len(TEAM_PREFIX):])} (bovenop een thuiswedstrijd)"
+        return f"{groep_namen.get(sleutel, sleutel[len(GROEP_PREFIX):])} (bovenop de soort)"
+
+    for sleutel in ("wedstrijd", "training", "weer", "evenement", "rustig", *groepen, *teams):
         waargenomen = _waargenomen_dagen(rijen, kalender, sleutel)
         effect_lijst.append(
             {
                 "sleutel": sleutel,
-                "naam": EFFECT_NAMEN.get(sleutel) or f"{groep_namen.get(sleutel, sleutel[len(GROEP_PREFIX):])} (bovenop de soort)",
+                "naam": effect_naam(sleutel),
                 "waarde": effecten[sleutel],
                 "aanname": aanname(sleutel),
                 "waargenomen_dagen": waargenomen,
@@ -558,7 +581,7 @@ def _dagdrukte(dag, kalender, effecten):
         + effecten["weer"] * (kenmerken["weer"] or 0.0)
         + effecten.get("evenement", 0.0) * (1.0 if kenmerken.get("evenementen") else 0.0)
         + effecten.get("rustig", 0.0) * (1.0 if kenmerken.get("rustig") else 0.0)
-        + sum(effecten.get(groep, 0.0) for groep in kenmerken.get("groepen", ()))
+        + _bijstellingen(kenmerken, effecten)
     )
 
 
@@ -705,7 +728,7 @@ def data_vingerafdruk(db):
 # model zelf uit, en na elke update van de server opnieuw. De sleutel bevat de vingerafdruk van de gegevens en de versie van
 # de site, dus een bestand van oudere gegevens of oudere code wordt nooit gebruikt.
 SCHIJF_AAN = True
-SCHIJF_VERSIE = 5  # ophogen als de vorm van een uitkomst verandert zonder dat de siteversie meegaat
+SCHIJF_VERSIE = 6  # ophogen als de vorm van een uitkomst verandert zonder dat de siteversie meegaat
 SCHIJF_MAX_LEEFTIJD_SECONDEN = 3 * 24 * 3600
 SCHIJF_MAX_BESTANDEN = 60
 

@@ -122,6 +122,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Bestellen",
+        "endpoints": ["facturen_overzicht", "factuur_ronde"],
+        "url_endpoint": "facturen_overzicht",
+        "label": "Factuur inboeken",
+    },
+    {
+        "groep": "Bestellen",
         "endpoints": ["leveranciers_lijst", "leverancier_nieuw", "leverancier_bewerken"],
         "url_endpoint": "leveranciers_lijst",
         "label": "Leveranciers",

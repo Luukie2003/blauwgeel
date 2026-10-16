@@ -2698,3 +2698,51 @@ button:disabled,
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* ---------- Productenlijst (producten.html): kerncijfers, snelfilters, marge ---------- */
+
+.stat-knop {
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    width: 100%;
+}
+
+.stat-knop:hover { border-color: var(--blauw); }
+
+.snelfilters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.8rem;
+}
+
+.snelfilter {
+    font: inherit;
+    font-size: 0.82rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--rand);
+    border-radius: 999px;
+    background: var(--kaart);
+    cursor: pointer;
+}
+
+.snelfilter.actief {
+    background: var(--blauw);
+    border-color: var(--blauw);
+    color: #fff;
+}
+
+.product-lijst-naam {
+    font-weight: 600;
+    color: inherit;
+    text-decoration: none;
+}
+
+.product-lijst-naam:hover { text-decoration: underline; }
+
+.tekst-rood { color: var(--rood); font-weight: 600; }
+
+@media (max-width: 720px) {
+    .producten-tabel .kolom-breed { display: none; }
+}

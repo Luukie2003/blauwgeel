@@ -349,3 +349,37 @@ def test_de_rooktest_vindt_een_kapotte_pagina(app, monkeypatch):
 
 def test_draai_rooktest_zonder_script_is_niet_afgerond(tmp_path):
     assert uitrollen.draai_rooktest(tmp_path, tmp_path / "x.db")["afgerond"] is False
+
+
+def test_de_rooktest_opent_ook_paginas_met_een_nummer(app, db, monkeypatch):
+    """Een productpagina die alleen met echte gegevens stukgaat, wordt ook gevonden."""
+    import app as app_module
+    import mail
+    import rooktest
+
+    monkeypatch.setattr(mail, "MAIL_BESCHIKBAAR", False)
+    pid = db.execute("SELECT id FROM producten WHERE actief = 1 ORDER BY id LIMIT 1").fetchone()[0]
+    echte_create_app = app_module.create_app
+
+    def met_kapotte_productpagina(**kwargs):
+        nieuwe = echte_create_app(**kwargs)
+
+        @nieuwe.route("/kapot/<int:product_id>")
+        def kapot_product(product_id):
+            raise ValueError(f"product {product_id}")
+
+        return nieuwe
+
+    monkeypatch.setattr(app_module, "create_app", met_kapotte_productpagina)
+    uitkomst = rooktest.draai(app.config["DATABASE"])
+    assert uitkomst["afgerond"] and any(f"/kapot/{pid}: ValueError" in f for f in uitkomst["fouten"])
+
+
+def test_voorbeelden_voor_paginas_met_een_nummer(app, db):
+    import rooktest
+
+    with app.app_context():
+        urls = [url for _, url in rooktest.te_openen_met_nummer(app, db)]
+    pid = db.execute("SELECT id FROM producten WHERE actief = 1 ORDER BY id LIMIT 1").fetchone()[0]
+    assert f"/producten/{pid}" in urls and f"/producten/{pid}/verkoop" in urls
+    assert not any("wachtwoord-instellen" in u or "/api/barcode/" in u for u in urls)

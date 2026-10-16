@@ -214,7 +214,8 @@ def test_barcodes_horen_bij_de_voorraad_sectie(client, db):
     _maak_vrijwilliger(db, "kassahulp", "kassa")
     _login(client, "kassahulp")
     assert client.get("/barcodes").status_code == 302
-    assert client.get(f"/api/barcode/{AH_ZAK}").status_code == 302
+    resp = client.get(f"/api/barcode/{AH_ZAK}")  # de app krijgt JSON in plaats van een doorverwijzing
+    assert resp.status_code == 403 and resp.get_json()["fout"] == "geen_toegang"
 
 
 def test_vrijwilliger_met_voorraad_kan_barcodes_toevoegen(client, db):

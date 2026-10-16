@@ -4,7 +4,49 @@ from flask import flash, jsonify, redirect, render_template, request, url_for
 
 from database import get_db
 from helpers import categorienamen_zonder_verkoopprijsplicht, is_ajax_verzoek
+from helpers.producten import inkoop_per_stuk, omzet_per_eenheid
+from marge import lees_doelmarge
 from productkaart import NIET_GEARCHIVEERD
+
+
+def _met_kerncijfers(db, producten, niet_verplicht):
+    """Elk product als dict, met wat de lijst erbij toont en waarop je kunt filteren en sorteren: de marge, de
+    voorraadwaarde, het aantal barcodes, de leverancier en wat er ontbreekt."""
+    barcodes = {r[0]: (r[1], r[2] or "") for r in db.execute(
+        """SELECT product_id, COUNT(*), GROUP_CONCAT(COALESCE(ean, '') || ' ' || COALESCE(ean_omverpakking, ''), ' ')
+           FROM artikelen GROUP BY product_id"""
+    ).fetchall()}
+    leveranciers = {r[0]: r[1] for r in db.execute("SELECT id, naam FROM leveranciers").fetchall()}
+    uitkomst = []
+    for p in producten:
+        inkoop = inkoop_per_stuk(p)
+        verkoop = omzet_per_eenheid(p)
+        aantal_barcodes, codes = barcodes.get(p["id"], (0, ""))
+        uitkomst.append(dict(
+            p,
+            inkoop_stuk=inkoop,
+            marge_pct=(verkoop - inkoop) / verkoop * 100 if inkoop > 0 and verkoop > 0 else None,
+            waarde=max(p["voorraad"], 0) * inkoop,
+            aantal_barcodes=aantal_barcodes,
+            barcode_tekst=codes,
+            leverancier_naam=leveranciers.get(p["leverancier_id"]),
+            zonder_verkoop=p["actief"] and p["verkoopprijs"] == 0 and not p["glazen_per_fust"]
+            and p["categorie"] not in niet_verplicht,
+            zonder_inkoop=p["actief"] and p["inkoopprijs"] == 0,
+        ))
+    return uitkomst
+
+
+def _samenvatting(producten):
+    """De kerncijfers bovenaan de productenlijst (alleen de actieve producten)."""
+    actief = [p for p in producten if p["actief"]]
+    return {
+        "actief": len(actief),
+        "waarde": sum(p["waarde"] for p in actief),
+        "onder_minimum": sum(1 for p in actief if p["voorraad"] < p["min_voorraad"]),
+        "zonder_prijs": sum(1 for p in actief if p["zonder_verkoop"] or p["zonder_inkoop"]),
+        "zonder_barcode": sum(1 for p in actief if not p["aantal_barcodes"]),
+    }
 
 
 def render_producten_pagina(categorie_vergrendeld=None):
@@ -39,12 +81,16 @@ def render_producten_pagina(categorie_vergrendeld=None):
         subcategorieen = db.execute(
             "SELECT categorie, naam FROM subcategorieen ORDER BY categorie, naam"
         ).fetchall()
+    niet_verplicht = categorienamen_zonder_verkoopprijsplicht(db)
+    producten = _met_kerncijfers(db, producten, niet_verplicht)
     return render_template(
         "producten.html",
         producten=producten,
+        samenvatting=_samenvatting(producten),
+        doelmarge=lees_doelmarge(db),
         categorieen=categorieen,
         subcategorieen=subcategorieen,
-        niet_verplicht_categorieen=categorienamen_zonder_verkoopprijsplicht(db),
+        niet_verplicht_categorieen=niet_verplicht,
         categorie_vergrendeld=categorie_vergrendeld,
         met_geschiedenis=producten_met_geschiedenis(db),
         aantal_inactief=sum(1 for p in producten if not p["actief"]),
@@ -63,7 +109,8 @@ def producten_met_geschiedenis(db):
         for r in db.execute(
             """SELECT product_id FROM telling_regels
                UNION SELECT product_id FROM keuken_telling_regels
-               UNION SELECT product_id FROM bestelregels"""
+               UNION SELECT product_id FROM bestelregels
+               UNION SELECT product_id FROM inboekronde_regels"""
         ).fetchall()
     }
 

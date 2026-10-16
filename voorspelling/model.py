@@ -16,6 +16,7 @@ from voorspelling.basis import (
     MODEL_MAX_PRODUCTEN,
     onzekerheid,
     PRIOR,
+    TEAM_PREFIX,
     TERUGTOETS_START,
 )
 
@@ -282,6 +283,12 @@ def pas_model_aan(rijen, licht=False):
     for r in leer_rijen:
         for groep, deel in (r["b"].get("G") or {}).items():
             informatie[groep] = informatie.get(groep, 0.0) + r["w"] * deel
+    # Een team is alleen te onderscheiden van 'een thuiswedstrijd' als er ook thuiswedstrijddagen zonder dat team zijn;
+    # anders (één team, of een team dat altijd speelt) leert alleen het effect van een thuiswedstrijd.
+    for team in [n for n in informatie if n.startswith(TEAM_PREFIX)]:
+        zonder = sum(r["w"] * max(0.0, r["b"].get("MD", 0.0) - (r["b"].get("G") or {}).get(team, 0.0)) for r in leer_rijen)
+        if zonder <= 0.3:
+            del informatie[team]
     vrij = {n: informatie.get(n, 0.0) > 0.3 for n in [*PRIOR, *(n for n in informatie if n not in PRIOR)]}
     effecten = dict(PRIOR)
     k = START_OVERSPREIDING

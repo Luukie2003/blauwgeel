@@ -3,7 +3,7 @@ import time
 from datetime import timedelta
 from pathlib import Path
 
-from flask import Flask, flash, g, redirect, render_template, request, send_from_directory, session, url_for
+from flask import Flask, flash, g, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 
 import mail
 import uitrollen as uitrollen_module
@@ -171,16 +171,27 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             return None
         if request.method == "POST":
             verwacht = session.get("csrf_token")
-            verzonden = request.form.get("csrf_token", "")
+            # Een app die JSON stuurt (zoals de handterminal, zie routes/facturen.py) geeft het token in een header mee;
+            # een andere site kan zo'n header niet meesturen, dus dat is net zo veilig als het formulierveld.
+            verzonden = request.form.get("csrf_token", "") or request.headers.get("X-CSRF-Token", "")
             if not verwacht or not secrets.compare_digest(verzonden, verwacht):
+                if is_app_api():
+                    return jsonify({"fout": "csrf", "melding": "Het csrf_token ontbreekt of klopt niet."}), 400
                 flash("Deze pagina was verlopen, probeer het nog eens.", "error")
                 return redirect(request.referrer or url_for("login"))
+
+    def is_app_api():
+        """De JSON-adressen voor de app op de handterminal: die krijgen een JSON-antwoord in plaats van een
+        doorverwijzing naar een pagina (inloggen, het overzicht) als het niet mag."""
+        return bool(request.endpoint) and (request.endpoint.startswith("api_factu") or request.endpoint == "api_barcode")
 
     @app.before_request
     def vereis_login():
         if request.endpoint in OPEN_ENDPOINTS or request.endpoint is None:
             return None
         if "gebruiker_id" not in session:
+            if is_app_api():
+                return jsonify({"fout": "niet_ingelogd", "melding": "Log eerst in met de code van je account."}), 401
             return redirect(url_for("login", next=request.path))
         # Elke keer opnieuw (i.p.v. alleen als rol/secties nog in de sessie
         # ontbreken, zoals hieronder) omdat "actief" direct moet gelden zodra
@@ -221,6 +232,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         if vereiste_sectie and not heeft_sectie_toegang(
             session.get("gebruiker_rol"), session.get("gebruiker_secties"), vereiste_sectie
         ):
+            if is_app_api():
+                return jsonify({"fout": "geen_toegang", "melding": "Dit mag jouw account niet."}), 403
             flash("Deze pagina is niet beschikbaar voor jouw account.", "error")
             return redirect(url_for("dashboard"))
         return None
@@ -492,6 +505,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         club_van_20,
         dashboard,
         eigen_taken,
+        facturen,
         fouten,
         fusten,
         gebruik,
@@ -533,6 +547,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     club_van_20.register_routes(app)
     dashboard.register_routes(app)
     eigen_taken.register_routes(app)
+    facturen.register_routes(app)
     fouten.register_routes(app)
     fusten.register_routes(app)
     gebruik.register_routes(app)
