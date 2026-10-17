@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 
 import weer
 from agenda import CLUBNAAM
+from helpers.tijd import vandaag_amsterdam
 
 
 def bepaal_tegenstander(omschrijving):
@@ -97,7 +98,7 @@ def bereken_wedstrijd_geschiedenis(db, limiet=25, inclusief_afgelast=False):
         for w in db.execute(
             f"""SELECT * FROM wedstrijden WHERE datum < ? {"" if inclusief_afgelast else "AND afgelast = 0"}
                 ORDER BY datum DESC, team LIMIT ?""",
-            (date.today().isoformat(), limiet),
+            (vandaag_amsterdam().isoformat(), limiet),
         ).fetchall()
     ]
 
@@ -159,8 +160,10 @@ def bereken_komende_thuiswedstrijden(db, dagen=14, inclusief_afgelast=False):
     bereken_voorspelde_tekorten() voor waar dat wel gebeurt. Een afgelaste
     wedstrijd doet niet mee, behalve met inclusief_afgelast=True (de pagina's
     waar je een wedstrijd als afgelast markeert of weer terugzet)."""
-    vandaag = date.today().isoformat()
-    grens = (date.today() + timedelta(days=dagen)).isoformat()
+    # Nederlandse tijd, niet de klok van de server (UTC op de hosting): anders schuift het venster tussen middernacht en
+    # 02:00 een dag op ten opzichte van de rest van de site (zie vandaag_amsterdam).
+    vandaag = vandaag_amsterdam().isoformat()
+    grens = (vandaag_amsterdam() + timedelta(days=dagen)).isoformat()
     rijen = db.execute(
         f"""SELECT id, datum, team, omschrijving, afgelast, handmatig FROM wedstrijden
            WHERE thuis = 1 AND datum >= ? AND datum <= ?

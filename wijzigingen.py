@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.52.1"
+HUIDIGE_VERSIE = "1.52.2"
 WIJZIGINGEN = [
+    {
+        "versie": "1.52.2",
+        "datum": "17 oktober 2026",
+        "punten": [
+            "Komende thuiswedstrijden (de kaart op het overzicht, de Wedstrijden-pagina en de schermen) rekenden met de klok van de server; tussen middernacht en 2 uur 's nachts schoof de lijst daardoor een dag op. Nu altijd met de Nederlandse tijd.",
+        ],
+    },
     {
         "versie": "1.52.1",
         "datum": "17 oktober 2026",
@@ -1046,7 +1053,7 @@ MODULES = [
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
-    {"naam": "Overzicht & prikbord", "versie": "1.12.3", "sinds": "0.2.0", "laatst": "1.49.2",
+    {"naam": "Overzicht & prikbord", "versie": "1.12.4", "sinds": "0.2.0", "laatst": "1.52.2",
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
