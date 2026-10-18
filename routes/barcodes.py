@@ -85,6 +85,10 @@ def register_routes(app):
         if not tekst:
             return redirect(url_for("barcodes_overzicht"))
         uitkomst = barcodes.zoek_barcode(db, tekst)
+        # direct=1: een scan met de handterminal-app (zie android-apps/handterminal/src/main/assets/scan.js). Een
+        # bekende barcode gaat meteen naar het product; dat werkt zonder JavaScript, dus ook op een oud toestel.
+        if request.args.get("direct") and uitkomst["bekend"]:
+            return redirect(url_for("product_detail", product_id=uitkomst["artikel"]["product_id"]))
         artikelen = db.execute(
             """SELECT a.id, a.naam, p.naam AS product_naam, a.ean_omverpakking FROM artikelen a
                JOIN producten p ON p.id = a.product_id ORDER BY p.naam COLLATE NOCASE, a.naam COLLATE NOCASE"""

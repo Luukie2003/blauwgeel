@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/achtergrond">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="24dp">
+
+        <TextView style="@style/InstellingKop" android:text="@string/inst_beveiliging" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/kaart"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/inst_uitloggen"
+                android:textColor="@color/tekst"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <Spinner
+                android:id="@+id/uitloggenKeuze"
+                android:layout_width="match_parent"
+                android:layout_height="48dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/inst_uitloggen_uitleg"
+                android:textColor="@color/tekst_zacht"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <TextView style="@style/InstellingKop" android:text="@string/inst_weergave" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/kaart"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/inst_tekst"
+                android:textColor="@color/tekst"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <Spinner
+                android:id="@+id/tekstKeuze"
+                android:layout_width="match_parent"
+                android:layout_height="48dp" />
+        </LinearLayout>
+
+        <TextView style="@style/InstellingKop" android:text="@string/inst_scanner" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/kaart"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/scannerStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/tekst_zacht"
+                android:textSize="13sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/trillenSchakelaar"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="6dp"
+                android:text="@string/inst_trillen"
+                android:textColor="@color/tekst"
+                android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/scannerOpnieuw"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/knop_rand"
+                android:stateListAnimator="@null"
+                android:text="@string/inst_scanner_opnieuw"
+                android:textAllCaps="false"
+                android:textColor="@color/tekst"
+                android:textSize="15sp" />
+        </LinearLayout>
+
+        <TextView style="@style/InstellingKop" android:text="@string/inst_website" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/kaart"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <!-- Alleen in een testversie aan te passen: in de echte app kan niemand de codes naar een ander adres sturen. -->
+            <EditText
+                android:id="@+id/websiteAdres"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/inst_website"
+                android:importantForAutofill="no"
+                android:inputType="textUri"
+                android:textColor="@color/tekst"
+                android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/websiteStandaard"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/knop_rand"
+                android:stateListAnimator="@null"
+                android:text="@string/inst_website_standaard"
+                android:textAllCaps="false"
+                android:textColor="@color/tekst"
+                android:textSize="15sp" />
+        </LinearLayout>
+
+        <TextView style="@style/InstellingKop" android:text="@string/inst_over" />
+
+        <TextView
+            android:id="@+id/overTekst"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/kaart"
+            android:padding="14dp"
+            android:textColor="@color/tekst_zacht"
+            android:textSize="13sp" />
+    </LinearLayout>
+</ScrollView>

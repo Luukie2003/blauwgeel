@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dezelfde kleuren als de handterminal-weergave van de site (.pda-kop en de variabelen in static/style.css),
+         zodat de balk van de app en de kop van de site één geheel vormen. -->
+    <color name="navy">#1C2B4A</color>
+    <color name="navy_donker">#0F1A30</color>
+    <color name="navy_licht">#2A3D63</color>
+    <color name="geel">#FCD42F</color>
+    <color name="geel_donker">#E0BA17</color>
+    <color name="wit">#FFFFFF</color>
+    <color name="tekst_op_navy">#F0F2F6</color>
+    <color name="tekst_zacht_op_navy">#A9B3CC</color>
+    <color name="achtergrond">#ECECEC</color>
+    <color name="kaart">#FFFFFF</color>
+    <color name="tekst">#1C2333</color>
+    <color name="tekst_zacht">#5B6270</color>
+    <color name="rand_licht">#D6D6D6</color>
+    <color name="groen">#3FB950</color>
+    <color name="oranje">#F0A020</color>
+    <color name="rood">#E5484D</color>
+    <color name="rood_balk">#A91C1C</color>
+    <color name="oranje_balk">#A6590A</color>
+    <color name="knop_op_navy">#1AFFFFFF</color>
+    <color name="knop_op_navy_rand">#33FFFFFF</color>
+</resources>

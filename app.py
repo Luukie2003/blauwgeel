@@ -45,6 +45,7 @@ from helpers import (
     heeft_sectie_toegang,
     inkoop_per_stuk,
     is_ajax_verzoek,
+    is_handterminal_app,
     kleine_afbeelding,
     met_tags_filter,
     naar_besteleenheden,
@@ -364,7 +365,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             "csrf_token": csrf_token,
             "pda_modus": pda_modus,
             "basis_template": "base_pda.html" if pda_modus else "base.html",
-            "toon_welkom_popup": session.pop("toon_welkom_popup", False),
+            # In de handterminal-app is de weergave al gekozen (zie android-apps/handterminal).
+            "toon_welkom_popup": session.pop("toon_welkom_popup", False) and not is_handterminal_app(),
             "noodstop_toestand": g.get("noodstop"),
             "welkom_groet": dagdeel_groet(),
         }

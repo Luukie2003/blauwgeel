@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Eén scherm met twee lagen: de site (statusbalk + WebView + foutscherm) en daaroverheen het inlogscherm.
+     Zo blijft de WebView bestaan bij uit- en weer inloggen, en is er geen gedoe met meerdere activities. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/navy">
+
+    <LinearLayout
+        android:id="@+id/siteLaag"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- De balk van de app: wie er is ingelogd en hoe de verbinding is. Zelfde navy als de kop van de site
+             eronder, zodat het één kop lijkt. Bij verbindingsproblemen kleurt hij oranje of rood. -->
+        <LinearLayout
+            android:id="@+id/statusBalk"
+            android:layout_width="match_parent"
+            android:layout_height="34dp"
+            android:background="@color/navy"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="14dp"
+            android:paddingEnd="2dp">
+
+            <View
+                android:id="@+id/statusStip"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
+                android:background="@drawable/status_stip" />
+
+            <TextView
+                android:id="@+id/statusTekst"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="9dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:textColor="@color/tekst_op_navy"
+                android:textSize="13sp" />
+
+            <ImageButton
+                android:id="@+id/menuKnop"
+                android:layout_width="40dp"
+                android:layout_height="34dp"
+                android:background="@drawable/menu_knop"
+                android:contentDescription="@string/menu_openen"
+                android:src="@drawable/ic_menu"
+                app:tint="@color/tekst_op_navy" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@color/achtergrond">
+
+            <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                android:id="@+id/verversen"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <WebView
+                    android:id="@+id/webView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+            <ProgressBar
+                android:id="@+id/voortgang"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:layout_gravity="top"
+                android:max="100"
+                android:progressDrawable="@drawable/voortgang"
+                android:visibility="gone" />
+
+            <!-- Foutscherm: geen netwerk, website onbereikbaar, of versturen niet bevestigd. -->
+            <ScrollView
+                android:id="@+id/foutLaag"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/achtergrond"
+                android:clickable="true"
+                android:fillViewport="true"
+                android:focusable="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/kaart"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical"
+                        android:paddingStart="20dp"
+                        android:paddingTop="26dp"
+                        android:paddingEnd="20dp"
+                        android:paddingBottom="20dp">
+
+                        <ImageView
+                            android:id="@+id/foutIcoon"
+                            android:layout_width="68dp"
+                            android:layout_height="68dp"
+                            android:background="@drawable/fout_icoon_achtergrond"
+                            android:contentDescription="@null"
+                            android:padding="18dp"
+                            android:src="@drawable/ic_wifi_uit"
+                            app:tint="@color/geel" />
+
+                        <TextView
+                            android:id="@+id/foutTitel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:gravity="center"
+                            android:textColor="@color/tekst"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/foutTekst"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="center"
+                            android:lineSpacingMultiplier="1.15"
+                            android:textColor="@color/tekst_zacht"
+                            android:textSize="15sp" />
+
+                        <Button
+                            android:id="@+id/foutKnop"
+                            android:layout_width="match_parent"
+                            android:layout_height="50dp"
+                            android:layout_marginTop="20dp"
+                            android:background="@drawable/knop_geel"
+                            android:stateListAnimator="@null"
+                            android:text="@string/fout_opnieuw"
+                            android:textAllCaps="false"
+                            android:textColor="@color/navy"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <Button
+                            android:id="@+id/foutTestKnop"
+                            android:layout_width="match_parent"
+                            android:layout_height="46dp"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/knop_rand"
+                            android:stateListAnimator="@null"
+                            android:text="@string/fout_test"
+                            android:textAllCaps="false"
+                            android:textColor="@color/tekst"
+                            android:textSize="15sp" />
+
+                        <TextView
+                            android:id="@+id/foutAftellen"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:textColor="@color/tekst_zacht"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </ScrollView>
+        </FrameLayout>
+    </LinearLayout>
+
+    <include
+        android:id="@+id/inlog"
+        layout="@layout/inlog_laag" />
+</FrameLayout>

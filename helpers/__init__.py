@@ -70,6 +70,7 @@ from helpers.web import (
     csrf_token,
     csv_response,
     is_ajax_verzoek,
+    is_handterminal_app,
     veilig_redirect_pad,
 )
 from helpers.toegang import (
@@ -186,6 +187,7 @@ __all__ = [
     "csrf_token",
     "csv_response",
     "is_ajax_verzoek",
+    "is_handterminal_app",
     "veilig_redirect_pad",
     "SECTIES",
     "SECTIE_LABELS",

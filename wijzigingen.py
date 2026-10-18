@@ -6,8 +6,19 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.52.2"
+HUIDIGE_VERSIE = "1.53.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.53.0",
+        "datum": "18 oktober 2026",
+        "punten": [
+            "Nieuw: de app Kantine Handterminal voor de Zebra-handterminal (TC51). Je logt in met je eigen 6-cijferige code, en na 15 minuten niets doen logt de app vanzelf uit. Daarna zie je de handterminal-weergave van de site.",
+            "Handterminal-app: de scanknoppen werken altijd. Staat er een scanveld open, dan komt de barcode daarin; anders spring je meteen naar het product of naar het toevoegen van een onbekende barcode. Een QR-code van de site opent die pagina.",
+            "Handterminal-app: bovenin een balk met wie er is ingelogd en hoe de verbinding is. Valt de wifi of de site weg, dan verschijnt een duidelijk scherm dat vanzelf verdergaat zodra alles terug is. Viel de verbinding weg tijdens het opslaan, dan verstuurt de app niets opnieuw, maar vraagt hij eerst te kijken of het al is opgeslagen.",
+            "Handterminal-app: werkt ook op Android 6, met een veilige verbinding met de site. Is de webweergave van het toestel te oud, dan zegt de app dat, met een knop om hem bij te werken.",
+            "Inloggen met je code: na een foute code meldt de app hoeveel pogingen er nog zijn voordat inloggen vanaf dat netwerk een half uur op slot gaat.",
+        ],
+    },
     {
         "versie": "1.52.2",
         "datum": "17 oktober 2026",
@@ -1033,7 +1044,7 @@ MODULES = [
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.12.1", "sinds": "0.4.0", "laatst": "1.51.0",
      "inhoud": "Bestellijst (ook per leverancier), leveranciers, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
-    {"naam": "Producten & prijzen", "versie": "1.15.0", "sinds": "0.1.0", "laatst": "1.50.0",
+    {"naam": "Producten & prijzen", "versie": "1.15.1", "sinds": "0.1.0", "laatst": "1.53.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
     {"naam": "Geld (kassa & kluis)", "versie": "1.4.0", "sinds": "1.0.0", "laatst": "1.45.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
@@ -1047,9 +1058,11 @@ MODULES = [
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
     {"naam": "Rapporten", "versie": "1.14.0", "sinds": "0.1.0", "laatst": "1.47.0",
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
-    {"naam": "Handterminal", "versie": "1.6.0", "sinds": "1.5.0", "laatst": "1.51.0",
+    {"naam": "Handterminal", "versie": "1.6.1", "sinds": "1.5.0", "laatst": "1.53.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Accounts & rechten", "versie": "1.10.2", "sinds": "0.1.0", "laatst": "1.52.0",
+    {"naam": "Handterminal-app", "versie": "0.1.0", "sinds": "1.53.0", "laatst": "1.53.0",
+     "inhoud": "De Android-app voor de Zebra: inloggen met je code, de scanner, verbindingsbewaking en automatisch uitloggen"},
+    {"naam": "Accounts & rechten", "versie": "1.10.3", "sinds": "0.1.0", "laatst": "1.53.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bewust een vaste lichte stijl, niet DayNight: de app volgt de huisstijl van de site. -->
+    <style name="Thema.Handterminal" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/navy</item>
+        <item name="colorPrimaryDark">@color/navy</item>
+        <item name="colorAccent">@color/geel_donker</item>
+        <item name="android:statusBarColor">@color/navy</item>
+        <item name="android:navigationBarColor">@color/navy</item>
+        <item name="android:windowBackground">@color/navy</item>
+    </style>
+
+    <style name="Thema.Handterminal.Instellingen" parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="colorPrimary">@color/navy</item>
+        <item name="colorPrimaryDark">@color/navy</item>
+        <item name="colorAccent">@color/geel_donker</item>
+        <item name="android:windowBackground">@color/achtergrond</item>
+    </style>
+
+    <style name="Cijfertoets">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_margin">5dp</item>
+        <item name="android:background">@drawable/toets</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/toets_tekst</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:soundEffectsEnabled">true</item>
+    </style>
+
+    <style name="Cijfertoets.Klein">
+        <item name="android:textSize">18sp</item>
+        <item name="android:background">@drawable/toets_rustig</item>
+    </style>
+
+    <style name="CodeStip">
+        <item name="android:layout_width">16dp</item>
+        <item name="android:layout_height">16dp</item>
+        <item name="android:layout_marginStart">7dp</item>
+        <item name="android:layout_marginEnd">7dp</item>
+        <item name="android:background">@drawable/stip_leeg</item>
+    </style>
+
+    <style name="InstellingKop">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">18dp</item>
+        <item name="android:layout_marginBottom">6dp</item>
+        <item name="android:textColor">@color/tekst_zacht</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+</resources>

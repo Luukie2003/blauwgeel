@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 rootProject.name = "KantineApps"
 include(":tv")
 include(":tablet")
+include(":handterminal")

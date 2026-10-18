@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_naam">Kantine Handterminal</string>
+    <string name="club">s.v. Blauw-Geel 1915</string>
+
+    <!-- Inloggen -->
+    <string name="code_instructie">Voer je persoonlijke code in</string>
+    <string name="code_fout">Die code klopt niet. Probeer het opnieuw.</string>
+    <string name="code_fout_pogingen">Die code klopt niet. Nog %1$d poging(en), daarna gaat inloggen op de club een half uur op slot.</string>
+    <string name="code_te_veel">Te veel foute codes vanaf dit netwerk. Probeer het over een half uur opnieuw.</string>
+    <string name="code_te_veel_minuten">Te veel foute codes vanaf dit netwerk. Probeer het over %1$d minuten opnieuw.</string>
+    <string name="code_noodstop">Het kantinesysteem is tijdelijk afgesloten. Probeer het later opnieuw.</string>
+    <string name="code_geen_verbinding">Geen verbinding met de website. Controleer de wifi en probeer het opnieuw.</string>
+    <string name="code_traag">De verbinding is te traag. Loop dichter naar de wifi en probeer het opnieuw.</string>
+    <string name="code_beveiliging">Beveiligde verbinding mislukt. Kloppen de datum en tijd van de handterminal?</string>
+    <string name="code_server">De website geeft een fout. Probeer het zo opnieuw.</string>
+    <string name="uitgelogd">Je bent uitgelogd.</string>
+    <string name="uitgelogd_automatisch">Automatisch uitgelogd na %1$d minuten niets doen.</string>
+    <string name="uitgelogd_sessie">Je sessie is verlopen. Log opnieuw in.</string>
+    <string name="welkom">Welkom, %1$s</string>
+    <string name="toets_wis">Wis</string>
+    <string name="toets_terug">Laatste cijfer weghalen</string>
+    <string name="webview_oud">De webweergave van dit toestel is oud (versie %1$d), pagina’s zien er dan niet goed uit. Tik hier om ‘Android System WebView’ bij te werken.</string>
+
+    <!-- Verbinding -->
+    <string name="verbonden_wifi">Verbonden met wifi</string>
+    <string name="verbonden_wifi_signaal">Wifi: %1$s signaal</string>
+    <string name="verbonden_mobiel">Verbonden via mobiel netwerk</string>
+    <string name="geen_netwerk">Geen netwerk</string>
+    <string name="inlog_site_ok">%1$s · website bereikbaar</string>
+    <string name="inlog_site_fout">%1$s · website niet bereikbaar</string>
+    <string name="signaal_uitstekend">uitstekend</string>
+    <string name="signaal_goed">goed</string>
+    <string name="signaal_matig">matig</string>
+    <string name="signaal_zwak">zwak</string>
+    <string name="balk_laden">Laden…</string>
+    <string name="balk_traag">Trage verbinding, nog even geduld…</string>
+    <string name="balk_offline">Geen verbinding</string>
+    <string name="balk_opnieuw">Geen verbinding, opnieuw over %1$d s…</string>
+    <string name="balk_server_opnieuw">Website niet bereikbaar, opnieuw over %1$d s…</string>
+
+    <!-- Foutscherm -->
+    <string name="fout_geen_netwerk_titel">Geen wifi-verbinding</string>
+    <string name="fout_geen_netwerk_tekst">De handterminal heeft geen netwerk. Loop richting de kantine of controleer de wifi. Zodra er weer verbinding is, gaat hij vanzelf verder.</string>
+    <string name="fout_server_titel">Website niet bereikbaar</string>
+    <string name="fout_server_tekst">Er is wel netwerk, maar kantineblauwgeel.nl reageert niet (of te traag). De app probeert het vanzelf opnieuw.</string>
+    <string name="fout_beveiliging_titel">Beveiligde verbinding mislukt</string>
+    <string name="fout_beveiliging_tekst">De verbinding met de website kon niet veilig worden gecontroleerd. Kloppen de datum en tijd van de handterminal? Na een lege accu staat de klok soms verkeerd.</string>
+    <string name="fout_versturen_titel">Niet zeker of het is opgeslagen</string>
+    <string name="fout_versturen_tekst">De verbinding viel weg tijdens het versturen. Kijk eerst of je wijziging er al staat, voordat je het opnieuw doet. Zo voorkom je dat iets dubbel wordt geboekt.</string>
+    <string name="fout_opnieuw">Opnieuw proberen</string>
+    <string name="fout_pagina_laden">Pagina opnieuw laden</string>
+    <string name="fout_test">Verbinding testen</string>
+    <string name="fout_aftellen">Automatisch opnieuw over %1$d s</string>
+    <string name="fout_wacht_netwerk">Wacht op netwerk…</string>
+
+    <!-- Menu -->
+    <string name="menu_start">Startscherm</string>
+    <string name="menu_vernieuwen">Vernieuwen</string>
+    <string name="menu_scannen">Scannen</string>
+    <string name="menu_verbinding">Verbinding testen</string>
+    <string name="menu_instellingen">Instellingen</string>
+    <string name="menu_uitloggen">Uitloggen</string>
+    <string name="menu_openen">Menu</string>
+
+    <!-- Scannen -->
+    <string name="scan_eerst_inloggen">Log eerst in met je code.</string>
+    <string name="scan_genegeerd">Scan niet gebruikt: je bent een aantal aan het invullen. Maak dat eerst af.</string>
+    <string name="scan_klaar">Scan maar</string>
+    <string name="download_gestart">Download gestart</string>
+    <string name="geen_app">Geen app gevonden om dit te openen.</string>
+
+    <!-- Verbinding testen -->
+    <string name="test_titel">Verbinding testen</string>
+    <string name="test_bezig">Bezig met meten…</string>
+    <string name="test_netwerk">Netwerk: %1$s</string>
+    <string name="test_wifi">wifi, %1$s signaal (%2$d dBm)</string>
+    <string name="test_mobiel">mobiel netwerk</string>
+    <string name="test_geen">geen</string>
+    <string name="test_website_ok">Website: bereikbaar, gemiddeld %1$d ms</string>
+    <string name="test_website_fout">Website: niet bereikbaar</string>
+    <string name="test_oordeel_goed">Alles in orde.</string>
+    <string name="test_oordeel_traag">Werkt, maar traag. Dichter bij het wifi-punt gaat het sneller.</string>
+    <string name="test_oordeel_fout">Geen verbinding met de website.</string>
+    <string name="test_versie">Versie website: %1$s</string>
+    <string name="sluiten">Sluiten</string>
+
+    <!-- Instellingen -->
+    <string name="instellingen">Instellingen</string>
+    <string name="inst_beveiliging">Beveiliging</string>
+    <string name="inst_uitloggen">Automatisch uitloggen na</string>
+    <string name="inst_uitloggen_uitleg">Iedereen gebruikt dezelfde handterminal met een eigen code. Na deze tijd zonder aanraken of scannen logt de app uit, zodat niemand op jouw naam verder werkt.</string>
+    <string name="inst_weergave">Weergave</string>
+    <string name="inst_tekst">Tekstgrootte</string>
+    <string name="inst_scanner">Scanner</string>
+    <string name="inst_trillen">Kort trillen bij een scan</string>
+    <string name="inst_scanner_zebra">Zebra-scanner gevonden. Scans gaan rechtstreeks naar de app, ook als er geen veld is geselecteerd.</string>
+    <string name="inst_scanner_geen">Geen Zebra-scanner gevonden. Een scanner die als toetsenbord werkt, typt in het geselecteerde veld.</string>
+    <string name="inst_scanner_opnieuw">Scanner opnieuw instellen</string>
+    <string name="inst_scanner_klaar">Scanner opnieuw ingesteld</string>
+    <string name="inst_website">Website</string>
+    <string name="inst_website_standaard">Standaard</string>
+    <string name="inst_website_ongeldig">Het adres moet met https:// beginnen.</string>
+    <string name="inst_over">Over deze app</string>
+    <string name="inst_over_tekst">Versie %1$s · Android %2$s · WebView %3$s</string>
+    <string name="minuten">%1$d minuten</string>
+    <string name="een_uur">1 uur</string>
+    <string name="nooit">Nooit</string>
+    <string name="procent">%1$d%%</string>
+</resources>

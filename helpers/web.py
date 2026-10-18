@@ -55,6 +55,11 @@ def veilig_redirect_pad(pad, fallback):
     return pad
 
 
+def is_handterminal_app():
+    """Draait de site in de handterminal-app voor de Zebra (android-apps/handterminal)? Die zet dit in de User-Agent."""
+    return "KantineHandterminal/" in request.headers.get("User-Agent", "")
+
+
 def bepaal_weergave_modus():
     """'pda' of 'desktop'. Het weergave-cookie (per toestel/browser, geen
     accountinstelling) wint altijd zodra het gezet is -- ook als iemand

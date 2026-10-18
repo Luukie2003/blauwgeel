@@ -334,7 +334,9 @@ def register_routes(app):
         if poging and poging["geblokkeerd_tot"]:
             geblokkeerd_tot = datetime.strptime(poging["geblokkeerd_tot"], "%Y-%m-%d %H:%M")
             if geblokkeerd_tot > datetime.now():
-                return jsonify({"geldig": False, "fout": "te_veel_pogingen"}), 429
+                # wacht_minuten: voor de handterminal-app, die het in de foutmelding zet.
+                wacht = max(1, -(-int((geblokkeerd_tot - datetime.now()).total_seconds()) // 60))
+                return jsonify({"geldig": False, "fout": "te_veel_pogingen", "wacht_minuten": wacht}), 429
 
         data = request.get_json(silent=True) or {}
         code = str(data.get("code", "")).strip()
@@ -392,4 +394,5 @@ def register_routes(app):
                 (ip, mislukte_pogingen, now_str(), nieuwe_blokkade),
             )
         db.commit()
-        return jsonify({"geldig": False})
+        # pogingen_over: de handterminal-app waarschuwt zo vóórdat inloggen vanaf dit netwerk op slot gaat.
+        return jsonify({"geldig": False, "pogingen_over": max(0, TABLET_CODE_MAX_POGINGEN - mislukte_pogingen)})

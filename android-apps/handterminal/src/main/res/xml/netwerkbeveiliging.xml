@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- De site draait op een Let's Encrypt-certificaat. Android 6 en 7.0 kennen het rootcertificaat daarvan
+     (ISRG Root X1) nog niet, dus dat zit in de app. Vanaf Android 7.0 regelt dit bestand het; op Android 6
+     doet Beveiliging.kt hetzelfde. Alleen https: geen onversleuteld verkeer. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/isrg_root_x1" />
+            <certificates src="@raw/isrg_root_x2" />
+        </trust-anchors>
+    </base-config>
+    <!-- Alleen voor het testen in de emulator tegen een lokale ontwikkelserver (10.0.2.2 = de computer). -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>
