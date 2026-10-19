@@ -275,6 +275,7 @@ def als_json(gegevens):
         "bestelling_id": r["bestelling_id"],
         "factuurnummer": r["factuurnummer"],
         "factuurbedrag": r["factuurbedrag"],
+        "opmerking": r["opmerking"],
         "gestart_op": r["gestart_op"],
         "totaal": gegevens["totaal"],
         "verschil": gegevens["verschil"],

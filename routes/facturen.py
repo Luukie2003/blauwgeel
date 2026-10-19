@@ -9,6 +9,7 @@ import barcodes
 import facturen
 from database import get_db
 from leveranciers import alle_leveranciers
+from routes.app_api import eenmalig
 
 
 def _door():
@@ -31,20 +32,24 @@ def _niet_gevonden_json():
     return jsonify({"fout": "Deze inboekronde bestaat niet."}), 404
 
 
-def _scan_json(db, ronde_id, code):
-    """Eén scan verwerken en als JSON teruggeven: de status ('toegevoegd', 'onbekend', 'ongeldig', 'gesloten'), wat
-    het is en de bijgewerkte ronde."""
+def _scan_inhoud(db, ronde_id, code):
+    """Eén scan verwerken: (inhoud, status) met de status van de scan ('toegevoegd', 'onbekend', 'ongeldig',
+    'gesloten'), wat het is en de bijgewerkte ronde."""
+    if facturen.ronde(db, ronde_id) is None:
+        return {"status": "fout", "melding": "Deze inboekronde bestaat niet (meer)."}, 404
     uitkomst = facturen.scan(db, ronde_id, code)
-    gegevens = facturen.ronde(db, ronde_id)
-    if gegevens is None:
-        return _niet_gevonden_json()
-    return jsonify({
+    return {
         "status": uitkomst["status"],
         "melding": uitkomst["melding"],
         "regel_id": uitkomst["regel_id"],
         "barcode": barcodes.als_json(uitkomst["barcode"]) if uitkomst["barcode"] else None,
-        "ronde": facturen.als_json(gegevens),
-    })
+        "ronde": facturen.als_json(facturen.ronde(db, ronde_id)),
+    }, 200
+
+
+def _scan_json(db, ronde_id, code):
+    inhoud, status = _scan_inhoud(db, ronde_id, code)
+    return jsonify(inhoud), status
 
 
 def register_routes(app):
@@ -176,8 +181,10 @@ def register_routes(app):
 
     @app.route("/api/facturen/<int:ronde_id>/scan", methods=["POST"])
     def api_factuur_scan(ronde_id):
-        """{code}: één scan (zie _scan_json)."""
-        return _scan_json(get_db(), ronde_id, str(_data().get("code", "")))
+        """{code, verzoek_id}: één scan (zie _scan_inhoud). Met een verzoek_id telt dezelfde scan nooit dubbel, ook niet
+        als de app hem na een haperende verbinding opnieuw stuurt (zie eenmalig in routes/app_api.py)."""
+        code = str(_data().get("code", ""))
+        return eenmalig(lambda db: _scan_inhoud(db, ronde_id, code))
 
     @app.route("/api/facturen/<int:ronde_id>/koppelen", methods=["POST"])
     def api_factuur_koppelen(ronde_id):
@@ -211,9 +218,12 @@ def register_routes(app):
 
     @app.route("/api/facturen/<int:ronde_id>/afronden", methods=["POST"])
     def api_factuur_afronden(ronde_id):
-        db = get_db()
-        samenvatting, fout = facturen.afronden(db, ronde_id, **_door())
-        if fout:
-            return jsonify({"status": "fout", "melding": fout}), 400
-        return jsonify({"status": "afgerond", "samenvatting": samenvatting,
-                        "ronde": facturen.als_json(facturen.ronde(db, ronde_id))})
+        """Met een verzoek_id: nog een keer hetzelfde verzoek geeft hetzelfde antwoord (zie eenmalig)."""
+        def rond_af(db):
+            samenvatting, fout = facturen.afronden(db, ronde_id, **_door())
+            if fout:
+                return {"status": "fout", "melding": fout}, 400
+            return {"status": "afgerond", "samenvatting": samenvatting,
+                    "ronde": facturen.als_json(facturen.ronde(db, ronde_id))}, 200
+
+        return eenmalig(rond_af)

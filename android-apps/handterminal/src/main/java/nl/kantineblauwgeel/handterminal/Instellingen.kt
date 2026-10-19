@@ -3,8 +3,8 @@ package nl.kantineblauwgeel.handterminal
 import android.content.Context
 import android.net.Uri
 
-/** Wat de app onthoudt op het toestel. De sessie zelf zit in de cookies van de WebView (CookieManager); hier
- * staat alleen wie er is ingelogd en wanneer die voor het laatst iets deed, voor het automatisch uitloggen. */
+/** Wat de app onthoudt op het toestel: de instellingen, en wie er is ingelogd (de sessie-cookie van de site en het
+ * csrf_token, zie Sessie.kt), met wanneer die voor het laatst iets deed, voor het automatisch uitloggen. */
 class Instellingen(context: Context) {
 
     private val prefs = context.applicationContext.getSharedPreferences("handterminal", Context.MODE_PRIVATE)
@@ -21,6 +21,7 @@ class Instellingen(context: Context) {
         get() = prefs.getInt("uitlog_minuten", 15)
         set(waarde) = prefs.edit().putInt("uitlog_minuten", waarde).apply()
 
+    /** Tekstgrootte van de pagina's die nog als website openen. */
     var tekstGrootte: Int
         get() = prefs.getInt("tekst_grootte", 100)
         set(waarde) = prefs.edit().putInt("tekst_grootte", waarde).apply()
@@ -29,23 +30,33 @@ class Instellingen(context: Context) {
         get() = prefs.getBoolean("trillen", true)
         set(waarde) = prefs.edit().putBoolean("trillen", waarde).apply()
 
-    /** Naam van wie er nu is ingelogd, of null. */
+    // ---- De sessie (zie Sessie.kt) ----
+
     var naam: String?
         get() = prefs.getString("naam", null)
         set(waarde) = prefs.edit().putString("naam", waarde).apply()
 
-    /** Wie er het laatst was ingelogd en waar die was: na automatisch uitloggen gaat dezelfde persoon daar verder. */
-    var vorigeNaam: String?
-        get() = prefs.getString("vorige_naam", null)
-        set(waarde) = prefs.edit().putString("vorige_naam", waarde).apply()
+    var cookies: String?
+        get() = prefs.getString("cookies", null)
+        set(waarde) = prefs.edit().putString("cookies", waarde).apply()
 
-    var vorigePagina: String?
-        get() = prefs.getString("vorige_pagina", null)
-        set(waarde) = prefs.edit().putString("vorige_pagina", waarde).apply()
+    var csrfToken: String?
+        get() = prefs.getString("csrf_token", null)
+        set(waarde) = prefs.edit().putString("csrf_token", waarde).apply()
+
+    /** Het website-adres waarmee is ingelogd; verandert dat (alleen in een testversie), dan opnieuw inloggen. */
+    var ingelogdOp: String?
+        get() = prefs.getString("ingelogd_op", null)
+        set(waarde) = prefs.edit().putString("ingelogd_op", waarde).apply()
 
     var laatsteActiviteit: Long
         get() = prefs.getLong("laatste_activiteit", 0L)
         set(waarde) = prefs.edit().putLong("laatste_activiteit", waarde).apply()
+
+    /** Het laatste antwoord van het startscherm, om meteen iets te kunnen tonen terwijl het nieuwe onderweg is. */
+    var startCache: String?
+        get() = prefs.getString("start_cache", null)
+        set(waarde) = prefs.edit().putString("start_cache", waarde).apply()
 
     fun isVerlopen(nu: Long = System.currentTimeMillis()): Boolean {
         val minuten = uitlogMinuten

@@ -16,26 +16,31 @@ Gradle-project, zodat je ze in één Android Studio-venster kunt openen en beher
 
 ## Kantine Handterminal (`handterminal/`)
 
-Inloggen met de persoonlijke 6-cijferige code (dezelfde als de tablet-code, via
-`/api/tablet-code/inloggen`), daarna de handterminal-weergave van de site in een
-WebView. Wat de app daaraan toevoegt:
+Een app met eigen schermen (geen website in een schil) voor het dagelijkse werk op de handterminal. Hij praat met de
+site via een JSON-API (`routes/app_api.py`, en voor facturen `routes/facturen.py`) en gebruikt dezelfde logica en
+database als de site. Inloggen gaat met de persoonlijke 6-cijferige code (`/api/tablet-code/inloggen`); de app bewaart
+de sessie-cookie zelf (`Sessie.kt`) en stuurt bij een POST het csrf_token mee in `X-CSRF-Token`.
 
-- **Automatisch uitloggen** na een instelbare tijd zonder aanraken of scannen
-  (standaard 15 minuten): iedereen gebruikt hetzelfde toestel met een eigen code.
-  Dezelfde persoon gaat na opnieuw inloggen verder waar hij was.
-- **Scanner (DataWedge)**: de app maakt bij het starten zelf een DataWedge-profiel
-  "Kantine Handterminal" aan (scans als broadcast, geen toetsaanslagen). Wat er met
-  een scan gebeurt staat in `src/main/assets/scan.js`: een scanveld op de pagina,
-  anders `/barcodes/zoek?direct=1` (bekende barcode → product). Een pagina kan het
-  ook zelf afhandelen met een `kantine-scan`-event. In andere apps blijft de scanner
-  gewoon typen.
-- **Verbinding**: een balk bovenin (groen/oranje/rood), een foutscherm dat vanzelf
-  opnieuw probeert (en meteen zodra het netwerk terug is), een wifi-lock zolang de
-  app voorin staat, en een mislukt formulier wordt nooit vanzelf opnieuw verstuurd.
-- **Android 6**: de site gebruikt Let's Encrypt (ISRG Root X1), dat Android 6 en
-  7.0 niet kennen. Het rootcertificaat zit in `res/raw`; zie `Beveiliging.kt`.
-  De WebView moet wel versie 72 of nieuwer zijn (anders stuurt `fetch()` de
-  inlogcookie niet mee); bij een oudere toont het inlogscherm een waarschuwing.
+- **Schermen**: `InlogActivity` (code), `StartActivity` (tegels, "Let op", "Meer"), `ProductenActivity`
+  (zoeken/voorraad/boeken), `ProductActivity` (voorraad, boeken, barcodes), `KoppelenActivity` (onbekende barcode),
+  `TellenActivity` (looplijst + controle), `FacturenActivity`/`FactuurActivity` (factuur inboeken) en `WebActivity`
+  voor alles wat (nog) geen eigen scherm heeft. Gedeeld gedrag (kopbalk, scanner, automatisch uitloggen, fouten) zit in
+  `BasisActivity`.
+- **Snel**: de hele productlijst met barcodes staat op het toestel (`Catalogus.kt`, ververst met een ETag); zoeken en
+  een scan opzoeken wachten dus niet op de site. Tellen gebeurt helemaal op het toestel; de stand gaat elke paar
+  producten naar de site (zelfde vorm als de looplijst van de site, dus verder gaan kan ook daar).
+- **Nooit dubbel**: schrijfacties krijgen een `verzoek_id`. Valt de verbinding weg, dan probeert de app het opnieuw en
+  geeft de site het bewaarde antwoord terug in plaats van het nog eens te doen (`eenmalig` in `routes/app_api.py`,
+  tabel `app_verzoeken`).
+- **Scanner (DataWedge)**: de app maakt bij het starten zelf een DataWedge-profiel "Kantine Handterminal" aan (scans
+  als broadcast, geen toetsaanslagen). Een scan opent het product, of het koppelen van een onbekende barcode; op een
+  websitepagina gaat hij eerst naar een scanveld van die pagina (`src/main/assets/scan.js`).
+- **Verbinding**: een stip in de kopbalk, automatisch opnieuw proberen, en een wifi-lock zolang de app voorin staat.
+- **Android 6**: de site gebruikt Let's Encrypt (ISRG Root X1), dat Android 6 en 7.0 niet kennen. Het rootcertificaat
+  zit in `res/raw`; zie `Beveiliging.kt`. Pagina's die als website openen hebben een WebView van versie 72 of nieuwer
+  nodig; bij een oudere meldt de app dat.
+- **Nieuwe versie**: zet `HANDTERMINAL_APP_VERSIE` in `routes/app_api.py` gelijk aan `versionName`; een oudere app
+  meldt dan op het startscherm dat er een nieuwe is.
 
 **Bouwen** (de buildmap staat buiten iCloud, in `~/.kantine-apps/build/handterminal`,
 omdat iCloud anders "… 2"-kopieën maakt waarop de build vastloopt):
@@ -56,8 +61,7 @@ ophogen.
 
 **Testen**: de testversie (`assembleDebug`) heeft in Instellingen een aanpasbaar
 website-adres (bijvoorbeeld `http://10.0.2.2:5050` voor een lokale server vanuit de
-emulator) en opent met `adb shell am start -n nl.kantineblauwgeel.handterminal/.HoofdActivity --es test_url <adres>`
-een pagina zonder in te loggen. Een scan nabootsen:
+emulator). Een scan nabootsen:
 `adb shell am broadcast -a nl.kantineblauwgeel.handterminal.SCAN -c android.intent.category.DEFAULT --es com.symbol.datawedge.data_string 8710200001234`.
 
 ## Zelf bouwen

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape><corners android:radius="10dp" /><solid android:color="@color/geel" /></shape>
+    </item>
+    <item android:state_enabled="false">
+        <shape><corners android:radius="10dp" /><solid android:color="#F2F2F2" /><stroke android:width="1dp" android:color="@color/rand_licht" /></shape>
+    </item>
+    <item>
+        <shape><corners android:radius="10dp" /><solid android:color="@color/kaart" /><stroke android:width="1dp" android:color="#C4C8D0" /></shape>
+    </item>
+</selector>

@@ -115,6 +115,10 @@ GEBRUIK_NIET_LOGGEN = {
     "api_factuur_koppelen",
     "api_factuur_regel",
     "api_factuur_afronden",
+    # De handterminal-app haalt de productlijst en de looplijst op de achtergrond op. Het startscherm en een product
+    # openen (api_app_start, api_app_product) tellen wel als bezoek, net als op de site.
+    "api_app_producten",
+    "api_app_tellen",
     # Delen van een pagina die na het laden apart worden opgehaald (zie data-lazy-bron in gedeeld.js), en het
     # voorverwarmen van het voorspelmodel: dat is geen bezoek aan een pagina.
     "dashboard_omzettrend",
@@ -238,6 +242,17 @@ BEHEERDER_ENDPOINTS = {
 # ook nog in: die blijven sowieso beheerder-only, ongeacht secties.
 SECTIE_ENDPOINTS = {
     "voorraad": {
+        # De handterminal-app (routes/app_api.py): zoeken, boeken, koppelen en tellen. Het startscherm
+        # (api_app_start) is voor iedereen die is ingelogd; dat toont zelf alleen wat bij je rechten past.
+        "api_app_producten",
+        "api_app_product",
+        "api_app_boeken",
+        "api_app_barcode_koppelen",
+        "api_app_tellen",
+        "api_app_tellen_stand",
+        "api_app_tellen_controleren",
+        "api_app_tellen_bevestigen",
+        "api_app_tellen_stoppen",
         "voorraadoverzicht",
         "voorraadoverzicht_pdf_route",
         "voorraadoverzicht_csv_route",
@@ -258,6 +273,7 @@ SECTIE_ENDPOINTS = {
         # Barcodes (EAN) van de artikelen die je inkoopt: opzoeken, toevoegen en bijwerken (zie barcodes.py).
         "barcodes_overzicht",
         "barcode_zoeken",
+        "barcode_snel_koppelen",
         "artikel_nieuw",
         "artikel_bewerken",
         "artikel_verwijderen",

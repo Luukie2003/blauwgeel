@@ -224,7 +224,9 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     def is_app_api():
         """De JSON-adressen voor de app op de handterminal: die krijgen een JSON-antwoord in plaats van een
         doorverwijzing naar een pagina (inloggen, het overzicht) als het niet mag."""
-        return bool(request.endpoint) and (request.endpoint.startswith("api_factu") or request.endpoint == "api_barcode")
+        return bool(request.endpoint) and (
+            request.endpoint.startswith(("api_factu", "api_app_")) or request.endpoint == "api_barcode"
+        )
 
     @app.before_request
     def vereis_login():
@@ -246,6 +248,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         ).fetchone()
         if gebruiker is None or not gebruiker["actief"]:
             session.clear()
+            if is_app_api():
+                return jsonify({"fout": "niet_ingelogd", "melding": "Dit account is geblokkeerd."}), 401
             flash("Dit account bestaat niet meer of is geblokkeerd. Neem contact op met een beheerder.", "error")
             return redirect(url_for("login"))
         # "Overal uitloggen" verhoogt sessie_versie in de database; een sessie met een oudere versie
@@ -253,6 +257,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         # net als de beginwaarde in de database, dus niemand wordt bij het invoeren uitgelogd.
         if session.get("sessie_versie", 0) != gebruiker["sessie_versie"]:
             session.clear()
+            if is_app_api():
+                return jsonify({"fout": "niet_ingelogd", "melding": "Je account is op alle toestellen uitgelogd."}), 401
             flash("Je bent uitgelogd, want je account is op alle toestellen uitgelogd. Log opnieuw in.", "error")
             return redirect(url_for("login"))
         session["eigenaar"] = bool(gebruiker["eigenaar"])  # alleen de eigenaar ziet Beheer > Noodstop
@@ -268,6 +274,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         ):
             return redirect(url_for("tablet_code_instellen", next=request.path))
         if request.endpoint in BEHEERDER_ENDPOINTS and session.get("gebruiker_rol") != "beheerder":
+            if is_app_api():
+                return jsonify({"fout": "geen_toegang", "melding": "Dit is alleen voor beheerders."}), 403
             flash("Deze pagina is alleen voor beheerders.", "error")
             return redirect(url_for("dashboard"))
         vereiste_sectie = ENDPOINT_SECTIE.get(request.endpoint)
@@ -367,6 +375,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             "basis_template": "base_pda.html" if pda_modus else "base.html",
             # In de handterminal-app is de weergave al gekozen (zie android-apps/handterminal).
             "toon_welkom_popup": session.pop("toon_welkom_popup", False) and not is_handterminal_app(),
+            # De app heeft een eigen kop, zoekbalk en scanner: base_pda.html laat de zijne dan weg.
+            "in_app": is_handterminal_app(),
             "noodstop_toestand": g.get("noodstop"),
             "welkom_groet": dagdeel_groet(),
         }
@@ -542,6 +552,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         aanmeldingen,
         accounts,
         activiteiten,
+        app_api,
         auth,
         barcodes,
         bardienstrapport,
@@ -581,6 +592,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     )
 
     aanmeldingen.register_routes(app)
+    app_api.register_routes(app)
     privacy.register_routes(app)
     prognose.register_routes(app)
     accounts.register_routes(app)

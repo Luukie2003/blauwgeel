@@ -52,3 +52,11 @@ def test_scan_van_een_bekende_barcode_gaat_meteen_naar_het_product(ingelogde_cli
     assert ingelogde_client.get("/barcodes/zoek?code=8710200001234").status_code == 200
     # Een onbekende barcode: de barcodepagina, om hem toe te voegen.
     assert ingelogde_client.get("/barcodes/zoek?direct=1&code=8710200001241").status_code == 200
+
+
+def test_in_de_app_geen_kop_en_tabbalk_van_de_site(ingelogde_client):
+    ingelogde_client.set_cookie("weergave", "pda")
+    in_app = ingelogde_client.get("/bijzonderheden", headers={"User-Agent": APP}).data.decode()
+    assert 'class="pda-tabbalk"' not in in_app and 'id="pda-zoek-invoer"' not in in_app and "pda-in-app" in in_app
+    browser = ingelogde_client.get("/bijzonderheden", headers={"User-Agent": TELEFOON}).data.decode()
+    assert 'class="pda-tabbalk"' in browser and 'id="pda-zoek-invoer"' in browser

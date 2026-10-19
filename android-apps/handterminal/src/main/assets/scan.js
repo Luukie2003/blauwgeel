@@ -1,4 +1,4 @@
-/* Wat de app doet met een scan van de Zebra-scanner (zie Scanner.kt en HoofdActivity.verwerkScan). Bewust ES5:
+/* Wat de app doet met een scan op een pagina die als website opent (zie WebActivity.bijScan). Bewust ES5:
    op een TC51 met Android 6 kan de WebView oud zijn. Geeft terug wat er met de scan is gebeurd.
 
    Volgorde:
@@ -10,10 +10,8 @@
       anders zou de barcode als aantal worden ingevuld, of zou je wegspringen en is wat je intikte weg. Een leeg
       getalveld (bijvoorbeeld het aantal dat op de productpagina vanzelf geselecteerd is) houdt niets tegen.
    3. Anders: een scanveld op de pagina zelf.
-   4. Anders: naar de barcodepagina van de site (/barcodes/zoek?direct=1). Een bekende barcode gaat daar meteen
-      door naar het product, een onbekende kun je er toevoegen. Dat gebeurt op de server, dus het werkt ook als de
-      WebView te oud is voor de JavaScript van de site. (Een gescande link naar de site, zoals een QR-code, opent
-      HoofdActivity.verwerkScan al zelf.) */
+   4. Anders: 'geen_veld'. Dan opent de app zelf het product, of het koppelen van een onbekende barcode
+      (BasisActivity.openScan). */
 (function (code) {
     function tekstVeld(el) {
         if (!el || el.tagName !== 'INPUT' || el.disabled || el.readOnly) return false;
@@ -65,9 +63,8 @@
         var knop = form.querySelector('button[type=submit], input[type=submit], button:not([type])');
         if (knop) knop.click(); else form.submit();
     }
-    function naarBarcodePagina() {
-        window.location.href = '/barcodes/zoek?direct=1&code=' + encodeURIComponent(code);
-        return 'barcode';
+    function geenVeld() {
+        return 'geen_veld';
     }
 
     try {
@@ -99,13 +96,13 @@
                 if (tekstVeld(kandidaten[i]) && zichtbaar(kandidaten[i]) && isScanVeld(kandidaten[i])) { veld = kandidaten[i]; break; }
             }
         }
-        if (!veld) return naarBarcodePagina();
+        if (!veld) return geenVeld();
 
         zet(veld, code);
         var doorgaan = drukEnter(veld);
         if (doorgaan && alleenDitVeld(veld)) { verstuur(veld.form); return 'verstuurd'; }
         return 'ingevuld';
     } catch (e) {
-        return naarBarcodePagina();
+        return geenVeld();
     }
 })

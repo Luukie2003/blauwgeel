@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <!-- Voor de wifi-lock: houdt de wifi op volle kracht zolang de app voorin staat (zie HoofdActivity). -->
+    <!-- Voor de wifi-lock: houdt de wifi op volle kracht zolang de app voorin staat (zie BasisActivity). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
@@ -26,18 +26,71 @@
         android:supportsRtl="false"
         android:theme="@style/Thema.Handterminal">
 
+        <!-- Het startpunt: inloggen met de code (of meteen door als je nog bent ingelogd). -->
         <activity
-            android:name=".HoofdActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|keyboard|smallestScreenSize"
+            android:name=".InlogActivity"
             android:exported="true"
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustResize|stateHidden">
+            android:windowSoftInputMode="stateAlwaysHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".StartActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".ProductenActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name=".ProductActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".KoppelenActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name=".TellenActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".FacturenActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".FactuurActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".WebActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|keyboard|smallestScreenSize"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
 
         <activity
             android:name=".InstellingenActivity"

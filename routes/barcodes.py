@@ -89,12 +89,30 @@ def register_routes(app):
         # bekende barcode gaat meteen naar het product; dat werkt zonder JavaScript, dus ook op een oud toestel.
         if request.args.get("direct") and uitkomst["bekend"]:
             return redirect(url_for("product_detail", product_id=uitkomst["artikel"]["product_id"]))
+        onbekend = uitkomst["geldig"] and not uitkomst["bekend"]
         artikelen = db.execute(
             """SELECT a.id, a.naam, p.naam AS product_naam, a.ean_omverpakking FROM artikelen a
                JOIN producten p ON p.id = a.product_id ORDER BY p.naam COLLATE NOCASE, a.naam COLLATE NOCASE"""
-        ).fetchall() if uitkomst["geldig"] and not uitkomst["bekend"] else []
-        return render_template("barcode_zoeken.html", uitkomst=uitkomst, artikelen=artikelen,
+        ).fetchall() if onbekend else []
+        producten = db.execute(
+            """SELECT id, naam, categorie, eenheid FROM producten WHERE COALESCE(gearchiveerd, 0) = 0
+               ORDER BY categorie COLLATE NOCASE, naam COLLATE NOCASE"""
+        ).fetchall() if onbekend else []
+        return render_template("barcode_zoeken.html", uitkomst=uitkomst, artikelen=artikelen, producten=producten,
                                per_eenheid=barcodes.per_eenheid)
+
+    @app.route("/barcodes/snel-koppelen", methods=["POST"])
+    def barcode_snel_koppelen():
+        """Een onbekende barcode in één keer aan een product koppelen: alleen het product, en of het één verpakking is
+        of een doos (zie barcodes.snel_koppelen)."""
+        db = get_db()
+        code = request.form.get("code", "")
+        _, fout = barcodes.snel_koppelen(db, code, request.form.get("product_id"), request.form.get("per_doos"), **_door())
+        if fout:
+            flash(fout, "error")
+        else:
+            flash("Barcode gekoppeld. Merk, leverancier of inkoopprijs kun je hieronder nog aanvullen via Bewerken.", "success")
+        return redirect(url_for("barcode_zoeken", code=code))
 
     @app.route("/barcodes/nieuw", methods=["GET", "POST"])
     def artikel_nieuw():

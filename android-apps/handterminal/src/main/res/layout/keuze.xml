@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Een keuzechip (categorie, reden): aangetikt = navy. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Keuze" />

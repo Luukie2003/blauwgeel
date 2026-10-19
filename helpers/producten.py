@@ -2,6 +2,8 @@
 
 from flask import request
 
+from helpers.tijd import now_str
+
 
 def verwerk_auto_inactief(db, product_id, nieuwe_voorraad):
     """Zet een product automatisch op inactief zodra de voorraad op 0 (of
@@ -23,6 +25,25 @@ def verwerk_auto_inactief(db, product_id, nieuwe_voorraad):
         return None
     db.execute("UPDATE producten SET actief = 0 WHERE id = ?", (product_id,))
     return product["naam"]
+
+
+def boek_mutatie(db, product_id, mtype, aantal, naam, gebruiker_id, opmerking="", reden=None):
+    """Boekt 'aantal' erin (mtype 'in') of eruit ('uit') bij een product, met een regel in de mutaties. Hetzelfde voor
+    de boekpagina en de handterminal-app. Geeft {"product", "voorraad", "gedeactiveerd"} terug (gedeactiveerd: de
+    naam als het product door de lege voorraad op inactief ging), of None als het product niet bestaat. Commit niet:
+    zo kan de aanroeper er nog iets in dezelfde transactie bij doen."""
+    product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+    if product is None:
+        return None
+    nieuwe_voorraad = product["voorraad"] + (aantal if mtype == "in" else -aantal)
+    db.execute("UPDATE producten SET voorraad = ? WHERE id = ?", (nieuwe_voorraad, product_id))
+    db.execute(
+        """INSERT INTO mutaties (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, reden)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (product_id, mtype, aantal, now_str(), naam, gebruiker_id, opmerking, reden if mtype == "uit" else None),
+    )
+    return {"product": product, "voorraad": nieuwe_voorraad,
+            "gedeactiveerd": verwerk_auto_inactief(db, product_id, nieuwe_voorraad)}
 
 
 def besteleenheid_naam(product):

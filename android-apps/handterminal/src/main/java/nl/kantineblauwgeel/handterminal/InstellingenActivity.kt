@@ -73,7 +73,7 @@ class InstellingenActivity : AppCompatActivity() {
         val adres = b.websiteAdres.text.toString().trim().trimEnd('/')
         if (adres == inst.basisUrl) return
         if (adres.startsWith("https://") || adres.startsWith("http://10.0.2.2")) {
-            inst.basisUrl = adres // HoofdActivity ziet het verschil en logt uit
+            inst.basisUrl = adres // de sessie hoort bij het oude adres: Sessie.isIngelogd is dan false, dus opnieuw inloggen
         } else {
             Toast.makeText(this, R.string.inst_website_ongeldig, Toast.LENGTH_LONG).show()
         }

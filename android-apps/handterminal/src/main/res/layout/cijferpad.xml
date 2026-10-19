@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Een groot cijferpad: voor het aantal bij boeken en tellen, en voor bedragen. Geen toetsenbord van Android dat het
+     halve scherm bedekt. In het telscherm zit hij vast onderaan, elders in een venster (Cijferpad.kt). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/padToetsen"
+    android:layout_width="match_parent"
+    android:layout_height="236dp"
+    android:orientation="vertical">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+        <TextView android:id="@+id/pad1" style="@style/Toets" android:text="1" />
+        <TextView android:id="@+id/pad2" style="@style/Toets" android:text="2" />
+        <TextView android:id="@+id/pad3" style="@style/Toets" android:text="3" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+        <TextView android:id="@+id/pad4" style="@style/Toets" android:text="4" />
+        <TextView android:id="@+id/pad5" style="@style/Toets" android:text="5" />
+        <TextView android:id="@+id/pad6" style="@style/Toets" android:text="6" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+        <TextView android:id="@+id/pad7" style="@style/Toets" android:text="7" />
+        <TextView android:id="@+id/pad8" style="@style/Toets" android:text="8" />
+        <TextView android:id="@+id/pad9" style="@style/Toets" android:text="9" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+        <TextView android:id="@+id/padLinks" style="@style/Toets" android:text="C" android:textSize="18sp" />
+        <TextView android:id="@+id/pad0" style="@style/Toets" android:text="0" />
+        <ImageView
+            android:id="@+id/padTerug"
+            style="@style/Toets"
+            android:contentDescription="@string/toets_terug"
+            android:scaleType="center"
+            android:src="@drawable/ic_terug_wissen"
+            app:tint="@color/tekst" />
+    </LinearLayout>
+</LinearLayout>

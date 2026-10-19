@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Een grote tegel op het startscherm: icoon, naam, een korte regel eronder en eventueel een teller. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="0dp"
+    android:layout_height="78dp"
+    android:layout_margin="4dp"
+    android:layout_weight="1"
+    android:background="@drawable/kaart_klik"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="8dp">
+
+        <ImageView
+            android:id="@+id/tegelIcoon"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/icoon_cirkel"
+            android:contentDescription="@null"
+            android:padding="8dp"
+            app:tint="@color/geel" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="9dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tegelNaam"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="2"
+                android:textColor="@color/tekst"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tegelSub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:textColor="@color/tekst_zacht"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tegelTeller"
+        android:layout_width="wrap_content"
+        android:layout_height="18dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="6dp"
+        android:background="@drawable/badge_rood"
+        android:gravity="center"
+        android:minWidth="18dp"
+        android:paddingStart="5dp"
+        android:paddingEnd="5dp"
+        android:textColor="@color/wit"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+</FrameLayout>

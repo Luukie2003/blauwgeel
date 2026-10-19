@@ -718,6 +718,19 @@ CREATE TABLE IF NOT EXISTS loop_voortgang (
     bijgewerkt_op TEXT NOT NULL
 );
 
+-- Schrijfacties van de handterminal-app (boeken, een telling bevestigen, een barcode koppelen) met het antwoord
+-- erop. De app geeft elke actie een eigen verzoek_id; valt de verbinding weg nadat de server het al had gedaan, dan
+-- stuurt de app hetzelfde verzoek opnieuw en krijgt hij het bewaarde antwoord terug, zonder dat het dubbel gebeurt.
+-- Zie routes/app_api.py; na een week opgeruimd (onderhoud.py).
+CREATE TABLE IF NOT EXISTS app_verzoeken (
+    id TEXT NOT NULL,
+    gebruiker_id INTEGER NOT NULL,
+    status INTEGER NOT NULL,
+    antwoord TEXT NOT NULL,
+    aangemaakt_op TEXT NOT NULL,
+    PRIMARY KEY (gebruiker_id, id)
+);
+
 -- Dagen waarop de kantine afwijkt van de vaste verkoopdagen (instellingen.verkoopdagen,
 -- standaard woensdag en zaterdag): open=1 is "toch open" (bijv. een wedstrijd op zondag),
 -- open=0 is "dicht" (bijv. een vrije zaterdag). Het voorspellen en de weekomzet

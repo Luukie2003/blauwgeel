@@ -5,6 +5,7 @@ from database import get_db
 from derving import DERVING_REDENEN, kies_reden
 from helpers import (
     besteleenheid_naam,
+    boek_mutatie,
     format_datum,
     naar_voorraadeenheden,
     now_datetime_local,
@@ -32,28 +33,12 @@ def register_routes(app):
                 else url_for("boeken")
             )
 
-            product = db.execute(
-                "SELECT * FROM producten WHERE id = ?", (product_id,)
-            ).fetchone()
-
-            if product is None or aantal <= 0:
+            geboekt = boek_mutatie(db, product_id, mtype, aantal, naam, gebruiker_id, opmerking, reden) if aantal > 0 else None
+            if geboekt is None:
                 flash("Ongeldige boeking.", "error")
                 return redirect(volgende)
-
-            delta = aantal if mtype == "in" else -aantal
-            nieuwe_voorraad = product["voorraad"] + delta
-
-            db.execute(
-                "UPDATE producten SET voorraad = ? WHERE id = ?",
-                (nieuwe_voorraad, product_id),
-            )
-            db.execute(
-                """INSERT INTO mutaties (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, reden)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (product_id, mtype, aantal, now_str(), naam, gebruiker_id, opmerking, reden),
-            )
-            gedeactiveerd = verwerk_auto_inactief(db, product_id, nieuwe_voorraad)
             db.commit()
+            product, nieuwe_voorraad, gedeactiveerd = geboekt["product"], geboekt["voorraad"], geboekt["gedeactiveerd"]
 
             if nieuwe_voorraad < 0:
                 flash(

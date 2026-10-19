@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- De kopbalk van elk werkscherm: terug (of het clublogo op het startscherm), de titel met eronder wie er is ingelogd
+     of hoe de verbinding is, een stip voor de verbinding (groen, oranje, rood) en het menu. Navy met een gele streep
+     eronder, zoals de kop van de site. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/balk"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="@color/navy"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingEnd="2dp">
+
+        <ImageButton
+            android:id="@+id/balkTerug"
+            android:layout_width="44dp"
+            android:layout_height="50dp"
+            android:background="@drawable/menu_knop"
+            android:contentDescription="@string/terug"
+            android:src="@drawable/ic_terug"
+            app:tint="@color/tekst_op_navy" />
+
+        <ImageView
+            android:id="@+id/balkLogo"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginStart="10dp"
+            android:contentDescription="@string/club"
+            android:src="@drawable/clublogo"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/balkTitel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:textColor="@color/wit"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/balkSub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:textColor="@color/tekst_zacht_op_navy"
+                android:textSize="12sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <View
+            android:id="@+id/balkStip"
+            android:layout_width="9dp"
+            android:layout_height="9dp"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/status_stip" />
+
+        <ImageButton
+            android:id="@+id/balkMenu"
+            android:layout_width="40dp"
+            android:layout_height="50dp"
+            android:background="@drawable/menu_knop"
+            android:contentDescription="@string/menu_openen"
+            android:src="@drawable/ic_menu"
+            app:tint="@color/tekst_op_navy" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:background="@color/geel" />
+</LinearLayout>

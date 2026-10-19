@@ -46,11 +46,32 @@
 {% else %}
 <div class="kaart">
     <h2 style="margin-top:0">Onbekende barcode <code>{{ uitkomst.code }}</code></h2>
-    <p style="margin-top:0">Deze barcode staat nog niet in de site. Wat heb je gescand?</p>
-    <div style="display:flex; gap:0.6rem; flex-wrap:wrap">
-        <a href="{{ url_for('artikel_nieuw', ean=uitkomst.code, terug='zoeken', zoekcode=uitkomst.code) }}" class="btn btn-geel">Het artikel zelf (zak, fles, blik)</a>
-        <a href="{{ url_for('artikel_nieuw', ean_omverpakking=uitkomst.code, terug='zoeken', zoekcode=uitkomst.code) }}" class="btn btn-rand">Een doos van een nieuw artikel</a>
-    </div>
+    <p style="margin-top:0">Bij welk product hoort hij? Meer hoef je niet in te vullen.</p>
+    <form method="post" action="{{ url_for('barcode_snel_koppelen') }}" class="formgrid" style="align-items:end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="code" value="{{ uitkomst.code }}">
+        <div class="veld" style="margin:0; min-width:0">
+            <label for="snel_product">Product</label>
+            <select id="snel_product" name="product_id" required style="width:100%">
+                <option value="">Kies&hellip;</option>
+                {% for categorie, groep in producten|groupby('categorie') %}
+                <optgroup label="{{ categorie or 'Zonder categorie' }}">
+                    {% for p in groep %}<option value="{{ p.id }}">{{ p.naam }}</option>{% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="veld" style="margin:0">
+            <label for="snel_per_doos">Een doos of krat? Hoeveel erin <span class="tekst-zacht">(leeg: één losse)</span></label>
+            <input type="number" id="snel_per_doos" name="per_doos" min="1" step="1" placeholder="Bijv. 24">
+        </div>
+        <div><button type="submit" class="btn btn-geel">Koppelen</button></div>
+    </form>
+    <p class="tekst-zacht" style="margin:0.8rem 0 0; font-size:0.85rem">
+        Ook merk, leverancier of inkoopprijs vastleggen?
+        <a href="{{ url_for('artikel_nieuw', ean=uitkomst.code, terug='zoeken', zoekcode=uitkomst.code) }}">Uitgebreid: het artikel zelf (zak, fles, blik)</a>
+        &middot; <a href="{{ url_for('artikel_nieuw', ean_omverpakking=uitkomst.code, terug='zoeken', zoekcode=uitkomst.code) }}">een doos van een nieuw artikel</a>
+    </p>
 </div>
 
 {% if artikelen %}

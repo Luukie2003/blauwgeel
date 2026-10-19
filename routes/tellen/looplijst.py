@@ -97,25 +97,7 @@ def register_routes(app):
                     else:
                         # Bar en voorraadhok zijn allebei geteld: optellen en
                         # naar het controlescherm, nog niet meteen opslaan.
-                        geparsed = {}
-                        for p in producten:
-                            pid_str = str(p["id"])
-                            bar_tekst = bar_waarden.get(pid_str, "")
-                            hok_tekst = hok_waarden.get(pid_str, "")
-                            if bar_tekst == "" and hok_tekst == "":
-                                continue
-                            try:
-                                bar_aantal = int(bar_tekst) if bar_tekst != "" else 0
-                            except ValueError:
-                                bar_aantal = 0
-                            try:
-                                hok_aantal = int(hok_tekst) if hok_tekst != "" else 0
-                            except ValueError:
-                                hok_aantal = 0
-                            geteld_totaal = bar_aantal + hok_aantal
-                            if geteld_totaal >= 0:
-                                geparsed[pid_str] = geteld_totaal
-
+                        geparsed = optellen(producten, bar_waarden, hok_waarden)
                         if not geparsed:
                             loop_wissen(db)
                             flash("Geen aantallen ingevuld: er is niets geteld.", "error")
@@ -223,36 +205,63 @@ def register_routes(app):
             )
             return redirect(url_for("telling_detail", telling_id=telling_id))
 
-        bar_waarden = session.get("loop_bar", {})
-        hok_waarden = session.get("loop_hok", {})
-        try:
-            verwachting = verwachte_verkoop_sinds_telling(db)
-        except Exception as fout:
-            print(f"[voorspelling] verwachte voorraad mislukt: {fout}")
-            verwachting = {}
-        regels = []
-        for product_id_str, totaal in review.items():
-            product = db.execute(
-                "SELECT * FROM producten WHERE id = ?", (int(product_id_str),)
-            ).fetchone()
-            if product is None:
-                continue
-            verwacht_nu = verwachte_voorraad(verwachting.get(product["id"]), product["voorraad"])
-            regels.append(
-                {
-                    "product": product,
-                    "bar": bar_waarden.get(product_id_str, "") or "0",
-                    "hok": hok_waarden.get(product_id_str, "") or "0",
-                    "totaal": totaal,
-                    "afwijking": signaleer_afwijkende_telling(
-                        db, product["id"], product["voorraad"], totaal
-                    ),
-                    "verwacht": verwacht_nu,
-                    "model_afwijking": telling_ver_van_verwachting(
-                        verwachting.get(product["id"]), product["voorraad"], totaal
-                    ),
-                }
-            )
-        regels.sort(key=lambda r: (r["product"]["categorie"], r["product"]["naam"]))
-
+        regels = controle_regels(db, review, session.get("loop_bar", {}), session.get("loop_hok", {}))
         return render_template("tellen_lopen_controleren.html", regels=regels)
+
+
+def optellen(producten, bar_waarden, hok_waarden):
+    """{product_id (tekst): bar + voorraadhok} voor elk product waar iets is ingevuld."""
+    geparsed = {}
+    for p in producten:
+        pid_str = str(p["id"])
+        bar_tekst = str(bar_waarden.get(pid_str, ""))
+        hok_tekst = str(hok_waarden.get(pid_str, ""))
+        if bar_tekst == "" and hok_tekst == "":
+            continue
+        try:
+            bar_aantal = int(bar_tekst) if bar_tekst != "" else 0
+        except ValueError:
+            bar_aantal = 0
+        try:
+            hok_aantal = int(hok_tekst) if hok_tekst != "" else 0
+        except ValueError:
+            hok_aantal = 0
+        geteld_totaal = bar_aantal + hok_aantal
+        if geteld_totaal >= 0:
+            geparsed[pid_str] = geteld_totaal
+    return geparsed
+
+
+def controle_regels(db, review, bar_waarden, hok_waarden):
+    """De regels van het controlescherm: per product de bar, het voorraadhok, het totaal, wat er verwacht werd en of het
+    opvallend afwijkt. Voor de site en voor de handterminal-app."""
+    try:
+        verwachting = verwachte_verkoop_sinds_telling(db)
+    except Exception as fout:
+        print(f"[voorspelling] verwachte voorraad mislukt: {fout}")
+        verwachting = {}
+    regels = []
+    for product_id_str, totaal in review.items():
+        product = db.execute(
+            "SELECT * FROM producten WHERE id = ?", (int(product_id_str),)
+        ).fetchone()
+        if product is None:
+            continue
+        verwacht_nu = verwachte_voorraad(verwachting.get(product["id"]), product["voorraad"])
+        regels.append(
+            {
+                "product": product,
+                "bar": str(bar_waarden.get(product_id_str, "") or "0"),
+                "hok": str(hok_waarden.get(product_id_str, "") or "0"),
+                "totaal": totaal,
+                "afwijking": signaleer_afwijkende_telling(
+                    db, product["id"], product["voorraad"], totaal
+                ),
+                "verwacht": verwacht_nu,
+                "model_afwijking": telling_ver_van_verwachting(
+                    verwachting.get(product["id"]), product["voorraad"], totaal
+                ),
+            }
+        )
+    regels.sort(key=lambda r: (r["product"]["categorie"], r["product"]["naam"]))
+    return regels

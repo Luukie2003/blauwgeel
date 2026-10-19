@@ -298,6 +298,58 @@ def koppel_doos(db, artikel_id, tekst, per_omverpakking):
     return None
 
 
+def snel_koppelen(db, tekst, product_id, per_doos=None, door=None, gebruiker_id=None):
+    """Koppelt een gescande barcode in één stap aan een product, zonder verder iets in te vullen: zonder per_doos is het
+    één verpakking (een fles, een blik), met per_doos een doos of krat met zoveel erin, geteld in de eenheid van het
+    product (een krat met 24 flessen: 24). Het artikel krijgt de naam van
+    het product; merk, leverancier en inkoopprijs kunnen later nog op de barcodepagina. Heeft het product al een artikel
+    waar dit stukje nog ontbreekt (een fles zonder doos-barcode, of andersom), dan komt de barcode daarbij.
+    Geeft (artikel_id, foutmelding) terug."""
+    code, fout = controleer(tekst)
+    if fout or code is None:
+        return None, fout or "Scan of typ eerst een barcode."
+    try:
+        product_id = int(product_id or 0)
+    except (TypeError, ValueError):
+        product_id = 0
+    product = db.execute("SELECT id, naam FROM producten WHERE id = ?", (product_id,)).fetchone()
+    if product is None:
+        return None, "Kies bij welk product deze barcode hoort."
+    if bezet := barcode_in_gebruik(db, code):
+        return None, f"Barcode {code} hoort al bij '{bezet['naam']}' ({bezet['product_naam']})."
+    if per_doos in (None, "", 0, "0"):
+        zonder_fles = db.execute(
+            "SELECT id FROM artikelen WHERE product_id = ? AND ean IS NULL ORDER BY id LIMIT 1", (product_id,)
+        ).fetchone()
+        if zonder_fles:
+            db.execute("UPDATE artikelen SET ean = ?, bijgewerkt_op = ? WHERE id = ?",
+                       (code, now_str(), zonder_fles["id"]))
+            db.commit()
+            return zonder_fles["id"], None
+        return bewaar_artikel(db, {"product_id": product_id, "naam": product["naam"], "ean": code},
+                              door=door, gebruiker_id=gebruiker_id)
+    try:
+        per_doos = int(per_doos)
+    except (TypeError, ValueError):
+        per_doos = 0
+    if per_doos < 1:
+        return None, "Vul in hoeveel er in de doos of krat zitten."
+    # Een artikel zonder doos-barcode waar het aantal in past: een doos van 60 frikandellen bij de zak van 20 is een
+    # doos van 3 zakken.
+    for artikel in db.execute(
+        """SELECT id, aantal_per_verpakking FROM artikelen WHERE product_id = ? AND ean_omverpakking IS NULL
+           ORDER BY id""", (product_id,),
+    ).fetchall():
+        per_verpakking = artikel["aantal_per_verpakking"] or 1
+        if per_doos % per_verpakking == 0:
+            fout = koppel_doos(db, artikel["id"], code, per_doos // per_verpakking)
+            return (None, fout) if fout else (artikel["id"], None)
+    return bewaar_artikel(
+        db, {"product_id": product_id, "naam": product["naam"], "ean_omverpakking": code, "per_omverpakking": per_doos},
+        door=door, gebruiker_id=gebruiker_id,
+    )
+
+
 def verwijder_artikel(db, artikel_id, door=None, gebruiker_id=None):
     rij = db.execute("SELECT product_id FROM artikelen WHERE id = ?", (artikel_id,)).fetchone()
     db.execute("DELETE FROM artikelen WHERE id = ?", (artikel_id,))

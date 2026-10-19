@@ -19,26 +19,32 @@ LOOP_BEWAREN_DAGEN = 3  # een onderbroken looplijst blijft zo lang bewaard
 # elke stap ook in de database bewaard: zo overleeft 'ie een vergrendelde
 # telefoon, uitloggen of een ander toestel.
 
+def bewaar_stand(db, gebruiker_id, fase, index, bar, hok, review=None):
+    """De stand van iemands looplijst in de database: {product_id (tekst): ingevuld aantal (tekst)} voor de bar en het
+    voorraadhok, en bij het controleren de opgetelde totalen (review). Ook voor de handterminal-app, die zelf telt en
+    alleen de stand doorgeeft (zie routes/app_api.py); zo kun je op de app pauzeren en op de site verder, of andersom."""
+    db.execute(
+        """INSERT OR REPLACE INTO loop_voortgang
+               (gebruiker_id, fase, indx, bar, hok, review, bijgewerkt_op)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (gebruiker_id, fase, index, json.dumps(bar), json.dumps(hok),
+         json.dumps(review) if review is not None else None, now_str()),
+    )
+    db.commit()
+
+
+def wis_stand(db, gebruiker_id):
+    db.execute("DELETE FROM loop_voortgang WHERE gebruiker_id = ?", (gebruiker_id,))
+    db.commit()
+
+
 def loop_bewaren(db):
     gebruiker_id = session.get("gebruiker_id")
     review = session.get("loop_review")
     if gebruiker_id is None or (review is None and "loop_fase" not in session):
         return
-    db.execute(
-        """INSERT OR REPLACE INTO loop_voortgang
-               (gebruiker_id, fase, indx, bar, hok, review, bijgewerkt_op)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (
-            gebruiker_id,
-            session.get("loop_fase", "bar"),
-            session.get("loop_index", 0),
-            json.dumps(session.get("loop_bar", {})),
-            json.dumps(session.get("loop_hok", {})),
-            json.dumps(review) if review is not None else None,
-            now_str(),
-        ),
-    )
-    db.commit()
+    bewaar_stand(db, gebruiker_id, session.get("loop_fase", "bar"), session.get("loop_index", 0),
+                 session.get("loop_bar", {}), session.get("loop_hok", {}), review)
 
 
 def loop_wissen(db):
@@ -47,13 +53,22 @@ def loop_wissen(db):
         session.pop(sleutel, None)
     gebruiker_id = session.get("gebruiker_id")
     if gebruiker_id is not None:
-        db.execute("DELETE FROM loop_voortgang WHERE gebruiker_id = ?", (gebruiker_id,))
-        db.commit()
+        wis_stand(db, gebruiker_id)
 
 
-def _bewaarde_loop(db):
+def bewaarde_stand(db, gebruiker_id):
+    """{"fase", "index", "bar", "hok", "review", "bijgewerkt_op"} van iemands bewaarde looplijst, of None."""
+    rij = _bewaarde_loop(db, gebruiker_id)
+    if rij is None:
+        return None
+    return {"fase": rij["fase"], "index": rij["indx"], "bar": json.loads(rij["bar"]), "hok": json.loads(rij["hok"]),
+            "review": json.loads(rij["review"]) if rij["review"] is not None else None,
+            "bijgewerkt_op": rij["bijgewerkt_op"]}
+
+
+def _bewaarde_loop(db, gebruiker_id=None):
     """De bewaarde stand van deze gebruiker, of None (ook als 'ie verlopen is)."""
-    gebruiker_id = session.get("gebruiker_id")
+    gebruiker_id = gebruiker_id if gebruiker_id is not None else session.get("gebruiker_id")
     if gebruiker_id is None:
         return None
     rij = db.execute("SELECT * FROM loop_voortgang WHERE gebruiker_id = ?", (gebruiker_id,)).fetchone()

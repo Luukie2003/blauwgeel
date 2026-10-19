@@ -14,7 +14,10 @@
     <meta name="apple-mobile-web-app-title" content="Kantine Beheer">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_versie }}">
 </head>
-<body class="pda-body">
+<body class="pda-body{{ ' pda-in-app' if in_app }}">
+    {# In de handterminal-app (android-apps/handterminal) zit de kop met terug en het menu in de app zelf, en scant de
+       app zelf: dan geen kop, zoekbalk en tabbalk van de site. #}
+    {% if not in_app %}
     <div class="pda-kop-wrap">
         <header class="pda-kop">
             {% if request.endpoint == 'dashboard' %}
@@ -45,6 +48,7 @@
         </div>
         {% endif %}
     </div>
+    {% endif %}
     {% if noodstop_toestand and noodstop_toestand.actief %}
     {# Zolang de noodstop aan staat: alleen de eigenaar komt hier, en die moet het niet vergeten (zie noodstop.py). #}
     <a href="{{ url_for('noodstop_pagina') }}" class="noodstop-balk">Noodstop actief sinds {{ noodstop_toestand.sinds|datum_nl }}: de site en de schermen zijn afgesloten voor iedereen behalve jou. Weer openen &rsaquo;</a>
@@ -201,6 +205,7 @@
         <span>{{ label }}</span>
     </a>
     {% endmacro %}
+    {% if not in_app %}
     <nav class="pda-tabbalk" aria-label="Snel naar">
         {{ tab(url_for('dashboard'), 'start', 'Start', '<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>') }}
         {% if sectie_toegang.voorraad %}
@@ -229,5 +234,6 @@
         });
     })();
     </script>
+    {% endif %}
 </body>
 </html>

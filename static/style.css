@@ -2862,6 +2862,8 @@ button:disabled,
 
 /* Ruimte onderaan, zodat de tabbalk niets van de pagina afdekt. */
 .pda-body .pda-inhoud { padding-bottom: 5.5rem; }
+/* In de handterminal-app is er geen tabbalk onderin (zie base_pda.html). */
+.pda-body.pda-in-app .pda-inhoud { padding-bottom: 1.5rem; }
 
 /* Categorieknoppen boven een lijst op de handterminal (pda_voorraad.html): op één regel, zijwaarts te schuiven. */
 .pda-chips {

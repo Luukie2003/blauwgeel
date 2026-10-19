@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Een regel in een lijst: wit, met een dun lijntje eronder. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true"><color android:color="#FFF6D6" /></item>
+    <item><color android:color="@color/kaart" /></item>
+</selector>

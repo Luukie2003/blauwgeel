@@ -26,6 +26,8 @@ BEWAARTERMIJNEN = [
     # Gebruiksstatistieken).
     ("trage_verzoeken", "datum", 90, None),
     ("fouten", "laatste_op", 180, "opgelost = 1"),
+    # Antwoorden op acties van de handterminal-app, tegen dubbel boeken bij een haperende verbinding.
+    ("app_verzoeken", "aangemaakt_op", 7, None),
 ]
 
 DATUM_FORMAAT = "%Y-%m-%d %H:%M"

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Eén scherm met twee lagen: de site (statusbalk + WebView + foutscherm) en daaroverheen het inlogscherm.
-     Zo blijft de WebView bestaan bij uit- en weer inloggen, en is er geen gedoe met meerdere activities. -->
+<!-- Een pagina die (nog) geen eigen scherm in de app heeft, als website: de kopbalk van de app, de WebView en een
+     foutscherm voor als de verbinding wegvalt. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -13,44 +13,9 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- De balk van de app: wie er is ingelogd en hoe de verbinding is. Zelfde navy als de kop van de site
-             eronder, zodat het één kop lijkt. Bij verbindingsproblemen kleurt hij oranje of rood. -->
-        <LinearLayout
-            android:id="@+id/statusBalk"
-            android:layout_width="match_parent"
-            android:layout_height="34dp"
-            android:background="@color/navy"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="14dp"
-            android:paddingEnd="2dp">
-
-            <View
-                android:id="@+id/statusStip"
-                android:layout_width="9dp"
-                android:layout_height="9dp"
-                android:background="@drawable/status_stip" />
-
-            <TextView
-                android:id="@+id/statusTekst"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="9dp"
-                android:layout_weight="1"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:textColor="@color/tekst_op_navy"
-                android:textSize="13sp" />
-
-            <ImageButton
-                android:id="@+id/menuKnop"
-                android:layout_width="40dp"
-                android:layout_height="34dp"
-                android:background="@drawable/menu_knop"
-                android:contentDescription="@string/menu_openen"
-                android:src="@drawable/ic_menu"
-                app:tint="@color/tekst_op_navy" />
-        </LinearLayout>
+        <include
+            android:id="@+id/balk"
+            layout="@layout/balk" />
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -176,7 +141,4 @@
         </FrameLayout>
     </LinearLayout>
 
-    <include
-        android:id="@+id/inlog"
-        layout="@layout/inlog_laag" />
 </FrameLayout>

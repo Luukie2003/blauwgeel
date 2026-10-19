@@ -6,8 +6,19 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.53.0"
+HUIDIGE_VERSIE = "1.54.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.54.0",
+        "datum": "19 oktober 2026",
+        "punten": [
+            "Handterminal-app 2.0: het dagelijkse werk heeft nu eigen schermen in plaats van de website, en is daardoor veel sneller. Startscherm, zoeken en voorraad (de productlijst staat op de handterminal zelf), een product met boeken, tellen met de looplijst, factuur inboeken en barcodes koppelen. Andere pagina's (prikbord, kassa, bestellijst en meer) openen als website in de app, onder 'Meer'.",
+            "Handterminal-app: tellen gaat zonder wachten. Het volgende product staat er meteen, met een groot cijferpad. Scan een product om ernaartoe te springen, en pauzeer wanneer je wilt: je gaat later verder waar je was, ook op de site.",
+            "Handterminal-app: een product scannen opent het met het aantal al ingevuld (een krat: 24, en Erin staat aan); nog een keer scannen telt erbij op. Een onbekende barcode koppel je in twee tikken: het product, en 'één fles' of 'een krat van 24'.",
+            "Barcode opzoeken op de site: een onbekende barcode koppelen vraagt nu alleen het product en of het een losse verpakking of een doos is. Het uitgebreide formulier (merk, leverancier, inkoopprijs) blijft beschikbaar.",
+            "Valt de verbinding weg net nadat de handterminal iets heeft opgeslagen (boeken, een telling, een scan bij Factuur inboeken), dan stuurt de app het opnieuw zonder dat het dubbel wordt geboekt.",
+        ],
+    },
     {
         "versie": "1.53.0",
         "datum": "18 oktober 2026",
@@ -1044,7 +1055,7 @@ MODULES = [
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.12.1", "sinds": "0.4.0", "laatst": "1.51.0",
      "inhoud": "Bestellijst (ook per leverancier), leveranciers, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
-    {"naam": "Producten & prijzen", "versie": "1.15.1", "sinds": "0.1.0", "laatst": "1.53.0",
+    {"naam": "Producten & prijzen", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "1.54.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
     {"naam": "Geld (kassa & kluis)", "versie": "1.4.0", "sinds": "1.0.0", "laatst": "1.45.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
@@ -1058,10 +1069,10 @@ MODULES = [
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
     {"naam": "Rapporten", "versie": "1.14.0", "sinds": "0.1.0", "laatst": "1.47.0",
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
-    {"naam": "Handterminal", "versie": "1.6.1", "sinds": "1.5.0", "laatst": "1.53.0",
+    {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.1.0", "sinds": "1.53.0", "laatst": "1.53.0",
-     "inhoud": "De Android-app voor de Zebra: inloggen met je code, de scanner, verbindingsbewaking en automatisch uitloggen"},
+    {"naam": "Handterminal-app", "versie": "0.2.0", "sinds": "1.53.0", "laatst": "1.54.0",
+     "inhoud": "De Android-app voor de Zebra met eigen schermen: zoeken, boeken, tellen, factuur inboeken en barcodes koppelen, plus inloggen met je code, de scanner en verbindingsbewaking"},
     {"naam": "Accounts & rechten", "versie": "1.10.3", "sinds": "0.1.0", "laatst": "1.53.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
