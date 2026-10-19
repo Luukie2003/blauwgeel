@@ -28,23 +28,9 @@
     <string name="signaal_goed">goed</string>
     <string name="signaal_matig">matig</string>
     <string name="signaal_zwak">zwak</string>
-    <string name="balk_laden">Laden…</string>
     <string name="balk_offline">Geen verbinding</string>
 
     <!-- Foutscherm -->
-    <string name="fout_geen_netwerk_titel">Geen wifi-verbinding</string>
-    <string name="fout_geen_netwerk_tekst">De handterminal heeft geen netwerk. Loop richting de kantine of controleer de wifi. Zodra er weer verbinding is, gaat hij vanzelf verder.</string>
-    <string name="fout_server_titel">Website niet bereikbaar</string>
-    <string name="fout_server_tekst">Er is wel netwerk, maar kantineblauwgeel.nl reageert niet (of te traag). De app probeert het vanzelf opnieuw.</string>
-    <string name="fout_beveiliging_titel">Beveiligde verbinding mislukt</string>
-    <string name="fout_beveiliging_tekst">De verbinding met de website kon niet veilig worden gecontroleerd. Kloppen de datum en tijd van de handterminal? Na een lege accu staat de klok soms verkeerd.</string>
-    <string name="fout_versturen_titel">Niet zeker of het is opgeslagen</string>
-    <string name="fout_versturen_tekst">De verbinding viel weg tijdens het versturen. Kijk eerst of je wijziging er al staat, voordat je het opnieuw doet. Zo voorkom je dat iets dubbel wordt geboekt.</string>
-    <string name="fout_opnieuw">Opnieuw proberen</string>
-    <string name="fout_pagina_laden">Pagina opnieuw laden</string>
-    <string name="fout_test">Verbinding testen</string>
-    <string name="fout_aftellen">Automatisch opnieuw over %1$d s</string>
-    <string name="fout_wacht_netwerk">Wacht op netwerk…</string>
 
     <!-- Menu -->
     <string name="menu_start">Startscherm</string>
@@ -56,9 +42,6 @@
 
     <!-- Scannen -->
     <string name="scan_eerst_inloggen">Log eerst in met je code.</string>
-    <string name="scan_genegeerd">Scan niet gebruikt: je bent een aantal aan het invullen. Maak dat eerst af.</string>
-    <string name="download_gestart">Download gestart</string>
-    <string name="geen_app">Geen app gevonden om dit te openen.</string>
 
     <!-- Verbinding testen -->
     <string name="test_titel">Verbinding testen</string>
@@ -80,8 +63,6 @@
     <string name="inst_beveiliging">Beveiliging</string>
     <string name="inst_uitloggen">Automatisch uitloggen na</string>
     <string name="inst_uitloggen_uitleg">Iedereen gebruikt dezelfde handterminal met een eigen code. Na deze tijd zonder aanraken of scannen logt de app uit, zodat niemand op jouw naam verder werkt.</string>
-    <string name="inst_weergave">Weergave</string>
-    <string name="inst_tekst">Tekstgrootte</string>
     <string name="inst_scanner">Scanner</string>
     <string name="inst_trillen">Kort trillen bij een scan</string>
     <string name="inst_scanner_zebra">Zebra-scanner gevonden. Scans gaan rechtstreeks naar de app, ook als er geen veld is geselecteerd.</string>
@@ -96,14 +77,12 @@
     <string name="minuten">%1$d minuten</string>
     <string name="een_uur">1 uur</string>
     <string name="nooit">Nooit</string>
-    <string name="procent">%1$d%%</string>
 
     <!-- Versie 2: de eigen schermen -->
     <string name="ok">OK</string>
     <string name="annuleren">Annuleren</string>
     <string name="terug">Terug</string>
     <string name="hallo">Hallo</string>
-    <string name="website">Website</string>
     <string name="product">Product</string>
     <string name="aantal">Aantal</string>
     <string name="aantal_eenheid">%1$d %2$s</string>
@@ -131,7 +110,7 @@
     <string name="gisteren_geteld">Gisteren geteld</string>
     <string name="dagen_geleden_geteld">%1$d dagen geleden geteld</string>
     <string name="let_op">Let op</string>
-    <string name="meer">Meer (op de website)</string>
+    <string name="meer">Meer</string>
     <string name="bekijk_welke">Bekijk welke het zijn</string>
     <string name="scan_de_levering">Scan de levering bij Factuur inboeken</string>
     <string name="prikbord">Prikbord</string>
@@ -165,7 +144,6 @@
     <string name="barcodes">Barcodes</string>
     <string name="nog_geen_barcode">Nog geen barcode. Scan er een om hem te koppelen.</string>
     <string name="barcode_koppelen">Barcode koppelen</string>
-    <string name="alles_over_product">Alles over dit product (website)</string>
     <string name="doos_van">doos/krat van %1$d %2$s</string>
     <string name="los_aantal">%1$d %2$s los</string>
     <string name="gescand">Gescand: %1$s (%2$s)</string>
@@ -183,19 +161,9 @@
     <string name="koppel_doos_anders">Een doos of krat met een ander aantal…</string>
     <string name="ander_product">Hoort bij een ander product…</string>
     <string name="hoeveel_in_doos">Hoeveel zitten er in de doos of krat?</string>
-    <string name="gekoppeld">Barcode gekoppeld</string>
     <string name="gekoppeld_aan">Gekoppeld aan %1$s</string>
     <string name="titel_tellen">Tellen</string>
     <string name="titel_controleren">Controleren</string>
-    <string name="tellen_bar">Tellen · bar</string>
-    <string name="tellen_hok">Tellen · voorraadhok</string>
-    <string name="n_van_m">%1$d van %2$d</string>
-    <string name="verwacht_totaal">verwacht ± %1$d (%2$d–%3$d)</string>
-    <string name="in_de_bar">in de bar: %1$s</string>
-    <string name="vorige">Vorige</string>
-    <string name="volgende">Volgende</string>
-    <string name="overslaan">Overslaan</string>
-    <string name="naar_controle">Klaar: controleren</string>
     <string name="bar_klaar_titel">De bar is klaar</string>
     <string name="bar_klaar_tekst">Nu het voorraadhok: dezelfde producten nog een keer. Het totaal telt de app straks zelf op.</string>
     <string name="verder_tellen_titel">Verder tellen?</string>
@@ -204,7 +172,6 @@
     <string name="fase_hok">Het voorraadhok</string>
     <string name="verder">Verder</string>
     <string name="opnieuw_beginnen">Opnieuw beginnen</string>
-    <string name="pauzeren">Pauzeren</string>
     <string name="naar_product">Naar een product…</string>
     <string name="stoppen_zonder_opslaan">Stoppen zonder opslaan</string>
     <string name="stoppen">Stoppen</string>
@@ -224,7 +191,6 @@
     <string name="terug_naar_tellen">Terug</string>
     <string name="telling_opslaan">Telling opslaan</string>
     <string name="telling_opgeslagen">Telling #%1$d opgeslagen</string>
-    <string name="telling">Telling</string>
     <string name="bekijk_telling">Bekijk de telling op de website</string>
     <string name="naar_start">Naar het startscherm</string>
     <string name="factuur">Factuur</string>
@@ -261,8 +227,6 @@
     <string name="factuur_gescand">+1 %1$s · %2$s</string>
     <string name="scan_niet_zeker">Niet zeker of de scan van %1$s is meegeteld. Kijk in de lijst hieronder voordat je opnieuw scant.</string>
     <string name="bedrag_op_factuur">Bedrag op de factuur</string>
-    <string name="op_de_website">Op de website openen</string>
-    <string name="webview_oud">De webweergave van deze handterminal is oud (versie %1$d), daardoor zien pagina’s van de website er niet goed uit. Werk ‘Android System WebView’ (of Chrome) bij via de Play Store.</string>
     <plurals name="n_producten">
         <item quantity="one">%d product</item>
         <item quantity="other">%d producten</item>
@@ -282,5 +246,373 @@
     <plurals name="bestellingen_inboeken">
         <item quantity="one">%d bestelling om in te boeken</item>
         <item quantity="other">%d bestellingen om in te boeken</item>
+    </plurals>
+
+    <!-- Versie 2.1 -->
+    <string name="titel_looplijst">Looplijst tellen</string>
+    <string name="product_n_van_m">Product %1$d van %2$d</string>
+    <string name="bar_tellen">Bar tellen</string>
+    <string name="hok_tellen">Voorraadhok tellen</string>
+    <string name="bar_geteld">Bar geteld: %1$s %2$s</string>
+    <string name="geregistreerde_voorraad">Geregistreerde voorraad: %1$d %2$s</string>
+    <string name="verwacht_nu">Verwacht nu ongeveer %1$d %2$s, bar en voorraadhok samen</string>
+    <string name="verwacht_nu_marge">Verwacht nu ongeveer %1$d %2$s (waarschijnlijk %3$d tot %4$d), bar en voorraadhok samen</string>
+    <string name="plus_een_besteleenheid">+1 %1$s (%2$d)</string>
+    <string name="vorige_pijl">← Vorige</string>
+    <string name="volgende_pijl">Volgende →</string>
+    <string name="door_naar_hok">Door naar voorraadhok →</string>
+    <string name="bekijken_en_bevestigen">Bekijken en bevestigen →</string>
+    <string name="pauzeren_later_verder">Pauzeren, later verder</string>
+    <string name="rekenmachine">Rekenmachine</string>
+    <string name="gebruiken">Gebruiken</string>
+    <string name="doos">doos</string>
+    <string name="los_gescand_titel">Let op! Artikel gescand</string>
+    <string name="los_gescand_vraag">Je scande %1$s (%2$s). Volledige besteleenheid inboeken?</string>
+    <string name="los_gescand_vol">Ja, %1$s van %2$d %3$s</string>
+    <string name="los_gescand_los">Nee, %1$d %2$s</string>
+    <string name="koppel_verpakking">Een verpakking met meer stuks (zoals een zak van 20)…</string>
+    <string name="koppelen">Koppelen</string>
+    <string name="koppel_naam">Naam (bijvoorbeeld het merk)</string>
+    <string name="koppel_naam_hint">Bijv. AH %1$s</string>
+    <string name="koppel_aantal">Hoeveel %1$s zit erin?</string>
+    <string name="koppel_aantal_hint">Bijv. 20</string>
+    <string name="koppel_prijs">Inkoopprijs van de verpakking (mag leeg)</string>
+    <string name="koppel_aantal_nodig">Vul in hoeveel er in de verpakking zit.</string>
+    <string name="qr_niet_voor_app">Deze QR-code is voor de website.</string>
+    <string name="nieuwe_mededeling">Nieuwe mededeling</string>
+    <string name="n_open_kop">Open (%1$d)</string>
+    <string name="prikbord_leeg">Niets op het prikbord. Mooi zo!</string>
+    <string name="afgehandeld">Afgehandeld</string>
+    <string name="afgehandeld_door">afgehandeld door %1$s</string>
+    <string name="urgent">URGENT</string>
+    <string name="reageren">Reageren</string>
+    <string name="afhandelen">Afhandelen</string>
+    <string name="afhandelen_vraag">Deze mededeling afhandelen?</string>
+    <string name="mededeling_hint">Bijv. ‘Tapkraan lekt een beetje’. Typ @naam om iemand te taggen.</string>
+    <string name="urgent_vraag">Urgent (bijv. een storing)</string>
+    <string name="plaatsen">Plaatsen</string>
+    <string name="bestellijst">Bestellijst</string>
+    <string name="bestellen_kop">Bestellen (%1$d)</string>
+    <string name="niets_bestellen">Niets onder het minimum. Alles op voorraad!</string>
+    <string name="voorraad_min">voorraad %1$d, minimum %2$d %3$s</string>
+    <string name="minstens_n">minstens %1$d %2$s</string>
+    <string name="gemeld_kop">Gemeld via de QR-code</string>
+    <string name="gemeld_detail">laatst %1$s</string>
+    <string name="n_keer">%1$d×</string>
+    <string name="melding_afhandelen_vraag">Deze melding afhandelen (bijvoorbeeld omdat het al besteld is)?</string>
+    <string name="onderweg_kop">Onderweg</string>
+    <string name="tellingen">Tellingen</string>
+    <string name="laatste_tellingen">Laatste tellingen</string>
+    <string name="nog_geen_tellingen">Nog geen tellingen.</string>
+    <string name="telling_nr">Telling #%1$d</string>
+    <string name="telling_omzet">Omzet sinds de vorige telling: %1$s</string>
+    <string name="was_geteld">was %1$d, geteld %2$d %3$s</string>
+    <string name="verkocht_n">%1$d verkocht</string>
+    <string name="geschiedenis">Geschiedenis</string>
+
+    <!-- Versie 2.2: alles in de app, ook wat eerst alleen op de site kon -->
+    <string name="niet_in_app_titel">Niet mogelijk in de app</string>
+    <string name="niet_in_app_tekst">%1$s kan alleen op de website, op de computer.</string>
+    <string name="op_de_computer">Alleen op de computer</string>
+    <string name="taak_klaar_titel">Taak afgerond?</string>
+    <string name="taak_klaar_vraag">Is de taak ‘%1$s’ hiermee klaar?</string>
+    <string name="ja_klaar">Ja, klaar</string>
+    <string name="nog_niet">Nog niet</string>
+    <string name="wat_bestelling_klaarzetten">Een bestelling klaarzetten</string>
+    <string name="wat_geld_afdragen">Geld afdragen of overboeken naar de kluis</string>
+    <string name="wat_geld_corrigeren">Een telling corrigeren, bewerken of heropenen</string>
+    <string name="wat_geld_storten">Storten of opnemen</string>
+    <string name="wat_kantine_tv">De kantine-tv instellen</string>
+    <string name="wat_keuken_instellingen">De keukeninstellingen (hoe vaak het frituurvet vervangen moet)</string>
+    <string name="wat_keukenprijzen">De keukenprijzen aanpassen</string>
+    <string name="wat_product_bewerken">Een product bewerken (prijzen, minimum, gegevens)</string>
+    <string name="wat_schaplabel">Een schaplabel printen</string>
+    <string name="wat_telling_corrigeren">Een telling corrigeren</string>
+    <string name="wat_verkoopdagen">De verkoopdagen en evenementen instellen</string>
+    <string name="bestelling_klaarzetten">Bestelling klaarzetten</string>
+    <string name="telling_corrigeren">Telling corrigeren of heropenen</string>
+    <string name="product_bewerken">Product bewerken</string>
+    <string name="schaplabel_printen">Schaplabel printen</string>
+    <string name="verkoopdagen_instellen">Verkoopdagen en evenementen instellen</string>
+    <string name="kantine_tv">Kantine-tv</string>
+
+    <!-- Productinformatie -->
+    <string name="artikelen_en_barcodes">Artikelen en barcodes</string>
+    <string name="in_het_kort">In het kort</string>
+    <string name="gearchiveerd">Gearchiveerd</string>
+    <string name="besteld">Besteld</string>
+    <string name="gemeld">Gemeld voor de bestellijst</string>
+    <string name="gemeld_n">Gemeld voor de bestellijst (%1$d×)</string>
+    <string name="op_prijzenscherm">Op het prijzenscherm</string>
+    <string name="op_prijzenscherm_uitverkocht">Op het prijzenscherm, als uitverkocht</string>
+    <string name="telt_niet_mee">Telt niet mee in de telling</string>
+    <string name="per_glas_uitleg">Per glas\n%1$d glazen per fust = %2$s</string>
+    <string name="verkoopprijs_per">Verkoopprijs per %1$s</string>
+    <string name="marge_uitleg">Marge · %1$s per %2$s\n%3$s de doelmarge van %4$d%%</string>
+    <string name="marge_reden">Marge: %1$s</string>
+    <string name="onder">onder</string>
+    <string name="boven">boven</string>
+    <string name="laatst_geteld_uitleg">Laatst geteld (%1$s)\n%2$d geteld, %3$d verkocht</string>
+    <string name="nog_niet_geteld">Nog niet geteld</string>
+    <string name="voorraadwaarde_uitleg">Voorraadwaarde\ntegen inkoopprijs</string>
+    <string name="verkoop_en_verwachting">Verkoop en verwachting</string>
+    <string name="even_rekenen">Even rekenen…</string>
+    <string name="verkoop_mislukt">De verkoop kon niet worden opgehaald. Probeer het straks opnieuw.</string>
+    <string name="verkoop_nog_geen_tellingen">Nog geen tellingen: zodra er twee tellingen zijn, staat hier hoeveel er per week verkocht wordt.</string>
+    <string name="weken_niets_verkocht">Al %1$d weken niets van verkocht. Blijft het liggen, overweeg dan het minimum te verlagen of het product uit het assortiment te halen.</string>
+    <string name="per_week_uitleg">Gemiddeld per week\n(laatste %1$d weken)</string>
+    <string name="samen_omzet">samen %1$s omzet</string>
+    <string name="verwacht_komende_dagen">Verwacht de komende %1$d dagen\nwaarschijnlijk %2$d tot %3$d</string>
+    <string name="op">Op</string>
+    <string name="niets_meer_op_voorraad">Er is niets meer op voorraad</string>
+    <string name="zo_lang_voorraad">Zo lang doe je met de voorraad</string>
+    <string name="kans_opraken">%1$d%% kans dat het deze week opraakt</string>
+    <string name="raakt_niet_op">raakt deze week waarschijnlijk niet op</string>
+    <string name="met_besteld">, met de %1$d %2$s die besteld is</string>
+    <string name="dagen">dagen</string>
+    <string name="nauwelijks_verkocht">Wordt nauwelijks verkocht</string>
+    <string name="advies_eenheden">Advies: bestel %1$d %2$s (%3$d %4$s).</string>
+    <string name="advies_stuks">Advies: bestel %1$d %2$s.</string>
+    <string name="besteleenheid">besteleenheid</string>
+    <string name="al_besteld">Er is al %1$d %2$s besteld.</string>
+    <string name="staat_al_op_bestellijst">Staat al op de bestellijst.</string>
+    <string name="verkocht_per_week">Verkocht per week</string>
+    <string name="grafiek_uitleg">Uit de tellingen, verdeeld over de verkoopdagen. Geteld tot %1$s; een lichte week is nog niet helemaal geteld.</string>
+    <string name="nog_weinig_tellingen">De verwachting is nog grof: er zijn nog weinig tellingen van dit product.</string>
+    <string name="prijzen">Prijzen</string>
+    <string name="per_glas">Per glas</string>
+    <string name="glazen_per_fust_is">%1$d glazen per fust = %2$s per fust</string>
+    <string name="verkoopprijs">Verkoopprijs</string>
+    <string name="nog_niet_ingevuld">nog niet ingevuld</string>
+    <string name="per_eenheid">per %1$s</string>
+    <string name="n_glazen">%1$d glazen</string>
+    <string name="prijs_per">%1$s per %2$s</string>
+    <string name="inkoop">Inkoop</string>
+    <string name="voorraadwaarde">Voorraadwaarde</string>
+    <string name="tegen_inkoopprijs">tegen inkoopprijs</string>
+    <string name="gepland">Gepland</string>
+    <string name="vanaf">Vanaf %1$s</string>
+    <string name="laatste_prijswijzigingen">Laatste prijswijzigingen</string>
+    <string name="inkoop_en_bestellen">Inkoop en bestellen</string>
+    <string name="niet_ingevuld">niet ingevuld</string>
+    <string name="bestellen_op">bestellen op %1$s</string>
+    <string name="bestellen_per">Bestellen per</string>
+    <string name="van_n_eenheid">van %1$d %2$s</string>
+    <string name="vaste_bestelling">vaste bestelling %1$d %2$s</string>
+    <string name="minimum_kort">Minimum</string>
+    <string name="laatst_binnen">Laatst binnen</string>
+    <string name="n_op_datum">%1$d %2$s op %3$s</string>
+    <string name="nog_niets_ingeboekt">nog niets ingeboekt</string>
+    <string name="van_datum">van %1$s</string>
+    <string name="op_de_bestellijst">Op de bestellijst</string>
+    <string name="op_de_bestellijst_nog_eens">Op de bestellijst (is al gemeld)</string>
+    <string name="derving_regel">Derving de laatste %1$d dagen: %2$d %3$s (%4$d× afgeboekt met een reden)</string>
+    <string name="derving_waarde">, %1$s tegen inkoopprijs</string>
+    <string name="voor_prijs">voor %1$s</string>
+    <string name="doos_code">doos (%1$d×) %2$s</string>
+    <string name="geen_barcode">geen barcode</string>
+
+    <!-- Kassa en kluis -->
+    <string name="kassa">Kassa</string>
+    <string name="kluis">Kluis</string>
+    <string name="kassa_tellen">Kassa tellen</string>
+    <string name="kluis_tellen">Kluis tellen</string>
+    <string name="kassatelling">Kassatelling</string>
+    <string name="kluistelling">Kluistelling</string>
+    <string name="stand">Stand</string>
+    <string name="in_de_kassalade">In de kassalade</string>
+    <string name="in_de_kluis">In de kluis</string>
+    <string name="volgens_administratie">volgens de administratie</string>
+    <string name="wacht_op_goedkeuring">Wacht op goedkeuring (%1$d)</string>
+    <string name="geen_concepten">Niets om goed te keuren.</string>
+    <string name="laatst_goedgekeurd">Laatst goedgekeurd</string>
+    <string name="geld_afdragen">Geld afdragen of overboeken</string>
+    <string name="geld_storten">Storten of opnemen</string>
+    <string name="goedgekeurd_door">goedgekeurd door %1$s</string>
+    <string name="goedgekeurd_door_op">Goedgekeurd door %1$s op %2$s</string>
+    <string name="niets_geteld">Niets geteld.</string>
+    <string name="geteld_bedrag">Geteld: %1$s</string>
+    <string name="verwacht_bedrag">Verwacht: %1$s</string>
+    <string name="verschil_bedrag">Verschil: %1$s</string>
+    <string name="contante_omzet_bedrag">Contante omzet: %1$s</string>
+    <string name="kaart_omzet_bedrag">Kaartbetalingen: %1$s</string>
+    <string name="opmerking_tekst">Opmerking: %1$s</string>
+    <string name="corrigeren">Corrigeren</string>
+    <string name="goedkeuren">Goedkeuren</string>
+    <string name="goedkeuren_kassa_vraag">Goedkeuren? De stand van de kassalade wordt dan %1$s.</string>
+    <string name="goedkeuren_kluis_vraag">Goedkeuren? De stand van de kluis wordt dan %1$s.</string>
+    <string name="eigen_telling_goedkeuren">Let op: dit is je eigen telling. Dat mag, maar het is netter als iemand anders hem goedkeurt.</string>
+    <string name="opmerking">Opmerking</string>
+    <string name="opmerking_optioneel">Opmerking (optioneel)</string>
+    <string name="opmerking_hint">Bijv. wat opviel bij het tellen</string>
+    <string name="per_coupure">Per munt en briefje</string>
+    <string name="hoeveel_van">Hoeveel van %1$s?</string>
+    <string name="omzet_uit_paypal">Omzet uit het PayPal-overzicht</string>
+    <string name="contante_omzet">Contante omzet</string>
+    <string name="kaartbetalingen">Kaartbetalingen</string>
+    <string name="kaart_telt_niet_mee">De kaartbetalingen tellen niet mee voor de kassalade (dat geld komt nooit in de la), alleen voor de vergelijking met de omzet.</string>
+    <string name="uitkomst">Uitkomst</string>
+    <string name="geteld">Geteld</string>
+    <string name="verwacht">Verwacht</string>
+    <string name="verschil_kort">Verschil</string>
+    <string name="leverancier_label">Leverancier</string>
+    <string name="verwacht_kassa_uitleg">Verwacht = de stand van de kassalade (%1$s) plus de contante omzet.</string>
+    <string name="verwacht_kluis_uitleg">Verwacht = de stand van de kluis (%1$s).</string>
+    <string name="opslaan_als_concept">Opslaan als concept</string>
+    <string name="opslaan_als_concept_bedrag">Opslaan als concept (%1$s)</string>
+    <string name="geld_opslaan_vraag">Geteld: %1$s\nVerschil: %2$s\n\nOpslaan als concept?</string>
+    <string name="opslaan">Opslaan</string>
+    <string name="opgeslagen">Opgeslagen</string>
+    <string name="concept_uitleg">De telling staat als concept klaar. Na het goedkeuren wordt de stand het getelde bedrag; liefst keurt iemand anders hem goed.</string>
+    <string name="tellen_weggooien_vraag">Stoppen met tellen? Wat je hebt geteld, wordt niet opgeslagen.</string>
+    <string name="weggooien">Stoppen</string>
+    <string name="verder_tellen">Verder tellen</string>
+    <string name="controleer_en_keur_goed">Controleer de aantallen en keur goed</string>
+
+    <!-- Keuken -->
+    <string name="keuken">Keuken</string>
+    <string name="frituurvet">Frituurvet</string>
+    <string name="frituurvet_vervangen">Frituurvet vervangen</string>
+    <string name="frituurvet_vraag">Registreren dat het frituurvet nu is vervangen?</string>
+    <string name="frituurvet_nooit">Nog nooit vervangen geregistreerd</string>
+    <string name="frituurvet_laatst">Laatst vervangen op %1$s</string>
+    <string name="frituurvet_interval">Vervangen om de %1$d dagen</string>
+    <string name="frituurvet_dagen">Al %1$d dagen niet vervangen</string>
+    <string name="vervangen">Vervangen</string>
+    <string name="vervangen_uitroep">Vervangen!</string>
+    <string name="vandaag">vandaag</string>
+    <string name="morgen">morgen</string>
+    <string name="tellen_en_inboeken">Tellen en inboeken</string>
+    <string name="keukentelling">Keukentelling</string>
+    <string name="keuken_inboeken">Keuken inboeken</string>
+    <string name="keuken_voorraad">Voorraad keuken</string>
+    <string name="geen_keukenproducten">Nog geen keukenproducten.</string>
+    <string name="geen_keukenproduct">Dit is geen keukenproduct.</string>
+    <string name="per_verpakking">per %1$s van %2$d</string>
+    <string name="laatste_keukentellingen">Laatste keukentellingen</string>
+    <string name="keukenprijzen">Keukenprijzen aanpassen</string>
+    <string name="keuken_instellingen">Instellingen (frituurvet)</string>
+    <string name="keukentelling_uitleg">Tel wat er nu is: wat minder is dan de voorraad, telt als verkocht. Tik op een product of scan het. Wat je niet invult, blijft zoals het is.</string>
+    <string name="keuken_inboeken_uitleg">Vul per product in hoeveel verpakkingen er binnenkwamen (bijv. 2 dozen). Tik op een product of scan het.</string>
+    <string name="overig">Overig</string>
+    <string name="voorraad_nu">voorraad %1$d %2$s</string>
+    <string name="hoeveel_nu">%1$s: hoeveel is er nu?</string>
+    <string name="hoeveel_binnen">%1$s: hoeveel binnen?</string>
+    <string name="telling_opslaan_n">Telling opslaan (%1$d)</string>
+    <string name="inboeken_n">Inboeken (%1$d)</string>
+    <string name="invoer_weggooien_vraag">Stoppen? Wat je hebt ingevuld, wordt niet opgeslagen.</string>
+
+    <!-- Boodschappen -->
+    <string name="boodschappen">Boodschappen</string>
+    <string name="boodschap_toevoegen">Op de boodschappenlijst</string>
+    <string name="boodschap_hint">Bijv. wc-papier of schoonmaakmiddel</string>
+    <string name="boodschap_weghalen_vraag">‘%1$s’ van de lijst halen?</string>
+    <string name="boodschappen_leeg">Niets te halen. Mooi zo!</string>
+    <string name="boodschappen_uitleg">Tik om af te vinken (of weer terug te zetten), houd vast om weg te halen.</string>
+    <string name="nog_halen">Nog halen (%1$d)</string>
+    <string name="afgevinkt">Afgevinkt</string>
+    <string name="weghalen">Weghalen</string>
+    <string name="toevoegen">Toevoegen</string>
+
+    <!-- Club van 20 -->
+    <string name="club_van_20">Club van 20</string>
+    <string name="aanmeldingen">Aanmeldingen</string>
+    <string name="aanmelden_uit">Aanmelden via de website staat uit.</string>
+    <string name="aanmelden_opent">Het formulier opent op %1$s.</string>
+    <string name="aanmeldingen_uitleg">Controleer eerst de betaling (Mollie: zoek de naam en het bedrag in de Mollie-app; contant: kijk of het geld er is en vraag het na bij de bardienst) en keur dan goed. Ontbrekende gegevens vul je later op de computer aan.</string>
+    <string name="geen_aanmeldingen">Geen aanmeldingen die op goedkeuring wachten.</string>
+    <string name="eerder_behandeld">Eerder behandeld</string>
+    <string name="verlenging">verlenging</string>
+    <string name="nu_bordje">nu: %1$s</string>
+    <string name="bestaand_lid">bestaand lid: %1$s</string>
+    <string name="nieuw_lid">nieuw lid</string>
+    <string name="contant">Contant</string>
+    <string name="betaling">Betaling</string>
+    <string name="bardienst_naam">bardienst: %1$s</string>
+    <string name="afwijzen">Afwijzen</string>
+    <string name="betaling_gecontroleerd">Ik heb de betaling gecontroleerd</string>
+    <string name="bordje_aanpassen">Bordje van het lid aanpassen naar ‘%1$s’</string>
+    <string name="aanmelding_goedkeuren">%1$s goedkeuren</string>
+    <string name="aanmelding_afwijzen">Aanmelding van %1$s afwijzen</string>
+    <string name="goedkeuren_uitleg">Het lid komt met de gegevens uit de aanmelding bij de leden en het bordje komt op het scherm.</string>
+    <string name="afwijs_reden_hint">Reden (optioneel), bijv. geen betaling gevonden</string>
+    <string name="controleer_betaling">Controleer de betaling en keur goed</string>
+
+    <!-- Agenda en prognose -->
+    <string name="agenda">Agenda</string>
+    <string name="agenda_leeg">Niets in de agenda voor deze weken.</string>
+    <string name="n_weken">%1$d weken</string>
+    <string name="week_n">Week %1$d</string>
+    <string name="open">Open</string>
+    <string name="dicht">Dicht</string>
+    <string name="kans_regen">%1$d%% kans op regen</string>
+    <string name="dicht_op_vaste_dag">Dicht (normaal een verkoopdag)</string>
+    <string name="afgelast">afgelast</string>
+    <string name="bardienst_regel">🍺 Bardienst %1$s–%2$s: %3$s</string>
+    <string name="training">Training</string>
+    <string name="prognose">Prognose</string>
+    <string name="n_dagen_kort">%1$d dagen</string>
+    <string name="prognose_niet_beschikbaar">Nog geen prognose: er zijn minstens twee tellingen nodig.</string>
+    <string name="komende_n_dagen">De komende %1$d dagen</string>
+    <string name="verwachte_omzet">Verwachte omzet\ntussen %1$s en %2$s</string>
+    <string name="producten_let_op">Producten om op te letten\n%1$d raken waarschijnlijk op, %2$d let op</string>
+    <string name="per_dag">Per dag</string>
+    <string name="evenement">evenement</string>
+    <string name="raakt_waarschijnlijk_op">Raakt waarschijnlijk op</string>
+    <string name="advies_kort_eenheden">bestel %1$d %2$s</string>
+    <string name="advies_kort_stuks">bestel %1$d %2$s</string>
+    <string name="voorraad_verwacht">voorraad %1$d, verwacht %2$d %3$s</string>
+    <string name="n_onderweg">%1$d onderweg</string>
+    <string name="op_bestellijst_kort">op de bestellijst</string>
+
+    <!-- Barcodes -->
+    <string name="zoek_barcode_hint">Zoek op naam, merk of barcode</string>
+    <string name="nog_geen_barcodes">Nog geen barcodes.</string>
+    <string name="niets_gevonden_voor">Niets gevonden voor ‘%1$s’.</string>
+    <string name="barcodes_uitleg">Een barcode koppelen doe je op het productscherm (scan hem daar). Een artikel bewerken of weghalen kan alleen op de website.</string>
+
+    <!-- Taken -->
+    <string name="taak">Taak</string>
+    <string name="taak_afronden">Taak afronden</string>
+    <string name="uiterlijk">Uiterlijk</string>
+    <string name="te_laat">te laat</string>
+    <string name="klaargezet_door">Klaargezet door</string>
+    <string name="samen_met">Samen met</string>
+    <string name="stappen_n">Stappen (%1$d van %2$d)</string>
+    <string name="waar_doe_je_het">Waar doe je het?</string>
+    <string name="naar_scherm">Naar %1$s</string>
+    <string name="taak_alleen_website">Deze taak hoort bij ‘%1$s’ op de website. Dat is niet mogelijk in de app: doe het op de computer en rond de taak daarna hier af.</string>
+
+    <plurals name="aanmeldingen_open">
+        <item quantity="one">%d aanmelding voor de Club van 20</item>
+        <item quantity="other">%d aanmeldingen voor de Club van 20</item>
+    </plurals>
+    <plurals name="genoeg_voorraad">
+        <item quantity="one">%d product heeft genoeg voorraad.</item>
+        <item quantity="other">%d producten hebben genoeg voorraad.</item>
+    </plurals>
+    <plurals name="kassatellingen_goedkeuren">
+        <item quantity="one">%d kassatelling wacht op goedkeuring</item>
+        <item quantity="other">%d kassatellingen wachten op goedkeuring</item>
+    </plurals>
+    <plurals name="kluistellingen_goedkeuren">
+        <item quantity="one">%d kluistelling wacht op goedkeuring</item>
+        <item quantity="other">%d kluistellingen wachten op goedkeuring</item>
+    </plurals>
+    <plurals name="n_artikelen">
+        <item quantity="one">%d artikel</item>
+        <item quantity="other">%d artikelen</item>
+    </plurals>
+    <plurals name="n_dagen">
+        <item quantity="one">%d dag</item>
+        <item quantity="other">%d dagen</item>
+    </plurals>
+    <plurals name="n_prijsopties">
+        <item quantity="one">%d prijsoptie</item>
+        <item quantity="other">%d prijsopties</item>
+    </plurals>
+    <plurals name="n_thuiswedstrijden">
+        <item quantity="one">%d thuiswedstrijd</item>
+        <item quantity="other">%d thuiswedstrijden</item>
     </plurals>
 </resources>

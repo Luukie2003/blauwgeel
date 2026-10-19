@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.view.Menu
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -22,13 +21,20 @@ import java.util.Locale
  * één keer in de voorraad.
  *
  * Scans gaan op volgorde de wachtrij in: snel achter elkaar tien dozen scannen gaat goed. Elke scan heeft een eigen
- * verzoek_id, dus bij een haperende verbinding probeert de app het opnieuw zonder dat een doos dubbel telt. */
+ * verzoek_id, dus bij een haperende verbinding probeert de app het opnieuw zonder dat een doos dubbel telt.
+ *
+ * Scan je een losse verpakking (één zakje chips) terwijl er een doos van bestaat, dan vraagt de app of je de volle
+ * besteleenheid wilt inboeken. Het antwoord geldt voor de rest van deze factuur bij dat artikel. */
 class FactuurActivity : BasisActivity() {
 
     private lateinit var b: ActivityFactuurBinding
     private var rondeId = 0
     private var ronde: JSONObject? = null
-    private val wachtrij = ArrayDeque<Pair<String, String>>() // (code, verzoek_id)
+    /** Een scan in de wachtrij; [extra]: hoeveel keer hij er daarna nog bij moet (een volle doos zonder eigen barcode). */
+    private class Scan(val code: String, val verzoekId: String, val extra: Int = 0, val melding: String? = null)
+
+    private val wachtrij = ArrayDeque<Scan>()
+    private val volleEenheidPerCode = HashMap<String, Boolean>()
     private var bezigMetScan = false
     private var afrondId: String? = null
 
@@ -156,23 +162,67 @@ class FactuurActivity : BasisActivity() {
     override fun bijScan(code: String) = scan(code)
 
     private fun scan(code: String) {
-        wachtrij.addLast(code to Api.nieuwVerzoekId())
+        val treffer = Catalogus.opBarcode(code)
+        val barcode = treffer?.barcode
+        val volle = if (barcode != null && !barcode.isDoos) treffer.product.volleEenheid(barcode) else null
+        if (barcode == null || volle == null) return zetInRij(code)
+        volleEenheidPerCode[barcode.code]?.let { return zetInRij(barcode, volle, it) }
+        val p = treffer.product
+        val doos = p.besteleenheid ?: getString(R.string.doos)
+        tril()
+        AlertDialog.Builder(this)
+            .setCustomTitle(dialoogTitel(getString(R.string.los_gescand_titel)))
+            .setMessage(getString(R.string.los_gescand_vraag, getString(R.string.los_aantal, barcode.aantal, p.eenheid), barcode.artikel))
+            .setPositiveButton(getString(R.string.los_gescand_vol, doos, volle, p.eenheid)) { _, _ ->
+                volleEenheidPerCode[barcode.code] = true
+                zetInRij(barcode, volle, true)
+            }
+            .setNegativeButton(getString(R.string.los_gescand_los, barcode.aantal, p.eenheid)) { _, _ ->
+                volleEenheidPerCode[barcode.code] = false
+                zetInRij(barcode, volle, false)
+            }
+            .show()
+    }
+
+    /** Een volle doos: de barcode van de doos als die bekend is, anders de losse zo vaak als er in de doos zitten. */
+    private fun zetInRij(barcode: Catalogus.Barcode, volle: Int, vol: Boolean) = when {
+        !vol -> zetInRij(barcode.code)
+        barcode.doosCode != null -> zetInRij(barcode.doosCode)
+        else -> {
+            val p = Catalogus.opBarcode(barcode.code)?.product
+            val melding = p?.let { "+1 ${it.besteleenheid ?: getString(R.string.doos)} ($volle ${it.eenheid}) · ${it.naam}" }
+            zetInRij(barcode.code, extra = maxOf(0, volle / maxOf(1, barcode.aantal) - 1), melding = melding)
+        }
+    }
+
+    private fun zetInRij(code: String, extra: Int = 0, melding: String? = null) {
+        wachtrij.addLast(Scan(code, Api.nieuwVerzoekId(), extra, melding))
         volgendeScan()
     }
 
     private fun volgendeScan() {
         if (bezigMetScan) return
-        val (code, verzoekId) = wachtrij.removeFirstOrNull() ?: return
+        val volgende = wachtrij.removeFirstOrNull() ?: return
+        val code = volgende.code
         bezigMetScan = true
         lifecycleScope.launch {
             try {
-                val antwoord = Api.post(this@FactuurActivity, "/api/facturen/$rondeId/scan", JSONObject().put("code", code), verzoekId = verzoekId)
+                val antwoord = Api.post(this@FactuurActivity, "/api/facturen/$rondeId/scan", JSONObject().put("code", code), verzoekId = volgende.verzoekId)
                 antwoord.optJSONObject("ronde")?.let(::toon)
+                if (antwoord.optString("status") == "toegevoegd" && volgende.extra > 0) {
+                    // Een volle doos zonder eigen barcode: de losse regel zoveel keer extra.
+                    val regelId = antwoord.optInt("regel_id")
+                    val regel = antwoord.optJSONObject("ronde")?.optJSONArray("regels")?.objecten()?.firstOrNull { it.optInt("id") == regelId }
+                    if (regel != null) {
+                        toon(Api.post(this@FactuurActivity, "/api/facturen/$rondeId/regels/$regelId",
+                            JSONObject().put("aantal", regel.optInt("aantal") + volgende.extra), herhaalbaar = true))
+                    }
+                }
                 val barcode = antwoord.optJSONObject("barcode")
                 when (antwoord.optString("status")) {
                     "toegevoegd" -> {
                         tril()
-                        b.scanMelding.text = getString(R.string.factuur_gescand, barcode?.optString("omschrijving") ?: code,
+                        b.scanMelding.text = volgende.melding ?: getString(R.string.factuur_gescand, barcode?.optString("omschrijving") ?: code,
                             barcode?.optJSONObject("product")?.optString("naam") ?: "")
                     }
                     "onbekend" -> {
@@ -259,16 +309,6 @@ class FactuurActivity : BasisActivity() {
                 }
             }
             .show()
-    }
-
-    override fun vulMenu(menu: Menu) {
-        menu.add(0, 100, 0, R.string.op_de_website)
-    }
-
-    override fun bijMenu(id: Int): Boolean {
-        if (id != 100) return false
-        WebActivity.open(this, "/facturen/$rondeId", getString(R.string.factuur))
-        return true
     }
 
     companion object {

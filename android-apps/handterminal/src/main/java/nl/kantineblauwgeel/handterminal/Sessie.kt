@@ -1,11 +1,9 @@
 package nl.kantineblauwgeel.handterminal
 
 import android.content.Context
-import android.webkit.CookieManager
 
 /** Wie er is ingelogd. De site werkt met een sessie-cookie; de app bewaart die (en het csrf_token, voor elke POST)
- * zelf en stuurt hem mee met elk verzoek (zie Api.kt). Voor de pagina's die nog als website openen, zet WebActivity
- * dezelfde cookie in de WebView. */
+ * zelf en stuurt hem mee met elk verzoek (zie Api.kt). */
 object Sessie {
 
     private val cookies = LinkedHashMap<String, String>()
@@ -68,18 +66,6 @@ object Sessie {
     @Synchronized
     fun cookieKop(): String = cookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
 
-    /** De cookies in de WebView zetten, voor een pagina die als website opent. */
-    fun naarWebView(context: Context) {
-        val inst = Instellingen(context)
-        val manager = CookieManager.getInstance()
-        val veilig = if (inst.basisUrl.startsWith("https://")) "; Secure" else ""
-        synchronized(this) {
-            for ((sleutel, waarde) in cookies) manager.setCookie(inst.basisUrl, "$sleutel=$waarde; Path=/$veilig")
-        }
-        manager.setCookie(inst.basisUrl, "weergave=pda; Max-Age=31536000; Path=/; SameSite=Lax$veilig")
-        manager.flush()
-    }
-
     @Synchronized
     fun wis(context: Context) {
         laad(context)
@@ -92,7 +78,5 @@ object Sessie {
         inst.csrfToken = null
         inst.ingelogdOp = null
         inst.startCache = null
-        CookieManager.getInstance().removeAllCookies(null)
-        CookieManager.getInstance().flush()
     }
 }

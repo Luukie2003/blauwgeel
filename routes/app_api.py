@@ -23,13 +23,20 @@ import barcodes
 from database import get_db
 from derving import DERVING_REDENEN, kies_reden
 from helpers import (
+    bereken_bestellijst_meldingen,
     bereken_pda_start,
+    bestel_suggesties,
     besteleenheid_factor,
+    besteleenheid_naam,
     boek_mutatie,
     dagdeel_groet,
     heeft_sectie_toegang,
+    naar_besteleenheden,
     now_str,
+    regels_per_bestelling,
+    stuur_tag_notificaties,
 )
+from helpers.afbeeldingen import kleine_afbeelding
 from productkaart import TELLEN_VOORWAARDE
 from routes.tellen.looplijst import controle_regels, optellen
 from routes.tellen.looplijst_opslag import bewaar_stand, bewaarde_stand, wis_stand
@@ -37,7 +44,7 @@ from routes.tellen.verwerken import verwerk_telling
 from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 # De nieuwste versie van de app. Draait er een oudere, dan meldt de app dat er een nieuwe is.
-HANDTERMINAL_APP_VERSIE = "2.0.0"
+HANDTERMINAL_APP_VERSIE = "2.2.0"
 
 MAX_AANTAL = 100000
 
@@ -67,9 +74,13 @@ def _barcodes_per_product(db, product_id=None):
     per_product = {}
     for a in rijen:
         per_verpakking = a["aantal_per_verpakking"] or 1
+        doos = per_verpakking * (a["per_omverpakking"] or 1) if a["ean_omverpakking"] else None
         if a["ean"]:
+            # doos_aantal/doos_code: de doos waar deze verpakking in zit, voor de vraag "volledige besteleenheid
+            # inboeken?" als je een losse verpakking scant.
             per_product.setdefault(a["product_id"], []).append(
-                {"code": a["ean"], "niveau": "verpakking", "aantal": per_verpakking, "artikel": a["naam"]})
+                {"code": a["ean"], "niveau": "verpakking", "aantal": per_verpakking, "artikel": a["naam"],
+                 "doos_aantal": doos, "doos_code": a["ean_omverpakking"]})
         if a["ean_omverpakking"]:
             per_product.setdefault(a["product_id"], []).append(
                 {"code": a["ean_omverpakking"], "niveau": "omverpakking",
@@ -90,14 +101,23 @@ def _product_json(rij, codes):
         "min_voorraad": rij["min_voorraad"] or 0,
         "actief": bool(rij["actief"]),
         # Een krat, tray of doos: de knop "+1 krat" bij het boeken.
-        "besteleenheid": rij["besteleenheid"] if factor > 1 and rij["besteleenheid"] else None,
+        "besteleenheid": (rij["besteleenheid"] or "doos") if factor > 1 else None,
         "per_besteleenheid": factor,
         "barcodes": codes.get(rij["id"], []),
+        "foto": _foto(rij["afbeelding"], "klein"),
+        "foto_groot": _foto(rij["afbeelding"], "middel"),
     }
 
 
+def _foto(afbeelding, formaat):
+    """Het adres van een (verkleinde) productfoto, of None. De app bewaart de foto's zelf (Fotos.kt)."""
+    if not afbeelding:
+        return None
+    return url_for("static", filename="product_afbeeldingen/" + kleine_afbeelding(afbeelding, formaat))
+
+
 _PRODUCT_SELECT = """SELECT id, naam, categorie, subcategorie, merk, eenheid, voorraad, min_voorraad, actief, besteleenheid,
-                            besteleenheid_factor
+                            besteleenheid_factor, afbeelding
                      FROM producten"""
 
 
@@ -131,10 +151,23 @@ def eenmalig(actie):
     return Response(tekst, status=status, mimetype="application/json")
 
 
+def taak_vragen(db, endpoint):
+    """De open taken van deze persoon die met deze actie klaar kunnen zijn: de app vraagt dan "Taak afgerond?", net als
+    de site na het opslaan (zie vraag_of_taak_klaar_is in routes/eigen_taken.py)."""
+    from eigen_taken import vraag_kandidaten
+
+    try:
+        return [{"id": t["id"], "titel": t["titel"]} for t in vraag_kandidaten(db, session.get("gebruiker_id"), endpoint)]
+    except Exception as fout:  # de vraag is een extraatje: opslaan mag er nooit door mislukken
+        print(f"[app] taakvraag overgeslagen: {fout}")
+        return []
+
+
 def _tel_producten(db):
     # Dezelfde volgorde als de looplijst op de site: de opgeslagen stand gaat per positie.
     return db.execute(
-        f"SELECT id, naam, categorie, eenheid, voorraad FROM producten WHERE {TELLEN_VOORWAARDE} ORDER BY categorie, naam"
+        f"""SELECT id, naam, categorie, eenheid, voorraad, afbeelding, besteleenheid, besteleenheid_factor
+            FROM producten WHERE {TELLEN_VOORWAARDE} ORDER BY categorie, naam"""
     ).fetchall()
 
 
@@ -181,6 +214,18 @@ def _webpaginas(rol, secties, pda):
     return paginas
 
 
+def _kassa_start(db, pda):
+    status = pda["kassa_status"] or {}
+    return {"status": status.get("status"), "tekst": status.get("tekst"),
+            "concepten": db.execute("SELECT COUNT(*) FROM kassa_tellingen WHERE afgesloten = 0").fetchone()[0]}
+
+
+def _frituurvet_start(status):
+    if status is None:
+        return None
+    return {"ok": status["ok"], "dagen_geleden": status["dagen_geleden"], "interval": status["interval"]}
+
+
 def register_routes(app):
     @app.route("/api/app/start")
     def api_app_start():
@@ -188,7 +233,7 @@ def register_routes(app):
         db = get_db()
         rol, secties, gebruiker_id = session.get("gebruiker_rol"), session.get("gebruiker_secties"), session.get("gebruiker_id")
         pda = bereken_pda_start(db, rol, secties, gebruiker_id)
-        toegang = {s: heeft_sectie_toegang(rol, secties, s) for s in ("voorraad", "kassa", "keuken", "club_van_20")}
+        toegang = {s: heeft_sectie_toegang(rol, secties, s) for s in ("voorraad", "kassa", "keuken", "club_van_20", "kantine_tv")}
         telling = None
         if pda["telling_status"] is not None:
             laatste = pda["telling_status"]["laatste"]
@@ -210,8 +255,17 @@ def register_routes(app):
             "mededelingen_urgent": pda["mededelingen_urgent"],
             "telling": telling,
             "looplijst": looplijst,
-            "taken": [{"titel": t["titel"], "detail": t["detail"], "urgent": bool(t["urgent"]),
+            # Een taak opent in de app een eigen scherm (de stappen, afronden en waar je hem doet: "doel", het endpoint
+            # van de pagina op de site; heeft de app daar geen scherm voor, dan zegt hij dat het niet in de app kan).
+            "taken": [{"id": t["taak_id"], "titel": t["titel"], "detail": t["detail"], "urgent": bool(t["urgent"]),
+                       "doel": t["doel"], "stappen": t["stappen"],
                        "pad": url_for(t["endpoint"], **t["kwargs"])} for t in pda["eigen_taken"]],
+            "kassa": _kassa_start(db, pda) if toegang["kassa"] else None,
+            "kluis_concepten": db.execute("SELECT COUNT(*) FROM kluis_tellingen WHERE afgesloten = 0").fetchone()[0]
+            if rol == "beheerder" else None,
+            "frituurvet": _frituurvet_start(pda["frituurvet_status"]) if toegang["keuken"] else None,
+            "aanmeldingen_open": db.execute("SELECT COUNT(*) FROM club_van_20_aanmeldingen WHERE status = 'nieuw'").fetchone()[0]
+            if toegang["club_van_20"] else None,
             "paginas": _webpaginas(rol, secties, pda),
             "app_versie": HANDTERMINAL_APP_VERSIE,
         })
@@ -234,7 +288,10 @@ def register_routes(app):
 
     @app.route("/api/app/producten/<int:product_id>")
     def api_app_product(product_id):
-        """Eén product met de laatste boekingen, de laatste telling en de artikelen."""
+        """Eén product met de laatste boekingen, de laatste telling en (in "info") alles van de productpagina van de site
+        wat zonder het voorspelmodel kan; de verkoop per week haalt de app apart op (api_app_product_verkoop)."""
+        from routes.app_api_meer import productinfo_json  # hier pas: app_api_meer gebruikt deze module zelf ook
+
         db = get_db()
         product = _product(db, product_id)
         if product is None:
@@ -253,6 +310,7 @@ def register_routes(app):
             "verkoopprijs": verkoopprijs,
             "mutaties": [{**dict(m), "reden": DERVING_REDENEN.get(m["reden"]) if m["reden"] else None} for m in mutaties],
             "laatste_telling": dict(laatste_telling) if laatste_telling else None,
+            "info": productinfo_json(db, product_id),
             "pad": url_for("product_detail", product_id=product_id),
         })
 
@@ -286,13 +344,16 @@ def register_routes(app):
 
     @app.route("/api/app/barcodes/koppelen", methods=["POST"])
     def api_app_barcode_koppelen():
-        """{code, product_id, per_doos (leeg: één verpakking; anders hoeveel er in de doos of krat zitten), verzoek_id}"""
+        """{code, product_id, per_doos (leeg: één verpakking; anders hoeveel er in de doos of krat zitten), verzoek_id}.
+        Uitgebreid (spullen uit de keuken): ook per_verpakking, inkoopprijs en naam (zie barcodes.snel_koppelen)."""
         data = _data()
 
         def koppel(db):
             code = str(data.get("code") or "")
             _, fout = barcodes.snel_koppelen(db, code, data.get("product_id"), data.get("per_doos"),
-                                             door=session.get("gebruiker_naam"), gebruiker_id=session.get("gebruiker_id"))
+                                             door=session.get("gebruiker_naam"), gebruiker_id=session.get("gebruiker_id"),
+                                             per_verpakking=data.get("per_verpakking"), inkoopprijs=data.get("inkoopprijs"),
+                                             naam=str(data.get("naam") or "").strip() or None)
             if fout:
                 return {"fout": "fout", "melding": fout}, 400
             uitkomst = barcodes.zoek_barcode(db, code)
@@ -315,7 +376,10 @@ def register_routes(app):
         return jsonify({
             "producten": [{"id": p["id"], "naam": p["naam"], "categorie": p["categorie"] or "", "eenheid": p["eenheid"],
                            "voorraad": p["voorraad"],
-                           "verwacht": verwachte_voorraad(verwachting.get(p["id"]), p["voorraad"])}
+                           "verwacht": verwachte_voorraad(verwachting.get(p["id"]), p["voorraad"]),
+                           "foto_groot": _foto(p["afbeelding"], "middel"),
+                           "besteleenheid": besteleenheid_naam(p) if besteleenheid_factor(p) > 1 else None,
+                           "per_besteleenheid": besteleenheid_factor(p)}
                           for p in _tel_producten(db)],
             "stand": bewaarde_stand(db, session.get("gebruiker_id")),
         })
@@ -369,7 +433,8 @@ def register_routes(app):
                 return {"fout": "fout", "melding": "Er is nog niets ingevuld."}, 400
             wis_stand(db, gebruiker_id)
             return {"telling_id": telling_id, "aantal": len(waarden),
-                    "pad": url_for("telling_detail", telling_id=telling_id)}, 200
+                    "pad": url_for("telling_detail", telling_id=telling_id),
+                    "taak_vragen": taak_vragen(db, "tellen_lopen_controleren")}, 200
 
         return eenmalig(bevestig)
 
@@ -378,3 +443,160 @@ def register_routes(app):
         """De looplijst afbreken: de bewaarde stand weg, er wordt niets opgeslagen."""
         wis_stand(get_db(), session.get("gebruiker_id"))
         return jsonify({"status": "gestopt"})
+
+    # ---------- Prikbord ----------
+
+    def _prikbord(db):
+        mededelingen = db.execute(
+            """SELECT * FROM mededelingen WHERE afgehandeld = 0
+               UNION ALL SELECT * FROM (SELECT * FROM mededelingen WHERE afgehandeld = 1 ORDER BY id DESC LIMIT 10)
+               ORDER BY afgehandeld ASC, urgent DESC, id DESC"""
+        ).fetchall()
+        reacties = {}
+        for r in db.execute("SELECT mededeling_id, tekst, naam, datum FROM mededeling_opmerkingen ORDER BY id").fetchall():
+            reacties.setdefault(r["mededeling_id"], []).append({"tekst": r["tekst"], "naam": r["naam"], "datum": r["datum"]})
+        return {"mededelingen": [
+            {"id": m["id"], "tekst": m["tekst"], "naam": m["naam"], "datum": m["datum"], "urgent": bool(m["urgent"]),
+             "afgehandeld": bool(m["afgehandeld"]), "afgehandeld_door": m["afgehandeld_door"],
+             "reacties": reacties.get(m["id"], [])}
+            for m in mededelingen
+        ]}
+
+    @app.route("/api/app/prikbord", methods=["GET", "POST"])
+    def api_app_prikbord():
+        """GET: wat er openstaat (urgent eerst) en de laatste tien afgehandelde. POST {tekst, urgent, verzoek_id}: een
+        nieuwe mededeling, net als op de site (Bijzonderheden)."""
+        if request.method == "GET":
+            return jsonify(_prikbord(get_db()))
+        data = _data()
+
+        def plaats(db):
+            tekst = str(data.get("tekst") or "").strip()[:2000]
+            if not tekst:
+                return {"fout": "fout", "melding": "Vul een tekst in."}, 400
+            naam = session.get("gebruiker_naam")
+            db.execute("INSERT INTO mededelingen (tekst, naam, datum, urgent) VALUES (?, ?, ?, ?)",
+                       (tekst, naam, now_str(), 1 if data.get("urgent") else 0))
+            db.commit()
+            stuur_tag_notificaties(db, tekst, naam, "nieuwe mededeling", url_for("bijzonderheden", _external=True))
+            return _prikbord(db), 200
+
+        return eenmalig(plaats)
+
+    @app.route("/api/app/prikbord/<int:mededeling_id>/afhandelen", methods=["POST"])
+    def api_app_prikbord_afhandelen(mededeling_id):
+        db = get_db()
+        db.execute(
+            "UPDATE mededelingen SET afgehandeld = 1, afgehandeld_door = ?, afgehandeld_op = ? WHERE id = ? AND afgehandeld = 0",
+            (session.get("gebruiker_naam"), now_str(), mededeling_id),
+        )
+        db.commit()
+        return jsonify(_prikbord(db))
+
+    @app.route("/api/app/prikbord/<int:mededeling_id>/reactie", methods=["POST"])
+    def api_app_prikbord_reactie(mededeling_id):
+        """{tekst, verzoek_id}: een reactie onder een mededeling."""
+        data = _data()
+
+        def reageer(db):
+            if db.execute("SELECT 1 FROM mededelingen WHERE id = ?", (mededeling_id,)).fetchone() is None:
+                return {"fout": "niet_gevonden", "melding": "Deze mededeling bestaat niet meer."}, 404
+            tekst = str(data.get("tekst") or "").strip()[:2000]
+            if not tekst:
+                return {"fout": "fout", "melding": "Vul een tekst in."}, 400
+            naam = session.get("gebruiker_naam")
+            db.execute(
+                "INSERT INTO mededeling_opmerkingen (mededeling_id, tekst, naam, gebruiker_id, datum) VALUES (?, ?, ?, ?, ?)",
+                (mededeling_id, tekst, naam, session.get("gebruiker_id"), now_str()),
+            )
+            db.commit()
+            stuur_tag_notificaties(db, tekst, naam, "reactie op een mededeling", url_for("bijzonderheden", _external=True))
+            return _prikbord(db), 200
+
+        return eenmalig(reageer)
+
+    # ---------- Geschiedenis, tellingen en de bestellijst (bekijken) ----------
+
+    @app.route("/api/app/geschiedenis")
+    def api_app_geschiedenis():
+        """De laatste boekingen van alle producten (of van één, met ?product_id=)."""
+        db = get_db()
+        product_id = request.args.get("product_id", type=int)
+        rijen = db.execute(
+            """SELECT m.type, m.aantal, m.datum, m.naam, m.opmerking, m.reden, p.id AS product_id, p.naam AS product,
+                      p.eenheid
+               FROM mutaties m JOIN producten p ON p.id = m.product_id"""
+            + (" WHERE m.product_id = ?" if product_id else "") + " ORDER BY m.id DESC LIMIT 150",
+            (product_id,) if product_id else (),
+        ).fetchall()
+        return jsonify({"mutaties": [{**dict(r), "reden": DERVING_REDENEN.get(r["reden"]) if r["reden"] else None}
+                                     for r in rijen]})
+
+    @app.route("/api/app/tellingen")
+    def api_app_tellingen():
+        """De laatste twintig tellingen."""
+        rijen = get_db().execute(
+            """SELECT t.id, t.datum, t.naam, t.opmerking,
+                      (SELECT COUNT(*) FROM telling_regels WHERE telling_id = t.id) AS aantal_producten,
+                      (SELECT COALESCE(SUM(verkocht * verkoopprijs), 0) FROM telling_regels WHERE telling_id = t.id) AS omzet
+               FROM tellingen t ORDER BY t.id DESC LIMIT 20"""
+        ).fetchall()
+        return jsonify({"tellingen": [dict(r) for r in rijen]})
+
+    @app.route("/api/app/tellingen/<int:telling_id>")
+    def api_app_telling(telling_id):
+        db = get_db()
+        telling = db.execute("SELECT id, datum, naam, opmerking FROM tellingen WHERE id = ?", (telling_id,)).fetchone()
+        if telling is None:
+            return _fout("Deze telling bestaat niet (meer).", 404, "niet_gevonden")
+        regels = db.execute(
+            """SELECT tr.product_id, p.naam AS product, p.eenheid, tr.voorraad_voor, tr.geteld_aantal, tr.verkocht,
+                      tr.correctie, tr.verkoopprijs
+               FROM telling_regels tr JOIN producten p ON p.id = tr.product_id
+               WHERE tr.telling_id = ? ORDER BY p.categorie, p.naam""", (telling_id,),
+        ).fetchall()
+        return jsonify({"telling": dict(telling), "regels": [dict(r) for r in regels],
+                        "omzet": round(sum(r["verkocht"] * (r["verkoopprijs"] or 0) for r in regels), 2)})
+
+    @app.route("/api/app/bestellijst")
+    def api_app_bestellijst():
+        """Wat er besteld moet worden (onder het minimum en nog niet besteld), wat bezoekers via de QR-code meldden,
+        en de bestellingen die onderweg zijn. Een bestelling klaarzetten blijft op de computer."""
+        db = get_db()
+        meldingen = bereken_bestellijst_meldingen(db)
+        open_bestellingen = db.execute(
+            "SELECT id, aangemaakt_op, referentie FROM bestellingen WHERE status = 'besteld' ORDER BY id DESC"
+        ).fetchall()
+        regels = regels_per_bestelling(db, [b["id"] for b in open_bestellingen])
+
+        def product(p):
+            factor = besteleenheid_factor(p)
+            return {"id": p["id"], "naam": p["naam"], "categorie": p["categorie"] or "", "eenheid": p["eenheid"],
+                    "voorraad": p["voorraad"], "min_voorraad": p["min_voorraad"] or 0,
+                    "bestel_hoeveelheid": p["bestel_hoeveelheid"],
+                    "besteleenheid": besteleenheid_naam(p) if factor > 1 else None, "per_besteleenheid": factor}
+
+        return jsonify({
+            "bestellen": [product(p) for p in bestel_suggesties(db)],
+            "gemeld": [{**product(m["product"]), "keer": m["aantal"], "laatste_melding": m["laatste_melding"]}
+                       for m in meldingen["producten"]],
+            "teksten": [{"id": t["id"], "tekst": t["tekst"], "aangemaakt_op": t["aangemaakt_op"]} for t in meldingen["teksten"]],
+            "onderweg": [
+                {"id": b["id"], "aangemaakt_op": b["aangemaakt_op"], "referentie": b["referentie"],
+                 "regels": [{"product": r["product_naam"], "aantal": naar_besteleenheden(r["aantal_besteld"], r),
+                             "eenheid": besteleenheid_naam(r)} for r in regels.get(b["id"], [])]}
+                for b in open_bestellingen
+            ],
+        })
+
+    @app.route("/api/app/bestellijst/gemeld/<int:product_id>/afhandelen", methods=["POST"])
+    def api_app_bestellijst_melding_afhandelen(product_id):
+        """De QR-meldingen van dit product afhandelen (bijvoorbeeld omdat het al besteld is)."""
+        db = get_db()
+        db.execute(
+            """UPDATE bestellijst_meldingen SET afgehandeld = 1, afgehandeld_door = ?, afgehandeld_op = ?
+               WHERE product_id = ? AND afgehandeld = 0""",
+            (session.get("gebruiker_naam"), now_str(), product_id),
+        )
+        db.commit()
+        return api_app_bestellijst()

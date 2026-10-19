@@ -12,7 +12,15 @@ import java.text.Normalizer
  * achtergrond ververst bij de site (GET /api/app/producten, met een ETag: niets veranderd is dan bijna gratis). */
 object Catalogus {
 
-    class Barcode(val code: String, val niveau: String, val aantal: Int, val artikel: String) {
+    /** [doosAantal]/[doosCode]: bij een losse verpakking de doos waar hij in zit (als die bekend is). */
+    class Barcode(
+        val code: String,
+        val niveau: String,
+        val aantal: Int,
+        val artikel: String,
+        val doosAantal: Int? = null,
+        val doosCode: String? = null,
+    ) {
         val isDoos get() = niveau == "omverpakking"
     }
 
@@ -29,6 +37,8 @@ object Catalogus {
         val besteleenheid: String?,
         val perBesteleenheid: Int,
         val barcodes: List<Barcode>,
+        val foto: String? = null,
+        val fotoGroot: String? = null,
     ) {
         val laag get() = actief && voorraad < minVoorraad
         internal val zoektekst = normaal("$naam $categorie $subcategorie $merk")
@@ -41,7 +51,13 @@ object Catalogus {
         }
 
         fun metVoorraad(nieuw: Int) = Product(id, naam, categorie, subcategorie, merk, eenheid, nieuw, minVoorraad, actief,
-            besteleenheid, perBesteleenheid, barcodes)
+            besteleenheid, perBesteleenheid, barcodes, foto, fotoGroot)
+
+        /** Hoeveel er in een volle doos of krat zit, bij een losse verpakking van [barcode]: de doos van dat artikel,
+         * of anders de besteleenheid van het product. Null als er niets groters is. */
+        fun volleEenheid(barcode: Barcode): Int? =
+            barcode.doosAantal?.takeIf { it > barcode.aantal }
+                ?: perBesteleenheid.takeIf { besteleenheid != null && it > barcode.aantal }
     }
 
     class Treffer(val product: Product, val barcode: Barcode)
@@ -112,8 +128,14 @@ object Catalogus {
         besteleenheid = json.tekstOfNull("besteleenheid"),
         perBesteleenheid = json.optInt("per_besteleenheid", 1),
         barcodes = json.optJSONArray("barcodes")?.objecten()?.map {
-            Barcode(it.getString("code"), it.optString("niveau"), it.optInt("aantal", 1), it.optString("artikel"))
+            Barcode(
+                it.getString("code"), it.optString("niveau"), it.optInt("aantal", 1), it.optString("artikel"),
+                doosAantal = if (it.isNull("doos_aantal")) null else it.optInt("doos_aantal"),
+                doosCode = it.tekstOfNull("doos_code"),
+            )
         } ?: emptyList(),
+        foto = json.tekstOfNull("foto"),
+        fotoGroot = json.tekstOfNull("foto_groot"),
     )
 
     /** Een product dat net is bijgewerkt (geboekt, barcode gekoppeld): meteen goed in de lijst, zonder op het

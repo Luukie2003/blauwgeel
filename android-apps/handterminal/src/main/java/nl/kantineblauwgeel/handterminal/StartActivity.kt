@@ -14,8 +14,10 @@ import nl.kantineblauwgeel.handterminal.databinding.TegelBinding
 import org.json.JSONObject
 
 /** Het startscherm: zoeken of scannen, de vier dingen van het dagelijkse werk (Factuur inboeken, Tellen, Boeken,
- * Voorraad), wat aandacht nodig heeft, en de pagina's die nog als website openen. Toont meteen het vorige antwoord van
- * de site (bewaard op het toestel) en ververst op de achtergrond, ook de productlijst. */
+ * Voorraad), wat aandacht nodig heeft (ook de taken die een beheerder voor je klaarzette) en onder "Meer" alle andere
+ * schermen, voor zover je er rechten voor hebt. Alles in de app zelf: wat alleen op de website kan (de kantine-tv), zegt
+ * dat het niet in de app kan. Toont meteen het vorige antwoord van de site (bewaard op het toestel) en ververst op de
+ * achtergrond, ook de productlijst. */
 class StartActivity : BasisActivity() {
 
     private lateinit var b: ActivityStartBinding
@@ -120,10 +122,38 @@ class StartActivity : BasisActivity() {
 
         // Let op
         b.letOpLijst.removeAllViews()
+        val toegang = start.optJSONObject("toegang")
+        fun heeft(sectie: String) = toegang?.optBoolean(sectie) ?: false
+        val beheerder = start.optBoolean("beheerder")
+        // Taken die een beheerder voor jou klaarzette: een eigen scherm met de stappen en afronden.
         start.optJSONArray("taken")?.objecten()?.forEach { t ->
-            letOp(t.optString("titel"), t.optString("detail"), if (t.optBoolean("urgent")) R.drawable.rand_links_rood else R.drawable.rand_links_oranje) {
-                WebActivity.open(this, t.optString("pad"), t.optString("titel"))
+            val rand = if (t.optBoolean("urgent")) R.drawable.rand_links_rood else R.drawable.rand_links_oranje
+            if (t.has("id")) letOp(t.optString("titel"), t.optString("detail"), rand) { TaakActivity.open(this, t.getInt("id")) }
+            else letOp(t.optString("titel"), t.optString("detail"), rand, null)
+        }
+        val kassa = start.optJSONObject("kassa")
+        if (kassa != null) {
+            val concepten = kassa.optInt("concepten")
+            if (concepten > 0) {
+                letOp(resources.getQuantityString(R.plurals.kassatellingen_goedkeuren, concepten, concepten), getString(R.string.controleer_en_keur_goed),
+                    R.drawable.rand_links_oranje) { GeldActivity.open(this, GeldActivity.KASSA) }
+            } else if (kassa.optString("status") == "rood") {
+                letOp(getString(R.string.kassa_tellen), kassa.optString("tekst"), R.drawable.rand_links_rood) { GeldActivity.open(this, GeldActivity.KASSA) }
             }
+        }
+        val kluis = start.optInt("kluis_concepten")
+        if (beheerder && kluis > 0) {
+            letOp(resources.getQuantityString(R.plurals.kluistellingen_goedkeuren, kluis, kluis), getString(R.string.controleer_en_keur_goed),
+                R.drawable.rand_links_oranje) { GeldActivity.open(this, GeldActivity.KLUIS) }
+        }
+        start.optJSONObject("frituurvet")?.takeIf { !it.optBoolean("ok") }?.let { vet ->
+            letOp(getString(R.string.frituurvet_vervangen), if (vet.isNull("dagen_geleden")) getString(R.string.frituurvet_nooit)
+                else getString(R.string.frituurvet_dagen, vet.optInt("dagen_geleden")), R.drawable.rand_links_rood) { KeukenActivity.open(this) }
+        }
+        val aanmeldingen = start.optInt("aanmeldingen_open")
+        if (aanmeldingen > 0) {
+            letOp(resources.getQuantityString(R.plurals.aanmeldingen_open, aanmeldingen, aanmeldingen), getString(R.string.controleer_betaling),
+                R.drawable.rand_links_oranje) { AanmeldingenActivity.open(this) }
         }
         if (voorraad && laag > 0) {
             letOp(resources.getQuantityString(R.plurals.onder_minimum, laag, laag), getString(R.string.bekijk_welke), R.drawable.rand_links_rood) {
@@ -139,32 +169,54 @@ class StartActivity : BasisActivity() {
         val urgent = start.optInt("mededelingen_urgent")
         if (urgent > 0) {
             letOp(getString(R.string.prikbord_urgent, urgent), getString(R.string.n_open, start.optInt("mededelingen_open")), R.drawable.rand_links_rood) {
-                WebActivity.open(this, "/bijzonderheden", getString(R.string.prikbord))
+                PrikbordActivity.open(this)
             }
         }
         b.letOpKop.isVisible = b.letOpLijst.childCount > 0
 
-        // Meer (op de website)
+        // Meer: de andere schermen van de app, voor zover je er rechten voor hebt.
         b.meerLijst.removeAllViews()
-        val paginas = start.optJSONArray("paginas")?.objecten() ?: emptyList()
-        b.meerKop.isVisible = paginas.isNotEmpty()
-        paginas.chunked(3).forEach { rij ->
+        val meer = mutableListOf<Meer>()
+        meer += Meer(getString(R.string.prikbord), R.drawable.ic_prikbord, start.optInt("mededelingen_open"), urgent > 0) { PrikbordActivity.open(this) }
+        if (voorraad) {
+            meer += Meer(getString(R.string.bestellijst), R.drawable.ic_bestellijst, bestellingen, false) { BestellijstActivity.open(this) }
+            meer += Meer(getString(R.string.boodschappen), R.drawable.ic_boodschappen, 0, false) { BoodschappenActivity.open(this) }
+            meer += Meer(getString(R.string.prognose), R.drawable.ic_prognose, 0, false) { PrognoseActivity.open(this) }
+            meer += Meer(getString(R.string.tellingen), R.drawable.ic_tellingen, 0, false) { TellingenActivity.open(this) }
+            meer += Meer(getString(R.string.geschiedenis), R.drawable.ic_geschiedenis, 0, false) { GeschiedenisActivity.open(this) }
+            meer += Meer(getString(R.string.barcodes), R.drawable.ic_barcodes, 0, false) { BarcodesActivity.open(this) }
+        }
+        meer += Meer(getString(R.string.agenda), R.drawable.ic_agenda, 0, false) { AgendaActivity.open(this) }
+        if (heeft("kassa")) {
+            meer += Meer(getString(R.string.kassa), R.drawable.ic_kassa, kassa?.optInt("concepten") ?: 0, false) { GeldActivity.open(this, GeldActivity.KASSA) }
+        }
+        if (beheerder) meer += Meer(getString(R.string.kluis), R.drawable.ic_kluis, kluis, false) { GeldActivity.open(this, GeldActivity.KLUIS) }
+        if (heeft("keuken")) {
+            val vetNodig = start.optJSONObject("frituurvet")?.optBoolean("ok") == false
+            meer += Meer(getString(R.string.keuken), R.drawable.ic_keuken, if (vetNodig) 1 else 0, vetNodig, label = "!") { KeukenActivity.open(this) }
+        }
+        if (heeft("club_van_20")) meer += Meer(getString(R.string.club_van_20), R.drawable.ic_aanmeldingen, aanmeldingen, false) { AanmeldingenActivity.open(this) }
+        if (heeft("kantine_tv")) meer += Meer(getString(R.string.kantine_tv), R.drawable.ic_kiosk, 0, false) { nietInApp(getString(R.string.wat_kantine_tv)) }
+        b.meerKop.isVisible = meer.isNotEmpty()
+        meer.chunked(3).forEach { rij ->
             val regel = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            rij.forEach { p ->
+            rij.forEach { m ->
                 val item = ItemMeerBinding.inflate(LayoutInflater.from(this), regel, false)
-                item.meerNaam.text = p.optString("label")
-                item.meerIcoon.setImageResource(icoonVoor(p.optString("label")))
-                val teller = if (p.isNull("teller")) 0 else p.optInt("teller")
-                item.meerTeller.isVisible = teller > 0
-                item.meerTeller.text = teller.toString()
-                if (p.optBoolean("let_op")) {
+                item.meerNaam.text = m.naam
+                item.meerIcoon.setImageResource(m.icoon)
+                item.meerTeller.isVisible = m.teller > 0
+                item.meerTeller.text = m.label ?: m.teller.toString()
+                if (m.rood) {
                     item.meerTeller.setBackgroundResource(R.drawable.badge_rood)
                     item.meerTeller.setTextColor(getColor(R.color.wit))
                 }
-                item.root.setOnClickListener { WebActivity.open(this, p.optString("pad"), p.optString("label")) }
+                item.root.setOnClickListener { m.actie() }
                 regel.addView(item.root)
             }
-            repeat(3 - rij.size) { regel.addView(android.view.View(this), LinearLayout.LayoutParams(0, 1, 1f)) }
+            // Lege plekken even breed als een tegel (die heeft 3dp marge rondom), zodat de laatste rij niet breder wordt.
+            repeat(3 - rij.size) {
+                regel.addView(android.view.View(this), LinearLayout.LayoutParams(0, 1, 1f).apply { setMargins(dp(this@StartActivity, 3), 0, dp(this@StartActivity, 3), 0) })
+            }
             b.meerLijst.addView(regel)
         }
 
@@ -177,13 +229,23 @@ class StartActivity : BasisActivity() {
         b.updateMelding.text = getString(R.string.update_beschikbaar, nieuwste)
     }
 
-    private fun letOp(titel: String, detail: String, @DrawableRes rand: Int, actie: () -> Unit) {
+    private class Meer(
+        val naam: String,
+        @DrawableRes val icoon: Int,
+        val teller: Int,
+        val rood: Boolean,
+        val label: String? = null,
+        val actie: () -> Unit,
+    )
+
+    private fun letOp(titel: String, detail: String, @DrawableRes rand: Int, actie: (() -> Unit)?) {
         val regel = ItemLetopBinding.inflate(LayoutInflater.from(this), b.letOpLijst, false)
         regel.root.setBackgroundResource(rand)
         regel.letOpTitel.text = titel
         regel.letOpDetail.text = detail
         regel.letOpDetail.isVisible = detail.isNotEmpty()
-        regel.root.setOnClickListener { actie() }
+        regel.letOpPijl.isVisible = actie != null
+        if (actie != null) regel.root.setOnClickListener { actie() } else regel.root.isClickable = false
         b.letOpLijst.addView(regel.root)
     }
 
@@ -191,24 +253,6 @@ class StartActivity : BasisActivity() {
         0 -> getString(R.string.vandaag_geteld)
         1 -> getString(R.string.gisteren_geteld)
         else -> getString(R.string.dagen_geleden_geteld, dagen)
-    }
-
-    @DrawableRes
-    private fun icoonVoor(label: String) = when (label) {
-        "Bestellijst" -> R.drawable.ic_bestellijst
-        "Boodschappen" -> R.drawable.ic_boodschappen
-        "Prognose" -> R.drawable.ic_prognose
-        "Agenda" -> R.drawable.ic_agenda
-        "Tellingen" -> R.drawable.ic_tellingen
-        "Geschiedenis" -> R.drawable.ic_geschiedenis
-        "Barcodes" -> R.drawable.ic_barcodes
-        "Prikbord" -> R.drawable.ic_prikbord
-        "Kassa" -> R.drawable.ic_kassa
-        "Keuken" -> R.drawable.ic_keuken
-        "Kantine-tv" -> R.drawable.ic_kiosk
-        "Kluis" -> R.drawable.ic_kluis
-        "Club van 20" -> R.drawable.ic_aanmeldingen
-        else -> R.drawable.ic_website
     }
 
     companion object {

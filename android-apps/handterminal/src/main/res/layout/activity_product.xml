@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Eén product: de voorraad, en meteen daaronder boeken (zonder te scrollen op een TC51). Daarna de laatste boekingen en
-     de barcodes. -->
+<!-- Eén product: de voorraad, en meteen daaronder boeken (zonder te scrollen op een TC51). Daaronder alles van de
+     productpagina van de site: kerncijfers, verkoop en verwachting, prijzen, inkoop en bestellen (infoBoven), de laatste
+     boekingen, de artikelen en barcodes en de laatste tellingen (infoOnder). Die blokken bouwt ProductActivity zelf. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -50,6 +51,15 @@
                 android:paddingEnd="12dp"
                 android:paddingBottom="8dp">
 
+                <ImageView
+                    android:id="@+id/productFoto"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_marginEnd="12dp"
+                    android:contentDescription="@null"
+                    android:scaleType="fitCenter"
+                    android:visibility="gone" />
+
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -77,6 +87,16 @@
                         android:layout_height="wrap_content"
                         android:textColor="@color/tekst_zacht"
                         android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/kenmerken"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/navy"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
                 </LinearLayout>
 
                 <TextView
@@ -93,6 +113,20 @@
                     android:textStyle="bold"
                     android:visibility="gone" />
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/productOpmerking"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/badge_geel"
+                android:paddingStart="10dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="6dp"
+                android:textColor="@color/navy"
+                android:textSize="13sp"
+                android:visibility="gone" />
 
             <!-- Boeken -->
             <LinearLayout
@@ -224,8 +258,15 @@
                     android:layout_marginTop="10dp" />
             </LinearLayout>
 
+            <LinearLayout
+                android:id="@+id/infoBoven"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
             <TextView
                 style="@style/Kop"
+                android:paddingStart="4dp"
                 android:text="@string/laatste_boekingen" />
 
             <LinearLayout
@@ -241,7 +282,8 @@
 
             <TextView
                 style="@style/Kop"
-                android:text="@string/barcodes" />
+                android:paddingStart="4dp"
+                android:text="@string/artikelen_en_barcodes" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -268,16 +310,13 @@
                     android:textSize="15sp" />
             </LinearLayout>
 
-            <Button
-                android:id="@+id/siteKnop"
-                style="@style/Knop.Rand"
+            <LinearLayout
+                android:id="@+id/infoOnder"
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
-                android:layout_marginTop="12dp"
-                app:drawableStartCompat="@drawable/ic_website"
-                app:drawableTint="@color/navy"
-                android:text="@string/alles_over_product"
-                android:textSize="15sp" />
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="8dp" />
+
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

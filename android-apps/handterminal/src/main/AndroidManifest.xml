@@ -84,13 +84,95 @@
             android:screenOrientation="portrait"
             android:theme="@style/Thema.Handterminal.Licht" />
 
+
         <activity
-            android:name=".WebActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|keyboard|smallestScreenSize"
+            android:name=".TellingenActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".PrikbordActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".BestellijstActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".GeschiedenisActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <!-- Versie 2.2: de schermen die eerst alleen op de site waren. -->
+        <activity
+            android:name=".GeldActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".GeldTellenActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Thema.Handterminal.Licht"
             android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name=".KeukenActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".KeukenInvoerActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".BoodschappenActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name=".AanmeldingenActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name=".AgendaActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".PrognoseActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".BarcodesActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name=".TaakActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
 
         <activity
             android:name=".InstellingenActivity"

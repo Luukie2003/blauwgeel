@@ -60,3 +60,8 @@ def test_in_de_app_geen_kop_en_tabbalk_van_de_site(ingelogde_client):
     assert 'class="pda-tabbalk"' not in in_app and 'id="pda-zoek-invoer"' not in in_app and "pda-in-app" in in_app
     browser = ingelogde_client.get("/bijzonderheden", headers={"User-Agent": TELEFOON}).data.decode()
     assert 'class="pda-tabbalk"' in browser and 'id="pda-zoek-invoer"' in browser
+
+
+def test_rekenmachine_op_de_looplijst(ingelogde_client):
+    pagina = ingelogde_client.get("/tellen/lopen").data.decode()
+    assert 'id="rekenmachine"' in pagina and "rekenmachineGebruiken()" in pagina

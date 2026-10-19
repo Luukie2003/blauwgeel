@@ -58,6 +58,21 @@ class Instellingen(context: Context) {
         get() = prefs.getString("start_cache", null)
         set(waarde) = prefs.edit().putString("start_cache", waarde).apply()
 
+    /** Mag je bij deze sectie (voorraad, kassa, keuken, club_van_20, kantine_tv), volgens het laatste startscherm?
+     * Alleen om te bepalen wat de app laat zien: de site controleert het zelf ook. Zonder startscherm: ja. */
+    fun toegang(sectie: String): Boolean = try {
+        startCache?.let { org.json.JSONObject(it).optJSONObject("toegang")?.optBoolean(sectie, true) } ?: true
+    } catch (e: org.json.JSONException) {
+        true
+    }
+
+    val beheerder: Boolean
+        get() = try {
+            startCache?.let { org.json.JSONObject(it).optBoolean("beheerder") } ?: false
+        } catch (e: org.json.JSONException) {
+            false
+        }
+
     fun isVerlopen(nu: Long = System.currentTimeMillis()): Boolean {
         val minuten = uitlogMinuten
         return minuten > 0 && nu - laatsteActiviteit > minuten * 60_000L

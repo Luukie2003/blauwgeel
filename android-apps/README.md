@@ -16,29 +16,37 @@ Gradle-project, zodat je ze in één Android Studio-venster kunt openen en beher
 
 ## Kantine Handterminal (`handterminal/`)
 
-Een app met eigen schermen (geen website in een schil) voor het dagelijkse werk op de handterminal. Hij praat met de
-site via een JSON-API (`routes/app_api.py`, en voor facturen `routes/facturen.py`) en gebruikt dezelfde logica en
-database als de site. Inloggen gaat met de persoonlijke 6-cijferige code (`/api/tablet-code/inloggen`); de app bewaart
+Een zelfstandige app met eigen schermen (er opent nergens een websitepagina) voor het werk op de handterminal. Hij
+praat met de site via een JSON-API (`routes/app_api.py` voor het dagelijkse werk, `routes/app_api_meer.py` voor de rest:
+productinformatie, kassa en kluis, keuken, boodschappen, aanmeldingen, agenda, prognose, barcodes en taken, en voor
+facturen `routes/facturen.py`) en gebruikt dezelfde logica en database als de site. Wat alleen op de site kan
+(corrigeren, bewerken, de kantine-tv), meldt de app met "Niet mogelijk in de app" (`nietInApp` in `BasisActivity`);
+hij opent nooit de website. Inloggen gaat met de persoonlijke 6-cijferige code (`/api/tablet-code/inloggen`); de app bewaart
 de sessie-cookie zelf (`Sessie.kt`) en stuurt bij een POST het csrf_token mee in `X-CSRF-Token`.
 
 - **Schermen**: `InlogActivity` (code), `StartActivity` (tegels, "Let op", "Meer"), `ProductenActivity`
-  (zoeken/voorraad/boeken), `ProductActivity` (voorraad, boeken, barcodes), `KoppelenActivity` (onbekende barcode),
-  `TellenActivity` (looplijst + controle), `FacturenActivity`/`FactuurActivity` (factuur inboeken) en `WebActivity`
-  voor alles wat (nog) geen eigen scherm heeft. Gedeeld gedrag (kopbalk, scanner, automatisch uitloggen, fouten) zit in
-  `BasisActivity`.
+  (zoeken/voorraad/boeken), `ProductActivity` (voorraad, boeken en alles van de productpagina van de site, met
+  `WeekGrafiek`), `KoppelenActivity` (onbekende barcode), `TellenActivity` (looplijst zoals op de site, met rekenmachine,
+  en de controle), `FacturenActivity`/`FactuurActivity` (factuur inboeken), `PrikbordActivity`, `BestellijstActivity`,
+  `TellingenActivity`, `GeschiedenisActivity`, `BoodschappenActivity`, `PrognoseActivity`, `AgendaActivity`,
+  `BarcodesActivity`, `GeldActivity`/`GeldTellenActivity` (kassa en kluis), `KeukenActivity`/`KeukenInvoerActivity`,
+  `AanmeldingenActivity` en `TaakActivity` (een taak van een beheerder; `Schermen.kt` weet welk scherm bij welke
+  pagina van de site hoort). Gedeeld gedrag (kopbalk, scanner, automatisch uitloggen, fouten, "Niet mogelijk in de
+  app", de vraag "Taak afgerond?") zit in `BasisActivity`; lijsten en kaarten in `Lijst.kt`, productfoto's in
+  `Fotos.kt`, het koppelen van een barcode in `Koppelvraag.kt`.
 - **Snel**: de hele productlijst met barcodes staat op het toestel (`Catalogus.kt`, ververst met een ETag); zoeken en
   een scan opzoeken wachten dus niet op de site. Tellen gebeurt helemaal op het toestel; de stand gaat elke paar
   producten naar de site (zelfde vorm als de looplijst van de site, dus verder gaan kan ook daar).
 - **Nooit dubbel**: schrijfacties krijgen een `verzoek_id`. Valt de verbinding weg, dan probeert de app het opnieuw en
   geeft de site het bewaarde antwoord terug in plaats van het nog eens te doen (`eenmalig` in `routes/app_api.py`,
-  tabel `app_verzoeken`).
+  tabel `app_verzoeken`). Zware berekeningen (de verkoop per week en de prognose) haalt een scherm pas op als het
+  nodig is, apart van de rest.
 - **Scanner (DataWedge)**: de app maakt bij het starten zelf een DataWedge-profiel "Kantine Handterminal" aan (scans
-  als broadcast, geen toetsaanslagen). Een scan opent het product, of het koppelen van een onbekende barcode; op een
-  websitepagina gaat hij eerst naar een scanveld van die pagina (`src/main/assets/scan.js`).
+  als broadcast, geen toetsaanslagen). Een scan opent het product, of het koppelen van een onbekende barcode. Een losse
+  verpakking terwijl er een doos van bestaat: de vraag of de volle besteleenheid erin moet.
 - **Verbinding**: een stip in de kopbalk, automatisch opnieuw proberen, en een wifi-lock zolang de app voorin staat.
 - **Android 6**: de site gebruikt Let's Encrypt (ISRG Root X1), dat Android 6 en 7.0 niet kennen. Het rootcertificaat
-  zit in `res/raw`; zie `Beveiliging.kt`. Pagina's die als website openen hebben een WebView van versie 72 of nieuwer
-  nodig; bij een oudere meldt de app dat.
+  zit in `res/raw`; zie `Beveiliging.kt`.
 - **Nieuwe versie**: zet `HANDTERMINAL_APP_VERSIE` in `routes/app_api.py` gelijk aan `versionName`; een oudere app
   meldt dan op het startscherm dat er een nieuwe is.
 

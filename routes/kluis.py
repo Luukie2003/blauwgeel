@@ -11,57 +11,66 @@ from helpers import (
 )
 
 
+def maak_kluis_telling(db, form, naam, gebruiker_id):
+    """Een kluistelling als concept (de aantallen per coupure en een opmerking). Voor de site en de handterminal-app.
+    Geeft het id; commit."""
+    opmerking = str(form.get("opmerking", "") or "").strip()
+    aantallen, geteld_bedrag = bereken_kassa_coupure_bedrag(form)
+    # Geen contante omzet zoals bij de kassalade: de kluis heeft geen eigen inkomsten, het verwachte bedrag is gewoon
+    # de bekende stand.
+    verwacht_bedrag = bereken_kluis_stand(db)["stand"]
+    verschil = round(geteld_bedrag - verwacht_bedrag, 2)
+    cur = db.execute(
+        """INSERT INTO kluis_tellingen
+           (datum, naam, gebruiker_id, verwacht_bedrag, geteld_bedrag,
+            verschil, aantal_50, aantal_20, aantal_10, aantal_5,
+            aantal_2, aantal_1, aantal_050, aantal_020, aantal_010,
+            aantal_005, opmerking)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            now_str(), naam, gebruiker_id, verwacht_bedrag, geteld_bedrag, verschil,
+            aantallen["aantal_50"], aantallen["aantal_20"], aantallen["aantal_10"], aantallen["aantal_5"],
+            aantallen["aantal_2"], aantallen["aantal_1"], aantallen["aantal_050"], aantallen["aantal_020"],
+            aantallen["aantal_010"], aantallen["aantal_005"], opmerking,
+        ),
+    )
+    # Nog niet in instellingen.kluis_stand verrekenen -- dat gebeurt pas bij het afsluiten, zelfde patroon als de kassa.
+    db.commit()
+    return cur.lastrowid
+
+
+def keur_kluis_telling_goed(db, telling_id, naam, gebruiker_id, opmerking=""):
+    """Een concept-kluistelling goedkeuren: de stand van de kluis wordt het getelde bedrag. Foutmelding of None."""
+    telling = db.execute("SELECT * FROM kluis_tellingen WHERE id = ?", (telling_id,)).fetchone()
+    if telling is None:
+        return "Kluistelling niet gevonden."
+    if telling["afgesloten"]:
+        return "Deze kluistelling was al goedgekeurd."
+    db.execute(
+        """UPDATE kluis_tellingen
+           SET afgesloten = 1, goedgekeurd_door_id = ?, goedgekeurd_door = ?,
+               goedgekeurd_op = ?, goedkeuring_opmerking = ?
+           WHERE id = ?""",
+        (gebruiker_id, naam, now_str(), (opmerking or "").strip() or None, telling_id),
+    )
+    db.execute("UPDATE instellingen SET kluis_stand = ? WHERE id = 1", (telling["geteld_bedrag"],))
+    db.commit()
+    return None
+
+
 def register_routes(app):
 
     @app.route("/kluis/tellen", methods=["GET", "POST"])
     def kluis_tellen():
         db = get_db()
         if request.method == "POST":
-            opmerking = request.form.get("opmerking", "").strip()
-
-            aantallen, geteld_bedrag = bereken_kassa_coupure_bedrag(request.form)
-            kluis_stand = bereken_kluis_stand(db)
-            # Geen contante omzet zoals bij de kassalade: de kluis heeft geen
-            # eigen inkomsten, het verwachte bedrag is gewoon de bekende stand.
-            verwacht_bedrag = kluis_stand["stand"]
-            verschil = round(geteld_bedrag - verwacht_bedrag, 2)
-
-            cur = db.execute(
-                """INSERT INTO kluis_tellingen
-                   (datum, naam, gebruiker_id, verwacht_bedrag, geteld_bedrag,
-                    verschil, aantal_50, aantal_20, aantal_10, aantal_5,
-                    aantal_2, aantal_1, aantal_050, aantal_020, aantal_010,
-                    aantal_005, opmerking)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    now_str(),
-                    session.get("gebruiker_naam"),
-                    session.get("gebruiker_id"),
-                    verwacht_bedrag,
-                    geteld_bedrag,
-                    verschil,
-                    aantallen["aantal_50"],
-                    aantallen["aantal_20"],
-                    aantallen["aantal_10"],
-                    aantallen["aantal_5"],
-                    aantallen["aantal_2"],
-                    aantallen["aantal_1"],
-                    aantallen["aantal_050"],
-                    aantallen["aantal_020"],
-                    aantallen["aantal_010"],
-                    aantallen["aantal_005"],
-                    opmerking,
-                ),
-            )
-            # Nog niet in instellingen.kluis_stand verrekenen -- dat gebeurt
-            # pas bij het afsluiten, zelfde patroon als kassa_tellen.
-            db.commit()
+            telling_id = maak_kluis_telling(db, request.form, session.get("gebruiker_naam"), session.get("gebruiker_id"))
             flash(
                 "Kluistelling opgeslagen als concept. Controleer de aantallen en sluit "
                 "'m af zodra je klaar bent.",
                 "success",
             )
-            return redirect(url_for("kluis_telling_detail", telling_id=cur.lastrowid))
+            return redirect(url_for("kluis_telling_detail", telling_id=telling_id))
 
         kluis_stand = bereken_kluis_stand(db)
         return render_template(
@@ -280,33 +289,12 @@ def register_routes(app):
     @app.route("/kluis/tellingen/<int:telling_id>/goedkeuren", methods=["POST"])
     def kluis_telling_goedkeuren(telling_id):
         db = get_db()
-        telling = db.execute(
-            "SELECT * FROM kluis_tellingen WHERE id = ?", (telling_id,)
-        ).fetchone()
-        if telling is None:
-            flash("Kluistelling niet gevonden.", "error")
-            return redirect(url_for("kluis_geschiedenis"))
-        if telling["afgesloten"]:
-            flash("Deze kluistelling was al goedgekeurd.", "error")
-            return redirect(url_for("kluis_telling_detail", telling_id=telling_id))
-        goedkeuring_opmerking = request.form.get("goedkeuring_opmerking", "").strip()
-        db.execute(
-            """UPDATE kluis_tellingen
-               SET afgesloten = 1, goedgekeurd_door_id = ?, goedgekeurd_door = ?,
-                   goedgekeurd_op = ?, goedkeuring_opmerking = ?
-               WHERE id = ?""",
-            (
-                session.get("gebruiker_id"),
-                session.get("gebruiker_naam"),
-                now_str(),
-                goedkeuring_opmerking or None,
-                telling_id,
-            ),
-        )
-        db.execute(
-            "UPDATE instellingen SET kluis_stand = ? WHERE id = 1", (telling["geteld_bedrag"],)
-        )
-        db.commit()
+        telling = db.execute("SELECT gebruiker_id FROM kluis_tellingen WHERE id = ?", (telling_id,)).fetchone()
+        fout = keur_kluis_telling_goed(db, telling_id, session.get("gebruiker_naam"), session.get("gebruiker_id"),
+                                       request.form.get("goedkeuring_opmerking", ""))
+        if fout:
+            flash(fout, "error")
+            return redirect(url_for("kluis_geschiedenis") if telling is None else url_for("kluis_telling_detail", telling_id=telling_id))
         if telling["gebruiker_id"] is not None and telling["gebruiker_id"] == session.get("gebruiker_id"):
             flash("Kluistelling goedgekeurd. Je hebt je eigen telling goedgekeurd.", "success")
         else:

@@ -27,6 +27,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import nl.kantineblauwgeel.handterminal.databinding.BalkBinding
+import org.json.JSONObject
 
 /** Wat elk scherm van de app gemeen heeft:
  * - de kopbalk (titel, wie er is ingelogd, de verbindingsstip en het menu);
@@ -221,9 +222,11 @@ abstract class BasisActivity : AppCompatActivity() {
 
     fun openScan(code: String) {
         tril()
+        // Een QR-code van de site (zoals op een schaplabel: /scan/12): het product openen in de app.
         val link = Uri.parse(code)
         if ((link.scheme == "https" || link.scheme == "http") && link.host?.endsWith(inst.siteHost.removePrefix("www.")) == true) {
-            WebActivity.open(this, (link.path ?: "/") + (link.query?.let { "?$it" } ?: ""))
+            val id = Regex("^/(?:scan|producten)/(\\d+)").find(link.path ?: "")?.groupValues?.get(1)?.toIntOrNull()
+            if (id != null) ProductActivity.open(this, id) else melding(getString(R.string.qr_niet_voor_app))
             return
         }
         Catalogus.opBarcode(code)?.let {
@@ -337,6 +340,43 @@ abstract class BasisActivity : AppCompatActivity() {
         setTextColor(getColor(R.color.tekst))
         setTypeface(typeface, android.graphics.Typeface.BOLD)
         setPadding(dp(context, 24), dp(context, 20), dp(context, 24), dp(context, 4))
+    }
+
+    /** Iets wat alleen op de website kan (corrigeren, bewerken, de kantine-tv, een bestelling klaarzetten): de app
+     * stuurt je niet naar de site, maar zegt dat het hier niet kan. */
+    fun nietInApp(wat: String) {
+        AlertDialog.Builder(this)
+            .setCustomTitle(dialoogTitel(getString(R.string.niet_in_app_titel)))
+            .setMessage(getString(R.string.niet_in_app_tekst, wat))
+            .setPositiveButton(R.string.ok, null)
+            .show()
+    }
+
+    /** Na het opslaan: taken die je hiermee misschien hebt afgerond ("taak_vragen" in het antwoord van de site)? Dan
+     * per taak de vraag of hij klaar is, net als op de site. Daarna [daarna]. */
+    fun vraagTaken(antwoord: JSONObject, daarna: () -> Unit = {}) {
+        val vragen = antwoord.optJSONArray("taak_vragen")?.objecten().orEmpty()
+        fun volgende(i: Int) {
+            if (i >= vragen.size) return daarna()
+            val taak = vragen[i]
+            AlertDialog.Builder(this)
+                .setCustomTitle(dialoogTitel(getString(R.string.taak_klaar_titel)))
+                .setMessage(getString(R.string.taak_klaar_vraag, taak.optString("titel")))
+                .setCancelable(false)
+                .setPositiveButton(R.string.ja_klaar) { _, _ ->
+                    bezig {
+                        try {
+                            val uit = Api.post(this, "/api/app/taken/${taak.getInt("id")}/afronden", verzoekId = Api.nieuwVerzoekId())
+                            uit.tekstOfNull("melding")?.let { melding(it, lang = true) }
+                        } finally {
+                            volgende(i + 1)
+                        }
+                    }
+                }
+                .setNegativeButton(R.string.nog_niet) { _, _ -> volgende(i + 1) }
+                .show()
+        }
+        volgende(0)
     }
 
     fun signaalWoord(signaal: Int) = getString(

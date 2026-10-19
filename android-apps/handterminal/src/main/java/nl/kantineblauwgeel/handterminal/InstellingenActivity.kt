@@ -38,11 +38,6 @@ class InstellingenActivity : AppCompatActivity() {
         keuzelijst(b.uitloggenKeuze, uitlogLabels, Instellingen.UITLOG_KEUZES.indexOf(inst.uitlogMinuten)) {
             inst.uitlogMinuten = Instellingen.UITLOG_KEUZES[it]
         }
-        keuzelijst(
-            b.tekstKeuze,
-            Instellingen.TEKST_KEUZES.map { getString(R.string.procent, it) },
-            Instellingen.TEKST_KEUZES.indexOf(inst.tekstGrootte),
-        ) { inst.tekstGrootte = Instellingen.TEKST_KEUZES[it] }
 
         val zebra = Scanner.isAanwezig(this)
         b.scannerStatus.setText(if (zebra) R.string.inst_scanner_zebra else R.string.inst_scanner_geen)

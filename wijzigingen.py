@@ -6,8 +6,29 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.54.0"
+HUIDIGE_VERSIE = "1.56.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.56.0",
+        "datum": "19 oktober 2026",
+        "punten": [
+            "Handterminal-app 2.2: alles in de app, zonder de website. Nieuwe schermen voor Kassa (tellen per munt en briefje met de contante omzet en kaartbetalingen, en goedkeuren), Kluis (beheerders), Keuken (frituurvet, keukentelling en inboeken), Boodschappen, Club van 20-aanmeldingen (goedkeuren na het controleren van de betaling, of afwijzen), Agenda, Prognose en Barcodes.",
+            "Handterminal-app: het productscherm is net zo uitgebreid als de productpagina op de site: kerncijfers (prijs, marge voor beheerders, laatst geteld, voorraadwaarde), de verkoop per week met grafiek, de verwachting met besteladvies, prijzen en geplande prijswijzigingen, inkoop en bestellen met 'Op de bestellijst', de artikelen met barcodes en inkoopprijs, en de laatste tellingen.",
+            "Handterminal-app: taken die een beheerder voor je klaarzet, open je in de app: stappen afvinken, afronden en met één tik naar het juiste scherm. Na kassa tellen, kluis tellen, een telling of frituurvet vervangen vraagt de app, net als de site, of de taak daarmee klaar is.",
+            "Handterminal-app: wat alleen op de computer kan (de kantine-tv, een telling corrigeren of heropenen, een bestelling klaarzetten, een product bewerken, de keukenprijzen) meldt 'Niet mogelijk in de app' in plaats van de website te openen.",
+        ],
+    },
+    {
+        "versie": "1.55.0",
+        "datum": "19 oktober 2026",
+        "punten": [
+            "Handterminal-app 2.1: een zelfstandige app, zonder websitepagina's. Het prikbord (lezen, plaatsen, reageren en afhandelen), de bestellijst, de tellingen en de geschiedenis hebben nu eigen schermen. Kassa, kluis, de kantine-tv en de Club van 20 doe je op de computer.",
+            "Handterminal-app: het telscherm is nu net als de looplijst op de site, met de productfoto, de geregistreerde voorraad, de verwachting en de knoppen 0, −1, +1, +2 en +1 krat. Productfoto's staan ook in de lijsten en op het productscherm.",
+            "Rekenmachine bij het tellen, op de looplijst van de site en in de app: bijvoorbeeld 3×24+7, en de uitkomst met één tik invullen.",
+            "Handterminal-app: scan je een los artikel (één zakje chips) terwijl er een doos of krat van bestaat, dan vraagt de app 'Let op! Artikel gescand, volledige besteleenheid inboeken?', bij boeken en bij Factuur inboeken.",
+            "Handterminal-app: een barcode van spullen uit de keuken koppel je als 'verpakking met meer stuks', met de naam, hoeveel erin zit en de inkoopprijs (AH frikandellen 20 stuks naast Plus frikandellen 15 stuks bij 'Frikandel').",
+        ],
+    },
     {
         "versie": "1.54.0",
         "datum": "19 oktober 2026",
@@ -1051,7 +1072,7 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.11.2", "sinds": "0.1.0", "laatst": "1.49.1",
+    {"naam": "Voorraad & tellen", "versie": "1.12.0", "sinds": "0.1.0", "laatst": "1.55.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.12.1", "sinds": "0.4.0", "laatst": "1.51.0",
      "inhoud": "Bestellijst (ook per leverancier), leveranciers, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
@@ -1071,8 +1092,8 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.2.0", "sinds": "1.53.0", "laatst": "1.54.0",
-     "inhoud": "De Android-app voor de Zebra met eigen schermen: zoeken, boeken, tellen, factuur inboeken en barcodes koppelen, plus inloggen met je code, de scanner en verbindingsbewaking"},
+    {"naam": "Handterminal-app", "versie": "0.4.0", "sinds": "1.53.0", "laatst": "1.56.0",
+     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken, barcodes, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, plus inloggen met je code, de scanner en verbindingsbewaking"},
     {"naam": "Accounts & rechten", "versie": "1.10.3", "sinds": "0.1.0", "laatst": "1.53.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",

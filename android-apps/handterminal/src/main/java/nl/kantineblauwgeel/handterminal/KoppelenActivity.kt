@@ -5,9 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import androidx.appcompat.app.AlertDialog
 import nl.kantineblauwgeel.handterminal.databinding.ActivityKoppelenBinding
-import org.json.JSONObject
 
 /** Een onbekende barcode koppelen, in twee tikken: het product kiezen, en dan "één fles" of "een krat van 24". Verder
  * niets invullen (merk, leverancier, inkoopprijs kan later op de site). Daarna opent het product, met de scan al
@@ -53,34 +51,7 @@ class KoppelenActivity : BasisActivity() {
     }
 
     private fun kies(p: Catalogus.Product) {
-        val keuzes = mutableListOf(getString(R.string.koppel_los, p.eenheid))
-        val aantallen = mutableListOf<Int?>(null)
-        if (p.besteleenheid != null && p.perBesteleenheid > 1) {
-            keuzes += getString(R.string.koppel_doos, p.besteleenheid, p.perBesteleenheid, p.eenheid)
-            aantallen += p.perBesteleenheid
-        }
-        keuzes += getString(R.string.koppel_doos_anders)
-        AlertDialog.Builder(this)
-            .setCustomTitle(dialoogTitel(getString(R.string.wat_heb_je_gescand, p.naam)))
-            .setItems(keuzes.toTypedArray()) { _, i ->
-                if (i < aantallen.size) koppel(p, aantallen[i])
-                else Cijferpad.vraag(this, getString(R.string.hoeveel_in_doos), eenheid = p.eenheid) { n ->
-                    n.toIntOrNull()?.takeIf { it > 0 }?.let { koppel(p, it) }
-                }
-            }
-            .setNegativeButton(R.string.annuleren, null)
-            .show()
-    }
-
-    private fun koppel(p: Catalogus.Product, perDoos: Int?) {
-        val id = Api.nieuwVerzoekId()
-        bezig {
-            val body = JSONObject().put("code", code).put("product_id", p.id)
-            if (perDoos != null) body.put("per_doos", perDoos)
-            val antwoord = Api.post(this, "/api/app/barcodes/koppelen", body, verzoekId = id)
-            Catalogus.werkBij(this, Catalogus.product(antwoord.getJSONObject("product")))
-            tril(60)
-            melding(getString(R.string.gekoppeld_aan, p.naam))
+        Koppelvraag.vraag(this, code, p, getString(R.string.wat_heb_je_gescand, p.naam)) {
             if (callingActivity != null) {
                 setResult(RESULT_OK, Intent().putExtra(EXTRA_CODE, code))
             } else {

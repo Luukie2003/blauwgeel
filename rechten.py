@@ -119,6 +119,7 @@ GEBRUIK_NIET_LOGGEN = {
     # openen (api_app_start, api_app_product) tellen wel als bezoek, net als op de site.
     "api_app_producten",
     "api_app_tellen",
+    "api_app_product_verkoop",
     # Delen van een pagina die na het laden apart worden opgehaald (zie data-lazy-bron in gedeeld.js), en het
     # voorverwarmen van het voorspelmodel: dat is geen bezoek aan een pagina.
     "dashboard_omzettrend",
@@ -216,6 +217,9 @@ BEHEERDER_ENDPOINTS = {
     # (zie SECTIE_ENDPOINTS["kassa"] hieronder, die blijft voor iedereen met
     # de kassa-sectie).
     "kluis_tellen",
+    "api_app_kluis",
+    "api_app_kluis_tellen",
+    "api_app_kluis_goedkeuren",
     "kluis_telling_detail",
     "kluis_telling_heropenen",
     "kluis_telling_coupures_corrigeren",
@@ -253,6 +257,18 @@ SECTIE_ENDPOINTS = {
         "api_app_tellen_controleren",
         "api_app_tellen_bevestigen",
         "api_app_tellen_stoppen",
+        "api_app_geschiedenis",
+        "api_app_tellingen",
+        "api_app_telling",
+        "api_app_bestellijst",
+        "api_app_bestellijst_melding_afhandelen",
+        "api_app_product_verkoop",
+        "api_app_product_melden",
+        "api_app_boodschappen",
+        "api_app_boodschap_afvinken",
+        "api_app_boodschap_verwijderen",
+        "api_app_prognose",
+        "api_app_barcodes",
         "voorraadoverzicht",
         "voorraadoverzicht_pdf_route",
         "voorraadoverzicht_csv_route",
@@ -351,6 +367,9 @@ SECTIE_ENDPOINTS = {
         "verbruiksvoorwerpen_labels_pdf",
     },
     "kassa": {
+        "api_app_kassa",
+        "api_app_kassa_tellen",
+        "api_app_kassa_goedkeuren",
         "kassa_tellen",
         "kassa_telling_detail",
         "kassa_telling_heropenen",
@@ -365,6 +384,10 @@ SECTIE_ENDPOINTS = {
         "kassa_mutatie_corrigeren",
     },
     "keuken": {
+        "api_app_keuken",
+        "api_app_keuken_tellen",
+        "api_app_keuken_inboeken",
+        "api_app_frituurvet",
         "frituurvet_vervangen",
         "keuken_voorraad",
         "keuken_instellingen",
@@ -457,6 +480,9 @@ SECTIE_ENDPOINTS = {
         "club_van_20_importeren",
         "club_van_20_exporteren",
         "club_van_20_aanmeldingen",
+        "api_app_aanmeldingen",
+        "api_app_aanmelding_goedkeuren",
+        "api_app_aanmelding_afwijzen",
         "club_van_20_aanmelding_goedkeuren",
         "club_van_20_aanmelding_afwijzen",
         "club_van_20_instellingen",

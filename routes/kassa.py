@@ -14,12 +14,67 @@ from helpers import (
 from pdf import kassa_pdf
 
 
-def _kaart_omzet():
+def _kaart_omzet(form):
     """De kaartbetalingen uit het formulier (uit hetzelfde PayPal-overzicht als het contante bedrag), 0 als leeg."""
     try:
-        return max(0.0, round(float((request.form.get("kaart_omzet") or "0").replace(",", ".")), 2))
+        return max(0.0, round(float(str(form.get("kaart_omzet") or "0").replace(",", ".")), 2))
     except ValueError:
         return 0.0
+
+
+def maak_kassa_telling(db, form, naam, gebruiker_id):
+    """Een kassatelling als concept: de aantallen per coupure (aantal_50 ... aantal_005), contante_omzet,
+    kaart_omzet en opmerking uit [form]. Voor de site (kassa_tellen) en de handterminal-app. Geeft het id; commit."""
+    try:
+        contante_omzet = round(float(str(form.get("contante_omzet", "0") or "0").replace(",", ".")), 2)
+    except ValueError:
+        contante_omzet = 0.0
+    opmerking = str(form.get("opmerking", "") or "").strip()
+    aantallen, geteld_bedrag = bereken_kassa_coupure_bedrag(form)
+    kassalade_stand = bereken_kassalade_stand(db)
+    verwacht_bedrag = round(kassalade_stand["stand"] + contante_omzet, 2)
+    verschil = round(geteld_bedrag - verwacht_bedrag, 2)
+    cur = db.execute(
+        """INSERT INTO kassa_tellingen
+           (datum, naam, gebruiker_id, verwacht_bedrag, contante_omzet,
+            geteld_bedrag, verschil, aantal_50, aantal_20, aantal_10,
+            aantal_5, aantal_2, aantal_1, aantal_050, aantal_020,
+            aantal_010, aantal_005, opmerking)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            now_str(), naam, gebruiker_id, verwacht_bedrag, contante_omzet, geteld_bedrag, verschil,
+            aantallen["aantal_50"], aantallen["aantal_20"], aantallen["aantal_10"], aantallen["aantal_5"],
+            aantallen["aantal_2"], aantallen["aantal_1"], aantallen["aantal_050"], aantallen["aantal_020"],
+            aantallen["aantal_010"], aantallen["aantal_005"], opmerking,
+        ),
+    )
+    # De kaartbetalingen tellen niet mee voor de kassalade (dat geld komt nooit in de la), alleen voor de
+    # vergelijking met de omzet uit de voorraadtellingen (Geld > Omzet en kassa).
+    db.execute("UPDATE kassa_tellingen SET kaart_omzet = ? WHERE id = ?", (_kaart_omzet(form), cur.lastrowid))
+    # Nog niet in instellingen.kassalade_stand verrekenen -- dat gebeurt pas bij het afsluiten, zodat de telling tot
+    # die tijd nog aangepast kan worden zonder de lopende stand te verstoren.
+    db.commit()
+    return cur.lastrowid
+
+
+def keur_kassa_telling_goed(db, telling_id, naam, gebruiker_id, opmerking=""):
+    """Een concept-kassatelling goedkeuren: de stand van de kassalade wordt het getelde bedrag. Geeft een foutmelding
+    of None; commit."""
+    telling = db.execute("SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)).fetchone()
+    if telling is None:
+        return "Kassatelling niet gevonden."
+    if telling["afgesloten"]:
+        return "Deze kassatelling was al goedgekeurd."
+    db.execute(
+        """UPDATE kassa_tellingen
+           SET afgesloten = 1, goedgekeurd_door_id = ?, goedgekeurd_door = ?,
+               goedgekeurd_op = ?, goedkeuring_opmerking = ?
+           WHERE id = ?""",
+        (gebruiker_id, naam, now_str(), (opmerking or "").strip() or None, telling_id),
+    )
+    db.execute("UPDATE instellingen SET kassalade_stand = ? WHERE id = 1", (telling["geteld_bedrag"],))
+    db.commit()
+    return None
 
 
 def register_routes(app):
@@ -28,60 +83,13 @@ def register_routes(app):
     def kassa_tellen():
         db = get_db()
         if request.method == "POST":
-            try:
-                contante_omzet = round(
-                    float(request.form.get("contante_omzet", "0").replace(",", ".")), 2
-                )
-            except ValueError:
-                contante_omzet = 0.0
-            opmerking = request.form.get("opmerking", "").strip()
-
-            aantallen, geteld_bedrag = bereken_kassa_coupure_bedrag(request.form)
-            kassalade_stand = bereken_kassalade_stand(db)
-            verwacht_bedrag = round(kassalade_stand["stand"] + contante_omzet, 2)
-            verschil = round(geteld_bedrag - verwacht_bedrag, 2)
-
-            cur = db.execute(
-                """INSERT INTO kassa_tellingen
-                   (datum, naam, gebruiker_id, verwacht_bedrag, contante_omzet,
-                    geteld_bedrag, verschil, aantal_50, aantal_20, aantal_10,
-                    aantal_5, aantal_2, aantal_1, aantal_050, aantal_020,
-                    aantal_010, aantal_005, opmerking)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    now_str(),
-                    session.get("gebruiker_naam"),
-                    session.get("gebruiker_id"),
-                    verwacht_bedrag,
-                    contante_omzet,
-                    geteld_bedrag,
-                    verschil,
-                    aantallen["aantal_50"],
-                    aantallen["aantal_20"],
-                    aantallen["aantal_10"],
-                    aantallen["aantal_5"],
-                    aantallen["aantal_2"],
-                    aantallen["aantal_1"],
-                    aantallen["aantal_050"],
-                    aantallen["aantal_020"],
-                    aantallen["aantal_010"],
-                    aantallen["aantal_005"],
-                    opmerking,
-                ),
-            )
-            # De kaartbetalingen tellen niet mee voor de kassalade (dat geld komt nooit in de la), alleen voor de
-            # vergelijking met de omzet uit de voorraadtellingen (Geld > Omzet en kassa).
-            db.execute("UPDATE kassa_tellingen SET kaart_omzet = ? WHERE id = ?", (_kaart_omzet(), cur.lastrowid))
-            # Nog niet in instellingen.kassalade_stand verrekenen -- dat gebeurt
-            # pas bij het afsluiten, zodat de telling tot die tijd nog
-            # aangepast kan worden zonder de lopende stand te verstoren.
-            db.commit()
+            telling_id = maak_kassa_telling(db, request.form, session.get("gebruiker_naam"), session.get("gebruiker_id"))
             flash(
                 "Kassatelling opgeslagen als concept. Controleer de aantallen en sluit "
                 "'m af zodra je klaar bent.",
                 "success",
             )
-            return redirect(url_for("kassa_telling_detail", telling_id=cur.lastrowid))
+            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
 
         kassalade_stand = bereken_kassalade_stand(db)
         return render_template(
@@ -365,7 +373,7 @@ def register_routes(app):
                     telling_id,
                 ),
             )
-            db.execute("UPDATE kassa_tellingen SET kaart_omzet = ? WHERE id = ?", (_kaart_omzet(), telling_id))
+            db.execute("UPDATE kassa_tellingen SET kaart_omzet = ? WHERE id = ?", (_kaart_omzet(request.form), telling_id))
             db.commit()
             flash("Kassatelling bijgewerkt.", "success")
             return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
@@ -387,7 +395,7 @@ def register_routes(app):
         if telling is None:
             flash("Kassatelling niet gevonden.", "error")
             return redirect(url_for("kassa_geschiedenis"))
-        nieuw = _kaart_omzet()
+        nieuw = _kaart_omzet(request.form)
         db.execute("UPDATE kassa_tellingen SET kaart_omzet = ? WHERE id = ?", (nieuw, telling_id))
         db.commit()
         flash(
@@ -406,33 +414,12 @@ def register_routes(app):
     @app.route("/kassa/tellingen/<int:telling_id>/goedkeuren", methods=["POST"])
     def kassa_telling_goedkeuren(telling_id):
         db = get_db()
-        telling = db.execute(
-            "SELECT * FROM kassa_tellingen WHERE id = ?", (telling_id,)
-        ).fetchone()
-        if telling is None:
-            flash("Kassatelling niet gevonden.", "error")
-            return redirect(url_for("kassa_geschiedenis"))
-        if telling["afgesloten"]:
-            flash("Deze kassatelling was al goedgekeurd.", "error")
-            return redirect(url_for("kassa_telling_detail", telling_id=telling_id))
-        goedkeuring_opmerking = request.form.get("goedkeuring_opmerking", "").strip()
-        db.execute(
-            """UPDATE kassa_tellingen
-               SET afgesloten = 1, goedgekeurd_door_id = ?, goedgekeurd_door = ?,
-                   goedgekeurd_op = ?, goedkeuring_opmerking = ?
-               WHERE id = ?""",
-            (
-                session.get("gebruiker_id"),
-                session.get("gebruiker_naam"),
-                now_str(),
-                goedkeuring_opmerking or None,
-                telling_id,
-            ),
-        )
-        db.execute(
-            "UPDATE instellingen SET kassalade_stand = ? WHERE id = 1", (telling["geteld_bedrag"],)
-        )
-        db.commit()
+        telling = db.execute("SELECT gebruiker_id FROM kassa_tellingen WHERE id = ?", (telling_id,)).fetchone()
+        fout = keur_kassa_telling_goed(db, telling_id, session.get("gebruiker_naam"), session.get("gebruiker_id"),
+                                       request.form.get("goedkeuring_opmerking", ""))
+        if fout:
+            flash(fout, "error")
+            return redirect(url_for("kassa_geschiedenis") if telling is None else url_for("kassa_telling_detail", telling_id=telling_id))
         if telling["gebruiker_id"] is not None and telling["gebruiker_id"] == session.get("gebruiker_id"):
             flash("Kassatelling goedgekeurd. Je hebt je eigen telling goedgekeurd.", "success")
         else:

@@ -298,13 +298,17 @@ def koppel_doos(db, artikel_id, tekst, per_omverpakking):
     return None
 
 
-def snel_koppelen(db, tekst, product_id, per_doos=None, door=None, gebruiker_id=None):
+def snel_koppelen(db, tekst, product_id, per_doos=None, door=None, gebruiker_id=None, per_verpakking=None,
+                  inkoopprijs=None, naam=None):
     """Koppelt een gescande barcode in één stap aan een product, zonder verder iets in te vullen: zonder per_doos is het
     één verpakking (een fles, een blik), met per_doos een doos of krat met zoveel erin, geteld in de eenheid van het
     product (een krat met 24 flessen: 24). Het artikel krijgt de naam van
     het product; merk, leverancier en inkoopprijs kunnen later nog op de barcodepagina. Heeft het product al een artikel
     waar dit stukje nog ontbreekt (een fles zonder doos-barcode, of andersom), dan komt de barcode daarbij.
-    Geeft (artikel_id, foutmelding) terug."""
+
+    Voor spullen uit de keuken (een zak AH frikandellen van 20 voor € 20, naast een zak Plus van 15) kan het ook
+    uitgebreider: per_verpakking (hoeveel er in de verpakking zit), inkoopprijs (van die verpakking) en een naam. Dan
+    wordt het altijd een eigen artikel. Geeft (artikel_id, foutmelding) terug."""
     code, fout = controleer(tekst)
     if fout or code is None:
         return None, fout or "Scan of typ eerst een barcode."
@@ -317,6 +321,11 @@ def snel_koppelen(db, tekst, product_id, per_doos=None, door=None, gebruiker_id=
         return None, "Kies bij welk product deze barcode hoort."
     if bezet := barcode_in_gebruik(db, code):
         return None, f"Barcode {code} hoort al bij '{bezet['naam']}' ({bezet['product_naam']})."
+    uitgebreid = any(waarde not in (None, "") for waarde in (per_verpakking, inkoopprijs, naam))
+    if uitgebreid and per_doos in (None, "", 0, "0"):
+        return bewaar_artikel(db, {"product_id": product_id, "naam": naam or product["naam"], "ean": code,
+                                   "aantal_per_verpakking": per_verpakking or 1, "inkoopprijs": inkoopprijs or ""},
+                              door=door, gebruiker_id=gebruiker_id)
     if per_doos in (None, "", 0, "0"):
         zonder_fles = db.execute(
             "SELECT id FROM artikelen WHERE product_id = ? AND ean IS NULL ORDER BY id LIMIT 1", (product_id,)

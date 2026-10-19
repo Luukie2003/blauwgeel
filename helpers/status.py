@@ -142,6 +142,8 @@ def _eigen_taken(db, gebruiker_id):
                 **_taak(t["titel"], " · ".join(delen) or f"Toegevoegd door {t['aangemaakt_door'] or 'een beheerder'}",
                         "eigen_taak_openen", urgent=t["te_laat"], taak_id=t["id"]),
                 "taak_id": t["id"],
+                "doel": t["doel"]["endpoint"] if t["doel"] else None,
+                "stappen": len(t["stappen_lijst"]),
             }
         )
     return uitkomst

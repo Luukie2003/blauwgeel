@@ -1241,6 +1241,15 @@ footer {
     margin-bottom: 1.1rem;
 }
 
+/* De rekenmachine op de looplijst (tellen_lopen.html). */
+.rekenmachine { max-width: 320px; padding: 0.8rem; }
+.rekenmachine-scherm { background: var(--paneel); border: 1px solid var(--rand-licht); border-radius: 8px; padding: 0.5rem 0.8rem; text-align: right; margin-bottom: 0.6rem; }
+.rekenmachine-som { color: var(--tekst-zacht); font-size: 1rem; min-height: 1.3em; word-break: break-all; }
+.rekenmachine-uitkomst { font-size: 2rem; font-weight: 700; }
+.rekenmachine-toetsen { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+.rekenmachine-toetsen .btn { padding: 0.8rem 0; font-size: 1.3rem; font-weight: 700; }
+.rekenmachine-onder { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-top: 0.6rem; }
+
 .loop-snelknop {
     flex: 1 1 60px;
     padding: 0.9rem 0.5rem;

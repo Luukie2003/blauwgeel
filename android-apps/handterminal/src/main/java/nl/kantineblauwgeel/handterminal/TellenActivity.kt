@@ -16,7 +16,9 @@ import nl.kantineblauwgeel.handterminal.databinding.ActivityTellenBinding
 import org.json.JSONObject
 
 /** Tellen met de looplijst: eerst de bar, dan het voorraadhok, product voor product. Daarna een controlescherm met de
- * totalen (en wat opvallend afwijkt), en pas bij "Telling opslaan" verandert de voorraad.
+ * totalen (en wat opvallend afwijkt), en pas bij "Telling opslaan" verandert de voorraad. Het scherm volgt de looplijst
+ * van de site: foto, geregistreerde voorraad, wat er verwacht wordt, de snelknoppen (0, −1, +1, +2, +1 krat), plus een
+ * rekenmachine (3 kratten van 24 en 7 losse).
  *
  * Het tellen zelf gebeurt helemaal op het toestel: het volgende product staat er meteen, ook bij een slechte
  * verbinding. De stand gaat elke paar producten (en bij pauzeren) naar de site, in dezelfde vorm als de looplijst van
@@ -26,7 +28,17 @@ import org.json.JSONObject
  * Een product scannen tijdens het tellen springt naar dat product. */
 class TellenActivity : BasisActivity() {
 
-    private class TelProduct(val id: Int, val naam: String, val categorie: String, val eenheid: String, val verwacht: JSONObject?)
+    private class TelProduct(
+        val id: Int,
+        val naam: String,
+        val categorie: String,
+        val eenheid: String,
+        val voorraad: Int,
+        val verwacht: JSONObject?,
+        val foto: String?,
+        val besteleenheid: String?,
+        val perBesteleenheid: Int,
+    )
 
     private enum class Laag { LADEN, TELLEN, CONTROLE, KLAAR }
 
@@ -41,7 +53,7 @@ class TellenActivity : BasisActivity() {
     private var laag = Laag.LADEN
     private var controleWaarden = LinkedHashMap<String, Int>()
     private var opslaanId: String? = null
-    private var tellingPad: String? = null
+    private var tellingId: Int? = null
 
     private val lokaal by lazy { getSharedPreferences("tellen", Context.MODE_PRIVATE) }
 
@@ -57,6 +69,23 @@ class TellenActivity : BasisActivity() {
         }
         b.volgendeKnop.setOnClickListener { volgende() }
         b.vorigeKnop.setOnClickListener { vorige() }
+        // De snelknoppen van de looplijst op de site: 0 (en meteen door), −1, +1, +2 en +1 krat.
+        b.snelNul.setOnClickListener {
+            waarde = "0"
+            volgende()
+        }
+        b.snelMin1.setOnClickListener { pasAan(-1) }
+        b.snelPlus1.setOnClickListener { pasAan(1) }
+        b.snelPlus2.setOnClickListener { pasAan(2) }
+        b.snelKrat.setOnClickListener { pasAan(producten[index].perBesteleenheid) }
+        b.rekenKnop.setOnClickListener {
+            Rekenmachine.open(this, waarde) {
+                waarde = it.toString()
+                toonWaarde()
+            }
+        }
+        b.pauzeerKnop.setOnClickListener { pauzeer() }
+        b.stopKnop.setOnClickListener { vraagStoppen() }
         b.terugNaarTellenKnop.setOnClickListener {
             fase = "hok"
             index = producten.lastIndex
@@ -65,7 +94,7 @@ class TellenActivity : BasisActivity() {
         }
         b.opslaanKnop.setOnClickListener { bevestig() }
         b.klaarKnop.setOnClickListener { finish() }
-        b.bekijkKnop.setOnClickListener { tellingPad?.let { WebActivity.open(this, it, getString(R.string.telling)) } }
+        b.bekijkKnop.setOnClickListener { tellingId?.let { TellingenActivity.open(this, it) } }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -114,8 +143,13 @@ class TellenActivity : BasisActivity() {
                 return@launch
             }
             producten = data.getJSONArray("producten").objecten().map {
-                TelProduct(it.getInt("id"), it.getString("naam"), it.optString("categorie"), it.optString("eenheid"), it.optJSONObject("verwacht"))
+                TelProduct(
+                    it.getInt("id"), it.getString("naam"), it.optString("categorie"), it.optString("eenheid"),
+                    it.optInt("voorraad"), it.optJSONObject("verwacht"), it.tekstOfNull("foto_groot"),
+                    it.tekstOfNull("besteleenheid"), it.optInt("per_besteleenheid", 1),
+                )
             }
+            Fotos.haalAlvast(this@TellenActivity, producten.take(4).map { it.foto })
             if (producten.isEmpty()) {
                 melding(getString(R.string.niets_te_tellen), lang = true)
                 finish()
@@ -183,36 +217,61 @@ class TellenActivity : BasisActivity() {
 
     private fun toonProduct() {
         val p = producten[index]
-        zetBalkTitel(getString(if (fase == "bar") R.string.tellen_bar else R.string.tellen_hok))
-        zetBalkSub(getString(R.string.n_van_m, index + 1, producten.size))
-        val stap = (if (fase == "bar") 0 else producten.size) + index
+        val bar = fase == "bar"
+        zetBalkTitel(getString(R.string.titel_looplijst))
+        zetBalkSub(getString(R.string.product_n_van_m, index + 1, producten.size))
+        val stap = (if (bar) 0 else producten.size) + index
         b.voortgang.progress = (stap * 1000) / (producten.size * 2)
+        b.faseLabel.setText(if (bar) R.string.bar_tellen else R.string.hok_tellen)
+        b.faseLabel.setBackgroundResource(if (bar) R.drawable.fase_bar else R.drawable.fase_hok)
+        b.faseLabel.setTextColor(getColor(if (bar) R.color.groen_tekst else R.color.oranje_balk))
+        b.telBarGeteld.text = if (bar) "" else getString(R.string.bar_geteld, this.bar[p.id.toString()]?.ifEmpty { null } ?: "—", p.eenheid)
+        Fotos.toon(b.telFoto, p.foto)
         b.telCategorie.text = p.categorie
         b.telNaam.text = p.naam
         b.telEenheid.text = p.eenheid
-        val hints = mutableListOf<String>()
-        p.verwacht?.let { v ->
-            hints += getString(R.string.verwacht_totaal, v.optInt("verwacht"), v.optInt("laag"), v.optInt("hoog"))
-        }
-        if (fase == "hok") hints += getString(R.string.in_de_bar, bar[p.id.toString()]?.ifEmpty { null } ?: "0")
-        b.telHint.text = hints.joinToString(" · ")
+        b.telVoorraad.text = getString(R.string.geregistreerde_voorraad, p.voorraad, p.eenheid)
+        b.telVerwacht.text = p.verwacht?.let { v ->
+            val laag = v.optInt("laag")
+            val hoog = v.optInt("hoog")
+            if (hoog > laag) getString(R.string.verwacht_nu_marge, v.optInt("verwacht"), p.eenheid, laag, hoog)
+            else getString(R.string.verwacht_nu, v.optInt("verwacht"), p.eenheid)
+        } ?: ""
+        b.telVerwacht.isVisible = p.verwacht != null
+        b.snelKrat.isVisible = p.besteleenheid != null && p.perBesteleenheid > 1
+        b.snelKrat.text = getString(R.string.plus_een_besteleenheid, p.besteleenheid ?: "", p.perBesteleenheid)
         waarde = huidige[p.id.toString()] ?: ""
         toonWaarde()
-        b.vorigeKnop.isEnabled = !(fase == "bar" && index == 0)
+        b.vorigeKnop.isEnabled = !(bar && index == 0)
         b.vorigeKnop.alpha = if (b.vorigeKnop.isEnabled) 1f else 0.4f
+        b.volgendeKnop.setText(
+            when {
+                index < producten.lastIndex -> R.string.volgende_pijl
+                bar -> R.string.door_naar_hok
+                else -> R.string.bekijken_en_bevestigen
+            },
+        )
+        // De foto's van de volgende producten alvast ophalen, dan staan ze er meteen.
+        Fotos.haalAlvast(this, producten.drop(index + 1).take(3).map { it.foto })
     }
 
     private fun toonWaarde() {
         b.telWaarde.text = waarde.ifEmpty { "–" }
         b.telWaarde.setTextColor(getColor(if (waarde.isEmpty()) R.color.rand_licht else R.color.tekst))
-        val laatste = fase == "hok" && index == producten.lastIndex
-        b.volgendeKnop.text = getString(
-            when {
-                laatste -> R.string.naar_controle
-                waarde.isEmpty() -> R.string.overslaan
-                else -> R.string.volgende
-            },
-        )
+    }
+
+    private fun pasAan(stap: Int) {
+        val nu = waarde.toIntOrNull() ?: 0
+        waarde = maxOf(0, nu + stap).toString()
+        toonWaarde()
+    }
+
+    private fun vraagStoppen() {
+        AlertDialog.Builder(this)
+            .setMessage(R.string.stoppen_vraag)
+            .setPositiveButton(R.string.stoppen) { _, _ -> stop() }
+            .setNegativeButton(R.string.annuleren, null)
+            .show()
     }
 
     private fun legVast() {
@@ -271,22 +330,12 @@ class TellenActivity : BasisActivity() {
 
     override fun vulMenu(menu: Menu) {
         if (laag != Laag.TELLEN) return
-        menu.add(0, 100, 0, R.string.pauzeren)
         menu.add(0, 101, 1, R.string.naar_product)
-        menu.add(0, 102, 2, R.string.stoppen_zonder_opslaan)
     }
 
     override fun bijMenu(id: Int): Boolean {
-        when (id) {
-            100 -> pauzeer()
-            101 -> kiesProduct()
-            102 -> AlertDialog.Builder(this)
-                .setMessage(R.string.stoppen_vraag)
-                .setPositiveButton(R.string.stoppen) { _, _ -> stop() }
-                .setNegativeButton(R.string.annuleren, null)
-                .show()
-            else -> return false
-        }
+        if (id != 101) return false
+        kiesProduct()
         return true
     }
 
@@ -454,7 +503,7 @@ class TellenActivity : BasisActivity() {
                 controleWaarden.forEach { (k, v) -> waarden.put(k, v) }
                 val antwoord = Api.post(this, "/api/app/tellen/bevestigen", JSONObject().put("waarden", waarden), verzoekId = id)
                 lokaal.edit().remove("stand").apply()
-                tellingPad = antwoord.tekstOfNull("pad")
+                tellingId = antwoord.optInt("telling_id")
                 b.klaarTitel.text = getString(R.string.telling_opgeslagen, antwoord.optInt("telling_id"))
                 b.klaarTekst.text = resources.getQuantityString(R.plurals.n_producten_bijgewerkt, antwoord.optInt("aantal"), antwoord.optInt("aantal"))
                 tril(80)

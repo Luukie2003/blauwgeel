@@ -33,6 +33,7 @@ class ProductAdapter(private val context: Context, private val bijKlik: (Catalog
     override fun onBindViewHolder(regel: Regel, positie: Int) {
         val p = lijst[positie]
         val v = regel.v
+        Fotos.toon(v.productFoto, p.foto)
         v.productNaam.text = p.naam
         v.productSub.text = listOf(p.categorie, p.subcategorie, p.merk).filter { it.isNotEmpty() }.distinct().joinToString(" · ")
         v.productVoorraad.text = p.voorraadTekst()
