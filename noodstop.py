@@ -15,6 +15,8 @@ Kwijt of buitengesloten? Op de server (een Bash-console op PythonAnywhere) kan h
     python3 noodstop.py eigenaar NAAM   # een ander account eigenaar maken
 """
 
+import tijdzone  # noqa: F401  (ook vanaf de console in Nederlandse tijd)
+
 import sqlite3
 import sys
 from datetime import datetime, timedelta

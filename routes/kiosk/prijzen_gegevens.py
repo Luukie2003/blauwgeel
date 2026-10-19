@@ -132,10 +132,9 @@ def _bardiensten_vandaag(db):
     """Bardiensten rond vandaag, op datum+tijd gesorteerd -- geen
     wekelijks terugkerend rooster, dus alleen echte datums tellen mee
     (zie kiosk_bardienst hieronder voor de planning zelf). Haalt bewust
-    ook gisteren en morgen op (serverdatum) i.p.v. alleen exact vandaag:
-    de server draait op UTC terwijl het scherm in Europe/Amsterdam
-    staat, dus rond middernacht kan de serverdatum een paar uur
-    achterlopen op de kloktijd van de kantine zelf. Welke dienst nu
+    ook gisteren en morgen op i.p.v. alleen exact vandaag (de app rekent
+    in Nederlandse tijd, zie tijdzone.py, maar de klok van het scherm
+    kan net anders lopen, en een dienst kan over middernacht lopen). Welke dienst nu
     precies actief is (en het afhandelen van een dienst die middernacht
     overschrijdt, bijv. 22:00-01:00) wordt daarom client-side bepaald
     met de eigen klok van het scherm, zie kiosk_prijzen_scherm.html."""

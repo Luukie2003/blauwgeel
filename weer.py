@@ -11,6 +11,8 @@ als agenda.py en backup.py:
 
 Gebruikt alleen de standaardbibliotheek -- geen virtualenv nodig."""
 
+import tijdzone  # noqa: F401  (het weer per Nederlandse dag)
+
 import json
 from datetime import datetime
 import sqlite3

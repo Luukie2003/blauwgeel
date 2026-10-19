@@ -1,3 +1,5 @@
+import tijdzone  # noqa: F401  (als eerste: het proces rekent in Nederlandse tijd)
+
 import secrets
 import time
 from datetime import timedelta

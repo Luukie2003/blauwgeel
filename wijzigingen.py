@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.58.0"
+HUIDIGE_VERSIE = "1.58.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.58.1",
+        "datum": "19 oktober 2026",
+        "punten": [
+            "Tijden kloppen: de server draait in Engelse tijd (UTC), waardoor alles wat de site zelf vastlegde (het logboek, boekingen, tellingen, de kassa, het prikbord) 1 uur in de winter en 2 uur in de zomer te vroeg stond. Vanaf nu in Nederlandse tijd, met zomer- en wintertijd.",
+        ],
+    },
     {
         "versie": "1.58.0",
         "datum": "19 oktober 2026",
@@ -1124,6 +1131,6 @@ MODULES = [
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
-    {"naam": "Techniek & beveiliging", "versie": "1.9.0", "sinds": "1.1.0", "laatst": "1.58.0",
+    {"naam": "Techniek & beveiliging", "versie": "1.9.1", "sinds": "1.1.0", "laatst": "1.58.1",
      "inhoud": "Geautomatiseerde tests, beveiligingsheaders, de noodstop, bereikbaarheidscontrole, snelheid"},
 ]

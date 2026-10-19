@@ -19,6 +19,8 @@ integrity_check). Is die niet in orde, dan wordt hij weggegooid en gaat er
 een waarschuwingsmail uit, zodat je dat niet pas merkt als je hem nodig hebt.
 """
 
+import tijdzone  # noqa: F401  (de namen en datums van de back-ups in Nederlandse tijd)
+
 import json
 import sqlite3
 import sys

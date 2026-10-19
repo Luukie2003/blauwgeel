@@ -1,5 +1,7 @@
 """Datum- en tijdhulpjes (Nederlandse notatie, Amsterdamse tijd)."""
 
+import tijdzone  # noqa: F401  (het proces rekent in Nederlandse tijd, ook op een server in UTC)
+
 import calendar
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
