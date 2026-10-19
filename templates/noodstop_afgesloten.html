@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-{# Wat iedereen (behalve de eigenaar) ziet tijdens een noodstop: zie noodstop.py en noodstop_bewaken in app.py.
+{# Wat iedereen (behalve een beheerder die met de noodcode inlogde) ziet tijdens een noodstop: zie noodstop.py en noodstop_bewaken in app.py.
    Staat los van base.html, zodat er niets van de site (menu, namen, gegevens) op komt. #}
 <html lang="nl">
 <head>
@@ -45,7 +45,7 @@
         </div>
         <h1>Tijdelijk afgesloten</h1>
         <p>Kantine Beheer is uit voorzorg even dicht. Alle gegevens zijn veilig. Probeer het later opnieuw.</p>
-        <p class="klein"><a href="{{ url_for('login') }}">Inloggen</a> (alleen voor de beheerder van de site)</p>
+        <p class="klein"><a href="{{ url_for('login') }}">Inloggen</a> (alleen beheerders, met de noodcode)</p>
         <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="logo">
     </div>
 </body>

@@ -308,6 +308,17 @@
                     app:drawableTint="@color/navy"
                     android:text="@string/barcode_koppelen"
                     android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/artikelKnop"
+                    style="@style/Knop.Rand"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="6dp"
+                    app:drawableStartCompat="@drawable/ic_plus"
+                    app:drawableTint="@color/navy"
+                    android:text="@string/artikel_toevoegen"
+                    android:textSize="15sp" />
             </LinearLayout>
 
             <LinearLayout

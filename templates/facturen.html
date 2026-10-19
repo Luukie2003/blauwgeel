@@ -4,8 +4,28 @@
 <p class="subtitel">
     Scan de dozen, kratten en losse verpakkingen van een levering: de site weet per barcode wat het is en hoeveel erin
     zit, en telt alles op. Klopt het met de factuur, dan rond je af en gaat alles in &eacute;&eacute;n keer in de voorraad.
-    Hoort het bij een bestelling, dan staat die daarna op ontvangen.
+    Een klaargezette bestelling staat hier als concept: dan zie je per product wat er besteld is en wat er al binnen is.
 </p>
+
+{% set klaar = bestellingen|selectattr('ronde_id', 'none')|list %}
+{% if klaar %}
+<div class="kaart">
+    <h2 style="margin-top:0">Klaargezette bestellingen</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Het concept van de factuur. Komt de levering binnen, tik dan op Inboeken en scan wat er binnenkomt.</p>
+    <ul class="info-opsomming">
+        {% for b in klaar %}
+        <li style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center; flex-wrap:wrap">
+            <div style="min-width:0">
+                <strong>Bestelling #{{ b.id }}</strong>{% if b.referentie %} ({{ b.referentie }}){% endif %}
+                <span class="tekst-zacht">&middot; {{ b.producten }} product{{ 'en' if b.producten != 1 }} &middot; klaargezet {{ b.aangemaakt_op|datum_nl }}{% if b.besteld_door %} door {{ b.besteld_door }}{% endif %}</span>
+                <div class="tekst-zacht" style="font-size:0.82rem">{{ b.samenvatting }}</div>
+            </div>
+            <a href="{{ url_for('factuur_voor_bestelling', bestelling_id=b.id) }}" class="btn btn-geel btn-klein">Inboeken</a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
 
 {% if open_rondes %}
 <div class="kaart">
@@ -13,8 +33,8 @@
     <ul class="info-opsomming">
         {% for r in open_rondes %}
         <li>
-            <a href="{{ url_for('factuur_ronde', ronde_id=r.id) }}"><strong>{{ 'Factuur ' ~ r.factuurnummer if r.factuurnummer else 'Inboekronde #' ~ r.id }}</strong></a>
-            <span class="tekst-zacht">&middot; {{ r.leverancier_naam or 'geen leverancier' }} &middot; {{ r.scans }} gescand &middot; begonnen {{ r.gestart_op|datum_nl }}{% if r.gestart_door %} door {{ r.gestart_door }}{% endif %}{% if r.bron == 'app' %} (app){% endif %}</span>
+            <a href="{{ url_for('factuur_ronde', ronde_id=r.id) }}"><strong>{{ 'Factuur ' ~ r.factuurnummer if r.factuurnummer else ('Bestelling #' ~ r.bestelling_id if r.bestelling_id else 'Inboekronde #' ~ r.id) }}</strong></a>
+            <span class="tekst-zacht">&middot; {{ r.leverancier_naam or 'geen leverancier' }}{% if r.bestelling_id %} &middot; bestelling #{{ r.bestelling_id }}{% endif %} &middot; {{ r.scans }} gescand &middot; begonnen {{ r.gestart_op|datum_nl }}{% if r.gestart_door %} door {{ r.gestart_door }}{% endif %}{% if r.bron == 'app' %} (app){% endif %}</span>
         </li>
         {% endfor %}
     </ul>
@@ -22,7 +42,7 @@
 {% endif %}
 
 <div class="kaart">
-    <h2 style="margin-top:0">Nieuwe factuur</h2>
+    <h2 style="margin-top:0">{{ 'Andere factuur' if klaar else 'Nieuwe factuur' }}</h2>
     <form method="post" action="{{ url_for('factuur_start') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="formgrid">

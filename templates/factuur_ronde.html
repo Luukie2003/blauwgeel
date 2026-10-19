@@ -1,7 +1,7 @@
 {% extends basis_template %}
 {% set r = g_ronde.ronde %}
 {% set open = r.status == 'open' %}
-{% block titel %}{{ 'Factuur ' ~ r.factuurnummer if r.factuurnummer else 'Inboekronde #' ~ r.id }}{% endblock %}
+{% block titel %}{{ 'Factuur ' ~ r.factuurnummer if r.factuurnummer else ('Bestelling #' ~ r.bestelling_id if r.bestelling_id else 'Inboekronde #' ~ r.id) }}{% endblock %}
 {% macro euro(bedrag) %}&euro; {{ '%.2f'|format(bedrag)|replace('.', ',') }}{% endmacro %}
 {% block inhoud %}
 <p class="subtitel">
@@ -58,6 +58,48 @@
 </div>
 {% endif %}
 
+{% if g_ronde.besteld %}
+{% set nog = g_ronde.besteld|selectattr('rest', 'gt', 0)|list %}
+<div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">Besteld</h2>
+        <span class="tekst-zacht">{{ g_ronde.besteld|length - nog|length }} van de {{ g_ronde.besteld|length }} binnen</span>
+    </div>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th style="text-align:right">Besteld</th><th style="text-align:right">Gescand</th><th></th></tr></thead>
+            <tbody>
+                {% for b in g_ronde.besteld %}
+                <tr>
+                    <td>{{ b.naam }}</td>
+                    <td style="text-align:right">{{ b.besteld_eenheden }} {{ b.besteleenheid }}{% if b.per_besteleenheid > 1 %}<div class="tekst-zacht" style="font-size:0.75rem">{{ b.besteld }} {{ b.eenheid }}</div>{% endif %}</td>
+                    <td style="text-align:right">{{ b.gescand }} {{ b.eenheid }}</td>
+                    <td style="text-align:right">
+                        {% if b.status == 'binnen' %}<span class="badge badge-ok">binnen</span>
+                        {% elif open %}
+                        <form method="post" action="{{ url_for('factuur_zoals_besteld', ronde_id=r.id) }}" style="margin:0">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="product_id" value="{{ b.product_id }}">
+                            <button type="submit" class="btn btn-rand btn-klein" title="Zonder te scannen: de {{ b.rest }} {{ b.eenheid }} die nog mist erbij">+{{ b.rest }} zoals besteld</button>
+                        </form>
+                        {% else %}<span class="badge badge-laag">{{ 'mist ' ~ b.rest if b.gescand else 'niet geleverd' }}</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if open and nog|length > 1 %}
+    <form method="post" action="{{ url_for('factuur_zoals_besteld', ronde_id=r.id) }}" style="margin:0.6rem 0 0"
+          onsubmit="return bevestigEnVerstuur(this, 'Alles wat nog niet gescand is erbij zetten zoals besteld?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-rand btn-klein">Alles wat nog mist zoals besteld</button>
+    </form>
+    {% endif %}
+    <p class="tekst-zacht" style="font-size:0.8rem; margin:0.5rem 0 0">Wat niet binnenkomt, laat je open: bij het afronden staat het als manco bij de bestelling. Wat er extra meekomt, scan je gewoon mee.</p>
+</div>
+{% endif %}
+
 <div class="kaart">
     <div class="actiebalk">
         <h2 style="margin:0">Wat er binnenkomt</h2>
@@ -69,7 +111,7 @@
             <thead><tr><th>Product</th><th style="text-align:right">Erbij</th><th style="text-align:right">Inkoop</th></tr></thead>
             <tbody>
                 {% for p in g_ronde.per_product %}
-                <tr><td>{{ p.naam }}</td><td style="text-align:right"><strong>+{{ p.eenheden }}</strong> {{ p.eenheid }}</td><td style="text-align:right">{{ euro(p.bedrag) }}</td></tr>
+                <tr><td>{{ p.naam }}{% if g_ronde.besteld and not p.besteld %} <span class="badge badge-neutraal">niet besteld</span>{% endif %}</td><td style="text-align:right"><strong>+{{ p.eenheden }}</strong> {{ p.eenheid }}</td><td style="text-align:right">{{ euro(p.bedrag) }}</td></tr>
                 {% endfor %}
             </tbody>
             <tfoot>

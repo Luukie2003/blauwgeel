@@ -1,4 +1,5 @@
-"""De noodstop (noodstop.py): de hele site en de tv-schermen afsluiten, en alleen de eigenaar kan weer openen."""
+"""De noodstop (noodstop.py): de hele site en de tv-schermen afsluiten. Iedereen gaat eruit, ook de beheerders; daarna
+komt alleen een beheerder er nog in met de noodcode, en alleen de eigenaar kan weer openen."""
 
 import pytest
 from werkzeug.security import generate_password_hash
@@ -10,6 +11,7 @@ import noodstop
 from database import WACHTWOORD_HASH_METHODE
 
 WACHTWOORD = "kantine123"  # van de beheerder in de tests (zie conftest.py)
+CODE = "geheim-123"
 
 
 def _dicht(client, wachtwoord=WACHTWOORD, reden="Vreemde inlogpogingen"):
@@ -23,6 +25,11 @@ def _open(client, wachtwoord=WACHTWOORD, code=""):
 def _code(client, code, oude_code="", wachtwoord=WACHTWOORD):
     return client.post("/beheer/noodstop/code", data={
         "csrf_token": _csrf(client), "wachtwoord": wachtwoord, "oude_code": oude_code, "code": code, "code_herhalen": code})
+
+
+def _inloggen(client, naam="admin", wachtwoord=WACHTWOORD, code=CODE):
+    """Inloggen zoals tijdens een noodstop: met de noodcode erbij."""
+    return client.post("/login", data={"naam": naam, "wachtwoord": wachtwoord, "noodcode": code, "csrf_token": _csrf(client)})
 
 
 def _tweede_beheerder(db, naam="beheerder2"):
@@ -52,12 +59,21 @@ def test_een_andere_beheerder_kan_niet_bij_de_noodstop(client, db):
 
 def test_eigenaar_ziet_de_noodstop_in_het_menu(ingelogde_client, db):
     assert "/beheer/noodstop" in ingelogde_client.get("/").data.decode()
+    noodstop.zet_code(db, CODE)
     assert "Noodstop: alles afsluiten" in ingelogde_client.get("/beheer/noodstop").data.decode()
 
 
 def test_afsluiten_vraagt_het_wachtwoord(ingelogde_client, db):
+    noodstop.zet_code(db, CODE)
     _dicht(ingelogde_client, wachtwoord="fout")
     assert not noodstop.is_actief(db)
+
+
+def test_zonder_noodcode_kan_de_noodstop_niet_aan(ingelogde_client, db):
+    """Anders kan na het afsluiten niemand meer inloggen (alleen nog op de server)."""
+    assert "Stel eerst hieronder een noodcode in" in ingelogde_client.get("/beheer/noodstop").data.decode()
+    resp = _dicht(ingelogde_client)
+    assert not noodstop.is_actief(db) and resp.headers["Location"].endswith("/beheer/noodstop")
 
 
 # ---------- Afgesloten ----------
@@ -65,31 +81,59 @@ def test_afsluiten_vraagt_het_wachtwoord(ingelogde_client, db):
 
 @pytest.fixture
 def afgesloten(app, ingelogde_client, db):
-    """Een vrijwilliger die al ingelogd was, en daarna de noodstop van de eigenaar."""
+    """Een vrijwilliger die al ingelogd was, en daarna de noodstop van de eigenaar. Ook de eigenaar is dan uitgelogd;
+    die logt weer in met de noodcode (ingelogde_client)."""
     _maak_vrijwilliger(db, "vrijwilliger1", "voorraad")
     vrijwilliger = app.test_client()
     _login(vrijwilliger, "vrijwilliger1")
     assert vrijwilliger.get("/").status_code == 200
-    _dicht(ingelogde_client)
-    assert noodstop.is_actief(db)
+    noodstop.zet_code(db, CODE)
+    resp = _dicht(ingelogde_client)
+    assert noodstop.is_actief(db) and resp.headers["Location"].endswith("/login")
+    assert ingelogde_client.get("/").status_code == 503  # ook de eigenaar is eruit
+    assert _inloggen(ingelogde_client).status_code == 302
     return vrijwilliger
 
 
-def test_iedereen_eruit_behalve_de_eigenaar(afgesloten, ingelogde_client):
-    resp = afgesloten.get("/")
-    assert resp.status_code == 503 and "Tijdelijk afgesloten" in resp.data.decode()
-    tekst = ingelogde_client.get("/").data.decode()  # de eigenaar werkt gewoon door
-    assert "Noodstop actief sinds" in tekst
+def test_iedereen_eruit_ook_de_beheerders(app, db, ingelogde_client):
+    _tweede_beheerder(db)
+    beheerder = app.test_client()
+    _login(beheerder, "beheerder2")
+    assert beheerder.get("/").status_code == 200
+    noodstop.zet_code(db, CODE)
+    _dicht(ingelogde_client)
+    for client in (beheerder, ingelogde_client):  # een andere beheerder, en de eigenaar die op de knop drukte
+        resp = client.get("/")
+        assert resp.status_code == 503 and "Tijdelijk afgesloten" in resp.data.decode()
 
 
-def test_alleen_de_eigenaar_kan_inloggen(app, afgesloten, db):
-    anders = app.test_client()
-    csrf = _csrf(anders)
-    resp = anders.post("/login", data={"naam": "vrijwilliger1", "wachtwoord": "test1234", "csrf_token": csrf})
+def test_alleen_beheerders_met_de_noodcode_kunnen_inloggen(app, afgesloten, db):
+    _tweede_beheerder(db)
+    login = app.test_client().get("/login").data.decode()
+    assert 'name="noodcode"' in login and "Alleen een beheerder kan inloggen" in login
+
+    vrijwilliger = app.test_client()
+    resp = _inloggen(vrijwilliger, "vrijwilliger1", "test1234")  # zelfs met de goede code: geen beheerder
     assert resp.status_code == 200 and "tijdelijk afgesloten" in resp.data.decode()
-    eigenaar = app.test_client()
-    resp = eigenaar.post("/login", data={"naam": "admin", "wachtwoord": WACHTWOORD, "csrf_token": _csrf(eigenaar)})
-    assert resp.status_code == 302 and eigenaar.get("/beheer/noodstop").status_code == 200
+
+    beheerder = app.test_client()
+    resp = _inloggen(beheerder, "beheerder2", "test1234", code="")  # zonder code
+    assert resp.status_code == 200 and "noodcode" in resp.data.decode()
+    _inloggen(beheerder, "beheerder2", "test1234", code="fout")
+    assert db.execute("SELECT noodstop_pogingen FROM instellingen").fetchone()[0] == 2  # telt als foute poging
+    assert _inloggen(beheerder, "beheerder2", "test1234").status_code == 302
+    tekst = beheerder.get("/").data.decode()
+    assert "Noodstop actief sinds" in tekst and 'data-noodstop-binnen="1"' in tekst
+    assert beheerder.get("/beheer/noodstop").status_code == 302  # openen kan alleen de eigenaar
+
+
+def test_zonder_noodcode_komt_alleen_de_eigenaar_erin(app, db):
+    """Dicht vanaf de server (python3 noodstop.py dicht) terwijl er geen noodcode is: dan komt de eigenaar er met
+    alleen het wachtwoord in, zodat niemand buitengesloten raakt."""
+    _tweede_beheerder(db)
+    noodstop.vergrendel(db, "console op de server")
+    assert _inloggen(app.test_client(), "beheerder2", "test1234", code="").status_code == 200
+    assert _inloggen(app.test_client(), code="").status_code == 302
 
 
 def test_tv_schermen_tonen_het_vergrendel_scherm(app, afgesloten):
@@ -150,9 +194,9 @@ def test_te_veel_foute_pogingen(afgesloten, ingelogde_client, db):
 
 
 def test_logboek_houdt_bij_wie_het_deed(afgesloten, ingelogde_client, db):
-    _open(ingelogde_client)
-    acties = [r[0] for r in db.execute("SELECT actie FROM logboek WHERE endpoint LIKE 'noodstop%' ORDER BY id")]
-    assert acties == ["Noodstop: site en schermen afgesloten", "Noodstop: site en schermen weer geopend"]
+    _open(ingelogde_client, code=CODE)
+    regels = [tuple(r) for r in db.execute("SELECT actie, gebruiker_naam FROM logboek WHERE endpoint LIKE 'noodstop%' ORDER BY id")]
+    assert regels == [("Noodstop: site en schermen afgesloten", "admin"), ("Noodstop: site en schermen weer geopend", "admin")]
 
 
 # ---------- Op de server ----------
@@ -199,12 +243,32 @@ def test_schermen_ook_op_slot_als_de_eigenaar_daar_is_ingelogd(afgesloten, ingel
 
 
 def test_een_oude_sessie_van_de_eigenaar_komt_er_niet_meer_in(app, db):
-    """Op een tweede toestel ingelogd als eigenaar, daarna de noodstop vanaf het eerste: het tweede is uitgelogd, ook
-    op publieke pagina's."""
+    """Op een tweede toestel ingelogd als eigenaar, daarna de noodstop vanaf het eerste: allebei uitgelogd, ook op
+    publieke pagina's. Weer inloggen met de noodcode op het eerste geeft het tweede geen toegang."""
+    noodstop.zet_code(db, CODE)
     eerste, tweede = app.test_client(), app.test_client()
     for client in (eerste, tweede):
         assert client.post("/login", data={"naam": "admin", "wachtwoord": WACHTWOORD, "csrf_token": _csrf(client)}).status_code == 302
     _dicht(eerste)
+    _inloggen(eerste)
     assert tweede.get("/club-van-20/doe-mee").status_code == 503
     assert "Tijdelijk afgesloten" in tweede.get("/").data.decode()
     assert eerste.get("/").status_code == 200
+
+
+# ---------- Wat al openstond gaat ook dicht ----------
+
+
+def test_open_paginas_kijken_of_de_site_dicht_is(app, ingelogde_client, db):
+    """Een pagina die al openstond, herlaadt zodra de site dicht is (gedeeld.js kijkt naar /noodstop/status); ook bij de
+    eigenaar, want iedereen gaat eruit. Alleen wie tijdens de noodstop met de noodcode binnenkwam, hoeft niet te kijken."""
+    assert "data-noodstop-binnen" not in ingelogde_client.get("/").data.decode()
+    js = app.test_client().get("/static/gedeeld.js").data.decode()
+    assert "/noodstop/status" in js and "dataset.noodstopBinnen" in js
+
+
+def test_welkomstmeldingen_beginnen_niet_opnieuw_na_een_noodstop(app, afgesloten):
+    """Het antwoord voor de welkomstmelding op de tv heeft tijdens de noodstop geen 'laatste': anders zette het scherm
+    zijn teller op 0 en kwamen na het openen de meldingen van het afgelopen half uur nog een keer."""
+    antwoord = app.test_client().get("/kiosk/welkom?na=12").get_json()
+    assert antwoord["noodstop"] is True and "laatste" not in antwoord

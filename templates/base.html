@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="Kantine Beheer">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_versie }}">
 </head>
-<body>
+<body{% if noodstop_toestand and session.get("noodstop_toegang") == noodstop_toestand.sinds %} data-noodstop-binnen="1"{% endif %}>
     <div class="app-titelbalk">
         <a href="{{ url_for('dashboard') }}" class="titelbalk-link">
             <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="titelbalk-logo">
@@ -46,8 +46,12 @@
         {% endif %}
     </div>
     {% if noodstop_toestand and noodstop_toestand.actief %}
-    {# Zolang de noodstop aan staat: alleen de eigenaar komt hier, en die moet het niet vergeten (zie noodstop.py). #}
-    <a href="{{ url_for('noodstop_pagina') }}" class="noodstop-balk">Noodstop actief sinds {{ noodstop_toestand.sinds|datum_nl }}: de site en de schermen zijn afgesloten voor iedereen behalve jou. Weer openen &rsaquo;</a>
+    {# Zolang de noodstop aan staat: alleen een beheerder met de noodcode komt hier, en die moet het niet vergeten (zie noodstop.py). #}
+    {% if session.get("eigenaar") %}
+    <a href="{{ url_for('noodstop_pagina') }}" class="noodstop-balk">Noodstop actief sinds {{ noodstop_toestand.sinds|datum_nl }}: de site en de schermen zijn afgesloten; alleen beheerders met de noodcode komen erin. Weer openen &rsaquo;</a>
+    {% else %}
+    <div class="noodstop-balk">Noodstop actief sinds {{ noodstop_toestand.sinds|datum_nl }}: de site en de schermen zijn afgesloten; alleen beheerders met de noodcode komen erin. Weer openen kan de eigenaar van de site.</div>
+    {% endif %}
     {% endif %}
     {% if site_banner_tekst %}
     <div class="site-banner" id="site-banner" data-banner-tekst="{{ site_banner_tekst }}">

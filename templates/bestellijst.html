@@ -10,14 +10,14 @@
         {% if suggesties %}
         <a href="{{ url_for('bestellijst_pdf_route') }}" class="btn btn-rand">Bestellijst (PDF)</a>
         {% endif %}
-        <a href="{{ url_for('bestelling_nieuw') }}" class="btn btn-rand">Al besteld? Factuur klaarzetten</a>
+        <a href="{{ url_for('bestelling_nieuw') }}" class="btn btn-rand">Al besteld? Bestelling klaarzetten</a>
     </div>
     {% endif %}
 </div>
 
 <div class="kaart">
     <h2>Openstaande bestellingen</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">Klaargezette bestellingen — boek ze in zodra de levering binnenkomt.</p>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Klaargezet en onderweg. Elke bestelling staat als concept bij Factuur inboeken: komt de levering binnen, scan hem dan in (ook met de handterminal) en je ziet per product wat er besteld is en wat er al binnen is.</p>
     {% if open_bestellingen %}
     {% for b, regels in open_bestellingen %}
     <div style="border:1px solid var(--rand); border-radius:8px; padding:0.9rem; margin-bottom:0.9rem;">
@@ -27,7 +27,7 @@
                 <span class="tekst-zacht">— aangemaakt {{ b.aangemaakt_op|datum_nl }}{% if b.besteld_door %} door {{ b.besteld_door }}{% endif %}</span>
             </div>
             <div class="tabel-acties">
-                <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-geel btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
+                <a href="{{ url_for('factuur_voor_bestelling', bestelling_id=b.id) }}" class="btn btn-geel btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
                     {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{% endif %}
                     Inboeken
                 </a>
@@ -86,35 +86,41 @@
 {% if not pda_modus %}
 <div class="kaart">
     <h2>Voorgesteld om te bestellen</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Wat onder het minimum zit, en wat volgens de prognose de komende 7 dagen waarschijnlijk opraakt (thuiswedstrijden,
+        trainingsavonden en het weer tellen mee). Vraagt de komende week meer dan het minimum, dan staat het aantal al
+        hoger. <a href="{{ url_for('prognose_pagina') }}">Bekijk de volledige prognose</a>.
+    </p>
     {% if suggesties or overige_producten %}
     <form method="post" action="{{ url_for('bestelling_aanmaken') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="tabel-wrap">
             <table id="suggesties-tabel">
                 <thead>
-                    <tr><th></th><th></th><th>Product</th><th>Voorraad</th><th>Minimum</th><th>Aantal bestellen</th></tr>
+                    <tr><th></th><th></th><th>Product</th><th>Voorraad</th><th>Minimum</th><th>Verwacht <span class="tekst-zacht" style="font-weight:normal">(7 dagen)</span></th><th>Aantal bestellen</th></tr>
                 </thead>
                 <tbody>
                     {% for p in suggesties %}
                     {% set tekort = p.bestel_hoeveelheid if p.bestel_hoeveelheid > 0 else (p.min_voorraad - p.voorraad) %}
                     {% set besteleenheden = tekort|naar_besteleenheden(p) %}
-                    <tr>
+                    <tr data-product-id="{{ p.id }}">
                         <td><input type="checkbox" name="product_id" value="{{ p.id }}" checked></td>
                         <td>
                             {% if p.afbeelding %}
                             <img src="{{ url_for('static', filename='product_afbeeldingen/' + (p.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
                             {% endif %}
                         </td>
-                        <td>{{ p.naam }} <span class="badge badge-neutraal">Voorgesteld</span>
+                        <td>{{ p.naam }} <span class="badge badge-neutraal">Onder minimum</span>
                             {% if leverancier_namen.get(p.leverancier_id) %}<div class="tekst-zacht" style="font-size:0.72rem">bij {{ leverancier_namen[p.leverancier_id] }}</div>{% endif %}</td>
                         <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
                         <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
+                        <td class="prognose-cel tekst-zacht" data-eenheid="{{ p.eenheid }}">&hellip;</td>
                         <td>
                             <input type="number" name="aantal_{{ p.id }}" min="0" style="width:6rem"
-                                   value="{{ besteleenheden }}">
+                                   value="{{ besteleenheden }}" data-standaard="{{ besteleenheden }}" data-factor="{{ p.besteleenheid_factor }}">
                             {{ p|besteleenheid_naam }}
                             {% if p.besteleenheid_factor > 1 %}
-                            <div class="tekst-zacht" style="font-size:0.72rem">= {{ besteleenheden * p.besteleenheid_factor }} {{ p.eenheid }}</div>
+                            <div class="tekst-zacht aantal-uitleg" style="font-size:0.72rem">= {{ besteleenheden * p.besteleenheid_factor }} {{ p.eenheid }}</div>
                             {% endif %}
                         </td>
                     </tr>
@@ -122,6 +128,7 @@
                 </tbody>
             </table>
         </div>
+        <p class="tekst-zacht" id="prognose-status" style="font-size:0.8rem; margin:0.5rem 0 0">De prognose wordt berekend&hellip;</p>
         {% if overige_producten %}
         <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.8rem">
             <select id="extra-product-select">
@@ -141,96 +148,175 @@
             var tabel = document.getElementById('suggesties-tabel');
             var select = document.getElementById('extra-product-select');
             var knop = document.getElementById('extra-product-toevoegen-knop');
-            if (!tabel || !select || !knop) return;
+            var status = document.getElementById('prognose-status');
+            if (!tabel) return;
 
-            knop.addEventListener('click', function () {
-                var optie = select.options[select.selectedIndex];
-                if (!optie || !optie.value) return;
+            function cel(rij, inhoud) {
+                var td = document.createElement('td');
+                if (inhoud) td.appendChild(inhoud);
+                rij.appendChild(td);
+                return td;
+            }
+            function tekst(t, klasse) {
+                var s = document.createElement('span');
+                if (klasse) s.className = klasse;
+                s.textContent = t;
+                return s;
+            }
+            function procent(kans) {
+                return kans > 0.99 ? '> 99%' : Math.round(kans * 100) + '%';
+            }
+
+            // Een rij erbij: een ander product uit de keuzelijst, of een voorspeld tekort uit de prognose.
+            // o = {id, naam, foto, voorraad, minimum, eenheid, besteleenheid, factor, aantal, aan, badge, verwacht, optie}
+            function voegRijToe(o) {
                 var rij = document.createElement('tr');
-
-                var vinkjeTd = document.createElement('td');
+                rij.dataset.productId = o.id;
                 var vinkje = document.createElement('input');
                 vinkje.type = 'checkbox';
                 vinkje.name = 'product_id';
-                vinkje.value = optie.value;
-                vinkje.checked = true;
-                vinkjeTd.appendChild(vinkje);
-
-                var thumbTd = document.createElement('td');
-                if (optie.dataset.afbeelding) {
+                vinkje.value = o.id;
+                vinkje.checked = o.aan;
+                cel(rij, vinkje);
+                var thumb = cel(rij);
+                if (o.foto) {
                     var img = document.createElement('img');
-                    img.src = '/static/product_afbeeldingen/' + optie.dataset.afbeelding;
+                    img.src = o.foto;
                     img.alt = '';
                     img.className = 'product-thumb';
-                    thumbTd.appendChild(img);
+                    thumb.appendChild(img);
                 }
+                var naam = cel(rij, document.createTextNode(o.naam + ' '));
+                if (o.badge) naam.appendChild(tekst(o.badge, 'badge badge-laag'));
+                if (o.optie) {
+                    var weg = document.createElement('button');
+                    weg.type = 'button';
+                    weg.className = 'btn-tekstlink';
+                    weg.style.fontSize = '0.78rem';
+                    weg.textContent = 'Verwijderen';
+                    weg.addEventListener('click', function () {
+                        rij.remove();
+                        o.optie.selected = false;
+                        select.insertBefore(o.optie, select.options[1] || null);
+                        select.value = '';
+                    });
+                    naam.appendChild(weg);
+                }
+                cel(rij, document.createTextNode(o.voorraad));
+                cel(rij, document.createTextNode(o.minimum));
+                var verwacht = cel(rij, document.createTextNode(o.verwacht || ''));
+                verwacht.className = 'prognose-cel tekst-zacht';
+                var aantalTd = cel(rij);
+                var aantal = document.createElement('input');
+                aantal.type = 'number';
+                aantal.name = 'aantal_' + o.id;
+                aantal.min = '0';
+                aantal.value = String(o.aantal);
+                aantal.style.width = '6rem';
+                aantalTd.appendChild(aantal);
+                aantalTd.appendChild(document.createTextNode(' ' + o.besteleenheid));
+                if (o.factor > 1) {
+                    var uitleg = tekst('= ' + (o.aantal * o.factor) + ' ' + o.eenheid, 'tekst-zacht aantal-uitleg');
+                    uitleg.style.display = 'block';
+                    uitleg.style.fontSize = '0.72rem';
+                    aantalTd.appendChild(uitleg);
+                    aantal.addEventListener('input', function () {
+                        uitleg.textContent = '= ' + ((parseInt(aantal.value, 10) || 0) * o.factor) + ' ' + o.eenheid;
+                    });
+                }
+                tabel.querySelector('tbody').appendChild(rij);
+                return rij;
+            }
 
-                var naamTd = document.createElement('td');
-                naamTd.appendChild(document.createTextNode(optie.dataset.naam + ' '));
-                var verwijderKnop = document.createElement('button');
-                verwijderKnop.type = 'button';
-                verwijderKnop.className = 'btn-tekstlink';
-                verwijderKnop.style.fontSize = '0.78rem';
-                verwijderKnop.textContent = 'Verwijderen';
-                verwijderKnop.addEventListener('click', function () {
-                    rij.remove();
-                    optie.selected = false;
-                    select.insertBefore(optie, select.options[1] || null);
+            if (select && knop) {
+                knop.addEventListener('click', function () {
+                    var optie = select.options[select.selectedIndex];
+                    if (!optie || !optie.value) return;
+                    voegRijToe({
+                        id: optie.value, naam: optie.dataset.naam, aan: true, aantal: 1, optie: optie,
+                        foto: optie.dataset.afbeelding ? '/static/product_afbeeldingen/' + optie.dataset.afbeelding : null,
+                        voorraad: optie.dataset.voorraad, minimum: optie.dataset.minimum, eenheid: optie.dataset.eenheid,
+                        besteleenheid: optie.dataset.besteleenheid, factor: parseInt(optie.dataset.factor, 10) || 1
+                    });
+                    optie.remove();
                     select.value = '';
                 });
-                naamTd.appendChild(verwijderKnop);
+            }
 
-                var voorraadTd = document.createElement('td');
-                voorraadTd.textContent = optie.dataset.voorraad;
-
-                var minimumTd = document.createElement('td');
-                minimumTd.textContent = optie.dataset.minimum;
-
-                var aantalTd = document.createElement('td');
-                var aantalInput = document.createElement('input');
-                aantalInput.type = 'number';
-                aantalInput.name = 'aantal_' + optie.value;
-                aantalInput.min = '0';
-                aantalInput.value = '1';
-                aantalInput.style.width = '6rem';
-                aantalTd.appendChild(aantalInput);
-                aantalTd.appendChild(document.createTextNode(' ' + optie.dataset.besteleenheid));
-                if (parseInt(optie.dataset.factor, 10) > 1) {
-                    var hint = document.createElement('div');
-                    hint.className = 'tekst-zacht';
-                    hint.style.fontSize = '0.72rem';
-                    hint.textContent = '= ' + optie.dataset.factor + ' ' + optie.dataset.eenheid;
-                    aantalTd.appendChild(hint);
-                }
-
-                rij.appendChild(vinkjeTd);
-                rij.appendChild(thumbTd);
-                rij.appendChild(naamTd);
-                rij.appendChild(voorraadTd);
-                rij.appendChild(minimumTd);
-                rij.appendChild(aantalTd);
-                tabel.querySelector('tbody').appendChild(rij);
-                optie.remove();
-                select.value = '';
-            });
+            // De prognose (routes/bestellijst.py, bestellijst_prognose): rekent soms enkele seconden, dus na het laden.
+            fetch('{{ url_for("bestellijst_prognose") }}', { credentials: 'same-origin' })
+                .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+                .then(function (data) {
+                    var cellen = tabel.querySelectorAll('tbody tr[data-product-id] .prognose-cel');
+                    if (!data.beschikbaar) {
+                        cellen.forEach(function (c) { c.textContent = '–'; });
+                        status.textContent = 'Nog geen prognose: daarvoor zijn eerst een paar tellingen nodig. De aantallen gaan uit van het minimum.';
+                        return;
+                    }
+                    var verhoogd = 0;
+                    tabel.querySelectorAll('tbody tr[data-product-id]').forEach(function (rij) {
+                        var p = data.producten[rij.dataset.productId];
+                        var c = rij.querySelector('.prognose-cel');
+                        if (!c || c.textContent.trim() !== '…') return;
+                        if (!p) { c.textContent = '–'; return; }
+                        c.textContent = '~' + p.verwacht + ' ' + (c.dataset.eenheid || '');
+                        if (p.kans_tekort >= 0.2) {
+                            c.appendChild(document.createElement('br'));
+                            c.appendChild(tekst('kans op tekort ' + procent(p.kans_tekort), 'badge badge-laag'));
+                        }
+                        var invoer = rij.querySelector('input[type=number]');
+                        // Alleen ophogen als het aantal nog op het gewone voorstel staat: wat je zelf invulde, blijft.
+                        if (invoer && p.advies_eenheden > p.basis_eenheden && invoer.value === invoer.dataset.standaard) {
+                            invoer.value = String(p.advies_eenheden);
+                            var factor = parseInt(invoer.dataset.factor, 10) || 1;
+                            var uitleg = rij.querySelector('.aantal-uitleg');
+                            if (uitleg) uitleg.textContent = '= ' + (p.advies_eenheden * factor) + ' ' + (c.dataset.eenheid || '');
+                            var hint = tekst('verhoogd door de prognose (was ' + p.basis_eenheden + ')', 'tekst-zacht');
+                            hint.style.display = 'block';
+                            hint.style.fontSize = '0.72rem';
+                            invoer.parentNode.appendChild(hint);
+                            verhoogd++;
+                        }
+                    });
+                    var al = {};
+                    tabel.querySelectorAll('tbody tr[data-product-id]').forEach(function (rij) { al[rij.dataset.productId] = true; });
+                    var erbij = 0;
+                    data.extra.forEach(function (p) {
+                        if (al[p.id]) return;
+                        if (select) {
+                            var optie = select.querySelector('option[value="' + p.id + '"]');
+                            if (optie) optie.remove();
+                        }
+                        voegRijToe({
+                            id: p.id, naam: p.naam, foto: p.foto, eenheid: p.eenheid, factor: p.factor,
+                            voorraad: p.voorraad + ' ' + p.eenheid, minimum: p.min_voorraad + ' ' + p.eenheid,
+                            besteleenheid: p.besteleenheid, aantal: p.advies_eenheden,
+                            badge: 'Raakt waarschijnlijk op (' + procent(p.kans_tekort) + ')',
+                            verwacht: '~' + p.verwacht + ' ' + p.eenheid + (p.onderweg ? ' · ' + p.onderweg + ' onderweg' : ''),
+                            aan: p.status === 'urgent'
+                        });
+                        erbij++;
+                    });
+                    var zinnen = [];
+                    if (verhoogd) zinnen.push(verhoogd + (verhoogd === 1 ? ' aantal is' : ' aantallen zijn') + ' verhoogd omdat de komende week meer vraagt dan het minimum.');
+                    if (erbij) zinnen.push(erbij + (erbij === 1 ? ' product zit' : ' producten zitten') + ' nog boven het minimum maar raakt waarschijnlijk op; die staan er onderaan bij (aangevinkt als de kans 50% of meer is).');
+                    status.textContent = zinnen.length ? 'Prognose: ' + zinnen.join(' ') : 'Prognose: de voorgestelde aantallen zijn genoeg voor de komende week.';
+                })
+                .catch(function () {
+                    tabel.querySelectorAll('.prognose-cel').forEach(function (c) { if (c.textContent.trim() === '…') c.textContent = '–'; });
+                    status.textContent = 'De prognose kon niet worden geladen. Ververs de pagina om het opnieuw te proberen; de aantallen gaan nu uit van het minimum.';
+                });
         })();
         </script>
         <div class="veld" style="max-width:300px; margin-top:1rem">
             <label>Besteld door</label>
             <p class="veld-waarde">{{ huidige_gebruiker }}</p>
         </div>
-        <button type="submit" class="btn btn-geel">Bestelling aanmaken</button>
+        <button type="submit" class="btn btn-geel">Bestelling klaarzetten</button>
     </form>
     {% else %}
     <p class="leeg">Niets nodig — alle voorraad zit boven het minimum.</p>
     {% endif %}
-</div>
-
-{# De kaart 'Voorspelde tekorten' komt uit _bestellijst_voorspeld.html en laadt na de rest: het voorspelmodel rekent op de
-   server soms enkele seconden (zie gedeeld.js, data-lazy-bron). Zijn er geen verwachte tekorten, dan verdwijnt dit blokje. #}
-<div data-lazy-bron="{{ url_for('bestellijst_voorspeld') }}"
-     data-lazy-fout="De voorspelde tekorten konden niet worden geladen. Ververs de pagina om het opnieuw te proberen.">
-    <p class="tekst-zacht" data-lazy-status style="margin:0 0 1rem">Verwachte tekorten worden berekend&hellip;</p>
 </div>
 
 {% if meldingen.producten or meldingen.teksten %}

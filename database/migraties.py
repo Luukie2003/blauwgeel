@@ -373,6 +373,9 @@ KOLOM_MIGRATIES = [
         "TEXT NOT NULL DEFAULT 'Hoi {voornaam}! Het nieuwe seizoen ({seizoen}) van de Club van 20 is begonnen. "
         "Doe je weer mee voor €{bedrag}? Dan komt \"{naambordje}\" weer op het scherm in de kantine. {betaallink}'",
     ),
+    # Welke looplijst dit is (1.58.0): breek je hem op het ene toestel af (of begin je opnieuw), dan merkt een ander
+    # toestel of de handterminal-app dat aan een ander of ontbrekend loop_id (zie routes/tellen/looplijst_opslag.py).
+    ("loop_voortgang", "loop_id", "TEXT"),
 ]
 
 

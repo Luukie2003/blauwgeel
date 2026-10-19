@@ -14,6 +14,8 @@ LAZY_PAGINA = {
     "/bestellijst": "/bestellijst/voorspeld",
     "/prognose": "/prognose/resultaat",
 }
+# Op de computer haalt de bestellijst de prognose op als gegevens, voor in de tabel 'Voorgesteld om te bestellen'.
+LAZY_COMPUTER = {**LAZY_PAGINA, "/bestellijst": "/bestellijst/prognose"}
 
 
 @pytest.fixture
@@ -27,12 +29,15 @@ def zonder_model(monkeypatch):
     monkeypatch.setattr(bestellijst_routes, "bereken_voorspelde_tekorten", mag_niet)
 
 
-@pytest.mark.parametrize("pagina, deel", LAZY_PAGINA.items())
+@pytest.mark.parametrize("pagina, deel", LAZY_COMPUTER.items())
 def test_de_pagina_rekent_het_voorspelmodel_niet_zelf_uit(ingelogde_client, zonder_model, pagina, deel):
     resp = ingelogde_client.get(pagina)
     tekst = resp.data.decode()
     assert resp.status_code == 200
-    assert f'data-lazy-bron="{deel}' in tekst and "data-lazy-status" in tekst  # de plek voor het rekenwerk, tot het er is
+    if pagina == "/bestellijst":
+        assert f"fetch('{deel}'" in tekst and "De prognose wordt berekend" in tekst
+    else:
+        assert f'data-lazy-bron="{deel}' in tekst and "data-lazy-status" in tekst  # de plek voor het rekenwerk, tot het er is
 
 
 @pytest.mark.parametrize("pagina, deel", LAZY_PAGINA.items())

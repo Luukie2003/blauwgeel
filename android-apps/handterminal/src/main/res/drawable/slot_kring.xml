@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- De gele cirkel met het slot op het vergrendel-scherm (zelfde vorm als op de tv, templates/noodstop_tv.html). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/geel" />
+    <stroke android:width="6dp" android:color="#33FCD42F" />
+</shape>

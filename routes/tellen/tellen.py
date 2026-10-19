@@ -5,7 +5,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 from database import get_db
 from helpers import now_datetime_local, now_str
 from productkaart import TELLEN_VOORWAARDE
-from routes.tellen.looplijst_opslag import loop_onderbroken
+from routes.tellen.looplijst_opslag import loop_bijwerken, loop_onderbroken
 from routes.tellen.verwerken import verwerk_telling
 
 
@@ -51,6 +51,7 @@ def register_routes(app):
         producten = db.execute(
             f"SELECT * FROM producten WHERE {TELLEN_VOORWAARDE} ORDER BY categorie, naam"
         ).fetchall()
+        loop_bijwerken(db)  # wat er in de app of op een ander toestel is afgebroken, staat hier ook niet meer
         return render_template(
             "tellen.html",
             producten=producten,

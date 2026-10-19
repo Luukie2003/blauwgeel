@@ -23,7 +23,8 @@ object Api {
 
     enum class Soort { GEEN_VERBINDING, TRAAG, BEVEILIGING, NIET_INGELOGD, GEEN_TOEGANG, NOODSTOP, NIET_GEVONDEN, ONGELDIG, SERVER }
 
-    class Fout(val soort: Soort, melding: String) : Exception(melding) {
+    /** [code]: het 'fout'-veld van de site, voor een fout die een scherm zelf afhandelt (zoals "afgebroken"). */
+    class Fout(val soort: Soort, melding: String, val code: String? = null) : Exception(melding) {
         /** Netwerk of server: het kan zo weer werken (in tegenstelling tot bijvoorbeeld een foute invoer). */
         val tijdelijk get() = soort in setOf(Soort.GEEN_VERBINDING, Soort.TRAAG, Soort.SERVER)
     }
@@ -111,7 +112,7 @@ object Api {
                 status == 403 -> Fout(Soort.GEEN_TOEGANG, melding ?: "Dit mag jouw account niet.")
                 status == 503 && json?.optString("fout") == "noodstop" -> Fout(Soort.NOODSTOP, context.getString(R.string.code_noodstop))
                 status == 404 -> Fout(Soort.NIET_GEVONDEN, melding ?: "Niet gevonden.")
-                status in 400..499 -> Fout(Soort.ONGELDIG, melding ?: "Dat ging niet goed (fout $status).")
+                status in 400..499 -> Fout(Soort.ONGELDIG, melding ?: "Dat ging niet goed (fout $status).", json?.optString("fout"))
                 else -> Fout(Soort.SERVER, context.getString(R.string.fout_server_kort))
             }
         } catch (e: IOException) {
@@ -191,6 +192,27 @@ object Api {
             }
         } finally {
             verbinding.disconnect()
+        }
+    }
+
+    /** GET /noodstop/status (staat altijd open, ook tijdens een noodstop): is de site afgesloten met de noodstop (zie
+     * noodstop.py op de site)? null als de site geen antwoord geeft: dan weten we het niet. */
+    suspend fun noodstopActief(context: Context): Boolean? = withContext(Dispatchers.IO) {
+        try {
+            val verbinding = Beveiliging.open(context, Instellingen(context).basisUrl + "/noodstop/status")
+            try {
+                verbinding.connectTimeout = 8_000
+                verbinding.readTimeout = 8_000
+                verbinding.setRequestProperty("Cache-Control", "no-cache")
+                verbinding.setRequestProperty("User-Agent", userAgent)
+                if (verbinding.responseCode !in 200..299) return@withContext null
+                val json = JSONObject(verbinding.inputStream.bufferedReader().use { it.readText() })
+                if (json.has("actief")) json.optBoolean("actief") else null
+            } finally {
+                verbinding.disconnect()
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 

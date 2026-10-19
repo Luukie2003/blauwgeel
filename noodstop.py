@@ -1,10 +1,10 @@
 """De noodstop: met één knop de hele site en de tv-schermen afsluiten, bijvoorbeeld bij een vermoeden van een hack.
 
-Alleen de eigenaar (gebruikers.eigenaar, één account) kan afsluiten en weer openen. Afsluiten logt iedereen overal uit
-(ook de eigenaar op andere toestellen); daarna kan alleen de eigenaar nog inloggen. Publieke pagina's, de apps en het
-wachtwoord-vergeten-formulier gaan dicht en de tv-schermen tonen een vergrendel-scherm (zie app.py, noodstop_bewaken).
-Weer openen vraagt het wachtwoord van de eigenaar én een aparte noodcode, zodat een gestolen wachtwoord alleen niet
-genoeg is.
+Alleen de eigenaar (gebruikers.eigenaar, één account) kan afsluiten en weer openen, en afsluiten kan pas als er een
+noodcode is. Afsluiten logt iedereen overal uit, ook de beheerders en de eigenaar zelf. Daarna komt alleen een
+beheerder er nog in, met zijn wachtwoord én de noodcode (mag_inloggen), zodat een gestolen wachtwoord alleen niet
+genoeg is. Publieke pagina's, de apps en het wachtwoord-vergeten-formulier gaan dicht en de tv-schermen tonen een
+vergrendel-scherm (zie app.py, noodstop_bewaken). Weer openen vraagt het wachtwoord van de eigenaar en de noodcode.
 
 Kwijt of buitengesloten? Op de server (een Bash-console op PythonAnywhere) kan het altijd:
 
@@ -118,6 +118,22 @@ def wis_code(db):
 def code_klopt(db, code):
     rij = db.execute("SELECT noodstop_code_hash FROM instellingen WHERE id = 1").fetchone()
     return bool(rij and rij[0] and code and check_password_hash(rij[0], code.strip()))
+
+
+def mag_inloggen(db, gebruiker, code):
+    """Inloggen tijdens een noodstop (het wachtwoord klopt al): alleen een beheerder, en alleen met de noodcode. Geeft
+    een foutmelding, of None als het mag. Een foute noodcode telt als foute poging (zie foute_poging). Is er (nog) geen
+    noodcode, bijvoorbeeld na 'python3 noodstop.py dicht' op de server, dan komt alleen de eigenaar erin."""
+    if gebruiker["rol"] != "beheerder":
+        return "De site is tijdelijk afgesloten. Probeer het later opnieuw."
+    if (minuten := wachten(db)):
+        return f"Te veel foute pogingen. Probeer het over {minuten} minuut/minuten opnieuw."
+    if not toestand(db)["code_ingesteld"]:
+        return None if is_eigenaar(db, gebruiker["id"]) else "De site is tijdelijk afgesloten. Probeer het later opnieuw."
+    if not code_klopt(db, code):
+        foute_poging(db)
+        return "De site is afgesloten met de noodstop: vul ook de noodcode in. Wachtwoord of noodcode klopt niet."
+    return None
 
 
 def wachten(db):

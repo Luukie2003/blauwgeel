@@ -29,7 +29,12 @@
     <div class="pda-knoppenrij" style="margin:0">
         <a href="{{ url_for('tellen_lopen_hervatten') }}" class="btn btn-geel">Doorgaan</a>
         <a href="{{ url_for('tellen_lopen_starten') }}" class="btn btn-rand"
-           onclick="toonBevestiging('Opnieuw beginnen? Wat je tot nu toe hebt ingevuld wordt weggegooid.', function () { window.location = '{{ url_for('tellen_lopen_starten') }}'; }); return false;">Opnieuw beginnen</a>
+           onclick="toonBevestiging('Opnieuw beginnen? Wat je tot nu toe hebt ingevuld wordt weggegooid.', function () { window.location = '{{ url_for('tellen_lopen_starten') }}'; }, {ja: 'Ja, opnieuw', nee: 'Nee'}); return false;">Opnieuw beginnen</a>
+        <form method="post" action="{{ url_for('tellen_lopen_afbreken') }}" style="margin:0"
+              onsubmit="return bevestigEnVerstuur(this, 'Looplijst afbreken? Wat je hebt ingevuld wordt niet opgeslagen, ook niet wat in de app geteld is.', {ja: 'Ja, afbreken', nee: 'Nee'});">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-gevaar">Afbreken</button>
+        </form>
     </div>
 </div>
 {% else %}

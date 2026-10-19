@@ -115,6 +115,9 @@ def register_routes(app):
 
     @app.after_request
     def logboek_vastleggen(response):
+        # De route schreef het logboek al zelf (zie schrijf_logboek), bijvoorbeeld omdat de sessie daarna leeg is.
+        if g.pop("logboek_geschreven", False):
+            return response
         if request.method != "POST" or request.endpoint not in LOGBOEK_ACTIES:
             return response
         # Is een eerdere before_request (CSRF, inloggen, rechten) de aanvraag

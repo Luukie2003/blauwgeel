@@ -1,7 +1,7 @@
-"""Bestellen > Factuur inboeken: dozen en verpakkingen scannen en in één keer inboeken (zie facturen.py). Werkt in de
-browser, ook op de handterminal (de scanner typt de barcode en drukt op Enter), en via JSON voor de app die er later
-bij komt. Die logt in met de 6-cijferige code van een account (tablet_code_inloggen) en stuurt het csrf_token mee in
-de header X-CSRF-Token."""
+"""Bestellen > Factuur inboeken: dozen en verpakkingen scannen en in één keer inboeken (zie facturen.py). Een
+klaargezette bestelling staat hier als concept klaar (factuur_voor_bestelling). Werkt in de browser en via JSON voor de
+app op de handterminal. Die logt in met de 6-cijferige code van een account (tablet_code_inloggen) en stuurt het
+csrf_token mee in de header X-CSRF-Token."""
 
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
 
@@ -74,6 +74,16 @@ def register_routes(app):
         )
         return redirect(url_for("factuur_ronde", ronde_id=ronde_id))
 
+    @app.route("/facturen/bestelling/<int:bestelling_id>", methods=["GET", "POST"])
+    def factuur_voor_bestelling(bestelling_id):
+        """Een klaargezette bestelling inboeken: verder in de ronde die er al bij hoort, of een nieuwe beginnen. Mag ook
+        met GET (de knop 'Inboeken' op de bestellijst): er komt nooit meer dan één open ronde per bestelling."""
+        ronde_id = facturen.ronde_voor_bestelling(get_db(), bestelling_id, **_door())
+        if ronde_id is None:
+            flash("Deze bestelling staat niet (meer) klaar om in te boeken.", "error")
+            return redirect(url_for("facturen_overzicht"))
+        return redirect(url_for("factuur_ronde", ronde_id=ronde_id))
+
     @app.route("/facturen/<int:ronde_id>")
     def factuur_ronde(ronde_id):
         db = get_db()
@@ -115,6 +125,14 @@ def register_routes(app):
             get_db(), ronde_id, request.form.get("product_id"), request.form.get("eenheden"), request.form.get("prijs")
         )
         flash(fout or "Toegevoegd.", "error" if fout else "success")
+        return redirect(url_for("factuur_ronde", ronde_id=ronde_id))
+
+    @app.route("/facturen/<int:ronde_id>/zoals-besteld", methods=["POST"])
+    def factuur_zoals_besteld(ronde_id):
+        """Wat van de bestelling nog niet gescand is erbij zetten zoals besteld: één product (product_id) of alles."""
+        aantal, fout = facturen.voeg_rest_toe(get_db(), ronde_id, request.form.get("product_id"))
+        flash(fout or ("Toegevoegd zoals besteld." if aantal == 1 else f"{aantal} producten toegevoegd zoals besteld."),
+              "error" if fout else "success")
         return redirect(url_for("factuur_ronde", ronde_id=ronde_id))
 
     @app.route("/facturen/<int:ronde_id>/regels/<int:regel_id>", methods=["POST"])
@@ -165,9 +183,19 @@ def register_routes(app):
         return jsonify({
             "open": [facturen.als_json(facturen.ronde(db, r["id"])) for r in facturen.open_rondes(db)],
             "leveranciers": [{"id": r["id"], "naam": r["naam"]} for r in alle_leveranciers(db, alleen_actief=True)],
-            "bestellingen": [dict(r) for r in facturen.open_bestellingen(db)],
+            "bestellingen": facturen.open_bestellingen(db),
             "producten": [dict(r) for r in _producten(db)],
         })
+
+    @app.route("/api/facturen/bestelling/<int:bestelling_id>", methods=["POST"])
+    def api_factuur_bestelling(bestelling_id):
+        """Een klaargezette bestelling inboeken: de ronde die er al bij hoort, of een nieuwe (zie
+        facturen.ronde_voor_bestelling). Twee keer hetzelfde verzoek geeft dus dezelfde ronde."""
+        db = get_db()
+        ronde_id = facturen.ronde_voor_bestelling(db, bestelling_id, bron="app", **_door())
+        if ronde_id is None:
+            return jsonify({"fout": "Deze bestelling staat niet (meer) klaar om in te boeken."}), 404
+        return jsonify(facturen.als_json(facturen.ronde(db, ronde_id)))
 
     @app.route("/api/facturen/<int:ronde_id>", methods=["GET", "POST"])
     def api_factuur(ronde_id):
@@ -205,6 +233,20 @@ def register_routes(app):
         if fout:
             return jsonify({"status": "fout", "melding": fout}), 400
         return _scan_json(db, ronde_id, code)
+
+    @app.route("/api/facturen/<int:ronde_id>/zoals-besteld", methods=["POST"])
+    def api_factuur_zoals_besteld(ronde_id):
+        """{product_id} (of leeg voor alles): wat van de bestelling nog niet gescand is, erbij zoals besteld. Met een
+        verzoek_id gebeurt het maar één keer (zie eenmalig)."""
+        product_id = _data().get("product_id")
+
+        def zoals_besteld(db):
+            _, fout = facturen.voeg_rest_toe(db, ronde_id, product_id)
+            if fout:
+                return {"status": "fout", "melding": fout}, 400
+            return facturen.als_json(facturen.ronde(db, ronde_id)), 200
+
+        return eenmalig(zoals_besteld)
 
     @app.route("/api/facturen/<int:ronde_id>/regels/<int:regel_id>", methods=["POST"])
     def api_factuur_regel(ronde_id, regel_id):

@@ -72,7 +72,9 @@ document.addEventListener("click", function (e) {
 });
 
 // ---------- Bevestigen via pop-up i.p.v. de kale browser-confirm() ----------
-function toonBevestiging(bericht, callback) {
+// opties (mag weg): {ja: "Ja, afbreken", nee: "Nee, verder tellen"} -- duidelijker dan
+// "Bevestigen" en "Annuleren" als de vraag zelf over annuleren gaat.
+function toonBevestiging(bericht, callback, opties) {
     var overlay = document.getElementById("bevestig-modal");
     if (!overlay) {
         overlay = document.createElement("div");
@@ -88,6 +90,8 @@ function toonBevestiging(bericht, callback) {
         document.body.appendChild(overlay);
     }
     overlay.querySelector("#bevestig-modal-tekst").textContent = bericht;
+    overlay.querySelector('[data-actie="annuleren"]').textContent = (opties && opties.nee) || "Annuleren";
+    overlay.querySelector('[data-actie="bevestigen"]').textContent = (opties && opties.ja) || "Bevestigen";
     var sluiten = function () {
         overlay.classList.remove("open");
     };
@@ -102,10 +106,10 @@ function toonBevestiging(bericht, callback) {
 // Vervangt onsubmit="return confirm(...)": zelfde bevestig-stap, maar
 // met de pop-up van de site i.p.v. de lelijke kale browserdialoog.
 // De submit zelf blijft daarna een gewone paginaherlaad.
-function bevestigEnVerstuur(form, bericht) {
+function bevestigEnVerstuur(form, bericht, opties) {
     toonBevestiging(bericht, function () {
         form.submit();
-    });
+    }, opties);
     return false;
 }
 
@@ -265,6 +269,29 @@ document.addEventListener("ajax-form:success", function (e) {
         toonToast(e.detail.melding);
     }
 });
+
+// ---------- Noodstop: ook een pagina die al openstaat gaat dicht ----------
+// Drukt de eigenaar op de noodstop (Beheer > Noodstop, zie noodstop.py), dan
+// krijgt elk volgend verzoek het afgesloten-scherm. Een pagina die al openstond
+// (op een andere computer, de tablet) bleef tot dan gewoon staan; daarom kijkt
+// elke pagina elke 30 seconden, en meteen als je hem weer voor je haalt, of de
+// site is afgesloten, en herlaadt dan. Ook bij beheerders: iedereen wordt
+// uitgelogd. Wie tijdens de noodstop met de noodcode inlogde (data-noodstop-binnen
+// op <body>), werkt gewoon door; die pagina's hoeven niet te kijken.
+(function () {
+    if (document.body.dataset.noodstopBinnen === "1") return;
+    function kijk() {
+        if (document.visibilityState !== "visible") return;
+        fetch("/noodstop/status", { cache: "no-store", credentials: "same-origin" })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data && data.actief === true) window.location.reload();
+            })
+            .catch(function () {});
+    }
+    setInterval(kijk, 30000);
+    document.addEventListener("visibilitychange", kijk);
+})();
 
 // Cachet alleen de schil (stijl, logo) en toont een nette offline-pagina
 // i.p.v. de kale foutmelding van de browser bij geen verbinding -- zie

@@ -53,6 +53,29 @@
         <item name="android:background">@drawable/stip_leeg</item>
     </style>
 
+    <!-- Het label boven een veld in een dialoog (dialog_nieuw_product.xml). -->
+    <style name="VeldLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:textColor">@color/tekst_zacht</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- Een kenmerk op het vergrendel-scherm (activity_vergrendeld.xml). -->
+    <style name="KenmerkOpNavy">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:background">@drawable/kenmerk_op_navy</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:paddingTop">7dp</item>
+        <item name="android:paddingBottom">7dp</item>
+        <item name="android:textColor">@color/tekst_op_navy</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
     <!-- ===== Werkschermen ===== -->
 
     <style name="Knop">

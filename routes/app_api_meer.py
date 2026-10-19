@@ -2,13 +2,14 @@
 
 Met deze schermen heeft de app geen website meer nodig: de uitgebreide productinformatie, kassa en kluis tellen en
 goedkeuren, de keuken (tellen, inboeken, frituurvet), boodschappen, de Club van 20-aanmeldingen, de agenda, de prognose,
-het barcode-overzicht en de taken die een beheerder voor iemand klaarzet. Zelfde afspraken als routes/app_api.py:
+het barcode-overzicht, de taken die een beheerder voor iemand klaarzet en een nieuw product aanmaken (bij een barcode
+die bij nog geen enkel product hoort). Zelfde afspraken als routes/app_api.py:
 inloggen met de code, het csrf_token in de header, een verzoek_id voor schrijfacties (zie eenmalig) en JSON in plaats
 van een doorverwijzing als iets niet mag. De logica is die van de site (dezelfde functies), de rechten staan in
 rechten.py.
 
-Wat alleen op de site kan (corrigeren, bewerken, heropenen, een bestelling klaarzetten, de kantine-tv, prijzen en
-producten beheren), staat hier bewust niet in: de app zegt dan dat het niet in de app kan."""
+Wat alleen op de site kan (corrigeren, bewerken, heropenen, een bestelling klaarzetten, de kantine-tv, prijzen
+beheren), staat hier bewust niet in: de app zegt dan dat het niet in de app kan."""
 
 from datetime import date, datetime
 
@@ -32,9 +33,12 @@ from helpers import (
 from helpers.kas import KASSA_COUPURES
 from helpers.tijd import vandaag_amsterdam
 from keukenbeheer import boek_keuken_in, keuken_producten, keuken_tellingen, verwerk_keuken_telling
-from routes.app_api import _data, _foto, _fout, _getal, eenmalig, taak_vragen
+from leveranciers import alle_leveranciers
+from productkaart import BESTELEENHEDEN, EENHEDEN
+from routes.app_api import _data, _foto, _fout, _getal, _product, eenmalig, taak_vragen
 from routes.kassa import keur_kassa_telling_goed, maak_kassa_telling
 from routes.kluis import keur_kluis_telling_goed, maak_kluis_telling
+from routes.logboek import schrijf_logboek
 
 RECENTE_GELDTELLINGEN = 6
 MAX_STUKS = 100000
@@ -218,8 +222,97 @@ def _verschil_tekst(verschil):
     return f"{_euro(abs(verschil))} {'te veel' if verschil > 0 else 'te weinig'}."
 
 
+# ---------------------------------------------------------------- een nieuw product
+
+
+def _categorieen(db):
+    return [r["naam"] for r in db.execute("SELECT naam FROM categorieen ORDER BY naam COLLATE NOCASE").fetchall()]
+
+
+def maak_product(db, data, door=None):
+    """Een nieuw product vanaf de handterminal, zoals Snel toevoegen op de site: naam, categorie, eenheid en eventueel de
+    besteleenheid (een krat van 24) en de verkoopprijs. Voorraad en minimum beginnen op 0; foto, leverancier en het
+    prijzenscherm vul je later op de computer aan. Geeft (product_id, foutmelding)."""
+    naam = " ".join(str(data.get("naam") or "").split())
+    if not naam:
+        return None, "Vul de naam van het product in."
+    if len(naam) > 80:
+        return None, "Die naam is te lang; houd het kort, bijvoorbeeld 'Hertog Jan 0.0 Fles'."
+    if db.execute(
+        "SELECT 1 FROM producten WHERE naam = ? COLLATE NOCASE AND COALESCE(gearchiveerd, 0) = 0", (naam,)
+    ).fetchone():
+        return None, f"Er is al een product '{naam}'. Kies dat in de lijst."
+    categorie = str(data.get("categorie") or "").strip()
+    if categorie not in _categorieen(db):
+        categorie = "Overig"
+    eenheid = str(data.get("eenheid") or "").strip()
+    if eenheid not in EENHEDEN:
+        return None, "Kies de eenheid waarin je het product telt (bijvoorbeeld Fles of Zakje)."
+    besteleenheid = str(data.get("besteleenheid") or "").strip() or None
+    factor = _getal(data.get("per_besteleenheid"), 1)
+    if besteleenheid is not None and (besteleenheid not in BESTELEENHEDEN or factor < 2):
+        return None, "Vul in hoeveel er in de besteleenheid zitten (2 of meer), of laat de besteleenheid leeg."
+    if besteleenheid is None:
+        factor = 1
+    prijs = _kommagetal(data.get("verkoopprijs")) if str(data.get("verkoopprijs") or "").strip() else 0.0
+    if prijs is None or prijs < 0:
+        return None, "Vul een geldige verkoopprijs in (bijvoorbeeld 2,50), of laat hem leeg."
+    product_id = db.execute(
+        """INSERT INTO producten (naam, categorie, eenheid, voorraad, min_voorraad, bestel_hoeveelheid, verkoopprijs,
+               actief, besteleenheid, besteleenheid_factor, opmerking)
+           VALUES (?, ?, ?, 0, 0, 0, ?, 1, ?, ?, '')""",
+        (naam, categorie, eenheid, prijs, besteleenheid, factor),
+    ).lastrowid
+    schrijf_logboek(db, "product_nieuw", f"Product '{naam}' aangemaakt op de handterminal{' door ' + door if door else ''}.")
+    return product_id, None
+
+
 def register_routes(app):
     # ------------------------------------------------------------ product
+
+    @app.route("/api/app/producten/nieuw", methods=["GET", "POST"])
+    def api_app_product_nieuw():
+        """GET: de keuzes (categorieën, eenheden, besteleenheden). POST {naam, categorie, eenheid, besteleenheid,
+        per_besteleenheid, verkoopprijs, verzoek_id}: het product aanmaken (zie maak_product); het antwoord is het
+        product zoals in de productlijst, zodat de app er meteen een barcode aan kan koppelen."""
+        if request.method == "GET":
+            return jsonify({"categorieen": _categorieen(get_db()), "eenheden": EENHEDEN, "besteleenheden": BESTELEENHEDEN})
+        data = _data()
+
+        def maak(db):
+            product_id, fout = maak_product(db, data, session.get("gebruiker_naam"))
+            if fout:
+                return {"fout": "fout", "melding": fout}, 400
+            return {"product": _product(db, product_id), "melding": f"{data.get('naam', '').strip()} is aangemaakt."}, 200
+
+        return eenmalig(maak)
+
+    @app.route("/api/app/producten/<int:product_id>/artikelen", methods=["GET", "POST"])
+    def api_app_artikel_nieuw(product_id):
+        """GET: de leveranciers om uit te kiezen. POST {naam, merk, ean, aantal_per_verpakking, inkoopprijs,
+        ean_omverpakking, per_omverpakking, leverancier_id, verzoek_id}: een nieuw artikel bij dit product, met dezelfde
+        controles als Producten > Barcodes op de site (barcodes.bewaar_artikel). Het antwoord is het product met zijn
+        barcodes, voor de productlijst op de handterminal."""
+        db = get_db()
+        if db.execute("SELECT 1 FROM producten WHERE id = ?", (product_id,)).fetchone() is None:
+            return _fout("Dit product bestaat niet meer.", 404, "niet_gevonden")
+        if request.method == "GET":
+            return jsonify({"leveranciers": [{"id": r["id"], "naam": r["naam"]}
+                                             for r in alle_leveranciers(db, alleen_actief=True)]})
+        data = _data()
+
+        def maak(db):
+            velden = {sleutel: str(data.get(sleutel) or "").strip() for sleutel in (
+                "naam", "merk", "ean", "aantal_per_verpakking", "inkoopprijs", "ean_omverpakking", "per_omverpakking",
+                "leverancier_id")}
+            velden["product_id"] = str(product_id)
+            _, fout = barcodes.bewaar_artikel(db, velden, door=session.get("gebruiker_naam"),
+                                              gebruiker_id=session.get("gebruiker_id"))
+            if fout:
+                return {"fout": "fout", "melding": fout}, 400
+            return {"product": _product(db, product_id), "melding": f"Artikel '{velden['naam']}' toegevoegd."}, 200
+
+        return eenmalig(maak)
 
     @app.route("/api/app/producten/<int:product_id>/verkoop")
     def api_app_product_verkoop(product_id):

@@ -33,6 +33,8 @@
 
     <form method="post" id="loop-formulier" data-product-id="{{ product.id }}" data-fase="{{ fase }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="product_id" value="{{ product.id }}">
+        <input type="hidden" name="fase" value="{{ fase }}">
         <input type="number" name="geteld" id="loop-invoer" inputmode="numeric" min="0"
                class="loop-invoer" placeholder="Aantal {{ product.eenheid }}"
                value="{{ huidige_waarde }}" autofocus>
@@ -77,11 +79,10 @@
         <button type="submit" form="loop-formulier" name="actie" value="pauzeren" class="btn-tekstlink">Pauzeren, later verder</button>
     </p>
 
-    <form method="post" class="loop-stop"
-          onsubmit="return bevestigEnVerstuur(this, 'Looplijst afbreken? Wat je tot nu toe hebt ingevuld wordt niet opgeslagen.');">
+    <form method="post" action="{{ url_for('tellen_lopen_afbreken') }}" class="loop-stop"
+          onsubmit="return bevestigEnVerstuur(this, 'Looplijst afbreken? Wat je tot nu toe hebt ingevuld wordt niet opgeslagen, ook niet wat in de app geteld is.', {ja: 'Ja, afbreken', nee: 'Nee, verder tellen'});">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="actie" value="stoppen">
-        <button type="submit" class="btn btn-gevaar btn-klein">Stoppen zonder opslaan</button>
+        <button type="submit" class="btn btn-gevaar btn-klein">Afbreken zonder opslaan</button>
     </form>
 </div>
 

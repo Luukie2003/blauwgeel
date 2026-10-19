@@ -2917,7 +2917,7 @@ button:disabled,
     text-align: center;
 }
 
-.noodstop-balk:hover { color: #fff; text-decoration: underline; }
+a.noodstop-balk:hover { color: #fff; text-decoration: underline; }
 
 .noodstop-kaart { border-left: 5px solid var(--groen); }
 .noodstop-kaart--dicht { border-left-color: var(--rood); background: var(--rood-bg); }

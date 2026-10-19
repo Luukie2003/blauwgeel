@@ -1,11 +1,12 @@
 """Beheer > Noodstop: de hele site en de tv-schermen afsluiten en weer openen (zie noodstop.py). Alleen voor de
 eigenaar; de bewaking zelf (wat er dicht is tijdens een noodstop) staat in app.py (noodstop_bewaken)."""
 
-from flask import flash, jsonify, redirect, render_template, request, session, url_for
+from flask import flash, g, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
 import noodstop
 from database import get_db
+from routes.logboek import schrijf_logboek
 
 
 def _alleen_eigenaar():
@@ -37,21 +38,28 @@ def register_routes(app):
     @app.route("/beheer/noodstop/dicht", methods=["POST"])
     def noodstop_dicht():
         """Alles afsluiten. Vraagt het wachtwoord, zodat een openstaande sessie op een ander toestel dit niet zomaar
-        kan."""
+        kan, en kan pas als er een noodcode is: daarmee kom je er daarna weer in."""
         if (weg := _alleen_eigenaar()) is not None:
             return weg
         db = get_db()
+        if not noodstop.toestand(db)["code_ingesteld"]:
+            flash("Stel eerst een noodcode in (hieronder): zonder noodcode kan na het afsluiten niemand meer inloggen.",
+                  "error")
+            return redirect(url_for("noodstop_pagina"))
         if not _wachtwoord_klopt(db, request.form.get("wachtwoord")):
             flash("Wachtwoord klopt niet; er is niets afgesloten.", "error")
             return redirect(url_for("noodstop_pagina"))
         noodstop.vergrendel(db, session.get("gebruiker_naam"), request.form.get("reden"))
-        # Iedereen is uitgelogd (sessie_versie omhoog); deze sessie van de eigenaar blijft geldig.
-        session["sessie_versie"] = db.execute(
-            "SELECT sessie_versie FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)
-        ).fetchone()[0]
-        flash("Noodstop: de site en de schermen zijn afgesloten en iedereen is uitgelogd. Alleen jij kunt nog "
-              "inloggen.", "success")
-        return redirect(url_for("noodstop_pagina"))
+        # In het logboek met wie het deed, want zo meteen is ook deze sessie leeg.
+        schrijf_logboek(db, "noodstop_dicht", "Noodstop: de site en de schermen zijn afgesloten en iedereen is "
+                        "uitgelogd, ook de beheerders.")
+        g.logboek_geschreven = True
+        # Iedereen is uitgelogd (sessie_versie omhoog), ook de eigenaar zelf: weer inloggen kan alleen als beheerder,
+        # met de noodcode.
+        session.clear()
+        flash("Noodstop: de site en de schermen zijn afgesloten en iedereen is uitgelogd, ook jij. Inloggen kan nu "
+              "alleen als beheerder, met je wachtwoord en de noodcode.", "warning")
+        return redirect(url_for("login"))
 
     @app.route("/beheer/noodstop/open", methods=["POST"])
     def noodstop_open():

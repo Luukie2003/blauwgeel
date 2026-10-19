@@ -22,5 +22,11 @@
             <button type="button" class="btn btn-geel" onclick="window.location.reload()">Opnieuw proberen</button>
         </div>
     </div>
+    <script>
+    // Ook zonder dat iemand op de knop drukt (een tv of tablet aan de muur): zodra er weer verbinding is, en verder
+    // elke 20 seconden, opnieuw proberen.
+    window.addEventListener("online", function () { window.location.reload(); });
+    setInterval(function () { if (navigator.onLine !== false) window.location.reload(); }, 20000);
+    </script>
 </body>
 </html>

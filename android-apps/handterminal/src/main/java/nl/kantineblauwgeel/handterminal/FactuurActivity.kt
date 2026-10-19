@@ -9,6 +9,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import nl.kantineblauwgeel.handterminal.databinding.ActivityFactuurBinding
@@ -16,7 +17,9 @@ import org.json.JSONObject
 import java.util.Locale
 
 /** Eén factuur inboeken: dozen, kratten en losse verpakkingen scannen. De site weet per barcode wat het is en hoeveel
- * erin zit; hier zie je per product wat erbij komt en of het totaal klopt met het bedrag op de factuur. Een onbekende
+ * erin zit; hier zie je per product wat erbij komt en of het totaal klopt met het bedrag op de factuur. Hoort de factuur
+ * bij een klaargezette bestelling, dan staat bovenaan per besteld product wat er besteld is en wat er al gescand is; wat
+ * zonder barcode binnenkomt, zet je er met één tik bij zoals besteld. Een onbekende
  * barcode koppel je meteen (KoppelenActivity), en die scan telt dan alsnog mee. "Afronden en inboeken" zet alles in
  * één keer in de voorraad.
  *
@@ -94,11 +97,15 @@ class FactuurActivity : BasisActivity() {
             b.verschil.setTextColor(getColor(if (Math.abs(verschil) < 0.005) R.color.groen else R.color.oranje_balk))
         }
 
+        toonBesteld(r.optJSONArray("besteld")?.objecten().orEmpty())
+
         b.perProduct.removeAllViews()
         val perProduct = r.optJSONArray("per_product")?.objecten() ?: emptyList()
+        val metBestelling = !r.isNull("bestelling_id")
         if (perProduct.isEmpty()) b.perProduct.addView(tekst(getString(R.string.nog_niets_gescand), zacht = true))
         for (p in perProduct) {
-            b.perProduct.addView(tekst("${p.optString("naam")}   +${p.optInt("eenheden")} ${p.optString("eenheid")}   ${euro(p.optDouble("bedrag"))}"))
+            val extra = if (metBestelling && !p.optBoolean("besteld")) "   · " + getString(R.string.niet_besteld) else ""
+            b.perProduct.addView(tekst("${p.optString("naam")}   +${p.optInt("eenheden")} ${p.optString("eenheid")}   ${euro(p.optDouble("bedrag"))}$extra"))
         }
 
         b.regels.removeAllViews()
@@ -107,6 +114,50 @@ class FactuurActivity : BasisActivity() {
         for (g in regels) b.regels.addView(regelView(g))
         b.afrondenKnop.isEnabled = regels.isNotEmpty()
         b.afrondenKnop.alpha = if (regels.isNotEmpty()) 1f else 0.5f
+    }
+
+    /** Bij een klaargezette bestelling: per besteld product besteld en gescand, met een vinkje als alles binnen is.
+     * Tik op een product dat nog mist om het erbij te zetten zoals besteld. */
+    private fun toonBesteld(besteld: List<JSONObject>) {
+        b.besteldKop.isVisible = besteld.isNotEmpty()
+        b.besteld.isVisible = besteld.isNotEmpty()
+        b.besteld.removeAllViews()
+        if (besteld.isEmpty()) return
+        b.besteldKop.text = getString(R.string.besteld_kop_n, besteld.count { it.optString("status") == "binnen" }, besteld.size)
+        for (x in besteld) {
+            val rest = x.optInt("rest")
+            val hoeveel = "${x.optInt("besteld_eenheden")} ${x.optString("besteleenheid")}" +
+                if (x.optInt("per_besteleenheid", 1) > 1) " (${x.optInt("besteld")} ${x.optString("eenheid")})" else ""
+            val (rechts, kleur) = when (x.optString("status")) {
+                "binnen" -> "✓" to R.color.groen_tekst
+                "deels" -> "−$rest" to R.color.oranje_balk
+                else -> getString(R.string.nog_niet_binnen) to R.color.tekst_zacht
+            }
+            Lijst.regel(b.besteld, x.optString("naam"), getString(R.string.besteld_detail, hoeveel, x.optInt("gescand"), x.optString("eenheid")),
+                rechts, kleur, klik = if (rest > 0) ({ zoalsBesteld(x) }) else null)
+        }
+        if (besteld.count { it.optInt("rest") > 0 } > 1) Lijst.knop(b.besteld, getString(R.string.alles_zoals_besteld)) { zoalsBesteld(null) }
+        Lijst.tekst(b.besteld, getString(R.string.besteld_uitleg), grootte = 11.5f)
+    }
+
+    /** Wat van de bestelling nog mist erbij zetten zoals besteld: één product ([x]), of alles (null). */
+    private fun zoalsBesteld(x: JSONObject?) {
+        val vraag = if (x == null) getString(R.string.zoals_besteld_alles_vraag)
+        else getString(R.string.zoals_besteld_vraag, x.optString("naam"), x.optInt("rest"), x.optString("eenheid"))
+        val verzoekId = Api.nieuwVerzoekId()
+        AlertDialog.Builder(this)
+            .setCustomTitle(dialoogTitel(x?.optString("naam") ?: getString(R.string.zoals_besteld_titel)))
+            .setMessage(vraag)
+            .setNegativeButton(R.string.annuleren, null)
+            .setPositiveButton(R.string.zoals_besteld) { _, _ ->
+                val body = JSONObject()
+                x?.let { body.put("product_id", it.getInt("product_id")) }
+                bezig {
+                    toon(Api.post(this, "/api/facturen/$rondeId/zoals-besteld", body, verzoekId = verzoekId))
+                    tril(60)
+                }
+            }
+            .show()
     }
 
     private fun tekst(waarde: String, zacht: Boolean = false) = TextView(this).apply {
@@ -320,6 +371,7 @@ class FactuurActivity : BasisActivity() {
 
         fun naam(context: Context, r: JSONObject) =
             r.tekstOfNull("leverancier") ?: r.tekstOfNull("factuurnummer")?.let { context.getString(R.string.factuur_nr, it) }
+            ?: r.takeIf { !it.isNull("bestelling_id") }?.let { context.getString(R.string.bestelling_nr, it.optInt("bestelling_id")) }
             ?: context.getString(R.string.factuur_id, r.optInt("id"))
 
         fun euro(bedrag: Double): String = "€ " + String.format(Locale("nl", "NL"), "%.2f", bedrag)

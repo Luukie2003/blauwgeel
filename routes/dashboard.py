@@ -495,9 +495,17 @@ def register_routes(app):
 
     @app.route("/bijzonderheden/<int:mededeling_id>/verwijderen", methods=["POST"])
     def mededeling_verwijderen(mededeling_id):
+        """Weg is weg: alleen wie de mededeling schreef, of een beheerder. Anderen kunnen hem afhandelen."""
         db = get_db()
-        db.execute("DELETE FROM mededelingen WHERE id = ?", (mededeling_id,))
-        db.commit()
+        mededeling = db.execute("SELECT naam FROM mededelingen WHERE id = ?", (mededeling_id,)).fetchone()
+        if mededeling is not None and (
+            session.get("gebruiker_rol") == "beheerder" or mededeling["naam"] == session.get("gebruiker_naam")
+        ):
+            db.execute("DELETE FROM mededelingen WHERE id = ?", (mededeling_id,))
+            db.commit()
+        elif mededeling is not None:
+            flash("Alleen wie de mededeling schreef of een beheerder kan hem verwijderen. Handel hem af als hij klaar is.",
+                  "error")
         return redirect(url_for("bijzonderheden"))
 
     @app.route("/bijzonderheden/<int:mededeling_id>/afhandelen", methods=["POST"])

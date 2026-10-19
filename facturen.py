@@ -6,11 +6,17 @@ barcodes.py) en telt het op. Een doos die je twee keer scant, telt twee keer. Ee
 aan een product (als nieuw artikel, of als doos van een bekend artikel) en dan telt die scan alsnog mee. De ronde blijft
 bewaard tot je hem afrondt: valt de handterminal in slaap, dan ben je niets kwijt.
 
+Een klaargezette bestelling (Bestellen > Bestellijst) is het concept van de factuur: die staat hier klaar om in te
+boeken (ronde_voor_bestelling). De ronde toont dan per besteld product wat er besteld is en wat er al gescand is; wat
+zonder barcode binnenkomt zet je er in één keer bij ("zoals besteld", voeg_rest_toe). Wat er meekomt maar niet besteld
+was, scan je gewoon mee.
+
 Bij het afronden gaat de voorraad omhoog (een boeking per product). Hoort de ronde bij een openstaande bestelling, dan
-staat die daarna op ontvangen: per bestelregel wat er is binnengekomen, en wat niet is gescand is manco, net als bij
-Bestellingen > Inboeken."""
+staat die daarna op ontvangen: per bestelregel wat er is binnengekomen, wat niet is gescand is manco, en wat er extra
+meekwam komt er als regel bij (besteld: 0)."""
 
 import barcodes
+from helpers.producten import besteleenheid_factor, besteleenheid_naam, inkoop_per_stuk
 from helpers.tijd import now_str
 
 STATUSSEN = ("open", "afgerond", "geannuleerd")
@@ -46,9 +52,70 @@ def recente_rondes(db, aantal=10):
 
 
 def open_bestellingen(db):
-    return db.execute(
-        "SELECT id, aangemaakt_op, referentie FROM bestellingen WHERE status = 'besteld' ORDER BY aangemaakt_op DESC"
-    ).fetchall()
+    """De klaargezette bestellingen (het concept van een factuur), nieuwste eerst, met hoeveel producten erop staan, een
+    korte samenvatting en de open ronde waarin hij al wordt ingeboekt (ronde_id, of None)."""
+    bestellingen = [
+        dict(r)
+        for r in db.execute(
+            """SELECT b.id, b.aangemaakt_op, b.referentie, b.besteld_door,
+                      (SELECT MAX(r.id) FROM inboekrondes r WHERE r.bestelling_id = b.id AND r.status = 'open') AS ronde_id
+               FROM bestellingen b WHERE b.status = 'besteld' ORDER BY b.aangemaakt_op DESC, b.id DESC"""
+        ).fetchall()
+    ]
+    for b in bestellingen:
+        regels = _bestelregels(db, b["id"])
+        b["producten"] = len(regels)
+        b["samenvatting"] = ", ".join(f"{r['besteld_eenheden']} {r['besteleenheid']} {r['naam']}" for r in regels)
+    return bestellingen
+
+
+def _bestelregels(db, bestelling_id):
+    """De regels van een bestelling, met de besteleenheid erbij (een krat van 24 en niet 24 flesjes)."""
+    uitkomst = []
+    for r in db.execute(
+        """SELECT br.product_id, br.aantal_besteld, p.naam, p.eenheid, p.besteleenheid, p.besteleenheid_factor,
+                  p.inkoopprijs
+           FROM bestelregels br JOIN producten p ON p.id = br.product_id
+           WHERE br.bestelling_id = ? AND br.aantal_besteld > 0 ORDER BY p.categorie, p.naam COLLATE NOCASE""",
+        (bestelling_id,),
+    ).fetchall():
+        factor = besteleenheid_factor(r)
+        uitkomst.append({
+            "product_id": r["product_id"],
+            "naam": r["naam"],
+            "eenheid": r["eenheid"],
+            "besteld": r["aantal_besteld"],
+            "per_besteleenheid": factor,
+            "besteleenheid": besteleenheid_naam(r) if factor > 1 else r["eenheid"],
+            "besteld_eenheden": -(-r["aantal_besteld"] // factor),
+            "inkoop_per_stuk": inkoop_per_stuk(r),
+        })
+    return uitkomst
+
+
+def ronde_voor_bestelling(db, bestelling_id, door=None, door_id=None, bron="site"):
+    """Een klaargezette bestelling inboeken: de open ronde die er al bij hoort, of een nieuwe (met de leverancier als
+    alle producten van dezelfde leverancier komen). Geeft het id van de ronde, of None als de bestelling niet (meer)
+    openstaat."""
+    bestelling_id = _getal(bestelling_id) or 0
+    if not db.execute("SELECT 1 FROM bestellingen WHERE id = ? AND status = 'besteld'", (bestelling_id,)).fetchone():
+        return None
+    bestaand = db.execute(
+        "SELECT id FROM inboekrondes WHERE bestelling_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1",
+        (bestelling_id,),
+    ).fetchone()
+    if bestaand:
+        return bestaand["id"]
+    leveranciers = {
+        r["leverancier_id"]
+        for r in db.execute(
+            """SELECT p.leverancier_id FROM bestelregels br JOIN producten p ON p.id = br.product_id
+               WHERE br.bestelling_id = ?""",
+            (bestelling_id,),
+        ).fetchall()
+    }
+    leverancier_id = next(iter(leveranciers)) if len(leveranciers) == 1 else None
+    return start_ronde(db, leverancier_id, None, bestelling_id, door=door, door_id=door_id, bron=bron)
 
 
 def _getal(waarde, soort=int):
@@ -103,7 +170,9 @@ def werk_gegevens_bij(db, ronde_id, form):
 
 def ronde(db, ronde_id):
     """De ronde met zijn regels en totalen, of None.
-    {"ronde", "regels", "per_product": [{product, eenheden, bedrag}], "totaal", "scans", "verschil"}"""
+    {"ronde", "regels", "per_product": [{product, eenheden, bedrag, besteld}], "totaal", "scans", "verschil",
+     "besteld": [...]} met bij een bestelling per besteld product wat er besteld is, wat er al gescand is en wat er nog
+    mist ("rest", zie _besteld)."""
     rij = _ronde_rij(db, ronde_id)
     if rij is None:
         return None
@@ -120,6 +189,10 @@ def ronde(db, ronde_id):
         p["eenheden"] += g["aantal"] * g["eenheden_per_stuk"]
         p["bedrag"] += g["aantal"] * g["prijs_per_stuk"]
     totaal = round(sum(p["bedrag"] for p in per_product.values()), 2)
+    besteld = _besteld(db, rij, per_product)
+    besteld_ids = {b["product_id"] for b in besteld}
+    for p in per_product.values():
+        p["besteld"] = p["product_id"] in besteld_ids
     return {
         "ronde": rij,
         "regels": regels,
@@ -127,7 +200,26 @@ def ronde(db, ronde_id):
         "totaal": totaal,
         "scans": sum(g["aantal"] for g in regels),
         "verschil": round(totaal - rij["factuurbedrag"], 2) if rij["factuurbedrag"] is not None else None,
+        "besteld": besteld,
     }
+
+
+def _besteld(db, rij, per_product):
+    """Bij een ronde die bij een bestelling hoort: per besteld product besteld, gescand en wat er nog mist, met de
+    status 'binnen' (alles gescand), 'deels' of 'nog_niet'. Zonder bestelling: een lege lijst."""
+    if not rij["bestelling_id"]:
+        return []
+    uitkomst = []
+    for b in _bestelregels(db, rij["bestelling_id"]):
+        gescand = per_product.get(b["product_id"], {}).get("eenheden", 0)
+        rest = max(0, b["besteld"] - gescand)
+        uitkomst.append({
+            **b,
+            "gescand": gescand,
+            "rest": rest,
+            "status": "binnen" if rest == 0 else ("deels" if gescand else "nog_niet"),
+        })
+    return uitkomst
 
 
 def _is_open(db, ronde_id):
@@ -191,6 +283,35 @@ def voeg_handmatig_toe(db, ronde_id, product_id, eenheden, prijs=None):
     return None
 
 
+def voeg_rest_toe(db, ronde_id, product_id=None):
+    """Wat van de bestelling nog niet gescand is, erbij zetten zoals besteld (iets zonder barcode, of een doos die je
+    niet apart scant): voor één product, of zonder product_id voor alles wat nog mist. Geeft (aantal producten,
+    foutmelding) terug."""
+    if not _is_open(db, ronde_id):
+        return 0, "Deze inboekronde is al afgerond."
+    gegevens = ronde(db, ronde_id)
+    if not gegevens["besteld"]:
+        return 0, "Deze factuur hoort niet bij een klaargezette bestelling."
+    product_id = _getal(product_id) if product_id not in (None, "") else None
+    nu = now_str()
+    toegevoegd = 0
+    for b in gegevens["besteld"]:
+        if b["rest"] <= 0 or (product_id is not None and b["product_id"] != product_id):
+            continue
+        db.execute(
+            """INSERT INTO inboekronde_regels (ronde_id, product_id, code, niveau, omschrijving, aantal, eenheden_per_stuk,
+                   prijs_per_stuk, laatst_gescand_op)
+               VALUES (?, ?, NULL, 'handmatig', ?, 1, ?, ?, ?)""",
+            (ronde_id, b["product_id"], f"{b['naam']} (zoals besteld)", b["rest"],
+             round(b["rest"] * b["inkoop_per_stuk"], 2), nu),
+        )
+        toegevoegd += 1
+    db.commit()
+    if not toegevoegd:
+        return 0, "Daar mist niets meer van: alles is al gescand."
+    return toegevoegd, None
+
+
 def zet_aantal(db, ronde_id, regel_id, aantal):
     """Hoe vaak een regel gescand is aanpassen (bijv. een dubbele scan terugdraaien); 0 haalt de regel weg."""
     if not _is_open(db, ronde_id):
@@ -245,6 +366,14 @@ def afronden(db, ronde_id, door=None, door_id=None):
                 (ontvangen, 0 if ontvangen else 1, regel["id"]),
             )
         db.execute("UPDATE bestellingen SET status = 'ontvangen', ontvangen_op = ? WHERE id = ?", (nu, bestelling_id))
+        # Wat er extra meekwam (niet besteld) hoort ook bij deze levering, net als bij Bestellingen > Inboeken.
+        for product_id in binnen.keys() - besteld:
+            db.execute(
+                """INSERT INTO bestelregels (bestelling_id, product_id, aantal_besteld, aantal_ontvangen, manco)
+                   VALUES (?, ?, 0, ?, 0)""",
+                (bestelling_id, product_id, binnen[product_id]),
+            )
+            besteld.add(product_id)
     else:
         bestelling_id = None
 
@@ -290,4 +419,6 @@ def als_json(gegevens):
             for g in gegevens["regels"]
         ],
         "per_product": gegevens["per_product"],
+        "bestelling_referentie": r["bestelling_referentie"],
+        "besteld": [{k: v for k, v in b.items() if k != "inkoop_per_stuk"} for b in gegevens["besteld"]],
     }

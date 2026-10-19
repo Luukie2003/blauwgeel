@@ -105,6 +105,20 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- Bij een klaargezette bestelling: per besteld product besteld, gescand en wat er nog mist. -->
+            <TextView
+                android:id="@+id/besteldKop"
+                style="@style/Kop"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/besteld"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/kaart"
+                android:orientation="vertical"
+                android:visibility="gone" />
+
             <TextView
                 style="@style/Kop"
                 android:text="@string/per_product" />

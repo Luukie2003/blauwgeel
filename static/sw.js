@@ -7,7 +7,7 @@
 // hier. Cachet ook geen ingelogde pagina's: die zijn per gebruiker/sessie
 // verschillend en zouden verouderd of verkeerd (andere gebruiker) kunnen
 // worden getoond.
-const CACHE_NAAM = "kantine-schil-v1";
+const CACHE_NAAM = "kantine-schil-v2";  // ophogen als de schil (zoals /offline) verandert
 const SCHIL_BESTANDEN = [
     "/static/style.css",
     "/static/logo.png",

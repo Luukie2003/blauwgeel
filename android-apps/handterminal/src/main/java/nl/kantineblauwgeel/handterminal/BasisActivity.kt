@@ -25,6 +25,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import nl.kantineblauwgeel.handterminal.databinding.BalkBinding
 import org.json.JSONObject
@@ -35,7 +37,10 @@ import org.json.JSONObject
  *   onbekende barcode), een scherm kan dat zelf anders doen;
  * - automatisch uitloggen na een tijd niets doen (iedereen gebruikt dezelfde handterminal met een eigen code);
  * - de wifi op volle kracht zolang de app voorin staat;
- * - foutmeldingen: sessie verlopen of noodstop gaat terug naar het inlogscherm, de rest wordt kort gemeld. */
+ * - de noodstop van de site: elke paar seconden kijken of de site is afgesloten, en dan meteen het vergrendel-scherm
+ *   (ook als er niemand iets doet, of alleen op het toestel wordt gezocht, gescand of geteld);
+ * - foutmeldingen: sessie verlopen gaat terug naar het inlogscherm, de noodstop naar het vergrendel-scherm, de rest
+ *   wordt kort gemeld. */
 abstract class BasisActivity : AppCompatActivity() {
 
     protected lateinit var inst: Instellingen
@@ -46,6 +51,7 @@ abstract class BasisActivity : AppCompatActivity() {
     private var balkSub: String? = null
     private var laatsteOpslag = 0L
     private val hoofdThread = Handler(Looper.getMainLooper())
+    private var noodstopKijken: Job? = null
 
     /** Is er nu netwerk (wifi of mobiel)? */
     protected var verbonden = true
@@ -84,6 +90,12 @@ abstract class BasisActivity : AppCompatActivity() {
         }
         wifiLock?.acquire()
         hoofdThread.postDelayed(inactiviteitTik, 30_000)
+        noodstopKijken = lifecycleScope.launch {
+            while (isActive) {
+                if (Api.noodstopActief(applicationContext) == true) return@launch vergrendel()
+                delay(NOODSTOP_ELKE_MS)
+            }
+        }
     }
 
     override fun onPause() {
@@ -93,6 +105,7 @@ abstract class BasisActivity : AppCompatActivity() {
         verbinding.stop()
         if (wifiLock?.isHeld == true) wifiLock?.release()
         hoofdThread.removeCallbacks(inactiviteitTik)
+        noodstopKijken?.cancel()
     }
 
     // ---------------------------------------------------------------- automatisch uitloggen
@@ -131,6 +144,16 @@ abstract class BasisActivity : AppCompatActivity() {
         startActivity(
             Intent(this, InlogActivity::class.java)
                 .putExtra(InlogActivity.EXTRA_MELDING, melding)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
+        )
+        finish()
+    }
+
+    /** De site is afgesloten met de noodstop: uitloggen en het vergrendel-scherm, met alle andere schermen weg. */
+    fun vergrendel() {
+        Sessie.wis(this)
+        startActivity(
+            Intent(this, VergrendeldActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
         )
         finish()
@@ -268,12 +291,13 @@ abstract class BasisActivity : AppCompatActivity() {
         Toast.makeText(this, tekst, if (lang) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
     }
 
-    /** Een fout van de site: niet meer ingelogd of noodstop gaat naar het inlogscherm, de rest wordt gemeld. */
+    /** Een fout van de site: niet meer ingelogd gaat naar het inlogscherm, de noodstop naar het vergrendel-scherm, de
+     * rest wordt gemeld. */
     fun toonFout(fout: Throwable) {
         val f = fout as? Api.Fout ?: Api.Fout(Api.Soort.SERVER, fout.message ?: getString(R.string.fout_server_kort))
         when (f.soort) {
             Api.Soort.NIET_INGELOGD -> naarInlog(getString(R.string.uitgelogd_sessie))
-            Api.Soort.NOODSTOP -> naarInlog(f.message)
+            Api.Soort.NOODSTOP -> vergrendel()
             else -> {
                 tril(150)
                 melding(f.message ?: getString(R.string.fout_server_kort), lang = true)
@@ -389,6 +413,9 @@ abstract class BasisActivity : AppCompatActivity() {
     )
 
     companion object {
+        /** Zo vaak kijkt een scherm of de site met de noodstop is afgesloten (en het vergrendel-scherm of hij weer open is). */
+        const val NOODSTOP_ELKE_MS = 15_000L
+
         fun dp(context: Context, waarde: Int) = (waarde * context.resources.displayMetrics.density).toInt()
     }
 }

@@ -10,7 +10,7 @@ from voorspelling import (
     verwachte_verkoop_sinds_telling,
     verwachte_voorraad,
 )
-from routes.tellen.looplijst_opslag import loop_bewaren, loop_herstellen, loop_wissen
+from routes.tellen.looplijst_opslag import AFGEBROKEN, loop_bewaren, loop_bijwerken, loop_wissen
 from routes.tellen.verwerken import signaleer_afwijkende_telling, verwerk_telling
 
 
@@ -20,11 +20,22 @@ def register_routes(app):
         loop_wissen(get_db())
         return redirect(url_for("tellen_lopen"))
 
+    @app.route("/tellen/lopen/afbreken", methods=["POST"])
+    def tellen_lopen_afbreken():
+        """Een lopende of onderbroken looplijst afbreken: er wordt niets opgeslagen, ook niet wat er in de app of op een
+        ander toestel al geteld was (die merken dat bij de volgende stap)."""
+        loop_wissen(get_db())
+        flash("Looplijst afgebroken, er is niets opgeslagen.", "success")
+        return redirect(url_for("tellen"))
+
     @app.route("/tellen/lopen/hervatten")
     def tellen_lopen_hervatten():
-        """Pakt een onderbroken looplijst weer op waar je was."""
+        """Pakt een onderbroken looplijst weer op waar je was (ook als je in de app of op een ander toestel telde)."""
         db = get_db()
-        if session.get("loop_review") is None and "loop_fase" not in session and not loop_herstellen(db):
+        if loop_bijwerken(db):
+            flash(AFGEBROKEN, "warning")
+            return redirect(url_for("tellen"))
+        if session.get("loop_review") is None and "loop_fase" not in session:
             flash("Er is geen looplijst om mee verder te gaan.", "error")
             return redirect(url_for("tellen"))
         if session.get("loop_review") is not None:
@@ -42,11 +53,13 @@ def register_routes(app):
             return redirect(url_for("tellen"))
         totaal = len(producten)
 
-        # Sessie kwijt (uitgelogd, nieuw toestel) maar wel iets bewaard: pak dat op.
-        if session.get("loop_review") is None and "loop_fase" not in session:
-            loop_herstellen(db)
-            if session.get("loop_review") is not None:
-                return redirect(url_for("tellen_lopen_controleren"))
+        # De bewaarde stand is de waarheid: pak die op (sessie kwijt, of in de app of op een ander toestel verder
+        # geteld), en is de looplijst daar intussen afgebroken of opgeslagen, dan stopt hij hier ook.
+        if loop_bijwerken(db):
+            flash(AFGEBROKEN, "warning")
+            return redirect(url_for("tellen"))
+        if session.get("loop_review") is not None:
+            return redirect(url_for("tellen_lopen_controleren"))
 
         if request.method == "POST":
             actie = request.form.get("actie", "volgende")
@@ -57,6 +70,14 @@ def register_routes(app):
 
             fase = session.get("loop_fase", "bar")
             index = session.get("loop_index", 0)
+            # Het product dat op dit scherm stond: de stand kan intussen in de app of op een ander toestel verder zijn,
+            # en dan hoort het aantal toch bij dit product.
+            getoond = request.form.get("product_id", type=int)
+            if getoond is not None:
+                gevonden = next((i for i, p in enumerate(producten) if p["id"] == getoond), None)
+                if gevonden is not None:
+                    index = gevonden
+                    fase = "hok" if request.form.get("fase") == "hok" else "bar"
             bar_waarden = session.get("loop_bar", {})
             hok_waarden = session.get("loop_hok", {})
             huidige_dict = bar_waarden if fase == "bar" else hok_waarden
@@ -159,12 +180,12 @@ def register_routes(app):
     @app.route("/tellen/lopen/controleren", methods=["GET", "POST"])
     def tellen_lopen_controleren():
         db = get_db()
+        if loop_bijwerken(db):
+            flash(AFGEBROKEN, "warning")
+            return redirect(url_for("tellen"))
         review = session.get("loop_review")
         if not review:
-            loop_herstellen(db)
-            review = session.get("loop_review")
-        if not review:
-            return redirect(url_for("tellen"))
+            return redirect(url_for("tellen_lopen") if "loop_fase" in session else url_for("tellen"))
 
         if request.method == "POST":
             actie = request.form.get("actie", "bevestigen")

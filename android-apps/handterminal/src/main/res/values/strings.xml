@@ -10,6 +10,17 @@
     <string name="code_te_veel">Te veel foute codes vanaf dit netwerk. Probeer het over een half uur opnieuw.</string>
     <string name="code_te_veel_minuten">Te veel foute codes vanaf dit netwerk. Probeer het over %1$d minuten opnieuw.</string>
     <string name="code_noodstop">Het kantinesysteem is tijdelijk afgesloten. Probeer het later opnieuw.</string>
+
+    <!-- Het vergrendel-scherm tijdens een noodstop (VergrendeldActivity) -->
+    <string name="kantinesysteem">Kantinesysteem</string>
+    <string name="vergrendeld">Vergrendeld</string>
+    <string name="vergrendeld_titel">Systeem <font color="#FCD42F">vergrendeld</font></string>
+    <string name="vergrendeld_uitleg">Het kantinesysteem is uit voorzorg tijdelijk afgesloten en iedereen is uitgelogd. Zodra het weer open is, kun je hier opnieuw inloggen.</string>
+    <string name="vergrendeld_veilig">🔒  Alles is veilig opgeslagen</string>
+    <string name="vergrendeld_bar_open">☕  De bar blijft gewoon open</string>
+    <string name="vergrendeld_toestel">📵  Zoeken, scannen en tellen kan nu even niet</string>
+    <string name="vergrendeld_sinds">Vergrendeld sinds %1$s · kijkt elke 15 seconden of het weer open is</string>
+    <string name="weer_open">Het kantinesysteem is weer open. Log in met je code.</string>
     <string name="code_server">De website geeft een fout. Probeer het zo opnieuw.</string>
     <string name="uitgelogd">Je bent uitgelogd.</string>
     <string name="uitgelogd_automatisch">Automatisch uitgelogd na %1$d minuten niets doen.</string>
@@ -175,9 +186,11 @@
     <string name="naar_product">Naar een product…</string>
     <string name="stoppen_zonder_opslaan">Stoppen zonder opslaan</string>
     <string name="stoppen">Stoppen</string>
-    <string name="stoppen_vraag">De looplijst stoppen? Wat je hebt geteld wordt niet opgeslagen.</string>
+    <string name="stoppen_vraag">De telling afbreken? Wat je hebt geteld wordt niet opgeslagen, ook niet op de site.</string>
+    <string name="ja_afbreken">Ja, afbreken</string>
+    <string name="nee_verder_tellen">Nee, verder tellen</string>
     <string name="gepauzeerd">Gepauzeerd. Bij Tellen ga je verder waar je was.</string>
-    <string name="gestopt">Looplijst gestopt; er is niets opgeslagen.</string>
+    <string name="gestopt">Telling afgebroken; er is niets opgeslagen.</string>
     <string name="niets_te_tellen">Er zijn geen producten om te tellen.</string>
     <string name="scan_onbekend_tellen">Onbekende barcode: koppel hem na het tellen.</string>
     <string name="scan_telt_niet_mee">Dit product telt niet mee in de looplijst.</string>
@@ -199,6 +212,48 @@
     <string name="nieuwe_factuur">Nieuwe factuur</string>
     <string name="factuur_uitleg">Scan de dozen, kratten en losse verpakkingen die binnenkomen. De app telt alles op, en bij Afronden gaat het in één keer in de voorraad.</string>
     <string name="verder_met">Verder met</string>
+    <string name="staat_er_niet_bij">Staat het er niet bij? Nieuw product</string>
+    <string name="nieuw_product">Nieuw product</string>
+    <string name="nieuw_naam">Naam</string>
+    <string name="nieuw_naam_hint">Bijvoorbeeld Hertog Jan 0.0 Fles</string>
+    <string name="categorie">Categorie</string>
+    <string name="nieuw_eenheid">Je telt het per</string>
+    <string name="nieuw_besteleenheid">Besteleenheid (mag leeg)</string>
+    <string name="aantal_erin">aantal</string>
+    <string name="geen_besteleenheid">Geen (los)</string>
+    <string name="nieuw_verkoopprijs">Verkoopprijs in € (mag leeg)</string>
+    <string name="nieuw_product_uitleg">Daarna koppel je de barcode eraan. Foto, leverancier, minimum en het prijzenscherm vul je later op de computer aan.</string>
+    <string name="aanmaken">Aanmaken</string>
+    <string name="nieuw_naam_nodig">Vul de naam van het product in.</string>
+    <string name="wat_heb_je_gescand_nieuw">%1$s is aangemaakt. Wat heb je gescand?</string>
+    <string name="telling_afgebroken_titel">Telling gestopt</string>
+    <string name="telling_afgebroken">Deze telling is op een ander toestel (of op de site) afgebroken of al opgeslagen.</string>
+    <string name="artikel_toevoegen">Artikel toevoegen</string>
+    <string name="nieuw_artikel">Nieuw artikel bij %1$s</string>
+    <string name="artikel_naam">Naam van het artikel</string>
+    <string name="artikel_naam_hint">Bijvoorbeeld AH frikandellen 20 stuks</string>
+    <string name="artikel_merk">Merk</string>
+    <string name="artikel_barcode">Barcode van de verpakking (mag leeg)</string>
+    <string name="scan_of_typ">Scan of typ de barcode</string>
+    <string name="artikel_aantal">%1$s erin</string>
+    <string name="artikel_inkoopprijs">Inkoop in € (mag leeg)</string>
+    <string name="artikel_doos">Doos of krat (mag leeg): barcode en hoeveel erin</string>
+    <string name="doos_barcode_hint">Scan de doos</string>
+    <string name="geen_leverancier">Geen / weet ik niet</string>
+    <string name="artikel_uitleg">Scan je terwijl dit open staat, dan komt de barcode in het veld waar je staat (anders eerst bij de verpakking, dan bij de doos). De inkoopprijs is per verpakking.</string>
+    <string name="klaargezet_kop">Klaargezette bestellingen</string>
+    <string name="bestelling_ref">Bestelling %1$d · %2$s</string>
+    <string name="bij_bestelling">bij bestelling %1$d</string>
+    <string name="besteld_kop_n">Besteld · %1$d van de %2$d binnen</string>
+    <string name="besteld_detail">besteld %1$s · gescand %2$d %3$s</string>
+    <string name="nog_niet_binnen">nog niet</string>
+    <string name="niet_besteld">niet besteld</string>
+    <string name="zoals_besteld_titel">Zoals besteld erbij?</string>
+    <string name="zoals_besteld_vraag">Komt %1$s binnen zonder dat je het scant (geen barcode, of je scant de doos niet)? Dan zet je de %2$d %3$s die nog mist erbij zoals besteld.</string>
+    <string name="zoals_besteld_alles_vraag">Alles wat nog niet gescand is, erbij zetten zoals besteld?</string>
+    <string name="zoals_besteld">Erbij zoals besteld</string>
+    <string name="alles_zoals_besteld">Alles wat nog mist zoals besteld</string>
+    <string name="besteld_uitleg">Wat niet binnenkomt laat je open: bij afronden staat het als manco bij de bestelling. Wat extra meekomt, scan je gewoon mee.</string>
     <string name="factuur_regel">%1$d scans · %2$s · gestart %3$s</string>
     <string name="leverancier">Leverancier (mag leeg)</string>
     <string name="bestelling">Bestelling (mag leeg)</string>
@@ -301,6 +356,9 @@
     <string name="n_keer">%1$d×</string>
     <string name="melding_afhandelen_vraag">Deze melding afhandelen (bijvoorbeeld omdat het al besteld is)?</string>
     <string name="onderweg_kop">Onderweg</string>
+    <string name="prognose_bezig">Prognose wordt berekend…</string>
+    <string name="verwacht_7_dagen">Verwacht de komende 7 dagen: ~%1$d %2$s</string>
+    <string name="bestel_liever">bestel liever %1$d %2$s</string>
     <string name="tellingen">Tellingen</string>
     <string name="laatste_tellingen">Laatste tellingen</string>
     <string name="nog_geen_tellingen">Nog geen tellingen.</string>
@@ -569,7 +627,7 @@
     <string name="zoek_barcode_hint">Zoek op naam, merk of barcode</string>
     <string name="nog_geen_barcodes">Nog geen barcodes.</string>
     <string name="niets_gevonden_voor">Niets gevonden voor ‘%1$s’.</string>
-    <string name="barcodes_uitleg">Een barcode koppelen doe je op het productscherm (scan hem daar). Een artikel bewerken of weghalen kan alleen op de website.</string>
+    <string name="barcodes_uitleg">Een barcode koppelen of een artikel toevoegen doe je op het productscherm (scan de barcode daar, of tik op Artikel toevoegen). Een artikel bewerken of weghalen kan alleen op de website.</string>
 
     <!-- Taken -->
     <string name="taak">Taak</string>

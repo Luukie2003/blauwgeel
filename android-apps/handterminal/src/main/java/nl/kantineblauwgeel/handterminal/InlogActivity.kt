@@ -154,7 +154,7 @@ class InlogActivity : BasisActivity() {
                 is Api.Inlog.TeVeelPogingen -> codeFout(
                     uitkomst.minuten?.let { getString(R.string.code_te_veel_minuten, it) } ?: getString(R.string.code_te_veel),
                 )
-                Api.Inlog.Noodstop -> codeFout(getString(R.string.code_noodstop))
+                Api.Inlog.Noodstop -> vergrendel()
                 is Api.Inlog.Mislukt -> {
                     controleerWebsite()
                     codeFout(uitkomst.fout.message ?: getString(R.string.code_server), schudden = false)

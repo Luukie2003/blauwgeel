@@ -7,11 +7,15 @@ import androidx.appcompat.app.AlertDialog
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
-/** De bestellijst om te bekijken: wat onder het minimum zit (en nog niet besteld is), wat bezoekers via de QR-code
- * meldden, en wat er onderweg is (inboeken: Factuur inboeken). Een bestelling klaarzetten kan alleen op de website. */
+/** De bestellijst om te bekijken: wat onder het minimum zit (en nog niet besteld is), met de prognose erbij (wat er de
+ * komende week verwacht wordt, en hoeveel je dan bestelt), wat waarschijnlijk opraakt terwijl het nog boven het minimum
+ * zit, wat bezoekers via de QR-code meldden, en wat er onderweg is (tik om de levering in te scannen). Een bestelling
+ * klaarzetten kan alleen op de website. De prognose rekent soms enkele seconden en komt er apart bij. */
 class BestellijstActivity : BasisActivity() {
 
     private lateinit var b: ActivityLijstBinding
+    private var data: JSONObject? = null
+    private var prognose: JSONObject? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,9 +36,14 @@ class BestellijstActivity : BasisActivity() {
     private fun laad() {
         bezig {
             try {
-                toon(Api.getJson(this, "/api/app/bestellijst"))
+                data = Api.getJson(this, "/api/app/bestellijst")
+                toon()
             } finally {
                 b.verversen.isRefreshing = false
+            }
+            if (prognose == null) {
+                prognose = Api.getJson(this, "/api/app/bestellijst/prognose")
+                toon()
             }
         }
     }
@@ -49,7 +58,22 @@ class BestellijstActivity : BasisActivity() {
             " · " + getString(R.string.minstens_n, eenheden, naam)
     }
 
-    private fun toon(data: JSONObject) {
+    /** Wat de prognose bij een voorgesteld product zegt: de verwachte verkoop, en een hoger aantal als de komende week
+     * meer vraagt dan het minimum. */
+    private fun metPrognose(p: JSONObject): String {
+        val basis = hoeveelheid(p)
+        val pr = prognose ?: return basis + "\n" + getString(R.string.prognose_bezig)
+        val x = pr.optJSONObject("producten")?.optJSONObject(p.getInt("id").toString()) ?: return basis
+        val eenheid = p.tekstOfNull("besteleenheid") ?: p.optString("eenheid")
+        var tekst = basis + "\n" + getString(R.string.verwacht_7_dagen, x.optInt("verwacht"), p.optString("eenheid"))
+        if (x.optInt("advies_eenheden") > x.optInt("basis_eenheden")) {
+            tekst += " · " + getString(R.string.bestel_liever, x.optInt("advies_eenheden"), eenheid)
+        }
+        return tekst
+    }
+
+    private fun toon() {
+        val data = data ?: return
         val inhoud = b.inhoud
         inhoud.removeAllViews()
         val bestellen = data.getJSONArray("bestellen").objecten()
@@ -58,9 +82,24 @@ class BestellijstActivity : BasisActivity() {
         else {
             val kaart = Lijst.kaart(inhoud)
             for (p in bestellen) {
-                Lijst.regel(kaart, p.optString("naam"), hoeveelheid(p), getString(R.string.laag), R.color.rood_balk) {
+                Lijst.regel(kaart, p.optString("naam"), metPrognose(p), getString(R.string.laag), R.color.rood_balk) {
                     ProductActivity.open(this, p.getInt("id"))
                 }
+            }
+        }
+
+        val extra = prognose?.optJSONArray("extra")?.objecten().orEmpty()
+        if (extra.isNotEmpty()) {
+            Lijst.kop(inhoud, getString(R.string.raakt_waarschijnlijk_op))
+            val kaart = Lijst.kaart(inhoud, R.drawable.rand_links_oranje)
+            for (p in extra) {
+                val urgent = p.optString("status") == "urgent"
+                Lijst.regel(
+                    kaart, p.optString("naam"),
+                    getString(R.string.voorraad_verwacht, p.optInt("voorraad"), p.optInt("verwacht"), p.optString("eenheid")) + " · " +
+                        getString(R.string.advies_kort_eenheden, p.optInt("advies_eenheden"), p.optString("besteleenheid")),
+                    "${Math.round(p.optDouble("kans_tekort") * 100)}%", if (urgent) R.color.rood_balk else R.color.oranje_balk,
+                ) { ProductActivity.open(this, p.getInt("id")) }
             }
         }
 
@@ -76,7 +115,10 @@ class BestellijstActivity : BasisActivity() {
                         .setTitle(p.optString("naam"))
                         .setMessage(R.string.melding_afhandelen_vraag)
                         .setPositiveButton(R.string.afhandelen) { _, _ ->
-                            bezig { toon(Api.post(this, "/api/app/bestellijst/gemeld/${p.getInt("id")}/afhandelen", herhaalbaar = true)) }
+                            bezig {
+                                this@BestellijstActivity.data = Api.post(this, "/api/app/bestellijst/gemeld/${p.getInt("id")}/afhandelen", herhaalbaar = true)
+                                toon()
+                            }
                         }
                         .setNeutralButton(R.string.naar_product) { _, _ -> ProductActivity.open(this, p.getInt("id")) }
                         .setNegativeButton(R.string.annuleren, null)
@@ -98,7 +140,7 @@ class BestellijstActivity : BasisActivity() {
                     regels.joinToString(", ") { "${it.optInt("aantal")} ${it.optString("product")}" },
                     Lijst.datum(best.tekstOfNull("aangemaakt_op"), metTijd = false),
                     R.color.tekst_zacht,
-                ) { startActivity(Intent(this, FacturenActivity::class.java)) }
+                ) { FacturenActivity.inboeken(this, best.getInt("id")) }
             }
         }
 

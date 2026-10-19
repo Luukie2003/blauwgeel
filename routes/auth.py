@@ -1,7 +1,7 @@
 import re
 from datetime import datetime, timedelta
 
-from flask import current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import mail
@@ -39,6 +39,8 @@ def register_routes(app):
     def login():
         if "gebruiker_id" in session:
             return redirect(url_for("dashboard"))
+        # Tijdens een noodstop vraagt het formulier ook de noodcode (zie templates/login.html).
+        g.noodstop_login = noodstop.is_actief(get_db())
 
         if request.method == "POST":
             naam = request.form.get("naam", "").strip()
@@ -80,10 +82,13 @@ def register_routes(app):
                 )
                 return render_template("login.html")
             if gebruiker and check_password_hash(gebruiker["wachtwoord_hash"], wachtwoord):
-                if noodstop.is_actief(db) and not noodstop.is_eigenaar(db, gebruiker["id"]):
-                    # Noodstop (zie noodstop.py): alleen de eigenaar komt er nu in.
-                    flash("De site is tijdelijk afgesloten. Probeer het later opnieuw.", "error")
-                    return render_template("login.html")
+                noodstop_toestand = noodstop.toestand(db)
+                if noodstop_toestand["actief"]:
+                    # Noodstop (zie noodstop.py): alleen een beheerder, met de noodcode.
+                    fout = noodstop.mag_inloggen(db, gebruiker, request.form.get("noodcode"))
+                    if fout:
+                        flash(fout, "error")
+                        return render_template("login.html")
                 if not gebruiker["wachtwoord_hash"].startswith(WACHTWOORD_HASH_METHODE + "$"):
                     # Hash met een ouder/trager aantal iteraties (werkzeug's
                     # eigen pbkdf2-standaard duurde hier ruim 0,6s per
@@ -110,6 +115,9 @@ def register_routes(app):
                 session["gebruiker_naam"] = gebruiker["naam"]
                 session["gebruiker_rol"] = gebruiker["rol"]
                 session["eigenaar"] = bool(gebruiker["eigenaar"])
+                if noodstop_toestand["actief"]:
+                    # Binnen tijdens deze noodstop (zie noodstop_bewaken in app.py).
+                    session["noodstop_toegang"] = noodstop_toestand["sinds"]
                 # Eenmalig vlaggetje (net als flash()) -- inject_nav() haalt
                 # 'm er weer af zodra de eerste pagina na het inloggen is
                 # gerenderd, zodat de welkom-pop-up maar 1x verschijnt.

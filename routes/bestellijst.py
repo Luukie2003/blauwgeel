@@ -1,10 +1,12 @@
-from flask import Response, flash, g, redirect, render_template, request, session, url_for
+from flask import Response, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from database import get_db
 from helpers import (
     bereken_bestellijst_meldingen,
     bereken_voorspelde_tekorten,
+    bestel_advies,
     bestel_suggesties,
+    kleine_afbeelding,
     naar_besteleenheden,
     naar_voorraadeenheden,
     now_str,
@@ -83,6 +85,17 @@ def register_routes(app):
             voorspelde_tekorten=bereken_voorspelde_tekorten(get_db()),
         )
 
+    @app.route("/bestellijst/prognose")
+    def bestellijst_prognose():
+        """De prognose bij 'Voorgesteld om te bestellen' (zie bestel_advies), apart opgehaald omdat het voorspelmodel
+        soms enkele seconden rekent: de verwachte verkoop per voorgesteld product, een hoger aantal als de komende week
+        meer vraagt, en wat er nog bij moet omdat het waarschijnlijk opraakt."""
+        advies = bestel_advies(get_db())
+        for p in advies["extra"]:
+            p["foto"] = (url_for("static", filename="product_afbeeldingen/" + kleine_afbeelding(p["afbeelding"], "klein"))
+                         if p["afbeelding"] else None)
+        return jsonify(advies)
+
     @app.route("/bestellijst/pdf")
     def bestellijst_pdf_route():
         """De bestellijst als pdf; met ?leverancier=<id> (of 'geen') alleen wat bij die leverancier besteld wordt."""
@@ -158,7 +171,11 @@ def register_routes(app):
                 (bestelling_id, product_id, aantal),
             )
         db.commit()
-        flash(f"Bestelling aangemaakt met {len(regels)} product(en).", "success")
+        flash(
+            f"Bestelling #{bestelling_id} klaargezet met {len(regels)} product(en). Hij staat nu als concept bij Factuur "
+            "inboeken: scan de levering daar in zodra hij binnenkomt (ook met de handterminal).",
+            "success",
+        )
         return redirect(url_for("bestellijst"))
 
     @app.route("/bestellijst/nieuw", methods=["GET", "POST"])
@@ -209,8 +226,8 @@ def register_routes(app):
                 )
             db.commit()
             flash(
-                f"Bestelling #{bestelling_id} klaargezet met {len(regels)} product(en). "
-                "Boek 'm in zodra de levering binnenkomt.",
+                f"Bestelling #{bestelling_id} klaargezet met {len(regels)} product(en). Hij staat nu als concept bij "
+                "Factuur inboeken: scan de levering daar in zodra hij binnenkomt (ook met de handterminal).",
                 "success",
             )
             return redirect(url_for("bestellijst"))
@@ -311,6 +328,11 @@ def register_routes(app):
         if bestelling is None:
             flash("Bestelling niet gevonden.", "error")
             return redirect(url_for("bestellijst"))
+        if bestelling["status"] == "besteld" and request.method == "GET":
+            # Een klaargezette bestelling is het concept van een factuur: die boek je in door de levering te scannen
+            # (Factuur inboeken, ook op de handterminal). Dit formulier is er nog om een ontvangen bestelling te
+            # corrigeren; een formulier dat nog openstond (van voor deze wijziging) kun je nog wel versturen.
+            return redirect(url_for("factuur_voor_bestelling", bestelling_id=bestelling_id))
 
         regels = db.execute(
             """SELECT br.*, p.naam AS product_naam, p.eenheid, p.afbeelding,

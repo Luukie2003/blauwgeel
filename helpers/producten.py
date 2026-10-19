@@ -1,5 +1,7 @@
 """Producten, besteleenheden, bestelsuggesties en voorspelde tekorten."""
 
+import math
+
 from flask import request
 
 from helpers.tijd import now_str
@@ -271,6 +273,65 @@ def bereken_voorspelde_tekorten(db, dagen_vooruit=7):
         )
     resultaat.sort(key=lambda x: x["verwacht_tekort"], reverse=True)
     return resultaat
+
+
+def bestel_advies(db, dagen=7):
+    """De prognose bij de bestellijst (zie voorspelling.maak_prognose; rekent soms enkele seconden, dus de bestellijst
+    haalt dit apart op).
+    - "producten": per product dat nu besteld moet worden (bestel_suggesties) wat er de komende 'dagen' dagen verwacht
+      wordt, en hoeveel besteleenheden je dan beter bestelt: genoeg voor een drukke week (het 90%-punt van de
+      verwachting, en minstens het minimum), nooit minder dan het gewone voorstel ("basis_eenheden").
+    - "extra": wat nog boven het minimum zit maar waarschijnlijk opraakt (net als bereken_voorspelde_tekorten), met het
+      advies van het voorspelmodel.
+    {"beschikbaar", "dagen", "producten": {id: {...}}, "extra": [...]}"""
+    from voorspelling import maak_prognose
+
+    leeg = {"beschikbaar": False, "dagen": dagen, "producten": {}, "extra": []}
+    try:
+        prognose = maak_prognose(db, dagen=dagen)
+    except Exception as fout:  # de bestellijst mag nooit stuk gaan door de voorspelling
+        print(f"[voorspelling] mislukt: {fout}")
+        return leeg
+    if not prognose["beschikbaar"]:
+        return leeg
+    suggesties = {p["id"]: p for p in bestel_suggesties(db)}
+    per_id = {p["product"]["id"]: p for p in prognose["producten"]}
+    producten = {}
+    for pid, s in suggesties.items():
+        p = per_id.get(pid)
+        if p is None:
+            continue  # (nog) geen verkoop om van te leren: het minimum blijft het voorstel
+        basis = s["bestel_hoeveelheid"] if s["bestel_hoeveelheid"] > 0 else (s["min_voorraad"] - s["voorraad"])
+        nodig = math.ceil(max(s["min_voorraad"] or 0, p["hoog"]) - max(0, s["voorraad"]) - p["onderweg"])
+        producten[pid] = {
+            "verwacht": round(p["verwacht"]),
+            "hoog": round(p["hoog"]),
+            "kans_tekort": round(p["kans_tekort"], 3),
+            "basis_eenheden": naar_besteleenheden(basis, s),
+            "advies_eenheden": naar_besteleenheden(max(basis, nodig), s),
+        }
+    extra = []
+    for p in prognose["producten"]:
+        product = p["product"]
+        if product["id"] in suggesties or p["status"] == "ok" or p["advies_stuks"] <= 0:
+            continue
+        extra.append({
+            "id": product["id"],
+            "naam": product["naam"],
+            "afbeelding": product["afbeelding"],
+            "eenheid": product["eenheid"],
+            "voorraad": product["voorraad"],
+            "min_voorraad": product["min_voorraad"] or 0,
+            "besteleenheid": besteleenheid_naam(product),
+            "factor": besteleenheid_factor(product),
+            "leverancier_id": product["leverancier_id"],
+            "verwacht": round(p["verwacht"]),
+            "kans_tekort": round(p["kans_tekort"], 3),
+            "status": p["status"],
+            "onderweg": p["onderweg"],
+            "advies_eenheden": naar_besteleenheden(p["advies_stuks"], product),
+        })
+    return {"beschikbaar": True, "dagen": dagen, "producten": producten, "extra": extra}
 
 
 def bereken_bestellijst_meldingen(db):

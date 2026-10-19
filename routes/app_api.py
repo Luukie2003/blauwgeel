@@ -24,6 +24,7 @@ from database import get_db
 from derving import DERVING_REDENEN, kies_reden
 from helpers import (
     bereken_bestellijst_meldingen,
+    bestel_advies,
     bereken_pda_start,
     bestel_suggesties,
     besteleenheid_factor,
@@ -39,12 +40,12 @@ from helpers import (
 from helpers.afbeeldingen import kleine_afbeelding
 from productkaart import TELLEN_VOORWAARDE
 from routes.tellen.looplijst import controle_regels, optellen
-from routes.tellen.looplijst_opslag import bewaar_stand, bewaarde_stand, wis_stand
+from routes.tellen.looplijst_opslag import bewaar_stand, bewaarde_stand, stand_verlopen, wis_stand
 from routes.tellen.verwerken import verwerk_telling
 from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 # De nieuwste versie van de app. Draait er een oudere, dan meldt de app dat er een nieuwe is.
-HANDTERMINAL_APP_VERSIE = "2.2.0"
+HANDTERMINAL_APP_VERSIE = "2.3.0"
 
 MAX_AANTAL = 100000
 
@@ -384,14 +385,24 @@ def register_routes(app):
             "stand": bewaarde_stand(db, session.get("gebruiker_id")),
         })
 
+    def _afgebroken(db, data):
+        """Een 409 als deze looplijst (loop_id) intussen ergens anders is afgebroken, opgeslagen of opnieuw begonnen;
+        de app stopt dan ook (zie stand_verlopen). 'nieuw': de eerste keer dat de app deze looplijst doorgeeft."""
+        reden = stand_verlopen(db, session.get("gebruiker_id"), data.get("loop_id"), bool(data.get("nieuw")))
+        return _fout(reden, 409, "afgebroken") if reden else None
+
     @app.route("/api/app/tellen/stand", methods=["POST"])
     def api_app_tellen_stand():
-        """{fase: 'bar'|'hok', index, bar: {product_id: aantal}, hok: {...}}: de stand bewaren (pauzeren, of gewoon
-        tussendoor), zodat je later verder kunt, ook op een ander toestel of op de site."""
+        """{fase: 'bar'|'hok', index, bar: {product_id: aantal}, hok: {...}, loop_id, nieuw}: de stand bewaren
+        (pauzeren, of gewoon tussendoor), zodat je later verder kunt, ook op een ander toestel of op de site. Is de
+        looplijst intussen ergens anders afgebroken of opgeslagen, dan een 409 (fout: afgebroken)."""
+        db = get_db()
         data = _data()
+        if (fout := _afgebroken(db, data)) is not None:
+            return fout
         fase = "hok" if data.get("fase") == "hok" else "bar"
-        bewaar_stand(get_db(), session.get("gebruiker_id"), fase, max(0, _getal(data.get("index"), 0)),
-                     _invoer(data.get("bar")), _invoer(data.get("hok")))
+        bewaar_stand(db, session.get("gebruiker_id"), fase, max(0, _getal(data.get("index"), 0)),
+                     _invoer(data.get("bar")), _invoer(data.get("hok")), loop_id=data.get("loop_id") or None)
         return jsonify({"status": "bewaard"})
 
     @app.route("/api/app/tellen/controleren", methods=["POST"])
@@ -400,11 +411,13 @@ def register_routes(app):
         aantallen, wat er verwacht werd en of het opvallend afwijkt. Er wordt nog niets opgeslagen in de voorraad."""
         db = get_db()
         data = _data()
+        if (fout := _afgebroken(db, data)) is not None:
+            return fout
         bar, hok = _invoer(data.get("bar")), _invoer(data.get("hok"))
         review = optellen(_tel_producten(db), bar, hok)
         if not review:
             return _fout("Er is nog niets ingevuld.")
-        bewaar_stand(db, session.get("gebruiker_id"), "hok", 0, bar, hok, review)
+        bewaar_stand(db, session.get("gebruiker_id"), "hok", 0, bar, hok, review, loop_id=data.get("loop_id") or None)
         regels = controle_regels(db, review, bar, hok)
         return jsonify({"regels": [
             {"product_id": r["product"]["id"], "naam": r["product"]["naam"], "categorie": r["product"]["categorie"] or "",
@@ -416,10 +429,15 @@ def register_routes(app):
 
     @app.route("/api/app/tellen/bevestigen", methods=["POST"])
     def api_app_tellen_bevestigen():
-        """{waarden: {product_id: totaal}, verzoek_id}: de telling opslaan, net als 'Bevestigen' op de site."""
+        """{waarden: {product_id: totaal}, loop_id, verzoek_id}: de telling opslaan, net als 'Bevestigen' op de site.
+        Is deze looplijst intussen ergens anders afgebroken of al opgeslagen, dan een 409: zo komt er geen dubbele
+        telling."""
         data = _data()
 
         def bevestig(db):
+            reden = stand_verlopen(db, session.get("gebruiker_id"), data.get("loop_id"))
+            if reden:
+                return {"fout": "afgebroken", "melding": reden}, 409
             waarden = {}
             for sleutel, waarde in (data.get("waarden") or {}).items():
                 aantal = _getal(waarde)
@@ -440,8 +458,9 @@ def register_routes(app):
 
     @app.route("/api/app/tellen/stoppen", methods=["POST"])
     def api_app_tellen_stoppen():
-        """De looplijst afbreken: de bewaarde stand weg, er wordt niets opgeslagen."""
-        wis_stand(get_db(), session.get("gebruiker_id"))
+        """{loop_id}: de looplijst afbreken, de bewaarde stand weg; er wordt niets opgeslagen. Met loop_id alleen als het
+        nog die looplijst is (een late 'stoppen' gooit geen nieuwere weg)."""
+        wis_stand(get_db(), session.get("gebruiker_id"), _data().get("loop_id") or None)
         return jsonify({"status": "gestopt"})
 
     # ---------- Prikbord ----------
@@ -588,6 +607,16 @@ def register_routes(app):
                 for b in open_bestellingen
             ],
         })
+
+    @app.route("/api/app/bestellijst/prognose")
+    def api_app_bestellijst_prognose():
+        """De prognose bij de bestellijst (zie bestel_advies): apart, want het voorspelmodel rekent soms enkele
+        seconden. Per voorgesteld product de verwachte verkoop en het advies, en wat er waarschijnlijk opraakt."""
+        advies = bestel_advies(get_db())
+        for p in advies["extra"]:
+            p["foto"] = _foto(p.pop("afbeelding"), "klein")
+        advies["producten"] = {str(pid): v for pid, v in advies["producten"].items()}
+        return jsonify(advies)
 
     @app.route("/api/app/bestellijst/gemeld/<int:product_id>/afhandelen", methods=["POST"])
     def api_app_bestellijst_melding_afhandelen(product_id):

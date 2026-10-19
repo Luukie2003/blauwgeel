@@ -146,9 +146,9 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
 
     @app.before_request
     def noodstop_bewaken():
-        """De noodstop (zie noodstop.py): is de site afgesloten, dan kan alleen de eigenaar er nog in. De tv-schermen
-        tonen het vergrendel-scherm, de apps krijgen een JSON-antwoord en alle andere pagina's (ook de publieke, het
-        inloggen voor anderen en wachtwoord vergeten) een afgesloten-pagina. Live zetten (met handtekening) en de
+        """De noodstop (zie noodstop.py): is de site afgesloten, dan kan alleen een beheerder er nog in die tijdens de
+        noodstop heeft ingelogd met de noodcode. De tv-schermen tonen het vergrendel-scherm, de apps krijgen een
+        JSON-antwoord en alle andere pagina's (ook de publieke en wachtwoord vergeten) een afgesloten-pagina. Live zetten (met handtekening) en de
         statuspagina blijven werken, zodat een herstel nog live kan."""
         if request.endpoint is None or request.endpoint in NOODSTOP_ALTIJD_OPEN:
             return None
@@ -165,13 +165,19 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             return antwoord
         if request.endpoint in KIOSK_POLLS:
             # Een scherm dat nog de oude pagina toont, herlaadt bij een andere versie en krijgt dan het vergrendel-scherm.
-            return jsonify({"versie": "noodstop", "noodstop": True, "meldingen": [], "laatste": 0, "duur": 12})
-        # De eigenaar werkt gewoon door, maar alleen met een sessie die na het afsluiten nog geldig is (zie
-        # noodstop.vergrendel: sessie_versie omhoog). Een oude sessie van de eigenaar op een ander toestel telt niet,
-        # ook niet op een publieke pagina waar vereis_login de sessie verder niet controleert.
-        if session.get("gebruiker_id") and noodstop.is_eigenaar(db, session["gebruiker_id"]):
-            rij = db.execute("SELECT sessie_versie FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)).fetchone()
-            if rij is not None and session.get("sessie_versie", 0) == (rij["sessie_versie"] or 0):
+            # Zonder 'laatste': anders zet de welkomstmelding (templates/_kiosk_welkom.html) zijn teller op 0 en komen na
+            # het openen de meldingen van het afgelopen half uur nog eens.
+            return jsonify({"versie": "noodstop", "noodstop": True, "meldingen": [], "duur": 12})
+        # Een beheerder die tijdens deze noodstop met de noodcode inlogde (zie login in routes/auth.py), werkt door.
+        # Iedereen die al was ingelogd, ook de beheerders en de eigenaar, is bij het afsluiten uitgelogd
+        # (noodstop.vergrendel: sessie_versie omhoog); dat wordt hier ook gecontroleerd, want op een publieke pagina
+        # doet vereis_login dat niet.
+        if session.get("gebruiker_id") and session.get("noodstop_toegang") == toestand["sinds"]:
+            rij = db.execute(
+                "SELECT rol, actief, sessie_versie FROM gebruikers WHERE id = ?", (session["gebruiker_id"],)
+            ).fetchone()
+            if (rij is not None and rij["actief"] and rij["rol"] == "beheerder"
+                    and session.get("sessie_versie", 0) == (rij["sessie_versie"] or 0)):
                 return None
         session.clear()  # wie anders nog een sessie had, is bij het afsluiten al uitgelogd
         if request.path.startswith("/api/") or is_app_api():
@@ -262,12 +268,11 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             flash("Je bent uitgelogd, want je account is op alle toestellen uitgelogd. Log opnieuw in.", "error")
             return redirect(url_for("login"))
         session["eigenaar"] = bool(gebruiker["eigenaar"])  # alleen de eigenaar ziet Beheer > Noodstop
-        if "gebruiker_rol" not in session or "gebruiker_secties" not in session:
-            # Sessie is aangemaakt voor rollen/secties bestonden (of
-            # anderszins verouderd) -- alsnog ophalen zodat je niet
-            # handmatig hoeft uit/in te loggen na een update.
-            session["gebruiker_rol"] = gebruiker["rol"]
-            session["gebruiker_secties"] = gebruiker["secties"]
+        # Rol en secties bij elk verzoek uit de database (de rij is hierboven toch al opgehaald): haalt een beheerder
+        # bij iemand een sectie weg of maakt hij een beheerder vrijwilliger, dan geldt dat meteen, ook in een sessie
+        # die nog weken loopt ("Ingelogd blijven") en in de handterminal-app.
+        session["gebruiker_rol"] = gebruiker["rol"]
+        session["gebruiker_secties"] = gebruiker["secties"]
         if (
             gebruiker["tablet_code_hash"] is None
             and request.endpoint not in TABLET_CODE_UITGEZONDERD

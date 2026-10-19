@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import nl.kantineblauwgeel.handterminal.databinding.ActivityTellenBinding
 import org.json.JSONObject
+import java.util.UUID
 
 /** Tellen met de looplijst: eerst de bar, dan het voorraadhok, product voor product. Daarna een controlescherm met de
  * totalen (en wat opvallend afwijkt), en pas bij "Telling opslaan" verandert de voorraad. Het scherm volgt de looplijst
@@ -24,6 +25,11 @@ import org.json.JSONObject
  * verbinding. De stand gaat elke paar producten (en bij pauzeren) naar de site, in dezelfde vorm als de looplijst van
  * de site: verder gaan kan dus ook op een ander toestel of op de site. Lukt dat even niet, dan blijft de stand op het
  * toestel bewaard en gaat hij later mee.
+ *
+ * Elke telling heeft een eigen loop_id. Wordt hij op de site of een ander toestel afgebroken, opgeslagen of opnieuw
+ * begonnen, dan zegt de site dat bij de volgende keer doorgeven (409, "afgebroken") en stopt de telling hier ook, in
+ * plaats van hem op de site weer terug te zetten. Afbreken gaat ook naar de site als het scherm meteen sluit
+ * (Achtergrond); zonder verbinding gebeurt dat zodra het weer kan.
  *
  * Een product scannen tijdens het tellen springt naar dat product. */
 class TellenActivity : BasisActivity() {
@@ -54,6 +60,9 @@ class TellenActivity : BasisActivity() {
     private var controleWaarden = LinkedHashMap<String, Int>()
     private var opslaanId: String? = null
     private var tellingId: Int? = null
+    /** Welke telling dit is, en of de site hem al eens kreeg (dan herkent die hem; anders is hij nieuw). */
+    private var loopId = UUID.randomUUID().toString()
+    private var opSite = false
 
     private val lokaal by lazy { getSharedPreferences("tellen", Context.MODE_PRIVATE) }
 
@@ -136,6 +145,7 @@ class TellenActivity : BasisActivity() {
     private fun laad() {
         lifecycleScope.launch {
             val data = try {
+                stuurWachtendeStop(applicationContext)
                 Api.getJson(this@TellenActivity, "/api/app/tellen")
             } catch (f: Api.Fout) {
                 toonFout(f)
@@ -166,15 +176,15 @@ class TellenActivity : BasisActivity() {
             when {
                 stand == null -> begin()
                 !stand.isNull("review") -> {
-                    zetStand(stand)
+                    zetStand(stand, vanSite = opToestel == null)
                     controleer()
                 }
-                else -> vraagVerder(stand)
+                else -> vraagVerder(stand, vanSite = opToestel == null)
             }
         }
     }
 
-    private fun vraagVerder(stand: JSONObject) {
+    private fun vraagVerder(stand: JSONObject, vanSite: Boolean) {
         val faseNaam = getString(if (stand.optString("fase") == "hok") R.string.fase_hok else R.string.fase_bar)
         val nummer = stand.optInt("index") + 1
         AlertDialog.Builder(this)
@@ -182,7 +192,7 @@ class TellenActivity : BasisActivity() {
             .setMessage(getString(R.string.verder_tellen_vraag, faseNaam, nummer, producten.size))
             .setCancelable(false)
             .setPositiveButton(R.string.verder) { _, _ ->
-                zetStand(stand)
+                zetStand(stand, vanSite)
                 toonLaag(Laag.TELLEN)
                 toonProduct()
             }
@@ -190,7 +200,9 @@ class TellenActivity : BasisActivity() {
             .show()
     }
 
-    private fun zetStand(stand: JSONObject) {
+    private fun zetStand(stand: JSONObject, vanSite: Boolean) {
+        loopId = stand.tekstOfNull("loop_id") ?: UUID.randomUUID().toString()
+        opSite = vanSite || stand.optBoolean("op_site")
         fase = if (stand.optString("fase") == "hok") "hok" else "bar"
         index = stand.optInt("index").coerceIn(0, producten.lastIndex)
         bar.clear()
@@ -200,6 +212,8 @@ class TellenActivity : BasisActivity() {
     }
 
     private fun begin() {
+        loopId = UUID.randomUUID().toString()
+        opSite = false
         fase = "bar"
         index = 0
         bar.clear()
@@ -269,8 +283,8 @@ class TellenActivity : BasisActivity() {
     private fun vraagStoppen() {
         AlertDialog.Builder(this)
             .setMessage(R.string.stoppen_vraag)
-            .setPositiveButton(R.string.stoppen) { _, _ -> stop() }
-            .setNegativeButton(R.string.annuleren, null)
+            .setPositiveButton(R.string.ja_afbreken) { _, _ -> stop() }
+            .setNegativeButton(R.string.nee_verder_tellen, null)
             .show()
     }
 
@@ -363,16 +377,28 @@ class TellenActivity : BasisActivity() {
         finish()
     }
 
+    /** Afbreken: weg op het toestel en op de site. Het scherm sluit meteen; het bericht aan de site gaat op de
+     * achtergrond, en zonder verbinding de volgende keer dat je gaat tellen (stuurWachtendeStop). */
     private fun stop() {
-        lokaal.edit().remove("stand").apply()
-        lifecycleScope.launch {
-            try {
-                Api.post(this@TellenActivity, "/api/app/tellen/stoppen", herhaalbaar = true)
-            } catch (f: Api.Fout) {
-            }
-        }
+        laag = Laag.KLAAR // anders bewaart onPause de stand meteen weer
+        lokaal.edit().remove("stand").putString("stoppen", loopId).apply()
+        stopOpAchtergrond(applicationContext)
         melding(getString(R.string.gestopt))
         finish()
+    }
+
+    /** De telling is ergens anders afgebroken, opgeslagen of opnieuw begonnen: hier ook stoppen. */
+    private fun afgebroken(melding: String?) {
+        laag = Laag.KLAAR
+        lokaal.edit().remove("stand").apply()
+        if (isFinishing) return
+        tril(150)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.telling_afgebroken_titel)
+            .setMessage(melding ?: getString(R.string.telling_afgebroken))
+            .setCancelable(false)
+            .setPositiveButton(R.string.ok) { _, _ -> finish() }
+            .show()
     }
 
     // ---------------------------------------------------------------- de stand bewaren
@@ -380,6 +406,7 @@ class TellenActivity : BasisActivity() {
     private fun standJson(onverzonden: Boolean) = JSONObject()
         .put("fase", fase).put("index", index).put("bar", JSONObject(bar as Map<*, *>)).put("hok", JSONObject(hok as Map<*, *>))
         .put("naam", Sessie.naam).put("onverzonden", onverzonden).put("tijd", System.currentTimeMillis())
+        .put("loop_id", loopId).put("op_site", opSite)
 
     private fun bewaarLokaal(onverzonden: Boolean = true) {
         lokaal.edit().putString("stand", standJson(onverzonden).toString()).apply()
@@ -391,17 +418,26 @@ class TellenActivity : BasisActivity() {
         if (wijzigingen >= 5) stuurStand()
     }
 
+    /** De stand naar de site; ook als het scherm net sluit (pauzeren), dus op de achtergrond. */
     private fun stuurStand() {
         wijzigingen = 0
         val stand = standJson(false)
+        val body = JSONObject(stand.toString()).put("nieuw", !opSite)
         val app = applicationContext
-        lifecycleScope.launch {
+        val prefs = lokaal
+        Achtergrond.scope.launch {
             try {
-                Api.post(app, "/api/app/tellen/stand", stand, herhaalbaar = true)
+                Api.post(app, "/api/app/tellen/stand", body, herhaalbaar = true)
                 // Doorgegeven: bij de volgende start telt de stand van de site (die kan intussen verder zijn).
-                lokaal.edit().putString("stand", stand.toString()).apply()
+                opSite = true
+                prefs.edit().putString("stand", stand.put("op_site", true).toString()).apply()
             } catch (f: Api.Fout) {
-                if (f.soort == Api.Soort.NIET_INGELOGD) toonFout(f)
+                runOnUiThread {
+                    when {
+                        f.code == "afgebroken" -> afgebroken(f.message)
+                        f.soort == Api.Soort.NIET_INGELOGD && !isFinishing -> toonFout(f)
+                    }
+                }
             }
         }
     }
@@ -413,10 +449,13 @@ class TellenActivity : BasisActivity() {
         bezig {
             try {
                 val body = JSONObject().put("bar", JSONObject(bar as Map<*, *>)).put("hok", JSONObject(hok as Map<*, *>))
+                    .put("loop_id", loopId).put("nieuw", !opSite)
                 val regels = Api.post(this, "/api/app/tellen/controleren", body, herhaalbaar = true).getJSONArray("regels").objecten()
+                opSite = true
                 lokaal.edit().putString("stand", standJson(false).toString()).apply()
                 toonControle(regels)
             } catch (f: Api.Fout) {
+                if (f.code == "afgebroken") return@bezig afgebroken(f.message)
                 toonLaag(Laag.TELLEN)
                 toonProduct()
                 throw f
@@ -501,7 +540,12 @@ class TellenActivity : BasisActivity() {
             try {
                 val waarden = JSONObject()
                 controleWaarden.forEach { (k, v) -> waarden.put(k, v) }
-                val antwoord = Api.post(this, "/api/app/tellen/bevestigen", JSONObject().put("waarden", waarden), verzoekId = id)
+                val antwoord = try {
+                    Api.post(this, "/api/app/tellen/bevestigen", JSONObject().put("waarden", waarden).put("loop_id", loopId), verzoekId = id)
+                } catch (f: Api.Fout) {
+                    if (f.code == "afgebroken") return@bezig afgebroken(f.message)
+                    throw f
+                }
                 lokaal.edit().remove("stand").apply()
                 tellingId = antwoord.optInt("telling_id")
                 b.klaarTitel.text = getString(R.string.telling_opgeslagen, antwoord.optInt("telling_id"))
@@ -521,5 +565,21 @@ class TellenActivity : BasisActivity() {
 
     companion object {
         fun open(context: Context) = context.startActivity(Intent(context, TellenActivity::class.java))
+
+        /** Een afgebroken telling die de site nog niet weet (geen verbinding bij het afbreken): alsnog doorgeven. Alleen
+         * die telling (loop_id): is er intussen een nieuwe begonnen, dan blijft die staan. */
+        suspend fun stuurWachtendeStop(context: Context) {
+            val prefs = context.getSharedPreferences("tellen", Context.MODE_PRIVATE)
+            val id = prefs.getString("stoppen", null) ?: return
+            try {
+                Api.post(context, "/api/app/tellen/stoppen", JSONObject().put("loop_id", id), herhaalbaar = true)
+                prefs.edit().remove("stoppen").apply()
+            } catch (f: Api.Fout) {
+            }
+        }
+
+        private fun stopOpAchtergrond(context: Context) {
+            Achtergrond.scope.launch { stuurWachtendeStop(context) }
+        }
     }
 }

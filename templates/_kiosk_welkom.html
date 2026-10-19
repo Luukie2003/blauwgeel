@@ -92,6 +92,8 @@
         fetch(url + (cursor === null ? '' : '?na=' + cursor), { cache: 'no-store' })
             .then(function (r) { return r.json(); })
             .then(function (data) {
+                // De noodstop (zie noodstop_bewaken in app.py): meteen herladen, dan komt het vergrendel-scherm.
+                if (data.noodstop) { window.location.reload(); return; }
                 duurMs = (data.duur || 12) * 1000;
                 if (cursor === null || data.laatste < cursor) {
                     // Eerste keer kijken (niet alles van vroeger opnieuw tonen), of de server telt opnieuw.

@@ -6,8 +6,30 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.56.0"
+HUIDIGE_VERSIE = "1.58.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.58.0",
+        "datum": "19 oktober 2026",
+        "punten": [
+            "Noodstop: iedereen wordt uitgelogd, ook de beheerders en de eigenaar zelf. Daarna kan alleen een beheerder inloggen, met het wachtwoord én de noodcode; weer openen kan alleen de eigenaar. Zonder noodcode kan de noodstop niet aan.",
+            "Tellen: de looplijst op de site en in de handterminal-app is één telling. Afbreken (of opslaan) geldt nu overal: hij komt niet meer terug doordat een ander toestel of de app hem bij de volgende stap opnieuw bewaarde. Op Voorraad tellen staat een knop Afbreken, en de vraag 'Afbreken?' heeft nu de knoppen 'Ja, afbreken' en 'Nee, verder tellen'.",
+            "Tellen in de app: 'Stoppen zonder opslaan' werkt nu echt; de telling bleef eerder bewaard.",
+            "Handterminal-app: een artikel toevoegen op het productscherm (naam, merk, inhoud, inkoopprijs, leverancier en de barcodes van de verpakking en de doos, door te scannen).",
+            "Rechten: haalt een beheerder bij iemand een sectie weg (of maakt hij een beheerder vrijwilliger), dan geldt dat meteen, ook als die al is ingelogd. Een prikbordbericht verwijderen kan alleen wie het schreef, of een beheerder.",
+        ],
+    },
+    {
+        "versie": "1.57.0",
+        "datum": "19 oktober 2026",
+        "punten": [
+            "Bestellijst: de prognose zit nu in 'Voorgesteld om te bestellen'. Per product staat wat er de komende 7 dagen verwacht wordt; vraagt de komende week meer dan het minimum, dan staat het aantal al hoger. Producten die nog boven het minimum zitten maar waarschijnlijk opraken, komen er onderaan bij.",
+            "Een klaargezette bestelling is het concept van de factuur: hij staat meteen bij Factuur inboeken (op de site en op de handterminal). Bij het inscannen zie je per product wat er besteld is en wat er al binnen is, met 'zoals besteld' voor wat zonder barcode komt. Wat extra meekomt, komt er bij het afronden bij. 'Inboeken' op de bestellijst opent dit ook; het oude afvinkformulier is er alleen nog om een ontvangen bestelling te corrigeren.",
+            "Handterminal-app 2.3: klaargezette bestellingen inboeken met besteld naast gescand, de prognose bij de bestellijst, en een nieuw product aanmaken als een gescande barcode bij nog geen product hoort.",
+            "Noodstop: ook een pagina die al openstond gaat binnen een halve minuut dicht, en de handterminal-app gaat binnen 15 seconden op slot met een vergrendel-scherm, ook als hij net geen verbinding had. Is alles weer open, dan gaat de app vanzelf naar het inlogscherm. De welkomstmeldingen op de tv komen na een noodstop niet nog eens.",
+            "De pagina 'Geen verbinding' probeert het nu zelf opnieuw, handig voor een scherm aan de muur.",
+        ],
+    },
     {
         "versie": "1.56.0",
         "datum": "19 oktober 2026",
@@ -1072,10 +1094,10 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.12.0", "sinds": "0.1.0", "laatst": "1.55.0",
+    {"naam": "Voorraad & tellen", "versie": "1.14.0", "sinds": "0.1.0", "laatst": "1.58.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.12.1", "sinds": "0.4.0", "laatst": "1.51.0",
-     "inhoud": "Bestellijst (ook per leverancier), leveranciers, bestellen en ontvangen, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
+    {"naam": "Bestellen & prognose", "versie": "1.13.0", "sinds": "0.4.0", "laatst": "1.57.0",
+     "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "1.54.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
     {"naam": "Geld (kassa & kluis)", "versie": "1.4.0", "sinds": "1.0.0", "laatst": "1.45.0",
@@ -1092,16 +1114,16 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.4.0", "sinds": "1.53.0", "laatst": "1.56.0",
-     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken, barcodes, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, plus inloggen met je code, de scanner en verbindingsbewaking"},
-    {"naam": "Accounts & rechten", "versie": "1.10.3", "sinds": "0.1.0", "laatst": "1.53.0",
+    {"naam": "Handterminal-app", "versie": "0.6.0", "sinds": "1.53.0", "laatst": "1.58.0",
+     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes, artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
+    {"naam": "Accounts & rechten", "versie": "1.10.4", "sinds": "0.1.0", "laatst": "1.58.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
-    {"naam": "Overzicht & prikbord", "versie": "1.12.4", "sinds": "0.2.0", "laatst": "1.52.2",
+    {"naam": "Overzicht & prikbord", "versie": "1.12.5", "sinds": "0.2.0", "laatst": "1.58.0",
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
-    {"naam": "Techniek & beveiliging", "versie": "1.7.1", "sinds": "1.1.0", "laatst": "1.52.1",
-     "inhoud": "Geautomatiseerde tests, beveiligingsheaders, bereikbaarheidscontrole, snelheid"},
+    {"naam": "Techniek & beveiliging", "versie": "1.9.0", "sinds": "1.1.0", "laatst": "1.58.0",
+     "inhoud": "Geautomatiseerde tests, beveiligingsheaders, de noodstop, bereikbaarheidscontrole, snelheid"},
 ]

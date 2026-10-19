@@ -116,6 +116,9 @@ def test_inboeken_pagina_toont_alleen_niet_bestelde_producten_als_toevoegoptie(i
     besteld_product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
     _maak_bestelling(ingelogde_client, besteld_product["id"], 1)
     bestelling = db.execute("SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1").fetchone()
+    # Het formulier is er voor een ontvangen bestelling (corrigeren); een openstaande boek je in bij Factuur inboeken.
+    db.execute("UPDATE bestellingen SET status = 'ontvangen' WHERE id = ?", (bestelling["id"],))
+    db.commit()
 
     resp = ingelogde_client.get(f"/bestellingen/{bestelling['id']}/inboeken")
     body = resp.data.decode()
@@ -261,13 +264,13 @@ def test_bestellijst_toont_voorgesteld_label_alleen_bij_krappe_producten(ingelog
     body = ingelogde_client.get("/bestellijst").data.decode()
 
     laag_start = body.index("Laag Testproduct")
-    assert "Voorgesteld" in body[laag_start : laag_start + 150]
+    assert "Onder minimum" in body[laag_start : laag_start + 150]
 
     # Niet-krap product hoort wel in de "zelf toevoegen"-keuzelijst te staan...
     assert 'data-naam="Normaal Testproduct"' in body
-    # ...maar nergens met het "Voorgesteld"-label.
+    # ...maar nergens met het "Onder minimum"-label.
     normaal_start = body.index("Normaal Testproduct")
-    assert "Voorgesteld" not in body[normaal_start : normaal_start + 150]
+    assert "Onder minimum" not in body[normaal_start : normaal_start + 150]
 
 
 def test_overige_producten_sluit_al_openstaand_besteld_product_uit(ingelogde_client, db):
@@ -278,21 +281,15 @@ def test_overige_producten_sluit_al_openstaand_besteld_product_uit(ingelogde_cli
     assert 'data-naam="Al Besteld Testproduct"' not in body
 
 
-def test_verse_bestelling_toont_alles_ongevinkt_als_manco(ingelogde_client, db):
-    """Een net aangemaakte (nog niet ingeboekte) bestelling moet in het
-    inboekscherm met alle regels op manco/ongevinkt starten -- pas als je
-    'm actief aanvinkt telt een regel als binnengekomen."""
+def test_verse_bestelling_begint_met_niets_binnen(ingelogde_client, db):
+    """Een net aangemaakte (nog niet ingeboekte) bestelling is het concept van de factuur: inboeken opent Factuur
+    inboeken, waar nog niets binnen is -- pas wat je scant (of 'zoals besteld' erbij zet) telt als binnengekomen."""
     product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
     _maak_bestelling(ingelogde_client, product["id"], 3)
     bestelling = db.execute("SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1").fetchone()
-    regel = db.execute(
-        "SELECT * FROM bestelregels WHERE bestelling_id = ?", (bestelling["id"],)
-    ).fetchone()
 
-    body = ingelogde_client.get(f"/bestellingen/{bestelling['id']}/inboeken").data.decode()
-    veld_start = body.index(f'name="binnen_{regel["id"]}"')
-    veld_html = body[veld_start : veld_start + 120]
-    assert "checked" not in veld_html
+    body = ingelogde_client.get(f"/bestellingen/{bestelling['id']}/inboeken", follow_redirects=True).data.decode()
+    assert "Besteld" in body and "zoals besteld" in body and "badge-ok" not in body
 
 
 def test_bewerken_van_ingeboekte_bestelling_toont_echte_status(ingelogde_client, db):

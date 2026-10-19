@@ -30,8 +30,8 @@ de sessie-cookie zelf (`Sessie.kt`) en stuurt bij een POST het csrf_token mee in
   en de controle), `FacturenActivity`/`FactuurActivity` (factuur inboeken), `PrikbordActivity`, `BestellijstActivity`,
   `TellingenActivity`, `GeschiedenisActivity`, `BoodschappenActivity`, `PrognoseActivity`, `AgendaActivity`,
   `BarcodesActivity`, `GeldActivity`/`GeldTellenActivity` (kassa en kluis), `KeukenActivity`/`KeukenInvoerActivity`,
-  `AanmeldingenActivity` en `TaakActivity` (een taak van een beheerder; `Schermen.kt` weet welk scherm bij welke
-  pagina van de site hoort). Gedeeld gedrag (kopbalk, scanner, automatisch uitloggen, fouten, "Niet mogelijk in de
+  `AanmeldingenActivity`, `TaakActivity` (een taak van een beheerder; `Schermen.kt` weet welk scherm bij welke
+  pagina van de site hoort) en `VergrendeldActivity` (de noodstop). Gedeeld gedrag (kopbalk, scanner, automatisch uitloggen, fouten, "Niet mogelijk in de
   app", de vraag "Taak afgerond?") zit in `BasisActivity`; lijsten en kaarten in `Lijst.kt`, productfoto's in
   `Fotos.kt`, het koppelen van een barcode in `Koppelvraag.kt`.
 - **Snel**: de hele productlijst met barcodes staat op het toestel (`Catalogus.kt`, ververst met een ETag); zoeken en
@@ -45,6 +45,17 @@ de sessie-cookie zelf (`Sessie.kt`) en stuurt bij een POST het csrf_token mee in
   als broadcast, geen toetsaanslagen). Een scan opent het product, of het koppelen van een onbekende barcode. Een losse
   verpakking terwijl er een doos van bestaat: de vraag of de volle besteleenheid erin moet.
 - **Verbinding**: een stip in de kopbalk, automatisch opnieuw proberen, en een wifi-lock zolang de app voorin staat.
+- **Noodstop**: elk scherm kijkt elke 15 seconden naar `/noodstop/status` (staat ook tijdens een noodstop open). Is de
+  site afgesloten, dan logt de app uit en toont hij het vergrendel-scherm (`VergrendeldActivity`), net als de tv; dat
+  kijkt of alles weer open is en gaat dan naar het inlogscherm. Zonder verbinding gebeurt het zodra de site weer
+  bereikbaar is.
+- **Bestellingen**: een klaargezette bestelling staat bij Factuur inboeken als concept (`/api/facturen/bestelling/<id>`);
+  het factuurscherm toont dan besteld naast gescand, met "zoals besteld" (`/api/facturen/<id>/zoals-besteld`). Een
+  barcode die bij geen enkel product hoort: in `KoppelenActivity` kan ook een nieuw product
+  (`/api/app/producten/nieuw`). Een artikel toevoegen kan op het productscherm (`/api/app/producten/<id>/artikelen`).
+- **Tellen samen met de site**: elke telling heeft een `loop_id`. Wordt hij op de site of een ander toestel
+  afgebroken, opgeslagen of opnieuw begonnen, dan antwoordt de site bij het doorgeven met 409 `afgebroken` en stopt
+  de app ook. Afbreken en pauzeren gaan op de achtergrond door als het scherm sluit (`Achtergrond.kt`).
 - **Android 6**: de site gebruikt Let's Encrypt (ISRG Root X1), dat Android 6 en 7.0 niet kennen. Het rootcertificaat
   zit in `res/raw`; zie `Beveiliging.kt`.
 - **Nieuwe versie**: zet `HANDTERMINAL_APP_VERSIE` in `routes/app_api.py` gelijk aan `versionName`; een oudere app

@@ -4,11 +4,13 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import nl.kantineblauwgeel.handterminal.databinding.ActivityProductBinding
+import nl.kantineblauwgeel.handterminal.databinding.DialogNieuwArtikelBinding
 import org.json.JSONObject
 import kotlin.math.roundToInt
 
@@ -57,6 +59,7 @@ class ProductActivity : BasisActivity() {
         }
         b.boekKnop.setOnClickListener { boek() }
         b.koppelKnop.setOnClickListener { koppelKnop() }
+        b.artikelKnop.setOnClickListener { nieuwArtikel() }
 
         bouwRedenen()
         toonProduct()
@@ -193,6 +196,8 @@ class ProductActivity : BasisActivity() {
     // ---------------------------------------------------------------- productinformatie (zoals op de site)
 
     private var info: JSONObject? = null
+    /** Het open formulier 'Artikel toevoegen': een scan vult dan de barcode in (zie bijScan). */
+    private var artikelDialoog: DialogNieuwArtikelBinding? = null
     private var verkoop: JSONObject? = null
     private var verkoopGevraagd = false
     private var verkoopBlok: LinearLayout? = null
@@ -554,6 +559,17 @@ class ProductActivity : BasisActivity() {
     // ---------------------------------------------------------------- scannen en koppelen
 
     override fun bijScan(code: String) {
+        // Staat "Artikel toevoegen" open, dan is een scan de barcode voor dat artikel.
+        artikelDialoog?.let { d ->
+            val veld = when {
+                d.doosEan.hasFocus() -> d.doosEan
+                d.ean.hasFocus() || d.ean.text.isNullOrBlank() -> d.ean
+                else -> d.doosEan
+            }
+            veld.setText(Catalogus.normaliseerCode(code) ?: code)
+            tril()
+            return
+        }
         val treffer = Catalogus.opBarcode(code)
         when {
             treffer != null && treffer.product.id == productId -> gescand(treffer.barcode.code, eerste = false)
@@ -612,6 +628,50 @@ class ProductActivity : BasisActivity() {
         } else {
             Cijferpad.vraag(this, getString(R.string.barcode_intikken), max = 14) { code ->
                 if (code.isNotEmpty()) bijScan(code)
+            }
+        }
+    }
+
+    /** Een nieuw artikel bij dit product: wat je inkoopt (een zak AH frikandellen van 20, een krat Hertog Jan), met
+     * de barcode van de verpakking en eventueel van de doos, de inkoopprijs en de leverancier. Zelfde controles als
+     * op de site (barcodes.bewaar_artikel); een fout houdt het formulier open. */
+    private fun nieuwArtikel() {
+        val p = product ?: return
+        bezig {
+            val leveranciers = Api.getJson(this, "/api/app/producten/${p.id}/artikelen").getJSONArray("leveranciers").objecten()
+            val d = DialogNieuwArtikelBinding.inflate(layoutInflater)
+            d.aantalLabel.text = getString(R.string.artikel_aantal, p.eenheid)
+            d.leverancier.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item,
+                listOf(getString(R.string.geen_leverancier)) + leveranciers.map { it.optString("naam") })
+            val verzoekId = Api.nieuwVerzoekId()
+            val dialoog = AlertDialog.Builder(this)
+                .setCustomTitle(dialoogTitel(getString(R.string.nieuw_artikel, p.naam)))
+                .setView(d.root)
+                .setNegativeButton(R.string.annuleren, null)
+                .setPositiveButton(R.string.toevoegen, null)
+                .setOnDismissListener { artikelDialoog = null }
+                .show()
+            artikelDialoog = d
+            dialoog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val body = JSONObject()
+                    .put("naam", d.naam.text.toString().trim())
+                    .put("merk", d.merk.text.toString().trim())
+                    .put("ean", d.ean.text.toString().trim())
+                    .put("aantal_per_verpakking", d.aantal.text.toString().trim())
+                    .put("inkoopprijs", d.inkoopprijs.text.toString().trim().replace(',', '.'))
+                    .put("ean_omverpakking", d.doosEan.text.toString().trim())
+                    .put("per_omverpakking", d.perDoos.text.toString().trim())
+                d.leverancier.selectedItemPosition.takeIf { it > 0 }?.let { body.put("leverancier_id", leveranciers[it - 1].getInt("id")) }
+                bezig {
+                    val antwoord = Api.post(this, "/api/app/producten/${p.id}/artikelen", body, verzoekId = verzoekId)
+                    val nieuw = Catalogus.product(antwoord.getJSONObject("product"))
+                    Catalogus.werkBij(this, nieuw)
+                    product = nieuw
+                    dialoog.dismiss()
+                    tril(60)
+                    melding(antwoord.optString("melding"))
+                    laadDetail()
+                }
             }
         }
     }

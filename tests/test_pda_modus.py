@@ -158,7 +158,7 @@ def test_pda_modus_verbergt_bestelling_aanmaken(ingelogde_client):
     assert "Openstaande bestellingen" in body
     assert "Voorgesteld om te bestellen" not in body
     assert "Voorspelde tekorten" not in body
-    assert "Al besteld? Factuur klaarzetten" not in body
+    assert "Al besteld? Bestelling klaarzetten" not in body
     assert "Bestellijst (PDF)" not in body
 
 
@@ -167,7 +167,7 @@ def test_desktop_modus_toont_wel_voorgesteld_om_te_bestellen(ingelogde_client):
     resp = ingelogde_client.get("/bestellijst")
     body = resp.data.decode()
     assert "Voorgesteld om te bestellen" in body
-    assert "Al besteld? Factuur klaarzetten" in body
+    assert "Al besteld? Bestelling klaarzetten" in body
     assert 'id="suggesties-tabel"' in body
 
 

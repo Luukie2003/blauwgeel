@@ -2,8 +2,8 @@
 {% block titel %}Noodstop{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
-    Bij een vermoeden van een hack of misbruik sluit je hier met één knop de hele site en de tv-schermen af. Alleen
-    jij kunt daarna nog inloggen en de boel weer openen.
+    Bij een vermoeden van een hack of misbruik sluit je hier met één knop de hele site en de tv-schermen af. Daarna
+    komt alleen een beheerder er nog in, met het wachtwoord &eacute;n de noodcode, en alleen jij kunt de boel weer openen.
 </p>
 
 {% if toestand.actief %}
@@ -11,7 +11,7 @@
     <h2 style="margin-top:0">De site is afgesloten</h2>
     <p style="margin-top:0">Sinds {{ toestand.sinds|datum_nl }}{% if toestand.door %}, door {{ toestand.door }}{% endif %}.{% if toestand.reden %} Reden: {{ toestand.reden }}{% endif %}</p>
     <ul class="info-opsomming">
-        <li>Iedereen is uitgelogd; alleen jij kunt inloggen.</li>
+        <li>Iedereen is uitgelogd, ook de beheerders; inloggen kan alleen als beheerder, met de noodcode.</li>
         <li>De tv-schermen tonen het vergrendel-scherm; de publieke pagina's, de apps en &lsquo;wachtwoord vergeten&rsquo; zijn dicht.</li>
         <li>Back-ups blijven gewoon draaien, en een herstel kun je nog live zetten.</li>
     </ul>
@@ -35,11 +35,14 @@
     <h2 style="margin-top:0">Alles is open</h2>
     <p style="margin-top:0">Druk je op de noodstop, dan gebeurt dit meteen:</p>
     <ul class="info-opsomming">
-        <li>Iedereen wordt overal uitgelogd, ook op de handterminal en de tablet. Daarna kan alleen jij nog inloggen.</li>
+        <li>Iedereen wordt overal uitgelogd, ook de beheerders en jijzelf, ook op de handterminal en de tablet. Daarna kan alleen een beheerder nog inloggen, met het wachtwoord &eacute;n de noodcode.</li>
         <li>De tv-schermen tonen een vergrendel-scherm (&lsquo;Systeem vergrendeld&rsquo;) tot je de site weer opent.</li>
         <li>De publieke pagina's (Club van 20, stemmen, de QR-codes), de apps en &lsquo;wachtwoord vergeten&rsquo; gaan dicht.</li>
-        <li>Weer openen kan alleen met je wachtwoord{{ ' en je noodcode' if toestand.code_ingesteld }}.</li>
+        <li>Weer openen kan alleen jij, met je wachtwoord en de noodcode.</li>
     </ul>
+    {% if not toestand.code_ingesteld %}
+    <p class="flash flash-warning" style="margin:0.8rem 0 0">Stel eerst hieronder een noodcode in: zonder noodcode kan na het afsluiten niemand meer inloggen.</p>
+    {% else %}
     <form method="post" action="{{ url_for('noodstop_dicht') }}" class="formgrid" style="align-items:end; margin-top:0.8rem"
           onsubmit="return bevestigEnVerstuur(this, 'Nu de hele site en alle schermen afsluiten? Iedereen wordt uitgelogd.');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -47,15 +50,16 @@
         <div class="veld" style="margin:0"><label for="dicht_wachtwoord">Je wachtwoord</label><input type="password" id="dicht_wachtwoord" name="wachtwoord" autocomplete="current-password" required></div>
         <div><button type="submit" class="btn noodstop-knop">Noodstop: alles afsluiten</button></div>
     </form>
+    {% endif %}
 </div>
 {% endif %}
 
 <div class="kaart">
     <h2 style="margin-top:0">Noodcode</h2>
     {% if toestand.code_ingesteld %}
-    <p style="margin-top:0">Er is een noodcode ingesteld. Die heb je, naast je wachtwoord, nodig om de site weer te openen. Zo is een gestolen wachtwoord alleen niet genoeg.</p>
+    <p style="margin-top:0">Er is een noodcode ingesteld. Tijdens een noodstop heb je die, naast je wachtwoord, nodig om in te loggen (alleen beheerders) en om de site weer te openen. Zo is een gestolen wachtwoord alleen niet genoeg. Geef hem alleen aan beheerders die je vertrouwt.</p>
     {% else %}
-    <p class="flash flash-warning" style="margin-top:0">Er is nog geen noodcode. Stel er nu een in: dan is naast je wachtwoord ook de noodcode nodig om de site weer te openen.</p>
+    <p class="flash flash-warning" style="margin-top:0">Er is nog geen noodcode. Stel er nu een in: zonder noodcode kan de noodstop niet aan. Tijdens een noodstop is de noodcode, naast het wachtwoord, nodig om in te loggen en de site weer te openen.</p>
     {% endif %}
     <form method="post" action="{{ url_for('noodstop_code') }}" class="formgrid" style="align-items:end">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
