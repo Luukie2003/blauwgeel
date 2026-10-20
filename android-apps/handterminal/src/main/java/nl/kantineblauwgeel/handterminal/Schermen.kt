@@ -29,6 +29,7 @@ object Schermen {
         put("geschiedenis") { GeschiedenisActivity.open(it) }
         put("bijzonderheden") { PrikbordActivity.open(it) }
         put("club_van_20_aanmeldingen") { AanmeldingenActivity.open(it) }
+        put("timer_pagina") { TimerActivity.open(it) }
     }
 
     fun heeft(endpoint: String?) = endpoint != null && endpoint in schermen

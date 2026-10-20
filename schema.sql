@@ -944,3 +944,45 @@ CREATE TABLE IF NOT EXISTS inboekronde_regels (
     laatst_gescand_op TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_inboekronde_regels_ronde ON inboekronde_regels(ronde_id);
+
+-- Gekoppelde tv's (zie kiosk_tvs.py): een tv opent /kiosk/koppelen, krijgt een eigen adres /kiosk/t/<token> en toont
+-- daar een koppelcode; op Kantine-tv vul je die code in en geef je de tv een naam. Daarna kies je op de site per tv wat
+-- hij toont (prijzen, dia's of het wisselscherm) en hoe groot, en laad je hem op afstand opnieuw. De tv geeft bij het
+-- verversen door dat hij aan staat (laatst_gezien, hooguit eens per minuut weggeschreven), wat hij toont en hoe groot
+-- zijn beeld is.
+CREATE TABLE IF NOT EXISTS kiosk_tvs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT NOT NULL UNIQUE,
+    naam TEXT NOT NULL,
+    scherm TEXT NOT NULL DEFAULT 'prijzen',
+    zoom INTEGER NOT NULL DEFAULT 100,
+    herlaad_teller INTEGER NOT NULL DEFAULT 0,
+    laatst_gezien TEXT,
+    geladen_op TEXT,
+    toont TEXT,
+    beeld TEXT,
+    app_versie TEXT,
+    gekoppeld_op TEXT NOT NULL,
+    gekoppeld_door TEXT
+);
+
+-- Koppelcodes van tv's die nog niet gekoppeld zijn: 6 cijfers, een half uur geldig (zie kiosk_tvs.py).
+CREATE TABLE IF NOT EXISTS kiosk_tv_koppelcodes (
+    code TEXT PRIMARY KEY,
+    token TEXT NOT NULL UNIQUE,
+    aangemaakt_op TEXT NOT NULL
+);
+
+-- Timers op alle tv-schermen (zie kiosk_timers.py), bijvoorbeeld "Gehaktballen klaar over 12:30": linksonder op het
+-- prijzenscherm, de dia's en het wisselscherm. Na afloop staat er "klaar" tot iemand hem weghaalt, of tot een kwartier
+-- later. Ook de geschiedenis: de laatste duur per naam is de standaard voor de volgende keer.
+CREATE TABLE IF NOT EXISTS kiosk_timers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    naam TEXT NOT NULL,
+    minuten INTEGER NOT NULL,
+    gestart_op TEXT NOT NULL,
+    klaar_om TEXT NOT NULL,
+    gestopt_op TEXT,
+    gestart_door TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_kiosk_timers_klaar ON kiosk_timers(klaar_om);

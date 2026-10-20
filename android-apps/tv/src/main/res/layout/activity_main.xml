@@ -26,6 +26,21 @@
         android:orientation="horizontal">
 
         <Button
+            android:id="@+id/knopGekoppeld"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="24dp"
+            android:layout_weight="1"
+            android:background="@drawable/tv_card_background"
+            android:textColor="@color/wit"
+            android:letterSpacing="0"
+            android:paddingHorizontal="12dp"
+            android:textAllCaps="false"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:backgroundTint="@null" />
+
+        <Button
             android:id="@+id/knopPrijzen"
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -33,6 +48,9 @@
             android:layout_weight="1"
             android:background="@drawable/tv_card_background"
             android:textColor="@color/wit"
+            android:letterSpacing="0"
+            android:paddingHorizontal="12dp"
+            android:textAllCaps="false"
             android:textSize="20sp"
             android:textStyle="bold"
             app:backgroundTint="@null" />
@@ -45,6 +63,9 @@
             android:layout_weight="1"
             android:background="@drawable/tv_card_background"
             android:textColor="@color/wit"
+            android:letterSpacing="0"
+            android:paddingHorizontal="12dp"
+            android:textAllCaps="false"
             android:textSize="20sp"
             android:textStyle="bold"
             app:backgroundTint="@null" />
@@ -56,6 +77,9 @@
             android:layout_weight="1"
             android:background="@drawable/tv_card_background"
             android:textColor="@color/wit"
+            android:letterSpacing="0"
+            android:paddingHorizontal="12dp"
+            android:textAllCaps="false"
             android:textSize="20sp"
             android:textStyle="bold"
             app:backgroundTint="@null" />

@@ -41,6 +41,7 @@
     </style>
 </head>
 <body>
+    {% include '_kiosk_herstel.html' %}
     {% if slides %}
     <div class="scherm">
         {% for slide in slides %}
@@ -466,6 +467,33 @@
         var gewoonIndex = 0, sponsorIndex = 0, sindsSponsor = 1;
         var huidige = gewoon.length ? gewoon[0] : sponsors[0];
 
+        // Na een herlaadbeurt (zie herladen hieronder) gaat de diashow verder bij de dia die aan de beurt was, in plaats
+        // van weer bij de eerste: anders kwamen de eerste dia's veel vaker in beeld dan de rest.
+        var positieSleutel = 'kiosk_dia_positie:' + location.pathname;
+        var vorigePositie = null;
+        try {
+            vorigePositie = JSON.parse(sessionStorage.getItem(positieSleutel) || 'null');
+            sessionStorage.removeItem(positieSleutel);
+        } catch (e) {}
+        if (vorigePositie && Date.now() - vorigePositie.t < 10 * 60 * 1000) {
+            gewoonIndex = (vorigePositie.g || 0) % Math.max(1, gewoon.length);
+            sponsorIndex = vorigePositie.s || 0;
+            sindsSponsor = vorigePositie.ss || 0;
+            huidige = null;
+        }
+        function bewaarPositie() {
+            try {
+                sessionStorage.setItem(positieSleutel, JSON.stringify({
+                    g: gewoonIndex, s: sponsorIndex, ss: sindsSponsor, t: Date.now(),
+                }));
+            } catch (e) {}
+        }
+
+        // Is er iets veranderd (zie de versie-poll hieronder), dan herlaadt het scherm pas als de dia die nu in beeld
+        // is, klaar is: een video of een dia wordt niet halverwege afgebroken.
+        var herladen = false;
+        window.kioskDiaHerladen = function () { herladen = true; };
+
         function toon(slide) {
             slides.forEach(function (s) { s.classList.toggle('actief', s === slide); });
             telOp(slide);
@@ -493,15 +521,27 @@
             return huidige;
         }
 
+        function verder() {
+            huidige = volgende();
+            toon(huidige);
+            plan();
+        }
+
         function plan() {
             var duur = (parseFloat(huidige.dataset.duur) || 8) * 1000;
             setTimeout(function () {
-                huidige = volgende();
-                toon(huidige);
-                plan();
+                if (!herladen) return verder();
+                herladen = false;
+                bewaarPositie();
+                // Lukt het niet (geen verbinding), dan gaat de diashow gewoon door en probeert hij het na de volgende dia.
+                window.kioskScherm.herlaad(function () {
+                    herladen = true;
+                    verder();
+                });
             }, duur);
         }
 
+        if (huidige === null) huidige = volgende();  // verder na een herlaadbeurt
         if (!videoKlaar(huidige)) huidige = volgende();  // niet beginnen met een zwart scherm als er iets anders is
         toon(huidige);
         plan();
@@ -522,19 +562,22 @@
         // tests/test_tojson_context_regressie.py.
         var huidigeVersie = {{ versie|default('')|tojson }};
         setInterval(function () {
-            fetch('{{ versie_url }}')
+            fetch(window.kioskScherm.pollUrl({{ versie_url|tojson }}), { cache: 'no-store' })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     if (data.versie && data.versie !== huidigeVersie) {
                         // Een melding voor een nieuw/verlengd lid (_kiosk_welkom.html) eerst laten uitspelen.
                         if (window.kioskWelkomBezig && window.kioskWelkomBezig()) return;
-                        window.location.reload();
+                        // Bij een diashow na de dia die nu in beeld is (zie plan() hierboven), anders meteen; in beide
+                        // gevallen alleen als de site de nieuwe pagina ook echt geeft (zie _kiosk_herstel.html).
+                        if (window.kioskDiaHerladen) window.kioskDiaHerladen(); else window.kioskScherm.herlaad();
                     }
                 })
                 .catch(function () {});
         }, 10000);
     })();
     </script>
+    {% include '_kiosk_timer.html' %}
     {% include '_kiosk_welkom.html' %}
 </body>
 </html>

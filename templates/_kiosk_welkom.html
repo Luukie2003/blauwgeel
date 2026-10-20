@@ -1,7 +1,8 @@
 {# Melding bij een nieuw of verlengd lid van de Club van 20: komt bovenop elk scherm (de diashow, het prijzenscherm
    en de gedeelde tv) in beeld. Meerdere tegelijk? Dan staan ze in een wachtrij en komen ze achter elkaar.
    Elk scherm houdt zelf bij tot welke melding het heeft getoond (localStorage per pagina), dus elk scherm
-   krijgt elke melding. De server levert ze via /kiosk/welkom (welkom_wachtrij in club_van_20/scherm.py). #}
+   krijgt elke melding. De server levert ze via /kiosk/welkom (welkom_wachtrij in club_van_20/scherm.py), samen met de
+   timers linksonder op het scherm (zie _kiosk_timer.html). #}
 <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_welkom_stijl.css') }}?v={{ kiosk_welkom_stijl_versie|default('') }}">
 <div id="welkom-melding" class="welkom-melding" role="status" aria-live="polite"></div>
 <script>
@@ -93,7 +94,12 @@
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 // De noodstop (zie noodstop_bewaken in app.py): meteen herladen, dan komt het vergrendel-scherm.
-                if (data.noodstop) { window.location.reload(); return; }
+                if (data.noodstop) {
+                    if (window.kioskScherm) window.kioskScherm.herlaad(); else window.location.reload();
+                    return;
+                }
+                // De timers linksonder (zie _kiosk_timer.html) komen met dezelfde vraag mee.
+                if (window.kioskTimersBijwerken) window.kioskTimersBijwerken(data.timers || []);
                 duurMs = (data.duur || 12) * 1000;
                 if (cursor === null || data.laatste < cursor) {
                     // Eerste keer kijken (niet alles van vroeger opnieuw tonen), of de server telt opnieuw.

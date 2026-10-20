@@ -1,0 +1,154 @@
+{% extends basis_template %}
+{% block titel %}Timer op de tv{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Bijvoorbeeld voor de gehaktballen: de timer staat linksonder op alle tv's en telt af. Is hij klaar, dan staat er
+    "Klaar!" tot je hem weghaalt (of tot een kwartier later). De knoppen onthouden de tijd die je de vorige keer koos.
+</p>
+
+<style>
+    .timer-knoppen { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:0.6rem; }
+    .timer-knoppen form { margin:0; }
+    .timer-knoppen .btn { width:100%; min-height:3.4rem; flex-direction:column; gap:0.1rem; line-height:1.15; }
+    .timer-knoppen .btn small { font-weight:600; opacity:0.8; }
+    .timer-lijst { display:flex; flex-direction:column; gap:0.6rem; }
+    .timer-regel { display:flex; align-items:center; gap:0.9rem; flex-wrap:wrap; padding:0.7rem 0.9rem;
+                   border:2px solid var(--geel, #fcd42f); border-radius:12px; }
+    .timer-regel--klaar { background:var(--geel, #fcd42f); }
+    .timer-regel .timer-naam { font-weight:800; font-size:1.05rem; }
+    .timer-regel .timer-tijd { font-size:1.9rem; font-weight:800; font-variant-numeric:tabular-nums; min-width:5.5rem; }
+    .timer-regel .timer-acties { margin-left:auto; display:flex; gap:0.4rem; }
+    .timer-regel .timer-acties form { margin:0; }
+</style>
+
+<div class="kaart">
+    <h2>Op de tv's</h2>
+    <div class="timer-lijst" id="timer-lijst"></div>
+    <p class="leeg" id="timer-leeg"{% if timers %} hidden{% endif %}>Er loopt nu geen timer.</p>
+</div>
+
+<div class="kaart">
+    <h2>Timer starten</h2>
+    <div class="timer-knoppen" id="timer-knoppen"></div>
+    <form method="post" action="{{ url_for('timer_starten') }}" class="js-ajax-form"
+          style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap; margin-top:1rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld" style="flex:2; min-width:180px; margin:0">
+            <label for="timer-naam">Andere timer: waarvoor?</label>
+            <input type="text" id="timer-naam" name="naam" maxlength="30" placeholder="Bijv. Bitterballen" required>
+        </div>
+        <div class="veld" style="flex:1; min-width:110px; margin:0">
+            <label for="timer-minuten">Minuten</label>
+            <input type="number" id="timer-minuten" name="minuten" min="1" max="{{ max_minuten }}" value="15" required>
+        </div>
+        <button type="submit" class="btn btn-geel">Starten</button>
+    </form>
+</div>
+
+<script>
+(function () {
+    var csrf = {{ csrf_token()|tojson }};
+    var standUrl = {{ url_for('timer_stand')|tojson }};
+    var startUrl = {{ url_for('timer_starten')|tojson }};
+    var verlengUrl = {{ url_for('timer_verlengen', timer_id=0)|tojson }};
+    var stopUrl = {{ url_for('timer_stoppen', timer_id=0)|tojson }};
+    var lijst = document.getElementById('timer-lijst');
+    var leeg = document.getElementById('timer-leeg');
+    var knoppen = document.getElementById('timer-knoppen');
+    var timers = [];
+
+    function twee(n) { return (n < 10 ? '0' : '') + n; }
+    function tijd(s) {
+        var u = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60);
+        return u > 0 ? u + ':' + twee(m) + ':' + twee(s % 60) : m + ':' + twee(s % 60);
+    }
+    function maak(tag, klasse, tekst) {
+        var n = document.createElement(tag);
+        if (klasse) n.className = klasse;
+        if (tekst) n.textContent = tekst;
+        return n;
+    }
+    // Een klein formulier dat via js-ajax-form (zie gedeeld.js) verstuurt; zonder JavaScript gewoon een POST.
+    function formulier(actie, velden, knopTekst, knopKlasse) {
+        var f = maak('form');
+        f.method = 'post';
+        f.action = actie;
+        f.className = 'js-ajax-form';
+        velden.csrf_token = csrf;
+        Object.keys(velden).forEach(function (naam) {
+            var i = maak('input');
+            i.type = 'hidden';
+            i.name = naam;
+            i.value = velden[naam];
+            f.appendChild(i);
+        });
+        var knop = maak('button', 'btn ' + knopKlasse);
+        knop.type = 'submit';
+        if (typeof knopTekst === 'string') knop.textContent = knopTekst; else knop.appendChild(knopTekst);
+        f.appendChild(knop);
+        return f;
+    }
+
+    function tekenLijst() {
+        lijst.innerHTML = '';
+        leeg.hidden = timers.length > 0;
+        timers.forEach(function (t) {
+            var regel = maak('div', 'timer-regel');
+            regel.dataset.id = t.id;
+            var links = maak('div');
+            links.appendChild(maak('div', 'timer-naam', t.naam));
+            links.appendChild(maak('div', 'tekst-zacht', 'Klaar om ' + t.klaar_om + (t.gestart_door ? ' · gestart door ' + t.gestart_door : '')));
+            regel.appendChild(maak('div', 'timer-tijd'));
+            regel.appendChild(links);
+            var acties = maak('div', 'timer-acties');
+            acties.appendChild(formulier(verlengUrl.replace('/0/', '/' + t.id + '/'), { minuten: 5 }, '+5 min', 'btn-rand btn-klein'));
+            acties.appendChild(formulier(stopUrl.replace('/0/', '/' + t.id + '/'), {}, 'Weghalen', 'btn-rand btn-klein'));
+            regel.appendChild(acties);
+            lijst.appendChild(regel);
+        });
+        tik();
+    }
+
+    function tekenKnoppen(voorstellen) {
+        knoppen.innerHTML = '';
+        voorstellen.forEach(function (v) {
+            var inhoud = document.createDocumentFragment();
+            inhoud.appendChild(document.createTextNode(v.naam));
+            inhoud.appendChild(maak('small', '', v.minuten + ' minuten'));
+            knoppen.appendChild(formulier(startUrl, { naam: v.naam, minuten: v.minuten }, inhoud, 'btn-geel'));
+        });
+    }
+
+    function zet(data) {
+        var nu = Date.now();
+        timers = (data.timers || []).map(function (t) { t.klaarOp = nu + t.resterend * 1000; return t; });
+        tekenLijst();
+        tekenKnoppen(data.voorstellen || []);
+    }
+
+    function tik() {
+        var nu = Date.now();
+        timers.forEach(function (t) {
+            var regel = lijst.querySelector('[data-id="' + t.id + '"]');
+            if (!regel) return;
+            var rest = Math.max(0, Math.ceil((t.klaarOp - nu) / 1000));
+            regel.classList.toggle('timer-regel--klaar', rest === 0);
+            regel.querySelector('.timer-tijd').textContent = rest === 0 ? 'Klaar!' : tijd(rest);
+        });
+    }
+
+    document.addEventListener('ajax-form:success', function (e) {
+        if (e.detail && e.detail.timers) zet(e.detail);
+    });
+    function ververs() {
+        fetch(standUrl, { cache: 'no-store', credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(zet)
+            .catch(function () {});
+    }
+    zet({{ {'timers': timers, 'voorstellen': voorstellen}|tojson }});
+    setInterval(tik, 1000);
+    setInterval(ververs, 15000);
+})();
+</script>
+{% endblock %}

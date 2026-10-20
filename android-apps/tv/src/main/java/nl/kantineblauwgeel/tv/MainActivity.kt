@@ -15,10 +15,12 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        binding.knopGekoppeld.text = Screens.GEKOPPELD.titel
         binding.knopPrijzen.text = Screens.PRIJZEN.titel
         binding.knopDias.text = Screens.DIAS.titel
         binding.knopGedeeld.text = Screens.GEDEELD.titel
 
+        binding.knopGekoppeld.setOnClickListener { openScherm(Screens.GEKOPPELD) }
         binding.knopPrijzen.setOnClickListener { openScherm(Screens.PRIJZEN) }
         binding.knopDias.setOnClickListener { openScherm(Screens.DIAS) }
         binding.knopGedeeld.setOnClickListener { openScherm(Screens.GEDEELD) }
@@ -26,14 +28,14 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
-        val knoppen = listOf(binding.knopPrijzen, binding.knopDias, binding.knopGedeeld, binding.knopInstellingen)
+        val knoppen = listOf(binding.knopGekoppeld, binding.knopPrijzen, binding.knopDias, binding.knopGedeeld, binding.knopInstellingen)
         knoppen.forEach { knop ->
             knop.onFocusChangeListener = View.OnFocusChangeListener { view, heeftFocus ->
                 groeiBijFocus(view, heeftFocus)
             }
         }
 
-        binding.knopPrijzen.requestFocus()
+        binding.knopGekoppeld.requestFocus()
     }
 
     private fun groeiBijFocus(view: View, heeftFocus: Boolean) {

@@ -2,6 +2,7 @@
 
 from datetime import date, datetime, timedelta
 
+import kiosk_tvs
 from helpers.kas import bereken_kassa_telling_status
 from helpers.producten import bereken_bestellijst_meldingen
 from helpers.tijd import vandaag_amsterdam
@@ -259,6 +260,21 @@ def bouw_taken(db, rol, secties, gebruiker_id=None):
                     f"{aanmeldingen} {'aanmelding' if aanmeldingen == 1 else 'aanmeldingen'} Club van 20",
                     "Wachten op goedkeuring",
                     "club_van_20_aanmeldingen",
+                )
+            )
+
+    if heeft("kantine_tv"):
+        # Een gekoppelde tv die uit staat terwijl er bardienst is (zie kiosk_tvs.py).
+        uit = kiosk_tvs.uit_tijdens_bardienst(db)
+        if uit:
+            namen = ", ".join(f"'{tv['naam']}'" for tv in uit)
+            taken.append(
+                _taak(
+                    f"Tv {namen} {'staat' if len(uit) == 1 else 'staan'} uit",
+                    "Er is nu bardienst. Kijk of de tv aan staat en verbinding heeft",
+                    "kiosk_hub",
+                    urgent=True,
+                    _anchor="tvs",
                 )
             )
 

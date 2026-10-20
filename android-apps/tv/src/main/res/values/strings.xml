@@ -11,5 +11,11 @@
     <string name="auto_start_label">Bij opstarten automatisch het laatst gebruikte scherm tonen</string>
     <string name="verbinding_mislukt">Geen verbinding met kantineblauwgeel.nl</string>
     <string name="opnieuw_proberen">Opnieuw proberen</string>
+    <string name="opnieuw_nu">Bezig met opnieuw proberen…</string>
+    <string name="gekoppeld_uitleg">Gekoppeld scherm: wat deze tv toont en hoe groot, stel je op de site in (Kantine-tv → Tv\'s).</string>
     <string name="splash_tekst">De leukste vereniging van sportpark Coendersborg</string>
+    <plurals name="opnieuw_over">
+        <item quantity="one">Ik probeer het over %d seconde vanzelf opnieuw.</item>
+        <item quantity="other">Ik probeer het over %d seconden vanzelf opnieuw.</item>
+    </plurals>
 </resources>

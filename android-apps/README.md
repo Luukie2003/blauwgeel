@@ -3,8 +3,10 @@
 Drie losstaande Android-apps rond kantineblauwgeel.nl:
 
 - **`tv/`** — "Kantine TV", voor Google TV / Android TV. Schermkiezer tussen
-  de 3 bestaande kiosk-schermen van de website, met een zoom-instelling die
-  bewaard blijft (ook na herstarten van de tv).
+  een gekoppeld scherm (wat het toont en hoe groot stel je op de site in) en
+  de 3 vaste kiosk-schermen van de website, met een zoom-instelling die
+  bewaard blijft (ook na herstarten van de tv). Herstelt zichzelf na een
+  storing. Zie het kopje "Hoe de apps met de website praten".
 - **`tablet/`** — "Kantine Beheer", voor tablets. Toont de volledige website
   (ingelogd, met alle beheerfuncties zoals producten, acties, bardiensten en
   kiosk-instellingen) in een app-schil met een zijmenu voor snelle navigatie.
@@ -29,6 +31,7 @@ de sessie-cookie zelf (`Sessie.kt`) en stuurt bij een POST het csrf_token mee in
   `WeekGrafiek`), `KoppelenActivity` (onbekende barcode), `TellenActivity` (looplijst zoals op de site, met rekenmachine,
   en de controle), `FacturenActivity`/`FactuurActivity` (factuur inboeken), `PrikbordActivity`, `BestellijstActivity`,
   `TellingenActivity`, `GeschiedenisActivity`, `BoodschappenActivity`, `PrognoseActivity`, `AgendaActivity`,
+  `UitverkochtActivity` (producten op het prijzenscherm op uitverkocht zetten), `TimerActivity` (de timer op de tv's),
   `BarcodesActivity`, `GeldActivity`/`GeldTellenActivity` (kassa en kluis), `KeukenActivity`/`KeukenInvoerActivity`,
   `AanmeldingenActivity`, `TaakActivity` (een taak van een beheerder; `Schermen.kt` weet welk scherm bij welke
   pagina van de site hoort) en `VergrendeldActivity` (de noodstop). Gedeeld gedrag (kopbalk, scanner, automatisch uitloggen, fouten, "Niet mogelijk in de
@@ -125,10 +128,25 @@ tekenmateriaal, keuzes over vermelding):
 
 ## Hoe de apps met de website praten
 
-- De 3 tv-schermen zijn de bestaande, inlogvrije kiosk-URL's:
+- **Gekoppeld scherm** (de standaard): de app opent `/kiosk/koppelen`. Die pagina
+  geeft de tv een eigen token en gaat naar `/kiosk/t/<token>`; daar staat een
+  koppelcode die je op de site bij Kantine-tv → Tv koppelen invult (zie
+  `kiosk_tvs.py`). Daarna kies je op de site wat de tv toont en hoe groot. De app
+  onthoudt dat eigen adres (`Prefs.getGekoppeldUrl`). De pagina praat met de app
+  via `window.KantineTv` (`PlayerActivity.Brug`): `versie()` (zo ziet de site welke
+  app-versie er draait) en `zoom(procent)` (de grootte van de site wordt de
+  `textZoom` van de app). Zie `templates/_kiosk_herstel.html` op de site.
+- De 3 vaste tv-schermen zijn de bestaande, inlogvrije kiosk-URL's:
   `/kiosk/prijzen`, `/kiosk/scherm`, `/kiosk/tv`. Elk ververst zichzelf al via
   JavaScript-polling op de website — de app hoeft daar niets extra's voor te
   doen.
+- **Zelfherstel**: lukt het laden niet (geen wifi, een foutpagina van de server),
+  dan probeert `PlayerActivity` het elke 15 seconden opnieuw, en meteen als het
+  netwerk terug is; loopt de webweergave vast, dan begint het scherm opnieuw.
+- **Testen**: de testversie kan een ander adres krijgen, bijvoorbeeld een lokale
+  server vanuit de emulator: `./gradlew :tv:assembleDebug -PtvBasisUrl=http://10.0.2.2:5050`
+  (alleen de testversie mag dan ook zonder https). De tv-app vraagt Android 7 of
+  nieuwer.
 - De tablet-app is een volwaardige webweergave van `https://kantineblauwgeel.nl`
   (aanpasbaar via **Instellingen** in de app, voor bijvoorbeeld een
   test-omgeving). Inloggen gebeurt gewoon via de normale inlogpagina van de

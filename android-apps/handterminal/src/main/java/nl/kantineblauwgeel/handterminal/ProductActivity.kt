@@ -211,14 +211,12 @@ class ProductActivity : BasisActivity() {
         if ((i.optJSONArray("onderweg")?.length() ?: 0) > 0) kenmerken += getString(R.string.besteld)
         val meldingen = i.optInt("meldingen")
         if (meldingen > 0) kenmerken += if (meldingen > 1) getString(R.string.gemeld_n, meldingen) else getString(R.string.gemeld)
-        if (i.optBoolean("op_prijzenscherm")) {
-            kenmerken += getString(if (i.optBoolean("uitverkocht_op_scherm")) R.string.op_prijzenscherm_uitverkocht else R.string.op_prijzenscherm)
-        }
         if (i.optBoolean("niet_tellen")) kenmerken += getString(R.string.telt_niet_mee)
         b.kenmerken.text = kenmerken.joinToString(" · ")
         b.kenmerken.isVisible = kenmerken.isNotEmpty()
         b.productOpmerking.text = i.tekstOfNull("opmerking")
         b.productOpmerking.isVisible = i.tekstOfNull("opmerking") != null
+        toonTv(i)
 
         val boven = b.infoBoven
         boven.removeAllViews()
@@ -445,6 +443,33 @@ class ProductActivity : BasisActivity() {
         if (kaart.childCount == 0) blok.removeView(kaart)
     }
 
+    /** Op de tv: staat het product op het prijzenscherm, dan zet je het hier in één tik op uitverkocht (of weer te koop). */
+    private fun toonTv(i: JSONObject) {
+        val blok = b.tvBlok
+        blok.removeAllViews()
+        blok.isVisible = i.optBoolean("op_prijzenscherm")
+        if (!blok.isVisible) return
+        val uit = i.optBoolean("uitverkocht_op_scherm")
+        val kaart = Lijst.kaart(blok, if (uit) R.drawable.rand_links_rood else R.drawable.kaart)
+        Lijst.regel(
+            kaart,
+            getString(if (uit) R.string.uitverkocht_op_tv else R.string.te_koop_op_tv),
+            getString(if (uit) R.string.tik_weer_te_koop else R.string.tik_uitverkocht),
+        ) { zetUitverkocht(!uit) }
+    }
+
+    private fun zetUitverkocht(uitverkocht: Boolean) {
+        bezig {
+            val antwoord = Api.post(this, "/api/app/producten/$productId/uitverkocht", JSONObject().put("uitverkocht", uitverkocht), herhaalbaar = true)
+            tril(60)
+            melding(antwoord.optString("melding"))
+            info?.let {
+                it.put("uitverkocht_op_scherm", antwoord.optBoolean("uitverkocht_op_scherm"))
+                toonTv(it)
+            }
+        }
+    }
+
     /** "Op de bestellijst", net als de knop op de productpagina van de site. */
     private fun meld() {
         val id = Api.nieuwVerzoekId()
@@ -533,6 +558,14 @@ class ProductActivity : BasisActivity() {
                 melding(antwoord.optString("melding"))
                 antwoord.tekstOfNull("waarschuwing")?.let {
                     AlertDialog.Builder(this).setMessage(it).setPositiveButton(R.string.ok, null).show()
+                }
+                // Er komt iets bij terwijl het op de tv nog als uitverkocht staat: meteen weer te koop zetten?
+                if (r == "in" && info?.optBoolean("uitverkocht_op_scherm") == true && antwoord.tekstOfNull("waarschuwing") == null) {
+                    AlertDialog.Builder(this)
+                        .setMessage(getString(R.string.weer_te_koop_vraag, nieuw.naam))
+                        .setNegativeButton(R.string.nee, null)
+                        .setPositiveButton(R.string.ja_weer_te_koop) { _, _ -> zetUitverkocht(false) }
+                        .show()
                 }
                 // Klaar voor de volgende boeking.
                 verzoekId = null

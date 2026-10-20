@@ -401,8 +401,6 @@
     <string name="besteld">Besteld</string>
     <string name="gemeld">Gemeld voor de bestellijst</string>
     <string name="gemeld_n">Gemeld voor de bestellijst (%1$d×)</string>
-    <string name="op_prijzenscherm">Op het prijzenscherm</string>
-    <string name="op_prijzenscherm_uitverkocht">Op het prijzenscherm, als uitverkocht</string>
     <string name="telt_niet_mee">Telt niet mee in de telling</string>
     <string name="per_glas_uitleg">Per glas\n%1$d glazen per fust = %2$s</string>
     <string name="verkoopprijs_per">Verkoopprijs per %1$s</string>
@@ -673,4 +671,52 @@
         <item quantity="one">%d thuiswedstrijd</item>
         <item quantity="other">%d thuiswedstrijden</item>
     </plurals>
+
+    <!-- Uitverkocht op de tv (UitverkochtActivity, ProductActivity) -->
+    <string name="uitverkocht_titel">Uitverkocht op de tv</string>
+    <string name="uitverkocht_uitleg">Tik een product aan en het staat op de tv als uitverkocht: doorgestreept, met een melding over het scherm. Nog een keer tikken en het is weer te koop. De voorraad verandert niet.</string>
+    <string name="uitverkocht_leeg">Er staan nog geen producten op het prijzenscherm. Dat stel je op de site in, bij Kantine-tv.</string>
+    <string name="tik_weer_te_koop">Tik om het weer te koop te zetten</string>
+    <string name="uitverkocht_kort">Uitverkocht</string>
+    <string name="te_koop">Te koop</string>
+    <string name="uitverkocht_op_tv">Op de tv: uitverkocht</string>
+    <string name="te_koop_op_tv">Op de tv: te koop</string>
+    <string name="tik_uitverkocht">Op? Tik hier, dan staat het op de tv als uitverkocht</string>
+    <string name="weer_te_koop_vraag">%1$s staat op de tv nog als uitverkocht. Weer te koop zetten?</string>
+    <string name="ja_weer_te_koop">Ja, weer te koop</string>
+    <string name="nee">Nee</string>
+    <string name="op_de_tv">Op de tv</string>
+    <plurals name="n_uitverkocht">
+        <item quantity="one">%d uitverkocht</item>
+        <item quantity="other">%d uitverkocht</item>
+    </plurals>
+    <plurals name="letop_uitverkocht">
+        <item quantity="one">%d product uitverkocht op de tv</item>
+        <item quantity="other">%d producten uitverkocht op de tv</item>
+    </plurals>
+
+    <!-- Timer op de tv (TimerActivity) -->
+    <string name="timer_titel">Timer op de tv</string>
+    <string name="timer">Timer</string>
+    <string name="andere_timer">Andere timer</string>
+    <string name="op_de_tvs">Op de tv\'s</string>
+    <string name="geen_timer">Er loopt nu geen timer.</string>
+    <string name="klaar_om">Klaar om %1$s</string>
+    <string name="vijf_minuten_erbij">+5 min</string>
+    <string name="klaar">Klaar!</string>
+    <string name="timer_starten">Timer starten</string>
+    <string name="lang_indrukken_andere_tijd">Lang indrukken voor een andere tijd</string>
+    <string name="n_min">%1$d min</string>
+    <string name="timer_uitleg">De timer staat linksonder op alle tv\'s en telt af. Is hij klaar, dan staat er \"Klaar!\" tot je hem weghaalt, of tot een kwartier later. De knoppen onthouden de tijd van de vorige keer.</string>
+    <string name="timer_weghalen_vraag">De timer voor %1$s van de tv\'s halen?</string>
+    <string name="timer_naam_hint">Bijv. Gehaktballen</string>
+    <string name="minuten_hint">Minuten</string>
+    <string name="waarvoor">Waarvoor?</string>
+    <string name="hoeveel_minuten">Hoeveel minuten?</string>
+    <string name="starten">Starten</string>
+    <string name="timer_naam_nodig">Vul in waarvoor de timer is.</string>
+    <string name="timer_minuten_fout">Kies 1 tot %1$d minuten.</string>
+    <string name="letop_timer_loopt">%1$s: klaar om %2$s</string>
+    <string name="letop_timer_klaar">%1$s: klaar!</string>
+    <string name="letop_timer_detail">Timer op de tv\'s · tik om te verlengen of weg te halen</string>
 </resources>

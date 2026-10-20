@@ -49,6 +49,13 @@ NAV_ITEMS = [
         "label": "Prikbord",
     },
     {
+        # Een timer linksonder op alle tv's, bijvoorbeeld voor de gehaktballen (zie kiosk_timers.py): voor iedereen.
+        "groep": "Start",
+        "endpoints": ["timer_pagina"],
+        "url_endpoint": "timer_pagina",
+        "label": "Timer op de tv",
+    },
+    {
         "groep": "Start",
         "endpoints": ["eigen_taken_pagina", "eigen_taak_nieuw", "eigen_taak_verwijderen"],
         "url_endpoint": "eigen_taken_pagina",

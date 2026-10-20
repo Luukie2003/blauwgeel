@@ -28,6 +28,10 @@ BEWAARTERMIJNEN = [
     ("fouten", "laatste_op", 180, "opgelost = 1"),
     # Antwoorden op acties van de handterminal-app, tegen dubbel boeken bij een haperende verbinding.
     ("app_verzoeken", "aangemaakt_op", 7, None),
+    # Timers op de tv's (zie kiosk_timers.py): het laatste jaar is genoeg voor de snelknoppen.
+    ("kiosk_timers", "gestart_op", 365, None),
+    # Koppelcodes van tv's die nooit gekoppeld zijn (een code is maar een half uur geldig).
+    ("kiosk_tv_koppelcodes", "aangemaakt_op", 1, None),
 ]
 
 DATUM_FORMAAT = "%Y-%m-%d %H:%M"

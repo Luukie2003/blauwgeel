@@ -125,6 +125,16 @@ class StartActivity : BasisActivity() {
         val toegang = start.optJSONObject("toegang")
         fun heeft(sectie: String) = toegang?.optBoolean(sectie) ?: false
         val beheerder = start.optBoolean("beheerder")
+        // De timers op de tv's (bijvoorbeeld de gehaktballen): wat er loopt, of wat klaar is.
+        start.optJSONArray("timers")?.objecten()?.forEach { t ->
+            val klaar = t.optBoolean("klaar")
+            letOp(
+                if (klaar) getString(R.string.letop_timer_klaar, t.optString("naam"))
+                else getString(R.string.letop_timer_loopt, t.optString("naam"), t.optString("klaar_om")),
+                getString(R.string.letop_timer_detail),
+                if (klaar) R.drawable.rand_links_oranje else R.drawable.rand_links_navy,
+            ) { TimerActivity.open(this) }
+        }
         // Taken die een beheerder voor jou klaarzette: een eigen scherm met de stappen en afronden.
         start.optJSONArray("taken")?.objecten()?.forEach { t ->
             val rand = if (t.optBoolean("urgent")) R.drawable.rand_links_rood else R.drawable.rand_links_oranje
@@ -166,6 +176,11 @@ class StartActivity : BasisActivity() {
                 startActivity(Intent(this, FacturenActivity::class.java))
             }
         }
+        val uitverkocht = start.optJSONArray("uitverkocht_op_tv")?.let { l -> (0 until l.length()).map { l.optString(it) } }.orEmpty()
+        if (voorraad && uitverkocht.isNotEmpty()) {
+            letOp(resources.getQuantityString(R.plurals.letop_uitverkocht, uitverkocht.size, uitverkocht.size),
+                uitverkocht.joinToString(", "), R.drawable.rand_links_oranje) { UitverkochtActivity.open(this) }
+        }
         val urgent = start.optInt("mededelingen_urgent")
         if (urgent > 0) {
             letOp(getString(R.string.prikbord_urgent, urgent), getString(R.string.n_open, start.optInt("mededelingen_open")), R.drawable.rand_links_rood) {
@@ -178,6 +193,9 @@ class StartActivity : BasisActivity() {
         b.meerLijst.removeAllViews()
         val meer = mutableListOf<Meer>()
         meer += Meer(getString(R.string.prikbord), R.drawable.ic_prikbord, start.optInt("mededelingen_open"), urgent > 0) { PrikbordActivity.open(this) }
+        val timers = start.optJSONArray("timers")?.length() ?: 0
+        meer += Meer(getString(R.string.timer), R.drawable.ic_timer, timers, false) { TimerActivity.open(this) }
+        if (voorraad) meer += Meer(getString(R.string.op_de_tv), R.drawable.ic_kiosk, uitverkocht.size, false) { UitverkochtActivity.open(this) }
         if (voorraad) {
             meer += Meer(getString(R.string.bestellijst), R.drawable.ic_bestellijst, bestellingen, false) { BestellijstActivity.open(this) }
             meer += Meer(getString(R.string.boodschappen), R.drawable.ic_boodschappen, 0, false) { BoodschappenActivity.open(this) }

@@ -4,6 +4,7 @@ import json
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
 
+import kiosk_tvs
 import qr
 from database import get_db
 from helpers import is_ajax_verzoek
@@ -38,6 +39,11 @@ def register_routes(app):
             scherm_qr_svg=qr.qr_svg(scherm_url),
             tv_qr_svg=qr.qr_svg(tv_url),
             instellingen=_scherm_instellingen(db),
+            # Gekoppelde tv's (zie kiosk_tvs.py en routes/kiosk/tvs.py).
+            tvs=[{**dict(tv), "status": kiosk_tvs.status(tv)} for tv in kiosk_tvs.alle_tvs(db)],
+            schermen=kiosk_tvs.SCHERMEN,
+            zooms=kiosk_tvs.ZOOMS,
+            koppel_url=url_for("kiosk_koppelen", _external=True).split("://", 1)[-1],
         )
 
     # ---------- Onderdeel 1: Prijzenscherm ----------

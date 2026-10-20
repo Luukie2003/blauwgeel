@@ -4,6 +4,7 @@ import json
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
 
+import kiosk_timers
 from club_van_20 import welkom_wachtrij
 from database import get_db
 from helpers import (
@@ -398,9 +399,13 @@ def register_routes(app):
     @app.route("/kiosk/welkom")
     def kiosk_welkom():
         """Meldingen voor nieuwe en verlengde leden van de Club van 20, voor elk scherm (zie
-        templates/_kiosk_welkom.html): ?na=<id van de laatst getoonde melding>."""
+        templates/_kiosk_welkom.html): ?na=<id van de laatst getoonde melding>. Met de timers die linksonder op elk
+        scherm staan (zie kiosk_timers.py en templates/_kiosk_timer.html)."""
         db = get_db()
-        antwoord = jsonify(welkom_wachtrij(db, _scherm_instellingen(db), request.args.get("na", type=int)))
+        antwoord = jsonify({
+            **welkom_wachtrij(db, _scherm_instellingen(db), request.args.get("na", type=int)),
+            "timers": kiosk_timers.voor_scherm(db),
+        })
         antwoord.headers["Cache-Control"] = "no-store"
         return antwoord
 

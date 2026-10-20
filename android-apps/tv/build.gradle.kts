@@ -11,11 +11,18 @@ android {
         applicationId = "nl.kantineblauwgeel.tv"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
+        buildConfigField("String", "BASIS_URL", "\"https://www.kantineblauwgeel.nl\"")
     }
 
     buildTypes {
+        // De testversie kan een ander adres krijgen, bijvoorbeeld een testserver vanuit de emulator:
+        // ./gradlew :tv:assembleDebug -PtvBasisUrl=http://10.0.2.2:5056
+        debug {
+            val basisUrl = (project.findProperty("tvBasisUrl") as String?) ?: "https://www.kantineblauwgeel.nl"
+            buildConfigField("String", "BASIS_URL", "\"$basisUrl\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -33,6 +40,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 

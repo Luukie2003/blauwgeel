@@ -1,0 +1,142 @@
+{# Timers linksonder op elk tv-scherm (zie kiosk_timers.py): "Gehaktballen 12:34" met een ringetje dat leegloopt, en
+   als hij klaar is een geel, kloppend blok "Klaar!". De timers komen binnen met de vraag die het scherm toch al elke 5
+   seconden stelt (/kiosk/welkom, zie _kiosk_welkom.html, die kioskTimersBijwerken aanroept), als het aantal seconden
+   dat nog over is: het scherm telt daarna zelf elke seconde af. Op het prijzenscherm schuift de prijslijst omhoog zolang
+   er een timer staat, zodat er geen prijzen achter verdwijnen. #}
+<style>
+    .kiosk-timers {
+        /* Alleen vw (geen min()/max()): ook een oudere webweergave op een tv-kastje tekent dit goed. */
+        --tu: calc(100vw / 1920);
+        position: fixed;
+        left: calc(28 * var(--tu));
+        bottom: calc(26 * var(--tu));
+        z-index: 900;
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: flex-start;
+        gap: calc(14 * var(--tu));
+        pointer-events: none;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Calibri, sans-serif;
+    }
+    .kiosk-timer {
+        display: flex;
+        align-items: center;
+        gap: calc(20 * var(--tu));
+        min-width: calc(340 * var(--tu));
+        padding: calc(14 * var(--tu)) calc(34 * var(--tu)) calc(14 * var(--tu)) calc(16 * var(--tu));
+        border: calc(4 * var(--tu)) solid #fcd42f;
+        border-radius: calc(24 * var(--tu));
+        background: rgba(15, 31, 77, 0.95);
+        box-shadow: 0 calc(10 * var(--tu)) calc(34 * var(--tu)) rgba(0, 0, 0, 0.5);
+        color: #fff;
+        animation: kt-in 0.5s ease-out;
+    }
+    .kiosk-timer svg { width: calc(84 * var(--tu)); height: calc(84 * var(--tu)); flex: none; }
+    .kiosk-timer .kt-ring-achter { fill: none; stroke: rgba(255, 255, 255, 0.18); stroke-width: 9; }
+    .kiosk-timer .kt-ring { fill: none; stroke: #fcd42f; stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+    .kiosk-timer .kt-wijzer { stroke: #fff; stroke-width: 6; stroke-linecap: round; }
+    .kiosk-timer .kt-naam {
+        font-size: calc(30 * var(--tu));
+        font-weight: 800;
+        line-height: 1.1;
+        color: #fcd42f;
+        white-space: nowrap;
+    }
+    .kiosk-timer .kt-tijd {
+        font-size: calc(68 * var(--tu));
+        font-weight: 800;
+        line-height: 1.02;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.01em;
+    }
+    .kiosk-timer--klaar { background: #fcd42f; color: #0f1f4d; animation: kt-puls 1.1s ease-in-out infinite; }
+    .kiosk-timer--klaar .kt-naam { color: #0f1f4d; }
+    .kiosk-timer--klaar .kt-ring-achter { stroke: rgba(15, 31, 77, 0.2); }
+    .kiosk-timer--klaar .kt-ring { stroke: #0f1f4d; }
+    .kiosk-timer--klaar .kt-wijzer { stroke: #0f1f4d; }
+    @keyframes kt-in { from { opacity: 0; transform: translateY(30%); } to { opacity: 1; transform: none; } }
+    @keyframes kt-puls { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+</style>
+<div id="kiosk-timers" class="kiosk-timers" aria-live="polite"></div>
+<script>
+(function () {
+    var doos = document.getElementById('kiosk-timers');
+    var OMTREK = 2 * Math.PI * 42;
+    var KLAAR_ZICHTBAAR_MS = 15 * 60 * 1000;
+    var timers = [];
+    var blokken = {};
+    var inhoud = document.getElementById('inhoud');  // alleen op het prijzenscherm
+    var basisOnder = inhoud ? parseFloat(getComputedStyle(document.body).paddingBottom) || 0 : 0;
+    var vorigeHoogte = -1;
+
+    function twee(n) { return (n < 10 ? '0' : '') + n; }
+    function tijd(seconden) {
+        var u = Math.floor(seconden / 3600), m = Math.floor(seconden % 3600 / 60), s = seconden % 60;
+        return u > 0 ? u + ':' + twee(m) + ':' + twee(s) : m + ':' + twee(s);
+    }
+
+    function maakBlok(t) {
+        var blok = document.createElement('div');
+        blok.className = 'kiosk-timer';
+        blok.innerHTML =
+            '<svg viewBox="0 0 100 100" aria-hidden="true">' +
+            '<circle class="kt-ring-achter" cx="50" cy="50" r="42"/>' +
+            '<circle class="kt-ring" cx="50" cy="50" r="42" transform="rotate(-90 50 50)" stroke-dasharray="' + OMTREK + '"/>' +
+            '<line class="kt-wijzer" x1="50" y1="50" x2="50" y2="26"/><line class="kt-wijzer" x1="50" y1="50" x2="66" y2="58"/>' +
+            '</svg><div><div class="kt-naam"></div><div class="kt-tijd"></div></div>';
+        blok.querySelector('.kt-naam').textContent = t.naam;
+        return blok;
+    }
+
+    // Op het prijzenscherm de prijslijst zo nodig kleiner maken, zodat er niets achter de timer verdwijnt.
+    function maakRuimte() {
+        if (!inhoud) return;
+        var hoogte = timers.length ? doos.offsetHeight : 0;
+        if (hoogte === vorigeHoogte) return;
+        vorigeHoogte = hoogte;
+        document.body.style.paddingBottom = hoogte ? (basisOnder + hoogte + 12) + 'px' : '';
+        if (typeof window.pasInhoudSchaalAan === 'function') window.pasInhoudSchaalAan();
+    }
+
+    function teken() {
+        var nu = Date.now();
+        timers = timers.filter(function (t) { return nu - t.klaarOp < KLAAR_ZICHTBAAR_MS; });
+        var nog = {};
+        timers.forEach(function (t, i) {
+            var blok = blokken[t.id];
+            if (!blok) {
+                blok = blokken[t.id] = maakBlok(t);
+            }
+            if (doos.children[i] !== blok) doos.insertBefore(blok, doos.children[i] || null);
+            nog[t.id] = true;
+            var rest = Math.max(0, Math.ceil((t.klaarOp - nu) / 1000));
+            var klaar = rest === 0;
+            blok.classList.toggle('kiosk-timer--klaar', klaar);
+            blok.querySelector('.kt-naam').textContent = t.naam;
+            blok.querySelector('.kt-tijd').textContent = klaar ? 'Klaar!' : tijd(rest);
+            var deel = t.totaal > 0 ? Math.min(1, rest / t.totaal) : 0;
+            blok.querySelector('.kt-ring').setAttribute('stroke-dashoffset', String(OMTREK * (1 - deel)));
+        });
+        Object.keys(blokken).forEach(function (id) {
+            if (!nog[id]) {
+                if (blokken[id].parentNode) blokken[id].parentNode.removeChild(blokken[id]);
+                delete blokken[id];
+            }
+        });
+        maakRuimte();
+    }
+
+    window.kioskTimersBijwerken = function (lijst) {
+        var nu = Date.now();
+        timers = (lijst || []).map(function (t) {
+            return { id: t.id, naam: t.naam, klaarOp: nu + t.resterend * 1000, totaal: t.totaal || 0 };
+        });
+        teken();
+    };
+
+    (function tik() {
+        if (timers.length) teken();
+        setTimeout(tik, 1000 - (Date.now() % 1000));
+    })();
+})();
+</script>

@@ -13,6 +13,7 @@ object Prefs {
     private const val KEY_ZOOM_OUD_GEDEELD = "zoom_percent"
     private const val KEY_LAST_SCHERM = "last_scherm_sleutel"
     private const val KEY_AUTO_START = "auto_start_last"
+    private const val KEY_GEKOPPELD_URL = "gekoppeld_url"
 
     const val DEFAULT_ZOOM = 100
 
@@ -44,5 +45,13 @@ object Prefs {
 
     fun setAutoStartEnabled(context: Context, waarde: Boolean) {
         prefs(context).edit().putBoolean(KEY_AUTO_START, waarde).apply()
+    }
+
+    /** Het eigen adres van deze tv als gekoppeld scherm (/kiosk/t/<token>), zodra de site dat heeft gegeven. Zo blijft
+     * de koppeling ook bewaard als de opslag van de webweergave ooit leeg raakt. */
+    fun getGekoppeldUrl(context: Context): String? = prefs(context).getString(KEY_GEKOPPELD_URL, null)
+
+    fun setGekoppeldUrl(context: Context, url: String) {
+        prefs(context).edit().putString(KEY_GEKOPPELD_URL, url).apply()
     }
 }

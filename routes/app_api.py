@@ -20,6 +20,7 @@ import json
 from flask import Response, jsonify, request, session, url_for
 
 import barcodes
+import kiosk_timers
 from database import get_db
 from derving import DERVING_REDENEN, kies_reden
 from helpers import (
@@ -45,7 +46,7 @@ from routes.tellen.verwerken import verwerk_telling
 from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 # De nieuwste versie van de app. Draait er een oudere, dan meldt de app dat er een nieuwe is.
-HANDTERMINAL_APP_VERSIE = "2.3.0"
+HANDTERMINAL_APP_VERSIE = "2.4.0"
 
 MAX_AANTAL = 100000
 
@@ -268,6 +269,11 @@ def register_routes(app):
             "aanmeldingen_open": db.execute("SELECT COUNT(*) FROM club_van_20_aanmeldingen WHERE status = 'nieuw'").fetchone()[0]
             if toegang["club_van_20"] else None,
             "paginas": _webpaginas(rol, secties, pda),
+            # De timers op de tv's (zie kiosk_timers.py) en wat er op het prijzenscherm als uitverkocht staat.
+            "timers": kiosk_timers.actieve(db),
+            "uitverkocht_op_tv": [r[0] for r in db.execute(
+                """SELECT naam FROM producten WHERE actief = 1 AND toon_op_kiosk = 1 AND kiosk_uitverkocht = 1
+                   ORDER BY naam COLLATE NOCASE""").fetchall()] if toegang["voorraad"] else None,
             "app_versie": HANDTERMINAL_APP_VERSIE,
         })
 

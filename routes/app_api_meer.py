@@ -16,6 +16,7 @@ from datetime import date, datetime
 from flask import jsonify, request, session
 
 import barcodes
+import kiosk_timers
 import productinfo
 from activiteiten import bouw_agenda, kies_dagen
 from aanmeldingen import aanmelden_status, bestaand_lid_voor, keur_goed, ruim_op, splits_naam, wijs_af
@@ -492,6 +493,90 @@ def register_routes(app):
                     "taak_vragen": taak_vragen(db, "frituurvet_vervangen")}, 200
 
         return eenmalig(actie)
+
+    # ------------------------------------------------------------ prijzenscherm: uitverkocht
+
+    def _prijzenscherm(db):
+        """De producten op het prijzenscherm (zie routes/kiosk/prijzen_gegevens.py), per groep zoals op de tv."""
+        rijen = db.execute(
+            """SELECT id, naam, categorie, kiosk_categorie, kiosk_uitverkocht, afbeelding FROM producten
+               WHERE actief = 1 AND toon_op_kiosk = 1 ORDER BY naam COLLATE NOCASE"""
+        ).fetchall()
+        groepen = {}
+        for r in rijen:
+            groepen.setdefault(r["kiosk_categorie"] or r["categorie"] or "Overig", []).append(
+                {"id": r["id"], "naam": r["naam"], "uitverkocht": bool(r["kiosk_uitverkocht"]),
+                 "foto": _foto(r["afbeelding"], "klein")}
+            )
+        return {
+            "groepen": [{"naam": naam, "producten": producten} for naam, producten in sorted(groepen.items())],
+            "uitverkocht": sum(1 for r in rijen if r["kiosk_uitverkocht"]),
+        }
+
+    @app.route("/api/app/prijzenscherm")
+    def api_app_prijzenscherm():
+        return jsonify(_prijzenscherm(get_db()))
+
+    @app.route("/api/app/producten/<int:product_id>/uitverkocht", methods=["POST"])
+    def api_app_product_uitverkocht(product_id):
+        """{uitverkocht: true/false}: zo staat hij op het prijzenscherm (doorgestreept, met de melding 'Uitverkocht' op
+        de tv). Raakt de voorraad niet, net als de knop op de site (kiosk_product_uitverkocht_wisselen)."""
+        db = get_db()
+        product = db.execute("SELECT naam, toon_op_kiosk FROM producten WHERE id = ?", (product_id,)).fetchone()
+        if product is None:
+            return _fout("Dit product bestaat niet meer.", 404, "niet_gevonden")
+        uitverkocht = bool(_data().get("uitverkocht"))
+        db.execute("UPDATE producten SET kiosk_uitverkocht = ? WHERE id = ?", (1 if uitverkocht else 0, product_id))
+        db.commit()
+        if not product["toon_op_kiosk"]:
+            melding = f"{product['naam']} staat niet op het prijzenscherm."
+        elif uitverkocht:
+            melding = f"{product['naam']} staat nu als uitverkocht op de tv."
+        else:
+            melding = f"{product['naam']} is weer te koop op de tv."
+        return jsonify({**_prijzenscherm(db), "melding": melding, "uitverkocht_op_scherm": uitverkocht})
+
+    # ------------------------------------------------------------ timer op de tv's
+
+    def _timers(db):
+        return {"timers": kiosk_timers.actieve(db), "voorstellen": kiosk_timers.voorstellen(db),
+                "max_minuten": kiosk_timers.MAX_MINUTEN}
+
+    @app.route("/api/app/timers", methods=["GET", "POST"])
+    def api_app_timers():
+        """De timers op de tv's (zie kiosk_timers.py); POST {naam, minuten, verzoek_id} start er een."""
+        if request.method == "GET":
+            return jsonify(_timers(get_db()))
+        data = _data()
+
+        def actie(db):
+            timer_id, fout = kiosk_timers.start(db, data.get("naam"), data.get("minuten"), session.get("gebruiker_naam"))
+            if fout:
+                return {"fout": "fout", "melding": fout}, 400
+            t = db.execute("SELECT naam, minuten, klaar_om FROM kiosk_timers WHERE id = ?", (timer_id,)).fetchone()
+            return {**_timers(db), "melding": f"{t['naam']}: klaar om {t['klaar_om'][11:16]}. Staat op de tv's."}, 200
+
+        return eenmalig(actie)
+
+    @app.route("/api/app/timers/<int:timer_id>/verlengen", methods=["POST"])
+    def api_app_timer_verlengen(timer_id):
+        """{minuten (standaard 5), verzoek_id}"""
+        minuten = kiosk_timers.schoon_minuten(_data().get("minuten")) or 5
+
+        def actie(db):
+            naam = kiosk_timers.verleng(db, timer_id, minuten)
+            if naam is None:
+                return {"fout": "niet_gevonden", "melding": "Deze timer staat er niet meer."}, 404
+            return {**_timers(db), "melding": f"{naam}: {minuten} minuten erbij."}, 200
+
+        return eenmalig(actie)
+
+    @app.route("/api/app/timers/<int:timer_id>/stoppen", methods=["POST"])
+    def api_app_timer_stoppen(timer_id):
+        db = get_db()
+        naam = kiosk_timers.stop(db, timer_id)
+        melding = f"{naam}: van de tv's gehaald." if naam else "Deze timer stond er al niet meer."
+        return jsonify({**_timers(db), "melding": melding})
 
     # ------------------------------------------------------------ boodschappen
 

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tv koppelen · s.v. Blauw-Geel 1915</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <meta name="theme-color" content="#1e3a8a">
+    {# Een tv die nog niet is gekoppeld (zie kiosk_tvs.py): de koppelcode, groot, met wat je op de site moet doen. Kijkt
+       elke 5 seconden of hij intussen gekoppeld is (of de code verlopen is) en laadt dan opnieuw. #}
+    <style>
+        /* Alleen vw (geen min()/max()): ook een oudere webweergave op een tv-kastje tekent dit goed. */
+        :root { --u: calc(100vw / 1920); --blauw: #1e3a8a; --blauw-donker: #0f1f4d; --geel: #fcd42f; --zacht: #b9c2e0; }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; }
+        body {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: calc(40 * var(--u));
+            background: linear-gradient(160deg, var(--blauw) 0%, var(--blauw-donker) 100%); color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Calibri, sans-serif;
+            text-align: center; padding: calc(60 * var(--u));
+        }
+        .kop { display: flex; align-items: center; gap: calc(24 * var(--u)); }
+        .kop img { height: calc(110 * var(--u)); width: auto; }
+        .kop h1 { margin: 0; font-size: calc(64 * var(--u)); }
+        .uitleg { margin: 0; color: var(--zacht); font-size: calc(34 * var(--u)); }
+        .code {
+            font-size: calc(200 * var(--u)); font-weight: 800; letter-spacing: 0.08em;
+            color: var(--blauw-donker); background: var(--geel);
+            padding: calc(10 * var(--u)) calc(60 * var(--u)); border-radius: calc(32 * var(--u));
+            font-variant-numeric: tabular-nums; line-height: 1.15;
+        }
+        ol {
+            margin: 0; padding: 0; list-style: none; counter-reset: stap;
+            display: flex; flex-direction: column; gap: calc(14 * var(--u));
+            font-size: calc(36 * var(--u)); text-align: left;
+        }
+        ol li { counter-increment: stap; display: flex; gap: calc(18 * var(--u)); align-items: baseline; }
+        ol li::before {
+            content: counter(stap); flex: none; display: inline-flex; align-items: center; justify-content: center;
+            width: 1.5em; height: 1.5em; border-radius: 50%; background: rgba(252, 212, 47, 0.18); color: var(--geel);
+            font-weight: 800; font-size: 0.85em;
+        }
+        strong { color: var(--geel); }
+        .klein { margin: 0; color: var(--zacht); font-size: calc(24 * var(--u)); }
+    </style>
+</head>
+<body>
+    {% include '_kiosk_herstel.html' %}
+    <div class="kop">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="">
+        <h1>Deze tv koppelen</h1>
+    </div>
+    {% if code %}
+    <p class="uitleg">Koppelcode</p>
+    <div class="code">{{ code[:3] }} {{ code[3:] }}</div>
+    <ol>
+        <li><span>Ga op de site naar <strong>Kantine-tv</strong>.</span></li>
+        <li><span>Vul bij <strong>Tv koppelen</strong> deze code in en geef de tv een naam.</span></li>
+        <li><span>Kies wat de tv moet tonen. Binnen een paar seconden staat het hier.</span></li>
+    </ol>
+    <p class="klein">De code is een half uur geldig; daarna komt er vanzelf een nieuwe.</p>
+    {% else %}
+    <p class="uitleg">Er worden nu te veel tv's tegelijk gekoppeld. Over een paar minuten komt hier vanzelf een code.</p>
+    {% endif %}
+    <script>
+    (function () {
+        try { localStorage.setItem('kantine_tv_token', {{ token|tojson }}); } catch (e) {}
+        var huidigeVersie = {{ versie|tojson }};
+        setInterval(function () {
+            fetch({{ versie_url|tojson }}, { cache: 'no-store' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.versie && data.versie !== huidigeVersie) window.kioskScherm.herlaad();
+                })
+                .catch(function () {});
+        }, 5000);
+    })();
+    </script>
+</body>
+</html>

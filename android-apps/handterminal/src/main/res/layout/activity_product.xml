@@ -258,6 +258,15 @@
                     android:layout_marginTop="10dp" />
             </LinearLayout>
 
+            <!-- Op de tv: uitverkocht zetten op het prijzenscherm (alleen als het product daarop staat). -->
+            <LinearLayout
+                android:id="@+id/tvBlok"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:id="@+id/infoBoven"
                 android:layout_width="match_parent"

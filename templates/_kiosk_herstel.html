@@ -1,0 +1,72 @@
+{# Zelfherstel van een tv-scherm, en bij een gekoppelde tv (zie kiosk_tvs.py) de koppeling met de site. Bovenaan de
+   <body> van elk scherm (kiosk_scherm.html, kiosk_prijzen_scherm.html, kiosk_koppelen.html).
+
+   - kioskScherm.herlaad(mislukt): herlaadt pas als de site de nieuwe pagina ook echt geeft. Hapert de wifi of start de
+     server net opnieuw op, dan blijft het oude beeld staan (en roept hij mislukt() aan) en probeert het scherm het bij
+     de volgende controle opnieuw, in plaats van op een foutpagina te blijven hangen.
+   - kioskScherm.pollUrl(url): bij een gekoppelde tv met wat hij toont en hoe groot zijn beeld is; zo weet de site dat
+     hij aan staat (niet bij een voorbeeld op de site zelf).
+   - De zoom die op de site voor deze tv is gekozen: in de tv-app via de app (KantineTv.zoom, net als de zoom in de
+     instellingen van de app), in een browser via de lettergrootte.
+   - Eens per dag, 's nachts tussen 4 en 6 uur, herlaadt het scherm zichzelf: een pagina die dagen achter elkaar draait,
+     blijft zo fris. #}
+<script>
+(function () {
+    var tv = {{ tv_koppeling|default(none)|tojson }};
+    var geladenOp = Date.now();
+    var bezig = false;
+
+    window.kioskScherm = {
+        tv: tv,
+        pollUrl: function (url) {
+            if (!tv || tv.voorbeeld) return url;
+            var app = 'browser';
+            try { if (window.KantineTv && KantineTv.versie) app = String(KantineTv.versie()); } catch (e) {}
+            return url + (url.indexOf('?') < 0 ? '?' : '&') + 'beeld=' + window.innerWidth + 'x' + window.innerHeight +
+                '&app=' + encodeURIComponent(app);
+        },
+        herlaad: function (mislukt) {
+            if (bezig) return;
+            bezig = true;
+            var afgehandeld = false;
+            function nietGelukt() {
+                if (afgehandeld) return;
+                afgehandeld = true;
+                bezig = false;
+                if (mislukt) mislukt();
+            }
+            // Geen antwoord binnen 8 seconden telt als mislukt: het scherm mag niet blijven wachten.
+            var wacht = setTimeout(nietGelukt, 8000);
+            fetch(location.href, { cache: 'no-store', credentials: 'same-origin', headers: { 'X-Kiosk-Controle': '1' } })
+                .then(function (r) {
+                    if (afgehandeld) return;
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    afgehandeld = true;
+                    clearTimeout(wacht);
+                    window.location.reload();
+                })
+                .catch(function () {
+                    clearTimeout(wacht);
+                    nietGelukt();
+                });
+        }
+    };
+
+    if (tv && !tv.voorbeeld) {
+        try { localStorage.setItem('kantine_tv_token', tv.token); } catch (e) {}
+        var viaApp = false;
+        try {
+            if (window.KantineTv && KantineTv.zoom) {
+                KantineTv.zoom(tv.zoom);
+                viaApp = true;
+            }
+        } catch (e) {}
+        if (!viaApp && tv.zoom !== 100) document.documentElement.style.fontSize = tv.zoom + '%';
+    }
+
+    setInterval(function () {
+        var uur = new Date().getHours();
+        if (uur >= 4 && uur < 6 && Date.now() - geladenOp > 12 * 3600 * 1000) window.kioskScherm.herlaad();
+    }, 10 * 60 * 1000);
+})();
+</script>

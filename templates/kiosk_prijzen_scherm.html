@@ -187,6 +187,7 @@
     </style>
 </head>
 <body>
+    {% include '_kiosk_herstel.html' %}
     <div id="inhoud">
         <header>
             <img src="{{ url_for('static', filename='logo.png') }}" alt="">
@@ -511,7 +512,7 @@
         var bekendeWedstrijddagTest = {{ wedstrijddag_test|default(0)|tojson }};
 
         setInterval(function () {
-            fetch('{{ versie_url }}')
+            fetch(window.kioskScherm.pollUrl({{ versie_url|tojson }}), { cache: 'no-store' })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     if (data.wedstrijddag_test && data.wedstrijddag_test !== bekendeWedstrijddagTest) {
@@ -536,17 +537,21 @@
                             'kiosk-popup--uitverkocht',
                             7000
                         );
-                        setTimeout(function () { window.location.reload(); }, 8000);
+                        // Niet nog eens tonen als het herladen niet meteen lukt.
+                        bekendeUitverkocht = bekendeUitverkocht.concat(nieuwUitverkocht);
+                        setTimeout(function () { window.kioskScherm.herlaad(); }, 8000);
                     } else {
                         // Een melding voor een nieuw/verlengd lid (_kiosk_welkom.html) eerst laten uitspelen.
                         if (window.kioskWelkomBezig && window.kioskWelkomBezig()) return;
-                        window.location.reload();
+                        // Alleen als de site de nieuwe pagina ook echt geeft (zie _kiosk_herstel.html).
+                        window.kioskScherm.herlaad();
                     }
                 })
                 .catch(function () {});
         }, 10000);
     })();
     </script>
+    {% include '_kiosk_timer.html' %}
     {% include '_kiosk_welkom.html' %}
 </body>
 </html>

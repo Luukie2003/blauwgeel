@@ -4,7 +4,7 @@ Vroeger 1 bestand van ruim 2000 regels; nu opgesplitst per onderdeel. Alle
 routes behouden hun eigen endpoint-namen, dus url_for() en de rechten in
 app.py werken ongewijzigd."""
 
-from routes.kiosk import prijzen, bardienst, acties, sponsoren_sjablonen, scherm
+from routes.kiosk import prijzen, bardienst, acties, sponsoren_sjablonen, scherm, timer, tvs
 
 
 def register_routes(app):
@@ -13,3 +13,5 @@ def register_routes(app):
     acties.register_routes(app)
     sponsoren_sjablonen.register_routes(app)
     scherm.register_routes(app)
+    tvs.register_routes(app)
+    timer.register_routes(app)

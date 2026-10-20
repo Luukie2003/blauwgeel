@@ -58,6 +58,11 @@ OPEN_ENDPOINTS = {
     "kiosk_tv_versie",
     # Idem voor de melding bij een nieuw of verlengd lid van de Club van 20 (templates/_kiosk_welkom.html).
     "kiosk_welkom",
+    # Gekoppelde tv's (zie kiosk_tvs.py): het koppelen zelf, het scherm van één tv en zijn versie-poll. Het beheer
+    # (koppelen met de code, wat hij toont) zit wel achter login, in de sectie Kantine-tv.
+    "kiosk_koppelen",
+    "kiosk_tv_scherm",
+    "kiosk_tv_scherm_versie",
     # Publieke Club van 20-pagina: waar de QR-code op de wervingsdia van het
     # kantine scherm naartoe wijst -- bezoekers hebben geen account.
     "club_van_20_publiek",
@@ -82,8 +87,8 @@ NOODSTOP_ALTIJD_OPEN = {
     "login", "logout", "status_pagina", "uitrollen_endpoint", "noodstop_status",
 }
 # De tv-schermen en hun polls: die krijgen tijdens een noodstop het vergrendel-scherm.
-KIOSK_SCHERMEN = {"kiosk_prijzen_scherm", "kiosk_scherm", "kiosk_tv"}
-KIOSK_POLLS = {"kiosk_prijzen_versie", "kiosk_scherm_versie", "kiosk_tv_versie", "kiosk_welkom"}
+KIOSK_SCHERMEN = {"kiosk_prijzen_scherm", "kiosk_scherm", "kiosk_tv", "kiosk_koppelen", "kiosk_tv_scherm"}
+KIOSK_POLLS = {"kiosk_prijzen_versie", "kiosk_scherm_versie", "kiosk_tv_versie", "kiosk_welkom", "kiosk_tv_scherm_versie"}
 
 # Iedereen moet bij de eerste keer inloggen een eigen 6-cijferige tablet-code
 # instellen (zie tablet_code_instellen in routes/auth.py) -- die code wordt
@@ -147,6 +152,12 @@ GEBRUIK_NIET_LOGGEN = {
     # De schermen vragen dit elke 5 seconden: geen bezoek, en zonder deze regel stond er per scherm elke 5 seconden
     # een nieuwe regel in de database.
     "kiosk_welkom",
+    # Een gekoppelde tv vraagt elke 10 seconden of er iets veranderd is; Kantine-tv en de timerpagina verversen
+    # zichzelf, en de handterminal-app vraagt de timers elke paar seconden zolang het timerscherm open is.
+    "kiosk_tv_scherm_versie",
+    "kiosk_tvs_status",
+    "timer_stand",
+    "api_app_timers",
 }
 
 # Routes die alleen voor de rol 'beheerder' toegankelijk zijn. Vrijwilligers
@@ -276,6 +287,10 @@ SECTIE_ENDPOINTS = {
         "api_app_boodschap_verwijderen",
         "api_app_prognose",
         "api_app_barcodes",
+        # Uitverkocht zetten op het prijzenscherm vanaf de handterminal (op de site: kiosk_product_uitverkocht_wisselen
+        # in de sectie Kantine-tv). Wie aan de bar staat, ziet als eerste dat iets op is.
+        "api_app_prijzenscherm",
+        "api_app_product_uitverkocht",
         "voorraadoverzicht",
         "voorraadoverzicht_pdf_route",
         "voorraadoverzicht_csv_route",
@@ -473,6 +488,12 @@ SECTIE_ENDPOINTS = {
         "kiosk_motm_team_nieuw",
         "kiosk_motm_team_verwijderen",
         "kiosk_motm_volgorde_opslaan",
+        # Gekoppelde tv's (zie kiosk_tvs.py).
+        "kiosk_tv_koppelen",
+        "kiosk_tv_opslaan",
+        "kiosk_tv_herladen",
+        "kiosk_tv_verwijderen",
+        "kiosk_tvs_status",
     },
     # Club van 20: ledenadministratie + betalingen + projecten + de
     # Club van 20-dia's. Eigen sectie (los van Kantine-tv) zodat bijv. de

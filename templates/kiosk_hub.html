@@ -2,9 +2,9 @@
 {% block titel %}Kantine Kiosk{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
-    TV-schermen voor in de kantine, te casten via Chromecast. De schermen zelf
-    zijn publieke pagina's (geen account nodig) -- wat erop staat stel je hier in.
-    Hieronder een live voorbeeld van elk scherm, zodat je in één oogopslag ziet wat erop staat.
+    De tv's in de kantine. Koppel elke tv één keer met de code die hij laat zien; daarna kies je hier per tv wat
+    hij toont en hoe groot, zie je of hij aan staat en laad je hem op afstand opnieuw. De schermen zelf zijn
+    publieke pagina's (geen account nodig) -- wat erop staat stel je hieronder in.
 </p>
 
 <style>
@@ -21,9 +21,106 @@
     .kiosk-qr-blok { margin-top:0.7rem; }
     .kiosk-qr-blok[hidden] { display:none; }
     .kiosk-instellen-kolommen { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1.1rem; }
+    .tv-status { display:inline-flex; align-items:center; gap:0.4rem; font-weight:600; }
+    .tv-status::before { content:""; width:0.65rem; height:0.65rem; border-radius:50%; background:#9aa3b5; flex:none; }
+    .tv-status--aan::before { background:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,0.18); }
+    .tv-status--uit { color:#b42318; }
+    .tv-status--uit::before { background:#d92d20; }
+    .tv-details { margin:0.45rem 0 0.7rem; }
+    .tv-velden { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.6rem; margin-top:0.8rem; }
+    .tv-velden label { display:flex; flex-direction:column; gap:0.25rem; font-size:0.85rem; color:var(--tekst-zacht, #5b6478); }
+    .tv-koppel-form .tv-velden { margin-top:0.4rem; }
+    .tv-code-veld { font-size:1.3rem; letter-spacing:0.12em; font-variant-numeric:tabular-nums; }
 </style>
 
+<h2 id="tvs" style="margin:0 0 0.7rem">Tv's</h2>
+<div class="kiosk-schermen-grid" id="tv-lijst">
+    {% for tv in tvs %}
+    <div class="kaart kiosk-schermkaart" data-tv-id="{{ tv.id }}">
+        <div class="actiebalk" style="margin-bottom:0.3rem">
+            <h2 style="margin:0">{{ tv.naam }}</h2>
+            <span class="tv-status {{ 'tv-status--aan' if tv.status.aan else 'tv-status--uit' }}" data-tv-status>{{ tv.status.tekst }}</span>
+        </div>
+        <p class="tekst-zacht tv-details" data-tv-details>
+            {%- if tv.status.toont %}Toont {{ tv.status.toont }}{% endif %}
+            {%- if tv.status.beeld %} · beeld {{ tv.status.beeld }}{% endif %}
+            {%- if tv.status.app %} · {{ tv.status.app }}{% endif %}
+            {%- if tv.status.geladen %} · geladen {{ tv.status.geladen }}{% endif %}
+        </p>
+        <div class="kiosk-mini-voorbeeld-buiten">
+            <iframe class="kiosk-mini-voorbeeld" data-bron="{{ url_for('kiosk_tv_scherm', token=tv.token, voorbeeld=1) }}" title="Live voorbeeld {{ tv.naam }}"></iframe>
+        </div>
+        <form method="post" action="{{ url_for('kiosk_tv_opslaan', tv_id=tv.id) }}" class="js-ajax-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="tv-velden">
+                <label>Naam <input type="text" name="naam" value="{{ tv.naam }}" maxlength="40" required></label>
+                <label>Toont
+                    <select name="scherm">
+                        {% for sleutel, label in schermen.items() %}
+                        <option value="{{ sleutel }}" {{ 'selected' if tv.scherm == sleutel }}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Grootte
+                    <select name="zoom">
+                        {% for z in zooms %}
+                        <option value="{{ z }}" {{ 'selected' if tv.zoom == z }}>{{ z }}%{{ ' (standaard)' if z == 100 }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            <div class="kiosk-schermkaart-acties">
+                <button type="submit" class="btn btn-geel btn-klein">Opslaan</button>
+            </div>
+        </form>
+        <div class="kiosk-schermkaart-acties">
+            <form method="post" action="{{ url_for('kiosk_tv_herladen', tv_id=tv.id) }}" class="js-ajax-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-rand btn-klein">Opnieuw laden</button>
+            </form>
+            <form method="post" action="{{ url_for('kiosk_tv_verwijderen', tv_id=tv.id) }}"
+                  data-vraag="Tv '{{ tv.naam }}' ontkoppelen? Hij toont daarna weer een koppelcode."
+                  onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag, {ja: 'Ja, ontkoppelen'})">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-rand btn-klein">Ontkoppelen</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="kaart kiosk-schermkaart">
+        <h2 style="margin:0 0 0.4rem">Tv koppelen</h2>
+        <p class="tekst-zacht" style="margin:0 0 0.4rem">
+            Open op de tv <strong>{{ koppel_url }}</strong> (in de tv-app: <em>Gekoppeld scherm</em>). De tv laat dan
+            een code van 6 cijfers zien; vul die hier in.
+        </p>
+        <form method="post" action="{{ url_for('kiosk_tv_koppelen') }}" class="tv-koppel-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="tv-velden">
+                <label>Code op de tv
+                    <input type="text" name="code" inputmode="numeric" autocomplete="off" maxlength="7"
+                           placeholder="123 456" class="tv-code-veld" required>
+                </label>
+                <label>Naam <input type="text" name="naam" maxlength="40" placeholder="Bijv. Bar" required></label>
+                <label>Toont
+                    <select name="scherm">
+                        {% for sleutel, label in schermen.items() %}
+                        <option value="{{ sleutel }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            <div class="kiosk-schermkaart-acties">
+                <button type="submit" class="btn btn-geel btn-klein">Koppelen</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <h2 style="margin:0 0 0.7rem">Schermen</h2>
+<p class="tekst-zacht" style="margin:-0.3rem 0 0.8rem">
+    De vaste adressen van de drie schermen, voor een tv die (nog) niet gekoppeld is of een scherm dat je cast.
+</p>
 <div class="kiosk-schermen-grid">
     <div class="kaart kiosk-schermkaart">
         <div class="actiebalk" style="margin-bottom:0.6rem">
@@ -130,6 +227,29 @@
             if (blok) blok.hidden = !blok.hidden;
         });
     });
+
+    // Of de tv's aan staan: elke halve minuut bijgewerkt, zonder de pagina (en de voorbeelden) te herladen.
+    function werkTvsBij() {
+        fetch({{ url_for('kiosk_tvs_status')|tojson }}, { cache: 'no-store', credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                (data.tvs || []).forEach(function (tv) {
+                    var kaart = document.querySelector('[data-tv-id="' + tv.id + '"]');
+                    if (!kaart) return;
+                    var status = kaart.querySelector('[data-tv-status]');
+                    status.textContent = tv.status.tekst;
+                    status.className = 'tv-status ' + (tv.status.aan ? 'tv-status--aan' : 'tv-status--uit');
+                    var delen = [];
+                    if (tv.status.toont) delen.push('Toont ' + tv.status.toont);
+                    if (tv.status.beeld) delen.push('beeld ' + tv.status.beeld);
+                    if (tv.status.app) delen.push(tv.status.app);
+                    if (tv.status.geladen) delen.push('geladen ' + tv.status.geladen);
+                    kaart.querySelector('[data-tv-details]').textContent = delen.join(' · ');
+                });
+            })
+            .catch(function () {});
+    }
+    if (document.querySelector('[data-tv-id]')) setInterval(werkTvsBij, 30000);
 
     // Live mini-voorbeelden: op 1/10e schaal getekend (net als de live
     // voorbeeld bij Dia's instellen) en elke 30s ververst, zodat deze hub

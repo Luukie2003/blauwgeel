@@ -6,8 +6,18 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.58.1"
+HUIDIGE_VERSIE = "1.59.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.59.0",
+        "datum": "20 oktober 2026",
+        "punten": [
+            "Tv's koppelen: open op een tv /kiosk/koppelen (in de tv-app: 'Gekoppeld scherm'), vul op Kantine-tv bij 'Tv koppelen' de code in die op de tv staat en geef hem een naam. Daarna kies je per tv wat hij toont (de prijzenlijst, de dia's of het wisselscherm) en hoe groot, laad je hem op afstand opnieuw en zie je of hij aan staat, wat hij toont en hoe groot zijn beeld is. Staat een tv uit terwijl er bardienst is, dan staat dat bij 'Wat moet er nu?'. De oude vaste adressen blijven gewoon werken.",
+            "De tv-schermen herstellen zichzelf: ze herladen pas als de site de nieuwe pagina ook echt geeft, dus bij een haperende wifi blijft het oude beeld staan in plaats van een foutpagina. De diashow herlaadt pas als de dia in beeld klaar is en gaat daarna verder waar hij was, en 's nachts herladen de schermen zich één keer. De tv-app (versie 1.1) probeert het na een storing elke 15 seconden vanzelf opnieuw, en meteen als het netwerk terug is; eerder bleef hij op de foutmelding staan tot iemand op 'Opnieuw proberen' drukte.",
+            "Timer op de tv, bijvoorbeeld voor de gehaktballen: linksonder op alle tv's telt hij af (op het prijzenscherm schuift de prijslijst er netjes voor op), daarna staat er 'Klaar!' tot je hem weghaalt, of tot een kwartier later. Starten, er 5 minuten bij doen en weghalen via Start → Timer op de tv (ook in de tablet-app) of op de handterminal. De knoppen onthouden de tijd van de vorige keer.",
+            "Handterminal-app 2.4: producten op het prijzenscherm op uitverkocht zetten (Meer → Op de tv, of op het productscherm), met de vraag of het weer te koop moet als je er iets van inboekt. En de timer op de tv, ook bij 'Let op' op het startscherm.",
+        ],
+    },
     {
         "versie": "1.58.1",
         "datum": "19 oktober 2026",
@@ -1111,8 +1121,8 @@ MODULES = [
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.3.0", "sinds": "1.6.0", "laatst": "1.45.0",
      "inhoud": "Keukenvoorraad met een eigen telling, inboeken en prijzen, en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.18.25", "sinds": "1.10.1", "laatst": "1.52.0",
-     "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm"},
+    {"naam": "Kantine-tv", "versie": "1.19.0", "sinds": "1.10.1", "laatst": "1.59.0",
+     "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert, zelfherstel en de timer op de tv"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.0", "sinds": "", "laatst": "",
@@ -1121,13 +1131,13 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.6.0", "sinds": "1.53.0", "laatst": "1.58.0",
-     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes, artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
+    {"naam": "Handterminal-app", "versie": "0.7.0", "sinds": "1.53.0", "laatst": "1.59.0",
+     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes, artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv en de timer, plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.4", "sinds": "0.1.0", "laatst": "1.58.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
-    {"naam": "Overzicht & prikbord", "versie": "1.12.5", "sinds": "0.2.0", "laatst": "1.58.0",
+    {"naam": "Overzicht & prikbord", "versie": "1.12.6", "sinds": "0.2.0", "laatst": "1.59.0",
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
