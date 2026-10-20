@@ -187,6 +187,19 @@
             android:theme="@style/Thema.Handterminal.Licht"
             android:windowSoftInputMode="adjustResize|stateHidden" />
 
+        <activity
+            android:name=".KantineTvActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name=".DiasActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
         <!-- De noodstop van de site: het vergrendel-scherm, zelfde thema als het inlogscherm. -->
         <activity
             android:name=".VergrendeldActivity"

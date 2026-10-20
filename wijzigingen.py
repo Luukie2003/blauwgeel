@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.60.0"
+HUIDIGE_VERSIE = "1.61.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.61.0",
+        "datum": "20 oktober 2026",
+        "punten": [
+            "Handterminal-app 2.6: de kantine-tv vanaf de bar (Meer → Kantine-tv, met de rechten voor de kantine-tv). Je ziet per tv of hij aan staat en wat hij toont, kiest wat hij toont (prijzenlijst, dia's of wisselscherm), laadt hem opnieuw en zet het wisselscherm om. Verder het uitgelichte product (kies een ander product, pas de titel aan of zet het uit), de prijs-acties aan of uit, de bardienst van vandaag en morgen (een wissel ter plekke aanpassen, toevoegen of verwijderen) en de diashow: hele onderdelen zoals de standen, of losse dia's aan of uit. Uitverkocht en de timer staan er ook. Dia's maken en bewerken, de indeling en een nieuwe tv koppelen doe je op de site.",
+        ],
+    },
     {
         "versie": "1.60.0",
         "datum": "20 oktober 2026",
@@ -1128,8 +1135,8 @@ MODULES = [
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.3.0", "sinds": "1.6.0", "laatst": "1.45.0",
      "inhoud": "Keukenvoorraad met een eigen telling, inboeken en prijzen, en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.19.0", "sinds": "1.10.1", "laatst": "1.59.0",
-     "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert, zelfherstel en de timer op de tv"},
+    {"naam": "Kantine-tv", "versie": "1.20.0", "sinds": "1.10.1", "laatst": "1.61.0",
+     "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.0", "sinds": "", "laatst": "",
@@ -1138,8 +1145,8 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.8.0", "sinds": "1.53.0", "laatst": "1.60.0",
-     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes, artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv en de timer, plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
+    {"naam": "Handterminal-app", "versie": "0.9.0", "sinds": "1.53.0", "laatst": "1.61.0",
+     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes, artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's, specials, bardienst en dia's aan of uit), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.4", "sinds": "0.1.0", "laatst": "1.58.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",

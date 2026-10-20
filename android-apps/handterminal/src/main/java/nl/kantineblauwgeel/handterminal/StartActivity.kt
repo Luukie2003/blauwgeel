@@ -15,8 +15,7 @@ import org.json.JSONObject
 
 /** Het startscherm: zoeken of scannen, de vier dingen van het dagelijkse werk (Factuur inboeken, Tellen, Boeken,
  * Voorraad), wat aandacht nodig heeft (ook de taken die een beheerder voor je klaarzette) en onder "Meer" alle andere
- * schermen, voor zover je er rechten voor hebt. Alles in de app zelf: wat alleen op de website kan (de kantine-tv), zegt
- * dat het niet in de app kan. Toont meteen het vorige antwoord van de site (bewaard op het toestel) en ververst op de
+ * schermen, voor zover je er rechten voor hebt. Alles in de app zelf; de kantine-tv in KantineTvActivity. Toont meteen het vorige antwoord van de site (bewaard op het toestel) en ververst op de
  * achtergrond, ook de productlijst. */
 class StartActivity : BasisActivity() {
 
@@ -198,7 +197,9 @@ class StartActivity : BasisActivity() {
         meer += Meer(getString(R.string.prikbord), R.drawable.ic_prikbord, start.optInt("mededelingen_open"), urgent > 0) { PrikbordActivity.open(this) }
         val timers = start.optJSONArray("timers")?.length() ?: 0
         meer += Meer(getString(R.string.timer), R.drawable.ic_timer, timers, false) { TimerActivity.open(this) }
-        if (voorraad) meer += Meer(getString(R.string.op_de_tv), R.drawable.ic_kiosk, uitverkocht.size, false) { UitverkochtActivity.open(this) }
+        // Met de rechten voor de kantine-tv het hele tv-scherm (met uitverkocht en de timer); anders alleen uitverkocht.
+        if (heeft("kantine_tv")) meer += Meer(getString(R.string.kantine_tv), R.drawable.ic_kiosk, uitverkocht.size, false) { KantineTvActivity.open(this) }
+        else if (voorraad) meer += Meer(getString(R.string.op_de_tv), R.drawable.ic_kiosk, uitverkocht.size, false) { UitverkochtActivity.open(this) }
         if (voorraad) {
             meer += Meer(getString(R.string.bestellijst), R.drawable.ic_bestellijst, bestellingen, false) { BestellijstActivity.open(this) }
             meer += Meer(getString(R.string.boodschappen), R.drawable.ic_boodschappen, 0, false) { BoodschappenActivity.open(this) }
@@ -217,7 +218,6 @@ class StartActivity : BasisActivity() {
             meer += Meer(getString(R.string.keuken), R.drawable.ic_keuken, if (vetNodig) 1 else 0, vetNodig, label = "!") { KeukenActivity.open(this) }
         }
         if (heeft("club_van_20")) meer += Meer(getString(R.string.club_van_20), R.drawable.ic_aanmeldingen, aanmeldingen, false) { AanmeldingenActivity.open(this) }
-        if (heeft("kantine_tv")) meer += Meer(getString(R.string.kantine_tv), R.drawable.ic_kiosk, 0, false) { nietInApp(getString(R.string.wat_kantine_tv)) }
         b.meerKop.isVisible = meer.isNotEmpty()
         meer.chunked(3).forEach { rij ->
             val regel = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }

@@ -494,6 +494,20 @@ SECTIE_ENDPOINTS = {
         "kiosk_tv_herladen",
         "kiosk_tv_verwijderen",
         "kiosk_tvs_status",
+        # De kantine-tv vanaf de handterminal (routes/app_api_tv.py).
+        "api_app_kantine_tv",
+        "api_app_tv_scherm",
+        "api_app_tv_herladen",
+        "api_app_tv_wissel",
+        "api_app_tv_actie",
+        "api_app_tv_uitgelicht",
+        "api_app_tv_producten",
+        "api_app_tv_bardienst_nieuw",
+        "api_app_tv_bardienst",
+        "api_app_tv_bardienst_verwijderen",
+        "api_app_tv_dias",
+        "api_app_tv_dia",
+        "api_app_tv_dia_blok",
     },
     # Club van 20: ledenadministratie + betalingen + projecten + de
     # Club van 20-dia's. Eigen sectie (los van Kantine-tv) zodat bijv. de

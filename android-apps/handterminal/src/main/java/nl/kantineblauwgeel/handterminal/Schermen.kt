@@ -30,6 +30,8 @@ object Schermen {
         put("bijzonderheden") { PrikbordActivity.open(it) }
         put("club_van_20_aanmeldingen") { AanmeldingenActivity.open(it) }
         put("timer_pagina") { TimerActivity.open(it) }
+        for (e in listOf("kiosk_hub", "kiosk_prijzen_instellingen", "kiosk_bardienst", "kiosk_acties")) put(e) { KantineTvActivity.open(it) }
+        put("kiosk_sponsoren_leden") { DiasActivity.open(it) }
     }
 
     fun heeft(endpoint: String?) = endpoint != null && endpoint in schermen
