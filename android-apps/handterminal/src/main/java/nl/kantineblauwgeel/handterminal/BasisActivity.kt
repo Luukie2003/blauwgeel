@@ -243,8 +243,9 @@ abstract class BasisActivity : AppCompatActivity() {
 
     private var scanZoeken: Job? = null
 
-    /** [alleenInfo]: het product openen om te bekijken, met boeken onderaan (zo opent een scan vanuit het menu). */
-    fun openScan(code: String, alleenInfo: Boolean = false) {
+    /** [alleenInfo]: het product openen om te bekijken, met boeken onderaan (zo opent een scan overal, behalve bij
+     * Boeken). */
+    fun openScan(code: String, alleenInfo: Boolean = true) {
         tril()
         // Een QR-code van de site (zoals op een schaplabel: /scan/12): het product openen in de app.
         val link = Uri.parse(code)

@@ -106,7 +106,7 @@ class KoppelenActivity : BasisActivity() {
             if (callingActivity != null) {
                 setResult(RESULT_OK, Intent().putExtra(EXTRA_CODE, code))
             } else {
-                ProductActivity.open(this, p.id, scan = code)
+                ProductActivity.open(this, p.id, scan = code, alleenInfo = false)
             }
             finish()
         }

@@ -23,7 +23,12 @@ class ProductenActivity : BasisActivity() {
     private lateinit var modus: Modus
     private var categorie: String? = null
     private var alleenLaag = false
-    private val adapter by lazy { ProductAdapter(this) { ProductActivity.open(this, it.id) } }
+    private val adapter by lazy { ProductAdapter(this) { ProductActivity.open(this, it.id, alleenInfo = alleenInfo) } }
+
+    /** Bij Boeken staat boeken bovenaan; bij zoeken en Voorraad opent het product als informatie. */
+    private val alleenInfo get() = modus != Modus.BOEKEN
+
+    override fun bijScan(code: String) = openScan(code, alleenInfo)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,8 +57,8 @@ class ProductenActivity : BasisActivity() {
                 verbergToetsenbord()
                 // Een ingetikte barcode, of precies één uitkomst: meteen openen.
                 val term = b.zoekVeld.text.toString()
-                if (Catalogus.normaliseerCode(term)?.length in setOf(8, 13, 14)) openScan(term)
-                else adapter.lijst.singleOrNull()?.let { ProductActivity.open(this, it.id) }
+                if (Catalogus.normaliseerCode(term)?.length in setOf(8, 13, 14)) openScan(term, alleenInfo)
+                else adapter.lijst.singleOrNull()?.let { ProductActivity.open(this, it.id, alleenInfo = alleenInfo) }
             }
             true
         }

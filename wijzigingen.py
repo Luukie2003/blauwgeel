@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.62.0"
+HUIDIGE_VERSIE = "1.62.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.62.1",
+        "datum": "20 oktober 2026",
+        "punten": [
+            "Handterminal-app 2.7.1: een product opent overal als informatiepagina, met in- of uitboeken onderaan: via de zoekbalk, Voorraad, Barcodes, de bestellijst en een scan. Alleen via Boeken (en na het koppelen van een onbekende barcode) staat boeken bovenaan, met het gescande aantal al ingevuld. Eerder gold dat alleen voor een scan op het startscherm.",
+        ],
+    },
     {
         "versie": "1.62.0",
         "datum": "20 oktober 2026",
@@ -1153,7 +1160,7 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.10.0", "sinds": "1.53.0", "laatst": "1.62.0",
+    {"naam": "Handterminal-app", "versie": "0.10.1", "sinds": "1.53.0", "laatst": "1.62.1",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's, specials, bardienst en dia's aan of uit), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.4", "sinds": "0.1.0", "laatst": "1.58.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},

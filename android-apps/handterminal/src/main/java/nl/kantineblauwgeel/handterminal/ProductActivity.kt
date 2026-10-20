@@ -26,8 +26,9 @@ import kotlin.math.roundToInt
  * Boeken gaat met een verzoek_id: valt de verbinding weg, dan probeert de app het vanzelf opnieuw, en de site boekt het
  * toch maar één keer (zie routes/app_api.py).
  *
- * Gescand vanuit het menu ([alleenInfo]) is het vooral een informatiescherm: boeken staat dan onderaan, er staat nog
- * niets klaar, en nog een keer scannen telt pas op als je erin of eruit hebt gekozen. */
+ * Standaard ([alleenInfo]) is het een informatiescherm: boeken staat onderaan, er staat nog niets klaar, en nog een
+ * keer scannen telt pas op als je erin of eruit hebt gekozen. Alleen via Boeken (en na het koppelen van een gescande
+ * barcode) staat boeken bovenaan, met het gescande aantal al ingevuld. */
 class ProductActivity : BasisActivity() {
 
     private lateinit var b: ActivityProductBinding
@@ -796,7 +797,7 @@ class ProductActivity : BasisActivity() {
         private const val EXTRA_SCAN = "scan"
         private const val EXTRA_INFO = "alleen_info"
 
-        fun open(activity: Activity, productId: Int, scan: String? = null, alleenInfo: Boolean = false) {
+        fun open(activity: Activity, productId: Int, scan: String? = null, alleenInfo: Boolean = true) {
             activity.startActivity(Intent(activity, ProductActivity::class.java).putExtra(EXTRA_ID, productId).putExtra(EXTRA_SCAN, scan)
                 .putExtra(EXTRA_INFO, alleenInfo))
         }
