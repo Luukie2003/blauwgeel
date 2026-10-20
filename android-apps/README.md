@@ -45,7 +45,8 @@ de sessie-cookie zelf (`Sessie.kt`) en stuurt bij een POST het csrf_token mee in
   tabel `app_verzoeken`). Zware berekeningen (de verkoop per week en de prognose) haalt een scherm pas op als het
   nodig is, apart van de rest.
 - **Scanner (DataWedge)**: de app maakt bij het starten zelf een DataWedge-profiel "Kantine Handterminal" aan (scans
-  als broadcast, geen toetsaanslagen). Een scan opent het product, of het koppelen van een onbekende barcode. Een losse
+  als broadcast, geen toetsaanslagen). Een scan opent het product, of het koppelen van een onbekende barcode. Op het
+  startscherm opent een scan alleen de informatie (`alleenInfo`): boeken staat dan onderaan en er staat niets klaar. Een losse
   verpakking terwijl er een doos van bestaat: de vraag of de volle besteleenheid erin moet.
 - **Verbinding**: een stip in de kopbalk, automatisch opnieuw proberen, en een wifi-lock zolang de app voorin staat.
 - **Noodstop**: elk scherm kijkt elke 15 seconden naar `/noodstop/status` (staat ook tijdens een noodstop open). Is de

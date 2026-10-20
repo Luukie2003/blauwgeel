@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Eén product: de voorraad, en meteen daaronder boeken (zonder te scrollen op een TC51). Daaronder alles van de
      productpagina van de site: kerncijfers, verkoop en verwachting, prijzen, inkoop en bestellen (infoBoven), de laatste
-     boekingen, de artikelen en barcodes en de laatste tellingen (infoOnder). Die blokken bouwt ProductActivity zelf. -->
+     boekingen, de artikelen en barcodes en de laatste tellingen (infoOnder). Die blokken bouwt ProductActivity zelf.
+     Gescand vanuit het menu (alleen de informatie) zet ProductActivity boekKop en boekBlok onderaan. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -129,7 +130,15 @@
                 android:visibility="gone" />
 
             <!-- Boeken -->
+            <TextView
+                android:id="@+id/boekKop"
+                style="@style/Kop"
+                android:paddingStart="4dp"
+                android:text="@string/erin_of_eruit"
+                android:visibility="gone" />
+
             <LinearLayout
+                android:id="@+id/boekBlok"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"

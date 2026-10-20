@@ -24,7 +24,10 @@ import kotlin.math.roundToInt
  * op dit scherm vraagt of hij bij dit product hoort; dan is hij in één tik gekoppeld.
  *
  * Boeken gaat met een verzoek_id: valt de verbinding weg, dan probeert de app het vanzelf opnieuw, en de site boekt het
- * toch maar één keer (zie routes/app_api.py). */
+ * toch maar één keer (zie routes/app_api.py).
+ *
+ * Gescand vanuit het menu ([alleenInfo]) is het vooral een informatiescherm: boeken staat dan onderaan, er staat nog
+ * niets klaar, en nog een keer scannen telt pas op als je erin of eruit hebt gekozen. */
 class ProductActivity : BasisActivity() {
 
     private lateinit var b: ActivityProductBinding
@@ -39,12 +42,15 @@ class ProductActivity : BasisActivity() {
     private var scans = 0
     /** Na de vraag bij een los gescand artikel: tellen volgende losse scans als volle doos (true) of als los (false). */
     private var losAlsVolle: Boolean? = null
+    private var alleenInfo = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         b = ActivityProductBinding.inflate(layoutInflater)
         setContentView(b.root)
         productId = intent.getIntExtra(EXTRA_ID, 0)
+        alleenInfo = intent.getBooleanExtra(EXTRA_INFO, false)
+        if (alleenInfo) zetBoekenOnderaan()
         product = Catalogus.opId(productId)
         richtBalkIn(b.balk, product?.naam ?: getString(R.string.product), sub = product?.let(::balkSub))
 
@@ -63,8 +69,19 @@ class ProductActivity : BasisActivity() {
 
         bouwRedenen()
         toonProduct()
-        intent.getStringExtra(EXTRA_SCAN)?.let { gescand(it, eerste = true) }
+        if (!alleenInfo) intent.getStringExtra(EXTRA_SCAN)?.let { gescand(it, eerste = true) }
         werkBoekKnopBij()
+    }
+
+    /** Boeken (met een kopje erboven) naar het eind van de pagina, onder de laatste tellingen. */
+    private fun zetBoekenOnderaan() {
+        val pagina = b.boekBlok.parent as LinearLayout
+        pagina.removeView(b.boekKop)
+        pagina.removeView(b.boekBlok)
+        pagina.addView(b.boekKop)
+        pagina.addView(b.boekBlok)
+        b.boekKop.isVisible = true
+        (b.boekBlok.layoutParams as LinearLayout.LayoutParams).apply { topMargin = 0; bottomMargin = dp(this@ProductActivity, 10) }
     }
 
     override fun onResume() {
@@ -605,9 +622,10 @@ class ProductActivity : BasisActivity() {
         }
         val treffer = Catalogus.opBarcode(code)
         when {
-            treffer != null && treffer.product.id == productId -> gescand(treffer.barcode.code, eerste = false)
+            treffer != null && treffer.product.id == productId ->
+                if (alleenInfo && richting == null) tril() else gescand(treffer.barcode.code, eerste = false)
             treffer != null -> {
-                ProductActivity.open(this, treffer.product.id, scan = treffer.barcode.code)
+                ProductActivity.open(this, treffer.product.id, scan = treffer.barcode.code, alleenInfo = alleenInfo)
                 finish()
             }
             Catalogus.normaliseerCode(code)?.length in setOf(8, 13, 14) -> vraagKoppelen(code)
@@ -725,9 +743,11 @@ class ProductActivity : BasisActivity() {
     companion object {
         private const val EXTRA_ID = "product_id"
         private const val EXTRA_SCAN = "scan"
+        private const val EXTRA_INFO = "alleen_info"
 
-        fun open(activity: Activity, productId: Int, scan: String? = null) {
-            activity.startActivity(Intent(activity, ProductActivity::class.java).putExtra(EXTRA_ID, productId).putExtra(EXTRA_SCAN, scan))
+        fun open(activity: Activity, productId: Int, scan: String? = null, alleenInfo: Boolean = false) {
+            activity.startActivity(Intent(activity, ProductActivity::class.java).putExtra(EXTRA_ID, productId).putExtra(EXTRA_SCAN, scan)
+                .putExtra(EXTRA_INFO, alleenInfo))
         }
     }
 }

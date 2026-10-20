@@ -243,17 +243,18 @@ abstract class BasisActivity : AppCompatActivity() {
 
     private var scanZoeken: Job? = null
 
-    fun openScan(code: String) {
+    /** [alleenInfo]: het product openen om te bekijken, met boeken onderaan (zo opent een scan vanuit het menu). */
+    fun openScan(code: String, alleenInfo: Boolean = false) {
         tril()
         // Een QR-code van de site (zoals op een schaplabel: /scan/12): het product openen in de app.
         val link = Uri.parse(code)
         if ((link.scheme == "https" || link.scheme == "http") && link.host?.endsWith(inst.siteHost.removePrefix("www.")) == true) {
             val id = Regex("^/(?:scan|producten)/(\\d+)").find(link.path ?: "")?.groupValues?.get(1)?.toIntOrNull()
-            if (id != null) ProductActivity.open(this, id) else melding(getString(R.string.qr_niet_voor_app))
+            if (id != null) ProductActivity.open(this, id, alleenInfo = alleenInfo) else melding(getString(R.string.qr_niet_voor_app))
             return
         }
         Catalogus.opBarcode(code)?.let {
-            ProductActivity.open(this, it.product.id, scan = it.barcode.code)
+            ProductActivity.open(this, it.product.id, scan = it.barcode.code, alleenInfo = alleenInfo)
             return
         }
         if (Catalogus.normaliseerCode(code) == null) {
@@ -269,7 +270,7 @@ abstract class BasisActivity : AppCompatActivity() {
                 // Geen verbinding: dan gewoon met wat we hebben.
             }
             val treffer = Catalogus.opBarcode(code)
-            if (treffer != null) ProductActivity.open(this@BasisActivity, treffer.product.id, scan = treffer.barcode.code)
+            if (treffer != null) ProductActivity.open(this@BasisActivity, treffer.product.id, scan = treffer.barcode.code, alleenInfo = alleenInfo)
             else KoppelenActivity.open(this@BasisActivity, code)
         }
     }

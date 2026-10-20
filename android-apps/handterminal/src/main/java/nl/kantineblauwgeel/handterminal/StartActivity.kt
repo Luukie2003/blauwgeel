@@ -61,6 +61,9 @@ class StartActivity : BasisActivity() {
 
     override fun weerVerbonden() = laad()
 
+    /** Een scan in het menu: alleen de informatie van het product, boeken staat onderaan. */
+    override fun bijScan(code: String) = openScan(code, alleenInfo = true)
+
     private fun laad() {
         bezig {
             try {
