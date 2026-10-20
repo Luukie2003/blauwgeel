@@ -624,7 +624,7 @@
     <string name="zoek_barcode_hint">Zoek op naam, merk of barcode</string>
     <string name="nog_geen_barcodes">Nog geen barcodes.</string>
     <string name="niets_gevonden_voor">Niets gevonden voor ‘%1$s’.</string>
-    <string name="barcodes_uitleg">Een barcode koppelen of een artikel toevoegen doe je op het productscherm (scan de barcode daar, of tik op Artikel toevoegen). Een artikel bewerken of weghalen kan alleen op de website.</string>
+    <string name="barcodes_uitleg">Een barcode koppelen of een artikel toevoegen doe je op het productscherm (scan de barcode daar, of tik op Artikel toevoegen). Tik daar op een artikel om de barcode aan te passen of het te verwijderen. Alle producten in één keer koppelen: Koppelronde.</string>
 
     <!-- Taken -->
     <string name="taak">Taak</string>
@@ -776,4 +776,30 @@
     <string name="dia_later">vanaf %1$s</string>
     <string name="dia_tot">tot en met %1$s</string>
     <string name="dias_op_site">Tik op een dia om hem aan of uit te zetten. Een dia met een datum zet zichzelf aan en uit.</string>
+
+    <!-- Koppelronde en artikel aanpassen (KoppelrondeActivity, ProductActivity) -->
+    <string name="koppelronde">Koppelronde</string>
+    <string name="koppelronde_starten">Koppelronde: alle producten scannen</string>
+    <string name="n_van_m_gekoppeld">%1$d van %2$d gekoppeld</string>
+    <string name="ongedaan">Ongedaan</string>
+    <string name="koppelronde_klaar">Klaar! Alle producten hebben een barcode, of staan op \"heeft geen barcode\".</string>
+    <string name="nu_scannen">Nu scannen · %1$d van %2$d</string>
+    <string name="scan_een_los">Scan één los exemplaar (1 %1$s)</string>
+    <string name="per_scan">Er zit meer in één verpakking?</string>
+    <string name="per_scan_uitleg">Bijvoorbeeld een zak met 20 stuks</string>
+    <string name="overslaan">Overslaan, later doen</string>
+    <string name="heeft_geen_barcode">Heeft geen barcode</string>
+    <string name="daarna">Daarna</string>
+    <string name="zonder_barcode_n">Zonder barcode (%1$d)</string>
+    <string name="terugzetten">Terugzetten</string>
+    <string name="koppelronde_uitleg">Hier staan alle producten die nog geen barcode van een losse verpakking hebben. Scan er één los exemplaar van en het volgende staat klaar. Dozen en kratten koppel je bij het inboeken van facturen.</string>
+    <string name="hoeveel_in_verpakking">Hoeveel %1$s zit er in één verpakking?</string>
+    <string name="geen_geldige_barcode">%1$s is geen barcode van een product.</string>
+    <string name="barcode_al_van">Deze barcode hoort al bij %1$s.</string>
+    <string name="doos_gescand_titel">Is dit een doos?</string>
+    <string name="doos_gescand_vraag">Deze barcode heeft 14 cijfers. Die zit meestal op een doos of krat, en die koppel je bij het inboeken van facturen. Toch koppelen als één losse verpakking van %1$s?</string>
+    <string name="toch_koppelen">Toch koppelen</string>
+    <string name="artikel_aanpassen">Artikel aanpassen</string>
+    <string name="artikel_verwijderen">Artikel verwijderen</string>
+    <string name="artikel_verwijderen_vraag">Artikel %1$s verwijderen, met zijn barcodes?</string>
 </resources>

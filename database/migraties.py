@@ -185,6 +185,8 @@ KOLOM_MIGRATIES = [
     # telmethode/rapportage bepaalt) aan te passen. Leeg = gewoon de eigen
     # categorie, zoals voorheen. Zie _prijzen_categorieen in routes/kiosk.py.
     ("producten", "kiosk_categorie", "TEXT"),
+    # Heeft geen eigen barcode (tapbier, een portie uit de keuken): staat dan niet meer in de koppelronde van de app.
+    ("producten", "geen_barcode", "INTEGER NOT NULL DEFAULT 0"),
     # Aanvangstijd (Europe/Amsterdam, "UU:MM") uit de agenda-feed, voor zover
     # bekend -- een "hele dag"-event in de ICS-feed heeft geen tijd, dan
     # blijft dit NULL. Zie agenda.py (_parse_ics) en de

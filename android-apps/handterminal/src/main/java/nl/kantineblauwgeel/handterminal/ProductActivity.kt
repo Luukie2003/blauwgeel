@@ -498,23 +498,30 @@ class ProductActivity : BasisActivity() {
         }
     }
 
-    /** De artikelen van dit product met hun barcodes (zoals "Artikelen en barcodes" op de site). */
+    /** De artikelen van dit product met hun barcodes (zoals "Artikelen en barcodes" op de site). Tik op een artikel
+     * om het aan te passen (bijvoorbeeld een andere barcode) of te verwijderen. */
     private fun toonArtikelen(p: Catalogus.Product, artikelen: List<JSONObject>) {
         for (a in artikelen) {
+            val blok = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setBackgroundResource(R.drawable.regel_klik_kaart)
+                if (a.has("id")) setOnClickListener { artikelVenster(a.getInt("id")) }
+            }
+            b.barcodeLijst.addView(blok)
             val naam = listOfNotNull(a.optString("naam"), a.tekstOfNull("merk")?.takeIf { !a.optString("naam").contains(it, ignoreCase = true) })
                 .joinToString(" · ")
-            b.barcodeLijst.addView(regel(naam).apply { setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(0, dp(context, 6), 0, 0) })
+            blok.addView(regel(naam + "  ›").apply { setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(0, dp(context, 6), 0, 0) })
             val prijs = a.takeIf { !it.isNull("inkoopprijs") }?.let {
                 " " + getString(R.string.voor_prijs, Lijst.euro(it.optDouble("inkoopprijs"))) +
                     (it.takeIf { x -> !x.isNull("per_eenheid") && x.optInt("aantal") > 1 }?.let { x -> " (${getString(R.string.prijs_per, Lijst.euro(x.optDouble("per_eenheid")), p.eenheid)})" } ?: "")
             } ?: ""
             val wat = getString(R.string.los_aantal, a.optInt("aantal"), p.eenheid) + prijs + (a.tekstOfNull("leverancier")?.let { " · $it" } ?: "")
-            b.barcodeLijst.addView(regel(wat, zacht = true).apply { setPadding(0, 0, 0, 0) })
+            blok.addView(regel(wat, zacht = true).apply { setPadding(0, 0, 0, 0) })
             val codes = listOfNotNull(
                 a.tekstOfNull("ean"),
                 a.tekstOfNull("doos_ean")?.let { getString(R.string.doos_code, a.optInt("per_doos"), it) },
             ).joinToString("  ·  ").ifEmpty { getString(R.string.geen_barcode) }
-            b.barcodeLijst.addView(regel(codes).apply { typeface = android.graphics.Typeface.MONOSPACE; textSize = 12f; setPadding(0, 0, 0, dp(context, 6)) })
+            blok.addView(regel(codes).apply { typeface = android.graphics.Typeface.MONOSPACE; textSize = 12f; setPadding(0, 0, 0, dp(context, 6)) })
         }
     }
 
@@ -683,25 +690,50 @@ class ProductActivity : BasisActivity() {
         }
     }
 
-    /** Een nieuw artikel bij dit product: wat je inkoopt (een zak AH frikandellen van 20, een krat Hertog Jan), met
-     * de barcode van de verpakking en eventueel van de doos, de inkoopprijs en de leverancier. Zelfde controles als
-     * op de site (barcodes.bewaar_artikel); een fout houdt het formulier open. */
-    private fun nieuwArtikel() {
+    private fun nieuwArtikel() = artikelVenster(null)
+
+    /** Een nieuw artikel bij dit product ([artikelId] null), of een bestaand aanpassen: wat je inkoopt (een zak AH
+     * frikandellen van 20, een krat Hertog Jan), met de barcode van de verpakking en eventueel van de doos, de
+     * inkoopprijs en de leverancier. Een leeg veld haalt het weg (bijvoorbeeld de doos-barcode). Zelfde controles als
+     * op de site (barcodes.bewaar_artikel); een fout houdt het formulier open. Een scan vult de barcode in. */
+    private fun artikelVenster(artikelId: Int?) {
         val p = product ?: return
         bezig {
-            val leveranciers = Api.getJson(this, "/api/app/producten/${p.id}/artikelen").getJSONArray("leveranciers").objecten()
+            val gegevens = Api.getJson(this, if (artikelId == null) "/api/app/producten/${p.id}/artikelen" else "/api/app/artikelen/$artikelId")
+            val leveranciers = gegevens.getJSONArray("leveranciers").objecten()
+            val bestaand = gegevens.optJSONObject("artikel")
             val d = DialogNieuwArtikelBinding.inflate(layoutInflater)
             d.aantalLabel.text = getString(R.string.artikel_aantal, p.eenheid)
             d.leverancier.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item,
                 listOf(getString(R.string.geen_leverancier)) + leveranciers.map { it.optString("naam") })
+            if (bestaand != null) {
+                d.naam.setText(bestaand.optString("naam"))
+                d.merk.setText(bestaand.tekstOfNull("merk") ?: "")
+                d.ean.setText(bestaand.tekstOfNull("ean") ?: "")
+                d.aantal.setText(bestaand.optInt("aantal", 1).toString())
+                d.inkoopprijs.setText(bestaand.takeIf { !it.isNull("inkoopprijs") }?.let { Lijst.getal(it.optDouble("inkoopprijs"), 2) } ?: "")
+                d.doosEan.setText(bestaand.tekstOfNull("doos_ean") ?: "")
+                d.perDoos.setText(bestaand.takeIf { !it.isNull("per_doos") }?.optInt("per_doos")?.toString() ?: "")
+                val lev = bestaand.optInt("leverancier_id", 0)
+                leveranciers.indexOfFirst { it.optInt("id") == lev }.takeIf { it >= 0 }?.let { d.leverancier.setSelection(it + 1) }
+            }
             val verzoekId = Api.nieuwVerzoekId()
-            val dialoog = AlertDialog.Builder(this)
-                .setCustomTitle(dialoogTitel(getString(R.string.nieuw_artikel, p.naam)))
+            val bouwer = AlertDialog.Builder(this)
+                .setCustomTitle(dialoogTitel(if (bestaand == null) getString(R.string.nieuw_artikel, p.naam) else getString(R.string.artikel_aanpassen)))
                 .setView(d.root)
                 .setNegativeButton(R.string.annuleren, null)
-                .setPositiveButton(R.string.toevoegen, null)
+                .setPositiveButton(if (bestaand == null) R.string.toevoegen else R.string.opslaan, null)
                 .setOnDismissListener { artikelDialoog = null }
-                .show()
+            val dialoog = bouwer.show()
+            if (artikelId != null) {
+                d.verwijderKnop.visibility = android.view.View.VISIBLE
+                d.verwijderKnop.setOnClickListener {
+                    dialoog.dismiss()
+                    verwijderArtikel(artikelId, bestaand?.optString("naam") ?: "")
+                }
+            }
+            // Bij aanpassen staat de cursor in de barcode: een scan vervangt de oude barcode.
+            if (bestaand != null) d.ean.post { d.ean.requestFocus(); d.ean.selectAll() }
             artikelDialoog = d
             dialoog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val body = JSONObject()
@@ -714,7 +746,8 @@ class ProductActivity : BasisActivity() {
                     .put("per_omverpakking", d.perDoos.text.toString().trim())
                 d.leverancier.selectedItemPosition.takeIf { it > 0 }?.let { body.put("leverancier_id", leveranciers[it - 1].getInt("id")) }
                 bezig {
-                    val antwoord = Api.post(this, "/api/app/producten/${p.id}/artikelen", body, verzoekId = verzoekId)
+                    val antwoord = if (artikelId == null) Api.post(this, "/api/app/producten/${p.id}/artikelen", body, verzoekId = verzoekId)
+                    else Api.post(this, "/api/app/artikelen/$artikelId", body.put("leverancier_id", body.opt("leverancier_id") ?: ""), herhaalbaar = true)
                     val nieuw = Catalogus.product(antwoord.getJSONObject("product"))
                     Catalogus.werkBij(this, nieuw)
                     product = nieuw
@@ -725,6 +758,24 @@ class ProductActivity : BasisActivity() {
                 }
             }
         }
+    }
+
+    private fun verwijderArtikel(artikelId: Int, naam: String) {
+        AlertDialog.Builder(this)
+            .setMessage(getString(R.string.artikel_verwijderen_vraag, naam))
+            .setNegativeButton(R.string.annuleren, null)
+            .setPositiveButton(R.string.verwijderen) { _, _ ->
+                bezig {
+                    val antwoord = Api.post(this, "/api/app/artikelen/$artikelId/verwijderen", herhaalbaar = true)
+                    val nieuw = Catalogus.product(antwoord.getJSONObject("product"))
+                    Catalogus.werkBij(this, nieuw)
+                    product = nieuw
+                    tril(60)
+                    melding(antwoord.optString("melding"))
+                    laadDetail()
+                }
+            }
+            .show()
     }
 
     /** Onbekende barcode op dit scherm: hoort hij bij dit product? Eén tik en hij is gekoppeld. */

@@ -561,6 +561,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         activiteiten,
         app_api,
         app_api_meer,
+        app_api_barcodes,
         app_api_tv,
         auth,
         barcodes,
@@ -604,6 +605,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     app_api.register_routes(app)
     app_api_meer.register_routes(app)
     app_api_tv.register_routes(app)
+    app_api_barcodes.register_routes(app)
     privacy.register_routes(app)
     prognose.register_routes(app)
     accounts.register_routes(app)

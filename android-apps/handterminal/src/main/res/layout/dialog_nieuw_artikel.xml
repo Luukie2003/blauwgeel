@@ -144,5 +144,20 @@
             android:text="@string/artikel_uitleg"
             android:textColor="@color/tekst_zacht"
             android:textSize="12sp" />
+
+        <!-- Alleen bij een bestaand artikel (aanpassen): hier en niet als derde knop van het venster, want die past op
+             het kleine scherm niet naast Opslaan en Annuleren. -->
+        <TextView
+            android:id="@+id/verwijderKnop"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/regel_klik_kaart"
+            android:gravity="center"
+            android:text="@string/artikel_verwijderen"
+            android:textColor="@color/rood_balk"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
     </LinearLayout>
 </ScrollView>

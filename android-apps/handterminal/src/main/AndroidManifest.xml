@@ -195,6 +195,12 @@
             android:windowSoftInputMode="adjustResize|stateHidden" />
 
         <activity
+            android:name=".KoppelrondeActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
             android:name=".DiasActivity"
             android:exported="false"
             android:screenOrientation="portrait"

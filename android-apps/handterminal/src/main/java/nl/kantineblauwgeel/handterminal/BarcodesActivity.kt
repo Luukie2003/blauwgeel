@@ -16,8 +16,8 @@ import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
 /** Alle artikelen met hun barcodes, per product (Voorraad > Barcodes op de site). Zoeken op naam, merk of barcode; een
- * scan zoekt meteen. Tik op een product om het te openen. Een artikel bewerken of weghalen kan alleen op de website;
- * een barcode koppelen kan op het productscherm. */
+ * scan zoekt meteen. Tik op een product om het te openen; daar pas je een artikel aan of koppel je een barcode. Onderaan
+ * de koppelronde (KoppelrondeActivity): alle producten zonder barcode één voor één. */
 class BarcodesActivity : BasisActivity() {
 
     private lateinit var b: ActivityLijstBinding
@@ -32,6 +32,9 @@ class BarcodesActivity : BasisActivity() {
         richtBalkIn(b.balk, getString(R.string.barcodes))
         b.verversen.setColorSchemeResources(R.color.navy)
         b.verversen.setOnRefreshListener { laad() }
+        b.onderKnop.visibility = android.view.View.VISIBLE
+        b.onderKnop.setText(R.string.koppelronde_starten)
+        b.onderKnop.setOnClickListener { KoppelrondeActivity.open(this) }
         zoekveld = EditText(this).apply {
             hint = getString(R.string.zoek_barcode_hint)
             inputType = InputType.TYPE_CLASS_TEXT

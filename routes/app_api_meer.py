@@ -115,7 +115,7 @@ def _info_json(db, product, beheerder):
         ],
         "meldingen": info["meldingen"],
         "artikelen": [
-            {"naam": a["naam"], "merk": a["merk"] or None, "ean": a["ean"], "doos_ean": a["ean_omverpakking"],
+            {"id": a["id"], "naam": a["naam"], "merk": a["merk"] or None, "ean": a["ean"], "doos_ean": a["ean_omverpakking"],
              "per_doos": a["per_omverpakking"] or None, "aantal": a["aantal_per_verpakking"],
              "inkoopprijs": a["inkoopprijs"] or None, "per_eenheid": barcodes.per_eenheid(a) or None,
              "leverancier": a["leverancier_naam"]}

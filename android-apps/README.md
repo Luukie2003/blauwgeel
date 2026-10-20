@@ -21,7 +21,7 @@ Gradle-project, zodat je ze in één Android Studio-venster kunt openen en beher
 Een zelfstandige app met eigen schermen (er opent nergens een websitepagina) voor het werk op de handterminal. Hij
 praat met de site via een JSON-API (`routes/app_api.py` voor het dagelijkse werk, `routes/app_api_meer.py` voor de rest:
 productinformatie, kassa en kluis, keuken, boodschappen, aanmeldingen, agenda, prognose, barcodes en taken,
-`routes/app_api_tv.py` voor de kantine-tv, en voor facturen `routes/facturen.py`) en gebruikt dezelfde logica en database als de site. Wat alleen op de site kan
+`routes/app_api_tv.py` voor de kantine-tv, `routes/app_api_barcodes.py` voor artikelen aanpassen en de koppelronde, en voor facturen `routes/facturen.py`) en gebruikt dezelfde logica en database als de site. Wat alleen op de site kan
 (corrigeren, bewerken, dia's maken), meldt de app met "Niet mogelijk in de app" (`nietInApp` in `BasisActivity`);
 hij opent nooit de website. Inloggen gaat met de persoonlijke 6-cijferige code (`/api/tablet-code/inloggen`); de app bewaart
 de sessie-cookie zelf (`Sessie.kt`) en stuurt bij een POST het csrf_token mee in `X-CSRF-Token`.
@@ -33,7 +33,8 @@ de sessie-cookie zelf (`Sessie.kt`) en stuurt bij een POST het csrf_token mee in
   `TellingenActivity`, `GeschiedenisActivity`, `BoodschappenActivity`, `PrognoseActivity`, `AgendaActivity`,
   `UitverkochtActivity` (producten op het prijzenscherm op uitverkocht zetten), `TimerActivity` (de timer op de tv's),
   `KantineTvActivity` (tv's: aan of uit, wat ze tonen, opnieuw laden, de wisselknop; specials; bardienst van vandaag en
-  morgen) en `DiasActivity` (onderdelen van de diashow en losse dia's aan of uit),
+  morgen), `DiasActivity` (onderdelen van de diashow en losse dia's aan of uit), `KoppelrondeActivity` (alle producten
+  zonder barcode van een losse verpakking één voor één scannen),
   `BarcodesActivity`, `GeldActivity`/`GeldTellenActivity` (kassa en kluis), `KeukenActivity`/`KeukenInvoerActivity`,
   `AanmeldingenActivity`, `TaakActivity` (een taak van een beheerder; `Schermen.kt` weet welk scherm bij welke
   pagina van de site hoort) en `VergrendeldActivity` (de noodstop). Gedeeld gedrag (kopbalk, scanner, automatisch uitloggen, fouten, "Niet mogelijk in de

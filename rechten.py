@@ -291,6 +291,12 @@ SECTIE_ENDPOINTS = {
         # in de sectie Kantine-tv). Wie aan de bar staat, ziet als eerste dat iets op is.
         "api_app_prijzenscherm",
         "api_app_product_uitverkocht",
+        # Barcodes aanpassen en de koppelronde (routes/app_api_barcodes.py), net als artikel_bewerken op de site.
+        "api_app_artikel",
+        "api_app_artikel_verwijderen",
+        "api_app_koppelronde",
+        "api_app_koppelronde_geen_barcode",
+        "api_app_koppelronde_ongedaan",
         "voorraadoverzicht",
         "voorraadoverzicht_pdf_route",
         "voorraadoverzicht_csv_route",
