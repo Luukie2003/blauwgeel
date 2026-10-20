@@ -4,48 +4,40 @@ import android.content.Context
 
 object Prefs {
     private const val NAAM = "kantine_tv_prefs"
+    // Dezelfde sleutels als de vaste schermen van de app tot 1.1 (zoom_percent_prijzen, zoom_percent_dias): een zoom die
+    // daar al op de tv was ingesteld, blijft zo gewoon bewaard.
     private const val KEY_ZOOM_PREFIX = "zoom_percent_"
-    // Oude, gedeelde zoom-instelling van voor het scherm-per-scherm maken
-    // ervan -- alleen nog gelezen als terugvaloptie (zie getZoom hieronder)
-    // zodat een al ingestelde zoom niet stilzwijgend terugspringt naar
-    // DEFAULT_ZOOM voor iedereen die al een aangepaste waarde had. Wordt
-    // zelf niet meer geschreven.
-    private const val KEY_ZOOM_OUD_GEDEELD = "zoom_percent"
-    private const val KEY_LAST_SCHERM = "last_scherm_sleutel"
-    private const val KEY_AUTO_START = "auto_start_last"
     private const val KEY_GEKOPPELD_URL = "gekoppeld_url"
 
     const val DEFAULT_ZOOM = 100
+    const val PRIJZEN = "prijzen"
+    const val DIAS = "dias"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(NAAM, Context.MODE_PRIVATE)
 
-    fun getZoom(context: Context, schermSleutel: String): Int {
+    /** De grootte die op de site voor deze tv is gekozen (zie PlayerActivity.Brug). */
+    fun getSiteZoom(context: Context): Int = prefs(context).getInt(KEY_ZOOM_PREFIX + Screens.GEKOPPELD, DEFAULT_ZOOM)
+
+    fun setSiteZoom(context: Context, waarde: Int) {
+        prefs(context).edit().putInt(KEY_ZOOM_PREFIX + Screens.GEKOPPELD, waarde).apply()
+    }
+
+    /** De eigen zoom van deze tv voor de prijzenlijst of de dia's (Instellingen, de OK-knop), of null: dan de site. */
+    fun getEigenZoom(context: Context, scherm: String): Int? {
         val instellingen = prefs(context)
-        val eigenSleutel = KEY_ZOOM_PREFIX + schermSleutel
-        if (instellingen.contains(eigenSleutel)) {
-            return instellingen.getInt(eigenSleutel, DEFAULT_ZOOM)
-        }
-        return instellingen.getInt(KEY_ZOOM_OUD_GEDEELD, DEFAULT_ZOOM)
+        return if (instellingen.contains(KEY_ZOOM_PREFIX + scherm)) instellingen.getInt(KEY_ZOOM_PREFIX + scherm, DEFAULT_ZOOM) else null
     }
 
-    fun setZoom(context: Context, schermSleutel: String, waarde: Int) {
-        prefs(context).edit().putInt(KEY_ZOOM_PREFIX + schermSleutel, waarde).apply()
+    fun setEigenZoom(context: Context, scherm: String, waarde: Int?) {
+        val bewerk = prefs(context).edit()
+        if (waarde == null) bewerk.remove(KEY_ZOOM_PREFIX + scherm) else bewerk.putInt(KEY_ZOOM_PREFIX + scherm, waarde)
+        bewerk.apply()
     }
 
-    fun getLastSchermSleutel(context: Context): String? =
-        prefs(context).getString(KEY_LAST_SCHERM, null)
-
-    fun setLastSchermSleutel(context: Context, schermSleutel: String) {
-        prefs(context).edit().putString(KEY_LAST_SCHERM, schermSleutel).apply()
-    }
-
-    fun isAutoStartEnabled(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_AUTO_START, true)
-
-    fun setAutoStartEnabled(context: Context, waarde: Boolean) {
-        prefs(context).edit().putBoolean(KEY_AUTO_START, waarde).apply()
-    }
+    /** De zoom die nu geldt voor dit scherm: de eigen zoom van de tv, anders die van de site. */
+    fun zoomVoor(context: Context, scherm: String?): Int =
+        scherm?.let { getEigenZoom(context, it) } ?: getSiteZoom(context)
 
     /** Het eigen adres van deze tv als gekoppeld scherm (/kiosk/t/<token>), zodra de site dat heeft gegeven. Zo blijft
      * de koppeling ook bewaard als de opslag van de webweergave ooit leeg raakt. */

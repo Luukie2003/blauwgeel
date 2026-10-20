@@ -46,7 +46,7 @@ from routes.tellen.verwerken import verwerk_telling
 from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 # De nieuwste versie van de app. Draait er een oudere, dan meldt de app dat er een nieuwe is.
-HANDTERMINAL_APP_VERSIE = "2.7.1"
+HANDTERMINAL_APP_VERSIE = "2.8.0"
 
 MAX_AANTAL = 100000
 
@@ -372,24 +372,38 @@ def register_routes(app):
 
     @app.route("/api/app/tellen")
     def api_app_tellen():
-        """De producten van de looplijst, in volgorde, met wat er ongeveer hoort te staan, en de bewaarde stand (of
-        null). Het tellen zelf gebeurt op de handterminal; die geeft de stand af en toe door."""
+        """De producten van de looplijst, in volgorde, en de bewaarde stand (of null). Meteen, zonder het voorspelmodel:
+        wat er ongeveer hoort te staan haalt de app daarna apart op (api_app_tellen_verwachting), zodat je niet hoeft te
+        wachten tot het model is doorgerekend. Het tellen zelf gebeurt op de handterminal; die geeft de stand af en toe
+        door."""
         db = get_db()
-        try:
-            verwachting = verwachte_verkoop_sinds_telling(db)
-        except Exception as fout:
-            print(f"[voorspelling] verwachte voorraad mislukt: {fout}")
-            verwachting = {}
         return jsonify({
             "producten": [{"id": p["id"], "naam": p["naam"], "categorie": p["categorie"] or "", "eenheid": p["eenheid"],
                            "voorraad": p["voorraad"],
-                           "verwacht": verwachte_voorraad(verwachting.get(p["id"]), p["voorraad"]),
+                           "verwacht": None,
                            "foto_groot": _foto(p["afbeelding"], "middel"),
                            "besteleenheid": besteleenheid_naam(p) if besteleenheid_factor(p) > 1 else None,
                            "per_besteleenheid": besteleenheid_factor(p)}
                           for p in _tel_producten(db)],
             "stand": bewaarde_stand(db, session.get("gebruiker_id")),
         })
+
+    @app.route("/api/app/tellen/verwachting")
+    def api_app_tellen_verwachting():
+        """Per product (id als tekst) wat er ongeveer hoort te staan, of niets: het voorspelmodel, dat op de server soms
+        even rekent. Mislukt het, dan is er gewoon geen verwachting."""
+        db = get_db()
+        try:
+            verwachting = verwachte_verkoop_sinds_telling(db)
+        except Exception as fout:
+            print(f"[voorspelling] verwachte voorraad mislukt: {fout}")
+            verwachting = {}
+        uitkomst = {}
+        for p in _tel_producten(db):
+            v = verwachte_voorraad(verwachting.get(p["id"]), p["voorraad"])
+            if v is not None:
+                uitkomst[str(p["id"])] = v
+        return jsonify({"verwacht": uitkomst})
 
     def _afgebroken(db, data):
         """Een 409 als deze looplijst (loop_id) intussen ergens anders is afgebroken, opgeslagen of opnieuw begonnen;

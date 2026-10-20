@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Instellingen van de tv-app (SettingsActivity, de OK-knop): de zoom van de prijzenlijst en van de dia's. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -25,163 +26,113 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="24dp"
+            android:alpha="0.8"
             android:text="@string/zoom_uitleg"
+            android:textColor="@color/wit" />
+
+        <!-- Prijzenlijst -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/prijzenlijst"
+                android:textColor="@color/wit"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/prijzenWaarde"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/wit"
+                android:textSize="20sp" />
+        </LinearLayout>
+
+        <SeekBar
+            android:id="@+id/prijzenSeekbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:nextFocusDown="@id/prijzenSiteKnop" />
+
+        <Button
+            android:id="@+id/prijzenSiteKnop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/tv_card_background"
+            android:paddingHorizontal="24dp"
+            android:text="@string/zoals_op_de_site"
             android:textColor="@color/wit"
-            android:alpha="0.8" />
+            android:nextFocusUp="@id/prijzenSeekbar"
+            android:nextFocusDown="@id/diasSeekbar"
+            app:backgroundTint="@null" />
+
+        <!-- Dia's -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/dias"
+                android:textColor="@color/wit"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/diasWaarde"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/wit"
+                android:textSize="20sp" />
+        </LinearLayout>
+
+        <SeekBar
+            android:id="@+id/diasSeekbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:nextFocusUp="@id/prijzenSiteKnop"
+            android:nextFocusDown="@id/diasSiteKnop" />
+
+        <Button
+            android:id="@+id/diasSiteKnop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/tv_card_background"
+            android:paddingHorizontal="24dp"
+            android:text="@string/zoals_op_de_site"
+            android:textColor="@color/wit"
+            android:nextFocusUp="@id/diasSeekbar"
+            app:backgroundTint="@null" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="-16dp"
-            android:layout_marginBottom="24dp"
-            android:text="@string/gekoppeld_uitleg"
-            android:textColor="@color/wit"
-            android:alpha="0.8" />
+            android:layout_marginTop="40dp"
+            android:alpha="0.8"
+            android:text="@string/knoppen_uitleg"
+            android:textColor="@color/wit" />
 
-        <!-- Prijzenscherm -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/prijzenTitel"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textColor="@color/wit"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/prijzenZoomWaarde"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/geel"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <SeekBar
-            android:id="@+id/prijzenZoomSeekbar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:focusable="true"
-            android:nextFocusDown="@id/prijzenZoomResetKnop" />
-
-        <Button
-            android:id="@+id/prijzenZoomResetKnop"
+        <TextView
+            android:id="@+id/versie"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="32dp"
-            android:background="@drawable/tv_card_background"
-            android:paddingHorizontal="24dp"
-            android:text="@string/zoom_reset"
-            android:textColor="@color/wit"
-            android:nextFocusUp="@id/prijzenZoomSeekbar"
-            android:nextFocusDown="@id/diasZoomSeekbar"
-            app:backgroundTint="@null" />
-
-        <!-- Dia's & sponsoren -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/diasTitel"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textColor="@color/wit"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/diasZoomWaarde"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/geel"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <SeekBar
-            android:id="@+id/diasZoomSeekbar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:focusable="true"
-            android:nextFocusUp="@id/prijzenZoomResetKnop"
-            android:nextFocusDown="@id/diasZoomResetKnop" />
-
-        <Button
-            android:id="@+id/diasZoomResetKnop"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="32dp"
-            android:background="@drawable/tv_card_background"
-            android:paddingHorizontal="24dp"
-            android:text="@string/zoom_reset"
-            android:textColor="@color/wit"
-            android:nextFocusUp="@id/diasZoomSeekbar"
-            android:nextFocusDown="@id/gedeeldZoomSeekbar"
-            app:backgroundTint="@null" />
-
-        <!-- Kantine-TV (gedeeld) -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/gedeeldTitel"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textColor="@color/wit"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/gedeeldZoomWaarde"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/geel"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <SeekBar
-            android:id="@+id/gedeeldZoomSeekbar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:focusable="true"
-            android:nextFocusUp="@id/diasZoomResetKnop"
-            android:nextFocusDown="@id/gedeeldZoomResetKnop" />
-
-        <Button
-            android:id="@+id/gedeeldZoomResetKnop"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/tv_card_background"
-            android:paddingHorizontal="24dp"
-            android:text="@string/zoom_reset"
-            android:textColor="@color/wit"
-            android:nextFocusUp="@id/gedeeldZoomSeekbar"
-            android:nextFocusDown="@id/autoStartCheckbox"
-            app:backgroundTint="@null" />
-
-        <CheckBox
-            android:id="@+id/autoStartCheckbox"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="48dp"
-            android:text="@string/auto_start_label"
-            android:textColor="@color/wit"
-            android:nextFocusUp="@id/gedeeldZoomResetKnop" />
-
+            android:layout_marginTop="8dp"
+            android:alpha="0.6"
+            android:textColor="@color/wit" />
     </LinearLayout>
 </ScrollView>

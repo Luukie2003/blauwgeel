@@ -7,6 +7,9 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import nl.kantineblauwgeel.tv.databinding.ActivitySettingsBinding
 
+/** Instellingen (de OK-knop op de afstandsbediening): hoe groot de prijzenlijst en de dia's op deze tv staan. Niet elke
+ * pagina past op dezelfde grootte; elk scherm heeft daarom zijn eigen zoom, bewaard op de tv (ook na herstarten en een
+ * update). "Zoals op de site" laat het scherm de grootte volgen die op de site voor deze tv is gekozen. */
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
@@ -19,64 +22,35 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        koppelZoomRegelaar(
-            Screens.PRIJZEN, binding.prijzenTitel, binding.prijzenZoomWaarde,
-            binding.prijzenZoomSeekbar, binding.prijzenZoomResetKnop
-        )
-        koppelZoomRegelaar(
-            Screens.DIAS, binding.diasTitel, binding.diasZoomWaarde,
-            binding.diasZoomSeekbar, binding.diasZoomResetKnop
-        )
-        koppelZoomRegelaar(
-            Screens.GEDEELD, binding.gedeeldTitel, binding.gedeeldZoomWaarde,
-            binding.gedeeldZoomSeekbar, binding.gedeeldZoomResetKnop
-        )
-
-        binding.autoStartCheckbox.isChecked = Prefs.isAutoStartEnabled(this)
-        binding.autoStartCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            Prefs.setAutoStartEnabled(this, isChecked)
-        }
-
-        binding.prijzenZoomSeekbar.requestFocus()
+        regelaar(Prefs.PRIJZEN, binding.prijzenWaarde, binding.prijzenSeekbar, binding.prijzenSiteKnop)
+        regelaar(Prefs.DIAS, binding.diasWaarde, binding.diasSeekbar, binding.diasSiteKnop)
+        binding.versie.text = getString(R.string.app_versie, BuildConfig.VERSION_NAME)
+        binding.prijzenSeekbar.requestFocus()
     }
 
-    /** Zet 1 scherm z'n eigen zoom-regelaar op -- elk scherm heeft zijn eigen
-     * opgeslagen niveau (zie Prefs.getZoom/setZoom), losstaand van de andere
-     * 2, want niet elk scherm/tv-aansluiting toont de website even groot. */
-    private fun koppelZoomRegelaar(
-        scherm: Screen,
-        titel: TextView,
-        waarde: TextView,
-        seekbar: SeekBar,
-        resetKnop: Button
-    ) {
-        titel.text = scherm.titel
-
-        fun toon(percentage: Int) {
-            waarde.text = getString(R.string.zoom_percentage, percentage)
+    private fun regelaar(scherm: String, waarde: TextView, balk: SeekBar, siteKnop: Button) {
+        balk.max = (maxZoom - minZoom) / stap
+        fun toon() {
+            val eigen = Prefs.getEigenZoom(this, scherm)
+            val zoom = eigen ?: Prefs.getSiteZoom(this)
+            balk.progress = (zoom - minZoom) / stap
+            waarde.text = if (eigen == null) getString(R.string.zoom_zoals_site, zoom) else getString(R.string.zoom_percentage, zoom)
         }
-
-        val huidigeZoom = Prefs.getZoom(this, scherm.sleutel)
-        seekbar.max = (maxZoom - minZoom) / stap
-        seekbar.progress = (huidigeZoom - minZoom) / stap
-        toon(huidigeZoom)
-
-        seekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val percentage = minZoom + progress * stap
-                toon(percentage)
-                Prefs.setZoom(this@SettingsActivity, scherm.sleutel, percentage)
+        toon()
+        balk.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, vanGebruiker: Boolean) {
+                if (!vanGebruiker) return
+                val zoom = minZoom + progress * stap
+                Prefs.setEigenZoom(this@SettingsActivity, scherm, zoom)
+                waarde.text = getString(R.string.zoom_percentage, zoom)
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
-
-        resetKnop.setOnClickListener {
-            seekbar.progress = (Prefs.DEFAULT_ZOOM - minZoom) / stap
-            toon(Prefs.DEFAULT_ZOOM)
-            Prefs.setZoom(this, scherm.sleutel, Prefs.DEFAULT_ZOOM)
+        siteKnop.setOnClickListener {
+            Prefs.setEigenZoom(this, scherm, null)
+            toon()
         }
     }
 }

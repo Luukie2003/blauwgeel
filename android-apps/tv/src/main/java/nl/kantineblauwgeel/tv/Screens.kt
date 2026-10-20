@@ -1,20 +1,15 @@
 package nl.kantineblauwgeel.tv
 
-data class Screen(val sleutel: String, val titel: String, val url: String)
-
+/** Waar de tv-app naartoe gaat. De app toont alleen nog een gekoppeld scherm (zie kiosk_tvs.py op de site): de tv laat
+ * een koppelcode en een QR-code zien, je koppelt hem op de site of met de handterminal, en daar kies je ook wat hij
+ * toont en hoe groot. PlayerActivity onthoudt het eigen adres van de tv (/kiosk/t/...). */
 object Screens {
     // https://www.kantineblauwgeel.nl; in de testversie eventueel een testserver (zie build.gradle.kts).
     val BASE_URL: String = BuildConfig.BASIS_URL
 
-    // Een gekoppelde tv (zie kiosk_tvs.py op de site): de tv laat een code zien, die je op de site koppelt; daarna
-    // kies je op de site wat hij toont en hoe groot. PlayerActivity onthoudt het eigen adres van de tv (/kiosk/t/...).
-    val GEKOPPELD = Screen("gekoppeld", "Gekoppeld scherm\n(beheer op de site)", "$BASE_URL/kiosk/koppelen")
-    val PRIJZEN = Screen("prijzen", "Prijzenscherm", "$BASE_URL/kiosk/prijzen")
-    val DIAS = Screen("dias", "Dia's & sponsoren", "$BASE_URL/kiosk/scherm")
-    val GEDEELD = Screen("gedeeld", "Kantine-TV (gedeeld)", "$BASE_URL/kiosk/tv")
+    /** Een nieuwe tv begint hier: de site geeft hem een eigen token en adres. */
+    val KOPPELEN_URL = "$BASE_URL/kiosk/koppelen"
 
-    val ALLE = listOf(GEKOPPELD, PRIJZEN, DIAS, GEDEELD)
-
-    fun opSleutel(sleutel: String?): Screen =
-        ALLE.firstOrNull { it.sleutel == sleutel } ?: GEKOPPELD
+    /** De sleutel waaronder de zoom van het gekoppelde scherm bewaard wordt (zie Prefs). */
+    const val GEKOPPELD = "gekoppeld"
 }

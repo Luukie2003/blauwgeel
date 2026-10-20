@@ -41,7 +41,9 @@ object Scanner {
             putStringArray("ACTIVITY_LIST", arrayOf("*"))
         }
         stuurConfig(context, "CREATE_IF_NOT_EXIST", null) { putParcelableArray("APP_LIST", arrayOf(app)) }
-        stuurConfig(context, "UPDATE", plugin("BARCODE", "scanner_selection" to "auto", "scanner_input_enabled" to "true"))
+        stuurConfig(context, "UPDATE", plugin("BARCODE", "scanner_selection" to "auto", "scanner_input_enabled" to "true",
+            // QR-codes: het schaplabel en de koppelcode op een nieuwe tv.
+            "decoder_qrcode" to "true"))
         stuurConfig(
             context, "UPDATE",
             plugin(

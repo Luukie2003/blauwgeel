@@ -250,6 +250,12 @@ abstract class BasisActivity : AppCompatActivity() {
         // Een QR-code van de site (zoals op een schaplabel: /scan/12): het product openen in de app.
         val link = Uri.parse(code)
         if ((link.scheme == "https" || link.scheme == "http") && link.host?.endsWith(inst.siteHost.removePrefix("www.")) == true) {
+            // De QR-code op een nieuwe tv (/kiosk/koppel/123456): de tv koppelen.
+            Regex("^/kiosk/koppel/(\\d{6})").find(link.path ?: "")?.groupValues?.get(1)?.let { code ->
+                if (inst.toegang("kantine_tv")) KantineTvActivity.open(this, koppelcode = code)
+                else melding(getString(R.string.geen_rechten_tv), lang = true)
+                return
+            }
             val id = Regex("^/(?:scan|producten)/(\\d+)").find(link.path ?: "")?.groupValues?.get(1)?.toIntOrNull()
             if (id != null) ProductActivity.open(this, id, alleenInfo = alleenInfo) else melding(getString(R.string.qr_niet_voor_app))
             return

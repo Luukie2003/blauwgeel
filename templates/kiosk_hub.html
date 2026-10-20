@@ -92,20 +92,22 @@
         <h2 style="margin:0 0 0.4rem">Tv koppelen</h2>
         <p class="tekst-zacht" style="margin:0 0 0.4rem">
             Open op de tv <strong>{{ koppel_url }}</strong> (in de tv-app: <em>Gekoppeld scherm</em>). De tv laat dan
-            een code van 6 cijfers zien; vul die hier in.
+            een code van 6 cijfers en een QR-code zien; vul de code hier in, of scan de QR-code met de handterminal-app.
         </p>
         <form method="post" action="{{ url_for('kiosk_tv_koppelen') }}" class="tv-koppel-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="tv-velden">
                 <label>Code op de tv
                     <input type="text" name="code" inputmode="numeric" autocomplete="off" maxlength="7"
-                           placeholder="123 456" class="tv-code-veld" required>
+                           placeholder="123 456" class="tv-code-veld" required
+                           value="{{ request.args.get('code', '')[:7] }}">
                 </label>
-                <label>Naam <input type="text" name="naam" maxlength="40" placeholder="Bijv. Bar" required></label>
+                <label>Naam <input type="text" name="naam" maxlength="40" placeholder="Bijv. Bar" required
+                                   {{ 'autofocus' if request.args.get('code') }}></label>
                 <label>Toont
                     <select name="scherm">
                         {% for sleutel, label in schermen.items() %}
-                        <option value="{{ sleutel }}">{{ label }}</option>
+                        <option value="{{ sleutel }}" {{ 'selected' if sleutel == 'dias' }}>{{ label }}</option>
                         {% endfor %}
                     </select>
                 </label>

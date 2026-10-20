@@ -63,6 +63,8 @@ OPEN_ENDPOINTS = {
     "kiosk_koppelen",
     "kiosk_tv_scherm",
     "kiosk_tv_scherm_versie",
+    # De tv-app wisselt met de afstandsbediening zelf tussen prijzenlijst en dia's (met zijn eigen token).
+    "kiosk_tv_scherm_kiezen",
     # Publieke Club van 20-pagina: waar de QR-code op de wervingsdia van het
     # kantine scherm naartoe wijst -- bezoekers hebben geen account.
     "club_van_20_publiek",
@@ -126,6 +128,7 @@ GEBRUIK_NIET_LOGGEN = {
     # openen (api_app_start, api_app_product) tellen wel als bezoek, net als op de site.
     "api_app_producten",
     "api_app_tellen",
+    "api_app_tellen_verwachting",
     "api_app_product_verkoop",
     # Delen van een pagina die na het laden apart worden opgehaald (zie data-lazy-bron in gedeeld.js), en het
     # voorverwarmen van het voorspelmodel: dat is geen bezoek aan een pagina.
@@ -270,6 +273,7 @@ SECTIE_ENDPOINTS = {
         "api_app_product_nieuw",
         "api_app_artikel_nieuw",
         "api_app_tellen",
+        "api_app_tellen_verwachting",
         "api_app_tellen_stand",
         "api_app_tellen_controleren",
         "api_app_tellen_bevestigen",
@@ -496,6 +500,7 @@ SECTIE_ENDPOINTS = {
         "kiosk_motm_volgorde_opslaan",
         # Gekoppelde tv's (zie kiosk_tvs.py).
         "kiosk_tv_koppelen",
+        "kiosk_koppel_link",
         "kiosk_tv_opslaan",
         "kiosk_tv_herladen",
         "kiosk_tv_verwijderen",
@@ -504,6 +509,7 @@ SECTIE_ENDPOINTS = {
         "api_app_kantine_tv",
         "api_app_tv_scherm",
         "api_app_tv_herladen",
+        "api_app_tv_koppelen",
         "api_app_tv_wissel",
         "api_app_tv_actie",
         "api_app_tv_uitgelicht",

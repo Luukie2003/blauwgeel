@@ -233,3 +233,25 @@ def test_tijdens_de_noodstop_ook_op_slot(app, ingelogde_client, db):
     assert "Systeem <span>vergrendeld</span>" in tv.get(f"/kiosk/t/{TOKEN}").data.decode()
     assert "Systeem <span>vergrendeld</span>" in tv.get("/kiosk/koppelen").data.decode()
     assert _versie(tv) == "noodstop"
+
+
+def test_de_tv_wisselt_zelf_met_de_afstandsbediening(app, ingelogde_client, db):
+    """Knop omlaag in de tv-app: de prijzenlijst; omhoog: de dia's. Zonder inlog of csrf_token, met het token van de tv."""
+    tv = _gekoppeld(app, ingelogde_client, scherm="dias")
+    oud = _versie(tv)
+    resp = tv.post(f"/kiosk/t/{TOKEN}/scherm", json={"toont": "prijzen"})
+    assert resp.status_code == 200 and resp.get_json()["toont"] == "prijzen"
+    assert _rij(db)["scherm"] == "prijzen" and _rij(db)["naam"] == "Bar"
+    assert _versie(tv) != oud  # de tv herlaadt naar de prijzenlijst
+    tv.post(f"/kiosk/t/{TOKEN}/scherm", json={"toont": "dias"})
+    assert _rij(db)["scherm"] == "dias"
+    # Een tv die niet gekoppeld is, of een ongeldig token: niets.
+    assert app.test_client().post("/kiosk/t/OnbekendToken123456789/scherm", json={"toont": "prijzen"}).status_code == 404
+    assert app.test_client().post("/kiosk/t/kort/scherm", json={}).status_code == 404
+
+
+def test_standaard_toont_een_nieuwe_tv_de_dias(app, ingelogde_client, db):
+    tv = app.test_client()
+    ingelogde_client.post("/kiosk/tvs/koppelen", data={"csrf_token": _csrf(ingelogde_client), "code": "".join(_code(tv)),
+                                                       "naam": "Bar"})
+    assert _rij(db)["scherm"] == "dias"

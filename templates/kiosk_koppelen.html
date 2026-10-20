@@ -42,6 +42,9 @@
             font-weight: 800; font-size: 0.85em;
         }
         strong { color: var(--geel); }
+        .koppel-rij { display: flex; align-items: center; gap: calc(60 * var(--u)); }
+        .qr { background: #fff; padding: calc(16 * var(--u)); border-radius: calc(24 * var(--u)); line-height: 0; }
+        .qr svg { width: calc(260 * var(--u)); height: calc(260 * var(--u)); }
         .klein { margin: 0; color: var(--zacht); font-size: calc(24 * var(--u)); }
     </style>
 </head>
@@ -53,11 +56,14 @@
     </div>
     {% if code %}
     <p class="uitleg">Koppelcode</p>
-    <div class="code">{{ code[:3] }} {{ code[3:] }}</div>
+    <div class="koppel-rij">
+        <div class="code">{{ code[:3] }} {{ code[3:] }}</div>
+        {% if koppel_qr %}<div class="qr">{{ koppel_qr|safe }}</div>{% endif %}
+    </div>
     <ol>
-        <li><span>Ga op de site naar <strong>Kantine-tv</strong>.</span></li>
-        <li><span>Vul bij <strong>Tv koppelen</strong> deze code in en geef de tv een naam.</span></li>
-        <li><span>Kies wat de tv moet tonen. Binnen een paar seconden staat het hier.</span></li>
+        <li><span>Scan de QR-code met de <strong>handterminal-app</strong>, of ga op de site naar <strong>Kantine-tv</strong> en vul bij <strong>Tv koppelen</strong> de code in.</span></li>
+        <li><span>Geef de tv een naam en kies wat hij moet tonen.</span></li>
+        <li><span>Binnen een paar seconden staat het hier.</span></li>
     </ol>
     <p class="klein">De code is een half uur geldig; daarna komt er vanzelf een nieuwe.</p>
     {% else %}

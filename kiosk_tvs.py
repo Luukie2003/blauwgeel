@@ -83,7 +83,7 @@ def koppel(db, code, naam, scherm, door, nu=None):
     if not naam:
         return None, "Geef de tv een naam, bijvoorbeeld 'Bar' of 'Kantine links'."
     if scherm not in SCHERMEN:
-        scherm = "prijzen"
+        scherm = "dias"  # standaard de dia's; met de afstandsbediening wissel je naar de prijzenlijst
     rij = db.execute(
         "SELECT token FROM kiosk_tv_koppelcodes WHERE code = ? AND aangemaakt_op >= ?",
         (code, _tekst(nu - timedelta(minutes=CODE_GELDIG_MINUTEN))),

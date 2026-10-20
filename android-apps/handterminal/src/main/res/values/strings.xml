@@ -728,6 +728,16 @@
     <string name="tv_ingesteld_toont_nog">Wordt %1$s, toont nog %2$s</string>
     <string name="aan">Aan</string>
     <string name="uit">Uit</string>
+    <string name="tv_koppelen">Tv koppelen</string>
+    <string name="tv_koppelen_uitleg">Scan de QR-code op de tv, of tik hier en vul de code in</string>
+    <string name="code_op_de_tv">Code op de tv (6 cijfers)</string>
+    <string name="koppelcode_hint">123456</string>
+    <string name="koppelcode_fout">Vul de 6 cijfers in die op de tv staan.</string>
+    <string name="naam_van_de_tv">Naam van de tv</string>
+    <string name="tv_naam_hint">Bijv. Bar</string>
+    <string name="tv_naam_nodig">Geef de tv een naam.</string>
+    <string name="wat_toont_hij">Wat toont hij?</string>
+    <string name="geen_rechten_tv">Dit is de koppelcode van een tv. Koppelen kan met de rechten voor de kantine-tv.</string>
     <string name="wisselscherm">Wisselscherm</string>
     <string name="wissel_toont_prijzen">Tv\'s op \"wisselscherm\" tonen nu de prijzenlijst</string>
     <string name="wissel_toont_dias">Tv\'s op \"wisselscherm\" tonen nu de dia\'s</string>
@@ -767,7 +777,7 @@
     <string name="diashow">Diashow</string>
     <string name="dias_aan_uit">Dia\'s aan of uit</string>
     <string name="dias_aan_uit_uitleg">Een mededeling, sponsor of de standen even uitzetten</string>
-    <string name="kantine_tv_op_site">Dia\'s maken en bewerken, de indeling van het prijzenscherm en een nieuwe tv koppelen doe je op de site, bij Kantine-tv.</string>
+    <string name="kantine_tv_op_site">Dia\'s maken en bewerken en de indeling van het prijzenscherm doe je op de site, bij Kantine-tv.</string>
     <string name="onderdelen">Onderdelen</string>
     <string name="dias">Dia\'s</string>
     <string name="dias_blok_uit">\"Dia\'s en mededelingen\" staat uit: deze dia\'s komen nu geen van allen op de tv.</string>
@@ -802,4 +812,8 @@
     <string name="artikel_aanpassen">Artikel aanpassen</string>
     <string name="artikel_verwijderen">Artikel verwijderen</string>
     <string name="artikel_verwijderen_vraag">Artikel %1$s verwijderen, met zijn barcodes?</string>
+
+    <!-- Laden bij het tellen (TellenActivity) -->
+    <string name="laden_producten">Producten van de looplijst ophalen…</string>
+    <string name="fotos_klaarzetten">Foto\'s klaarzetten %1$d/%2$d</string>
 </resources>

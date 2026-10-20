@@ -3,6 +3,12 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Bouwen buiten iCloud Drive: iCloud maakt anders "… 2"-kopieën van tussenbestanden, en dan faalt de build.
+layout.buildDirectory.set(File(System.getProperty("user.home"), ".kantine-apps/build/tv"))
+
+// Let op: de tv-app op de Google TV Streamer is de testversie (assembleDebug), ondertekend met de testsleutel van de Mac
+// waarop hij is gebouwd (~/.android/debug.keystore). Een update moet met dezelfde sleutel, anders moet de app eraf en
+// is de koppeling en de zoom weg. De testversie wijst gewoon naar de echte site (zie BASIS_URL hieronder).
 android {
     namespace = "nl.kantineblauwgeel.tv"
     compileSdk = 34
@@ -11,8 +17,8 @@ android {
         applicationId = "nl.kantineblauwgeel.tv"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
         buildConfigField("String", "BASIS_URL", "\"https://www.kantineblauwgeel.nl\"")
     }
 

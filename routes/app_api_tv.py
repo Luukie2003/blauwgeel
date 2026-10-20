@@ -10,7 +10,7 @@ staan in rechten.py, sectie kantine_tv."""
 
 from datetime import timedelta
 
-from flask import jsonify
+from flask import jsonify, session
 
 import kiosk_timers
 import kiosk_tvs
@@ -150,6 +150,22 @@ def register_routes(app):
             return _fout(fout)
         naam = kiosk_tvs.SCHERMEN[scherm].split(" (")[0].lower()
         return jsonify({**_overzicht(db), "melding": f"{tv['naam']} toont nu: {naam}. Binnen een paar seconden op de tv."})
+
+    @app.route("/api/app/kantine-tv/tvs/koppelen", methods=["POST"])
+    def api_app_tv_koppelen():
+        """{code (6 cijfers, van de tv of uit de QR-code), naam, scherm, verzoek_id}: een nieuwe tv koppelen, zoals
+        Kantine-tv → Tv koppelen op de site (kiosk_tvs.koppel)."""
+        data = _data()
+
+        def actie(db):
+            tv_id, fout = kiosk_tvs.koppel(db, str(data.get("code") or ""), data.get("naam"), data.get("scherm"),
+                                           session.get("gebruiker_naam"))
+            if fout:
+                return {"fout": "fout", "melding": fout}, 400
+            tv = db.execute("SELECT naam FROM kiosk_tvs WHERE id = ?", (tv_id,)).fetchone()
+            return {**_overzicht(db), "melding": f"Tv '{tv['naam']}' is gekoppeld. Binnen een paar seconden toont hij wat je koos."}, 200
+
+        return eenmalig(actie)
 
     @app.route("/api/app/kantine-tv/tvs/<int:tv_id>/herladen", methods=["POST"])
     def api_app_tv_herladen(tv_id):

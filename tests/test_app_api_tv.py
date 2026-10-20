@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from test_app_api import _post, app_client  # noqa: F401 (fixture)
 from test_app_api_meer import _vrijwilliger
-from test_kiosk_tvs import TOKEN, _gekoppeld, _rij, _versie
+from test_kiosk_tvs import TOKEN, _code, _gekoppeld, _rij, _versie
 
 from helpers import vandaag_amsterdam
 
@@ -129,3 +129,30 @@ def test_alleen_met_kantine_tv_rechten(app, db):
 def test_token_van_de_tv_blijft_geheim(app, app_client, ingelogde_client, db):  # noqa: F811
     _gekoppeld(app, ingelogde_client)
     assert TOKEN not in app_client.get("/api/app/kantine-tv").get_data(as_text=True)
+
+
+def test_koppelen_vanuit_de_app(app, app_client, db):  # noqa: F811
+    tv = app.test_client()
+    code = "".join(_code(tv))
+    resp = _post(app_client, "/api/app/kantine-tv/tvs/koppelen", code=code, naam="Zaal", scherm="dias", verzoek_id="tv1")
+    data = resp.get_json()
+    assert resp.status_code == 200 and "is gekoppeld" in data["melding"]
+    assert data["tvs"][0]["naam"] == "Zaal" and _rij(db)["scherm"] == "dias"
+    # Dezelfde code nog een keer (bijvoorbeeld opnieuw verstuurd): niet dubbel.
+    _post(app_client, "/api/app/kantine-tv/tvs/koppelen", code=code, naam="Zaal", scherm="dias", verzoek_id="tv1")
+    assert db.execute("SELECT COUNT(*) FROM kiosk_tvs").fetchone()[0] == 1
+    resp = _post(app_client, "/api/app/kantine-tv/tvs/koppelen", code="000000", naam="X", scherm="prijzen")
+    assert resp.status_code == 400 and "staat niet" in resp.get_json()["melding"]
+
+
+def test_qr_code_op_de_tv_en_het_koppel_adres(app, ingelogde_client):
+    tv = app.test_client()
+    pagina = tv.get(f"/kiosk/t/{TOKEN}").get_data(as_text=True)
+    code = "".join(_code(tv))
+    assert "<svg" in pagina and "handterminal-app" in pagina
+    resp = ingelogde_client.get(f"/kiosk/koppel/{code}")
+    assert resp.status_code == 302 and resp.headers["Location"].endswith(f"/kiosk?code={code}#tvs")
+    hub = ingelogde_client.get(f"/kiosk?code={code}").get_data(as_text=True)
+    assert f'value="{code}"' in hub
+    # Zonder inloggen: eerst naar de inlogpagina.
+    assert "/login" in app.test_client().get(f"/kiosk/koppel/{code}").headers["Location"]

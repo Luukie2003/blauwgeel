@@ -210,13 +210,15 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         een verouderd token werd getoond) sturen we terug naar dezelfde
         pagina i.p.v. een kale 400-foutpagina te tonen -- die pagina heeft
         dan meteen weer een geldig token."""
-        if request.method == "POST" and request.endpoint in ("tablet_code_inloggen", "uitrollen_endpoint"):
+        if request.method == "POST" and request.endpoint in ("tablet_code_inloggen", "uitrollen_endpoint",
+                                                               "kiosk_tv_scherm_kiezen"):
             # CSRF is een misbruik van een browser die AL een geldige sessie
             # heeft -- dat bestaat hier niet: dit is een kale JSON-API-aanroep
             # vanuit de kiosk-tablet-app, zonder cookies/sessie, dus zonder
             # csrf_token om te controleren. Eigen brute-force-bescherming
             # (per IP) zit al in tablet_code_inloggen zelf. Hetzelfde geldt voor
-            # uitrollen_endpoint: een script, beveiligd met een handtekening.
+            # uitrollen_endpoint: een script, beveiligd met een handtekening, en voor kiosk_tv_scherm_kiezen: de tv-app,
+            # zonder sessie, met het geheime token van de tv in het adres.
             return None
         if request.method == "POST":
             verwacht = session.get("csrf_token")

@@ -11,7 +11,7 @@ import nl.kantineblauwgeel.tv.databinding.ActivitySplashBinding
  * de tv-launcher -- laadt zelf niets echts in (de kioskschermen doen dat pas
  * in PlayerActivity), maar geeft de app een merkmoment i.p.v. meteen kaal het
  * menu te tonen. Duurt daarom een vaste, fictieve tijd i.p.v. te wachten op
- * iets dat hier nog niet speelt. BootReceiver slaat dit scherm bewust over
+ * iets dat hier nog niet speelt. Daarna het gekoppelde scherm. BootReceiver slaat dit scherm bewust over
  * (start rechtstreeks PlayerActivity) -- na een stroomstoring moet het
  * kioskscherm zo snel mogelijk terug in beeld zijn, niet later. */
 class SplashActivity : AppCompatActivity() {
@@ -21,7 +21,8 @@ class SplashActivity : AppCompatActivity() {
         setContentView(ActivitySplashBinding.inflate(layoutInflater).root)
 
         Handler(Looper.getMainLooper()).postDelayed({
-            startActivity(Intent(this, MainActivity::class.java))
+            // Meteen het gekoppelde scherm (of, voor een nieuwe tv, de koppelcode): er is geen menu meer.
+            startActivity(PlayerActivity.intent(this))
             finish()
         }, SPLASH_DUUR_MS)
     }

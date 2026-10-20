@@ -3,6 +3,7 @@
 from flask import abort, flash, jsonify, redirect, render_template, request, session, url_for
 
 import kiosk_tvs
+import qr
 from database import get_db
 from helpers import is_ajax_verzoek
 from routes.kiosk.dia_gegevens import _bouw_slides
@@ -43,8 +44,10 @@ def register_routes(app):
         voorbeeld = request.args.get("voorbeeld") == "1"
         if tv is None:
             code = None if voorbeeld else kiosk_tvs.koppelcode_voor(db, token)
+            # De QR-code bij de koppelcode: scan hem met de handterminal-app (of een telefoon) en je koppelt meteen.
+            koppel_qr = qr.qr_svg(url_for("kiosk_koppel_link", code=code, _external=True)) if code else None
             antwoord = app.make_response(render_template(
-                "kiosk_koppelen.html", code=code, token=token,
+                "kiosk_koppelen.html", code=code, token=token, koppel_qr=koppel_qr,
                 versie=_koppel_versie(code), versie_url=url_for("kiosk_tv_scherm_versie", token=token),
             ))
             antwoord.headers["Cache-Control"] = "no-store"
@@ -55,7 +58,7 @@ def register_routes(app):
         effectief = kiosk_tvs.effectief_scherm(tv, instellingen)
         eigen = kiosk_tvs.tv_versie(tv, effectief)
         versie_url = url_for("kiosk_tv_scherm_versie", token=token)
-        koppeling = {"token": token, "zoom": tv["zoom"], "voorbeeld": voorbeeld, "naam": tv["naam"]}
+        koppeling = {"token": token, "zoom": tv["zoom"], "voorbeeld": voorbeeld, "naam": tv["naam"], "toont": effectief}
         if effectief == "dias":
             slides = _bouw_slides(db)
             antwoord = app.make_response(render_template(
@@ -94,7 +97,32 @@ def register_routes(app):
         poll["versie"] = poll["versie"] + "-" + eigen
         return jsonify(poll)
 
+    @app.route("/kiosk/t/<token>/scherm", methods=["POST"])
+    def kiosk_tv_scherm_kiezen(token):
+        """De tv-app wisselt zelf (knop omlaag: de prijzenlijst, knop omhoog: de dia's), met JSON {toont}. Dat wordt
+        de instelling van deze tv, net alsof je het op de site of de handterminal kiest; zo zie je daar ook wat hij
+        toont, en het blijft zo na een herstart. Het geheime token van de tv is de toegang (geen inlog, geen cookies,
+        dus ook geen csrf_token, zie csrf_beschermen in app.py)."""
+        if not kiosk_tvs.geldig_token(token):
+            abort(404)
+        db = get_db()
+        tv = kiosk_tvs.tv_voor_token(db, token)
+        if tv is None:
+            return jsonify({"ok": False, "melding": "Deze tv is (nog) niet gekoppeld."}), 404
+        data = request.get_json(silent=True) or {}
+        toont = "prijzen" if data.get("toont") == "prijzen" else "dias"
+        kiosk_tvs.bewaar_instellingen(db, tv["id"], tv["naam"], toont, tv["zoom"])
+        return jsonify({"ok": True, "toont": toont,
+                        "melding": "Prijzenlijst" if toont == "prijzen" else "Dia's"})
+
     # ---------- Beheer (Kantine-tv) ----------
+
+    @app.route("/kiosk/koppel/<code>")
+    def kiosk_koppel_link(code):
+        """Waar de QR-code op een nieuwe tv naartoe wijst: Kantine-tv met de code al ingevuld. De handterminal-app
+        herkent dit adres zelf en koppelt de tv in de app (zie BasisActivity.openScan)."""
+        code = "".join(c for c in code if c.isdigit())[:6]
+        return redirect(url_for("kiosk_hub", code=code) + "#tvs")
 
     @app.route("/kiosk/tvs/koppelen", methods=["POST"])
     def kiosk_tv_koppelen():

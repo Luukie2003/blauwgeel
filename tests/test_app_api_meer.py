@@ -246,3 +246,13 @@ def test_startscherm_met_kassa_keuken_en_club(app_client, db):  # noqa: F811
     assert start["kassa"]["concepten"] == 1 and start["kassa"]["status"] == "oranje"
     assert start["aanmeldingen_open"] == 1 and start["kluis_concepten"] == 0
     assert start["frituurvet"]["ok"] is False and start["toegang"]["kantine_tv"]
+
+
+def test_tellen_start_meteen_en_de_verwachting_komt_apart(app_client, db):  # noqa: F811
+    """De looplijst wacht niet op het voorspelmodel: dat haalt de app daarna apart op."""
+    pid = _hertog(db)
+    _bouw_geschiedenis(db, {pid: 4}, tijdstippen=_weken_terug(8), open_dagen="2,5")
+    lijst = app_client.get("/api/app/tellen").get_json()["producten"]
+    assert any(p["id"] == pid for p in lijst) and all(p["verwacht"] is None for p in lijst)
+    verwacht = app_client.get("/api/app/tellen/verwachting").get_json()["verwacht"]
+    assert verwacht[str(pid)]["verwacht"] >= 0

@@ -6,8 +6,9 @@
      de volgende controle opnieuw, in plaats van op een foutpagina te blijven hangen.
    - kioskScherm.pollUrl(url): bij een gekoppelde tv met wat hij toont en hoe groot zijn beeld is; zo weet de site dat
      hij aan staat (niet bij een voorbeeld op de site zelf).
-   - De zoom die op de site voor deze tv is gekozen: in de tv-app via de app (KantineTv.zoom, net als de zoom in de
-     instellingen van de app), in een browser via de lettergrootte.
+   - De zoom die op de site voor deze tv is gekozen: in de tv-app via de app (KantineTv.scherm: wat hij toont en de zoom
+     van de site; de app gebruikt zijn eigen zoom voor dat scherm als die in de instellingen van de app is gekozen, zie
+     PlayerActivity; een tv-app van voor 1.2 kent alleen KantineTv.zoom), in een browser via de lettergrootte.
    - Eens per dag, 's nachts tussen 4 en 6 uur, herlaadt het scherm zichzelf: een pagina die dagen achter elkaar draait,
      blijft zo fris. #}
 <script>
@@ -56,7 +57,10 @@
         try { localStorage.setItem('kantine_tv_token', tv.token); } catch (e) {}
         var viaApp = false;
         try {
-            if (window.KantineTv && KantineTv.zoom) {
+            if (window.KantineTv && KantineTv.scherm) {
+                KantineTv.scherm(tv.toont || '', tv.zoom);
+                viaApp = true;
+            } else if (window.KantineTv && KantineTv.zoom) {
                 KantineTv.zoom(tv.zoom);
                 viaApp = true;
             }

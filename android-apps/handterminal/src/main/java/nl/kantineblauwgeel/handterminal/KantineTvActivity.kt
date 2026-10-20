@@ -33,6 +33,7 @@ class KantineTvActivity : BasisActivity() {
         richtBalkIn(b.balk, getString(R.string.kantine_tv))
         b.verversen.setColorSchemeResources(R.color.navy)
         b.verversen.setOnRefreshListener { laad() }
+        teKoppelen = intent.getStringExtra(EXTRA_KOPPELCODE)
     }
 
     override fun onResume() {
@@ -42,10 +43,23 @@ class KantineTvActivity : BasisActivity() {
 
     override fun weerVerbonden() = laad()
 
+    /** Geopend door de QR-code op een nieuwe tv: meteen het koppelvenster (zie onCreate). */
+    private var teKoppelen: String? = null
+
+    /** Een scan hier: de QR-code van een nieuwe tv koppelt die tv; de rest zoals overal. */
+    override fun bijScan(code: String) {
+        val koppel = KOPPEL_LINK.find(code)?.groupValues?.get(1)
+        if (koppel != null) {
+            tril()
+            koppelVenster(koppel)
+        } else super.bijScan(code)
+    }
+
     private fun laad() {
         bezig {
             try {
                 toon(Api.getJson(this, "/api/app/kantine-tv"))
+                teKoppelen?.let { teKoppelen = null; koppelVenster(it) }
             } finally {
                 b.verversen.isRefreshing = false
             }
@@ -93,6 +107,9 @@ class KantineTvActivity : BasisActivity() {
                 Lijst.regel(kaart, tv.optString("naam"), detail, getString(if (aan) R.string.aan else R.string.uit),
                     if (aan) R.color.groen_tekst else R.color.rood_balk) { tvMenu(tv, schermen) }
             }
+        }
+        Lijst.regel(Lijst.kaart(inhoud), getString(R.string.tv_koppelen), getString(R.string.tv_koppelen_uitleg), "+", R.color.navy) {
+            koppelVenster(null)
         }
         val wisselDias = d.optString("wissel") == "dias"
         Lijst.regel(Lijst.kaart(inhoud), getString(R.string.wisselscherm),
@@ -170,6 +187,62 @@ class KantineTvActivity : BasisActivity() {
             }
             .setNegativeButton(R.string.annuleren, null)
             .show()
+    }
+
+    /** Een nieuwe tv koppelen: de code (uit de QR-code, of zelf intikken), een naam en wat hij toont. */
+    private fun koppelVenster(code: String?) {
+        val codeVeld = EditText(this).apply {
+            hint = getString(R.string.koppelcode_hint)
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(code ?: "")
+        }
+        val naam = EditText(this).apply {
+            hint = getString(R.string.tv_naam_hint)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+        }
+        val schermen = data?.optJSONArray("schermen")?.objecten().orEmpty()
+        val keuze = RadioGroup(this).apply {
+            schermen.forEachIndexed { i, s -> addView(RadioButton(context).apply { id = i + 1; text = s.optString("naam") }) }
+            // Standaard de dia's: met de afstandsbediening wissel je op de tv zelf naar de prijzenlijst.
+            check((schermen.indexOfFirst { it.optString("sleutel") == "dias" }.takeIf { it >= 0 } ?: 0) + 1)
+        }
+        fun label(tekst: Int) = TextView(this).apply {
+            setText(tekst)
+            textSize = 12f
+            setTextColor(getColor(R.color.tekst_zacht))
+            setPadding(0, dp(context, 8), 0, 0)
+        }
+        val vorm = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(context, 20), dp(context, 6), dp(context, 20), 0)
+            addView(label(R.string.code_op_de_tv))
+            addView(codeVeld)
+            addView(label(R.string.naam_van_de_tv))
+            addView(naam)
+            addView(label(R.string.wat_toont_hij))
+            addView(keuze)
+        }
+        val dialoog = AlertDialog.Builder(this)
+            .setCustomTitle(dialoogTitel(getString(R.string.tv_koppelen)))
+            .setView(android.widget.ScrollView(this).apply { addView(vorm) })
+            .setNegativeButton(R.string.annuleren, null)
+            .setPositiveButton(R.string.koppelen, null)
+            .show()
+        dialoog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val c = codeVeld.text.toString().filter { it.isDigit() }
+            val n = naam.text.toString().trim()
+            when {
+                c.length != 6 -> codeVeld.error = getString(R.string.koppelcode_fout)
+                n.isEmpty() -> naam.error = getString(R.string.tv_naam_nodig)
+                else -> {
+                    val scherm = schermen.getOrNull(keuze.checkedRadioButtonId - 1)?.optString("sleutel") ?: "prijzen"
+                    dialoog.dismiss()
+                    stuur("/api/app/kantine-tv/tvs/koppelen", JSONObject().put("code", c).put("naam", n).put("scherm", scherm),
+                        verzoekId = Api.nieuwVerzoekId())
+                }
+            }
+        }
+        (if (code == null) codeVeld else naam).requestFocus()
     }
 
     // ---------------------------------------------------------------- specials
@@ -348,6 +421,12 @@ class KantineTvActivity : BasisActivity() {
     }
 
     companion object {
-        fun open(context: Context) = context.startActivity(Intent(context, KantineTvActivity::class.java))
+        private const val EXTRA_KOPPELCODE = "koppelcode"
+
+        /** De QR-code op een nieuwe tv wijst naar /kiosk/koppel/<code> op de site. */
+        val KOPPEL_LINK = Regex("/kiosk/koppel/(\\d{6})")
+
+        fun open(context: Context, koppelcode: String? = null) =
+            context.startActivity(Intent(context, KantineTvActivity::class.java).putExtra(EXTRA_KOPPELCODE, koppelcode))
     }
 }

@@ -29,28 +29,33 @@ import nl.kantineblauwgeel.tv.databinding.ActivityPlayerBinding
  * zelf vastloopt, begint het scherm opnieuw. Vroeger bleef de tv dan op de foutmelding staan tot iemand met de
  * afstandsbediening op "Opnieuw proberen" drukte.
  *
- * Een gekoppeld scherm (zie Screens.GEKOPPELD) onthoudt zijn eigen adres op de site, en krijgt de grootte (zoom) van
- * de site: de pagina roept daarvoor KantineTv.zoom() aan (zie templates/_kiosk_herstel.html op de site). */
+ * Het gekoppelde scherm onthoudt zijn eigen adres op de site, en krijgt de grootte (zoom) van de site: de pagina roept
+ * daarvoor KantineTv.zoom() aan (zie templates/_kiosk_herstel.html op de site).
+ *
+ * Met de afstandsbediening: knop omlaag toont de prijzenlijst, knop omhoog de dia's. Dat wordt de instelling van deze
+ * tv op de site (POST /kiosk/t/<token>/scherm), dus je ziet het ook op de site en de handterminal, en het blijft zo na
+ * een herstart. OK opent de instellingen (de zoom per scherm, SettingsActivity). Terug sluit de app.
+ *
+ * De zoom: de pagina vertelt via KantineTv.scherm() wat hij toont en welke zoom de site voor deze tv heeft; heeft de tv
+ * voor dat scherm een eigen zoom ingesteld, dan geldt die (Prefs.zoomVoor). */
 class PlayerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPlayerBinding
-    private lateinit var schermSleutel: String
     private lateinit var startUrl: String
+    private var wisselt = false
+
+    /** Wat de pagina nu toont ("prijzen" of "dias"), zoals de pagina het via KantineTv.scherm() meldt. */
+    private var toont: String? = null
     private val klok = Handler(Looper.getMainLooper())
     private var fout = false
     private var opnieuwOver = 0
     private var netwerkTerug: ConnectivityManager.NetworkCallback? = null
 
     companion object {
-        private const val EXTRA_URL = "extra_url"
-        private const val EXTRA_SCHERM_SLEUTEL = "extra_scherm_sleutel"
         private const val OPNIEUW_NA_SECONDEN = 15
         private const val GEKOPPELD_PAD = "/kiosk/t/"
 
-        fun intentVoor(context: Context, scherm: Screen): Intent =
-            Intent(context, PlayerActivity::class.java)
-                .putExtra(EXTRA_URL, scherm.url)
-                .putExtra(EXTRA_SCHERM_SLEUTEL, scherm.sleutel)
+        fun intent(context: Context): Intent = Intent(context, PlayerActivity::class.java)
     }
 
     private val aftellen = object : Runnable {
@@ -75,13 +80,7 @@ class PlayerActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         verbergSysteembalken()
 
-        val scherm = Screens.opSleutel(intent.getStringExtra(EXTRA_SCHERM_SLEUTEL))
-        schermSleutel = scherm.sleutel
-        startUrl = if (scherm == Screens.GEKOPPELD) {
-            Prefs.getGekoppeldUrl(this) ?: scherm.url
-        } else {
-            intent.getStringExtra(EXTRA_URL) ?: scherm.url
-        }
+        startUrl = Prefs.getGekoppeldUrl(this) ?: Screens.KOPPELEN_URL
 
         binding.webview.settings.apply {
             javaScriptEnabled = true
@@ -89,7 +88,7 @@ class PlayerActivity : AppCompatActivity() {
             loadWithOverviewMode = true
             useWideViewPort = true
             mediaPlaybackRequiresUserGesture = false
-            textZoom = Prefs.getZoom(this@PlayerActivity, schermSleutel)
+            textZoom = Prefs.zoomVoor(this@PlayerActivity, null)
             cacheMode = WebSettings.LOAD_DEFAULT
         }
         binding.webview.addJavascriptInterface(Brug(), "KantineTv")
@@ -113,7 +112,7 @@ class PlayerActivity : AppCompatActivity() {
                 binding.foutmelding.visibility = View.GONE
                 klok.removeCallbacks(aftellen)
                 // Het eigen adres van een gekoppelde tv bewaren (zonder ?voorbeeld of andere toevoegingen).
-                if (schermSleutel == Screens.GEKOPPELD.sleutel && finishedUrl != null && GEKOPPELD_PAD in finishedUrl) {
+                if (finishedUrl != null && GEKOPPELD_PAD in finishedUrl) {
                     val adres = finishedUrl.substringBefore('?').substringBefore('#')
                     if (adres != Prefs.getGekoppeldUrl(this@PlayerActivity)) Prefs.setGekoppeldUrl(this@PlayerActivity, adres)
                 }
@@ -158,12 +157,6 @@ class PlayerActivity : AppCompatActivity() {
         netwerkTerug = null
     }
 
-    override fun onResume() {
-        super.onResume()
-        // De zoom kan gewijzigd zijn via het instellingenscherm; opnieuw toepassen.
-        binding.webview.settings.textZoom = Prefs.getZoom(this, schermSleutel)
-    }
-
     private fun laad() {
         klok.removeCallbacks(aftellen)
         binding.opnieuwOver.text = getString(R.string.opnieuw_nu)
@@ -183,17 +176,34 @@ class PlayerActivity : AppCompatActivity() {
         @JavascriptInterface
         fun versie(): String = BuildConfig.VERSION_NAME
 
-        /** De grootte die op de site voor deze tv is gekozen; is die anders dan nu, dan opnieuw laden met de nieuwe. */
+        /** Wat de pagina toont ("prijzen", "dias" of leeg bij de koppelcode) en de grootte die op de site voor deze tv is
+         * gekozen. Geldt er voor dat scherm een andere zoom dan nu, dan opnieuw laden met de nieuwe. */
         @JavascriptInterface
-        fun zoom(procent: Int) {
-            val nieuw = procent.coerceIn(50, 200)
+        fun scherm(wat: String, siteZoom: Int) {
             klok.post {
-                if (binding.webview.settings.textZoom == nieuw) return@post
-                Prefs.setZoom(this@PlayerActivity, schermSleutel, nieuw)
-                binding.webview.settings.textZoom = nieuw
-                binding.webview.reload()
+                toont = wat.takeIf { it == Prefs.PRIJZEN || it == Prefs.DIAS }
+                Prefs.setSiteZoom(this@PlayerActivity, siteZoom.coerceIn(50, 200))
+                pasZoomToe()
             }
         }
+
+        /** Voor een pagina van voor tv-app 1.2: alleen de zoom van de site. */
+        @JavascriptInterface
+        fun zoom(procent: Int) = scherm(toont ?: "", procent)
+    }
+
+    /** De zoom die nu geldt (eigen zoom van de tv voor dit scherm, anders de site); anders dan nu: opnieuw laden. */
+    private fun pasZoomToe() {
+        val nieuw = Prefs.zoomVoor(this, toont)
+        if (binding.webview.settings.textZoom == nieuw) return
+        binding.webview.settings.textZoom = nieuw
+        binding.webview.reload()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Terug uit de instellingen: de zoom kan veranderd zijn.
+        pasZoomToe()
     }
 
     private fun verbergSysteembalken() {
@@ -207,6 +217,61 @@ class PlayerActivity : AppCompatActivity() {
                 or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
             )
     }
+
+    /** Knop omlaag: de prijzenlijst; knop omhoog: de dia's (vóór de webweergave, die de pijltjes anders zelf gebruikt). */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // OK (de middelste knop): de instellingen, met de zoom per scherm.
+        if ((event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER) &&
+            binding.foutmelding.visibility != View.VISIBLE
+        ) {
+            if (event.action == KeyEvent.ACTION_UP) startActivity(Intent(this, SettingsActivity::class.java))
+            return true
+        }
+        val naar = when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_DOWN -> "prijzen"
+            KeyEvent.KEYCODE_DPAD_UP -> "dias"
+            else -> null
+        }
+        if (naar == null || binding.foutmelding.visibility == View.VISIBLE) return super.dispatchKeyEvent(event)
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) wissel(naar)
+        return true
+    }
+
+    /** Vraagt de site deze tv iets anders te laten tonen, en laadt dan meteen opnieuw. */
+    private fun wissel(toont: String) {
+        val adres = Prefs.getGekoppeldUrl(this) ?: return melding(getString(R.string.eerst_koppelen))
+        if (wisselt) return
+        wisselt = true
+        Thread {
+            val code = try {
+                val verbinding = java.net.URL("$adres/scherm").openConnection() as java.net.HttpURLConnection
+                verbinding.requestMethod = "POST"
+                verbinding.connectTimeout = 8000
+                verbinding.readTimeout = 8000
+                verbinding.doOutput = true
+                verbinding.setRequestProperty("Content-Type", "application/json")
+                verbinding.outputStream.use { it.write("{\"toont\": \"$toont\"}".toByteArray()) }
+                val antwoord = verbinding.responseCode
+                verbinding.disconnect()
+                antwoord
+            } catch (e: java.io.IOException) {
+                0
+            }
+            klok.post {
+                wisselt = false
+                when (code) {
+                    200 -> {
+                        melding(getString(if (toont == "prijzen") R.string.toont_prijzen else R.string.toont_dias))
+                        binding.webview.loadUrl(adres)
+                    }
+                    404 -> melding(getString(R.string.eerst_koppelen))  // de tv toont nog de koppelcode
+                    else -> melding(getString(R.string.wisselen_mislukt))
+                }
+            }
+        }.start()
+    }
+
+    private fun melding(tekst: String) = android.widget.Toast.makeText(this, tekst, android.widget.Toast.LENGTH_SHORT).show()
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK) {

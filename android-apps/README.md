@@ -2,11 +2,13 @@
 
 Drie losstaande Android-apps rond kantineblauwgeel.nl:
 
-- **`tv/`** — "Kantine TV", voor Google TV / Android TV. Schermkiezer tussen
-  een gekoppeld scherm (wat het toont en hoe groot stel je op de site in) en
-  de 3 vaste kiosk-schermen van de website, met een zoom-instelling die
-  bewaard blijft (ook na herstarten van de tv). Herstelt zichzelf na een
-  storing. Zie het kopje "Hoe de apps met de website praten".
+- **`tv/`** — "Kantine TV", voor Google TV / Android TV. Alleen een gekoppeld
+  scherm (sinds 1.2 geen menu meer): koppelen met de QR-code of de code, en wat
+  hij toont en hoe groot stel je op de site of de handterminal in. Met de
+  afstandsbediening: omlaag de prijzenlijst, omhoog de dia's, OK de instellingen
+  (zoom per scherm, bewaard op de tv). Start vanzelf na een
+  herstart en herstelt zichzelf na een storing. Zie het kopje "Hoe de apps met de
+  website praten".
 - **`tablet/`** — "Kantine Beheer", voor tablets. Toont de volledige website
   (ingelogd, met alle beheerfuncties zoals producten, acties, bardiensten en
   kiosk-instellingen) in een app-schil met een zijmenu voor snelle navigatie.
@@ -32,7 +34,7 @@ de sessie-cookie zelf (`Sessie.kt`) en stuurt bij een POST het csrf_token mee in
   en de controle), `FacturenActivity`/`FactuurActivity` (factuur inboeken), `PrikbordActivity`, `BestellijstActivity`,
   `TellingenActivity`, `GeschiedenisActivity`, `BoodschappenActivity`, `PrognoseActivity`, `AgendaActivity`,
   `UitverkochtActivity` (producten op het prijzenscherm op uitverkocht zetten), `TimerActivity` (de timer op de tv's),
-  `KantineTvActivity` (tv's: aan of uit, wat ze tonen, opnieuw laden, de wisselknop; specials; bardienst van vandaag en
+  `KantineTvActivity` (tv's: koppelen met de QR-code of de code, aan of uit, wat ze tonen, opnieuw laden, de wisselknop; specials; bardienst van vandaag en
   morgen), `DiasActivity` (onderdelen van de diashow en losse dia's aan of uit), `KoppelrondeActivity` (alle producten
   zonder barcode van een losse verpakking één voor één scannen),
   `BarcodesActivity`, `GeldActivity`/`GeldTellenActivity` (kassa en kluis), `KeukenActivity`/`KeukenInvoerActivity`,
@@ -45,8 +47,9 @@ de sessie-cookie zelf (`Sessie.kt`) en stuurt bij een POST het csrf_token mee in
   producten naar de site (zelfde vorm als de looplijst van de site, dus verder gaan kan ook daar).
 - **Nooit dubbel**: schrijfacties krijgen een `verzoek_id`. Valt de verbinding weg, dan probeert de app het opnieuw en
   geeft de site het bewaarde antwoord terug in plaats van het nog eens te doen (`eenmalig` in `routes/app_api.py`,
-  tabel `app_verzoeken`). Zware berekeningen (de verkoop per week en de prognose) haalt een scherm pas op als het
-  nodig is, apart van de rest.
+  tabel `app_verzoeken`). Zware berekeningen (de verkoop per week, de prognose en bij het tellen wat er verwacht wordt) haalt een
+  scherm pas op als het nodig is, apart van de rest. Bij het begin van een telling zet de app alle foto's van de looplijst
+  op het toestel, met de voortgang in de kopbalk.
 - **Scanner (DataWedge)**: de app maakt bij het starten zelf een DataWedge-profiel "Kantine Handterminal" aan (scans
   als broadcast, geen toetsaanslagen). Een scan opent het product, of het koppelen van een onbekende barcode. Een product
   opent als informatie (`alleenInfo`, de standaard): boeken staat onderaan en er staat niets klaar. Alleen via Boeken
@@ -133,18 +136,22 @@ tekenmateriaal, keuzes over vermelding):
 
 ## Hoe de apps met de website praten
 
-- **Gekoppeld scherm** (de standaard): de app opent `/kiosk/koppelen`. Die pagina
+- **Gekoppeld scherm** (het enige scherm): de app opent `/kiosk/koppelen`. Die pagina
   geeft de tv een eigen token en gaat naar `/kiosk/t/<token>`; daar staat een
-  koppelcode die je op de site bij Kantine-tv → Tv koppelen invult (zie
-  `kiosk_tvs.py`). Daarna kies je op de site wat de tv toont en hoe groot. De app
-  onthoudt dat eigen adres (`Prefs.getGekoppeldUrl`). De pagina praat met de app
+  koppelcode met een QR-code (`/kiosk/koppel/<code>`). Scan die met de
+  handterminal-app, of vul de code op de site in bij Kantine-tv → Tv koppelen (zie
+  `kiosk_tvs.py`). Daarna kies je wat de tv toont en hoe groot. De app onthoudt dat
+  eigen adres (`Prefs.getGekoppeldUrl`), en gaat bij het starten (ook met de hand,
+  via `SplashActivity`) meteen terug naar dat scherm. De pagina praat met de app
   via `window.KantineTv` (`PlayerActivity.Brug`): `versie()` (zo ziet de site welke
-  app-versie er draait) en `zoom(procent)` (de grootte van de site wordt de
-  `textZoom` van de app). Zie `templates/_kiosk_herstel.html` op de site.
-- De 3 vaste tv-schermen zijn de bestaande, inlogvrije kiosk-URL's:
-  `/kiosk/prijzen`, `/kiosk/scherm`, `/kiosk/tv`. Elk ververst zichzelf al via
-  JavaScript-polling op de website — de app hoeft daar niets extra's voor te
-  doen.
+  app-versie er draait) en `scherm(toont, zoom)` (wat de pagina toont en de grootte
+  van de site; de app gebruikt zijn eigen zoom voor dat scherm als die in de
+  instellingen is gekozen, anders die van de site, als `textZoom`). Zie `templates/_kiosk_herstel.html` op de site.
+- **Afstandsbediening**: knop omlaag/omhoog stuurt `POST /kiosk/t/<token>/scherm`
+  (`{"toont": "prijzen"}` of `"dias"`); het token van de tv is de toegang. Dat
+  wordt de instelling van de tv op de site, en de app laadt meteen opnieuw.
+- De vaste, inlogvrije kiosk-URL's (`/kiosk/prijzen`, `/kiosk/scherm`, `/kiosk/tv`)
+  werken nog voor een browser of Chromecast, maar zitten niet meer in de tv-app.
 - **Zelfherstel**: lukt het laden niet (geen wifi, een foutpagina van de server),
   dan probeert `PlayerActivity` het elke 15 seconden opnieuw, en meteen als het
   netwerk terug is; loopt de webweergave vast, dan begint het scherm opnieuw.

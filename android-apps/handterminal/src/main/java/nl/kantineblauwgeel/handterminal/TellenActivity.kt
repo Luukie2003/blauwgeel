@@ -40,7 +40,7 @@ class TellenActivity : BasisActivity() {
         val categorie: String,
         val eenheid: String,
         val voorraad: Int,
-        val verwacht: JSONObject?,
+        var verwacht: JSONObject?,
         val foto: String?,
         val besteleenheid: String?,
         val perBesteleenheid: Int,
@@ -145,6 +145,7 @@ class TellenActivity : BasisActivity() {
     private fun laad() {
         lifecycleScope.launch {
             val data = try {
+                b.ladenTekst.setText(R.string.laden_producten)
                 stuurWachtendeStop(applicationContext)
                 Api.getJson(this@TellenActivity, "/api/app/tellen")
             } catch (f: Api.Fout) {
@@ -160,6 +161,8 @@ class TellenActivity : BasisActivity() {
                 )
             }
             Fotos.haalAlvast(this@TellenActivity, producten.take(4).map { it.foto })
+            haalVerwachting()
+            zetFotosKlaar()
             if (producten.isEmpty()) {
                 melding(getString(R.string.niets_te_tellen), lang = true)
                 finish()
@@ -181,6 +184,29 @@ class TellenActivity : BasisActivity() {
                 }
                 else -> vraagVerder(stand, vanSite = opToestel == null)
             }
+        }
+    }
+
+    /** Wat er ongeveer hoort te staan (het voorspelmodel): apart, want dat rekent op de server soms even. Je kunt al
+     * tellen; de regel "verwacht" verschijnt zodra het binnen is. Lukt het niet, dan zonder verwachting. */
+    private fun haalVerwachting() {
+        lifecycleScope.launch {
+            val verwacht = try {
+                Api.getJson(this@TellenActivity, "/api/app/tellen/verwachting").optJSONObject("verwacht") ?: return@launch
+            } catch (f: Api.Fout) {
+                return@launch
+            }
+            for (p in producten) p.verwacht = verwacht.optJSONObject(p.id.toString())
+            if (laag == Laag.TELLEN) producten.getOrNull(index)?.let { toonVerwacht(it) }
+        }
+    }
+
+    /** Alle foto's van de looplijst op het toestel zetten, met de voortgang in de kopbalk ("Foto's 23/44"): daarna staat
+     * elk product er meteen, ook bij een slechte verbinding. */
+    private fun zetFotosKlaar() {
+        Fotos.zetOpToestel(this, producten.map { it.foto }) { klaar, totaal ->
+            if (isFinishing || isDestroyed) return@zetOpToestel
+            zetBalkSub(if (klaar < totaal) getString(R.string.fotos_klaarzetten, klaar, totaal) else Sessie.naam)
         }
     }
 
@@ -245,13 +271,7 @@ class TellenActivity : BasisActivity() {
         b.telNaam.text = p.naam
         b.telEenheid.text = p.eenheid
         b.telVoorraad.text = getString(R.string.geregistreerde_voorraad, p.voorraad, p.eenheid)
-        b.telVerwacht.text = p.verwacht?.let { v ->
-            val laag = v.optInt("laag")
-            val hoog = v.optInt("hoog")
-            if (hoog > laag) getString(R.string.verwacht_nu_marge, v.optInt("verwacht"), p.eenheid, laag, hoog)
-            else getString(R.string.verwacht_nu, v.optInt("verwacht"), p.eenheid)
-        } ?: ""
-        b.telVerwacht.isVisible = p.verwacht != null
+        toonVerwacht(p)
         b.snelKrat.isVisible = p.besteleenheid != null && p.perBesteleenheid > 1
         b.snelKrat.text = getString(R.string.plus_een_besteleenheid, p.besteleenheid ?: "", p.perBesteleenheid)
         waarde = huidige[p.id.toString()] ?: ""
@@ -267,6 +287,16 @@ class TellenActivity : BasisActivity() {
         )
         // De foto's van de volgende producten alvast ophalen, dan staan ze er meteen.
         Fotos.haalAlvast(this, producten.drop(index + 1).take(3).map { it.foto })
+    }
+
+    private fun toonVerwacht(p: TelProduct) {
+        b.telVerwacht.text = p.verwacht?.let { v ->
+            val laag = v.optInt("laag")
+            val hoog = v.optInt("hoog")
+            if (hoog > laag) getString(R.string.verwacht_nu_marge, v.optInt("verwacht"), p.eenheid, laag, hoog)
+            else getString(R.string.verwacht_nu, v.optInt("verwacht"), p.eenheid)
+        } ?: ""
+        b.telVerwacht.isVisible = p.verwacht != null
     }
 
     private fun toonWaarde() {
