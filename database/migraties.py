@@ -687,10 +687,17 @@ def _m3_eigenaar_aanwijzen(db):
         db.execute("UPDATE gebruikers SET eigenaar = 1 WHERE id = ?", (rij[0],))
 
 
+def _m4_codeblokkades_opheffen(db):
+    """Bij de overstap naar 10 pogingen en 10 minuten (1.65.1): wie nu op slot zit (na de oude grens van 5), kan meteen
+    weer inloggen met de code."""
+    db.execute("DELETE FROM tablet_code_pogingen")
+
+
 GENUMMERDE_MIGRATIES = [
     (1, _m1_tapbier_in_de_omzet),
     (2, _m2_opmerking_none_leegmaken),
     (3, _m3_eigenaar_aanwijzen),
+    (4, _m4_codeblokkades_opheffen),
 ]
 
 

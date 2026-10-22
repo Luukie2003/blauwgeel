@@ -30,8 +30,10 @@ TABLET_CODE_PATROON = re.compile(r"^\d{6}$")
 # zonder een blokkade die voor alle tablets tegelijk zou gelden, wat een
 # groter risico is (iedereen buitengesloten) dan het beperkte risico van een
 # geraden code (die geeft alleen toegang tot wat dat ene account al mag).
-TABLET_CODE_MAX_POGINGEN = 5
-TABLET_CODE_LOCKOUT_MINUTEN = 30
+# Sinds 1.65.1: 10 pogingen en 10 minuten (was 5 en 30). Op de handterminal tik je soms mis met handschoenen of haast,
+# en een half uur buitengesloten aan de bar is te lang.
+TABLET_CODE_MAX_POGINGEN = 10
+TABLET_CODE_LOCKOUT_MINUTEN = 10
 
 
 def register_routes(app):
@@ -345,6 +347,9 @@ def register_routes(app):
                 # wacht_minuten: voor de handterminal-app, die het in de foutmelding zet.
                 wacht = max(1, -(-int((geblokkeerd_tot - datetime.now()).total_seconds()) // 60))
                 return jsonify({"geldig": False, "fout": "te_veel_pogingen", "wacht_minuten": wacht}), 429
+            # De blokkade is voorbij: weer vanaf nul, anders zat je na één tikfout meteen weer op slot.
+            db.execute("DELETE FROM tablet_code_pogingen WHERE ip_adres = ?", (ip,))
+            poging = None
 
         data = request.get_json(silent=True) or {}
         code = str(data.get("code", "")).strip()

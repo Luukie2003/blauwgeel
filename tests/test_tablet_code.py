@@ -265,7 +265,7 @@ def test_geldige_code_ruimt_eigen_mislukte_pogingen_op(client, db):
     _zet_tablet_code(db, "admin", "246813")
     # Eén onder de blokkadedrempel (TABLET_CODE_MAX_POGINGEN), anders zou de
     # geslaagde poging hierna zelf al geblokkeerd worden.
-    for _ in range(4):
+    for _ in range(9):
         client.post("/api/tablet-code/inloggen", json={"code": "000000"})
 
     resp = client.post("/api/tablet-code/inloggen", json={"code": "246813"})

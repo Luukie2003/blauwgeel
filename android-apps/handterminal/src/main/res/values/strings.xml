@@ -6,7 +6,7 @@
     <!-- Inloggen -->
     <string name="code_instructie">Voer je persoonlijke code in</string>
     <string name="code_fout">Die code klopt niet. Probeer het opnieuw.</string>
-    <string name="code_fout_pogingen">Die code klopt niet. Nog %1$d poging(en), daarna gaat inloggen op de club een half uur op slot.</string>
+    <string name="code_fout_pogingen">Die code klopt niet. Nog %1$d poging(en), daarna gaat inloggen op de club 10 minuten op slot.</string>
     <string name="code_te_veel">Te veel foute codes vanaf dit netwerk. Probeer het over een half uur opnieuw.</string>
     <string name="code_te_veel_minuten">Te veel foute codes vanaf dit netwerk. Probeer het over %1$d minuten opnieuw.</string>
     <string name="code_noodstop">Het kantinesysteem is tijdelijk afgesloten. Probeer het later opnieuw.</string>
