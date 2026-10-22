@@ -213,3 +213,73 @@ def test_de_app_logt_in_met_de_code_en_boekt_in(app, db):
     app_client.post(f"/api/facturen/{ronde_id}/scan", json={"code": AH_DOOS}, headers=kop)
     assert app_client.post(f"/api/facturen/{ronde_id}/afronden", json={}, headers=kop).get_json()["status"] == "afgerond"
     assert _voorraad(db, pid) == 90
+
+
+# ---------- Zonder barcode (PLU) en 'Factuur gecontroleerd' (1.65.0) ----------
+
+
+def _fust(db, naam="Hertog Jan fust"):
+    pid = db.execute(
+        """INSERT INTO producten (naam, categorie, eenheid, voorraad, verkoopprijs, inkoopprijs, actief, glazen_per_fust)
+           VALUES (?, 'Bier', 'fust', 2, 3.0, 95.0, 1, 200)""", (naam,),
+    ).lastrowid
+    db.commit()
+    return pid
+
+
+def test_plu_lijst_fusten_en_geen_barcode_besteld_eerst(db):
+    fust = _fust(db)
+    cola = db.execute(
+        """INSERT INTO producten (naam, categorie, eenheid, voorraad, verkoopprijs, inkoopprijs, actief, geen_barcode,
+                                  besteleenheid, besteleenheid_factor)
+           VALUES ('Aaa limonadesiroop', 'Fris', 'pak', 0, 1.0, 12.0, 1, 1, 'doos', 6)"""
+    ).lastrowid
+    _product(db, "Gewoon met barcode")  # hoort niet in de PLU-lijst
+    b = db.execute("INSERT INTO bestellingen (status, aangemaakt_op) VALUES ('besteld', '2026-10-15 10:00')").lastrowid
+    db.execute("INSERT INTO bestelregels (bestelling_id, product_id, aantal_besteld) VALUES (?, ?, 4)", (b, fust))
+    db.commit()
+    ronde_id = facturen.start_ronde(db, bestelling_id=b)
+    gegevens = facturen.ronde(db, ronde_id)
+    lijst = facturen.plu_lijst(db, gegevens["besteld"], {})
+    assert [x["product_id"] for x in lijst] == [fust, cola]  # besteld eerst, ook al komt de naam later
+    assert lijst[0]["besteld"] == 4 and lijst[0]["fust"] is True
+    assert (lijst[1]["besteleenheid"], lijst[1]["per_besteleenheid"]) == ("doos", 6)
+
+
+def test_plu_toevoegen_telt_op_bij_dezelfde_regel_en_gecontroleerd_toont_wat_mist(db):
+    fust = _fust(db)
+    frikandel = _frikandel(db)
+    b = db.execute("INSERT INTO bestellingen (status, aangemaakt_op) VALUES ('besteld', '2026-10-15 10:00')").lastrowid
+    db.execute("INSERT INTO bestelregels (bestelling_id, product_id, aantal_besteld) VALUES (?, ?, 4)", (b, fust))
+    db.execute("INSERT INTO bestelregels (bestelling_id, product_id, aantal_besteld) VALUES (?, ?, 80)", (b, frikandel))
+    db.commit()
+    ronde_id = facturen.start_ronde(db, bestelling_id=b)
+    assert facturen.voeg_plu_toe(db, ronde_id, fust, 2) is None
+    assert facturen.voeg_plu_toe(db, ronde_id, fust, 1) is None
+    assert facturen.voeg_plu_toe(db, ronde_id, fust, 0) == "Vul een aantal van 1 of meer in."
+    gegevens = facturen.ronde(db, ronde_id)
+    plu = [g for g in gegevens["regels"] if g["niveau"] == "plu"]
+    assert len(plu) == 1 and plu[0]["aantal"] == 3 and plu[0]["prijs_per_stuk"] == 95.0
+    assert gegevens["totaal"] == 285.0
+    mist = {m["naam"]: (m["gescand"], m["besteld"]) for m in facturen.als_json(gegevens)["nog_niet_binnen"]}
+    assert mist == {"Hertog Jan fust": (3, 4), "Frikandel": (0, 80)}
+
+    # Het manco werkt zoals altijd: wat helemaal niet binnen is, staat op manco.
+    samenvatting, _ = facturen.afronden(db, ronde_id)
+    assert samenvatting["manco"] == 1
+    assert _voorraad(db, fust) == 5
+
+
+def test_de_app_plu_lijst_en_toevoegen(ingelogde_client, db):
+    fust = _fust(db)
+    kop = {"X-CSRF-Token": _csrf(ingelogde_client)}
+    ronde_id = ingelogde_client.post("/api/facturen", json={}, headers=kop).get_json()["id"]
+    lijst = ingelogde_client.get(f"/api/facturen/{ronde_id}/plu").get_json()["plu"]
+    assert [x["product_id"] for x in lijst] == [fust]
+    for _ in range(2):  # hetzelfde verzoek_id (opnieuw geprobeerd na een haperende verbinding): maar één keer
+        ronde = ingelogde_client.post(f"/api/facturen/{ronde_id}/plu", json={"product_id": fust, "aantal": 2, "verzoek_id": "plu-1"},
+                                      headers=kop).get_json()
+    assert ronde["per_product"][0]["eenheden"] == 2 and ronde["nog_niet_binnen"] == []
+    assert ingelogde_client.get(f"/api/facturen/{ronde_id}/plu").get_json()["plu"][0]["gescand"] == 2
+    assert ingelogde_client.post(f"/api/facturen/{ronde_id}/plu", json={"product_id": fust, "aantal": 0},
+                                 headers=kop).status_code == 400

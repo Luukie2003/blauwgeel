@@ -157,6 +157,15 @@
                 android:layout_marginTop="10dp"
                 android:text="@string/barcode_intikken"
                 android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/pluKnop"
+                style="@style/Knop.Rand"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="8dp"
+                android:text="@string/plu_knop"
+                android:textSize="15sp" />
         </LinearLayout>
     </ScrollView>
 

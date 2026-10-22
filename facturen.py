@@ -283,6 +283,81 @@ def voeg_handmatig_toe(db, ronde_id, product_id, eenheden, prijs=None):
     return None
 
 
+def plu_lijst(db, besteld=None, per_product=None):
+    """De PLU-lijst: wat binnenkomt zonder barcode om te scannen (fusten, en producten die op 'heeft geen barcode' staan),
+    om met een tik in te boeken. Per product hoeveel er in een besteleenheid zit (een fust is 1), wat die kost, wat er
+    besteld is (bij een klaargezette bestelling) en wat er al bij deze factuur staat. Besteld eerst, dan op naam."""
+    besteld = {b["product_id"]: b for b in (besteld or [])}
+    per_product = per_product or {}
+    uitkomst = []
+    for p in db.execute(
+        """SELECT * FROM producten
+           WHERE actief = 1 AND COALESCE(gearchiveerd, 0) = 0
+             AND (COALESCE(geen_barcode, 0) = 1 OR COALESCE(glazen_per_fust, 0) > 0)
+           ORDER BY naam COLLATE NOCASE"""
+    ).fetchall():
+        factor = besteleenheid_factor(p)
+        b = besteld.get(p["id"])
+        uitkomst.append({
+            "product_id": p["id"],
+            "naam": p["naam"],
+            "eenheid": p["eenheid"],
+            "besteleenheid": besteleenheid_naam(p) if factor > 1 else p["eenheid"],
+            "per_besteleenheid": factor,
+            "prijs_per_besteleenheid": round(inkoop_per_stuk(p) * factor, 4),
+            "fust": bool(p["glazen_per_fust"]),
+            "besteld": b["besteld"] if b else 0,
+            "gescand": per_product.get(p["id"], {}).get("eenheden", 0),
+        })
+    uitkomst.sort(key=lambda x: (not x["besteld"], x["naam"].lower()))
+    return uitkomst
+
+
+def voeg_plu_toe(db, ronde_id, product_id, aantal):
+    """Uit de PLU-lijst: aantal besteleenheden (fusten, kratten) van een product zonder barcode. Tik je hetzelfde product
+    nog een keer aan, dan komt het bij dezelfde regel (die je met min en plus nog kunt verbeteren). Geeft een
+    foutmelding of None."""
+    if not _is_open(db, ronde_id):
+        return "Deze inboekronde is al afgerond."
+    p = db.execute("SELECT * FROM producten WHERE id = ?", (_getal(product_id) or 0,)).fetchone()
+    if p is None:
+        return "Kies een product."
+    aantal = _getal(aantal)
+    if not aantal or aantal < 1:
+        return "Vul een aantal van 1 of meer in."
+    factor = besteleenheid_factor(p)
+    eenheid = besteleenheid_naam(p) if factor > 1 else p["eenheid"]
+    omschrijving = f"{p['naam']} ({eenheid}{f' van {factor}' if factor > 1 else ''}, zonder barcode)"
+    nu = now_str()
+    bestaand = db.execute(
+        """SELECT id FROM inboekronde_regels
+           WHERE ronde_id = ? AND product_id = ? AND niveau = 'plu' AND eenheden_per_stuk = ?""",
+        (ronde_id, p["id"], factor),
+    ).fetchone()
+    if bestaand:
+        db.execute("UPDATE inboekronde_regels SET aantal = aantal + ?, laatst_gescand_op = ? WHERE id = ?",
+                   (aantal, nu, bestaand["id"]))
+    else:
+        db.execute(
+            """INSERT INTO inboekronde_regels (ronde_id, product_id, code, niveau, omschrijving, aantal, eenheden_per_stuk,
+                   prijs_per_stuk, laatst_gescand_op)
+               VALUES (?, ?, NULL, 'plu', ?, ?, ?, ?, ?)""",
+            (ronde_id, p["id"], omschrijving, aantal, factor, round(inkoop_per_stuk(p) * factor, 4), nu),
+        )
+    db.commit()
+    return None
+
+
+def nog_niet_binnen(gegevens):
+    """Voor 'Factuur gecontroleerd': wat er van de klaargezette bestelling nog mist (niets of te weinig gescand). Bij het
+    inboeken wordt dat manco, net als bij Bestellingen > Inboeken."""
+    return [
+        {"product_id": b["product_id"], "naam": b["naam"], "besteld": b["besteld"], "gescand": b["gescand"],
+         "rest": b["rest"], "eenheid": b["eenheid"], "status": b["status"]}
+        for b in gegevens["besteld"] if b["rest"] > 0
+    ]
+
+
 def voeg_rest_toe(db, ronde_id, product_id=None):
     """Wat van de bestelling nog niet gescand is, erbij zetten zoals besteld (iets zonder barcode, of een doos die je
     niet apart scant): voor één product, of zonder product_id voor alles wat nog mist. Geeft (aantal producten,
@@ -421,4 +496,5 @@ def als_json(gegevens):
         "per_product": gegevens["per_product"],
         "bestelling_referentie": r["bestelling_referentie"],
         "besteld": [{k: v for k, v in b.items() if k != "inkoop_per_stuk"} for b in gegevens["besteld"]],
+        "nog_niet_binnen": nog_niet_binnen(gegevens),
     }

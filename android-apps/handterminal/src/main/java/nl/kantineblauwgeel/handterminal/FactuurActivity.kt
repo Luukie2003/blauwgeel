@@ -26,8 +26,11 @@ import java.util.Locale
  * Scans gaan op volgorde de wachtrij in: snel achter elkaar tien dozen scannen gaat goed. Elke scan heeft een eigen
  * verzoek_id, dus bij een haperende verbinding probeert de app het opnieuw zonder dat een doos dubbel telt.
  *
- * Scan je een losse verpakking (één zakje chips) terwijl er een doos van bestaat, dan vraagt de app of je de volle
- * besteleenheid wilt inboeken. Het antwoord geldt voor de rest van deze factuur bij dat artikel. */
+ * Scan je een losse verpakking (één zakje chips, één flesje cola) terwijl er een doos of krat van bestaat, dan vraagt de
+ * app of je de hele colli wilt inboeken. Het antwoord geldt voor de rest van deze factuur bij dat artikel.
+ *
+ * Wat geen barcode heeft (fusten, en producten op 'heeft geen barcode') kies je uit de PLU-lijst. "Factuur
+ * gecontroleerd" laat eerst zien wat er van de bestelling nog mist (dat wordt manco) en boekt daarna alles in. */
 class FactuurActivity : BasisActivity() {
 
     private lateinit var b: ActivityFactuurBinding
@@ -56,6 +59,7 @@ class FactuurActivity : BasisActivity() {
             Cijferpad.vraag(this, getString(R.string.barcode_intikken), max = 14) { code -> if (code.isNotEmpty()) scan(code) }
         }
         b.afrondenKnop.setOnClickListener { afronden() }
+        b.pluKnop.setOnClickListener { pluKiezen() }
     }
 
     override fun onResume() {
@@ -302,6 +306,47 @@ class FactuurActivity : BasisActivity() {
         }
     }
 
+    // ---------------------------------------------------------------- zonder barcode (PLU)
+
+    /** De PLU-lijst: fusten en producten zonder barcode, met wat er besteld en al binnen is. Tik er een aan en vul in
+     * hoeveel (in fusten, kratten). */
+    private fun pluKiezen() {
+        bezig {
+            val lijst = Api.getJson(this, "/api/facturen/$rondeId/plu").getJSONArray("plu").objecten()
+            if (lijst.isEmpty()) {
+                AlertDialog.Builder(this).setTitle(R.string.plu_titel).setMessage(R.string.plu_leeg)
+                    .setPositiveButton(R.string.ok, null).show()
+                return@bezig
+            }
+            val namen = lijst.map { x ->
+                val detail = if (x.optInt("besteld") > 0)
+                    getString(R.string.plu_regel_besteld, x.optInt("besteld"), x.optInt("gescand"), x.optString("eenheid"))
+                else getString(R.string.plu_regel_binnen, x.optInt("gescand"), x.optString("eenheid"))
+                "${x.optString("naam")}\n$detail"
+            }.toTypedArray()
+            AlertDialog.Builder(this)
+                .setCustomTitle(dialoogTitel(getString(R.string.plu_titel)))
+                .setItems(namen) { _, i -> pluAantal(lijst[i]) }
+                .setNegativeButton(R.string.annuleren, null)
+                .show()
+        }
+    }
+
+    private fun pluAantal(x: JSONObject) {
+        val eenheid = x.optString("besteleenheid")
+        val verzoekId = Api.nieuwVerzoekId()
+        Cijferpad.vraag(this, getString(R.string.plu_hoeveel, eenheid, x.optString("naam")), eenheid = eenheid, max = 4) { tekst ->
+            val n = tekst.toIntOrNull() ?: 0
+            if (n <= 0) return@vraag
+            bezig {
+                toon(Api.post(this, "/api/facturen/$rondeId/plu",
+                    JSONObject().put("product_id", x.getInt("product_id")).put("aantal", n), verzoekId = verzoekId))
+                tril(60)
+                b.scanMelding.text = "+$n $eenheid · ${x.optString("naam")}"
+            }
+        }
+    }
+
     private fun zetAantal(regelId: Int, aantal: Int) {
         bezig {
             toon(Api.post(this, "/api/facturen/$rondeId/regels/$regelId", JSONObject().put("aantal", maxOf(0, aantal)), herhaalbaar = true))
@@ -328,14 +373,26 @@ class FactuurActivity : BasisActivity() {
     private fun afronden() {
         val r = ronde ?: return
         val verschil = if (r.isNull("verschil")) 0.0 else r.optDouble("verschil")
+        val mist = r.optJSONArray("nog_niet_binnen")?.objecten().orEmpty()
         val tekst = buildString {
+            // Bij een klaargezette bestelling eerst wat er nog mist: dat wordt manco.
+            if (!r.isNull("bestelling_id")) {
+                if (mist.isEmpty()) append(getString(R.string.gecontroleerd_compleet))
+                else {
+                    append(getString(R.string.gecontroleerd_mist))
+                    for (m in mist) append("\n").append(getString(R.string.gecontroleerd_mist_regel, m.optString("naam"),
+                        m.optInt("gescand"), m.optInt("besteld"), m.optString("eenheid")))
+                    append("\n\n").append(getString(R.string.gecontroleerd_manco))
+                }
+                append("\n\n")
+            }
             append(getString(R.string.afronden_vraag, r.optInt("scans")))
             if (Math.abs(verschil) >= 0.005) append("\n\n").append(getString(R.string.afronden_verschil, euro(verschil)))
         }
         AlertDialog.Builder(this)
             .setTitle(R.string.afronden_en_inboeken)
             .setMessage(tekst)
-            .setNegativeButton(R.string.annuleren, null)
+            .setNegativeButton(R.string.terug_naar_factuur, null)
             .setPositiveButton(R.string.inboeken) { _, _ ->
                 b.afrondenKnop.isEnabled = false
                 val verzoekId = afrondId ?: Api.nieuwVerzoekId().also { afrondId = it }

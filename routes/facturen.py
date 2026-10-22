@@ -248,6 +248,26 @@ def register_routes(app):
 
         return eenmalig(zoals_besteld)
 
+    @app.route("/api/facturen/<int:ronde_id>/plu", methods=["GET", "POST"])
+    def api_factuur_plu(ronde_id):
+        """De PLU-lijst: fusten en producten zonder barcode (zie facturen.plu_lijst). GET: de lijst. POST {product_id,
+        aantal, verzoek_id}: zoveel besteleenheden (fusten, kratten) erbij; met een verzoek_id maar één keer."""
+        if request.method == "GET":
+            gegevens = facturen.ronde(get_db(), ronde_id)
+            if gegevens is None:
+                return _niet_gevonden_json()
+            per_product = {p["product_id"]: p for p in gegevens["per_product"]}
+            return jsonify({"plu": facturen.plu_lijst(get_db(), gegevens["besteld"], per_product)})
+        data = _data()
+
+        def plu(db):
+            fout = facturen.voeg_plu_toe(db, ronde_id, data.get("product_id"), data.get("aantal"))
+            if fout:
+                return {"status": "fout", "melding": fout}, 400
+            return facturen.als_json(facturen.ronde(db, ronde_id)), 200
+
+        return eenmalig(plu)
+
     @app.route("/api/facturen/<int:ronde_id>/regels/<int:regel_id>", methods=["POST"])
     def api_factuur_regel(ronde_id, regel_id):
         """{aantal}: hoe vaak een regel gescand is; 0 haalt hem weg."""
