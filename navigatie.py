@@ -93,7 +93,7 @@ NAV_ITEMS = [
     },
     {
         "groep": "Voorraad",
-        "endpoints": ["tellingen_overzicht", "tellingen_cijfers", "telling_detail", "tellingen_gecombineerd_pdf"],
+        "endpoints": ["tellingen_overzicht", "tellingen_cijfers", "telling_detail", "telling_regels", "tellingen_gecombineerd_pdf"],
         "url_endpoint": "tellingen_overzicht",
         "label": "Tellingen",
     },
@@ -245,13 +245,13 @@ NAV_ITEMS = [
     },
     {
         "groep": "Keuken",
-        "endpoints": ["keuken_tellen"],
+        "endpoints": ["keuken_tellen", "keuken_tellen_lopen"],
         "url_endpoint": "keuken_tellen",
         "label": "Tellen",
     },
     {
         "groep": "Keuken",
-        "endpoints": ["keuken_inboeken"],
+        "endpoints": ["keuken_inboeken", "keuken_barcode_koppelen"],
         "url_endpoint": "keuken_inboeken",
         "label": "Inboeken",
     },

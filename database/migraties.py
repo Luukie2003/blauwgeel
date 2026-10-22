@@ -378,6 +378,9 @@ KOLOM_MIGRATIES = [
     # Welke looplijst dit is (1.58.0): breek je hem op het ene toestel af (of begin je opnieuw), dan merkt een ander
     # toestel of de handterminal-app dat aan een ander of ontbrekend loop_id (zie routes/tellen/looplijst_opslag.py).
     ("loop_voortgang", "loop_id", "TEXT"),
+    # Een begintelling van de keuken (1.64.0) zet alleen de voorraad goed: het verschil is geen verkoop (zie
+    # keukenbeheer.verwerk_keuken_telling).
+    ("keuken_tellingen", "begintelling", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

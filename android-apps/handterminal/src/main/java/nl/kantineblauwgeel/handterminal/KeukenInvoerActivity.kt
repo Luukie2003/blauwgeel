@@ -13,7 +13,9 @@ import org.json.JSONObject
 
 /** De keukentelling (hoeveel er nu is; wat minder is dan de voorraad is verkocht) of keuken inboeken (hoeveel
  * verpakkingen er binnenkwamen, bijvoorbeeld 2 dozen frikandellen van 40). Tik op een product voor het cijferpad, of
- * scan het. Opslaan doet hetzelfde als Keuken > Tellen en Keuken > Inboeken op de site. */
+ * scan een volle doos of zak: dan telt wat erin zit er meteen bij (uit het artikel, dus per supermarkt anders).
+ * Opslaan doet hetzelfde als Keuken > Tellen en Keuken > Inboeken op de site; bij tellen kies je dan of het een
+ * begintelling is (dan is het verschil geen verkoop). */
 class KeukenInvoerActivity : BasisActivity() {
 
     private lateinit var b: ActivityLijstBinding
@@ -21,6 +23,9 @@ class KeukenInvoerActivity : BasisActivity() {
     private val isTellen get() = modus == TELLEN
     private var producten: List<JSONObject> = emptyList()
     private val waarden = mutableMapOf<Int, Int>()
+    /** Inboeken: wat er per product gescand is, in de eenheid van het product (los van [waarden] in verpakkingen). */
+    private val gescand = mutableMapOf<Int, Int>()
+    private var eersteTelling = false
     private val waardeViews = mutableMapOf<Int, TextView>()
     private var verzoekId: String? = null
 
@@ -35,7 +40,7 @@ class KeukenInvoerActivity : BasisActivity() {
         b.onderKnop.setOnClickListener { opslaan() }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (waarden.isEmpty()) return finish()
+                if (waarden.isEmpty() && gescand.isEmpty()) return finish()
                 AlertDialog.Builder(this@KeukenInvoerActivity)
                     .setMessage(R.string.invoer_weggooien_vraag)
                     .setPositiveButton(R.string.weggooien) { _, _ -> finish() }
@@ -45,7 +50,9 @@ class KeukenInvoerActivity : BasisActivity() {
         })
         werkKnopBij()
         bezig {
-            producten = Api.getJson(this, "/api/app/keuken").getJSONArray("producten").objecten()
+            val keuken = Api.getJson(this, "/api/app/keuken")
+            producten = keuken.getJSONArray("producten").objecten()
+            eersteTelling = keuken.optBoolean("eerste_telling")
             bouw()
         }
     }
@@ -94,39 +101,67 @@ class KeukenInvoerActivity : BasisActivity() {
         for (p in producten) {
             val id = p.getInt("id")
             val n = waarden[id]
+            val stuks = gescand[id]
             waardeViews[id]?.text = when {
-                n == null -> "–"
-                isTellen -> "$n ${p.optString("eenheid")}"
-                else -> "$n ${p.optString("verpakking")}"
+                isTellen -> if (n == null) "–" else "$n ${p.optString("eenheid")}"
+                n == null && stuks == null -> "–"
+                else -> listOfNotNull(n?.let { "$it ${p.optString("verpakking")}" }, stuks?.let { "+$it ${p.optString("eenheid")}" })
+                    .joinToString(" ")
             }
         }
         werkKnopBij()
     }
 
+    private val aantalProducten get() = (waarden.keys + gescand.keys).size
+
     private fun werkKnopBij() {
-        b.onderKnop.isEnabled = waarden.isNotEmpty()
-        b.onderKnop.alpha = if (waarden.isNotEmpty()) 1f else 0.5f
-        b.onderKnop.text = if (isTellen) getString(R.string.telling_opslaan_n, waarden.size) else getString(R.string.inboeken_n, waarden.size)
+        val iets = aantalProducten > 0
+        b.onderKnop.isEnabled = iets
+        b.onderKnop.alpha = if (iets) 1f else 0.5f
+        b.onderKnop.text = if (isTellen) getString(R.string.telling_opslaan_n, aantalProducten) else getString(R.string.inboeken_n, aantalProducten)
     }
 
-    /** Een gescand keukenproduct: meteen het cijferpad voor dat product. */
+    /** Een gescande doos of zak: wat erin zit telt er meteen bij (tellen: bij het getelde aantal, inboeken: bij wat er
+     * binnenkwam). Een onbekende barcode koppel je eerst (KoppelenActivity) en scan je daarna nog een keer. */
     override fun bijScan(code: String) {
         val treffer = Catalogus.opBarcode(code)
-        val p = treffer?.let { t -> producten.firstOrNull { it.getInt("id") == t.product.id } }
-        if (p == null) {
-            melding(getString(R.string.geen_keukenproduct))
+        if (treffer == null) {
+            if (Catalogus.normaliseerCode(code) == null) return melding(getString(R.string.scan_geen_barcode, code))
+            melding(getString(R.string.keuken_eerst_koppelen), lang = true)
+            KoppelenActivity.open(this, code)
             return
         }
+        val p = producten.firstOrNull { it.getInt("id") == treffer.product.id }
+            ?: return melding(getString(R.string.geen_keukenproduct))
+        val id = p.getInt("id")
+        val erbij = treffer.barcode.aantal
+        if (isTellen) waarden[id] = (waarden[id] ?: 0) + erbij else gescand[id] = (gescand[id] ?: 0) + erbij
+        verzoekId = null
         tril()
-        vraag(p)
+        melding(getString(R.string.keuken_scan_erbij, erbij, p.optString("eenheid"), p.optString("naam"), treffer.barcode.artikel))
+        werkBij()
     }
 
     private fun opslaan() {
-        if (waarden.isEmpty()) return
+        if (aantalProducten == 0) return
+        if (!isTellen) return verstuur(begintelling = false)
+        // Tellen: een gewone telling of een begintelling (de eerste keer staat begintelling al aan).
+        var keuze = if (eersteTelling) 1 else 0
+        AlertDialog.Builder(this)
+            .setTitle(R.string.keuken_soort_telling)
+            .setSingleChoiceItems(arrayOf(getString(R.string.keuken_gewone_telling), getString(R.string.keuken_begintelling)), keuze) { _, i -> keuze = i }
+            .setPositiveButton(R.string.opslaan) { _, _ -> verstuur(begintelling = keuze == 1) }
+            .setNegativeButton(R.string.annuleren, null)
+            .show()
+    }
+
+    private fun verstuur(begintelling: Boolean) {
         val id = verzoekId ?: Api.nieuwVerzoekId().also { verzoekId = it }
         val lijst = JSONObject()
         waarden.forEach { (pid, n) -> lijst.put(pid.toString(), n) }
         val body = JSONObject().put(if (isTellen) "waarden" else "verpakkingen", lijst)
+        if (isTellen) body.put("begintelling", begintelling)
+        else body.put("gescand", JSONObject().also { g -> gescand.forEach { (pid, n) -> g.put(pid.toString(), n) } })
         b.onderKnop.isEnabled = false
         bezig {
             try {

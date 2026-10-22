@@ -1,0 +1,68 @@
+{# Een barcode die de site nog niet kent: meteen koppelen aan een keukenproduct, met hoeveel erin zit (dat verschilt per
+   supermarkt). Gebruikt door de keukenlooplijst en Keuken inboeken: keukenKoppelVragen(code, producten, standaard_id,
+   naKoppelen(code, {product_id, aantal, omschrijving})). #}
+<div class="modal-overlay" id="kl-koppelen">
+    <div class="modal-venster">
+        <div class="modal-kop">
+            <h2 style="margin:0">Onbekende barcode</h2>
+            <button type="button" class="modal-sluiten" onclick="modalSluiten('kl-koppelen')">&times;</button>
+        </div>
+        <p class="tekst-zacht" style="margin-top:0">Barcode <strong id="kl-koppel-code"></strong> kent de site nog niet. Koppel hem één keer, dan telt hij voortaan vanzelf mee.</p>
+        <div class="veld"><label for="kl-koppel-product">Product</label><select id="kl-koppel-product"></select></div>
+        <div class="veld"><label for="kl-koppel-aantal">Hoeveel zit erin? (in de eenheid van het product)</label>
+            <input type="number" id="kl-koppel-aantal" inputmode="numeric" min="1" placeholder="bijv. 40"></div>
+        <div class="veld"><label for="kl-koppel-naam">Naam (optioneel)</label>
+            <input type="text" id="kl-koppel-naam" placeholder="bijv. AH frikandellen, doos van 40"></div>
+        <div class="veld"><label for="kl-koppel-prijs">Inkoopprijs van deze verpakking (optioneel)</label>
+            <input type="text" id="kl-koppel-prijs" inputmode="decimal" placeholder="bijv. 12,50"></div>
+        <p id="kl-koppel-fout" class="kl-melding kl-melding-fout" hidden></p>
+        <div style="display:flex; gap:0.5rem; justify-content:flex-end">
+            <button type="button" class="btn btn-rand" onclick="modalSluiten('kl-koppelen')">Annuleren</button>
+            <button type="button" class="btn btn-geel" onclick="keukenKoppelen()">Koppelen en meetellen</button>
+        </div>
+    </div>
+</div>
+
+<script>
+var keukenKoppelCode = null, keukenNaKoppelen = null;
+function keukenKoppelVragen(code, producten, standaardId, naKoppelen) {
+    keukenKoppelCode = code;
+    keukenNaKoppelen = naKoppelen;
+    document.getElementById('kl-koppel-code').textContent = code;
+    var keuze = document.getElementById('kl-koppel-product');
+    keuze.innerHTML = '';
+    producten.forEach(function (p) {
+        var o = document.createElement('option');
+        o.value = p.id;
+        o.textContent = p.naam;
+        o.selected = p.id === standaardId;
+        keuze.appendChild(o);
+    });
+    ['kl-koppel-aantal', 'kl-koppel-naam', 'kl-koppel-prijs'].forEach(function (id) { document.getElementById(id).value = ''; });
+    document.getElementById('kl-koppel-fout').hidden = true;
+    modalOpenen('kl-koppelen');
+    document.getElementById('kl-koppel-aantal').focus();
+}
+function keukenKoppelen() {
+    var fout = document.getElementById('kl-koppel-fout');
+    fetch({{ url_for('keuken_barcode_koppelen')|tojson }}, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': {{ csrf_token()|tojson }} },
+        body: JSON.stringify({
+            code: keukenKoppelCode,
+            product_id: document.getElementById('kl-koppel-product').value,
+            aantal: document.getElementById('kl-koppel-aantal').value,
+            naam: document.getElementById('kl-koppel-naam').value,
+            inkoopprijs: document.getElementById('kl-koppel-prijs').value
+        })
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (a) {
+        if (!a.ok) throw new Error(a.j.fout || 'Koppelen is niet gelukt.');
+        modalSluiten('kl-koppelen');
+        keukenNaKoppelen(a.j.code, { product_id: a.j.product_id, aantal: a.j.aantal, omschrijving: a.j.omschrijving });
+    }).catch(function (e) {
+        fout.textContent = e.message && e.message !== 'Failed to fetch' ? e.message : 'Geen verbinding: probeer het zo nog eens.';
+        fout.hidden = false;
+    });
+}
+</script>

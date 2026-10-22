@@ -37,7 +37,7 @@
                         <td>{{ t.aantal_producten }}</td>
                         <td>{{ "€ %.2f"|format(t.omzet) }}</td>
                         <td class="tabel-acties">
-                            <button type="button" class="btn btn-rand btn-klein" onclick="modalOpenen('modal-telling-{{ t.id }}')">Bekijken</button>
+                            <button type="button" class="btn btn-rand btn-klein" onclick="tellingBekijken({{ t.id }}, this)" data-titel="Telling van {{ t.datum|datum_nl }}" data-naam="{{ t.naam or '—' }}" data-pdf="{{ url_for('telling_pdf', telling_id=t.id) }}">Bekijken</button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -53,44 +53,37 @@
     {% endif %}
 </div>
 
-{% for t in tellingen %}
-<div class="modal-overlay" id="modal-telling-{{ t.id }}">
+{# Eén pop-up voor alle tellingen: de regels haalt tellingBekijken pas op als je er een opent (zie telling_regels). #}
+<div class="modal-overlay" id="modal-telling">
     <div class="modal-venster">
         <div class="modal-kop">
-            <h2 style="margin:0">Telling van {{ t.datum|datum_nl }}</h2>
-            <button type="button" class="modal-sluiten" onclick="modalSluiten('modal-telling-{{ t.id }}')">&times;</button>
+            <h2 style="margin:0" id="modal-telling-titel"></h2>
+            <button type="button" class="modal-sluiten" onclick="modalSluiten('modal-telling')">&times;</button>
         </div>
-        <p class="tekst-zacht" style="margin-top:0">Geteld door {{ t.naam or '—' }}</p>
-        {% set regels = regels_per_telling[t.id] %}
-        {% if regels %}
-        <div class="tabel-wrap" style="max-height:50vh; overflow-y:auto">
-            <table>
-                <thead>
-                    <tr><th>Product</th><th>Geteld</th><th>Verkocht</th><th>Omzet</th></tr>
-                </thead>
-                <tbody>
-                    {% for r in regels %}
-                    <tr>
-                        <td>{{ r.product_naam }}</td>
-                        <td>{{ r.geteld_aantal }} {{ r.eenheid }}</td>
-                        <td>{{ r.verkocht }} {{ r.eenheid }}</td>
-                        <td>€ {{ '%.2f'|format(r.verkocht * r.verkoopprijs) }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="leeg">Geen producten in deze telling.</p>
-        {% endif %}
+        <p class="tekst-zacht" style="margin-top:0">Geteld door <span id="modal-telling-naam"></span></p>
+        <div id="modal-telling-regels"></div>
         <div style="margin-top:1rem">
-            <a href="{{ url_for('telling_pdf', telling_id=t.id) }}" class="btn btn-rand">PDF downloaden</a>
+            <a href="#" id="modal-telling-pdf" class="btn btn-rand">PDF downloaden</a>
         </div>
     </div>
 </div>
-{% endfor %}
 
 <script>
+function tellingBekijken(id, knop) {
+    document.getElementById('modal-telling-titel').textContent = knop.dataset.titel;
+    document.getElementById('modal-telling-naam').textContent = knop.dataset.naam;
+    document.getElementById('modal-telling-pdf').href = knop.dataset.pdf;
+    var regels = document.getElementById('modal-telling-regels');
+    regels.innerHTML = '<p class="tekst-zacht">Laden…</p>';
+    modalOpenen('modal-telling');
+    fetch('/tellingen/' + id + '/regels', { credentials: 'same-origin' })
+        .then(function (antwoord) {
+            if (!antwoord.ok || antwoord.redirected) throw new Error('niet gelukt');
+            return antwoord.text();
+        })
+        .then(function (html) { regels.innerHTML = html; })
+        .catch(function () { regels.innerHTML = '<p class="leeg">Laden is niet gelukt. Probeer het nog eens.</p>'; });
+}
 (function () {
     var alles = document.getElementById('tellingen-alles');
     if (!alles) return;

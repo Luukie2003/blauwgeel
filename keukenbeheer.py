@@ -8,6 +8,7 @@ in de weekomzet en de prognose van de kantine.
 Inkoop gaat per verpakking (de besteleenheid, bijvoorbeeld een doos frikandellen van 40) en de voorraad in porties of
 stuks: 'aantal per besteleenheid' zegt hoeveel er in een verpakking zit."""
 
+import barcodes
 from helpers.producten import besteleenheid_factor, omzet_per_eenheid, verwerk_auto_inactief
 from productkaart import KEUKEN_CATEGORIE, NIET_GEARCHIVEERD
 
@@ -20,21 +21,45 @@ def keuken_producten(db, alleen_actief=True):
     ).fetchall()
 
 
-def verwerk_keuken_telling(db, waarden, naam, datum, gebruiker_id=None, opmerking=""):
+def keuken_barcodes(db):
+    """{barcode: {"product_id", "aantal", "omschrijving"}} van alle artikelen van keukenproducten, voor het scannen
+    bij het tellen en inboeken. "aantal" is in de eenheid van het product: een zak AH frikandellen van 20 is 20, een
+    doos Plus met 4 zakken van 15 is 60. Zo telt een doos van de ene supermarkt anders dan die van de andere."""
+    uit = {}
+    for a in db.execute(
+        """SELECT a.*, p.eenheid FROM artikelen a JOIN producten p ON p.id = a.product_id
+           WHERE p.categorie = ? AND (a.ean IS NOT NULL OR a.ean_omverpakking IS NOT NULL)""",
+        (KEUKEN_CATEGORIE,),
+    ).fetchall():
+        per_verpakking = a["aantal_per_verpakking"] or 1
+        if a["ean"]:
+            uit[a["ean"]] = {"product_id": a["product_id"], "aantal": per_verpakking,
+                             "omschrijving": barcodes.omschrijving(a)}
+        if a["ean_omverpakking"] and a["per_omverpakking"]:
+            uit[a["ean_omverpakking"]] = {"product_id": a["product_id"], "aantal": per_verpakking * a["per_omverpakking"],
+                                          "omschrijving": barcodes.omschrijving(a, "omverpakking")}
+    return uit
+
+
+def verwerk_keuken_telling(db, waarden, naam, datum, gebruiker_id=None, opmerking="", begintelling=False):
     """waarden: {product_id: geteld}. Legt de keukentelling vast, zet de voorraad op het getelde aantal en boekt het
-    verschil als verkocht (minder) of correctie (meer). Geeft het id van de telling, of None als er niets was."""
+    verschil als verkocht (minder) of correctie (meer). Geeft het id van de telling, of None als er niets was.
+
+    begintelling: de eerste telling (of opnieuw beginnen als de voorraad op de site niet meer klopt). Dan is het
+    verschil geen verkoop maar een correctie, ook als er minder ligt: zo komt er geen omzet bij die nooit verkocht is."""
     producten = {p["id"]: p for p in keuken_producten(db, alleen_actief=False)}
     waarden = {pid: geteld for pid, geteld in waarden.items() if pid in producten and geteld >= 0}
     if not waarden:
         return None
     telling_id = db.execute(
-        "INSERT INTO keuken_tellingen (datum, naam, gebruiker_id, opmerking) VALUES (?, ?, ?, ?)",
-        (datum, naam, gebruiker_id, opmerking or None),
+        "INSERT INTO keuken_tellingen (datum, naam, gebruiker_id, opmerking, begintelling) VALUES (?, ?, ?, ?, ?)",
+        (datum, naam, gebruiker_id, opmerking or None, 1 if begintelling else 0),
     ).lastrowid
     for pid, geteld in waarden.items():
         p = producten[pid]
         verschil = geteld - p["voorraad"]
-        verkocht, correctie = max(0, -verschil), max(0, verschil)
+        # Bij een begintelling is ook minder een correctie (negatief), geen verkoop.
+        verkocht, correctie = (0, verschil) if begintelling else (max(0, -verschil), max(0, verschil))
         db.execute(
             """INSERT INTO keuken_telling_regels
                (telling_id, product_id, voorraad_voor, geteld_aantal, verkocht, correctie, verkoopprijs)
@@ -44,22 +69,35 @@ def verwerk_keuken_telling(db, waarden, naam, datum, gebruiker_id=None, opmerkin
         db.execute("UPDATE producten SET voorraad = ? WHERE id = ?", (geteld, pid))
         verwerk_auto_inactief(db, pid, geteld)
         if verkocht or correctie:
+            soort = "Begintelling" if begintelling else ("Verkocht" if verkocht else "Correctie")
             db.execute(
                 """INSERT INTO mutaties (product_id, type, aantal, datum, naam, gebruiker_id, opmerking)
                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (pid, "uit" if verkocht else "in", verkocht or correctie, datum, naam, gebruiker_id,
-                 f"{'Verkocht' if verkocht else 'Correctie'} (keukentelling #{telling_id})"),
+                (pid, "uit" if verkocht or correctie < 0 else "in", verkocht or abs(correctie), datum, naam,
+                 gebruiker_id, f"{soort} (keukentelling #{telling_id})"),
             )
     db.commit()
     return telling_id
 
 
-def boek_keuken_in(db, verpakkingen, naam, datum, gebruiker_id=None, inkoopprijzen=None):
+def boek_keuken_in(db, verpakkingen, naam, datum, gebruiker_id=None, inkoopprijzen=None, gescand=None):
     """verpakkingen: {product_id: aantal verpakkingen}. Telt per product aantal maal 'aantal per besteleenheid' bij de
     voorraad op. inkoopprijzen: {product_id: nieuwe inkoopprijs per verpakking} (optioneel, alleen als die anders is).
-    Geeft het aantal ingeboekte producten."""
+    gescand: {product_id: stuks} uit het scannen van barcodes; hoeveel er in een doos zit komt dan van het artikel
+    (per supermarkt anders), niet van de besteleenheid. Geeft het aantal ingeboekte producten."""
     producten = {p["id"]: p for p in keuken_producten(db)}
-    aantal = 0
+    ingeboekt = set()
+    for pid, stuks in (gescand or {}).items():
+        p = producten.get(pid)
+        if p is None or stuks <= 0:
+            continue
+        db.execute("UPDATE producten SET voorraad = voorraad + ? WHERE id = ?", (stuks, pid))
+        db.execute(
+            """INSERT INTO mutaties (product_id, type, aantal, datum, naam, gebruiker_id, opmerking)
+               VALUES (?, 'in', ?, ?, ?, ?, ?)""",
+            (pid, stuks, datum, naam, gebruiker_id, f"Ingeboekt (keuken, gescand): {stuks} {p['eenheid'].lower()}"),
+        )
+        ingeboekt.add(pid)
     for pid, n in verpakkingen.items():
         p = producten.get(pid)
         if p is None or n <= 0:
@@ -72,7 +110,7 @@ def boek_keuken_in(db, verpakkingen, naam, datum, gebruiker_id=None, inkoopprijz
             (pid, stuks, datum, naam, gebruiker_id,
              f"Ingeboekt (keuken): {n} {(p['besteleenheid'] or p['eenheid']).lower()}"),
         )
-        aantal += 1
+        ingeboekt.add(pid)
     for pid, prijs in (inkoopprijzen or {}).items():
         p = producten.get(pid)
         if p is None or prijs is None or abs(p["inkoopprijs"] - prijs) < 0.001:
@@ -84,7 +122,7 @@ def boek_keuken_in(db, verpakkingen, naam, datum, gebruiker_id=None, inkoopprijz
             (pid, p["inkoopprijs"], prijs, datum, naam, gebruiker_id),
         )
     db.commit()
-    return aantal
+    return len(ingeboekt)
 
 
 def zet_keuken_prijzen(db, prijzen, naam, datum, gebruiker_id=None):

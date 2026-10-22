@@ -1,0 +1,21 @@
+{% if regels %}
+<div class="tabel-wrap" style="max-height:50vh; overflow-y:auto">
+    <table>
+        <thead>
+            <tr><th>Product</th><th>Geteld</th><th>Verkocht</th><th>Omzet</th></tr>
+        </thead>
+        <tbody>
+            {% for r in regels %}
+            <tr>
+                <td>{{ r.product_naam }}</td>
+                <td>{{ r.geteld_aantal }} {{ r.eenheid }}</td>
+                <td>{{ r.verkocht }} {{ r.eenheid }}</td>
+                <td>€ {{ '%.2f'|format(r.verkocht * r.verkoopprijs) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="leeg">Geen producten in deze telling.</p>
+{% endif %}

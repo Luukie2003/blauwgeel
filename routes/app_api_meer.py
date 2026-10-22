@@ -439,7 +439,9 @@ def register_routes(app):
             {"id": t["id"], "datum": t["datum"], "naam": t["naam"], "omzet": t["omzet"], "producten": t["aantal_producten"]}
             for t in keuken_tellingen(db, limiet=5)
         ]
-        return jsonify({"producten": producten, "frituurvet": _frituurvet(db), "tellingen": tellingen})
+        eerste = db.execute("SELECT 1 FROM keuken_tellingen LIMIT 1").fetchone() is None
+        return jsonify({"producten": producten, "frituurvet": _frituurvet(db), "tellingen": tellingen,
+                        "eerste_telling": eerste})
 
     def _aantallen(waarden):
         if not isinstance(waarden, dict):
@@ -453,29 +455,37 @@ def register_routes(app):
 
     @app.route("/api/app/keuken/tellen", methods=["POST"])
     def api_app_keuken_tellen():
-        """Keukentelling: wat er minder is dan de voorraad, is verkocht (zie verwerk_keuken_telling)."""
+        """Keukentelling: wat er minder is dan de voorraad, is verkocht (zie verwerk_keuken_telling). Met
+        "begintelling": true zet hij alleen de voorraad goed."""
         data = _data()
         waarden = _aantallen(data.get("waarden"))
         opmerking = str(data.get("opmerking") or "").strip()[:500]
+        begintelling = data.get("begintelling") is True
 
         def actie(db):
             telling_id = verwerk_keuken_telling(
-                db, waarden, session.get("gebruiker_naam"), now_str(), session.get("gebruiker_id"), opmerking
+                db, waarden, session.get("gebruiker_naam"), now_str(), session.get("gebruiker_id"), opmerking,
+                begintelling=begintelling,
             )
             if telling_id is None:
                 return {"fout": "leeg", "melding": "Geen aantallen ingevuld: er is niets geteld."}, 400
+            soort = "Begintelling" if begintelling else "Keukentelling"
             return {"telling_id": telling_id,
-                    "melding": f"Keukentelling opgeslagen ({len(waarden)} {'product' if len(waarden) == 1 else 'producten'})."}, 200
+                    "melding": f"{soort} opgeslagen ({len(waarden)} {'product' if len(waarden) == 1 else 'producten'})."}, 200
 
         return eenmalig(actie)
 
     @app.route("/api/app/keuken/inboeken", methods=["POST"])
     def api_app_keuken_inboeken():
-        """Keuken inboeken per verpakking (een doos frikandellen van 40: 1), zoals Keuken > Inboeken op de site."""
-        verpakkingen = {pid: n for pid, n in _aantallen(_data().get("verpakkingen")).items() if n > 0}
+        """Keuken inboeken per verpakking (een doos frikandellen van 40: 1), zoals Keuken > Inboeken op de site, en/of
+        "gescand": {product_id: stuks} uit gescande barcodes (wat er in een doos zit, verschilt per supermarkt)."""
+        data = _data()
+        verpakkingen = {pid: n for pid, n in _aantallen(data.get("verpakkingen")).items() if n > 0}
+        gescand = {pid: n for pid, n in _aantallen(data.get("gescand")).items() if n > 0}
 
         def actie(db):
-            aantal = boek_keuken_in(db, verpakkingen, session.get("gebruiker_naam"), now_str(), session.get("gebruiker_id"))
+            aantal = boek_keuken_in(db, verpakkingen, session.get("gebruiker_naam"), now_str(), session.get("gebruiker_id"),
+                                    gescand=gescand)
             if not aantal:
                 return {"fout": "leeg", "melding": "Niets ingevuld om in te boeken."}, 400
             return {"melding": f"{aantal} {'product' if aantal == 1 else 'producten'} ingeboekt."}, 200

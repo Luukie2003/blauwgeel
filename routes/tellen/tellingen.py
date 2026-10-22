@@ -24,26 +24,25 @@ def register_routes(app):
                ORDER BY t.id DESC"""
         ).fetchall()
 
-        # Per telling de regels erbij, voor de "Bekijken"-pop-up -- scheelt
-        # een aparte pagina-navigatie voor een snel kijkje.
-        # Alle regels in 1 query (i.p.v. 1 query per telling): bij tientallen tellingen scheelt dat
-        # honderden aparte database-aanroepen per bezoek.
-        regels_per_telling = {t["id"]: [] for t in tellingen}
-        for regel in db.execute(
-            """SELECT tr.*, p.naam AS product_naam, p.eenheid
-               FROM telling_regels tr JOIN producten p ON p.id = tr.product_id
-               ORDER BY p.categorie, p.naam"""
-        ).fetchall():
-            regels_per_telling[regel["telling_id"]].append(regel)
-
         # De verwachting, de trend en de omzet per week komen uit het voorspelmodel en dat rekent op de server soms
         # enkele seconden. Die haalt de pagina daarom na het laden apart op (zie tellingen_cijfers), zodat de
         # tellingen zelf meteen klaarstaan.
         return render_template(
             "pda_tellingen.html" if g.get("weergave_modus") == "pda" else "tellingen_overzicht.html",
             tellingen=tellingen,
-            regels_per_telling=regels_per_telling,
         )
+
+    @app.route("/tellingen/<int:telling_id>/regels")
+    def telling_regels(telling_id):
+        """De regels van één telling voor de "Bekijken"-pop-up, pas opgehaald als je hem opent. Vroeger stonden de regels
+        van alle tellingen ooit al in de pagina: na een seizoen was dat een paar MB, wat op een telefoon traag laadt."""
+        regels = get_db().execute(
+            """SELECT tr.*, p.naam AS product_naam, p.eenheid
+               FROM telling_regels tr JOIN producten p ON p.id = tr.product_id
+               WHERE tr.telling_id = ? ORDER BY p.categorie, p.naam""",
+            (telling_id,),
+        ).fetchall()
+        return render_template("_telling_regels.html", regels=regels)
 
     @app.route("/tellingen/cijfers")
     def tellingen_cijfers():

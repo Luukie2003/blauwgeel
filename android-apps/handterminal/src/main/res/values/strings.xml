@@ -547,8 +547,13 @@
     <string name="laatste_keukentellingen">Laatste keukentellingen</string>
     <string name="keukenprijzen">Keukenprijzen aanpassen</string>
     <string name="keuken_instellingen">Instellingen (frituurvet)</string>
-    <string name="keukentelling_uitleg">Tel wat er nu is: wat minder is dan de voorraad, telt als verkocht. Tik op een product of scan het. Wat je niet invult, blijft zoals het is.</string>
-    <string name="keuken_inboeken_uitleg">Vul per product in hoeveel verpakkingen er binnenkwamen (bijv. 2 dozen). Tik op een product of scan het.</string>
+    <string name="keukentelling_uitleg">Tel wat er nu is: wat minder is dan de voorraad, telt als verkocht. Tik op een product voor losse stuks, of scan een volle doos of zak: wat erin zit telt er meteen bij. Wat je niet invult, blijft zoals het is.</string>
+    <string name="keuken_inboeken_uitleg">Scan wat er binnenkomt: de app weet per barcode hoeveel erin zit, ook als dat per supermarkt verschilt. Zonder barcode: tik op een product en vul in hoeveel verpakkingen (bijv. 2 dozen).</string>
+    <string name="keuken_scan_erbij">+%1$d %2$s %3$s (%4$s)</string>
+    <string name="keuken_eerst_koppelen">Onbekende barcode: koppel hem aan het product (met hoeveel erin zit) en scan hem daarna nog een keer.</string>
+    <string name="keuken_soort_telling">Wat voor telling is dit?</string>
+    <string name="keuken_gewone_telling">Gewone telling (minder = verkocht)</string>
+    <string name="keuken_begintelling">Begintelling (alleen de voorraad goed zetten)</string>
     <string name="overig">Overig</string>
     <string name="voorraad_nu">voorraad %1$d %2$s</string>
     <string name="hoeveel_nu">%1$s: hoeveel is er nu?</string>

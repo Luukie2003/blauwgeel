@@ -8,6 +8,10 @@
     ingeboekt), telt als verkocht. Laat een veld leeg om dat product over te slaan. Deze telling staat los van de gewone telling.
 </p>
 {% if producten %}
+<div class="kaart" style="display:flex; flex-wrap:wrap; gap:0.8rem; align-items:center; justify-content:space-between">
+    <span>💡 Liever product voor product, en volle dozen scannen?</span>
+    <a href="{{ url_for('keuken_tellen_lopen') }}" class="btn btn-geel">Tellen met de looplijst &rarr;</a>
+</div>
 <form method="post" class="kaart">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="tabel-wrap">
@@ -25,6 +29,11 @@
             </tbody>
         </table>
     </div>
+    <label style="display:flex; gap:0.5rem; align-items:flex-start; margin-top:0.9rem">
+        <input type="checkbox" name="begintelling" value="1" {{ 'checked' if eerste_telling }}>
+        <span><strong>Begintelling</strong> &mdash; zet alleen de voorraad goed; wat er minder ligt telt niet als verkocht.
+            Gebruik dit de eerste keer, of als de voorraad op de site niet meer klopt.</span>
+    </label>
     <div class="veld" style="margin-top:0.8rem"><label for="opmerking">Opmerking (optioneel)</label><input type="text" id="opmerking" name="opmerking"></div>
     <button type="submit" class="btn btn-geel">Telling opslaan</button>
 </form>

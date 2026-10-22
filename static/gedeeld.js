@@ -647,3 +647,52 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
+
+// ---------- Barcodes scannen (keuken tellen en inboeken) ----------
+// Dezelfde vaste vorm als barcodes.normaliseer op de server: alleen cijfers, een UPC-A van 12 cijfers met een 0 ervoor,
+// een doos-code van 14 cijfers die met 0 begint zonder die 0. null als het geen getal is.
+function barcodeNormaliseren(tekst) {
+    var code = String(tekst || "").replace(/\s+/g, "");
+    if (!/^\d+$/.test(code)) return null;
+    if (code.length === 12) code = "0" + code;
+    if (code.length === 14 && code.charAt(0) === "0") code = code.slice(1);
+    return code;
+}
+
+// De camera als barcodescanner, waar de browser dat kan (BarcodeDetector: Chrome op Android). De knop blijft verborgen
+// als het niet kan; wissel() zet de camera aan of uit, en opGevonden(code) krijgt de eerste barcode die hij ziet.
+function cameraScanner(video, knop, opGevonden, opFout) {
+    var detector = null, stream = null;
+    if ("BarcodeDetector" in window) {
+        BarcodeDetector.getSupportedFormats().then(function (formaten) {
+            var nodig = ["ean_13", "ean_8", "upc_a", "itf"].filter(function (f) { return formaten.indexOf(f) >= 0; });
+            if (!nodig.length) return;
+            detector = new BarcodeDetector({ formats: nodig });
+            knop.hidden = false;
+        }).catch(function () {});
+    }
+    function stoppen() {
+        if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+        stream = null;
+        video.hidden = true;
+    }
+    function zoek() {
+        if (!stream) return;
+        detector.detect(video).then(function (codes) {
+            if (codes.length) { stoppen(); opGevonden(codes[0].rawValue); }
+            else setTimeout(zoek, 250);
+        }).catch(function () { setTimeout(zoek, 500); });
+    }
+    return {
+        wissel: function () {
+            if (stream) { stoppen(); return; }
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (s) {
+                stream = s;
+                video.srcObject = s;
+                video.hidden = false;
+                video.play();
+                zoek();
+            }).catch(function () { if (opFout) opFout(); });
+        }
+    };
+}

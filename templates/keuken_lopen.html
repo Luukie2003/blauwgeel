@@ -1,0 +1,311 @@
+{% extends basis_template %}
+{% block titel %}Keuken tellen (looplijst){% endblock %}
+{% block inhoud %}
+{# De looplijst van de keuken (zie keuken_tellen_lopen in routes/keuken.py): product voor product, losse stuks met de
+   hand en volle dozen of zakken met een scan. De stand staat in de browser (localStorage), dus zonder bereik ben je
+   niets kwijt; pas bij "Opslaan" gaat de telling naar de site. #}
+<p class="subtitel">
+    <span id="kl-positie"></span>
+    &nbsp;&middot;&nbsp; <a href="#" onclick="klOpnieuw(); return false;">Opnieuw beginnen</a>
+    &nbsp;&middot;&nbsp; <a href="{{ url_for('keuken_tellen') }}">Terug naar keuken tellen</a>
+</p>
+
+<div class="kaart loop-kaart" id="kl-tellen">
+    <div class="loop-voortgang"><div class="loop-voortgang-balk" id="kl-balk"></div></div>
+    <span class="badge badge-uit loop-fase-badge" id="kl-begin-badge" hidden>Begintelling</span>
+    <img id="kl-foto" alt="" class="product-thumb-groot" hidden>
+    <div class="loop-categorie" id="kl-subcategorie"></div>
+    <h1 class="loop-product" id="kl-naam"></h1>
+    <p class="tekst-zacht">Op de site: <span id="kl-voorraad"></span></p>
+
+    <input type="number" id="loop-invoer" inputmode="numeric" min="0" class="loop-invoer" autofocus
+           aria-label="Geteld aantal">
+
+    <div id="kl-scans" class="kl-scans"></div>
+
+    <div class="loop-snelknoppen">
+        <button type="button" class="btn btn-rand loop-snelknop" onclick="klNulEnVolgende()">0</button>
+        <button type="button" class="btn btn-rand loop-snelknop" onclick="klAanpassen(-1)">−1</button>
+        <button type="button" class="btn btn-rand loop-snelknop" onclick="klAanpassen(1)">+1</button>
+        <button type="button" class="btn btn-rand loop-snelknop" onclick="klAanpassen(5)">+5</button>
+        <button type="button" class="btn btn-rand loop-snelknop loop-snelknop-breed" id="kl-doosknop" hidden
+                onclick="klAanpassen(klHuidig().factor)"></button>
+        <button type="button" class="btn btn-rand loop-snelknop" onclick="rekenmachineOpenen()" title="Rekenmachine" aria-label="Rekenmachine">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h.01"/><path d="M12 11h.01"/><path d="M16 11h.01"/><path d="M8 15h.01"/><path d="M12 15h.01"/><path d="M16 15h.01"/><path d="M8 18h8"/></svg>
+        </button>
+    </div>
+
+    <form class="kl-scanbalk" onsubmit="klScanVeld(); return false;">
+        <label for="kl-scan" class="tekst-zacht">Volle doos of zak? Scan de barcode:</label>
+        <div style="display:flex; flex-wrap:wrap; gap:0.4rem">
+            <input type="text" id="kl-scan" inputmode="numeric" autocomplete="off" placeholder="Barcode" style="flex:1; min-width:8rem">
+            <button type="submit" class="btn btn-rand">Tel erbij</button>
+            <button type="button" class="btn btn-rand" id="kl-camera" hidden onclick="klCameraStarten()">Camera</button>
+        </div>
+        <video id="kl-video" playsinline muted hidden style="width:100%; margin-top:0.5rem; border-radius:var(--radius)"></video>
+    </form>
+    <p id="kl-melding" class="kl-melding" hidden></p>
+
+    <div class="loop-knoppen">
+        <button type="button" class="btn btn-rand loop-btn-klein" id="kl-vorige" onclick="klStap(-1)">&larr;&nbsp;Vorige</button>
+        <button type="button" class="btn btn-geel loop-btn-groot" id="kl-volgende" onclick="klStap(1)">Volgende →</button>
+    </div>
+</div>
+
+{# Het controlescherm: alles op een rij, nog aan te passen, en dan in één keer opslaan. #}
+<div class="kaart" id="kl-controle" hidden>
+    <h2 style="margin-top:0">Controleren en opslaan</h2>
+    <form method="post" action="{{ url_for('keuken_tellen') }}" id="kl-formulier">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="bron" value="looplijst">
+        <div class="tabel-wrap">
+            <table>
+                <thead><tr><th>Product</th><th style="text-align:right">Op de site</th><th>Geteld</th><th style="text-align:right">Verschil</th></tr></thead>
+                <tbody id="kl-regels"></tbody>
+            </table>
+        </div>
+        <label style="display:flex; gap:0.5rem; align-items:flex-start; margin:0.9rem 0">
+            <input type="checkbox" name="begintelling" value="1" id="kl-begintelling" onchange="klBeginWisselen(this.checked)">
+            <span><strong>Begintelling</strong> &mdash; zet alleen de voorraad goed. Wat er minder ligt dan op de site
+                staat, telt dan niet als verkocht. Gebruik dit de eerste keer, of als de voorraad op de site niet meer klopt.</span>
+        </label>
+        <div class="veld"><label for="kl-opmerking">Opmerking (optioneel)</label><input type="text" id="kl-opmerking" name="opmerking"></div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+            <button type="button" class="btn btn-rand" onclick="klTerugNaarTellen()">&larr; Terug naar de looplijst</button>
+            <button type="submit" class="btn btn-geel">Telling opslaan</button>
+        </div>
+        <p class="tekst-zacht">Een leeg veld slaat dat product over.</p>
+    </form>
+</div>
+
+{% include '_keuken_koppelen.html' %}
+{% include '_rekenmachine.html' %}
+
+<script>
+var KL_PRODUCTEN = {{ producten|tojson }};
+var KL_BARCODES = {{ barcodes|tojson }};
+var KL_SLEUTEL = 'kantine-keuken-loop';
+
+// De stand: welk product, wat er per product geteld is en welke scans erbij horen.
+var kl = { index: 0, waarden: {}, scans: {}, begintelling: {{ 'true' if eerste_telling else 'false' }}, controle: false };
+try {
+    var bewaard = JSON.parse(localStorage.getItem(KL_SLEUTEL) || 'null');
+    if (bewaard && bewaard.waarden) kl = Object.assign(kl, bewaard);
+} catch (e) { /* geen of kapotte stand: gewoon vooraan beginnen */ }
+if (kl.index >= KL_PRODUCTEN.length) kl.index = 0;
+
+function klBewaren() {
+    try { localStorage.setItem(KL_SLEUTEL, JSON.stringify(kl)); } catch (e) { /* privénavigatie: dan niet bewaren */ }
+}
+
+function klHuidig() { return KL_PRODUCTEN[kl.index]; }
+function klEenheid(p) { return (p.eenheid || 'stuks').toLowerCase(); }
+
+function klToon() {
+    var p = klHuidig();
+    document.getElementById('kl-positie').textContent = 'Product ' + (kl.index + 1) + ' van ' + KL_PRODUCTEN.length;
+    document.getElementById('kl-balk').style.width = Math.round(kl.index / KL_PRODUCTEN.length * 100) + '%';
+    document.getElementById('kl-begin-badge').hidden = !kl.begintelling;
+    var foto = document.getElementById('kl-foto');
+    foto.hidden = !p.foto;
+    if (p.foto) foto.src = p.foto;
+    document.getElementById('kl-subcategorie').textContent = p.subcategorie;
+    document.getElementById('kl-naam').textContent = p.naam;
+    document.getElementById('kl-voorraad').textContent = p.voorraad + ' ' + klEenheid(p);
+    var veld = document.getElementById('loop-invoer');
+    veld.value = kl.waarden[p.id] !== undefined ? kl.waarden[p.id] : '';
+    veld.placeholder = 'Aantal ' + klEenheid(p);
+    var doos = document.getElementById('kl-doosknop');
+    doos.hidden = !(p.factor > 1);
+    doos.textContent = '+1 ' + (p.besteleenheid || 'doos') + ' (' + p.factor + ')';
+    document.getElementById('kl-vorige').disabled = kl.index === 0;
+    document.getElementById('kl-volgende').textContent = kl.index === KL_PRODUCTEN.length - 1 ? 'Bekijken en opslaan →' : 'Volgende →';
+    klToonScans();
+    klMelding('');
+}
+
+function klToonScans() {
+    var p = klHuidig();
+    var vak = document.getElementById('kl-scans');
+    vak.innerHTML = '';
+    (kl.scans[p.id] || []).forEach(function (scan, i) {
+        var chip = document.createElement('span');
+        chip.className = 'kl-scan-chip';
+        chip.textContent = '+' + scan.aantal + ' ' + scan.omschrijving + ' ';
+        var weg = document.createElement('button');
+        weg.type = 'button';
+        weg.textContent = '×';
+        weg.setAttribute('aria-label', 'Scan weghalen');
+        weg.onclick = function () { klScanWeg(i); };
+        chip.appendChild(weg);
+        vak.appendChild(chip);
+    });
+}
+
+function klZet(waarde) {
+    var p = klHuidig();
+    if (waarde === '' || waarde === null || isNaN(waarde)) delete kl.waarden[p.id];
+    else kl.waarden[p.id] = Math.max(0, Math.round(waarde));
+    document.getElementById('loop-invoer').value = kl.waarden[p.id] !== undefined ? kl.waarden[p.id] : '';
+    klBewaren();
+}
+
+function klAanpassen(delta) {
+    var huidig = parseInt(document.getElementById('loop-invoer').value, 10);
+    klZet((isNaN(huidig) ? 0 : huidig) + delta);
+    document.getElementById('loop-invoer').focus();
+}
+
+function klStap(richting) {
+    clearTimeout(klTypTimer);
+    klZet(document.getElementById('loop-invoer').value === '' ? '' : parseInt(document.getElementById('loop-invoer').value, 10));
+    if (richting > 0 && kl.index === KL_PRODUCTEN.length - 1) { klNaarControle(); return; }
+    kl.index = Math.min(Math.max(0, kl.index + richting), KL_PRODUCTEN.length - 1);
+    klBewaren();
+    klToon();
+    window.scrollTo(0, 0);
+    document.getElementById('loop-invoer').focus();
+}
+
+function klNulEnVolgende() { klZet(0); klStap(1); }
+
+function klMelding(tekst, fout) {
+    var m = document.getElementById('kl-melding');
+    m.hidden = !tekst;
+    m.textContent = tekst;
+    m.classList.toggle('kl-melding-fout', !!fout);
+}
+
+// ---------- Scannen ----------
+function klScan(tekst) {
+    var code = barcodeNormaliseren(tekst);
+    if (!code || code.length < 8) { klMelding('Dat is geen barcode.', true); return; }
+    var gevonden = KL_BARCODES[code];
+    if (!gevonden) { klKoppelVragen(code); return; }
+    klZet(document.getElementById('loop-invoer').value === '' ? '' : parseInt(document.getElementById('loop-invoer').value, 10));
+    var index = KL_PRODUCTEN.findIndex(function (p) { return p.id === gevonden.product_id; });
+    if (index < 0) { klMelding('Deze barcode hoort bij een product dat niet (meer) actief is in de keuken.', true); return; }
+    var verplaatst = index !== kl.index;
+    kl.index = index;
+    var p = klHuidig();
+    kl.waarden[p.id] = (kl.waarden[p.id] || 0) + gevonden.aantal;
+    (kl.scans[p.id] = kl.scans[p.id] || []).push({ aantal: gevonden.aantal, omschrijving: gevonden.omschrijving });
+    klBewaren();
+    klToon();
+    klMelding('+' + gevonden.aantal + ' ' + klEenheid(p) + (verplaatst ? ' bij ' + p.naam + ' (daar ben je nu)' : '') + '.');
+}
+
+function klScanWeg(i) {
+    var p = klHuidig();
+    var scan = (kl.scans[p.id] || []).splice(i, 1)[0];
+    if (scan) kl.waarden[p.id] = Math.max(0, (kl.waarden[p.id] || 0) - scan.aantal);
+    klBewaren();
+    klToon();
+}
+
+function klScanVeld() {
+    var veld = document.getElementById('kl-scan');
+    if (veld.value.trim()) klScan(veld.value);
+    veld.value = '';
+}
+
+// Een handscanner "typt" de barcode in het veld dat de focus heeft en drukt op Enter. Staat de focus op het
+// aantal, dan is een getal van 8 cijfers of meer een scan en geen aantal.
+// Wat je typt wordt pas na een korte pauze bewaard: een scanner typt zo snel dat hij al op Enter drukt voordat de
+// cijfers van de barcode als aantal worden opgeslagen.
+var klTypTimer = null;
+document.getElementById('loop-invoer').addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    clearTimeout(klTypTimer);
+    var tekst = this.value;
+    if (tekst.replace(/\D/g, '').length >= 8) {
+        var p = klHuidig();
+        this.value = kl.waarden[p.id] !== undefined ? kl.waarden[p.id] : '';
+        klScan(tekst);
+    } else {
+        klStap(1);
+    }
+});
+document.getElementById('loop-invoer').addEventListener('input', function () {
+    var veld = this;
+    clearTimeout(klTypTimer);
+    klTypTimer = setTimeout(function () {
+        if (veld.value.replace(/\D/g, '').length < 8) klZet(veld.value === '' ? '' : parseInt(veld.value, 10));
+    }, 600);
+});
+
+// De camera als scanner, waar de browser dat kan (zie cameraScanner in gedeeld.js).
+var klCamera = cameraScanner(document.getElementById('kl-video'), document.getElementById('kl-camera'), klScan,
+    function () { klMelding('De camera kon niet worden geopend.', true); });
+function klCameraStarten() { klCamera.wissel(); }
+
+// ---------- Onbekende barcode koppelen (zie _keuken_koppelen.html) ----------
+function klKoppelVragen(code) {
+    keukenKoppelVragen(code, KL_PRODUCTEN, klHuidig().id, function (code, gegevens) {
+        KL_BARCODES[code] = gegevens;
+        klScan(code);
+    });
+}
+
+// ---------- Controleren en opslaan ----------
+function klNaarControle() {
+    kl.controle = true;
+    klBewaren();
+    var regels = document.getElementById('kl-regels');
+    regels.innerHTML = '';
+    KL_PRODUCTEN.forEach(function (p) {
+        var tr = document.createElement('tr');
+        var geteld = kl.waarden[p.id];
+        tr.innerHTML = '<td></td><td style="text-align:right"></td><td><input type="number" inputmode="numeric" min="0" style="width:6rem"></td><td style="text-align:right"></td>';
+        tr.children[0].textContent = p.naam;
+        tr.children[1].textContent = p.voorraad + ' ' + klEenheid(p);
+        var veld = tr.querySelector('input');
+        veld.name = 'geteld_' + p.id;
+        veld.setAttribute('aria-label', 'Geteld ' + p.naam);
+        veld.value = geteld !== undefined ? geteld : '';
+        function verschil() {
+            var cel = tr.children[3];
+            if (veld.value === '') { cel.textContent = '—'; cel.className = 'tekst-zacht'; return; }
+            var v = parseInt(veld.value, 10) - p.voorraad;
+            cel.textContent = (v > 0 ? '+' : '') + v;
+            cel.className = v < 0 && !kl.begintelling ? '' : 'tekst-zacht';
+            cel.title = v < 0 ? (kl.begintelling ? 'Begintelling: geen verkoop' : 'Telt als verkocht') : '';
+        }
+        veld.addEventListener('input', function () {
+            if (veld.value === '') delete kl.waarden[p.id]; else kl.waarden[p.id] = parseInt(veld.value, 10);
+            klBewaren();
+            verschil();
+        });
+        verschil();
+        regels.appendChild(tr);
+    });
+    document.getElementById('kl-begintelling').checked = kl.begintelling;
+    document.getElementById('kl-tellen').hidden = true;
+    document.getElementById('kl-controle').hidden = false;
+    document.getElementById('kl-positie').textContent = 'Controleren';
+    window.scrollTo(0, 0);
+}
+function klBeginWisselen(aan) {
+    kl.begintelling = aan;
+    klBewaren();
+    document.querySelectorAll('#kl-regels input').forEach(function (v) { v.dispatchEvent(new Event('input')); });
+}
+function klTerugNaarTellen() {
+    kl.controle = false;
+    klBewaren();
+    document.getElementById('kl-controle').hidden = true;
+    document.getElementById('kl-tellen').hidden = false;
+    klToon();
+}
+function klOpnieuw() {
+    toonBevestiging('Opnieuw beginnen? Wat je tot nu toe hebt geteld, wordt gewist.', function () {
+        try { localStorage.removeItem(KL_SLEUTEL); } catch (e) {}
+        window.location.reload();
+    }, { ja: 'Ja, opnieuw', nee: 'Nee, verder tellen' });
+}
+
+klToon();
+if (kl.controle) klNaarControle();
+</script>
+{% endblock %}

@@ -6,8 +6,20 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.63.0"
+HUIDIGE_VERSIE = "1.64.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.64.0",
+        "datum": "23 oktober 2026",
+        "punten": [
+            "Keuken tellen met de looplijst (Keuken → Tellen → Tellen met de looplijst): product voor product, net als de gewone looplijst, met de rekenmachine. Losse stuks tel je met de hand; een volle doos of zak scan je en wat erin zit telt er meteen bij. Een AH-doos en een Plus-doos tellen elk hun eigen aantal. Een onbekende barcode koppel je ter plekke, met hoeveel erin zit. Aan het eind controleer je alles op één scherm en sla je het op. Valt het bereik weg, dan ben je niets kwijt: de stand blijft op je telefoon bewaard.",
+            "Begintelling voor de keuken: zet alleen de voorraad goed, zonder dat het verschil als verkocht telt. Bij de allereerste keukentelling staat hij al aan. Ook in de handterminal-app: bij het opslaan kies je een gewone telling of een begintelling.",
+            "Keuken inboeken door te scannen: scan wat er binnenkomt en de site weet per barcode hoeveel erin zit, ook als dat per supermarkt verschilt. Zonder barcode vul je nog steeds het aantal verpakkingen in.",
+            "Handterminal-app 2.9: bij de keukentelling en Keuken inboeken telt een gescande doos of zak meteen mee (je hoeft niets meer in te tikken). Bij een onbekende barcode opent het koppelen.",
+            "De pagina Tellingen laadt sneller: de producten van een telling worden pas opgehaald als je op Bekijken tikt.",
+            "Op de telefoon vallen formulieren niet meer rechts buiten beeld, onder meer bij Boeken, een nieuwe bestelling, Levering inboeken en Tellen.",
+        ],
+    },
     {
         "versie": "1.63.0",
         "datum": "20 oktober 2026",
@@ -1150,7 +1162,7 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.14.0", "sinds": "0.1.0", "laatst": "1.58.0",
+    {"naam": "Voorraad & tellen", "versie": "1.14.1", "sinds": "0.1.0", "laatst": "1.64.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.13.0", "sinds": "0.4.0", "laatst": "1.57.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
@@ -1158,8 +1170,8 @@ MODULES = [
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
     {"naam": "Geld (kassa & kluis)", "versie": "1.4.0", "sinds": "1.0.0", "laatst": "1.45.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
-    {"naam": "Keuken", "versie": "1.3.0", "sinds": "1.6.0", "laatst": "1.45.0",
-     "inhoud": "Keukenvoorraad met een eigen telling, inboeken en prijzen, en de herinnering voor het frituurvet"},
+    {"naam": "Keuken", "versie": "1.4.0", "sinds": "1.6.0", "laatst": "1.64.0",
+     "inhoud": "Keukenvoorraad met een eigen telling (ook als looplijst met dozen scannen, en een begintelling), inboeken (ook door te scannen) en prijzen, en de herinnering voor het frituurvet"},
     {"naam": "Kantine-tv", "versie": "1.21.0", "sinds": "1.10.1", "laatst": "1.63.0",
      "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
@@ -1170,7 +1182,7 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.11.0", "sinds": "1.53.0", "laatst": "1.63.0",
+    {"naam": "Handterminal-app", "versie": "0.12.0", "sinds": "1.53.0", "laatst": "1.64.0",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst en dia's aan of uit), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.4", "sinds": "0.1.0", "laatst": "1.58.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
@@ -1180,6 +1192,6 @@ MODULES = [
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
-    {"naam": "Techniek & beveiliging", "versie": "1.9.1", "sinds": "1.1.0", "laatst": "1.58.1",
+    {"naam": "Techniek & beveiliging", "versie": "1.9.2", "sinds": "1.1.0", "laatst": "1.64.0",
      "inhoud": "Geautomatiseerde tests, beveiligingsheaders, de noodstop, bereikbaarheidscontrole, snelheid"},
 ]

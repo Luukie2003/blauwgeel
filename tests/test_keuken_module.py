@@ -85,3 +85,109 @@ def test_koud_zetten_is_weg(ingelogde_client):
     """Er is geen koelcel: het koud-zet-advies staat niet meer op het overzicht en de handterminal."""
     assert "koud-zetten" not in ingelogde_client.get("/").data.decode()
     assert ingelogde_client.get("/dashboard/koud-zetten").status_code == 404
+
+
+# ---------- Begintelling, looplijst en scannen (1.64.0) ----------
+
+
+def test_begintelling_zet_alleen_de_voorraad_goed(db):
+    """De eerste keukentelling: wat er minder ligt dan op de site stond, is geen verkoop en geeft geen omzet."""
+    pid = _keuken(db, voorraad=40)
+    meer = _keuken(db, naam="Kroket Proef", voorraad=5)
+    telling = verwerk_keuken_telling(db, {pid: 25, meer: 12}, "Kok", "2026-10-11 20:00", begintelling=True)
+
+    rij = db.execute("SELECT begintelling FROM keuken_tellingen WHERE id = ?", (telling,)).fetchone()
+    assert rij["begintelling"] == 1
+    regels = {r["product_id"]: r for r in db.execute("SELECT * FROM keuken_telling_regels WHERE telling_id = ?", (telling,))}
+    assert (regels[pid]["verkocht"], regels[pid]["correctie"]) == (0, -15)
+    assert (regels[meer]["verkocht"], regels[meer]["correctie"]) == (0, 7)
+    assert (_voorraad(db, pid), _voorraad(db, meer)) == (25, 12)
+    mutaties = {m["product_id"]: (m["type"], m["aantal"], m["opmerking"]) for m in db.execute("SELECT * FROM mutaties")}
+    assert mutaties[pid] == ("uit", 15, f"Begintelling (keukentelling #{telling})")
+    assert mutaties[meer] == ("in", 7, f"Begintelling (keukentelling #{telling})")
+    # De volgende (gewone) telling rekent vanaf de begintelling
+    volgende = verwerk_keuken_telling(db, {pid: 20}, "Kok", "2026-10-18 20:00")
+    assert db.execute("SELECT verkocht FROM keuken_telling_regels WHERE telling_id = ?", (volgende,)).fetchone()[0] == 5
+
+
+def test_keuken_barcodes_tellen_per_supermarkt_anders(db):
+    from test_barcodes import AH_DOOS, AH_ZAK, PLUS_ZAK, _artikel
+
+    from keukenbeheer import keuken_barcodes
+
+    pid = _keuken(db)
+    _artikel(db, pid, "AH frikandellen", ean=AH_ZAK, aantal=20, prijs=10, doos=AH_DOOS, per_doos=2)
+    _artikel(db, pid, "Plus frikandellen", ean=PLUS_ZAK, aantal=15, prijs=8)
+    codes = keuken_barcodes(db)
+    assert {c: codes[c]["aantal"] for c in codes} == {AH_ZAK: 20, AH_DOOS: 40, PLUS_ZAK: 15}
+    assert all(c["product_id"] == pid for c in codes.values())
+
+
+def test_gescand_inboeken_telt_stuks(db):
+    pid = _keuken(db, voorraad=10, factor=40)
+    assert boek_keuken_in(db, {pid: 1}, "Kok", "2026-10-10 10:00", gescand={pid: 55}) == 1  # één product, twee boekingen
+    assert _voorraad(db, pid) == 10 + 40 + 55
+    opmerkingen = [m[0] for m in db.execute("SELECT opmerking FROM mutaties WHERE product_id = ? ORDER BY id", (pid,))]
+    assert opmerkingen == ["Ingeboekt (keuken, gescand): 55 stuks", "Ingeboekt (keuken): 1 doos"]
+
+
+def test_looplijst_koppelen_en_opslaan_via_de_site(ingelogde_client, db):
+    from test_barcodes import _ean
+
+    pid = _keuken(db, voorraad=0)
+    pagina = ingelogde_client.get("/keuken/tellen/lopen").data.decode()
+    assert "Frikandel Proef" in pagina and "Begintelling" in pagina
+    code = _ean("871000000009")
+    resp = ingelogde_client.post("/keuken/barcode-koppelen", json={"code": code, "product_id": pid, "aantal": "40",
+                                                                    "naam": "AH doos", "inkoopprijs": "12,50"},
+                                 headers={"X-CSRF-Token": _csrf(ingelogde_client)})
+    assert resp.status_code == 200, resp.get_json()
+    assert resp.get_json()["aantal"] == 40 and resp.get_json()["product_id"] == pid
+    assert ingelogde_client.post("/keuken/barcode-koppelen", json={"code": code, "product_id": pid, "aantal": "40"},
+                                 headers={"X-CSRF-Token": _csrf(ingelogde_client)}).status_code == 400  # al gekoppeld
+    assert ingelogde_client.post("/keuken/barcode-koppelen", json={"code": _ean("871000000010"), "product_id": pid},
+                                 headers={"X-CSRF-Token": _csrf(ingelogde_client)}).status_code == 400  # aantal ontbreekt
+    assert code in ingelogde_client.get("/keuken/tellen/lopen").data.decode()
+
+    resp = ingelogde_client.post("/keuken/tellen", data={"csrf_token": _csrf(ingelogde_client), f"geteld_{pid}": "80",
+                                                         "begintelling": "1", "bron": "looplijst"})
+    assert resp.status_code == 302 and "opgeslagen=1" in resp.headers["Location"]
+    assert _voorraad(db, pid) == 80
+    assert "Begintelling" in ingelogde_client.get("/keuken/tellingen").data.decode()
+
+
+def test_keuken_scannen_alleen_met_keukenrechten(client, db):
+    pid = _keuken(db)
+    _maak_vrijwilliger(db, "tapper", "voorraad")
+    _login(client, "tapper")
+    assert client.get("/keuken/tellen/lopen").status_code == 302
+    resp = client.post("/keuken/barcode-koppelen", json={"code": "8710000000093", "product_id": pid, "aantal": 1},
+                       headers={"X-CSRF-Token": _csrf(client)})
+    assert resp.status_code == 302
+
+
+def test_app_begintelling_en_gescand_inboeken(app, db):
+    from test_app_api_meer import _vrijwilliger
+
+    pid = _keuken(db, voorraad=30)
+    client = _vrijwilliger(app, db, "keukenapp", "keuken")
+    assert client.get("/api/app/keuken").get_json()["eerste_telling"] is True
+    resp = client.post("/api/app/keuken/tellen", json={"waarden": {str(pid): 20}, "begintelling": True, "verzoek_id": "b1"},
+                       headers=client.kop)
+    assert resp.status_code == 200 and resp.get_json()["melding"].startswith("Begintelling")
+    assert db.execute("SELECT SUM(verkocht) FROM keuken_telling_regels").fetchone()[0] == 0
+    assert client.get("/api/app/keuken").get_json()["eerste_telling"] is False
+    client.post("/api/app/keuken/inboeken", json={"gescand": {str(pid): 55}, "verzoek_id": "b2"}, headers=client.kop)
+    assert _voorraad(db, pid) == 75
+
+
+def test_tellingen_pagina_laadt_de_regels_pas_bij_openen(ingelogde_client, db):
+    from routes.tellen.verwerken import verwerk_telling
+
+    pid = db.execute("INSERT INTO producten (naam, categorie, voorraad, verkoopprijs) VALUES ('Cola Proef', 'Fris', 10, 2.5)").lastrowid
+    db.commit()
+    telling = verwerk_telling(db, {pid: 6}, "Teller", "", "2026-10-10 20:00")
+    overzicht = ingelogde_client.get("/tellingen").data.decode()
+    assert "Cola Proef" not in overzicht  # niet meer alle regels in de pagina
+    regels = ingelogde_client.get(f"/tellingen/{telling}/regels").data.decode()
+    assert "Cola Proef" in regels and "€ 10.00" in regels

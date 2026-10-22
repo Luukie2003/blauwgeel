@@ -835,7 +835,9 @@ CREATE TABLE IF NOT EXISTS keuken_tellingen (
     datum TEXT NOT NULL,
     naam TEXT,
     gebruiker_id INTEGER REFERENCES gebruikers(id),
-    opmerking TEXT
+    opmerking TEXT,
+    -- 1 = begintelling: zet alleen de voorraad goed, het verschil is geen verkoop
+    begintelling INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS keuken_telling_regels (
