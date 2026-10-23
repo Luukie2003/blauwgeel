@@ -263,7 +263,7 @@ def test_bestellijst_toont_voorgesteld_label_alleen_bij_krappe_producten(ingelog
 
     body = ingelogde_client.get("/bestellijst").data.decode()
 
-    laag_start = body.index("Laag Testproduct")
+    laag_start = body.index("<td>Laag Testproduct")
     assert "Onder minimum" in body[laag_start : laag_start + 150]
 
     # Niet-krap product hoort wel in de "zelf toevoegen"-keuzelijst te staan...

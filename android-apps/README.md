@@ -32,12 +32,12 @@ de sessie-cookie zelf (`Sessie.kt`) en stuurt bij een POST het csrf_token mee in
   (zoeken/voorraad/boeken), `ProductActivity` (voorraad, boeken en alles van de productpagina van de site, met
   `WeekGrafiek`), `KoppelenActivity` (onbekende barcode), `TellenActivity` (looplijst zoals op de site, met rekenmachine,
   en de controle), `FacturenActivity`/`FactuurActivity` (factuur inboeken), `PrikbordActivity`, `BestellijstActivity`,
-  `TellingenActivity`, `GeschiedenisActivity`, `BoodschappenActivity`, `PrognoseActivity`, `AgendaActivity`,
+  `KlaarzettenActivity` (een bestelling klaarzetten), `TellingenActivity`, `GeschiedenisActivity`, `BoodschappenActivity`, `PrognoseActivity`, `AgendaActivity`,
   `UitverkochtActivity` (producten op het prijzenscherm op uitverkocht zetten), `TimerActivity` (de timer op de tv's),
   `KantineTvActivity` (tv's: koppelen met de QR-code of de code, aan of uit, wat ze tonen, opnieuw laden, de wisselknop; specials; bardienst van vandaag en
   morgen), `DiasActivity` (onderdelen van de diashow en losse dia's aan of uit), `KoppelrondeActivity` (alle producten
   zonder barcode van een losse verpakking één voor één scannen),
-  `BarcodesActivity`, `GeldActivity`/`GeldTellenActivity` (kassa en kluis), `KeukenActivity` (frituurvet, voorraad met de gekoppelde dozen, boodschappenlijst), `KeukenTellenActivity` (de keukentelling als looplijst met scans en controle, stand op het toestel), `KeukenTellingActivity` (een keukentelling bekijken), `KeukenInvoerActivity` (keuken inboeken),
+  `BarcodesActivity`, `GeldActivity`/`GeldTellenActivity` (kassa en kluis), `KeukenActivity` (frituurvet, voorraad met de gekoppelde dozen, boodschappenlijst), `KeukenTellenActivity` (de keukentelling als looplijst met scans en controle; de stand staat op het toestel én op de site, gedeeld met de keukenlooplijst van de site), `KeukenTellingActivity` (een keukentelling bekijken), `KeukenInvoerActivity` (keuken inboeken),
   `AanmeldingenActivity`, `TaakActivity` (een taak van een beheerder; `Schermen.kt` weet welk scherm bij welke
   pagina van de site hoort) en `VergrendeldActivity` (de noodstop). Gedeeld gedrag (kopbalk, scanner, automatisch uitloggen, fouten, "Niet mogelijk in de
   app", de vraag "Taak afgerond?") zit in `BasisActivity`; lijsten en kaarten in `Lijst.kt`, productfoto's in

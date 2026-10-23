@@ -77,6 +77,8 @@ class BestellijstActivity : BasisActivity() {
         val data = data ?: return
         val inhoud = b.inhoud
         inhoud.removeAllViews()
+        Lijst.ruimte(inhoud)
+        Lijst.knop(Lijst.kaart(inhoud), getString(R.string.bestelling_klaarzetten)) { KlaarzettenActivity.open(this) }
         val bestellen = data.getJSONArray("bestellen").objecten()
         Lijst.kop(inhoud, getString(R.string.bestellen_kop, bestellen.size))
         if (bestellen.isEmpty()) Lijst.leeg(inhoud, getString(R.string.niets_bestellen))
@@ -88,8 +90,6 @@ class BestellijstActivity : BasisActivity() {
                 }
             }
         }
-
-        Lijst.knop(Lijst.kaart(inhoud), getString(R.string.bestelling_klaarzetten)) { KlaarzettenActivity.open(this) }
 
         val manco = data.optJSONArray("manco")?.objecten().orEmpty()
         if (manco.isNotEmpty()) {

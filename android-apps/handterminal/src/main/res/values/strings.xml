@@ -294,8 +294,8 @@
     <string name="scan_niet_zeker">Niet zeker of de scan van %1$s is meegeteld. Kijk in de lijst hieronder voordat je opnieuw scant.</string>
     <string name="bedrag_op_factuur">Bedrag op de factuur</string>
     <plurals name="keuken_verder_tekst">
-        <item quantity="one">Er staat een keukentelling op dit toestel met %1$d geteld product. Daarmee verder, of opnieuw beginnen?</item>
-        <item quantity="other">Er staat een keukentelling op dit toestel met %1$d getelde producten. Daarmee verder, of opnieuw beginnen?</item>
+        <item quantity="one">Er staat een keukentelling klaar (hier of op de site) met %1$d geteld product. Daarmee verder, of opnieuw beginnen?</item>
+        <item quantity="other">Er staat een keukentelling klaar (hier of op de site) met %1$d getelde producten. Daarmee verder, of opnieuw beginnen?</item>
     </plurals>
     <plurals name="n_producten">
         <item quantity="one">%d product</item>
