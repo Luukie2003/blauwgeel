@@ -105,7 +105,7 @@ NAV_ITEMS = [
     },
     {
         "groep": "Bestellen",
-        "endpoints": ["bestellijst", "bestellijst_voorspeld", "bestelling_aanmaken", "bestelling_nieuw", "bestelling_inboeken"],
+        "endpoints": ["bestellijst", "bestellijst_voorspeld", "bestelling_aanmaken", "bestelling_nieuw", "bestelling_inboeken", "manco_afhandelen"],
         "url_endpoint": "bestellijst",
         "label": "Bestellijst",
     },
@@ -126,6 +126,12 @@ NAV_ITEMS = [
         "endpoints": ["boodschappenlijst"],
         "url_endpoint": "boodschappenlijst",
         "label": "Boodschappenlijst",
+    },
+    {
+        "groep": "Bestellen",
+        "endpoints": ["bestellingen_overzicht"],
+        "url_endpoint": "bestellingen_overzicht",
+        "label": "Bestellingen",
     },
     {
         "groep": "Bestellen",

@@ -13,6 +13,9 @@ WIJZIGINGEN = [
         "datum": "23 oktober 2026",
         "punten": [
             "Factuur inboeken op de site werkt nu net als in de app. Scan je een los flesje terwijl er een krat of doos van bestaat, dan vraagt de site: 'Hele colli inboeken?', en die keuze geldt voor de rest van de factuur. Fusten en producten zonder barcode voeg je toe uit de lijst 'Zonder barcode (PLU)'. De knop heet 'Factuur gecontroleerd' en laat eerst zien wat er van de bestelling nog mist; dat wordt manco.",
+            "Niet geleverd blijft niet liggen: wat bij een bestelling niet (of te weinig) binnenkwam, staat bij 'Voorgesteld om te bestellen' op de bestellijst ('niet geleverd bij #12'), met het tekort al ingevuld. Zet je het in een nieuwe bestelling, dan is het opgevolgd; anders tik je op 'Niet meer nodig'.",
+            "Nieuwe pagina Bestellen → Bestellingen: alle bestellingen, ook de ontvangen (die blijven bewaard), met per product wat er besteld en binnengekomen is. Bovenaan per leverancier wat er nog niet geleverd is.",
+            "Inkoopprijs uit de factuur: bij Factuur inboeken pas je per scan de prijs aan naar wat er op de factuur staat. Bij 'Factuur gecontroleerd' wordt dat de nieuwe inkoopprijs van het artikel en het product, zodat de marge klopt.",
             "Op de telefoon vallen de pagina's van de sponsoren en standen (Kantine-tv) niet meer buiten beeld.",
             "Invoervelden op Bulk bewerken, de bestellijst en de sponsorpagina hebben nu een naam, zodat een schermlezer zegt waar het veld voor is.",
         ],

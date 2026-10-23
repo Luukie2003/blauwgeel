@@ -189,6 +189,13 @@ def register_routes(app):
             flash(fout, "error")
         return redirect(url_for("factuur_ronde", ronde_id=ronde_id))
 
+    @app.route("/facturen/<int:ronde_id>/regels/<int:regel_id>/prijs", methods=["POST"])
+    def factuur_regel_prijs(ronde_id, regel_id):
+        """De prijs van één scan naar de factuur; bij het afronden wordt dat de inkoopprijs."""
+        fout = facturen.zet_prijs(get_db(), ronde_id, regel_id, request.form.get("prijs"))
+        flash(fout or "Prijs aangepast; bij 'Factuur gecontroleerd' wordt dit de nieuwe inkoopprijs.", "error" if fout else "success")
+        return redirect(url_for("factuur_ronde", ronde_id=ronde_id) + "#scans")
+
     @app.route("/facturen/<int:ronde_id>/gegevens", methods=["POST"])
     def factuur_gegevens(ronde_id):
         facturen.werk_gegevens_bij(get_db(), ronde_id, request.form)
@@ -205,6 +212,8 @@ def register_routes(app):
         if samenvatting["bestelling_id"]:
             tekst += f" Bestelling #{samenvatting['bestelling_id']} staat op ontvangen"
             tekst += f" ({samenvatting['manco']} niet geleverd)." if samenvatting["manco"] else "."
+        if samenvatting.get("prijzen"):
+            tekst += f" {samenvatting['prijzen']} inkoopprijs/prijzen bijgewerkt naar de factuur."
         flash(tekst, "success")
         return redirect(url_for("factuur_ronde", ronde_id=ronde_id))
 

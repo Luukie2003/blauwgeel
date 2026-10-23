@@ -381,6 +381,11 @@ KOLOM_MIGRATIES = [
     # Een begintelling van de keuken (1.64.0) zet alleen de voorraad goed: het verschil is geen verkoop (zie
     # keukenbeheer.verwerk_keuken_telling).
     ("keuken_tellingen", "begintelling", "INTEGER NOT NULL DEFAULT 0"),
+    # Manco opgevolgd (1.67.0): het product staat weer op een bestelling, of het hoefde niet meer (zie manco.py).
+    ("bestelregels", "manco_afgehandeld", "INTEGER NOT NULL DEFAULT 0"),
+    # De prijs van een scan aangepast naar wat er op de factuur staat (1.67.0): bij het afronden wordt dat de
+    # inkoopprijs van het artikel (zie facturen.afronden).
+    ("inboekronde_regels", "prijs_aangepast", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 
@@ -693,11 +698,17 @@ def _m4_codeblokkades_opheffen(db):
     db.execute("DELETE FROM tablet_code_pogingen")
 
 
+def _m5_oud_manco_afgehandeld(db):
+    """Manco opvolgen begint bij 1.67.0: wat daarvoor al niet geleverd was, komt niet ineens terug op de bestellijst."""
+    db.execute("UPDATE bestelregels SET manco_afgehandeld = 1")
+
+
 GENUMMERDE_MIGRATIES = [
     (1, _m1_tapbier_in_de_omzet),
     (2, _m2_opmerking_none_leegmaken),
     (3, _m3_eigenaar_aanwijzen),
     (4, _m4_codeblokkades_opheffen),
+    (5, _m5_oud_manco_afgehandeld),
 ]
 
 

@@ -34,7 +34,9 @@ CREATE TABLE IF NOT EXISTS bestelregels (
     product_id INTEGER NOT NULL REFERENCES producten(id),
     aantal_besteld INTEGER NOT NULL,
     aantal_ontvangen INTEGER,
-    manco INTEGER NOT NULL DEFAULT 0
+    manco INTEGER NOT NULL DEFAULT 0,
+    -- 1 = het tekort is opgevolgd (weer besteld, of niet meer nodig), zie manco.py
+    manco_afgehandeld INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS gebruikers (
@@ -943,7 +945,9 @@ CREATE TABLE IF NOT EXISTS inboekronde_regels (
     aantal INTEGER NOT NULL DEFAULT 1,
     eenheden_per_stuk INTEGER NOT NULL,
     prijs_per_stuk REAL NOT NULL DEFAULT 0,
-    laatst_gescand_op TEXT NOT NULL
+    laatst_gescand_op TEXT NOT NULL,
+    -- 1 = de prijs is aangepast naar de factuur: bij het afronden wordt dat de inkoopprijs
+    prijs_aangepast INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_inboekronde_regels_ronde ON inboekronde_regels(ronde_id);
 

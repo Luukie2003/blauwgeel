@@ -14,6 +14,7 @@ from helpers import (
     verwerk_auto_inactief,
 )
 from helpers.tijd import vandaag_amsterdam
+import manco
 from leveranciers import GEEN, filter_suggesties, per_leverancier
 from pdf import bestellijst_pdf
 
@@ -31,6 +32,12 @@ def register_routes(app):
         # Producten die al voorgesteld zijn of al op een openstaande bestelling
         # staan, hoeven hier niet nogmaals in de keuzelijst.
         suggestie_ids = {p["id"] for p in suggesties}
+        # Wat bij een vorige bestelling niet (of te weinig) geleverd is: dat komt hier terug tot het weer besteld is.
+        manco_per_product = manco.open_manco_per_product(db)
+        manco_extra = [regels[0] | {"tekort": sum(m["tekort"] for m in regels),
+                                    "bestellingen": [m["bestelling_id"] for m in regels]}
+                       for pid, regels in manco_per_product.items() if pid not in suggestie_ids]
+        suggestie_ids |= set(manco_per_product)
         product_ids_in_open_bestelling = {
             row["product_id"]
             for row in db.execute(
@@ -69,6 +76,8 @@ def register_routes(app):
             suggesties=suggesties,
             overige_producten=overige_producten,
             meldingen=bereken_bestellijst_meldingen(db),
+            manco_per_product=manco_per_product,
+            manco_extra=manco_extra,
             open_bestellingen=open_bestellingen_met_regels,
             recent_ontvangen=recent_ontvangen_met_regels,
             per_leverancier=per_leverancier(db, suggesties, vandaag_amsterdam()),
@@ -170,6 +179,7 @@ def register_routes(app):
                    VALUES (?, ?, ?)""",
                 (bestelling_id, product_id, aantal),
             )
+        manco.volg_op_bij_bestelling(db, [pid for pid, _ in regels])
         db.commit()
         flash(
             f"Bestelling #{bestelling_id} klaargezet met {len(regels)} product(en). Hij staat nu als concept bij Factuur "
@@ -529,6 +539,38 @@ def register_routes(app):
         return redirect(url_for("bestellijst"))
 
     # ---------- Meldingen (QR-scans van bezoekers, verbruiksvoorwerpen) ----------
+
+    @app.route("/bestellingen")
+    def bestellingen_overzicht():
+        """Alle bestellingen, ook de ontvangen: die blijven bewaard. Bovenaan per leverancier wat er nog niet geleverd is
+        (zie manco.py), daaronder de bestellingen met per bestelling wat er besteld en binnengekomen is."""
+        db = get_db()
+        status = request.args.get("status", "")
+        pagina = max(1, request.args.get("pagina", 1, type=int))
+        per_pagina = 25
+        voorwaarde, waarden = ("WHERE status = ?", [status]) if status in ("besteld", "ontvangen") else ("", [])
+        totaal = db.execute(f"SELECT COUNT(*) FROM bestellingen {voorwaarde}", waarden).fetchone()[0]
+        bestellingen = db.execute(
+            f"SELECT * FROM bestellingen {voorwaarde} ORDER BY id DESC LIMIT ? OFFSET ?",
+            [*waarden, per_pagina, (pagina - 1) * per_pagina],
+        ).fetchall()
+        regels = regels_per_bestelling(db, [b["id"] for b in bestellingen])
+        return render_template(
+            "bestellingen.html",
+            bestellingen=[(b, regels.get(b["id"], [])) for b in bestellingen],
+            manco_per_leverancier=manco.per_leverancier(db),
+            status=status,
+            pagina=pagina,
+            paginas=max(1, -(-totaal // per_pagina)),
+            totaal=totaal,
+        )
+
+    @app.route("/bestellijst/manco/<int:product_id>/afhandelen", methods=["POST"])
+    def manco_afhandelen(product_id):
+        """'Niet meer nodig': wat er van dit product niet geleverd is, hoeft niet meer besteld te worden."""
+        manco.handel_af(get_db(), product_id)
+        flash("Het niet geleverde komt niet meer terug op de bestellijst.", "success")
+        return redirect(request.referrer or url_for("bestellijst"))
 
     @app.route("/bestellijst/meldingen/product/<int:product_id>/afhandelen", methods=["POST"])
     def bestellijst_melding_product_afhandelen(product_id):

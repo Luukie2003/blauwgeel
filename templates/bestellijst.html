@@ -91,7 +91,7 @@
         trainingsavonden en het weer tellen mee). Vraagt de komende week meer dan het minimum, dan staat het aantal al
         hoger. <a href="{{ url_for('prognose_pagina') }}">Bekijk de volledige prognose</a>.
     </p>
-    {% if suggesties or overige_producten %}
+    {% if suggesties or overige_producten or manco_extra %}
     <form method="post" action="{{ url_for('bestelling_aanmaken') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="tabel-wrap">
@@ -110,7 +110,7 @@
                             <img src="{{ url_for('static', filename='product_afbeeldingen/' + (p.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
                             {% endif %}
                         </td>
-                        <td>{{ p.naam }} <span class="badge badge-neutraal">Onder minimum</span>
+                        <td>{{ p.naam }} <span class="badge badge-neutraal">Onder minimum</span>{% if manco_per_product.get(p.id) %} <span class="badge badge-laag" title="Bij een vorige bestelling niet (helemaal) geleverd">niet geleverd bij #{{ manco_per_product[p.id]|map(attribute='bestelling_id')|join(', #') }}</span>{% endif %}
                             {% if leverancier_namen.get(p.leverancier_id) %}<div class="tekst-zacht" style="font-size:0.72rem">bij {{ leverancier_namen[p.leverancier_id] }}</div>{% endif %}</td>
                         <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
                         <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
@@ -122,6 +122,26 @@
                             {% if p.besteleenheid_factor > 1 %}
                             <div class="tekst-zacht aantal-uitleg" style="font-size:0.72rem">= {{ besteleenheden * p.besteleenheid_factor }} {{ p.eenheid }}</div>
                             {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {# Niet (helemaal) geleverd bij een vorige bestelling, en nog niet weer besteld (zie manco.py). #}
+                    {% for m in manco_extra %}
+                    {% set besteleenheden = m.tekort|naar_besteleenheden(m) %}
+                    <tr data-product-id="{{ m.product_id }}">
+                        <td><input type="checkbox" name="product_id" value="{{ m.product_id }}" checked aria-label="{{ m.naam }} bestellen"></td>
+                        <td></td>
+                        <td>{{ m.naam }} <span class="badge badge-laag">niet geleverd bij #{{ m.bestellingen|join(', #') }}</span>
+                            {% if m.leverancier_naam %}<div class="tekst-zacht" style="font-size:0.72rem">bij {{ m.leverancier_naam }}</div>{% endif %}
+                            <button type="submit" form="manco-af-{{ m.product_id }}" class="btn-tekstlink" style="font-size:0.75rem">Niet meer nodig</button></td>
+                        <td>{{ m.voorraad }} {{ m.eenheid }}</td>
+                        <td></td>
+                        <td class="prognose-cel tekst-zacht" data-eenheid="{{ m.eenheid }}">&hellip;</td>
+                        <td>
+                            <input type="number" name="aantal_{{ m.product_id }}" min="0" style="width:6rem" aria-label="Aantal te bestellen {{ m.naam }}"
+                                   value="{{ besteleenheden }}" data-standaard="{{ besteleenheden }}" data-factor="{{ m.besteleenheid_factor }}">
+                            {{ m|besteleenheid_naam }}
+                            <div class="tekst-zacht aantal-uitleg" style="font-size:0.72rem">{{ m.tekort }} {{ m.eenheid }} niet geleverd</div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -316,6 +336,11 @@
         </div>
         <button type="submit" class="btn btn-geel">Bestelling klaarzetten</button>
     </form>
+    {% for m in manco_extra %}
+    <form method="post" action="{{ url_for('manco_afhandelen', product_id=m.product_id) }}" id="manco-af-{{ m.product_id }}" hidden>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    </form>
+    {% endfor %}
     {% else %}
     <p class="leeg">Niets nodig — alle voorraad zit boven het minimum.</p>
     {% endif %}

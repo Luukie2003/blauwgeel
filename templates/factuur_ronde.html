@@ -147,8 +147,11 @@
 </div>
 
 {% if g_ronde.regels %}
-<div class="kaart">
+<div class="kaart" id="scans">
     <h2 style="margin-top:0">Scans</h2>
+    {% if open and g_ronde.verschil is not none and g_ronde.verschil|abs >= 0.01 %}
+    <p class="tekst-zacht" style="margin-top:-0.3rem; font-size:0.82rem">Het totaal wijkt af van de factuur. Is een prijs veranderd? Pas hem hieronder aan per scan (&euro; per doos, fles of fust): bij &ldquo;Factuur gecontroleerd&rdquo; wordt dat de nieuwe inkoopprijs.</p>
+    {% endif %}
     <ul class="mutatie-lijst">
         {% for g in g_ronde.regels %}
         <li style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center; flex-wrap:wrap">
@@ -161,6 +164,13 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="number" name="aantal" value="{{ g.aantal }}" min="0" step="1" style="width:4.5rem" aria-label="Aantal keer gescand" onchange="this.form.submit()">
                 <button type="submit" name="weg" value="1" class="btn btn-rand btn-klein" title="Deze scan weghalen">Weg</button>
+            </form>
+            <form method="post" action="{{ url_for('factuur_regel_prijs', ronde_id=r.id, regel_id=g.id) }}" style="display:flex; gap:0.3rem; align-items:center; margin:0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <span class="tekst-zacht" style="font-size:0.8rem">&euro;</span>
+                <input type="text" inputmode="decimal" name="prijs" value="{{ '%.2f'|format(g.prijs_per_stuk)|replace('.', ',') }}" style="width:5rem; text-align:right"
+                       aria-label="Prijs per stuk volgens de factuur" onchange="this.form.submit()">
+                {% if g.prijs_aangepast %}<span class="badge badge-in" title="Wordt bij het afronden de inkoopprijs">nieuw</span>{% endif %}
             </form>
             {% else %}
             <span>{{ g.aantal }}&times;</span>

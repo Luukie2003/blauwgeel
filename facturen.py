@@ -448,6 +448,57 @@ def zet_aantal(db, ronde_id, regel_id, aantal):
     return None
 
 
+def zet_prijs(db, ronde_id, regel_id, prijs):
+    """De prijs van één scan (een doos, een fust) aanpassen naar wat er op de factuur staat. Bij het afronden wordt dat de
+    nieuwe inkoopprijs van het artikel of product (zie _werk_prijzen_bij). Geeft een foutmelding of None."""
+    if not _is_open(db, ronde_id):
+        return "Deze inboekronde is al afgerond."
+    bedrag = _getal(str(prijs or "").replace(",", "."), float)
+    if bedrag is None or bedrag < 0:
+        return "Vul een prijs van 0 of meer in."
+    db.execute("UPDATE inboekronde_regels SET prijs_per_stuk = ?, prijs_aangepast = 1 WHERE id = ? AND ronde_id = ?",
+               (round(bedrag, 4), regel_id, ronde_id))
+    db.commit()
+    return None
+
+
+def _werk_prijzen_bij(db, ronde_id, door=None, door_id=None):
+    """Bij het afronden: elke scan waarvan de prijs naar de factuur is aangepast, wordt de inkoopprijs. Van een artikel
+    (per verpakking; een doos-scan gedeeld door wat erin zit) en daarna het product (het gemiddelde van zijn artikelen,
+    zie barcodes.werk_inkoopprijs_bij); zonder artikel (PLU, handmatig) meteen die van het product, per besteleenheid.
+    Geeft het aantal bijgewerkte prijzen. Commit niet."""
+    nu = now_str()
+    aantal = 0
+    producten = set()
+    for g in db.execute(
+        """SELECT g.*, a.inkoopprijs AS artikel_prijs, a.per_omverpakking, p.inkoopprijs AS product_prijs,
+                  p.besteleenheid_factor
+           FROM inboekronde_regels g JOIN producten p ON p.id = g.product_id
+           LEFT JOIN artikelen a ON a.id = g.artikel_id
+           WHERE g.ronde_id = ? AND g.prijs_aangepast = 1""", (ronde_id,),
+    ).fetchall():
+        if g["artikel_id"] and g["artikel_prijs"] is not None:
+            per_verpakking = g["prijs_per_stuk"] / (g["per_omverpakking"] or 1 if g["niveau"] == "omverpakking" else 1)
+            if abs(per_verpakking - (g["artikel_prijs"] or 0)) >= 0.005:
+                db.execute("UPDATE artikelen SET inkoopprijs = ?, bijgewerkt_op = ? WHERE id = ?",
+                           (round(per_verpakking, 4), nu, g["artikel_id"]))
+                producten.add(g["product_id"])
+                aantal += 1
+        else:
+            nieuw = round(g["prijs_per_stuk"] / max(1, g["eenheden_per_stuk"]) * besteleenheid_factor(g), 4)
+            if abs(nieuw - (g["product_prijs"] or 0)) >= 0.005:
+                db.execute("UPDATE producten SET inkoopprijs = ? WHERE id = ?", (nieuw, g["product_id"]))
+                db.execute(
+                    """INSERT INTO prijs_geschiedenis (product_id, veld, oude_prijs, nieuwe_prijs, datum, naam, gebruiker_id)
+                       VALUES (?, 'inkoopprijs', ?, ?, ?, ?, ?)""",
+                    (g["product_id"], g["product_prijs"] or 0, nieuw, nu, door, door_id),
+                )
+                aantal += 1
+    for product_id in producten:
+        barcodes.werk_inkoopprijs_bij(db, product_id, door, door_id)
+    return aantal
+
+
 def annuleren(db, ronde_id):
     db.execute("UPDATE inboekrondes SET status = 'geannuleerd', afgerond_op = ? WHERE id = ? AND status = 'open'",
                (now_str(), ronde_id))
@@ -505,13 +556,14 @@ def afronden(db, ronde_id, door=None, door_id=None):
                VALUES (?, 'in', ?, ?, ?, ?, ?, ?)""",
             (product_id, eenheden, nu, door, door_id, omschrijving, bestelling_id if product_id in besteld else None),
         )
+    prijzen = _werk_prijzen_bij(db, ronde_id, door, door_id)
     db.execute(
         "UPDATE inboekrondes SET status = 'afgerond', afgerond_op = ?, afgerond_door = ? WHERE id = ?",
         (nu, door, ronde_id),
     )
     db.commit()
     return {"producten": len(binnen), "eenheden": sum(binnen.values()), "bestelling_id": bestelling_id,
-            "manco": manco}, None
+            "manco": manco, "prijzen": prijzen}, None
 
 
 def als_json(gegevens):

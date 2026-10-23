@@ -1,0 +1,100 @@
+{% extends basis_template %}
+{% block titel %}Bestellingen{% endblock %}
+{% block inhoud %}
+<h1>Bestellingen</h1>
+<p class="subtitel">
+    Alle bestellingen, ook de ontvangen: die blijven bewaard, met per product wat er besteld en wat er binnengekomen is.
+    Een nieuwe bestelling zet je klaar op de <a href="{{ url_for('bestellijst') }}">bestellijst</a>.
+</p>
+
+{% if manco_per_leverancier %}
+<div class="kaart" style="border-left:4px solid var(--oranje, #b45309)">
+    <h2 style="margin-top:0">Nog niet geleverd</h2>
+    <p class="tekst-zacht" style="margin-top:-0.3rem; font-size:0.85rem">
+        Wat bij een bestelling niet (of te weinig) binnenkwam. Het staat bij &ldquo;Voorgesteld om te bestellen&rdquo; tot je het
+        weer bestelt, of tot je op &ldquo;Niet meer nodig&rdquo; tikt.
+    </p>
+    {% for leverancier, regels in manco_per_leverancier %}
+    <h3 style="margin:0.8rem 0 0.3rem">{{ leverancier or 'Zonder leverancier' }}</h3>
+    <ul class="mutatie-lijst">
+        {% for m in regels %}
+        <li style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center; flex-wrap:wrap">
+            <div style="min-width:0">
+                <strong>{{ m.naam }}</strong>
+                <div class="tekst-zacht" style="font-size:0.8rem">
+                    {{ m.tekort }} {{ m.eenheid }} niet geleverd ({{ m.aantal_ontvangen }} van {{ m.aantal_besteld }})
+                    &middot; bestelling #{{ m.bestelling_id }}, ontvangen {{ m.ontvangen_op|datum_nl }}
+                </div>
+            </div>
+            <form method="post" action="{{ url_for('manco_afhandelen', product_id=m.product_id) }}" style="margin:0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-rand btn-klein">Niet meer nodig</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">{{ totaal }} {{ 'bestelling' if totaal == 1 else 'bestellingen' }}</h2>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap">
+            {% for waarde, label in [('', 'Alle'), ('besteld', 'Klaargezet'), ('ontvangen', 'Ontvangen')] %}
+            <a href="{{ url_for('bestellingen_overzicht', status=waarde or None) }}" class="btn {{ 'btn-geel' if status == waarde else 'btn-rand' }} btn-klein">{{ label }}</a>
+            {% endfor %}
+        </div>
+    </div>
+    {% for b, regels in bestellingen %}
+    <details style="border-top:1px solid var(--rand-licht); padding:0.6rem 0">
+        <summary style="cursor:pointer">
+            <strong>#{{ b.id }}</strong>{% if b.referentie %} &mdash; {{ b.referentie }}{% endif %}
+            &middot; {{ b.aangemaakt_op|datum_nl }}{% if b.besteld_door %} &middot; {{ b.besteld_door }}{% endif %}
+            &middot; {{ regels|length }} {{ 'product' if regels|length == 1 else 'producten' }}
+            {% if b.status == 'besteld' %}<span class="badge badge-in">klaargezet</span>
+            {% else %}<span class="badge badge-ok">ontvangen {{ b.ontvangen_op|datum_nl }}</span>
+                {% set tekort = regels|selectattr('manco')|list %}
+                {% if tekort %}<span class="badge badge-laag">{{ tekort|length }} manco</span>{% endif %}
+            {% endif %}
+        </summary>
+        <div class="tabel-wrap" style="margin-top:0.5rem">
+            <table>
+                <thead><tr><th>Product</th><th style="text-align:right">Besteld</th>{% if b.status == 'ontvangen' %}<th style="text-align:right">Ontvangen</th>{% endif %}</tr></thead>
+                <tbody>
+                    {% for r in regels %}
+                    <tr>
+                        <td>{{ r.product_naam }}</td>
+                        <td style="text-align:right">{{ r.aantal_besteld|naar_besteleenheden(r) }} {{ r|besteleenheid_naam }}{% if r.besteleenheid_factor > 1 %} <span class="tekst-zacht">({{ r.aantal_besteld }} {{ r.eenheid }})</span>{% endif %}</td>
+                        {% if b.status == 'ontvangen' %}
+                        <td style="text-align:right">
+                            {{ r.aantal_ontvangen or 0 }} {{ r.eenheid }}
+                            {% if (r.aantal_ontvangen or 0) < r.aantal_besteld %}<span class="badge badge-laag">{{ 'niet geleverd' if not r.aantal_ontvangen else 'te weinig' }}</span>{% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.5rem">
+            {% if b.status == 'besteld' %}
+            <a href="{{ url_for('factuur_voor_bestelling', bestelling_id=b.id) }}" class="btn btn-geel btn-klein">Inboeken (factuur)</a>
+            <a href="{{ url_for('bestelling_bewerken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+            {% else %}
+            <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Ontvangen aantallen corrigeren</a>
+            {% endif %}
+        </div>
+    </details>
+    {% else %}
+    <p class="leeg">Nog geen bestellingen.</p>
+    {% endfor %}
+    {% if paginas > 1 %}
+    <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.8rem">
+        {% for n in range(1, paginas + 1) %}
+        <a href="{{ url_for('bestellingen_overzicht', status=status or None, pagina=n) }}" class="btn {{ 'btn-geel' if n == pagina else 'btn-rand' }} btn-klein">{{ n }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
