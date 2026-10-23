@@ -187,7 +187,7 @@
                             {% else %}
                             <span class="stand-logo-placeholder">+</span>
                             {% endif %}
-                            <input type="file" name="logo" accept="image/*" onchange="this.form.requestSubmit()">
+                            <input type="file" name="logo" accept="image/*" onchange="this.form.requestSubmit()" aria-label="Logo van {{ team.naam }} vervangen">
                         </label>
                     </form>
                     <input type="text" class="stand-item-naam-veld" value="{{ team.naam }}" title="Teamnaam aanpassen" draggable="false">
@@ -220,11 +220,11 @@
             <button type="submit" class="btn btn-rand btn-klein">Stand opslaan</button>
         </form>
         <form method="post" action="{{ url_for('kiosk_stand_team_nieuw') }}" enctype="multipart/form-data"
-              style="margin-top:0.6rem; display:flex; gap:0.5rem; align-items:center">
+              style="margin-top:0.6rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="poule" value="{{ poule.sleutel }}">
-            <input type="text" name="naam" placeholder="Naam club toevoegen..." style="flex:1">
-            <input type="file" name="logo" accept="image/*" title="Logo (optioneel)" style="max-width:9rem">
+            <input type="text" name="naam" placeholder="Naam club toevoegen..." style="flex:1; min-width:10rem" aria-label="Naam club toevoegen">
+            <input type="file" name="logo" accept="image/*" title="Logo (optioneel)" aria-label="Logo (optioneel)" style="max-width:9rem">
             <button type="submit" class="btn btn-rand btn-klein">+ Team</button>
         </form>
     </div>
@@ -232,7 +232,7 @@
     <form method="post" action="{{ url_for('kiosk_stand_poule_nieuw') }}"
           style="margin-top:1rem; display:flex; gap:0.5rem; align-items:center">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="text" name="titel" placeholder="Titel nieuwe poule (bijv. Zaterdag 4)..." style="flex:1">
+        <input type="text" name="titel" placeholder="Titel nieuwe poule (bijv. Zaterdag 4)..." style="flex:1; min-width:10rem" aria-label="Titel nieuwe poule">
         <button type="submit" class="btn btn-rand btn-klein">+ Poule</button>
     </form>
 </div>
@@ -283,7 +283,7 @@
         <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
     </form>
     <form method="post" action="{{ url_for('kiosk_motm_team_nieuw') }}"
-          style="margin-top:0.6rem; display:flex; gap:0.5rem; align-items:center">
+          style="margin-top:0.6rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="team" placeholder="Teamnaam toevoegen (bijv. ZA 1)..." style="flex:1">
         <button type="submit" class="btn btn-rand btn-klein">+ Team</button>

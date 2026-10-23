@@ -348,6 +348,52 @@ def voeg_plu_toe(db, ronde_id, product_id, aantal):
     return None
 
 
+def volle_colli(db, regel_id):
+    """Bij een scan van een losse verpakking (één flesje, één zak): hoeveel er in de hele colli zit en hoe die heet, als
+    er iets groters bestaat. Eerst de doos van dat artikel (met een eigen barcode), anders de besteleenheid van het
+    product (een krat Hertog Jan zonder barcode). Geeft {"aantal", "naam", "doos_code", "los"} of None. Zoals
+    Product.volleEenheid in de app."""
+    g = db.execute(
+        """SELECT g.*, a.aantal_per_verpakking, a.ean_omverpakking, a.per_omverpakking, p.besteleenheid,
+                  p.besteleenheid_factor, p.eenheid, p.naam AS product_naam
+           FROM inboekronde_regels g JOIN producten p ON p.id = g.product_id
+           LEFT JOIN artikelen a ON a.id = g.artikel_id WHERE g.id = ?""", (regel_id,),
+    ).fetchone()
+    if g is None or g["niveau"] != "verpakking":
+        return None
+    los = g["eenheden_per_stuk"] or 1
+    if g["ean_omverpakking"] and g["per_omverpakking"] and los * g["per_omverpakking"] > los:
+        return {"aantal": los * g["per_omverpakking"], "naam": "doos", "doos_code": g["ean_omverpakking"], "los": los,
+                "eenheid": g["eenheid"], "product": g["product_naam"]}
+    factor = besteleenheid_factor(g)
+    if g["besteleenheid"] and factor > los:
+        return {"aantal": factor, "naam": besteleenheid_naam(g), "doos_code": None, "los": los, "eenheid": g["eenheid"],
+                "product": g["product_naam"]}
+    return None
+
+
+def maak_hele_colli(db, ronde_id, regel_id):
+    """De laatste scan van een losse verpakking wordt de hele colli: met de doos-barcode als die er is (de losse scan
+    gaat eraf, de doos erbij), anders telt de losse regel zo vaak extra als er in de colli zitten. Geeft een
+    foutmelding of None."""
+    colli = volle_colli(db, regel_id)
+    if colli is None:
+        return "Hier bestaat geen grotere colli van."
+    if colli["doos_code"]:
+        g = db.execute("SELECT aantal FROM inboekronde_regels WHERE id = ? AND ronde_id = ?", (regel_id, ronde_id)).fetchone()
+        if g is None:
+            return "Deze scan bestaat niet meer."
+        fout = zet_aantal(db, ronde_id, regel_id, g["aantal"] - 1)
+        if fout:
+            return fout
+        uitkomst = scan(db, ronde_id, colli["doos_code"])
+        return None if uitkomst["status"] == "toegevoegd" else uitkomst["melding"]
+    extra = max(0, colli["aantal"] // max(1, colli["los"]) - 1)
+    db.execute("UPDATE inboekronde_regels SET aantal = aantal + ? WHERE id = ? AND ronde_id = ?", (extra, regel_id, ronde_id))
+    db.commit()
+    return None
+
+
 def nog_niet_binnen(gegevens):
     """Voor 'Factuur gecontroleerd': wat er van de klaargezette bestelling nog mist (niets of te weinig gescand). Bij het
     inboeken wordt dat manco, net als bij Bestellingen > Inboeken."""

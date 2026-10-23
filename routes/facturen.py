@@ -91,6 +91,8 @@ def register_routes(app):
         if gegevens is None:
             flash("Deze inboekronde bestaat niet.", "error")
             return redirect(url_for("facturen_overzicht"))
+        colli_regel = request.args.get("colli", type=int)
+        colli = facturen.volle_colli(db, colli_regel) if colli_regel else None
         onbekend = request.args.get("onbekend", "")
         onbekende_barcode = barcodes.zoek_barcode(db, onbekend) if onbekend else None
         artikelen = db.execute(
@@ -105,19 +107,63 @@ def register_routes(app):
             producten=_producten(db),
             leveranciers=alle_leveranciers(db, alleen_actief=True),
             bestellingen=facturen.open_bestellingen(db),
+            colli=colli,
+            colli_regel=colli_regel,
+            colli_code=request.args.get("code", ""),
+            plu=facturen.plu_lijst(db, gegevens["besteld"], {p["product_id"]: p for p in gegevens["per_product"]}),
+            nog_niet_binnen=facturen.nog_niet_binnen(gegevens),
         )
+
+    def _colli_keuzes():
+        """Per ronde en barcode wat je koos bij 'Hele colli inboeken?': dat geldt voor de rest van deze factuur."""
+        return session.setdefault("colli_keuzes", {})
 
     @app.route("/facturen/<int:ronde_id>/scan", methods=["POST"])
     def factuur_scan(ronde_id):
-        uitkomst = facturen.scan(get_db(), ronde_id, request.form.get("code", ""))
+        db = get_db()
+        uitkomst = facturen.scan(db, ronde_id, request.form.get("code", ""))
         terug = url_for("factuur_ronde", ronde_id=ronde_id)
         if uitkomst["status"] == "toegevoegd":
+            # Een losse verpakking terwijl er een doos of krat van bestaat: vragen of de hele colli erin moet, en die
+            # keuze onthouden voor de rest van deze factuur (zoals de app).
+            colli = facturen.volle_colli(db, uitkomst["regel_id"])
+            sleutel = f"{ronde_id}:{uitkomst['barcode']['code']}"
+            keuze = _colli_keuzes().get(sleutel)
+            if colli and keuze is True:
+                fout = facturen.maak_hele_colli(db, ronde_id, uitkomst["regel_id"])
+                flash(fout or f"+ hele {colli['naam']} ({colli['aantal']} {colli['eenheid']}) · {colli['product']}",
+                      "error" if fout else "success")
+                return redirect(terug)
             flash(f"+ {uitkomst['melding']}", "success")
+            if colli and keuze is None:
+                return redirect(url_for("factuur_ronde", ronde_id=ronde_id, colli=uitkomst["regel_id"],
+                                        code=uitkomst["barcode"]["code"]) + "#colli")
         elif uitkomst["status"] == "onbekend":
             return redirect(url_for("factuur_ronde", ronde_id=ronde_id, onbekend=uitkomst["barcode"]["code"]) + "#onbekend")
         else:
             flash(uitkomst["melding"], "error")
         return redirect(terug)
+
+    @app.route("/facturen/<int:ronde_id>/colli", methods=["POST"])
+    def factuur_colli(ronde_id):
+        """Het antwoord op 'Hele colli inboeken?': ja maakt van de laatste losse scan de hele colli; het antwoord geldt
+        voor de rest van deze factuur bij die barcode."""
+        db = get_db()
+        ja = request.form.get("keuze") == "ja"
+        keuzes = _colli_keuzes()
+        keuzes[f"{ronde_id}:{request.form.get('code', '')}"] = ja
+        session.modified = True
+        if ja:
+            fout = facturen.maak_hele_colli(db, ronde_id, request.form.get("regel_id", type=int) or 0)
+            flash(fout or "Hele colli ingeboekt.", "error" if fout else "success")
+        return redirect(url_for("factuur_ronde", ronde_id=ronde_id))
+
+    @app.route("/facturen/<int:ronde_id>/plu", methods=["POST"])
+    def factuur_plu(ronde_id):
+        """Uit de PLU-lijst: zoveel fusten of kratten van een product zonder barcode."""
+        fout = facturen.voeg_plu_toe(get_db(), ronde_id, request.form.get("product_id"), request.form.get("aantal"))
+        flash(fout or "Toegevoegd.", "error" if fout else "success")
+        return redirect(url_for("factuur_ronde", ronde_id=ronde_id) + "#plu")
 
     @app.route("/facturen/<int:ronde_id>/handmatig", methods=["POST"])
     def factuur_handmatig(ronde_id):

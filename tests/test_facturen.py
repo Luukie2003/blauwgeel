@@ -104,7 +104,7 @@ def test_inboeken_in_de_browser(ingelogde_client, db):
     ronde_id = int(ronde_url.rstrip("/").split("/")[-1])
     ingelogde_client.post(f"/facturen/{ronde_id}/scan", data={"csrf_token": _csrf(ingelogde_client), "code": AH_DOOS})
     tekst = ingelogde_client.get(ronde_url).data.decode()
-    assert "Factuur F-9" in tekst and "+80" in tekst and "Afronden en inboeken" in tekst
+    assert "Factuur F-9" in tekst and "+80" in tekst and "Factuur gecontroleerd" in tekst
 
     regel_id = facturen.ronde(db, ronde_id)["regels"][0]["id"]
     ingelogde_client.post(f"/facturen/{ronde_id}/regels/{regel_id}", data={
@@ -283,3 +283,50 @@ def test_de_app_plu_lijst_en_toevoegen(ingelogde_client, db):
     assert ingelogde_client.get(f"/api/facturen/{ronde_id}/plu").get_json()["plu"][0]["gescand"] == 2
     assert ingelogde_client.post(f"/api/facturen/{ronde_id}/plu", json={"product_id": fust, "aantal": 0},
                                  headers=kop).status_code == 400
+
+
+# ---------- Op de site: hele colli, PLU en 'Factuur gecontroleerd' (1.67.0) ----------
+
+
+def _krat_hertog(db):
+    pid = db.execute(
+        """INSERT INTO producten (naam, categorie, eenheid, voorraad, verkoopprijs, inkoopprijs, actief, besteleenheid,
+                                  besteleenheid_factor) VALUES ('Hertog Jan', 'Bier', 'fles', 0, 2.5, 14.4, 1, 'krat', 24)"""
+    ).lastrowid
+    db.commit()
+    code = _ean("871111111111")
+    _artikel(db, pid, "Hertog Jan fles 30 cl", ean=code, aantal=1, prijs=0.6)
+    return pid, code
+
+
+def test_los_flesje_vraagt_om_de_hele_colli_en_onthoudt_het(ingelogde_client, db):
+    pid, code = _krat_hertog(db)
+    kop = {"csrf_token": _csrf(ingelogde_client)}
+    ronde_id = facturen.start_ronde(db)
+    resp = ingelogde_client.post(f"/facturen/{ronde_id}/scan", data={**kop, "code": code})
+    assert "colli=" in resp.headers["Location"]
+    pagina = ingelogde_client.get(resp.headers["Location"]).data.decode()
+    assert "Hele colli inboeken?" in pagina and "Ja, hele krat (24 fles)" in pagina
+    regel_id = facturen.ronde(db, ronde_id)["regels"][0]["id"]
+    ingelogde_client.post(f"/facturen/{ronde_id}/colli", data={**kop, "keuze": "ja", "regel_id": regel_id, "code": code})
+    assert facturen.ronde(db, ronde_id)["per_product"][0]["eenheden"] == 24
+    # De volgende scan van hetzelfde flesje: meteen een hele krat, zonder vraag.
+    resp = ingelogde_client.post(f"/facturen/{ronde_id}/scan", data={**kop, "code": code})
+    assert "colli=" not in resp.headers["Location"]
+    assert facturen.ronde(db, ronde_id)["per_product"][0]["eenheden"] == 48
+
+
+def test_site_plu_en_gecontroleerd_toont_wat_mist(ingelogde_client, db):
+    fust = db.execute(
+        """INSERT INTO producten (naam, categorie, eenheid, voorraad, verkoopprijs, inkoopprijs, actief, glazen_per_fust)
+           VALUES ('Fust Pils', 'Bier', 'fust', 1, 3.0, 95.0, 1, 200)"""
+    ).lastrowid
+    b = db.execute("INSERT INTO bestellingen (status, aangemaakt_op) VALUES ('besteld', '2026-10-15 10:00')").lastrowid
+    db.execute("INSERT INTO bestelregels (bestelling_id, product_id, aantal_besteld) VALUES (?, ?, 3)", (b, fust))
+    db.commit()
+    ronde_id = facturen.start_ronde(db, bestelling_id=b)
+    pagina = ingelogde_client.get(f"/facturen/{ronde_id}").data.decode()
+    assert "Zonder barcode (PLU)" in pagina and "Fust Pils" in pagina and "Nog niet (helemaal) binnen" in pagina
+    ingelogde_client.post(f"/facturen/{ronde_id}/plu", data={"csrf_token": _csrf(ingelogde_client), "product_id": fust, "aantal": "3"})
+    pagina = ingelogde_client.get(f"/facturen/{ronde_id}").data.decode()
+    assert "Nog niet (helemaal) binnen" not in pagina and "Alles van de bestelling is binnen" in pagina

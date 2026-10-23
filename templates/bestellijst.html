@@ -104,7 +104,7 @@
                     {% set tekort = p.bestel_hoeveelheid if p.bestel_hoeveelheid > 0 else (p.min_voorraad - p.voorraad) %}
                     {% set besteleenheden = tekort|naar_besteleenheden(p) %}
                     <tr data-product-id="{{ p.id }}">
-                        <td><input type="checkbox" name="product_id" value="{{ p.id }}" checked></td>
+                        <td><input type="checkbox" name="product_id" value="{{ p.id }}" checked aria-label="{{ p.naam }} bestellen"></td>
                         <td>
                             {% if p.afbeelding %}
                             <img src="{{ url_for('static', filename='product_afbeeldingen/' + (p.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
@@ -116,7 +116,7 @@
                         <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
                         <td class="prognose-cel tekst-zacht" data-eenheid="{{ p.eenheid }}">&hellip;</td>
                         <td>
-                            <input type="number" name="aantal_{{ p.id }}" min="0" style="width:6rem"
+                            <input type="number" name="aantal_{{ p.id }}" min="0" style="width:6rem" aria-label="Aantal te bestellen {{ p.naam }}"
                                    value="{{ besteleenheden }}" data-standaard="{{ besteleenheden }}" data-factor="{{ p.besteleenheid_factor }}">
                             {{ p|besteleenheid_naam }}
                             {% if p.besteleenheid_factor > 1 %}
@@ -131,7 +131,7 @@
         <p class="tekst-zacht" id="prognose-status" style="font-size:0.8rem; margin:0.5rem 0 0">De prognose wordt berekend&hellip;</p>
         {% if overige_producten %}
         <div style="display:flex; gap:0.5rem; align-items:center; margin-top:0.8rem">
-            <select id="extra-product-select">
+            <select id="extra-product-select" aria-label="Ander product toevoegen">
                 <option value="">+ Ander product toevoegen...</option>
                 {% for p in overige_producten %}
                 <option value="{{ p.id }}" data-naam="{{ p.naam }}" data-afbeelding="{{ p.afbeelding|foto_klein }}"
@@ -177,6 +177,7 @@
                 vinkje.name = 'product_id';
                 vinkje.value = o.id;
                 vinkje.checked = o.aan;
+                vinkje.setAttribute('aria-label', o.naam + ' bestellen');
                 cel(rij, vinkje);
                 var thumb = cel(rij);
                 if (o.foto) {
@@ -213,6 +214,7 @@
                 aantal.min = '0';
                 aantal.value = String(o.aantal);
                 aantal.style.width = '6rem';
+                aantal.setAttribute('aria-label', 'Aantal te bestellen ' + o.naam);
                 aantalTd.appendChild(aantal);
                 aantalTd.appendChild(document.createTextNode(' ' + o.besteleenheid));
                 if (o.factor > 1) {

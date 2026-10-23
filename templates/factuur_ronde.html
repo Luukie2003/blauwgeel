@@ -25,6 +25,21 @@
 </div>
 {% endif %}
 
+{% if colli and open %}
+<div class="kaart" id="colli" style="border-left:4px solid var(--oranje, #b45309)">
+    <h2 style="margin-top:0">Let op! Los artikel gescand</h2>
+    <p style="margin-top:0">Los gescand: {{ colli.los }} {{ colli.eenheid }} los van <strong>{{ colli.product }}</strong>. Hele colli inboeken?</p>
+    <form method="post" action="{{ url_for('factuur_colli', ronde_id=r.id) }}" style="display:flex; gap:0.6rem; flex-wrap:wrap; margin:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="regel_id" value="{{ colli_regel }}">
+        <input type="hidden" name="code" value="{{ colli_code }}">
+        <button type="submit" name="keuze" value="ja" class="btn btn-geel" autofocus>Ja, hele {{ colli.naam }} ({{ colli.aantal }} {{ colli.eenheid }})</button>
+        <button type="submit" name="keuze" value="nee" class="btn btn-rand">Nee, {{ colli.los }} {{ colli.eenheid }} los</button>
+    </form>
+    <p class="tekst-zacht" style="font-size:0.8rem; margin:0.5rem 0 0">Je keuze geldt voor de rest van deze factuur bij deze barcode.</p>
+</div>
+{% endif %}
+
 {% if onbekende_barcode and open %}
 <div class="kaart" id="onbekend" style="border-left:4px solid var(--oranje, #b45309)">
     <h2 style="margin-top:0">Onbekende barcode <code>{{ onbekende_barcode.code }}</code></h2>
@@ -156,6 +171,30 @@
 </div>
 {% endif %}
 
+{% if open and plu %}
+<div class="kaart" id="plu">
+    <h2 style="margin-top:0">Zonder barcode (PLU)</h2>
+    <p class="tekst-zacht" style="margin-top:0; font-size:0.82rem">Fusten en producten op &lsquo;Heeft geen barcode&rsquo;. Vul in hoeveel er binnen zijn en tik op +.</p>
+    <ul class="mutatie-lijst">
+        {% for x in plu %}
+        <li style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center; flex-wrap:wrap">
+            <div style="min-width:0">
+                <strong>{{ x.naam }}</strong>
+                <div class="tekst-zacht" style="font-size:0.8rem">{% if x.besteld %}besteld {{ x.besteld }} &middot; {% endif %}binnen {{ x.gescand }} {{ x.eenheid }}{% if x.per_besteleenheid > 1 %} &middot; {{ x.besteleenheid }} van {{ x.per_besteleenheid }}{% endif %}</div>
+            </div>
+            <form method="post" action="{{ url_for('factuur_plu', ronde_id=r.id) }}" style="display:flex; gap:0.3rem; align-items:center; margin:0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="product_id" value="{{ x.product_id }}">
+                <input type="number" name="aantal" min="1" step="1" value="1" style="width:4.5rem" aria-label="Aantal {{ x.besteleenheid }} {{ x.naam }}">
+                <span class="tekst-zacht" style="font-size:0.8rem">{{ x.besteleenheid }}</span>
+                <button type="submit" class="btn btn-rand btn-klein" aria-label="{{ x.naam }} toevoegen">+</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 {% if open %}
 <details class="kaart">
     <summary style="cursor:pointer"><strong>Iets zonder barcode toevoegen</strong></summary>
@@ -205,11 +244,22 @@
     </form>
 </details>
 
+{# "Factuur gecontroleerd": eerst wat er van de bestelling nog mist (dat wordt manco), dan inboeken. #}
+{% set mist_tekst %}{% if r.bestelling_id %}{% if nog_niet_binnen %}Nog niet (helemaal) binnen: {% for m in nog_niet_binnen %}{{ m.naam }} {{ m.gescand }} van {{ m.besteld }} {{ m.eenheid }}{{ ', ' if not loop.last }}{% endfor %}. Wat mist, komt op manco. {% else %}Alles van de bestelling is binnen. {% endif %}{% endif %}{% endset %}
+{% if r.bestelling_id and nog_niet_binnen %}
+<div class="kaart" style="border-left:4px solid var(--oranje, #b45309)">
+    <strong>Nog niet (helemaal) binnen</strong>
+    <ul style="margin:0.3rem 0 0; padding-left:1.2rem">
+        {% for m in nog_niet_binnen %}<li>{{ m.naam }}: {{ m.gescand }} van {{ m.besteld }} {{ m.eenheid }}</li>{% endfor %}
+    </ul>
+    <p class="tekst-zacht" style="font-size:0.8rem; margin:0.4rem 0 0">Wat mist, komt bij het inboeken op manco bij de bestelling.</p>
+</div>
+{% endif %}
 <div class="kaart" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center">
     <form method="post" action="{{ url_for('factuur_afronden', ronde_id=r.id) }}" style="margin:0"
-          onsubmit="return bevestigEnVerstuur(this, 'Alles inboeken? De voorraad gaat omhoog{{ ' en bestelling #' ~ r.bestelling_id ~ ' komt op ontvangen te staan' if r.bestelling_id }}.');">
+          onsubmit="return bevestigEnVerstuur(this, {{ (mist_tekst ~ 'Alles inboeken? De voorraad gaat omhoog' ~ (' en bestelling #' ~ r.bestelling_id ~ ' komt op ontvangen te staan' if r.bestelling_id else '') ~ '.')|tojson|forceescape }});">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-geel" {{ 'disabled' if not g_ronde.regels }}>Afronden en inboeken</button>
+        <button type="submit" class="btn btn-geel" {{ 'disabled' if not g_ronde.regels }}>Factuur gecontroleerd</button>
     </form>
     <form method="post" action="{{ url_for('factuur_annuleren', ronde_id=r.id) }}" style="margin:0"
           onsubmit="return bevestigEnVerstuur(this, 'Deze inboekronde annuleren? Er wordt niets ingeboekt.');">

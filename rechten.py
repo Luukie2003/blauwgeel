@@ -341,6 +341,8 @@ SECTIE_ENDPOINTS = {
         "factuur_annuleren",
         "factuur_voor_bestelling",
         "factuur_zoals_besteld",
+        "factuur_colli",
+        "factuur_plu",
         "api_facturen",
         "api_factuur_bestelling",
         "api_factuur_zoals_besteld",

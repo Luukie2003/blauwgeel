@@ -11,7 +11,7 @@
 <div class="kaart">
     {% if producten %}
     <div class="filterbalk">
-        <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">
+        <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode..." aria-label="Zoek op naam of artikelcode">
         <span id="filter-aantal" class="tekst-zacht"></span>
     </div>
     <form method="post">
@@ -47,15 +47,15 @@
                             {% endif %}
                         </td>
                         <td>
-                            <input type="number" name="min_{{ p.id }}" min="0" style="width:6rem"
+                            <input type="number" name="min_{{ p.id }}" min="0" style="width:6rem" aria-label="Minimumvoorraad {{ p.naam }}"
                                    value="{{ p.min_voorraad }}"> {{ p.eenheid }}
                         </td>
                         <td>
-                            <input type="text" name="eenheid_{{ p.id }}" style="width:8rem"
+                            <input type="text" name="eenheid_{{ p.id }}" style="width:8rem" aria-label="Besteleenheid {{ p.naam }}"
                                    placeholder="{{ p.eenheid }}" value="{{ p.besteleenheid or '' }}">
                         </td>
                         <td>
-                            <input type="number" name="factor_{{ p.id }}" min="1" style="width:5rem"
+                            <input type="number" name="factor_{{ p.id }}" min="1" style="width:5rem" aria-label="Aantal per besteleenheid {{ p.naam }}"
                                    value="{{ p.besteleenheid_factor }}">
                         </td>
                     </tr>

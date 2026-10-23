@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.66.0"
+HUIDIGE_VERSIE = "1.67.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.67.0",
+        "datum": "23 oktober 2026",
+        "punten": [
+            "Factuur inboeken op de site werkt nu net als in de app. Scan je een los flesje terwijl er een krat of doos van bestaat, dan vraagt de site: 'Hele colli inboeken?', en die keuze geldt voor de rest van de factuur. Fusten en producten zonder barcode voeg je toe uit de lijst 'Zonder barcode (PLU)'. De knop heet 'Factuur gecontroleerd' en laat eerst zien wat er van de bestelling nog mist; dat wordt manco.",
+            "Op de telefoon vallen de pagina's van de sponsoren en standen (Kantine-tv) niet meer buiten beeld.",
+            "Invoervelden op Bulk bewerken, de bestellijst en de sponsorpagina hebben nu een naam, zodat een schermlezer zegt waar het veld voor is.",
+        ],
+    },
     {
         "versie": "1.66.0",
         "datum": "23 oktober 2026",
@@ -1190,7 +1199,7 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.14.1", "sinds": "0.1.0", "laatst": "1.64.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.14.0", "sinds": "0.4.0", "laatst": "1.65.0",
+    {"naam": "Bestellen & prognose", "versie": "1.15.0", "sinds": "0.4.0", "laatst": "1.67.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "1.54.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
@@ -1198,7 +1207,7 @@ MODULES = [
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.5.0", "sinds": "1.6.0", "laatst": "1.66.0",
      "inhoud": "Keukenvoorraad met een eigen telling (ook als looplijst met dozen scannen, en een begintelling), inboeken (ook door te scannen) en prijzen, en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.21.0", "sinds": "1.10.1", "laatst": "1.63.0",
+    {"naam": "Kantine-tv", "versie": "1.21.1", "sinds": "1.10.1", "laatst": "1.67.0",
      "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
