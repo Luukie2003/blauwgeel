@@ -8,9 +8,10 @@ inloggen met de code, het csrf_token in de header, een verzoek_id voor schrijfac
 van een doorverwijzing als iets niet mag. De logica is die van de site (dezelfde functies), de rechten staan in
 rechten.py.
 
-Wat alleen op de site kan (corrigeren, bewerken, heropenen, een bestelling klaarzetten, de kantine-tv, prijzen
-beheren), staat hier bewust niet in: de app zegt dan dat het niet in de app kan."""
+Wat alleen op de site kan (corrigeren, bewerken, heropenen, de kantine-tv, de meeste prijzen), staat hier bewust niet
+in: de app zegt dan dat het niet in de app kan."""
 
+import json
 from datetime import date, datetime
 
 from flask import jsonify, request, session
@@ -38,8 +39,11 @@ from keukenbeheer import (
     boek_keuken_in,
     keuken_barcodes,
     keuken_producten,
+    bewaar_keuken_stand,
+    keuken_stand,
     keuken_tellingen,
     verwerk_keuken_telling,
+    wis_keuken_stand,
     zet_keuken_prijzen,
 )
 from leveranciers import alle_leveranciers
@@ -491,11 +495,33 @@ def register_routes(app):
             )
             if telling_id is None:
                 return {"fout": "leeg", "melding": "Geen aantallen ingevuld: er is niets geteld."}, 400
+            wis_keuken_stand(db, session.get("gebruiker_id"))
             soort = "Begintelling" if begintelling else "Keukentelling"
             return {"telling_id": telling_id,
                     "melding": f"{soort} opgeslagen ({len(waarden)} {'product' if len(waarden) == 1 else 'producten'})."}, 200
 
         return eenmalig(actie)
+
+    @app.route("/api/app/keuken/stand", methods=["GET", "POST"])
+    def api_app_keuken_stand():
+        """De keukentelling die nog loopt, gedeeld tussen de site (keuken_lopen.html) en de app (KeukenTellenActivity).
+        GET: {loop_id, stand, bijgewerkt_op} of {stand: null}. POST {loop_id, stand, nieuw}: bewaren; 409 'vervangen' als
+        er op een ander toestel opnieuw is begonnen. POST {loop_id, afbreken: true}: afbreken."""
+        db = get_db()
+        gebruiker_id = session.get("gebruiker_id")
+        if request.method == "GET":
+            return jsonify(keuken_stand(db, gebruiker_id) or {"stand": None})
+        data = _data()
+        loop_id = str(data.get("loop_id") or "")[:64]
+        if data.get("afbreken") is True:
+            wis_keuken_stand(db, gebruiker_id, loop_id or None)
+            return jsonify({"stand": None})
+        stand = data.get("stand")
+        if not loop_id or not isinstance(stand, dict) or len(json.dumps(stand)) > 200_000:
+            return _fout("Geen geldige stand.")
+        if not bewaar_keuken_stand(db, gebruiker_id, loop_id, stand, nieuw=data.get("nieuw") is True):
+            return _fout("Op een ander toestel is intussen een nieuwe keukentelling begonnen.", 409, "vervangen")
+        return jsonify({"loop_id": loop_id, "bewaard": True})
 
     @app.route("/api/app/keuken/tellingen/<int:telling_id>")
     def api_app_keuken_telling(telling_id):

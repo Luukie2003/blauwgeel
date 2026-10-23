@@ -227,3 +227,65 @@ def test_app_keuken_dozen_prijs_telling_bekijken_en_boodschappenlijst(app, db):
     gewoon = db.execute("INSERT INTO producten (naam, categorie, voorraad) VALUES ('Cola', 'Fris', 1)").lastrowid
     db.commit()
     assert client.post("/api/app/keuken/boodschap", json={"product_id": gewoon}, headers=client.kop).status_code == 404
+
+
+# ---------- De keukentelling gedeeld tussen site en app (1.67.0) ----------
+
+
+def test_keukentelling_stand_delen_tussen_site_en_app(app, db):
+    from test_app_api_meer import _vrijwilliger
+
+    pid = _keuken(db)
+    zebra = _vrijwilliger(app, db, "kokdeel", "keuken")
+    assert zebra.get("/api/app/keuken/stand").get_json() == {"stand": None}
+    stand = {"waarden": {str(pid): 40}, "scans": {}, "index": 0, "begintelling": False, "controle": False, "versie": 3}
+    assert zebra.post("/api/app/keuken/stand", json={"loop_id": "a", "stand": stand, "nieuw": True}, headers=zebra.kop).status_code == 200
+    terug = zebra.get("/api/app/keuken/stand").get_json()
+    assert terug["loop_id"] == "a" and terug["stand"]["waarden"] == {str(pid): 40}
+
+    # Een ander toestel begint opnieuw: het eerste toestel krijgt 409 bij de volgende stap.
+    assert zebra.post("/api/app/keuken/stand", json={"loop_id": "b", "stand": stand, "nieuw": True}, headers=zebra.kop).status_code == 200
+    resp = zebra.post("/api/app/keuken/stand", json={"loop_id": "a", "stand": stand}, headers=zebra.kop)
+    assert resp.status_code == 409 and resp.get_json()["fout"] == "vervangen"
+
+    # Opslaan (in de app of op de site) wist de lopende telling.
+    zebra.post("/api/app/keuken/tellen", json={"waarden": {str(pid): 30}, "verzoek_id": "deel1"}, headers=zebra.kop)
+    assert zebra.get("/api/app/keuken/stand").get_json() == {"stand": None}
+
+    # Afbreken
+    zebra.post("/api/app/keuken/stand", json={"loop_id": "c", "stand": stand, "nieuw": True}, headers=zebra.kop)
+    zebra.post("/api/app/keuken/stand", json={"loop_id": "c", "afbreken": True}, headers=zebra.kop)
+    assert zebra.get("/api/app/keuken/stand").get_json() == {"stand": None}
+    assert zebra.post("/api/app/keuken/stand", json={"loop_id": "d", "stand": "kapot"}, headers=zebra.kop).status_code == 400
+
+
+def test_opslaan_op_de_site_wist_de_gedeelde_stand(ingelogde_client, db):
+    from keukenbeheer import bewaar_keuken_stand, keuken_stand
+
+    pid = _keuken(db)
+    gebruiker = db.execute("SELECT id FROM gebruikers WHERE naam = 'admin'").fetchone()[0]
+    bewaar_keuken_stand(db, gebruiker, "x", {"waarden": {str(pid): 5}}, nieuw=True)
+    ingelogde_client.post("/keuken/tellen", data={"csrf_token": _csrf(ingelogde_client), f"geteld_{pid}": "5"})
+    assert keuken_stand(db, gebruiker) is None
+
+
+def test_keukenomzet_per_week_verdeeld_over_de_dagen(db):
+    from datetime import date
+
+    from keukenbeheer import keuken_omzet_in, keuken_omzet_per_dag
+
+    pid = _keuken(db, voorraad=40, verkoop=2.0)
+    verwerk_keuken_telling(db, {pid: 40}, "Kok", "2026-10-04 20:00", begintelling=True)  # zondag: begin
+    verwerk_keuken_telling(db, {pid: 26}, "Kok", "2026-10-11 20:00")  # 14 verkocht = € 28 over 7 dagen
+    per_dag = keuken_omzet_per_dag(db)
+    assert round(sum(per_dag.values()), 2) == 28.0
+    assert keuken_omzet_in(per_dag, date(2026, 10, 5), date(2026, 10, 11)) == 28.0  # ma t/m zo
+    assert keuken_omzet_in(per_dag, "2026-10-12", "2026-10-18") == 0
+
+
+def test_dashboard_toont_de_keukenomzet(ingelogde_client, db):
+    pid = _keuken(db, voorraad=40, verkoop=2.0)
+    verwerk_keuken_telling(db, {pid: 40}, "Kok", "2026-09-27 20:00", begintelling=True)
+    verwerk_keuken_telling(db, {pid: 20}, "Kok", "2026-10-04 20:00")
+    html = ingelogde_client.get("/dashboard/omzettrend").data.decode()
+    assert "Omzettrend" in html  # zonder kantinetellingen geen weekbalken, maar ook geen fout

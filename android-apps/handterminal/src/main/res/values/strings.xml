@@ -578,7 +578,9 @@
     <string name="keuken_klaar_begin">De voorraad is goed gezet. Vanaf nu telt wat er minder is als verkocht.</string>
     <string name="keuken_telling_bekijken">Telling bekijken</string>
     <string name="keuken_verder_titel">Verder met de keukentelling?</string>
-    <string name="keuken_gepauzeerd">Gepauzeerd: bij Keuken ga je verder waar je was.</string>
+    <string name="keuken_elders_klaar">Je keukentelling is intussen op de site of een ander toestel opgeslagen of afgebroken; je begint opnieuw.</string>
+    <string name="keuken_vervangen">Op een ander toestel (of op de site) is intussen een nieuwe keukentelling begonnen.</string>
+    <string name="keuken_gepauzeerd">Gepauzeerd: bij Keuken (of op de site) ga je verder waar je was.</string>
     <string name="keuken_stoppen_vraag">De keukentelling afbreken? Wat je hebt geteld, wordt niet opgeslagen.</string>
     <string name="keuken_product_n_van_m">Product %1$d van %2$d · %3$d geteld</string>
     <string name="keuken_dozen">dozen/zakken: %1$s</string>

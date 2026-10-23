@@ -3,7 +3,8 @@
 {% block inhoud %}
 {# De looplijst van de keuken (zie keuken_tellen_lopen in routes/keuken.py): product voor product, losse stuks met de
    hand en volle dozen of zakken met een scan. De stand staat in de browser (localStorage), dus zonder bereik ben je
-   niets kwijt; pas bij "Opslaan" gaat de telling naar de site. #}
+   niets kwijt, en gaat ook naar de site (/api/app/keuken/stand): zo ga je verder op de handterminal-app, of andersom.
+   Pas bij "Opslaan" verandert de voorraad. #}
 <p class="subtitel">
     <span id="kl-positie"></span>
     &nbsp;&middot;&nbsp; <a href="#" onclick="klOpnieuw(); return false;">Opnieuw beginnen</a>
@@ -87,15 +88,66 @@ var KL_BARCODES = {{ barcodes|tojson }};
 var KL_SLEUTEL = 'kantine-keuken-loop';
 
 // De stand: welk product, wat er per product geteld is en welke scans erbij horen.
-var kl = { index: 0, waarden: {}, scans: {}, begintelling: {{ 'true' if eerste_telling else 'false' }}, controle: false };
+var KL_STAND_URL = {{ url_for('api_app_keuken_stand')|tojson }};
+var KL_CSRF = {{ csrf_token()|tojson }};
+// loopId: welke telling dit is; opSite: de site kent hem al (anders is hij nieuw voor de site).
+var kl = { index: 0, waarden: {}, scans: {}, begintelling: {{ 'true' if eerste_telling else 'false' }}, controle: false,
+           loopId: null, opSite: false, versie: 0 };
 try {
     var bewaard = JSON.parse(localStorage.getItem(KL_SLEUTEL) || 'null');
     if (bewaard && bewaard.waarden) kl = Object.assign(kl, bewaard);
 } catch (e) { /* geen of kapotte stand: gewoon vooraan beginnen */ }
+if (!kl.loopId) kl.loopId = String(Date.now()) + Math.random().toString(16).slice(2);
+
+// De stand zoals de app hem ook bewaart: waarden als getal, de scans, waar je bent en of het een begintelling is.
+function klNaarStand() {
+    return { waarden: kl.waarden, scans: kl.scans, index: kl.index, begintelling: kl.begintelling, controle: kl.controle,
+             versie: kl.versie };
+}
+function klVanStand(stand, loopId) {
+    var waarden = {};
+    Object.keys(stand.waarden || {}).forEach(function (k) {
+        var n = parseInt(stand.waarden[k], 10);
+        if (!isNaN(n)) waarden[k] = n;
+    });
+    kl.waarden = waarden;
+    kl.scans = stand.scans || {};
+    kl.index = Math.min(Math.max(0, stand.index || 0), KL_PRODUCTEN.length - 1);
+    if (typeof stand.begintelling === 'boolean') kl.begintelling = stand.begintelling;
+    kl.controle = !!stand.controle;
+    kl.versie = stand.versie || 0;
+    kl.loopId = loopId;
+    kl.opSite = true;
+}
 if (kl.index >= KL_PRODUCTEN.length) kl.index = 0;
 
+var klStuurTimer = null;
 function klBewaren() {
+    kl.versie = (kl.versie || 0) + 1;  // wie de hoogste versie heeft, is het verst (zie het ophalen onderaan)
     try { localStorage.setItem(KL_SLEUTEL, JSON.stringify(kl)); } catch (e) { /* privénavigatie: dan niet bewaren */ }
+    // Na een korte pauze naar de site, zodat een rij scans niet elk een eigen verzoek wordt.
+    clearTimeout(klStuurTimer);
+    klStuurTimer = setTimeout(klStuur, 1200);
+}
+function klStuur() {
+    if (!Object.keys(kl.waarden).length && !kl.opSite) return;
+    fetch(KL_STAND_URL, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': KL_CSRF },
+        body: JSON.stringify({ loop_id: kl.loopId, stand: klNaarStand(), nieuw: !kl.opSite })
+    }).then(function (r) {
+        if (r.status === 409) {
+            // Op een ander toestel (of in de app) opnieuw begonnen: die telling is nu de waarheid.
+            try { localStorage.removeItem(KL_SLEUTEL); } catch (e) {}
+            toonBevestiging('Op een ander toestel (of in de app) is intussen een nieuwe keukentelling begonnen. Die laden?',
+                function () { window.location.reload(); }, { ja: 'Ja, laden', nee: 'Nee' });
+            return;
+        }
+        if (r.ok) {
+            kl.opSite = true;
+            try { localStorage.setItem(KL_SLEUTEL, JSON.stringify(kl)); } catch (e) {}
+        }
+    }).catch(function () { /* geen bereik: de stand staat in de browser en gaat bij de volgende stap mee */ });
 }
 
 function klHuidig() { return KL_PRODUCTEN[kl.index]; }
@@ -299,13 +351,44 @@ function klTerugNaarTellen() {
     klToon();
 }
 function klOpnieuw() {
-    toonBevestiging('Opnieuw beginnen? Wat je tot nu toe hebt geteld, wordt gewist.', function () {
+    toonBevestiging('Opnieuw beginnen? Wat je tot nu toe hebt geteld, wordt gewist, ook op de handterminal.', function () {
         try { localStorage.removeItem(KL_SLEUTEL); } catch (e) {}
-        window.location.reload();
+        fetch(KL_STAND_URL, {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': KL_CSRF },
+            body: JSON.stringify({ loop_id: kl.loopId, afbreken: true })
+        }).finally(function () { window.location.href = window.location.pathname; });
     }, { ja: 'Ja, opnieuw', nee: 'Nee, verder tellen' });
 }
 
 klToon();
 if (kl.controle) klNaarControle();
+
+// Wat staat er op de site? Een telling die op de handterminal (of een andere browser) verder is, wint; is hij daar
+// opgeslagen of afgebroken, dan begint deze browser ook opnieuw.
+fetch(KL_STAND_URL, { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (site) {
+    if (!site) return;
+    if (site.stand) {
+        // Dezelfde telling en hier verder (bijvoorbeeld zonder bereik geteld): dan gaat deze stand naar de site.
+        if (site.loop_id === kl.loopId && (kl.versie || 0) >= (site.stand.versie || 0)) {
+            kl.opSite = true;
+            if ((kl.versie || 0) > (site.stand.versie || 0)) klStuur();
+            return;
+        }
+        klVanStand(site.stand, site.loop_id);
+        try { localStorage.setItem(KL_SLEUTEL, JSON.stringify(kl)); } catch (e) {}
+        klToon();
+        if (kl.controle) klNaarControle();
+        klMelding('Verder met de telling van de site of de handterminal (' + Object.keys(kl.waarden).length + ' geteld).');
+    } else if (kl.opSite) {
+        try { localStorage.removeItem(KL_SLEUTEL); } catch (e) {}
+        kl = { index: 0, waarden: {}, scans: {}, begintelling: kl.begintelling, controle: false,
+               loopId: String(Date.now()) + Math.random().toString(16).slice(2), opSite: false, versie: 0 };
+        document.getElementById('kl-controle').hidden = true;
+        document.getElementById('kl-tellen').hidden = false;
+        klToon();
+        klMelding('Deze telling is intussen ergens anders opgeslagen of afgebroken; je begint opnieuw.');
+    }
+}).catch(function () {});
 </script>
 {% endblock %}

@@ -8,8 +8,12 @@ in de weekomzet en de prognose van de kantine.
 Inkoop gaat per verpakking (de besteleenheid, bijvoorbeeld een doos frikandellen van 40) en de voorraad in porties of
 stuks: 'aantal per besteleenheid' zegt hoeveel er in een verpakking zit."""
 
+import json
+from datetime import date, datetime, timedelta
+
 import barcodes
 from helpers.producten import besteleenheid_factor, omzet_per_eenheid, verwerk_auto_inactief
+from helpers.tijd import now_str
 from productkaart import KEUKEN_CATEGORIE, NIET_GEARCHIVEERD
 
 
@@ -168,3 +172,72 @@ def keuken_tellingen(db, limiet=30):
         for t in tellingen:
             t["regels"] = regels.get(t["id"], [])
     return tellingen
+
+
+# ---------- De keukentelling die nog loopt, gedeeld tussen de site en de handterminal-app ----------
+
+
+def keuken_stand(db, gebruiker_id):
+    """{"loop_id", "stand", "bijgewerkt_op"} van iemands lopende keukentelling, of None."""
+    rij = db.execute("SELECT * FROM keuken_loop WHERE gebruiker_id = ?", (gebruiker_id,)).fetchone()
+    if rij is None:
+        return None
+    try:
+        stand = json.loads(rij["stand"])
+    except ValueError:
+        return None
+    return {"loop_id": rij["loop_id"], "stand": stand, "bijgewerkt_op": rij["bijgewerkt_op"]}
+
+
+def bewaar_keuken_stand(db, gebruiker_id, loop_id, stand, nieuw=False):
+    """Bewaart de stand. Staat er al een andere telling (een ander loop_id) en is dit geen nieuwe, dan is er op een ander
+    toestel opnieuw begonnen: dan wordt er niets bewaard en geeft hij False. Anders True."""
+    huidig = db.execute("SELECT loop_id FROM keuken_loop WHERE gebruiker_id = ?", (gebruiker_id,)).fetchone()
+    if huidig is not None and huidig["loop_id"] != loop_id and not nieuw:
+        return False
+    db.execute(
+        "INSERT OR REPLACE INTO keuken_loop (gebruiker_id, loop_id, stand, bijgewerkt_op) VALUES (?, ?, ?, ?)",
+        (gebruiker_id, loop_id, json.dumps(stand), now_str()),
+    )
+    db.commit()
+    return True
+
+
+def wis_keuken_stand(db, gebruiker_id, loop_id=None):
+    """Afgebroken of opgeslagen. Met loop_id alleen als het nog die telling is (een late 'afbreken' wist geen nieuwere)."""
+    if loop_id:
+        db.execute("DELETE FROM keuken_loop WHERE gebruiker_id = ? AND loop_id = ?", (gebruiker_id, loop_id))
+    else:
+        db.execute("DELETE FROM keuken_loop WHERE gebruiker_id = ?", (gebruiker_id,))
+    db.commit()
+
+
+# ---------- Keukenomzet per week (dashboard) ----------
+
+
+def keuken_omzet_per_dag(db):
+    """{datum: omzet} van de keuken: de omzet van elke keukentelling verdeeld over de dagen sinds de vorige keukentelling
+    (zoals de weekomzet van de kantine), zodat het niet uitmaakt op welke dag je telt. De eerste telling (en een
+    begintelling) heeft geen omzet."""
+    tellingen = db.execute(
+        """SELECT k.datum, COALESCE(SUM(r.verkocht * r.verkoopprijs), 0) AS omzet
+           FROM keuken_tellingen k LEFT JOIN keuken_telling_regels r ON r.telling_id = k.id
+           GROUP BY k.id ORDER BY k.datum, k.id"""
+    ).fetchall()
+    per_dag = {}
+    vorige = None
+    for t in tellingen:
+        dag = datetime.strptime(t["datum"][:10], "%Y-%m-%d").date()
+        if vorige is not None and t["omzet"]:
+            dagen = [vorige + timedelta(days=i) for i in range(1, max(1, (dag - vorige).days) + 1)]
+            for d in dagen:
+                per_dag[d] = per_dag.get(d, 0) + t["omzet"] / len(dagen)
+        vorige = dag
+    return per_dag
+
+
+def keuken_omzet_in(per_dag, van, tot):
+    """De keukenomzet van van t/m tot (date of 'YYYY-MM-DD')."""
+    van = van if isinstance(van, date) else date.fromisoformat(str(van)[:10])
+    tot = tot if isinstance(tot, date) else date.fromisoformat(str(tot)[:10])
+    return round(sum(v for d, v in per_dag.items() if van <= d <= tot), 2)

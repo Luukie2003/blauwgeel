@@ -5,6 +5,7 @@ from flask import Response, flash, g, jsonify, redirect, render_template, reques
 import backup as backup_module
 from club_van_20 import bereken_club_van_20_status
 from database import get_db
+from keukenbeheer import keuken_omzet_in, keuken_omzet_per_dag
 from helpers import (
     bouw_taken,
     bereken_bestelling_status,
@@ -199,7 +200,18 @@ def register_routes(app):
     def dashboard_omzettrend():
         """De kaart 'Omzettrend' van het dashboard. Apart opgehaald, zodat het dashboard niet wacht op de weekcijfers
         (die komen uit het voorspelmodel en dat rekent soms enkele seconden)."""
-        return render_template("_dashboard_omzettrend.html", omzet_trend=bereken_omzet_trend(get_db()))
+        db = get_db()
+        omzet_trend = bereken_omzet_trend(db)
+        # De keuken telt apart (keukenbeheer.py): per week de keukenomzet naast die van de kantine.
+        keuken = keuken_omzet_per_dag(db)
+        if keuken and omzet_trend.get("weektrend"):
+            for balk in omzet_trend["weektrend"].get("balken", []):
+                balk["keuken"] = keuken_omzet_in(keuken, balk["van"], balk["tot"])
+            sv = omzet_trend["weektrend"].get("samenvatting")
+            if sv:
+                vorige = next((b for b in omzet_trend["weektrend"]["balken"] if b["week"] == sv["week"]), None)
+                sv["keuken"] = vorige.get("keuken") if vorige else None
+        return render_template("_dashboard_omzettrend.html", omzet_trend=omzet_trend)
 
     @app.route("/dashboard/wedstrijddag")
     def dashboard_wedstrijddag():

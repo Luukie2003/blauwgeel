@@ -10,8 +10,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import nl.kantineblauwgeel.handterminal.databinding.ActivityTellenBinding
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 /** De keukentelling als looplijst, net als Tellen (en de keukenlooplijst op de site): product voor product, met foto,
  * voortgang, de snelknoppen en de rekenmachine. Losse stuks tik je in; een volle doos of zak scan je, en wat erin zit
@@ -19,8 +21,10 @@ import org.json.JSONObject
  * · +15"); tik erop om een verkeerde scan weg te halen. Scan je een ander keukenproduct, dan springt de lijst daarheen; een
  * onbekende barcode koppel je meteen (KoppelenActivity) en die scan telt dan alsnog mee.
  *
- * De stand staat op het toestel (SharedPreferences "keuken_tellen"): na Terug, de slaapstand of een herstart ga je
- * verder waar je was. Aan het eind een controlescherm met per product geteld, de voorraad, het verschil en wat er als
+ * De stand staat op het toestel (SharedPreferences "keuken_tellen") en gaat ook naar de site (/api/app/keuken/stand):
+ * na Terug, de slaapstand of een herstart ga je verder waar je was, en verder gaan kan ook op de site (Keuken > Tellen
+ * met de looplijst), of andersom. Elke telling heeft een loop_id en een versie: de hoogste versie is het verst. Is er op
+ * een ander toestel opnieuw begonnen, dan zegt de site dat (409) en stopt het tellen hier. Aan het eind een controlescherm met per product geteld, de voorraad, het verschil en wat er als
  * verkocht telt (met de omzet), waar je ook kiest of het een begintelling is. Pas bij "Telling opslaan" verandert de
  * voorraad (/api/app/keuken/tellen, zoals Keuken > Tellen op de site). */
 class KeukenTellenActivity : BasisActivity() {
@@ -56,6 +60,10 @@ class KeukenTellenActivity : BasisActivity() {
     private var tellingId: Int? = null
     /** De scan die moest worden gekoppeld: na het koppelen telt hij alsnog mee. */
     private var teKoppelen: String? = null
+    /** Welke telling dit is, of de site hem al kent, en hoe vaak hij is veranderd (zie bewaar). */
+    private var loopId = UUID.randomUUID().toString()
+    private var opSite = false
+    private var versie = 0
 
     private val lokaal by lazy { getSharedPreferences("keuken_tellen", Context.MODE_PRIVATE) }
 
@@ -167,7 +175,25 @@ class KeukenTellenActivity : BasisActivity() {
             }
             begintelling = keuken.optBoolean("eerste_telling")
             val bewaard = lokaal.getString("stand", null)?.let { runCatching { JSONObject(it) }.getOrNull() }
-            if (bewaard != null && bewaard.optJSONObject("waarden")?.length() ?: 0 > 0) vraagVerder(bewaard) else begin()
+                ?.takeIf { (it.optJSONObject("waarden")?.length() ?: 0) > 0 }
+            // Wat er op de site staat: een telling die op de site (of een ander toestel) verder is, wint. Zonder
+            // verbinding gewoon met wat er op het toestel staat.
+            val site = try {
+                Api.getJson(this, "/api/app/keuken/stand").takeIf { !it.isNull("stand") }
+            } catch (f: Api.Fout) {
+                null.also { if (f.soort == Api.Soort.NIET_INGELOGD) throw f }
+            }
+            when {
+                site != null && !(bewaard != null && bewaard.optString("loop_id") == site.optString("loop_id") &&
+                    bewaard.optInt("versie") >= site.getJSONObject("stand").optInt("versie")) ->
+                    vraagVerder(site.getJSONObject("stand").put("loop_id", site.optString("loop_id")).put("op_site", true))
+                site == null && bewaard != null && bewaard.optBoolean("op_site") -> {
+                    melding(getString(R.string.keuken_elders_klaar), lang = true)
+                    begin()
+                }
+                bewaard != null -> vraagVerder(bewaard)
+                else -> begin()
+            }
             Fotos.haalAlvast(this, producten.map { it.foto })
         }
     }
@@ -189,7 +215,10 @@ class KeukenTellenActivity : BasisActivity() {
             .setMessage(resources.getQuantityString(R.plurals.keuken_verder_tekst, n, n))
             .setCancelable(false)
             .setPositiveButton(R.string.verder_tellen) { _, _ -> zetStand(stand) }
-            .setNegativeButton(R.string.opnieuw_beginnen) { _, _ -> begin() }
+            .setNegativeButton(R.string.opnieuw_beginnen) { _, _ ->
+                stand.tekstOfNull("loop_id")?.let { afbrekenOpSite(it) }
+                begin()
+            }
             .show()
     }
 
@@ -205,6 +234,9 @@ class KeukenTellenActivity : BasisActivity() {
             }
         }
         if (stand.has("begintelling")) begintelling = stand.optBoolean("begintelling")
+        stand.tekstOfNull("loop_id")?.let { loopId = it }
+        opSite = stand.optBoolean("op_site")
+        versie = stand.optInt("versie")
         index = stand.optInt("index").coerceIn(0, producten.lastIndex)
         if (stand.optBoolean("controle")) toonControle() else {
             toonLaag(Laag.TELLEN)
@@ -216,22 +248,69 @@ class KeukenTellenActivity : BasisActivity() {
         waarden.clear()
         scans.clear()
         index = 0
+        loopId = UUID.randomUUID().toString()
+        opSite = false
+        versie = 0
         opslaanId = null
         lokaal.edit().remove("stand").apply()
         toonLaag(Laag.TELLEN)
         toonProduct()
     }
 
-    private fun bewaar() {
+    private fun standJson(): JSONObject {
         val w = JSONObject()
-        waarden.forEach { (id, v) -> w.put(id.toString(), v) }
+        waarden.forEach { (id, v) -> v.toIntOrNull()?.let { w.put(id.toString(), it) } }
         val s = JSONObject()
         scans.forEach { (id, lijst) ->
             if (lijst.isNotEmpty()) s.put(id.toString(), JSONArray(lijst.map { JSONObject().put("aantal", it.aantal).put("omschrijving", it.omschrijving) }))
         }
-        val stand = JSONObject().put("waarden", w).put("scans", s).put("index", index).put("begintelling", begintelling)
-            .put("controle", laag == Laag.CONTROLE)
-        lokaal.edit().putString("stand", stand.toString()).apply()
+        return JSONObject().put("waarden", w).put("scans", s).put("index", index).put("begintelling", begintelling)
+            .put("controle", laag == Laag.CONTROLE).put("versie", versie)
+    }
+
+    /** Op het toestel, en (op de achtergrond, ook als het scherm sluit) naar de site. */
+    private fun bewaar() {
+        versie++
+        val stand = standJson()
+        lokaal.edit().putString("stand", JSONObject(stand.toString()).put("loop_id", loopId).put("op_site", opSite).toString()).apply()
+        if (waarden.isEmpty() && !opSite) return
+        val body = JSONObject().put("loop_id", loopId).put("stand", stand).put("nieuw", !opSite)
+        val app = applicationContext
+        val prefs = lokaal
+        val id = loopId
+        Achtergrond.scope.launch {
+            try {
+                Api.post(app, "/api/app/keuken/stand", body, herhaalbaar = true)
+                opSite = true
+                prefs.getString("stand", null)?.let { JSONObject(it) }?.takeIf { it.optString("loop_id") == id }?.let {
+                    prefs.edit().putString("stand", it.put("op_site", true).toString()).apply()
+                }
+            } catch (f: Api.Fout) {
+                if (f.code == "vervangen") runOnUiThread { vervangen(f.message) }
+            }
+        }
+    }
+
+    /** Op een ander toestel (of op de site) is opnieuw begonnen: hier stoppen, die telling is nu de waarheid. */
+    private fun vervangen(tekst: String?) {
+        if (isFinishing || laag == Laag.KLAAR) return
+        laag = Laag.KLAAR // niet nog eens bewaren bij het sluiten
+        lokaal.edit().remove("stand").apply()
+        AlertDialog.Builder(this)
+            .setMessage(tekst ?: getString(R.string.keuken_vervangen))
+            .setCancelable(false)
+            .setPositiveButton(R.string.ok) { _, _ -> finish() }
+            .show()
+    }
+
+    private fun afbrekenOpSite(id: String) {
+        val app = applicationContext
+        Achtergrond.scope.launch {
+            try {
+                Api.post(app, "/api/app/keuken/stand", JSONObject().put("loop_id", id).put("afbreken", true), herhaalbaar = true)
+            } catch (f: Api.Fout) {
+            }
+        }
     }
 
     // ---------------------------------------------------------------- tellen
@@ -384,6 +463,8 @@ class KeukenTellenActivity : BasisActivity() {
             .setMessage(R.string.keuken_stoppen_vraag)
             .setPositiveButton(R.string.ja_afbreken) { _, _ ->
                 lokaal.edit().remove("stand").apply()
+                if (opSite) afbrekenOpSite(loopId)
+                laag = Laag.KLAAR // niet nog eens bewaren bij het sluiten
                 finish()
             }
             .setNegativeButton(R.string.nee_verder_tellen, null)

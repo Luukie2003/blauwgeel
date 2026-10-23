@@ -547,6 +547,15 @@ fieldset.groupbox legend {
     text-overflow: ellipsis;
 }
 
+.omzet-bar-keuken {
+    font-size: 0.66rem;
+    color: var(--tekst-zacht);
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .omzet-bar-wedstrijden {
     font-size: 0.68rem;
     margin-top: 0.15rem;

@@ -853,6 +853,16 @@ CREATE TABLE IF NOT EXISTS keuken_telling_regels (
     verkoopprijs REAL NOT NULL DEFAULT 0
 );
 
+-- De keukentelling die nog loopt (1.67.0), per account: zo ga je op de site verder waar je op de handterminal was, en
+-- andersom. stand is JSON {waarden, scans, index, begintelling, controle}; loop_id is welke telling het is, zodat een
+-- ander toestel merkt dat er intussen opnieuw is begonnen (zie keukenbeheer.bewaar_keuken_stand).
+CREATE TABLE IF NOT EXISTS keuken_loop (
+    gebruiker_id INTEGER PRIMARY KEY REFERENCES gebruikers(id) ON DELETE CASCADE,
+    loop_id TEXT NOT NULL,
+    stand TEXT NOT NULL,
+    bijgewerkt_op TEXT NOT NULL
+);
+
 -- Evenementen (1.45.0): een toernooi, feest of verhuur. De prognose rekent zo'n dag als verkoopdag met een eigen,
 -- bijgeleerd drukte-effect (zie voorspelling.lees_evenementen).
 CREATE TABLE IF NOT EXISTS evenementen (

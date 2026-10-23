@@ -9,6 +9,7 @@ from keukenbeheer import (
     keuken_producten,
     keuken_tellingen,
     verwerk_keuken_telling,
+    wis_keuken_stand,
     zet_keuken_prijzen,
 )
 from routes.producten import render_producten_pagina, render_voorraad_pda
@@ -92,6 +93,7 @@ def register_routes(app):
             if telling_id is None:
                 flash("Geen aantallen ingevuld: er is niets geteld.", "error")
                 return redirect(url_for("keuken_tellen"))
+            wis_keuken_stand(db, session.get("gebruiker_id"))
             soort = "Begintelling" if begintelling else "Keukentelling"
             flash(f"{soort} #{telling_id} opgeslagen ({len(waarden)} {'product' if len(waarden) == 1 else 'producten'}).", "success")
             # Uit de looplijst: dan wist het overzicht de stand die in de browser bewaard was (zie keuken_lopen.html).

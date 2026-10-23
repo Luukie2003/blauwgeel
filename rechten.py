@@ -125,6 +125,7 @@ GEBRUIK_NIET_LOGGEN = {
     "api_factuur_bestelling",
     "api_factuur_zoals_besteld",
     "api_factuur_plu",
+    "api_app_keuken_stand",
     # De handterminal-app haalt de productlijst en de looplijst op de achtergrond op. Het startscherm en een product
     # openen (api_app_start, api_app_product) tellen wel als bezoek, net als op de site.
     "api_app_producten",
@@ -442,6 +443,7 @@ SECTIE_ENDPOINTS = {
         "api_app_keuken_boodschap",
         "api_app_keuken_prijzen",
         "api_app_keuken_instellingen",
+        "api_app_keuken_stand",
         "api_app_frituurvet",
         "frituurvet_vervangen",
         "keuken_voorraad",
