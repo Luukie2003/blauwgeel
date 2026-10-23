@@ -3,7 +3,6 @@ package nl.kantineblauwgeel.tablet
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import nl.kantineblauwgeel.tablet.databinding.ActivityWedstrijddagBinding
 
 /** Native scherm voor de wedstrijddag-welkomstmelding (zie
@@ -13,7 +12,7 @@ import nl.kantineblauwgeel.tablet.databinding.ActivityWedstrijddagBinding
  * prijzenscherm (die is verwijderd) -- staat 'm aan, dan verschijnt de
  * melding daar af en toe schermvullend, alleen binnen het tijdvak van een
  * eigen thuiswedstrijd vandaag. */
-class WedstrijddagActivity : AppCompatActivity() {
+class WedstrijddagActivity : BasisActivity() {
 
     private lateinit var binding: ActivityWedstrijddagBinding
 

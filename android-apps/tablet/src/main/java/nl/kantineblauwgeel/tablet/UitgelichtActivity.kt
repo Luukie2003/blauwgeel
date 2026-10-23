@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import nl.kantineblauwgeel.tablet.databinding.ActivityUitgelichtBinding
 
 private data class UitgelichtProduct(val id: Int, val naam: String, val categorie: String)
@@ -14,7 +13,7 @@ private data class UitgelichtProduct(val id: Int, val naam: String, val categori
  * groot en omlijnd op het prijzenscherm, los van zijn eigen categorie.
  * "Geen (uitzetten)" bovenaan de Spinner stuurt een leeg product_id mee,
  * precies zoals de website-pagina de kaart weer uitzet. */
-class UitgelichtActivity : AppCompatActivity() {
+class UitgelichtActivity : BasisActivity() {
 
     private lateinit var binding: ActivityUitgelichtBinding
     private var producten = listOf<UitgelichtProduct>()

@@ -3,15 +3,13 @@ package nl.kantineblauwgeel.tablet
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import nl.kantineblauwgeel.tablet.databinding.ActivityBeheerMenuBinding
 
-/** Getoond na een geldige tablet-code: menu met de basics die vanaf dit
- * toestel aan te passen zijn. Elke kaart opent een volledig native scherm
- * (geen WebView) dat rechtstreeks met de bestaande website-routes praat via
- * Api.kt, met de rechten van het account van de code. Terug-knop (hardware
- * of op het scherm) gaat terug naar de code-invoer. */
-class BeheerMenuActivity : AppCompatActivity() {
+/** Getoond na een geldige tablet-code: het menu. Bovenaan het prijzenscherm (producten, acties, bardienst,
+ * uitgelicht, wedstrijddag), onderaan de kantine-tv zelf (2.0: tv's, dia's, uitverkocht, timer). Elke kaart opent een
+ * volledig native scherm dat met de site praat via Api.kt, met de rechten van het account van de code. "Andere code
+ * invoeren" logt uit en gaat terug naar de code-invoer. */
+class BeheerMenuActivity : BasisActivity() {
 
     private lateinit var binding: ActivityBeheerMenuBinding
 
@@ -40,6 +38,13 @@ class BeheerMenuActivity : AppCompatActivity() {
         binding.knopWedstrijddag.setOnClickListener {
             startActivity(Intent(this, WedstrijddagActivity::class.java))
         }
-        binding.terugKnop.setOnClickListener { finish() }
+        binding.knopTvs.setOnClickListener { startActivity(Intent(this, TvsActivity::class.java)) }
+        binding.knopDias.setOnClickListener { startActivity(Intent(this, DiasActivity::class.java)) }
+        binding.knopUitverkocht.setOnClickListener { startActivity(Intent(this, UitverkochtActivity::class.java)) }
+        binding.knopTimer.setOnClickListener { startActivity(Intent(this, TimerActivity::class.java)) }
+        binding.terugKnop.setOnClickListener {
+            Sessie.uitloggen()
+            finish()
+        }
     }
 }

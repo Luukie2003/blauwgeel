@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import nl.kantineblauwgeel.tablet.databinding.ActivityProductenBinding
@@ -29,7 +28,7 @@ private data class Product(
  * de bestaande website-routes (zie Api.kt). Wie de vereiste sectie niet
  * heeft krijgt van de server gewoon een foutmelding terug bij het
  * schakelen, precies zoals op de website zelf. */
-class ProductenActivity : AppCompatActivity() {
+class ProductenActivity : BasisActivity() {
 
     private lateinit var binding: ActivityProductenBinding
     private val producten = mutableListOf<Product>()

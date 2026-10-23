@@ -11,7 +11,6 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import nl.kantineblauwgeel.tablet.databinding.ActivityBardienstenBinding
@@ -34,7 +33,7 @@ private fun isoNaarWeergave(iso: String): String {
  * -- aanmaken/bewerken kiest datum en tijden via de systeem-eigen date-/
  * time-pickers, geen los formulierscherm nodig. Tikken op een rij opent de
  * bewerk-dialoog, ✕ verwijdert direct na bevestiging. */
-class BardienstenActivity : AppCompatActivity() {
+class BardienstenActivity : BasisActivity() {
 
     private lateinit var binding: ActivityBardienstenBinding
     private val bardiensten = mutableListOf<Bardienst>()

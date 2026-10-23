@@ -12,7 +12,6 @@ import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import nl.kantineblauwgeel.tablet.databinding.ActivityActiesBinding
@@ -32,7 +31,7 @@ private data class Actie(
  * regel als op de website: een actie hergebruikt de foto/prijs van een
  * bestaand product) en een optionele tekst. Toon-schakelaar en verwijderen
  * gaan direct, tikken op een rij opent de bewerk-dialoog. */
-class ActiesActivity : AppCompatActivity() {
+class ActiesActivity : BasisActivity() {
 
     private lateinit var binding: ActivityActiesBinding
     private val acties = mutableListOf<Actie>()

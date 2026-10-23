@@ -9,9 +9,12 @@ Drie losstaande Android-apps rond kantineblauwgeel.nl:
   (zoom per scherm, bewaard op de tv). Start vanzelf na een
   herstart en herstelt zichzelf na een storing. Zie het kopje "Hoe de apps met de
   website praten".
-- **`tablet/`** — "Kantine Beheer", voor tablets. Toont de volledige website
-  (ingelogd, met alle beheerfuncties zoals producten, acties, bardiensten en
-  kiosk-instellingen) in een app-schil met een zijmenu voor snelle navigatie.
+- **`tablet/`** — "Kantine Beheer" (2.0), voor de tablet in de kantine. Een native app (geen website) voor de
+  kantine-tv: na de 6-cijferige code een menu met de producten op het prijzenscherm, acties, bardiensten, het uitgelichte
+  product, de wedstrijddag-welkomst, en (sinds 2.0) de tv's, dia's, uitverkocht en de timer. Die laatste vier gebruiken
+  dezelfde JSON-API als de handterminal-app (`routes/app_api_tv.py` en `/api/app/prijzenscherm`, `/api/app/timers`).
+  Logt uit na 10 minuten niets doen en gaat op slot bij een noodstop (`BasisActivity`). Gebouwd als debug-APK van deze
+  Mac (zelfde sleutel als de tv-app), buildmap `~/.kantine-apps/build/tablet`.
 - **`handterminal/`** — "Kantine Handterminal", voor de Zebra TC51 (en andere
   Android-handterminals vanaf Android 6). Zie het kopje hieronder.
 

@@ -6,8 +6,16 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.67.0"
+HUIDIGE_VERSIE = "1.67.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.67.1",
+        "datum": "23 oktober 2026",
+        "punten": [
+            "Tablet-app 2.0 'Kantine Beheer' (voorheen Kantine Kiosk): naast de producten, acties, bardienst, het uitgelichte product en de wedstrijddag nu ook de tv's (wat ze tonen, opnieuw laden, de wisselknop), de dia's (onderdelen en losse dia's aan of uit), uitverkocht op het prijzenscherm en de timer op de tv's.",
+            "Tablet-app 2.0: bij een foute code staat er hoeveel pogingen je nog hebt (of hoe lang je moet wachten); dat stond er eerder niet. Na 10 minuten niets doen logt hij vanzelf uit, en bij een noodstop gaat hij op slot.",
+        ],
+    },
     {
         "versie": "1.67.0",
         "datum": "23 oktober 2026",
@@ -1214,8 +1222,8 @@ MODULES = [
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.6.0", "sinds": "1.6.0", "laatst": "1.67.0",
      "inhoud": "Keukenvoorraad met een eigen telling (ook als looplijst met dozen scannen, en een begintelling), inboeken (ook door te scannen) en prijzen, en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.21.1", "sinds": "1.10.1", "laatst": "1.67.0",
-     "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv"},
+    {"naam": "Kantine-tv", "versie": "1.22.0", "sinds": "1.10.1", "laatst": "1.67.1",
+     "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, en de tablet-app Kantine Beheer"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.0", "sinds": "", "laatst": "",

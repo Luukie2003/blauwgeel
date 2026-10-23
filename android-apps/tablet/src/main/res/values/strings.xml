@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Kantine Kiosk</string>
-    <string name="kiosk_titel">Blauw-Geel Kiosk</string>
+    <string name="app_name">Kantine Beheer</string>
+    <string name="kiosk_titel">Kantine Beheer</string>
     <string name="code_instructie">Voer je 6-cijferige code in</string>
     <string name="code_onjuist">Onjuiste code, probeer opnieuw</string>
     <string name="te_veel_pogingen">Te veel pogingen, probeer het over een paar minuten opnieuw</string>
@@ -62,4 +62,51 @@
     <string name="basis_url_label">Website-adres</string>
     <string name="opslaan">Opslaan</string>
     <string name="instellingen_opgeslagen">Instellingen opgeslagen</string>
+
+    <!-- 2.0 -->
+    <string name="automatisch_uitgelogd">Je bent automatisch uitgelogd na 10 minuten niets doen. Voer je code opnieuw in.</string>
+    <string name="noodstop_actief">Systeem vergrendeld: de site is tijdelijk afgesloten. De bar blijft gewoon open.</string>
+    <plurals name="code_onjuist_pogingen">
+        <item quantity="one">Onjuiste code. Nog %1$d poging, daarna gaat inloggen 10 minuten op slot.</item>
+        <item quantity="other">Onjuiste code. Nog %1$d pogingen, daarna gaat inloggen 10 minuten op slot.</item>
+    </plurals>
+    <plurals name="te_veel_pogingen_minuten">
+        <item quantity="one">Te veel foute codes. Probeer het over %1$d minuut opnieuw.</item>
+        <item quantity="other">Te veel foute codes. Probeer het over %1$d minuten opnieuw.</item>
+    </plurals>
+    <string name="menu_tvs">Tv\'s</string>
+    <string name="menu_dias">Dia\'s</string>
+    <string name="menu_uitverkocht">Uitverkocht</string>
+    <string name="menu_timer">Timer</string>
+    <string name="titel_tvs">Tv\'s in de kantine</string>
+    <string name="wisselknop">Wisselknop</string>
+    <string name="wisselschermen_tonen">De wisselschermen tonen</string>
+    <string name="wissel_uitleg">Elke tv op \'Wisselscherm\' volgt deze knop.</string>
+    <string name="prijzenlijst">Prijzenlijst</string>
+    <string name="dias">Dia\'s</string>
+    <string name="tvs_kop">Gekoppelde tv\'s (%1$d)</string>
+    <string name="geen_tvs">Nog geen tv gekoppeld.</string>
+    <string name="opnieuw_laden">Opnieuw laden</string>
+    <string name="tv_koppelen_uitleg">Een nieuwe tv koppel je op de site (Kantine-tv → Tv koppelen) of met de handterminal (scan de QR-code op de tv).</string>
+    <string name="titel_dias">Dia\'s</string>
+    <string name="onderdelen">Onderdelen van de diashow</string>
+    <string name="losse_dias">Losse dia\'s</string>
+    <string name="geen_dias">Nog geen dia\'s. Die maak je op de site.</string>
+    <string name="dia_voorbij">periode voorbij</string>
+    <string name="dia_later">vanaf %1$s</string>
+    <string name="dia_zonder_titel">(zonder titel)</string>
+    <string name="titel_uitverkocht">Uitverkocht op het prijzenscherm</string>
+    <string name="geen_producten_op_scherm">Er staan nog geen producten op het prijzenscherm.</string>
+    <string name="titel_timer">Timer op de tv\'s</string>
+    <string name="timer_nieuw">Nieuwe timer</string>
+    <string name="timer_uitleg">Bijvoorbeeld \'Patat\' over 8 minuten: hij staat dan groot op de tv\'s.</string>
+    <string name="timer_starten">Starten</string>
+    <string name="timers_op_tv">Op de tv\'s</string>
+    <string name="geen_timers">Er loopt geen timer.</string>
+    <string name="timer_nog">nog %1$d:%2$02d</string>
+    <string name="timer_klaar">klaar!</string>
+    <string name="plus_5">+5 min</string>
+    <string name="weghalen">Weghalen</string>
+    <string name="timer_naam_hint">Waarvoor (bijv. Patat)</string>
+    <string name="timer_minuten_hint">Hoeveel minuten</string>
 </resources>

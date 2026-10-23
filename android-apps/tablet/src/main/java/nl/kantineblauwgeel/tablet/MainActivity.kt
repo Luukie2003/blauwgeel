@@ -27,7 +27,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stippen: List<TextView>
     private lateinit var cijferKnoppen: List<Pair<View, String>>
 
-    private enum class ControleResultaat { GELDIG, ONGELDIG, TE_VEEL_POGINGEN, VERBINDINGSFOUT }
+    private enum class ControleResultaat { GELDIG, ONGELDIG, TE_VEEL_POGINGEN, NOODSTOP, VERBINDINGSFOUT }
+
+    /** Uit het laatste antwoord: hoeveel pogingen er nog zijn, of hoe lang inloggen nog op slot zit. */
+    private var pogingenOver: Int? = null
+    private var wachtMinuten: Int? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +57,20 @@ class MainActivity : AppCompatActivity() {
         }
 
         werkStippenBij()
+        toonMeldingUitIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        toonMeldingUitIntent(intent)
+    }
+
+    /** Teruggestuurd door BasisActivity (automatisch uitgelogd, noodstop): dat hier laten zien. */
+    private fun toonMeldingUitIntent(intent: Intent?) {
+        intent?.getStringExtra(EXTRA_MELDING)?.let {
+            binding.foutmelding.text = it
+            binding.foutmelding.visibility = View.VISIBLE
+        }
     }
 
     private fun voegCijferToe(cijfer: String) {
@@ -89,9 +107,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toonFout(bericht: String) {
+        wisCode() // eerst: wisCode verbergt de melding (bij opnieuw beginnen met typen)
         binding.foutmelding.text = bericht
         binding.foutmelding.visibility = View.VISIBLE
-        wisCode()
     }
 
     private fun setInvoerIngeschakeld(ingeschakeld: Boolean) {
@@ -113,11 +131,19 @@ class MainActivity : AppCompatActivity() {
                 setInvoerIngeschakeld(true)
                 when (resultaat) {
                     ControleResultaat.GELDIG -> {
+                        Sessie.laatsteAanraking = System.currentTimeMillis()
                         startActivity(Intent(this, BeheerMenuActivity::class.java))
                         wisCode()
                     }
-                    ControleResultaat.ONGELDIG -> toonFout(getString(R.string.code_onjuist))
-                    ControleResultaat.TE_VEEL_POGINGEN -> toonFout(getString(R.string.te_veel_pogingen))
+                    ControleResultaat.ONGELDIG -> toonFout(
+                        pogingenOver?.let { n -> resources.getQuantityString(R.plurals.code_onjuist_pogingen, n, n) }
+                            ?: getString(R.string.code_onjuist)
+                    )
+                    ControleResultaat.TE_VEEL_POGINGEN -> toonFout(
+                        wachtMinuten?.let { n -> resources.getQuantityString(R.plurals.te_veel_pogingen_minuten, n, n) }
+                            ?: getString(R.string.te_veel_pogingen)
+                    )
+                    ControleResultaat.NOODSTOP -> toonFout(getString(R.string.noodstop_actief))
                     ControleResultaat.VERBINDINGSFOUT -> toonFout(getString(R.string.geen_verbinding))
                 }
             }
@@ -141,7 +167,10 @@ class MainActivity : AppCompatActivity() {
             val stream = if (status in 200..299) verbinding.inputStream else verbinding.errorStream
             val antwoord = JSONObject(stream.bufferedReader().use { it.readText() })
             val geldig = antwoord.optBoolean("geldig", false)
+            pogingenOver = if (antwoord.has("pogingen_over")) antwoord.optInt("pogingen_over") else null
+            wachtMinuten = if (antwoord.has("wacht_minuten")) antwoord.optInt("wacht_minuten") else null
             when {
+                status == 503 -> ControleResultaat.NOODSTOP
                 status == 429 -> ControleResultaat.TE_VEEL_POGINGEN
                 geldig && neemSessieOver(verbinding, antwoord) -> ControleResultaat.GELDIG
                 geldig -> ControleResultaat.VERBINDINGSFOUT
@@ -172,5 +201,9 @@ class MainActivity : AppCompatActivity() {
         Sessie.csrfToken = csrfToken
         Sessie.naam = antwoord.optString("naam").takeIf { it.isNotEmpty() }
         return true
+    }
+
+    companion object {
+        const val EXTRA_MELDING = "melding"
     }
 }

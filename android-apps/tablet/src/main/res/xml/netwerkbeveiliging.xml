@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Alleen https naar de site; onversleuteld verkeer alleen naar 10.0.2.2 (de computer, gezien vanuit de emulator), om
+     te testen tegen een lokale ontwikkelserver. Zelfde als de handterminal-app. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

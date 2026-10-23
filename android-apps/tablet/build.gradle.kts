@@ -3,6 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Bouwen buiten iCloud Drive: iCloud maakt anders "… 2"-kopieën van tussenbestanden, en dan faalt de build.
+layout.buildDirectory.set(File(System.getProperty("user.home"), ".kantine-apps/build/tablet"))
+
 android {
     namespace = "nl.kantineblauwgeel.tablet"
     compileSdk = 34
@@ -11,8 +14,8 @@ android {
         applicationId = "nl.kantineblauwgeel.tablet"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
     }
 
     buildTypes {
