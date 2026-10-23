@@ -33,8 +33,15 @@ from helpers import (
 )
 from helpers.kas import KASSA_COUPURES
 from helpers.tijd import vandaag_amsterdam
-from helpers.producten import omzet_per_eenheid
-from keukenbeheer import boek_keuken_in, keuken_barcodes, keuken_producten, keuken_tellingen, verwerk_keuken_telling
+from helpers.producten import inkoop_per_stuk, omzet_per_eenheid
+from keukenbeheer import (
+    boek_keuken_in,
+    keuken_barcodes,
+    keuken_producten,
+    keuken_tellingen,
+    verwerk_keuken_telling,
+    zet_keuken_prijzen,
+)
 from leveranciers import alle_leveranciers
 from productkaart import BESTELEENHEDEN, EENHEDEN
 from routes.app_api import _data, _foto, _fout, _getal, _product, eenmalig, taak_vragen
@@ -527,6 +534,44 @@ def register_routes(app):
             return {"melding": f"{p['naam']} staat op de boodschappenlijst."}, 200
 
         return eenmalig(actie)
+
+    @app.route("/api/app/keuken/prijzen", methods=["GET", "POST"])
+    def api_app_keuken_prijzen():
+        """(Beheerders) De verkoopprijzen van de keuken, met de inkoop per stuk ernaast, zoals Keuken > Prijzen op de
+        site. POST {prijzen: {product_id: prijs}}: alleen wat anders is, met prijsgeschiedenis."""
+        db = get_db()
+        if request.method == "POST":
+            prijzen = {}
+            for sleutel, waarde in (_data().get("prijzen") or {}).items():
+                pid = _getal(sleutel)
+                try:
+                    prijs = round(float(str(waarde).replace(",", ".")), 2)
+                except ValueError:
+                    continue
+                if pid is not None and 0 <= prijs < 1000:
+                    prijzen[pid] = prijs
+            n = zet_keuken_prijzen(db, prijzen, session.get("gebruiker_naam"), now_str(), session.get("gebruiker_id"))
+            melding = f"{n} {'prijs' if n == 1 else 'prijzen'} aangepast." if n else "Geen prijzen gewijzigd."
+        else:
+            melding = None
+        return jsonify({
+            "melding": melding,
+            "producten": [{"id": p["id"], "naam": p["naam"], "subcategorie": p["subcategorie"] or "", "eenheid": p["eenheid"],
+                           "verkoopprijs": p["verkoopprijs"], "inkoop_per_stuk": round(inkoop_per_stuk(p), 4),
+                           "actief": bool(p["actief"])}
+                          for p in keuken_producten(db, alleen_actief=False)],
+        })
+
+    @app.route("/api/app/keuken/instellingen", methods=["POST"])
+    def api_app_keuken_instellingen():
+        """{frituurvet_interval_dagen}: om de hoeveel dagen het frituurvet vervangen moet, zoals Keuken > Instellingen."""
+        dagen = _getal(_data().get("frituurvet_interval_dagen"))
+        if dagen is None or not 1 <= dagen <= 365:
+            return _fout("Vul een aantal dagen van 1 tot 365 in.")
+        db = get_db()
+        db.execute("UPDATE instellingen SET frituurvet_interval_dagen = ? WHERE id = 1", (dagen,))
+        db.commit()
+        return jsonify({"frituurvet": _frituurvet(db), "melding": f"Het frituurvet moet nu om de {dagen} dagen vervangen."})
 
     @app.route("/api/app/keuken/inboeken", methods=["POST"])
     def api_app_keuken_inboeken():

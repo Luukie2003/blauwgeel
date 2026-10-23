@@ -15,6 +15,7 @@ from helpers import (
 )
 from helpers.tijd import vandaag_amsterdam
 import manco
+from bestellen import maak_bestelling
 from leveranciers import GEEN, filter_suggesties, per_leverancier
 from pdf import bestellijst_pdf
 
@@ -143,46 +144,12 @@ def register_routes(app):
             if aantal_besteleenheden > 0:
                 aantallen_per_pid[int(pid)] = aantal_besteleenheden
 
-        # Alle betrokken producten in 1 keer ophalen i.p.v. per productregel
-        # een losse SELECT.
-        regels = []
-        if aantallen_per_pid:
-            plekhouders = ",".join("?" * len(aantallen_per_pid))
-            producten_bij_id = {
-                p["id"]: p
-                for p in db.execute(
-                    f"SELECT * FROM producten WHERE id IN ({plekhouders})",
-                    tuple(aantallen_per_pid.keys()),
-                ).fetchall()
-            }
-            for pid, aantal_besteleenheden in aantallen_per_pid.items():
-                product = producten_bij_id.get(pid)
-                if product is None:
-                    continue
-                aantal = naar_voorraadeenheden(aantal_besteleenheden, product)
-                if aantal > 0:
-                    regels.append((pid, aantal))
-
-        if not regels:
+        bestelling_id, aantal_regels = maak_bestelling(db, aantallen_per_pid, besteld_door, besteld_door_id)
+        if bestelling_id is None:
             flash("Geen producten geselecteerd voor de bestelling.", "error")
             return redirect(url_for("bestellijst"))
-
-        cur = db.execute(
-            """INSERT INTO bestellingen (status, aangemaakt_op, besteld_door, besteld_door_id)
-               VALUES ('besteld', ?, ?, ?)""",
-            (now_str(), besteld_door, besteld_door_id),
-        )
-        bestelling_id = cur.lastrowid
-        for product_id, aantal in regels:
-            db.execute(
-                """INSERT INTO bestelregels (bestelling_id, product_id, aantal_besteld)
-                   VALUES (?, ?, ?)""",
-                (bestelling_id, product_id, aantal),
-            )
-        manco.volg_op_bij_bestelling(db, [pid for pid, _ in regels])
-        db.commit()
         flash(
-            f"Bestelling #{bestelling_id} klaargezet met {len(regels)} product(en). Hij staat nu als concept bij Factuur "
+            f"Bestelling #{bestelling_id} klaargezet met {aantal_regels} product(en). Hij staat nu als concept bij Factuur "
             "inboeken: scan de levering daar in zodra hij binnenkomt (ook met de handterminal).",
             "success",
         )

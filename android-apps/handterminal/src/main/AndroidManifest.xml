@@ -142,6 +142,12 @@
             android:theme="@style/Thema.Handterminal.Licht" />
 
         <activity
+            android:name=".KlaarzettenActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
             android:name=".KeukenTellingActivity"
             android:exported="false"
             android:screenOrientation="portrait"

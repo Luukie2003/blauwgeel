@@ -105,10 +105,10 @@ class KeukenActivity : BasisActivity() {
             }
         }
 
-        Lijst.kop(inhoud, getString(R.string.op_de_computer))
-        val computer = Lijst.kaart(inhoud)
-        if (inst.beheerder) Lijst.knop(computer, getString(R.string.keukenprijzen)) { nietInApp(getString(R.string.wat_keukenprijzen)) }
-        Lijst.knop(computer, getString(R.string.keuken_instellingen)) { nietInApp(getString(R.string.wat_keuken_instellingen)) }
+        Lijst.kop(inhoud, getString(R.string.instellingen))
+        val beheer = Lijst.kaart(inhoud)
+        if (inst.beheerder) Lijst.knop(beheer, getString(R.string.keukenprijzen)) { prijzen() }
+        Lijst.knop(beheer, getString(R.string.frituurvet_interval_aanpassen, vet.optInt("interval"))) { interval(vet.optInt("interval")) }
     }
 
     /** Een keukenproduct aangetikt: de productinformatie (met voorraadrechten), en op de boodschappenlijst zetten. */
@@ -135,6 +135,49 @@ class KeukenActivity : BasisActivity() {
             tril(60)
             melding(antwoord.optString("melding"))
             laad()
+        }
+    }
+
+    /** (Beheerders) De verkoopprijzen van de keuken: tik op een product en vul de nieuwe prijs in. */
+    private fun prijzen() {
+        bezig {
+            val lijst = Api.getJson(this, "/api/app/keuken/prijzen").getJSONArray("producten").objecten()
+            if (lijst.isEmpty()) return@bezig melding(getString(R.string.geen_keukenproducten))
+            AlertDialog.Builder(this)
+                .setCustomTitle(dialoogTitel(getString(R.string.keukenprijzen)))
+                .setItems(lijst.map {
+                    "${it.optString("naam")}   ${Lijst.euro(it.optDouble("verkoopprijs"))}" +
+                        "\n" + getString(R.string.inkoop_per_stuk_kort, Lijst.euro(it.optDouble("inkoop_per_stuk")), it.optString("eenheid"))
+                }.toTypedArray()) { _, i -> prijsVragen(lijst[i]) }
+                .setNegativeButton(R.string.sluiten, null)
+                .show()
+        }
+    }
+
+    private fun prijsVragen(p: JSONObject) {
+        val nu = String.format(java.util.Locale("nl", "NL"), "%.2f", p.optDouble("verkoopprijs"))
+        Cijferpad.vraag(this, p.optString("naam"), nu, decimaal = true, voor = "€") { tekst ->
+            if (tekst.isEmpty()) return@vraag
+            val id = Api.nieuwVerzoekId()
+            bezig {
+                val antwoord = Api.post(this, "/api/app/keuken/prijzen",
+                    JSONObject().put("prijzen", JSONObject().put(p.getInt("id").toString(), tekst.replace(',', '.'))), verzoekId = id)
+                tril(40)
+                melding(antwoord.optString("melding"))
+                prijzen()
+            }
+        }
+    }
+
+    /** Om de hoeveel dagen het frituurvet vervangen moet. */
+    private fun interval(nu: Int) {
+        Cijferpad.vraag(this, getString(R.string.frituurvet_interval_vraag), nu.toString(), eenheid = getString(R.string.dagen), max = 3) { tekst ->
+            val dagen = tekst.toIntOrNull() ?: return@vraag
+            bezig {
+                val antwoord = Api.post(this, "/api/app/keuken/instellingen", JSONObject().put("frituurvet_interval_dagen", dagen), herhaalbaar = true)
+                melding(antwoord.optString("melding"))
+                laad()
+            }
         }
     }
 

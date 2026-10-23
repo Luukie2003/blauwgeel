@@ -21,6 +21,8 @@ from flask import Response, jsonify, request, session, url_for
 
 import barcodes
 import kiosk_timers
+import manco
+from bestellen import maak_bestelling
 from database import get_db
 from derving import DERVING_REDENEN, kies_reden
 from helpers import (
@@ -40,6 +42,7 @@ from helpers import (
 )
 from helpers.afbeeldingen import kleine_afbeelding
 from productkaart import TELLEN_VOORWAARDE
+from routes.logboek import schrijf_logboek
 from routes.tellen.looplijst import controle_regels, optellen
 from routes.tellen.looplijst_opslag import bewaar_stand, bewaarde_stand, stand_verlopen, wis_stand
 from routes.tellen.verwerken import verwerk_telling
@@ -599,8 +602,9 @@ def register_routes(app):
 
     @app.route("/api/app/bestellijst")
     def api_app_bestellijst():
-        """Wat er besteld moet worden (onder het minimum en nog niet besteld), wat bezoekers via de QR-code meldden,
-        en de bestellingen die onderweg zijn. Een bestelling klaarzetten blijft op de computer."""
+        """Wat er besteld moet worden (onder het minimum en nog niet besteld), wat bij een vorige bestelling niet geleverd
+        is (manco), wat bezoekers via de QR-code meldden, en de bestellingen die onderweg zijn. Klaarzetten: zie
+        api_app_bestellijst_bestellen."""
         db = get_db()
         meldingen = bereken_bestellijst_meldingen(db)
         open_bestellingen = db.execute(
@@ -615,8 +619,21 @@ def register_routes(app):
                     "bestel_hoeveelheid": p["bestel_hoeveelheid"],
                     "besteleenheid": besteleenheid_naam(p) if factor > 1 else None, "per_besteleenheid": factor}
 
+        suggesties = bestel_suggesties(db)
+        suggestie_ids = {p["id"] for p in suggesties}
+        manco_regels = {}
+        for m in manco.open_manco(db):
+            if m["product_id"] in suggestie_ids:
+                continue
+            x = manco_regels.setdefault(m["product_id"], {**product(m | {"id": m["product_id"]}),
+                                                          "tekort": 0, "bestellingen": []})
+            x["tekort"] += m["tekort"]
+            x["bestellingen"].append(m["bestelling_id"])
+        for x in manco_regels.values():
+            x["tekort_besteleenheden"] = naar_besteleenheden(x["tekort"], {"besteleenheid_factor": x["per_besteleenheid"]})
         return jsonify({
-            "bestellen": [product(p) for p in bestel_suggesties(db)],
+            "bestellen": [product(p) for p in suggesties],
+            "manco": list(manco_regels.values()),
             "gemeld": [{**product(m["product"]), "keer": m["aantal"], "laatste_melding": m["laatste_melding"]}
                        for m in meldingen["producten"]],
             "teksten": [{"id": t["id"], "tekst": t["tekst"], "aangemaakt_op": t["aangemaakt_op"]} for t in meldingen["teksten"]],
@@ -637,6 +654,50 @@ def register_routes(app):
             p["foto"] = _foto(p.pop("afbeelding"), "klein")
         advies["producten"] = {str(pid): v for pid, v in advies["producten"].items()}
         return jsonify(advies)
+
+    @app.route("/api/app/bestellijst/bestellen", methods=["POST"])
+    def api_app_bestellijst_bestellen():
+        """{aantallen: {product_id: besteleenheden}, verzoek_id}: een bestelling klaarzetten, zoals Bestellijst >
+        Voorgesteld om te bestellen op de site. Hij staat daarna bij Factuur inboeken als concept."""
+        aantallen = {}
+        for sleutel, waarde in (_data().get("aantallen") or {}).items():
+            pid, n = _getal(sleutel), _getal(waarde)
+            if pid is not None and n is not None and 0 < n <= 1000:
+                aantallen[pid] = n
+
+        def actie(db):
+            bestelling_id, n = maak_bestelling(db, aantallen, session.get("gebruiker_naam"), session.get("gebruiker_id"))
+            if bestelling_id is None:
+                return {"fout": "leeg", "melding": "Kies eerst wat je wilt bestellen."}, 400
+            return {"bestelling_id": bestelling_id,
+                    "melding": f"Bestelling #{bestelling_id} klaargezet ({n} {'product' if n == 1 else 'producten'}). "
+                               "Hij staat bij Factuur inboeken."}, 200
+
+        return eenmalig(actie)
+
+    @app.route("/api/app/producten/<int:product_id>/instellingen", methods=["POST"])
+    def api_app_product_instellingen(product_id):
+        """(Beheerders) {min_voorraad, besteleenheid, besteleenheid_factor}: het minimum en de besteleenheid van een
+        product aanpassen vanaf de handterminal. De rest (prijzen, naam, ...) blijft op de site."""
+        db = get_db()
+        p = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+        if p is None:
+            return _fout("Dit product bestaat niet (meer).", 404, "niet_gevonden")
+        data = _data()
+        minimum = _getal(data.get("min_voorraad"))
+        factor = _getal(data.get("besteleenheid_factor"))
+        naam = str(data.get("besteleenheid") or "").strip()[:30] or None
+        if minimum is None or minimum < 0 or minimum > MAX_AANTAL:
+            return _fout("Vul een minimum van 0 of meer in.")
+        if factor is None or factor < 1 or factor > 1000:
+            return _fout("Vul in hoeveel er in een besteleenheid zit (1 of meer).")
+        db.execute("UPDATE producten SET min_voorraad = ?, besteleenheid = ?, besteleenheid_factor = ? WHERE id = ?",
+                   (minimum, naam if factor > 1 else None, factor, product_id))
+        schrijf_logboek(db, "api_app_product_instellingen",
+                        f"{p['naam']}: minimum {p['min_voorraad']} → {minimum}, besteleenheid "
+                        f"{p['besteleenheid'] or '-'} van {p['besteleenheid_factor']} → {naam or '-'} van {factor} (handterminal)")
+        db.commit()
+        return jsonify({"product": _product(db, product_id), "melding": "Opgeslagen."})
 
     @app.route("/api/app/bestellijst/gemeld/<int:product_id>/afhandelen", methods=["POST"])
     def api_app_bestellijst_melding_afhandelen(product_id):

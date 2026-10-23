@@ -7,10 +7,11 @@ import androidx.appcompat.app.AlertDialog
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
-/** De bestellijst om te bekijken: wat onder het minimum zit (en nog niet besteld is), met de prognose erbij (wat er de
- * komende week verwacht wordt, en hoeveel je dan bestelt), wat waarschijnlijk opraakt terwijl het nog boven het minimum
- * zit, wat bezoekers via de QR-code meldden, en wat er onderweg is (tik om de levering in te scannen). Een bestelling
- * klaarzetten kan alleen op de website. De prognose rekent soms enkele seconden en komt er apart bij. */
+/** De bestellijst: wat onder het minimum zit (en nog niet besteld is), met de prognose erbij (wat er de komende week
+ * verwacht wordt, en hoeveel je dan bestelt), wat bij een vorige bestelling niet geleverd is, wat waarschijnlijk opraakt
+ * terwijl het nog boven het minimum zit, wat bezoekers via de QR-code meldden, en wat er onderweg is (tik om de levering
+ * in te scannen). "Bestelling klaarzetten" opent [KlaarzettenActivity]. De prognose rekent soms enkele seconden en komt
+ * er apart bij. */
 class BestellijstActivity : BasisActivity() {
 
     private lateinit var b: ActivityLijstBinding
@@ -88,6 +89,20 @@ class BestellijstActivity : BasisActivity() {
             }
         }
 
+        Lijst.knop(Lijst.kaart(inhoud), getString(R.string.bestelling_klaarzetten)) { KlaarzettenActivity.open(this) }
+
+        val manco = data.optJSONArray("manco")?.objecten().orEmpty()
+        if (manco.isNotEmpty()) {
+            Lijst.kop(inhoud, getString(R.string.klaarzetten_manco))
+            val kaart = Lijst.kaart(inhoud, R.drawable.rand_links_oranje)
+            for (p in manco) {
+                Lijst.regel(kaart, p.optString("naam"),
+                    getString(R.string.niet_geleverd_detail, p.optInt("tekort"), p.optString("eenheid")),
+                    getString(R.string.n_eenheid, p.optInt("tekort_besteleenheden"), p.tekstOfNull("besteleenheid") ?: p.optString("eenheid")),
+                    R.color.oranje_balk) { ProductActivity.open(this, p.getInt("id")) }
+            }
+        }
+
         val extra = prognose?.optJSONArray("extra")?.objecten().orEmpty()
         if (extra.isNotEmpty()) {
             Lijst.kop(inhoud, getString(R.string.raakt_waarschijnlijk_op))
@@ -143,9 +158,6 @@ class BestellijstActivity : BasisActivity() {
                 ) { FacturenActivity.inboeken(this, best.getInt("id")) }
             }
         }
-
-        Lijst.kop(inhoud, getString(R.string.op_de_computer))
-        Lijst.knop(Lijst.kaart(inhoud), getString(R.string.bestelling_klaarzetten)) { nietInApp(getString(R.string.wat_bestelling_klaarzetten)) }
     }
 
     companion object {

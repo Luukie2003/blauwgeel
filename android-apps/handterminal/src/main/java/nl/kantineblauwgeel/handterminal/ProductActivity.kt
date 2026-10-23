@@ -369,8 +369,55 @@ class ProductActivity : BasisActivity() {
             }
         }
         val beheer = Lijst.kaart(onder)
-        if (inst.beheerder) Lijst.knop(beheer, getString(R.string.product_bewerken)) { nietInApp(getString(R.string.wat_product_bewerken)) }
+        if (inst.beheerder) {
+            Lijst.knop(beheer, getString(R.string.minimum_en_besteleenheid)) { instellingenAanpassen() }
+            Lijst.knop(beheer, getString(R.string.product_bewerken_rest)) { nietInApp(getString(R.string.wat_product_bewerken)) }
+        }
         Lijst.knop(beheer, getString(R.string.schaplabel_printen)) { nietInApp(getString(R.string.wat_schaplabel)) }
+    }
+
+    /** (Beheerders) Het minimum en de besteleenheid aanpassen, wat je juist aan de bar of in het hok ziet. De rest van
+     * het product (naam, prijzen, ...) blijft op de computer. */
+    private fun instellingenAanpassen() {
+        val p = product ?: return
+        val dp = { n: Int -> dp(this, n) }
+        val vak = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(8), dp(22), 0)
+        }
+        fun veld(label: String, waarde: String, getal: Boolean): android.widget.EditText {
+            vak.addView(TextView(this).apply {
+                text = label
+                textSize = 13f
+                setTextColor(getColor(R.color.tekst_zacht))
+                setPadding(0, dp(8), 0, 0)
+            })
+            return android.widget.EditText(this).apply {
+                setText(waarde)
+                inputType = if (getal) android.text.InputType.TYPE_CLASS_NUMBER else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                setSelectAllOnFocus(true)
+                vak.addView(this)
+            }
+        }
+        val minimum = veld(getString(R.string.minimumvoorraad_in, p.eenheid), p.minVoorraad.toString(), true)
+        val naam = veld(getString(R.string.besteleenheid_naam_vraag), p.besteleenheid ?: "", false)
+        val factor = veld(getString(R.string.aantal_per_besteleenheid, p.eenheid), p.perBesteleenheid.toString(), true)
+        AlertDialog.Builder(this)
+            .setCustomTitle(dialoogTitel(p.naam))
+            .setView(vak)
+            .setNegativeButton(R.string.annuleren, null)
+            .setPositiveButton(R.string.opslaan) { _, _ ->
+                val body = JSONObject().put("min_voorraad", minimum.text.toString().toIntOrNull() ?: -1)
+                    .put("besteleenheid", naam.text.toString().trim())
+                    .put("besteleenheid_factor", factor.text.toString().toIntOrNull() ?: 0)
+                bezig {
+                    val antwoord = Api.post(this, "/api/app/producten/$productId/instellingen", body, herhaalbaar = true)
+                    Catalogus.werkBij(this, Catalogus.product(antwoord.getJSONObject("product")))
+                    melding(antwoord.optString("melding"))
+                    laadDetail()
+                }
+            }
+            .show()
     }
 
     private fun laadVerkoop() {

@@ -16,6 +16,7 @@ def open_manco(db):
         """SELECT br.id AS regel_id, br.bestelling_id, br.product_id, br.aantal_besteld,
                   COALESCE(br.aantal_ontvangen, 0) AS aantal_ontvangen, b.ontvangen_op, b.referentie,
                   p.naam, p.eenheid, p.besteleenheid, p.besteleenheid_factor, p.voorraad, p.leverancier_id,
+                  p.min_voorraad, p.bestel_hoeveelheid, p.categorie,
                   l.naam AS leverancier_naam
            FROM bestelregels br
            JOIN bestellingen b ON b.id = br.bestelling_id
