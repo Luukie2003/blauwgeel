@@ -136,6 +136,18 @@
             android:theme="@style/Thema.Handterminal.Licht" />
 
         <activity
+            android:name=".KeukenTellenActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name=".KeukenTellingActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
             android:name=".BoodschappenActivity"
             android:exported="false"
             android:screenOrientation="portrait"

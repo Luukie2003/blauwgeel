@@ -6,8 +6,18 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.65.1"
+HUIDIGE_VERSIE = "1.66.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.66.0",
+        "datum": "23 oktober 2026",
+        "punten": [
+            "Handterminal-app 2.11, keukentelling als looplijst: product voor product, met foto, voortgang ('Product 3 van 22 · 2 geteld'), de snelknoppen en de rekenmachine, net als Tellen. Losse stuks tik je in; scan je een volle doos of zak, dan telt wat erin zit er meteen bij. Onder de naam staat wat je gescand hebt ('Gescand: +40 · +15'); tik erop om een verkeerde scan weg te halen. Scan je een ander keukenproduct, dan springt de lijst daarheen, en een onbekende barcode koppel je meteen.",
+            "Keukentelling in de app: aan het eind een controlescherm met per product wat er was, wat je telde en wat er als verkocht telt, met de omzet. Daar kies je ook of het een begintelling is. De stand blijft op de handterminal bewaard: na Terug, de slaapstand of een herstart ga je verder waar je was.",
+            "Keuken inboeken in de app: wat je scant staat bovenaan in een lijst ('Gescand'), elke scan met een kruisje om hem weg te halen.",
+            "Keuken in de app: tik op een keukentelling om te zien wat er per product is verkocht (een begintelling staat er als zodanig bij). Bij elk product zie je de gekoppelde dozen en zakken, en je zet het met één tik op de boodschappenlijst, ook met alleen keukenrechten.",
+        ],
+    },
     {
         "versie": "1.65.1",
         "datum": "23 oktober 2026",
@@ -1186,7 +1196,7 @@ MODULES = [
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
     {"naam": "Geld (kassa & kluis)", "versie": "1.4.0", "sinds": "1.0.0", "laatst": "1.45.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
-    {"naam": "Keuken", "versie": "1.4.0", "sinds": "1.6.0", "laatst": "1.64.0",
+    {"naam": "Keuken", "versie": "1.5.0", "sinds": "1.6.0", "laatst": "1.66.0",
      "inhoud": "Keukenvoorraad met een eigen telling (ook als looplijst met dozen scannen, en een begintelling), inboeken (ook door te scannen) en prijzen, en de herinnering voor het frituurvet"},
     {"naam": "Kantine-tv", "versie": "1.21.0", "sinds": "1.10.1", "laatst": "1.63.0",
      "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv"},
@@ -1198,7 +1208,7 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.13.0", "sinds": "1.53.0", "laatst": "1.65.0",
+    {"naam": "Handterminal-app", "versie": "0.14.0", "sinds": "1.53.0", "laatst": "1.66.0",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst en dia's aan of uit), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.5", "sinds": "0.1.0", "laatst": "1.65.1",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},

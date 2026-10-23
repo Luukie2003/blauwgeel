@@ -33,7 +33,8 @@ from helpers import (
 )
 from helpers.kas import KASSA_COUPURES
 from helpers.tijd import vandaag_amsterdam
-from keukenbeheer import boek_keuken_in, keuken_producten, keuken_tellingen, verwerk_keuken_telling
+from helpers.producten import omzet_per_eenheid
+from keukenbeheer import boek_keuken_in, keuken_barcodes, keuken_producten, keuken_tellingen, verwerk_keuken_telling
 from leveranciers import alle_leveranciers
 from productkaart import BESTELEENHEDEN, EENHEDEN
 from routes.app_api import _data, _foto, _fout, _getal, _product, eenmalig, taak_vragen
@@ -425,18 +426,32 @@ def register_routes(app):
         return {"datum": laatste["datum"] if laatste else None, "naam": laatste["naam"] if laatste else None,
                 "dagen_geleden": f["dagen_geleden"], "interval": f["interval"], "ok": f["ok"]}
 
+    def _keuken_boodschap(p):
+        return f"{p['naam']} (keuken)"
+
     @app.route("/api/app/keuken")
     def api_app_keuken():
+        """De keuken voor de app: per product de voorraad, de verkoopprijs (voor de omzet op het controlescherm), de
+        gekoppelde dozen en zakken (wat een scan oplevert, per supermarkt anders) en of hij al op de boodschappenlijst
+        staat; de laatste keukentellingen en het frituurvet."""
         db = get_db()
+        dozen = {}
+        for code, d in keuken_barcodes(db).items():
+            dozen.setdefault(d["product_id"], []).append({"code": code, "aantal": d["aantal"], "omschrijving": d["omschrijving"]})
+        open_boodschappen = {b["tekst"] for b in db.execute("SELECT tekst FROM boodschappen WHERE afgevinkt = 0").fetchall()}
         producten = [
             {"id": p["id"], "naam": p["naam"], "subcategorie": p["subcategorie"] or "", "eenheid": p["eenheid"] or "stuks",
              "voorraad": p["voorraad"], "min_voorraad": p["min_voorraad"] or 0,
              "verpakking": (p["besteleenheid"] or p["eenheid"] or "verpakking").lower(),
-             "per_verpakking": max(1, p["besteleenheid_factor"] or 1), "foto": _foto(p["afbeelding"], "klein")}
+             "per_verpakking": max(1, p["besteleenheid_factor"] or 1), "foto": _foto(p["afbeelding"], "klein"),
+             "foto_groot": _foto(p["afbeelding"], "middel"), "verkoopprijs": round(omzet_per_eenheid(p), 4),
+             "dozen": sorted(dozen.get(p["id"], []), key=lambda d: d["aantal"]),
+             "op_boodschappenlijst": _keuken_boodschap(p) in open_boodschappen}
             for p in keuken_producten(db)
         ]
         tellingen = [
-            {"id": t["id"], "datum": t["datum"], "naam": t["naam"], "omzet": t["omzet"], "producten": t["aantal_producten"]}
+            {"id": t["id"], "datum": t["datum"], "naam": t["naam"], "omzet": t["omzet"], "producten": t["aantal_producten"],
+             "begintelling": bool(t["begintelling"])}
             for t in keuken_tellingen(db, limiet=5)
         ]
         eerste = db.execute("SELECT 1 FROM keuken_tellingen LIMIT 1").fetchone() is None
@@ -472,6 +487,44 @@ def register_routes(app):
             soort = "Begintelling" if begintelling else "Keukentelling"
             return {"telling_id": telling_id,
                     "melding": f"{soort} opgeslagen ({len(waarden)} {'product' if len(waarden) == 1 else 'producten'})."}, 200
+
+        return eenmalig(actie)
+
+    @app.route("/api/app/keuken/tellingen/<int:telling_id>")
+    def api_app_keuken_telling(telling_id):
+        """Eén keukentelling: per product wat er was, wat er geteld is, wat er verkocht is en wat dat opbracht."""
+        db = get_db()
+        t = db.execute("SELECT * FROM keuken_tellingen WHERE id = ?", (telling_id,)).fetchone()
+        if t is None:
+            return _fout("Deze keukentelling bestaat niet (meer).", 404, "niet_gevonden")
+        regels = [
+            {"product_id": r["product_id"], "naam": r["naam"], "eenheid": r["eenheid"], "was": r["voorraad_voor"],
+             "geteld": r["geteld_aantal"], "verkocht": r["verkocht"], "correctie": r["correctie"],
+             "omzet": round(r["verkocht"] * r["verkoopprijs"], 2)}
+            for r in db.execute(
+                """SELECT r.*, p.naam, p.eenheid FROM keuken_telling_regels r JOIN producten p ON p.id = r.product_id
+                   WHERE r.telling_id = ? ORDER BY p.subcategorie, p.naam COLLATE NOCASE""", (telling_id,),
+            ).fetchall()
+        ]
+        return jsonify({"id": t["id"], "datum": t["datum"], "naam": t["naam"], "opmerking": t["opmerking"],
+                        "begintelling": bool(t["begintelling"]), "regels": regels,
+                        "omzet": round(sum(r["omzet"] for r in regels), 2)})
+
+    @app.route("/api/app/keuken/boodschap", methods=["POST"])
+    def api_app_keuken_boodschap():
+        """{product_id}: een keukenproduct op de boodschappenlijst ('Frikandel (keuken)'), ook voor wie alleen
+        keukenrechten heeft. Staat hij er al (niet afgevinkt), dan gebeurt er niets."""
+        product_id = _getal(_data().get("product_id"))
+
+        def actie(db):
+            p = next((p for p in keuken_producten(db) if p["id"] == product_id), None)
+            if p is None:
+                return {"fout": "niet_gevonden", "melding": "Dit is geen keukenproduct."}, 404
+            tekst = _keuken_boodschap(p)
+            if not db.execute("SELECT 1 FROM boodschappen WHERE tekst = ? AND afgevinkt = 0", (tekst,)).fetchone():
+                db.execute("INSERT INTO boodschappen (tekst, aangemaakt_door, aangemaakt_op) VALUES (?, ?, ?)",
+                           (tekst, session.get("gebruiker_naam"), now_str()))
+            return {"melding": f"{p['naam']} staat op de boodschappenlijst."}, 200
 
         return eenmalig(actie)
 

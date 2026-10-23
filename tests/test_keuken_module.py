@@ -191,3 +191,39 @@ def test_tellingen_pagina_laadt_de_regels_pas_bij_openen(ingelogde_client, db):
     assert "Cola Proef" not in overzicht  # niet meer alle regels in de pagina
     regels = ingelogde_client.get(f"/tellingen/{telling}/regels").data.decode()
     assert "Cola Proef" in regels and "€ 10.00" in regels
+
+
+# ---------- De keuken in de handterminal-app (1.66.0) ----------
+
+
+def test_app_keuken_dozen_prijs_telling_bekijken_en_boodschappenlijst(app, db):
+    from test_app_api_meer import _vrijwilliger
+    from test_barcodes import AH_DOOS, AH_ZAK, _artikel
+
+    pid = _keuken(db, voorraad=50, verkoop=1.75)
+    _artikel(db, pid, "AH frikandellen", ean=AH_ZAK, aantal=20, prijs=10, doos=AH_DOOS, per_doos=2)
+    client = _vrijwilliger(app, db, "keukenapp2", "keuken")
+
+    keuken = client.get("/api/app/keuken").get_json()
+    p = next(x for x in keuken["producten"] if x["id"] == pid)
+    assert p["verkoopprijs"] == 1.75 and p["op_boodschappenlijst"] is False
+    assert [(d["code"], d["aantal"]) for d in p["dozen"]] == [(AH_ZAK, 20), (AH_DOOS, 40)]
+
+    telling = client.post("/api/app/keuken/tellen", json={"waarden": {str(pid): 30}, "verzoek_id": "kt1"},
+                          headers=client.kop).get_json()["telling_id"]
+    detail = client.get(f"/api/app/keuken/tellingen/{telling}").get_json()
+    assert detail["begintelling"] is False and detail["omzet"] == 35.0
+    assert detail["regels"] == [{"product_id": pid, "naam": "Frikandel Proef", "eenheid": "Stuks", "was": 50, "geteld": 30,
+                                 "verkocht": 20, "correctie": 0, "omzet": 35.0}]
+    assert client.get("/api/app/keuken/tellingen/9999").status_code == 404
+    assert client.get("/api/app/keuken").get_json()["tellingen"][0]["begintelling"] is False
+
+    # Op de boodschappenlijst, ook zonder voorraadrechten, en maar één keer.
+    for verzoek in ("b1", "b2"):
+        resp = client.post("/api/app/keuken/boodschap", json={"product_id": pid, "verzoek_id": verzoek}, headers=client.kop)
+        assert resp.status_code == 200
+    assert [r[0] for r in db.execute("SELECT tekst FROM boodschappen WHERE afgevinkt = 0")] == ["Frikandel Proef (keuken)"]
+    assert next(x for x in client.get("/api/app/keuken").get_json()["producten"] if x["id"] == pid)["op_boodschappenlijst"]
+    gewoon = db.execute("INSERT INTO producten (naam, categorie, voorraad) VALUES ('Cola', 'Fris', 1)").lastrowid
+    db.commit()
+    assert client.post("/api/app/keuken/boodschap", json={"product_id": gewoon}, headers=client.kop).status_code == 404

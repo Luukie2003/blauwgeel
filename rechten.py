@@ -429,6 +429,8 @@ SECTIE_ENDPOINTS = {
         "api_app_keuken",
         "api_app_keuken_tellen",
         "api_app_keuken_inboeken",
+        "api_app_keuken_telling",
+        "api_app_keuken_boodschap",
         "api_app_frituurvet",
         "frituurvet_vervangen",
         "keuken_voorraad",
