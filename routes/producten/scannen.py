@@ -146,6 +146,24 @@ def register_routes(app):
             verkoop = None
         return render_template("_product_verkoop.html", product=product, verkoop=verkoop)
 
+    @app.route("/producten/<int:product_id>/bijstelling", methods=["POST"])
+    def product_bijstelling(product_id):
+        """De prognose tot de volgende levering bijstellen (plus of min); zie bestelvoorstel.py."""
+        import bestelvoorstel
+
+        db = get_db()
+        if db.execute("SELECT 1 FROM producten WHERE id = ?", (product_id,)).fetchone() is None:
+            flash("Product niet gevonden.", "error")
+            return redirect(url_for("producten_lijst"))
+        try:
+            stuks = int(request.form.get("stuks", "0"))
+        except ValueError:
+            stuks = 0
+        stuks = max(-100000, min(100000, stuks))
+        bestelvoorstel.zet_bijstelling(db, product_id, stuks, session.get("gebruiker_naam"), session.get("gebruiker_id"))
+        flash("Prognose bijgesteld; dat telt mee bij Voorgesteld om te bestellen." if stuks else "Bijstelling weggehaald.", "success")
+        return redirect(url_for("product_detail", product_id=product_id) + "#verkoop")
+
     @app.route("/producten/<int:product_id>/melden", methods=["POST"])
     def product_melden(product_id):
         """'Op de bestellijst': net als de QR-code op het schaplabel, maar dan vanaf de productpagina."""

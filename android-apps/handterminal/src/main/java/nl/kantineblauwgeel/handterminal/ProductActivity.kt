@@ -3,8 +3,12 @@ package nl.kantineblauwgeel.handterminal
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.widget.ArrayAdapter
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -12,6 +16,7 @@ import androidx.core.view.isVisible
 import nl.kantineblauwgeel.handterminal.databinding.ActivityProductBinding
 import nl.kantineblauwgeel.handterminal.databinding.DialogNieuwArtikelBinding
 import org.json.JSONObject
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /** Eén product: de voorraad, boeken (erin of eruit), en daaronder alles van de productpagina van de site: kerncijfers,
@@ -284,6 +289,9 @@ class ProductActivity : BasisActivity() {
         Lijst.kop(boven, getString(R.string.verkoop_en_verwachting))
         verkoopBlok = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }.also { boven.addView(it) }
         toonVerkoop()
+        // Bestellen: tot wanneer, de prognose tot de levering daarna, en die bijstellen met − en + (komt mee met de verkoop)
+        bestelBlok = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }.also { boven.addView(it) }
+        toonBestellen()
 
         // Prijzen
         Lijst.kop(boven, getString(R.string.prijzen))
@@ -428,6 +436,7 @@ class ProductActivity : BasisActivity() {
             } finally {
                 if (verkoop == null) verkoop = JSONObject().put("mislukt", true)
                 toonVerkoop()
+                toonBestellen()
             }
         }
     }
@@ -481,7 +490,7 @@ class ProductActivity : BasisActivity() {
         Lijst.cijfers(blok, cijfers)
 
         val kaart = Lijst.kaart(blok)
-        if (w != null && w.optString("status") != "ok" && w.optInt("advies_stuks") > 0) {
+        if (w != null && !v.has("bestellen") && w.optString("status") != "ok" && w.optInt("advies_stuks") > 0) {
             val stuks = w.optInt("advies_stuks")
             val advies = if (!w.isNull("advies_eenheden")) {
                 getString(R.string.advies_eenheden, w.optInt("advies_eenheden"), w.tekstOfNull("besteleenheid") ?: getString(R.string.besteleenheid), stuks, eenheid)
@@ -506,6 +515,149 @@ class ProductActivity : BasisActivity() {
                 (if (w?.optBoolean("weinig_data") == true) " " + getString(R.string.nog_weinig_tellingen) else ""), grootte = 11f)
         }
         if (kaart.childCount == 0) blok.removeView(kaart)
+    }
+
+    // ---------------------------------------------------------------- bestellen: de prognose bijstellen
+
+    private var bestelBlok: LinearLayout? = null
+    /** De bijstelling die je net met − of + koos en die nog niet verstuurd is: een paar tikken achter elkaar worden
+     * samen één verzoek (zie bijstellen). */
+    private var bijstellingNieuw: Int? = null
+    private val wachtrij = Handler(Looper.getMainLooper())
+    private val bijstellingVersturen = Runnable { verstuurBijstelling() }
+
+    /** Zoals de handterminal van de supermarkt: tot wanneer je moet bestellen, wat er tot de levering daarna verwacht
+     * wordt, en die prognose met − en + bijstellen (per besteleenheid; tik op het getal voor een eigen aantal). De
+     * bijstelling telt mee in het advies en bij "Voorgesteld om te bestellen" op de bestellijst (bestelvoorstel.py). */
+    private fun toonBestellen() {
+        val blok = bestelBlok ?: return
+        blok.removeAllViews()
+        val best = verkoop?.optJSONObject("bestellen") ?: return
+        val eenheid = best.optString("eenheid")
+        val factor = maxOf(1, best.optInt("factor", 1))
+        val bij = bijstellingNieuw ?: best.optInt("bijstelling")
+        val verwacht = best.optDouble("verwacht")
+        // Lager dan het hoge punt van de prognose heeft geen zin: dan is het advies al nul.
+        val ondergrens = -ceil(best.optDouble("hoog")).toInt()
+        val metBij = maxOf(0.0, verwacht + bij)
+
+        Lijst.kop(blok, best.tekstOfNull("leverancier")?.let { getString(R.string.bestellen_bij, it) } ?: getString(R.string.bestellen_titel))
+        val kaart = Lijst.kaart(blok)
+        best.tekstOfNull("uiterst_tekst")?.let {
+            Lijst.tekst(kaart, getString(R.string.uiterlijk_bestellen, it, best.optString("levering_tekst")), kleur = R.color.tekst, vet = true)
+        }
+        if (!best.optBoolean("prognose_beschikbaar")) Lijst.tekst(kaart, getString(R.string.prognose_nog_niet))
+
+        val rij = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(this@ProductActivity, 8), dp(this@ProductActivity, 4), dp(this@ProductActivity, 8), dp(this@ProductActivity, 4))
+        }
+        fun knop(icoon: Int, beschrijving: Int, aan: Boolean, nieuw: Int) = ImageButton(this).apply {
+            setImageResource(icoon)
+            setColorFilter(getColor(R.color.navy))
+            contentDescription = getString(beschrijving)
+            setBackgroundResource(R.drawable.toets_licht)
+            isEnabled = aan
+            alpha = if (aan) 1f else 0.35f
+            setOnClickListener {
+                tril(15)
+                bijstellen(nieuw)
+            }
+        }
+        val maat = dp(this, 56)
+        rij.addView(knop(R.drawable.ic_min, R.string.prognose_omlaag, bij > ondergrens, maxOf(ondergrens, bij - factor)),
+            LinearLayout.LayoutParams(maat, maat))
+        val midden = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setBackgroundResource(R.drawable.regel_klik_kaart)
+            setPadding(0, dp(this@ProductActivity, 4), 0, dp(this@ProductActivity, 4))
+            setOnClickListener { vraagPrognose(best, verwacht, ondergrens) }
+        }
+        midden.addView(TextView(this).apply {
+            text = "${metBij.roundToInt()} $eenheid"
+            textSize = 24f
+            gravity = Gravity.CENTER
+            setTextColor(getColor(if (bij != 0) R.color.navy else R.color.tekst))
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        })
+        val uitleg = best.tekstOfNull("volgende_levering_tekst")?.let { getString(R.string.prognose_tot, it) }
+            ?: getString(R.string.prognose_komende_dagen, best.optInt("dagen", 7))
+        midden.addView(TextView(this).apply {
+            text = uitleg + if (bij != 0) "\n" + getString(R.string.bijgesteld_n, (if (bij > 0) "+" else "") + bij) else ""
+            textSize = 11.5f
+            gravity = Gravity.CENTER
+            setTextColor(getColor(if (bij != 0) R.color.navy else R.color.tekst_zacht))
+        })
+        rij.addView(midden, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+            marginStart = dp(this@ProductActivity, 6)
+            marginEnd = dp(this@ProductActivity, 6)
+        })
+        rij.addView(knop(R.drawable.ic_plus, R.string.prognose_omhoog, bij < 9999, bij + factor), LinearLayout.LayoutParams(maat, maat))
+        kaart.addView(rij)
+
+        Lijst.info(kaart, getString(R.string.voorraad), "${best.optInt("voorraad")} $eenheid",
+            getString(R.string.minimum, best.optInt("min_voorraad")))
+        if (best.optInt("onderweg") > 0) Lijst.info(kaart, getString(R.string.onderweg_kort), "${best.optInt("onderweg")} $eenheid")
+        val eenheden = best.optInt("advies_eenheden")
+        val advies = when {
+            bijstellingNieuw != null -> getString(R.string.advies_rekent)
+            eenheden <= 0 -> getString(R.string.advies_niets)
+            else -> "$eenheden ${best.optString("besteleenheid")}"
+        }
+        Lijst.info(kaart, getString(R.string.advies_kort), advies,
+            if (bijstellingNieuw == null && eenheden > 0 && factor > 1) "${best.optInt("advies_stuks")} $eenheid" else null,
+            kleur = if (bijstellingNieuw == null && eenheden > 0) R.color.navy else R.color.tekst_zacht)
+        Lijst.tekst(kaart, best.tekstOfNull("bijgesteld_door")?.takeIf { bij != 0 }?.let { getString(R.string.bijgesteld_door, it) }
+            ?: getString(R.string.tik_om_bij_te_stellen), grootte = 11f)
+        if (bij != 0) Lijst.knop(kaart, getString(R.string.bijstelling_weghalen)) { bijstellen(0) }
+    }
+
+    /** Tik op het getal: zelf invullen hoeveel je verwacht; de bijstelling is het verschil met de prognose. */
+    private fun vraagPrognose(best: JSONObject, verwacht: Double, ondergrens: Int) {
+        val bij = bijstellingNieuw ?: best.optInt("bijstelling")
+        val tot = best.tekstOfNull("volgende_levering_tekst") ?: getString(R.string.prognose_komende_dagen, best.optInt("dagen", 7))
+        Cijferpad.vraag(this, getString(R.string.hoeveel_verwacht, tot), maxOf(0.0, verwacht + bij).roundToInt().toString(),
+            eenheid = best.optString("eenheid"), max = 4) { tekst ->
+            val gewenst = tekst.toIntOrNull() ?: return@vraag
+            bijstellen(maxOf(ondergrens, gewenst - verwacht.roundToInt()), meteen = true)
+        }
+    }
+
+    /** Laat de nieuwe bijstelling meteen zien en verstuurt hem even later (nog een tik = het wachten begint opnieuw). */
+    private fun bijstellen(nieuw: Int, meteen: Boolean = false) {
+        bijstellingNieuw = nieuw
+        toonBestellen()
+        wachtrij.removeCallbacks(bijstellingVersturen)
+        if (meteen) verstuurBijstelling() else wachtrij.postDelayed(bijstellingVersturen, 700)
+    }
+
+    private fun verstuurBijstelling() {
+        wachtrij.removeCallbacks(bijstellingVersturen)
+        val stuks = bijstellingNieuw ?: return
+        bezig {
+            try {
+                // Herhaalbaar: het zet de bijstelling op een vast getal, twee keer is hetzelfde als één keer.
+                val antwoord = Api.post(this, "/api/app/producten/$productId/bijstelling", JSONObject().put("stuks", stuks), herhaalbaar = true)
+                if (bijstellingNieuw == stuks) {
+                    verkoop?.put("bestellen", antwoord.getJSONObject("bestellen"))
+                    bijstellingNieuw = null
+                    tril(30)
+                    melding(antwoord.optString("melding"))
+                }
+            } finally {
+                // Mislukt: terug naar wat de site heeft (de foutmelding komt via bezig).
+                if (bijstellingNieuw == stuks) bijstellingNieuw = null
+                toonBestellen()
+            }
+        }
+    }
+
+    override fun onPause() {
+        // Weg van het scherm terwijl er nog een tik wacht: nu versturen.
+        if (bijstellingNieuw != null) verstuurBijstelling()
+        super.onPause()
     }
 
     /** Op de tv: staat het product op het prijzenscherm, dan zet je het hier in één tik op uitverkocht (of weer te koop). */

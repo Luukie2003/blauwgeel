@@ -18,6 +18,7 @@ from flask import jsonify, request, session
 
 import barcodes
 import kiosk_timers
+import bestelvoorstel
 import productinfo
 from activiteiten import bouw_agenda, kies_dagen
 from aanmeldingen import aanmelden_status, bestaand_lid_voor, keur_goed, ruim_op, splits_naam, wijs_af
@@ -174,6 +175,7 @@ def _verkoop_json(verkoop):
         "geteld_tot": verkoop["geteld_tot"].strftime("%Y-%m-%d %H:%M"),
         "verwachting": verwachting,
         "prognose_dagen": verkoop["prognose_dagen"],
+        "bestellen": verkoop.get("bestellen"),
     }
 
 
@@ -340,6 +342,25 @@ def register_routes(app):
             print(f"[app] verkoop van {product_id} mislukt: {fout}")
             verkoop = None
         return jsonify(_verkoop_json(verkoop))
+
+    @app.route("/api/app/producten/<int:product_id>/bijstelling", methods=["POST"])
+    def api_app_product_bijstelling(product_id):
+        """{stuks}: de prognose van dit product tot de volgende levering bijstellen (plus of min, in de eenheid van het
+        product; 0 = weg). Geeft het nieuwe bestelblok terug (zie bestelvoorstel.py)."""
+        db = get_db()
+        product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+        if product is None:
+            return _fout("Dit product bestaat niet meer.", 404, "niet_gevonden")
+        stuks = _getal(_data().get("stuks"))
+        if stuks is None or abs(stuks) > MAX_STUKS:
+            return _fout("Geen geldig aantal.")
+        bestelvoorstel.zet_bijstelling(db, product_id, stuks, session.get("gebruiker_naam"), session.get("gebruiker_id"))
+        blok = bestelvoorstel.voor_product(db, product)
+        if stuks:
+            melding = f"Prognose {'+' if stuks > 0 else ''}{stuks} {product['eenheid']}: advies {blok['advies_eenheden']} {blok['besteleenheid']}."
+        else:
+            melding = "Bijstelling weggehaald."
+        return jsonify({"bestellen": blok, "melding": melding})
 
     @app.route("/api/app/producten/<int:product_id>/melden", methods=["POST"])
     def api_app_product_melden(product_id):

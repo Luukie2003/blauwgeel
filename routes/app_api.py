@@ -49,7 +49,7 @@ from routes.tellen.verwerken import verwerk_telling
 from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 # De nieuwste versie van de app. Draait er een oudere, dan meldt de app dat er een nieuwe is.
-HANDTERMINAL_APP_VERSIE = "2.12.0"
+HANDTERMINAL_APP_VERSIE = "2.13.0"
 
 MAX_AANTAL = 100000
 

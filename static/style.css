@@ -2967,3 +2967,12 @@ a.noodstop-balk:hover { color: #fff; text-decoration: underline; }
 .kl-scanbalk label { display: block; margin-bottom: 0.3rem; font-size: 0.85rem; }
 .kl-melding { margin: 0.4rem 0; font-weight: 600; color: var(--groen, #1e7b34); }
 .kl-melding-fout { color: var(--rood, #b3261e); }
+
+/* ---------- Bestelblok op de productpagina (templates/_product_verkoop.html) ---------- */
+.bestelblok { border: 1px solid var(--rand-licht); border-radius: var(--radius); padding: 0.7rem 0.8rem; margin: 0 0 0.9rem; }
+.bestelblok-kop { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.4rem; margin-bottom: 0.5rem; }
+.bestelblok-cijfers { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: 0.5rem; }
+.bestelblok-cijfers > div { display: flex; flex-direction: column; }
+.bestelblok-cijfers .label { font-size: 0.75rem; color: var(--tekst-zacht); }
+.bestelblok-cijfers strong { font-size: 1.15rem; }
+.bestelblok-knoppen { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0.6rem 0 0; }

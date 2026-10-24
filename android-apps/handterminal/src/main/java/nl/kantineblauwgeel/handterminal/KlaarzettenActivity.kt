@@ -52,12 +52,15 @@ class KlaarzettenActivity : BasisActivity() {
             for (r in regels) {
                 val x = advies?.optJSONObject(r.p.getInt("id").toString()) ?: continue
                 r.p.put("advies", x.optInt("advies_eenheden"))
-                if (r.soort == "laag" && x.optInt("advies_eenheden") > r.aantal) r.aantal = x.optInt("advies_eenheden")
+                r.p.put("bijstelling", x.optInt("bijstelling"))
+                // Hoger als de prognose meer vraagt; lager alleen als iemand de prognose omlaag bijstelde.
+                if (r.soort == "laag" && (x.optInt("advies_eenheden") > r.aantal || x.optInt("bijstelling") < 0)) r.aantal = x.optInt("advies_eenheden")
             }
             val al = regels.map { it.p.getInt("id") }.toSet()
             prognose.optJSONArray("extra")?.objecten()?.filter { it.getInt("id") !in al }?.forEach {
                 it.put("advies", it.optInt("advies_eenheden"))
-                regels += Regel(it, "opraken", 0)
+                // Zelf de prognose omhoog bijgesteld (bij het product): dan staat hij al klaar.
+                regels += Regel(it, "opraken", if (it.optInt("bijstelling") > 0) it.optInt("advies_eenheden") else 0)
             }
             toon()
         }
@@ -89,6 +92,7 @@ class KlaarzettenActivity : BasisActivity() {
                     if (soort == "manco") getString(R.string.niet_geleverd_bij, p.optJSONArray("bestellingen")?.let { a -> (0 until a.length()).joinToString(", #") { a.optInt(it).toString() } } ?: "")
                     else null,
                     if (p.has("advies")) getString(R.string.advies_kort_eenheden, p.optInt("advies"), eenheid(p)) else null,
+                    p.optInt("bijstelling").takeIf { it != 0 }?.let { getString(R.string.bijgesteld_n, (if (it > 0) "+" else "") + it) },
                 ).joinToString(" · ")
                 Lijst.regel(kaart, p.optString("naam"), detail, if (r.aantal > 0) "${r.aantal} ${eenheid(p)}" else "–",
                     if (r.aantal > 0) R.color.navy else R.color.tekst_zacht) { vraag(r) }

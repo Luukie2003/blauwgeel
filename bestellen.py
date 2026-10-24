@@ -2,6 +2,7 @@
 klaargezette bestelling is het concept van de factuur (zie facturen.py); wat er bij een vorige bestelling niet geleverd
 was, is met deze bestelling opgevolgd (zie manco.py)."""
 
+import bestelvoorstel
 import manco
 from helpers.producten import naar_voorraadeenheden
 from helpers.tijd import now_str
@@ -32,5 +33,6 @@ def maak_bestelling(db, besteleenheden_per_product, door=None, door_id=None):
         db.execute("INSERT INTO bestelregels (bestelling_id, product_id, aantal_besteld) VALUES (?, ?, ?)",
                    (bestelling_id, product_id, aantal))
     manco.volg_op_bij_bestelling(db, [pid for pid, _ in regels])
+    bestelvoorstel.wis_bij_bestelling(db, [pid for pid, _ in regels])
     db.commit()
     return bestelling_id, len(regels)

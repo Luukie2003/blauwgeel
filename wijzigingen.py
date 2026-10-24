@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.67.1"
+HUIDIGE_VERSIE = "1.68.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.68.0",
+        "datum": "24 oktober 2026",
+        "punten": [
+            "Prognose bijstellen, zoals op de handterminal van de supermarkt: scan een product (of open het op de site) en je ziet onder 'Bestellen bij ...' tot wanneer je uiterlijk moet bestellen, wanneer het geleverd wordt en hoeveel er verwacht wordt tot de levering daarna. Met − en + stel je die prognose bij (per krat, doos of tray; in de app tik je op het getal voor een eigen aantal). Het advies gaat meteen mee.",
+            "Een bijstelling telt mee bij 'Voorgesteld om te bestellen' op de bestellijst en bij Bestelling klaarzetten in de app, met 'bijgesteld +6 (naam)' erbij. Ook een product met een prognose van 0 komt er zo bij te staan, aangevinkt. Is het besteld, dan vervalt de bijstelling vanzelf.",
+            "De prognose op de bestellijst rekent nu per leverancier tot de levering ná de bestelling (uit de besteldagen, de besteltijd en de levertijd), in plaats van altijd 7 dagen. Zonder besteldagen blijft het 7 dagen.",
+        ],
+    },
     {
         "versie": "1.67.1",
         "datum": "23 oktober 2026",
@@ -1214,7 +1223,7 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.14.1", "sinds": "0.1.0", "laatst": "1.64.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.15.0", "sinds": "0.4.0", "laatst": "1.67.0",
+    {"naam": "Bestellen & prognose", "versie": "1.16.0", "sinds": "0.4.0", "laatst": "1.68.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "1.54.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
@@ -1232,7 +1241,7 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.15.0", "sinds": "1.53.0", "laatst": "1.67.0",
+    {"naam": "Handterminal-app", "versie": "0.16.0", "sinds": "1.53.0", "laatst": "1.68.0",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst en dia's aan of uit), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.5", "sinds": "0.1.0", "laatst": "1.65.1",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},

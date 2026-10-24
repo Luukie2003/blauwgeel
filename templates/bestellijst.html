@@ -87,9 +87,10 @@
 <div class="kaart">
     <h2>Voorgesteld om te bestellen</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Wat onder het minimum zit, en wat volgens de prognose de komende 7 dagen waarschijnlijk opraakt (thuiswedstrijden,
-        trainingsavonden en het weer tellen mee). Vraagt de komende week meer dan het minimum, dan staat het aantal al
-        hoger. <a href="{{ url_for('prognose_pagina') }}">Bekijk de volledige prognose</a>.
+        Wat onder het minimum zit, en wat volgens de prognose waarschijnlijk opraakt vóór de levering ná deze bestelling
+        (per leverancier, uit de besteldagen; anders de komende 7 dagen). Thuiswedstrijden, trainingsavonden en het weer
+        tellen mee, net als een bijstelling die je bij het product deed (plus of min). Vraagt die periode meer dan het
+        minimum, dan staat het aantal al hoger. <a href="{{ url_for('prognose_pagina') }}">Bekijk de volledige prognose</a>.
     </p>
     {% if suggesties or overige_producten or manco_extra %}
     <form method="post" action="{{ url_for('bestelling_aanmaken') }}">
@@ -97,7 +98,7 @@
         <div class="tabel-wrap">
             <table id="suggesties-tabel">
                 <thead>
-                    <tr><th></th><th></th><th>Product</th><th>Voorraad</th><th>Minimum</th><th>Verwacht <span class="tekst-zacht" style="font-weight:normal">(7 dagen)</span></th><th>Aantal bestellen</th></tr>
+                    <tr><th></th><th></th><th>Product</th><th>Voorraad</th><th>Minimum</th><th>Verwacht <span class="tekst-zacht" style="font-weight:normal">(tot levering)</span></th><th>Aantal bestellen</th></tr>
                 </thead>
                 <tbody>
                     {% for p in suggesties %}
@@ -286,14 +287,20 @@
                             c.appendChild(document.createElement('br'));
                             c.appendChild(tekst('kans op tekort ' + procent(p.kans_tekort), 'badge badge-laag'));
                         }
+                        if (p.bijstelling) {
+                            c.appendChild(document.createElement('br'));
+                            c.appendChild(tekst('bijgesteld ' + (p.bijstelling > 0 ? '+' : '') + p.bijstelling + (p.bijgesteld_door ? ' (' + p.bijgesteld_door + ')' : ''), 'badge badge-in'));
+                        }
                         var invoer = rij.querySelector('input[type=number]');
-                        // Alleen ophogen als het aantal nog op het gewone voorstel staat: wat je zelf invulde, blijft.
-                        if (invoer && p.advies_eenheden > p.basis_eenheden && invoer.value === invoer.dataset.standaard) {
+                        // Alleen aanpassen als het aantal nog op het gewone voorstel staat: wat je zelf invulde, blijft.
+                        // Omlaag alleen als iemand de prognose omlaag bijstelde.
+                        if (invoer && invoer.value === invoer.dataset.standaard &&
+                            (p.advies_eenheden > p.basis_eenheden || (p.bijstelling < 0 && p.advies_eenheden !== p.basis_eenheden))) {
                             invoer.value = String(p.advies_eenheden);
                             var factor = parseInt(invoer.dataset.factor, 10) || 1;
                             var uitleg = rij.querySelector('.aantal-uitleg');
                             if (uitleg) uitleg.textContent = '= ' + (p.advies_eenheden * factor) + ' ' + (c.dataset.eenheid || '');
-                            var hint = tekst('verhoogd door de prognose (was ' + p.basis_eenheden + ')', 'tekst-zacht');
+                            var hint = tekst((p.bijstelling ? 'aangepast door de bijstelling' : 'verhoogd door de prognose') + ' (was ' + p.basis_eenheden + ')', 'tekst-zacht');
                             hint.style.display = 'block';
                             hint.style.fontSize = '0.72rem';
                             invoer.parentNode.appendChild(hint);
@@ -313,9 +320,11 @@
                             id: p.id, naam: p.naam, foto: p.foto, eenheid: p.eenheid, factor: p.factor,
                             voorraad: p.voorraad + ' ' + p.eenheid, minimum: p.min_voorraad + ' ' + p.eenheid,
                             besteleenheid: p.besteleenheid, aantal: p.advies_eenheden,
-                            badge: 'Raakt waarschijnlijk op (' + procent(p.kans_tekort) + ')',
-                            verwacht: '~' + p.verwacht + ' ' + p.eenheid + (p.onderweg ? ' · ' + p.onderweg + ' onderweg' : ''),
-                            aan: p.status === 'urgent'
+                            badge: p.status === 'bijgesteld'
+                                ? 'Prognose bijgesteld ' + (p.bijstelling > 0 ? '+' : '') + p.bijstelling + (p.bijgesteld_door ? ' (' + p.bijgesteld_door + ')' : '')
+                                : 'Raakt waarschijnlijk op (' + procent(p.kans_tekort) + ')' + (p.bijstelling ? ', bijgesteld ' + (p.bijstelling > 0 ? '+' : '') + p.bijstelling : ''),
+                            verwacht: '~' + (p.verwacht + (p.bijstelling || 0)) + ' ' + p.eenheid + (p.onderweg ? ' · ' + p.onderweg + ' onderweg' : ''),
+                            aan: p.status === 'urgent' || p.bijstelling > 0
                         });
                         erbij++;
                     });

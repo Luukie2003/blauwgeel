@@ -103,7 +103,7 @@ def _maandag(dag):
 
 def verkoopinfo(db, product_id, vandaag=None, nu=None):
     """De verkoop per week (uit de tellingen, over de dagen verdeeld zoals in het voorspelmodel) en de verwachting
-    voor de komende 7 dagen. None als er nog geen telling is."""
+    voor de komende 7 dagen, en het bestelblok (bestelvoorstel.voor_product). None als er nog geen telling is."""
     from voorspelling import maak_prognose, verdeling  # hier pas: het voorspelmodel is groot
 
     nu = nu or datetime.now()
@@ -147,8 +147,15 @@ def verkoopinfo(db, product_id, vandaag=None, nu=None):
     if prognose.get("beschikbaar"):
         verwachting = next((p for p in prognose["producten"] if p["product"]["id"] == product_id), None)
 
+    # Het bestelblok: tot wanneer bestellen, de prognose tot de levering daarna en een eventuele bijstelling.
+    import bestelvoorstel
+
+    product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+    bestellen = bestelvoorstel.voor_product(db, product, nu) if product is not None else None
+
     hoogste = max((w["aantal"] for w in weken), default=0)
     return {
+        "bestellen": bestellen,
         "weken": weken,
         "hoogste": hoogste,
         "per_week": per_week,

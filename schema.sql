@@ -863,6 +863,16 @@ CREATE TABLE IF NOT EXISTS keuken_loop (
     bijgewerkt_op TEXT NOT NULL
 );
 
+-- Bijstelling van de bestelprognose (1.68.0): bij een product de verwachting plus of min ('stuks', in de eenheid van het
+-- product), bijvoorbeeld +6 voor een toernooi. Geldt tot het product besteld is (zie bestelvoorstel.py).
+CREATE TABLE IF NOT EXISTS bestel_bijstellingen (
+    product_id INTEGER PRIMARY KEY REFERENCES producten(id) ON DELETE CASCADE,
+    stuks INTEGER NOT NULL,
+    door TEXT,
+    gebruiker_id INTEGER REFERENCES gebruikers(id),
+    op TEXT NOT NULL
+);
+
 -- Evenementen (1.45.0): een toernooi, feest of verhuur. De prognose rekent zo'n dag als verkoopdag met een eigen,
 -- bijgeleerd drukte-effect (zie voorspelling.lees_evenementen).
 CREATE TABLE IF NOT EXISTS evenementen (
