@@ -121,7 +121,10 @@
     <string name="gisteren_geteld">Gisteren geteld</string>
     <string name="dagen_geleden_geteld">%1$d dagen geleden geteld</string>
     <string name="let_op">Let op</string>
-    <string name="meer">Meer</string>
+    <string name="groep_voorraad">Voorraad en bestellen</string>
+    <string name="groep_kantine">Kantine en keuken</string>
+    <string name="groep_geld">Geld</string>
+    <string name="groep_club">Club</string>
     <string name="bekijk_welke">Bekijk welke het zijn</string>
     <string name="scan_de_levering">Scan de levering bij Factuur inboeken</string>
     <string name="prikbord">Prikbord</string>

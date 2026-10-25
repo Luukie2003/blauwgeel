@@ -14,8 +14,8 @@ import nl.kantineblauwgeel.handterminal.databinding.TegelBinding
 import org.json.JSONObject
 
 /** Het startscherm: zoeken of scannen, de vier dingen van het dagelijkse werk (Factuur inboeken, Tellen, Boeken,
- * Voorraad), wat aandacht nodig heeft (ook de taken die een beheerder voor je klaarzette) en onder "Meer" alle andere
- * schermen, voor zover je er rechten voor hebt. Alles in de app zelf; de kantine-tv in KantineTvActivity. Toont meteen het vorige antwoord van de site (bewaard op het toestel) en ververst op de
+ * Voorraad), wat aandacht nodig heeft (ook de taken die een beheerder voor je klaarzette) en daaronder alle andere
+ * schermen per onderwerp (Voorraad en bestellen, Kantine en keuken, Geld, Club), voor zover je er rechten voor hebt. Alles in de app zelf; de kantine-tv in KantineTvActivity. Toont meteen het vorige antwoord van de site (bewaard op het toestel) en ververst op de
  * achtergrond, ook de productlijst. */
 class StartActivity : BasisActivity() {
 
@@ -191,35 +191,60 @@ class StartActivity : BasisActivity() {
         }
         b.letOpKop.isVisible = b.letOpLijst.childCount > 0
 
-        // Meer: de andere schermen van de app, voor zover je er rechten voor hebt.
+        // De andere schermen van de app, per onderwerp, voor zover je er rechten voor hebt.
         b.meerLijst.removeAllViews()
-        val meer = mutableListOf<Meer>()
-        meer += Meer(getString(R.string.prikbord), R.drawable.ic_prikbord, start.optInt("mededelingen_open"), urgent > 0) { PrikbordActivity.open(this) }
-        val timers = start.optJSONArray("timers")?.length() ?: 0
-        meer += Meer(getString(R.string.timer), R.drawable.ic_timer, timers, false) { TimerActivity.open(this) }
-        // Met de rechten voor de kantine-tv het hele tv-scherm (met uitverkocht en de timer); anders alleen uitverkocht.
-        if (heeft("kantine_tv")) meer += Meer(getString(R.string.kantine_tv), R.drawable.ic_kiosk, uitverkocht.size, false) { KantineTvActivity.open(this) }
-        else if (voorraad) meer += Meer(getString(R.string.op_de_tv), R.drawable.ic_kiosk, uitverkocht.size, false) { UitverkochtActivity.open(this) }
+        val voorraadMeer = mutableListOf<Meer>()
         if (voorraad) {
-            meer += Meer(getString(R.string.bestellijst), R.drawable.ic_bestellijst, bestellingen, false) { BestellijstActivity.open(this) }
-            meer += Meer(getString(R.string.boodschappen), R.drawable.ic_boodschappen, 0, false) { BoodschappenActivity.open(this) }
-            meer += Meer(getString(R.string.prognose), R.drawable.ic_prognose, 0, false) { PrognoseActivity.open(this) }
-            meer += Meer(getString(R.string.tellingen), R.drawable.ic_tellingen, 0, false) { TellingenActivity.open(this) }
-            meer += Meer(getString(R.string.geschiedenis), R.drawable.ic_geschiedenis, 0, false) { GeschiedenisActivity.open(this) }
-            meer += Meer(getString(R.string.barcodes), R.drawable.ic_barcodes, 0, false) { BarcodesActivity.open(this) }
+            voorraadMeer += Meer(getString(R.string.bestellijst), R.drawable.ic_bestellijst, bestellingen, false) { BestellijstActivity.open(this) }
+            voorraadMeer += Meer(getString(R.string.boodschappen), R.drawable.ic_boodschappen, 0, false) { BoodschappenActivity.open(this) }
+            voorraadMeer += Meer(getString(R.string.prognose), R.drawable.ic_prognose, 0, false) { PrognoseActivity.open(this) }
+            voorraadMeer += Meer(getString(R.string.tellingen), R.drawable.ic_tellingen, 0, false) { TellingenActivity.open(this) }
+            voorraadMeer += Meer(getString(R.string.geschiedenis), R.drawable.ic_geschiedenis, 0, false) { GeschiedenisActivity.open(this) }
+            voorraadMeer += Meer(getString(R.string.barcodes), R.drawable.ic_barcodes, 0, false) { BarcodesActivity.open(this) }
         }
-        meer += Meer(getString(R.string.agenda), R.drawable.ic_agenda, 0, false) { AgendaActivity.open(this) }
-        if (heeft("kassa")) {
-            meer += Meer(getString(R.string.kassa), R.drawable.ic_kassa, kassa?.optInt("concepten") ?: 0, false) { GeldActivity.open(this, GeldActivity.KASSA) }
-        }
-        if (beheerder) meer += Meer(getString(R.string.kluis), R.drawable.ic_kluis, kluis, false) { GeldActivity.open(this, GeldActivity.KLUIS) }
+        val kantineMeer = mutableListOf<Meer>()
         if (heeft("keuken")) {
             val vetNodig = start.optJSONObject("frituurvet")?.optBoolean("ok") == false
-            meer += Meer(getString(R.string.keuken), R.drawable.ic_keuken, if (vetNodig) 1 else 0, vetNodig, label = "!") { KeukenActivity.open(this) }
+            kantineMeer += Meer(getString(R.string.keuken), R.drawable.ic_keuken, if (vetNodig) 1 else 0, vetNodig, label = "!") { KeukenActivity.open(this) }
         }
-        if (heeft("club_van_20")) meer += Meer(getString(R.string.club_van_20), R.drawable.ic_aanmeldingen, aanmeldingen, false) { AanmeldingenActivity.open(this) }
-        b.meerKop.isVisible = meer.isNotEmpty()
-        meer.chunked(3).forEach { rij ->
+        // Met de rechten voor de kantine-tv het hele tv-scherm (met uitverkocht en de timer); anders alleen uitverkocht.
+        if (heeft("kantine_tv")) kantineMeer += Meer(getString(R.string.kantine_tv), R.drawable.ic_kiosk, uitverkocht.size, false) { KantineTvActivity.open(this) }
+        else if (voorraad) kantineMeer += Meer(getString(R.string.op_de_tv), R.drawable.ic_kiosk, uitverkocht.size, false) { UitverkochtActivity.open(this) }
+        val timers = start.optJSONArray("timers")?.length() ?: 0
+        kantineMeer += Meer(getString(R.string.timer), R.drawable.ic_timer, timers, false) { TimerActivity.open(this) }
+        val geldMeer = mutableListOf<Meer>()
+        if (heeft("kassa")) {
+            geldMeer += Meer(getString(R.string.kassa), R.drawable.ic_kassa, kassa?.optInt("concepten") ?: 0, false) { GeldActivity.open(this, GeldActivity.KASSA) }
+        }
+        if (beheerder) geldMeer += Meer(getString(R.string.kluis), R.drawable.ic_kluis, kluis, false) { GeldActivity.open(this, GeldActivity.KLUIS) }
+        val clubMeer = mutableListOf<Meer>()
+        clubMeer += Meer(getString(R.string.prikbord), R.drawable.ic_prikbord, start.optInt("mededelingen_open"), urgent > 0) { PrikbordActivity.open(this) }
+        clubMeer += Meer(getString(R.string.agenda), R.drawable.ic_agenda, 0, false) { AgendaActivity.open(this) }
+        if (heeft("club_van_20")) clubMeer += Meer(getString(R.string.club_van_20), R.drawable.ic_aanmeldingen, aanmeldingen, false) { AanmeldingenActivity.open(this) }
+        val groepen = listOf(
+            R.string.groep_voorraad to voorraadMeer,
+            R.string.groep_kantine to kantineMeer,
+            R.string.groep_geld to geldMeer,
+            R.string.groep_club to clubMeer,
+        )
+        for ((kop, groep) in groepen) {
+            if (groep.isEmpty()) continue
+            Lijst.kop(b.meerLijst, getString(kop))
+            toonMeer(groep)
+        }
+
+        b.standTekst.text = telling?.tekstOfNull("datum")?.let {
+            getString(R.string.laatst_geteld, it.take(10).split("-").reversed().joinToString("-"), telling.tekstOfNull("door") ?: "?")
+        } ?: ""
+
+        val nieuwste = start.optString("app_versie")
+        b.updateMelding.isVisible = nieuwer(nieuwste, BuildConfig.VERSION_NAME)
+        b.updateMelding.text = getString(R.string.update_beschikbaar, nieuwste)
+    }
+
+    /** Een groep kleine tegels, drie naast elkaar. */
+    private fun toonMeer(groep: List<Meer>) {
+        groep.chunked(3).forEach { rij ->
             val regel = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             rij.forEach { m ->
                 val item = ItemMeerBinding.inflate(LayoutInflater.from(this), regel, false)
@@ -240,14 +265,6 @@ class StartActivity : BasisActivity() {
             }
             b.meerLijst.addView(regel)
         }
-
-        b.standTekst.text = telling?.tekstOfNull("datum")?.let {
-            getString(R.string.laatst_geteld, it.take(10).split("-").reversed().joinToString("-"), telling.tekstOfNull("door") ?: "?")
-        } ?: ""
-
-        val nieuwste = start.optString("app_versie")
-        b.updateMelding.isVisible = nieuwer(nieuwste, BuildConfig.VERSION_NAME)
-        b.updateMelding.text = getString(R.string.update_beschikbaar, nieuwste)
     }
 
     private class Meer(
