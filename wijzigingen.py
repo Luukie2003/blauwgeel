@@ -15,7 +15,7 @@ WIJZIGINGEN = [
             "Bestellen in colli: bij een product (gescand op de handterminal of op de site) zie je de prognose en het advies, en kies je met − en + hoeveel kratten, dozen of trays je bestelt. Dat gaat per hele colli, dus niet meer via een prognose in stuks die wordt afgerond. In de app tik je op het getal om het in te vullen; op 0 bestel je het niet, en met 'Terug naar het advies' haal je je keuze weg.",
             "Wat je kiest staat meteen zo bij 'Voorgesteld om te bestellen' op de bestellijst en bij Bestelling klaarzetten in de app, met 'zelf gekozen (naam)' erbij, ook als het product niet onder het minimum zit. Is het besteld, dan vervalt de keuze vanzelf.",
             "Scannen op de bestellijst: op de site staat boven 'Voorgesteld om te bestellen' een scanveld (scan een barcode, ook die van de doos, of typ een naam en druk op Enter). Het product komt erbij en wordt aangevinkt; scan je het nog een keer, dan is het één colli meer. In de app scan je een product op de Bestellijst of bij Bestelling klaarzetten, en dan komt het onder 'Gescand' te staan.",
-            "Handterminal-app 2.14.0: onderaan het startscherm staan de knoppen niet meer door elkaar onder 'Meer', maar per onderwerp: Voorraad en bestellen, Kantine en keuken, Geld en Club.",
+            "Handterminal-app 2.14.0: onderaan het startscherm staan onder 'Meer' niet langer twaalf knoppen door elkaar, maar vier onderwerpen: Voorraad en bestellen, Kantine en keuken, Geld en Club. Tik op een onderwerp en er schuift een blad omhoog met de onderdelen, elk met een korte uitleg en een teller als er iets is (bijvoorbeeld 2 bestellingen). Op de tegel van het onderwerp staat het totaal, rood als er iets dringends bij zit.",
         ],
     },
     {

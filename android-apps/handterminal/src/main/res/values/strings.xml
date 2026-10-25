@@ -121,7 +121,24 @@
     <string name="gisteren_geteld">Gisteren geteld</string>
     <string name="dagen_geleden_geteld">%1$d dagen geleden geteld</string>
     <string name="let_op">Let op</string>
+    <string name="meer">Meer</string>
     <string name="groep_voorraad">Voorraad en bestellen</string>
+    <string name="uitleg_bestellijst">Wat besteld moet worden, en klaarzetten</string>
+    <string name="uitleg_boodschappen">Het lijstje voor de supermarkt</string>
+    <string name="uitleg_prognose">Wat er de komende dagen verkocht wordt</string>
+    <string name="uitleg_tellingen">Eerdere tellingen en de omzet</string>
+    <string name="uitleg_geschiedenis">Wat er geboekt is, en door wie</string>
+    <string name="uitleg_barcodes">Barcodes koppelen en de koppelronde</string>
+    <string name="uitleg_keuken">Keukenvoorraad, tellen en frituurvet</string>
+    <string name="uitleg_keuken_vet">Het frituurvet moet vervangen worden</string>
+    <string name="uitleg_kantine_tv">Tv\'s, dia\'s, uitverkocht en de timer</string>
+    <string name="uitleg_op_de_tv">Uitverkocht op het prijzenscherm</string>
+    <string name="uitleg_timer">Een timer op alle tv\'s</string>
+    <string name="uitleg_kassa">De kassa tellen</string>
+    <string name="uitleg_kluis">De kluis tellen</string>
+    <string name="uitleg_prikbord">Mededelingen voor iedereen</string>
+    <string name="uitleg_agenda">Wedstrijden en activiteiten</string>
+    <string name="uitleg_club_van_20">Aanmeldingen voor de Club van 20</string>
     <string name="groep_kantine">Kantine en keuken</string>
     <string name="groep_geld">Geld</string>
     <string name="groep_club">Club</string>
@@ -299,6 +316,10 @@
     <plurals name="keuken_verder_tekst">
         <item quantity="one">Er staat een keukentelling klaar (hier of op de site) met %1$d geteld product. Daarmee verder, of opnieuw beginnen?</item>
         <item quantity="other">Er staat een keukentelling klaar (hier of op de site) met %1$d getelde producten. Daarmee verder, of opnieuw beginnen?</item>
+    </plurals>
+    <plurals name="n_onderdelen">
+        <item quantity="one">%d onderdeel</item>
+        <item quantity="other">%d onderdelen</item>
     </plurals>
     <plurals name="n_producten">
         <item quantity="one">%d product</item>

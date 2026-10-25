@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Een onderdeel in het blad van een onderwerp: icoon, naam en een korte uitleg, eventueel met een teller. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_margin="5dp"
+    android:layout_weight="1"
+    android:background="@drawable/kaart_klik"
+    android:clickable="true"
+    android:focusable="true"
+    android:minHeight="112dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <ImageView
+            android:id="@+id/onderdeelIcoon"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/icoon_cirkel"
+            android:contentDescription="@null"
+            android:padding="9dp"
+            app:tint="@color/geel" />
+
+        <TextView
+            android:id="@+id/onderdeelNaam"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="9dp"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/tekst"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/onderdeelUitleg"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="1dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@color/tekst_zacht"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/onderdeelTeller"
+        android:layout_width="wrap_content"
+        android:layout_height="20dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="10dp"
+        android:background="@drawable/badge_geel"
+        android:gravity="center"
+        android:minWidth="20dp"
+        android:paddingStart="5dp"
+        android:paddingEnd="5dp"
+        android:textColor="@color/navy"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+</FrameLayout>

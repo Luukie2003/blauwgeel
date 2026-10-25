@@ -16,6 +16,21 @@
         <item name="android:textColorPrimary">@color/tekst</item>
     </style>
 
+    <!-- Een blad dat van onderen omhoog schuift, over het scherm heen (zie StartActivity.openOnderwerp). -->
+    <style name="Blad" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.55</item>
+        <item name="android:windowAnimationStyle">@style/Blad.Animatie</item>
+    </style>
+
+    <style name="Blad.Animatie" parent="">
+        <item name="android:windowEnterAnimation">@anim/blad_in</item>
+        <item name="android:windowExitAnimation">@anim/blad_uit</item>
+    </style>
+
     <style name="Thema.Handterminal.Instellingen" parent="Theme.AppCompat.Light.DarkActionBar">
         <item name="colorPrimary">@color/navy</item>
         <item name="colorPrimaryDark">@color/navy</item>

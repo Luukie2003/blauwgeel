@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Het streepje bovenaan het blad: een teken dat het omlaag weg kan. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="2dp" />
+    <solid android:color="@color/knop_op_navy_rand" />
+</shape>
