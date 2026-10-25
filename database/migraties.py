@@ -386,6 +386,8 @@ KOLOM_MIGRATIES = [
     # De prijs van een scan aangepast naar wat er op de factuur staat (1.67.0): bij het afronden wordt dat de
     # inkoopprijs van het artikel (zie facturen.afronden).
     ("inboekronde_regels", "prijs_aangepast", "INTEGER NOT NULL DEFAULT 0"),
+    # Zelf gekozen aantal colli om te bestellen (1.69.0), zie bestelvoorstel.zet_bestelaantal.
+    ("bestel_bijstellingen", "eenheden", "INTEGER"),
 ]
 
 

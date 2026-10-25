@@ -863,11 +863,13 @@ CREATE TABLE IF NOT EXISTS keuken_loop (
     bijgewerkt_op TEXT NOT NULL
 );
 
--- Bijstelling van de bestelprognose (1.68.0): bij een product de verwachting plus of min ('stuks', in de eenheid van het
--- product), bijvoorbeeld +6 voor een toernooi. Geldt tot het product besteld is (zie bestelvoorstel.py).
+-- Wat je bij een product zelf aan de bestelling verandert (zie bestelvoorstel.py), tot het besteld is: 'eenheden' is
+-- hoeveel colli je wilt bestellen (1.69.0; NULL = het advies volgen), 'stuks' een bijstelling van de prognose plus of
+-- min (1.68.0, in de eenheid van het product).
 CREATE TABLE IF NOT EXISTS bestel_bijstellingen (
     product_id INTEGER PRIMARY KEY REFERENCES producten(id) ON DELETE CASCADE,
     stuks INTEGER NOT NULL,
+    eenheden INTEGER,
     door TEXT,
     gebruiker_id INTEGER REFERENCES gebruikers(id),
     op TEXT NOT NULL

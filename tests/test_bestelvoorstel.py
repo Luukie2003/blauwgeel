@@ -1,11 +1,12 @@
-"""Het bestelvoorstel (bestelvoorstel.py, 1.68.0): het uiterste bestelmoment per leverancier, en de prognose met plus en
-min bijstellen vanaf het product (site en handterminal), wat meetelt bij "Voorgesteld om te bestellen"."""
+"""Het bestelvoorstel (bestelvoorstel.py): het uiterste bestelmoment per leverancier (1.68.0), bij het product zelf het
+aantal colli kiezen (1.69.0, site en handterminal), en producten scannen op de bestellijst (1.69.0)."""
 
 from datetime import datetime
 
 import pytest
 from conftest import stel_csrf_token_in as _csrf
 from test_app_api import _post, app_client  # noqa: F401 (fixture)
+from test_barcodes import AH_DOOS, AH_ZAK, _artikel
 
 import bestelvoorstel
 from helpers.producten import bestel_advies
@@ -91,10 +92,78 @@ def test_app_stelt_bij_en_krijgt_het_nieuwe_blok(app_client, db, prognose):  # n
     assert bestelvoorstel.bijstellingen(db) == {}
 
 
-def test_site_stelt_bij_en_bestellen_wist_de_bijstelling(ingelogde_client, db, prognose):
-    pid = _product(db, "Sinas Site", voorraad=0)
-    resp = ingelogde_client.post(f"/producten/{pid}/bijstelling", data={"csrf_token": _csrf(ingelogde_client), "stuks": "5"})
+def test_site_kiest_het_aantal_colli_en_bestellen_wist_het(ingelogde_client, db, prognose):
+    pid = _product(db, "Sinas Site", voorraad=0, factor=24, besteleenheid="tray")
+    prognose[pid] = (10, 15)
+    pagina = ingelogde_client.get(f"/producten/{pid}/verkoop").data.decode()
+    assert 'name="aantal" value="1"' in pagina and "Kies met min en plus" in pagina  # het advies: 1 tray
+    resp = ingelogde_client.post(f"/producten/{pid}/bestellen", data={"csrf_token": _csrf(ingelogde_client), "eenheden": "3"})
     assert resp.status_code == 302 and resp.location.endswith(f"/producten/{pid}#verkoop")
-    assert bestelvoorstel.bijstellingen(db)[pid]["stuks"] == 5
+    assert bestelvoorstel.bijstellingen(db)[pid]["eenheden"] == 3
+    pagina = ingelogde_client.get(f"/producten/{pid}/verkoop").data.decode()
+    assert 'name="aantal" value="3"' in pagina and "terug naar het advies" in pagina and "(72 stuks)" in pagina
+    # Enter in het invulvak: een lege 'eenheden', dus het getal uit 'aantal'.
+    ingelogde_client.post(f"/producten/{pid}/bestellen", data={"csrf_token": _csrf(ingelogde_client), "eenheden": "", "aantal": "5"})
+    assert bestelvoorstel.bijstellingen(db)[pid]["eenheden"] == 5
     ingelogde_client.post("/bestellijst/aanmaken", data={"csrf_token": _csrf(ingelogde_client), "product_id": [pid], f"aantal_{pid}": "5"})
     assert pid not in bestelvoorstel.bijstellingen(db)
+
+
+def test_terug_naar_het_advies(ingelogde_client, db, prognose):
+    pid = _product(db, "Ranja Advies")
+    bestelvoorstel.zet_bestelaantal(db, pid, 2)
+    ingelogde_client.post(f"/producten/{pid}/bestellen", data={"csrf_token": _csrf(ingelogde_client), "eenheden": "advies"})
+    assert bestelvoorstel.bijstellingen(db) == {}
+
+
+def test_app_kiest_het_aantal_colli(app_client, db, prognose):  # noqa: F811
+    pid = _product(db, "Chips Colli", voorraad=0, factor=12, besteleenheid="doos")
+    prognose[pid] = (5, 8)
+    resp = _post(app_client, f"/api/app/producten/{pid}/bestelaantal", eenheden=4)
+    blok = resp.get_json()["bestellen"]
+    assert resp.status_code == 200 and blok["gekozen"] == 4 and blok["bestellen_eenheden"] == 4 and blok["advies_eenheden"] == 1
+    assert resp.get_json()["melding"] == "Chips Colli: 4 doos bestellen."
+    assert _post(app_client, f"/api/app/producten/{pid}/bestelaantal", eenheden=-1).status_code == 400
+    assert _post(app_client, f"/api/app/producten/{pid}/bestelaantal", eenheden="veel").status_code == 400
+    blok = _post(app_client, f"/api/app/producten/{pid}/bestelaantal", eenheden=None).get_json()["bestellen"]
+    assert blok["gekozen"] is None and blok["bestellen_eenheden"] == 1
+
+
+def test_gekozen_aantal_staat_meteen_op_de_bestellijst(ingelogde_client, app_client, db, prognose):  # noqa: F811
+    boven = _product(db, "Cola Boven", voorraad=50, minimum=10, factor=24, besteleenheid="tray")
+    laag = _product(db, "Bier Laag", voorraad=0, minimum=10)
+    bestelvoorstel.zet_bestelaantal(db, boven, 3, "Luuk")
+    bestelvoorstel.zet_bestelaantal(db, laag, 0, "Luuk")
+
+    pagina = ingelogde_client.get("/bestellijst").data.decode()
+    assert f'name="aantal_{boven}"' in pagina and "zelf gekozen (Luuk)" in pagina and "niet bestellen (Luuk)" in pagina
+    rij_laag = pagina[pagina.index(f'value="{laag}"') - 60:pagina.index(f'value="{laag}"') + 120]
+    assert "checked" not in rij_laag
+
+    advies = bestel_advies(db)
+    assert advies["producten"][boven]["gekozen"] == 3 and all(e["id"] != boven for e in advies["extra"])
+
+    lijst = app_client.get("/api/app/bestellijst").get_json()
+    assert [p["id"] for p in lijst["gekozen"]] == [boven] and lijst["gekozen"][0]["gekozen"] == 3
+    assert next(p for p in lijst["bestellen"] if p["id"] == laag)["gekozen"] == 0
+
+
+def test_scannen_op_de_bestellijst(ingelogde_client, db):
+    pid = _product(db, "Frikandel Scan", voorraad=3, factor=40, besteleenheid="doos")
+    _artikel(db, pid, "AH frikandellen", ean=AH_ZAK, aantal=20, doos=AH_DOOS, per_doos=2)
+    _product(db, "Cola Zoek")
+    _product(db, "Cola Zero Zoek")
+    bestelvoorstel.zet_bestelaantal(db, pid, 2)
+
+    def zoek(q):
+        return ingelogde_client.get("/bestellijst/zoek", query_string={"q": q}).get_json()
+
+    for code in (AH_ZAK, AH_DOOS, f"https://www.kantineblauwgeel.nl/scan/{pid}"):
+        p = zoek(code)["producten"]
+        assert [x["id"] for x in p] == [pid] and p[0]["besteleenheid"] == "doos" and p[0]["factor"] == 40
+        assert p[0]["gekozen"] == 2 and p[0]["open_bestelling"] is None
+    assert [x["naam"] for x in zoek("cola zoek")["producten"]] == ["Cola Zoek"]  # precies de naam
+    assert [x["naam"] for x in zoek("zoek cola")["producten"]] == ["Cola Zero Zoek", "Cola Zoek"]
+    assert "hoort nog bij geen enkel product" in zoek("8712345678906")["melding"]
+    assert zoek("snoep")["producten"] == [] and "Geen product" in zoek("snoep")["melding"]
+    assert 'id="bestel-scan"' in ingelogde_client.get("/bestellijst").data.decode()

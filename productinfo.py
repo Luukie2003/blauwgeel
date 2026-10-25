@@ -101,6 +101,17 @@ def _maandag(dag):
     return dag - timedelta(days=dag.weekday())
 
 
+def bestelblok(db, product, nu=None):
+    """Het bestelblok los (bestelvoorstel.voor_product), voor als er nog geen verkoopinfo is; None als het mislukt."""
+    import bestelvoorstel
+
+    try:
+        return bestelvoorstel.voor_product(db, product, nu)
+    except Exception as fout:  # het blok mag de productpagina nooit stuk maken
+        print(f"[productpagina] bestelblok van {product['id']} mislukt: {fout}")
+        return None
+
+
 def verkoopinfo(db, product_id, vandaag=None, nu=None):
     """De verkoop per week (uit de tellingen, over de dagen verdeeld zoals in het voorspelmodel) en de verwachting
     voor de komende 7 dagen, en het bestelblok (bestelvoorstel.voor_product). None als er nog geen telling is."""

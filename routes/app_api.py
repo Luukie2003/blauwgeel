@@ -20,6 +20,7 @@ import json
 from flask import Response, jsonify, request, session, url_for
 
 import barcodes
+import bestelvoorstel
 import kiosk_timers
 import manco
 from bestellen import maak_bestelling
@@ -49,7 +50,7 @@ from routes.tellen.verwerken import verwerk_telling
 from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 # De nieuwste versie van de app. Draait er een oudere, dan meldt de app dat er een nieuwe is.
-HANDTERMINAL_APP_VERSIE = "2.13.0"
+HANDTERMINAL_APP_VERSIE = "2.14.0"
 
 MAX_AANTAL = 100000
 
@@ -603,9 +604,11 @@ def register_routes(app):
     @app.route("/api/app/bestellijst")
     def api_app_bestellijst():
         """Wat er besteld moet worden (onder het minimum en nog niet besteld), wat bij een vorige bestelling niet geleverd
-        is (manco), wat bezoekers via de QR-code meldden, en de bestellingen die onderweg zijn. Klaarzetten: zie
-        api_app_bestellijst_bestellen."""
+        is (manco), wat iemand bij het product zelf koos ("gekozen": aantal colli, ook boven het minimum; zie
+        bestelvoorstel.zet_bestelaantal), wat bezoekers via de QR-code meldden, en de bestellingen die onderweg zijn.
+        Klaarzetten: zie api_app_bestellijst_bestellen."""
         db = get_db()
+        keuzes = bestelvoorstel.bijstellingen(db)
         meldingen = bereken_bestellijst_meldingen(db)
         open_bestellingen = db.execute(
             "SELECT id, aangemaakt_op, referentie FROM bestellingen WHERE status = 'besteld' ORDER BY id DESC"
@@ -617,7 +620,8 @@ def register_routes(app):
             return {"id": p["id"], "naam": p["naam"], "categorie": p["categorie"] or "", "eenheid": p["eenheid"],
                     "voorraad": p["voorraad"], "min_voorraad": p["min_voorraad"] or 0,
                     "bestel_hoeveelheid": p["bestel_hoeveelheid"],
-                    "besteleenheid": besteleenheid_naam(p) if factor > 1 else None, "per_besteleenheid": factor}
+                    "besteleenheid": besteleenheid_naam(p) if factor > 1 else None, "per_besteleenheid": factor,
+                    "gekozen": bestelvoorstel.gekozen(keuzes.get(p["id"]))}
 
         suggesties = bestel_suggesties(db)
         suggestie_ids = {p["id"] for p in suggesties}
@@ -631,9 +635,15 @@ def register_routes(app):
             x["bestellingen"].append(m["bestelling_id"])
         for x in manco_regels.values():
             x["tekort_besteleenheden"] = naar_besteleenheden(x["tekort"], {"besteleenheid_factor": x["per_besteleenheid"]})
+        gekozen_ids = [pid for pid, b in keuzes.items() if (bestelvoorstel.gekozen(b) or 0) > 0
+                       and pid not in suggestie_ids and pid not in manco_regels]
+        gekozen = db.execute(
+            f"SELECT * FROM producten WHERE id IN ({','.join('?' * len(gekozen_ids))}) ORDER BY naam COLLATE NOCASE", gekozen_ids
+        ).fetchall() if gekozen_ids else []
         return jsonify({
             "bestellen": [product(p) for p in suggesties],
             "manco": list(manco_regels.values()),
+            "gekozen": [product(p) for p in gekozen],
             "gemeld": [{**product(m["product"]), "keer": m["aantal"], "laatste_melding": m["laatste_melding"]}
                        for m in meldingen["producten"]],
             "teksten": [{"id": t["id"], "tekst": t["tekst"], "aangemaakt_op": t["aangemaakt_op"]} for t in meldingen["teksten"]],

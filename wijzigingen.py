@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.68.0"
+HUIDIGE_VERSIE = "1.69.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.69.0",
+        "datum": "26 oktober 2026",
+        "punten": [
+            "Bestellen in colli: bij een product (gescand op de handterminal of op de site) zie je de prognose en het advies, en kies je met − en + hoeveel kratten, dozen of trays je bestelt. Dat gaat per hele colli, dus niet meer via een prognose in stuks die wordt afgerond. In de app tik je op het getal om het in te vullen; op 0 bestel je het niet, en met 'Terug naar het advies' haal je je keuze weg.",
+            "Wat je kiest staat meteen zo bij 'Voorgesteld om te bestellen' op de bestellijst en bij Bestelling klaarzetten in de app, met 'zelf gekozen (naam)' erbij, ook als het product niet onder het minimum zit. Is het besteld, dan vervalt de keuze vanzelf.",
+            "Scannen op de bestellijst: op de site staat boven 'Voorgesteld om te bestellen' een scanveld (scan een barcode, ook die van de doos, of typ een naam en druk op Enter). Het product komt erbij en wordt aangevinkt; scan je het nog een keer, dan is het één colli meer. In de app scan je een product op de Bestellijst of bij Bestelling klaarzetten, en dan komt het onder 'Gescand' te staan.",
+        ],
+    },
     {
         "versie": "1.68.0",
         "datum": "24 oktober 2026",
@@ -1223,7 +1232,7 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.14.1", "sinds": "0.1.0", "laatst": "1.64.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.16.0", "sinds": "0.4.0", "laatst": "1.68.0",
+    {"naam": "Bestellen & prognose", "versie": "1.17.0", "sinds": "0.4.0", "laatst": "1.69.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "1.54.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
@@ -1241,7 +1250,7 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.16.0", "sinds": "1.53.0", "laatst": "1.68.0",
+    {"naam": "Handterminal-app", "versie": "0.17.0", "sinds": "1.53.0", "laatst": "1.69.0",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst en dia's aan of uit), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.5", "sinds": "0.1.0", "laatst": "1.65.1",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},

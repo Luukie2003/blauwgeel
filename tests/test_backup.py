@@ -56,7 +56,8 @@ def test_status_met_verse_backup_is_ok(tmp_path):
 def test_status_met_oude_backup_waarschuwt(tmp_path):
     pad = tmp_path / "voorraad-2026-10-01.db"
     _maak_db(pad)
-    _zet_leeftijd(pad, 5)
+    # Iets meer dan 5 dagen: in de week na de overgang naar wintertijd is precies 5x24 uur in lokale tijd 4 dagen en 23 uur.
+    _zet_leeftijd(pad, 5.1)
     status = backup.bereken_backup_status(backup_map=tmp_path)
     assert not status["ok"]
     assert "5 dagen" in status["tekst"]

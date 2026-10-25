@@ -153,9 +153,9 @@ def productinfo_json(db, product_id):
     return _info_json(db, product, session.get("gebruiker_rol") == "beheerder")
 
 
-def _verkoop_json(verkoop):
+def _verkoop_json(verkoop, bestellen=None):
     if not verkoop:
-        return {"beschikbaar": False}
+        return {"beschikbaar": False, "bestellen": bestellen}
     v = verkoop["verwachting"]
     verwachting = None
     if v:
@@ -341,12 +341,36 @@ def register_routes(app):
         except Exception as fout:  # het blok mag het productscherm nooit stuk maken
             print(f"[app] verkoop van {product_id} mislukt: {fout}")
             verkoop = None
-        return jsonify(_verkoop_json(verkoop))
+        product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+        return jsonify(_verkoop_json(verkoop, None if verkoop else productinfo.bestelblok(db, product)))
+
+    @app.route("/api/app/producten/<int:product_id>/bestelaantal", methods=["POST"])
+    def api_app_product_bestelaantal(product_id):
+        """{eenheden}: zelf kiezen hoeveel colli je van dit product bestelt (0 = niet bestellen; null = weer het advies).
+        Geeft het nieuwe bestelblok terug (zie bestelvoorstel.py)."""
+        db = get_db()
+        product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+        if product is None:
+            return _fout("Dit product bestaat niet meer.", 404, "niet_gevonden")
+        ruw = _data().get("eenheden")
+        eenheden = None if ruw is None else _getal(ruw)
+        if ruw is not None and (eenheden is None or not 0 <= eenheden <= bestelvoorstel.MAX_EENHEDEN):
+            return _fout("Geen geldig aantal.")
+        bestelvoorstel.zet_bestelaantal(db, product_id, eenheden, session.get("gebruiker_naam"), session.get("gebruiker_id"))
+        blok = bestelvoorstel.voor_product(db, product)
+        if eenheden is None:
+            melding = f"Weer het advies: {blok['advies_eenheden']} {blok['besteleenheid']}."
+        elif eenheden == 0:
+            melding = f"{product['naam']}: niet bestellen."
+        else:
+            melding = f"{product['naam']}: {eenheden} {blok['besteleenheid']} bestellen."
+        return jsonify({"bestellen": blok, "melding": melding})
 
     @app.route("/api/app/producten/<int:product_id>/bijstelling", methods=["POST"])
     def api_app_product_bijstelling(product_id):
         """{stuks}: de prognose van dit product tot de volgende levering bijstellen (plus of min, in de eenheid van het
-        product; 0 = weg). Geeft het nieuwe bestelblok terug (zie bestelvoorstel.py)."""
+        product; 0 = weg). Geeft het nieuwe bestelblok terug (zie bestelvoorstel.py). Voor handterminal-app 2.13.0;
+        sinds 2.14.0 kiest de app het aantal colli (api_app_product_bestelaantal)."""
         db = get_db()
         product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
         if product is None:

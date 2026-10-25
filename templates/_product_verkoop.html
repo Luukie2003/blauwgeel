@@ -1,9 +1,51 @@
 {# Het blok 'Verkoop en verwachting' van de productpagina, apart opgehaald (zie product_detail_verkoop). #}
 {% macro getal(waarde) %}{{ ('%.1f'|format(waarde)).replace('.0', '').replace('.', ',') }}{% endmacro %}
+{# Het bestelblok (bestelvoorstel.py): tot wanneer bestellen, de prognose tot de levering daarna, het advies, en met
+   min en plus zelf kiezen hoeveel colli je bestelt. Ook zonder tellingen: dan is de prognose 0, maar kiezen kan al. #}
+{% macro bestelblok(b, v) %}
+{% if b %}
+{% set n = b.bestellen_eenheden %}
+<div class="bestelblok" id="verkoop">
+    <div class="bestelblok-kop">
+        <strong>Bestellen{% if b.leverancier %} bij {{ b.leverancier }}{% endif %}</strong>
+        {% if b.uiterst %}<span class="tekst-zacht">uiterlijk {{ b.uiterst_tekst }} &middot; levering {{ b.levering_tekst }}</span>{% endif %}
+    </div>
+    <div class="bestelblok-cijfers">
+        <div><span class="label">Voorraad</span><strong>{{ b.voorraad }}</strong></div>
+        <div><span class="label">Onderweg</span><strong>{{ b.onderweg }}</strong></div>
+        <div><span class="label">Prognose {% if b.volgende_levering %}tot {{ b.volgende_levering_tekst }}{% else %}{{ b.dagen }} dagen{% endif %}</span>
+            <strong>{{ '%.0f'|format(b.met_bijstelling) }}</strong>{% if b.bijstelling %} <span class="badge badge-in" title="Bijgesteld door {{ b.bijgesteld_door or 'onbekend' }}">{{ '+' if b.bijstelling > 0 }}{{ b.bijstelling }}</span>{% endif %}</div>
+        <div><span class="label">Advies</span><strong>{{ b.advies_eenheden }} {{ b.besteleenheid }}</strong>{% if b.factor > 1 and b.advies_stuks %} <span class="tekst-zacht">({{ b.advies_stuks }})</span>{% endif %}</div>
+    </div>
+    <form method="post" action="{{ url_for('product_bestelaantal', product_id=product.id) }}" class="bestelblok-knoppen">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {# Enter in het invulvak: deze (onzichtbare) eerste knop, met een lege 'eenheden', dus het getal uit 'aantal'. #}
+        <button type="submit" name="eenheden" value="" class="visueel-verborgen" tabindex="-1" aria-hidden="true"></button>
+        <span class="label">Bestellen</span>
+        <button type="submit" name="eenheden" value="{{ [n - 1, 0]|max }}" class="btn btn-rand btn-klein" aria-label="Eén {{ b.besteleenheid }} minder"{% if n <= 0 %} disabled{% endif %}>&minus;</button>
+        <input type="number" name="aantal" value="{{ n }}" min="0" max="999" class="bestelblok-aantal" aria-label="Aantal {{ b.besteleenheid }} bestellen">
+        <button type="submit" name="eenheden" value="{{ n + 1 }}" class="btn btn-rand btn-klein" aria-label="Eén {{ b.besteleenheid }} meer">+</button>
+        <span>{{ b.besteleenheid }}{% if b.factor > 1 and n > 0 %} <span class="tekst-zacht">({{ n * b.factor }} {{ b.eenheid }})</span>{% endif %}</span>
+        {% if b.gekozen is not none %}<button type="submit" name="eenheden" value="advies" class="btn-tekstlink">terug naar het advies</button>{% endif %}
+    </form>
+    <p class="tekst-zacht" style="margin:0.3rem 0 0; font-size:0.78rem">
+        {% if b.gekozen is not none %}
+        Zelf gekozen{% if b.bijgesteld_door %} door {{ b.bijgesteld_door }}{% endif %}{% if b.gekozen == 0 %}: niet bestellen{% endif %}.
+        Zo staat het bij &ldquo;Voorgesteld om te bestellen&rdquo; tot het besteld is.
+        {% else %}
+        Kies met min en plus hoeveel {{ b.besteleenheid }} je bestelt; dat aantal komt zo bij &ldquo;Voorgesteld om te
+        bestellen&rdquo; te staan, ook als het niet onder het minimum zit. Op 0 wordt het niet besteld.
+        {% endif %}
+        {% if v and v.al_op_bestellijst %}Staat al op de bestellijst.{% endif %}
+    </p>
+</div>
+{% endif %}
+{% endmacro %}
 <div class="kaart">
     <h2>Verkoop en verwachting</h2>
     {% if not verkoop %}
-    <p class="leeg" style="margin:0">Nog geen tellingen: zodra er twee tellingen zijn, staat hier hoeveel er per week verkocht wordt.</p>
+    <p class="leeg" style="margin:0 0 0.9rem">Nog geen tellingen: zodra er twee tellingen zijn, staat hier hoeveel er per week verkocht wordt.</p>
+    {{ bestelblok(bestellen, None) }}
     {% else %}
     {% set v = verkoop.verwachting %}
     {% if verkoop.zonder_verkoop %}
@@ -33,35 +75,7 @@
         </div>
         {% endif %}
     </div>
-    {% set b = verkoop.bestellen %}
-    {% if b %}
-    {# Het bestelblok (bestelvoorstel.py): tot wanneer bestellen, de prognose tot de levering daarna, met plus en min. #}
-    {% set stap = b.factor %}
-    <div class="bestelblok" id="verkoop">
-        <div class="bestelblok-kop">
-            <strong>Bestellen{% if b.leverancier %} bij {{ b.leverancier }}{% endif %}</strong>
-            {% if b.uiterst %}<span class="tekst-zacht">uiterlijk {{ b.uiterst_tekst }} &middot; levering {{ b.levering_tekst }}</span>{% endif %}
-        </div>
-        <div class="bestelblok-cijfers">
-            <div><span class="label">Voorraad</span><strong>{{ b.voorraad }}</strong></div>
-            <div><span class="label">Onderweg</span><strong>{{ b.onderweg }}</strong></div>
-            <div><span class="label">Prognose {% if b.volgende_levering %}tot {{ b.volgende_levering_tekst }}{% else %}{{ b.dagen }} dagen{% endif %}</span>
-                <strong>{{ '%.0f'|format(b.met_bijstelling) }}</strong>{% if b.bijstelling %} <span class="badge badge-in" title="Bijgesteld door {{ b.bijgesteld_door or 'onbekend' }}">{{ '+' if b.bijstelling > 0 }}{{ b.bijstelling }}</span>{% endif %}</div>
-            <div><span class="label">Advies</span><strong>{{ b.advies_eenheden }} {{ b.besteleenheid }}</strong>{% if b.factor > 1 and b.advies_stuks %} <span class="tekst-zacht">({{ b.advies_stuks }})</span>{% endif %}</div>
-        </div>
-        <form method="post" action="{{ url_for('product_bijstelling', product_id=product.id) }}" class="bestelblok-knoppen">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <span class="tekst-zacht">Prognose bijstellen:</span>
-            <button type="submit" name="stuks" value="{{ b.bijstelling - stap }}" class="btn btn-rand btn-klein" aria-label="Prognose {{ stap }} lager">&minus;{{ stap if stap > 1 else '' }}</button>
-            <button type="submit" name="stuks" value="{{ b.bijstelling + stap }}" class="btn btn-rand btn-klein" aria-label="Prognose {{ stap }} hoger">+{{ stap if stap > 1 else '' }}</button>
-            {% if b.bijstelling %}<button type="submit" name="stuks" value="0" class="btn-tekstlink">weghalen</button>{% endif %}
-        </form>
-        <p class="tekst-zacht" style="margin:0.3rem 0 0; font-size:0.78rem">
-            Wat je bijstelt telt mee bij &ldquo;Voorgesteld om te bestellen&rdquo; (ook als de prognose 0 is), tot het besteld is.
-            {% if v and v.al_op_bestellijst %}Staat al op de bestellijst.{% endif %}
-        </p>
-    </div>
-    {% endif %}
+    {{ bestelblok(bestellen, v) }}
 
     {% if verkoop.weken %}
     <h3 class="info-kopje">Verkocht per week</h3>

@@ -16,7 +16,6 @@ import androidx.core.view.isVisible
 import nl.kantineblauwgeel.handterminal.databinding.ActivityProductBinding
 import nl.kantineblauwgeel.handterminal.databinding.DialogNieuwArtikelBinding
 import org.json.JSONObject
-import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /** Eén product: de voorraad, boeken (erin of eruit), en daaronder alles van de productpagina van de site: kerncijfers,
@@ -517,29 +516,27 @@ class ProductActivity : BasisActivity() {
         if (kaart.childCount == 0) blok.removeView(kaart)
     }
 
-    // ---------------------------------------------------------------- bestellen: de prognose bijstellen
+    // ---------------------------------------------------------------- bestellen: zelf het aantal colli kiezen
 
     private var bestelBlok: LinearLayout? = null
-    /** De bijstelling die je net met − of + koos en die nog niet verstuurd is: een paar tikken achter elkaar worden
-     * samen één verzoek (zie bijstellen). */
-    private var bijstellingNieuw: Int? = null
+    /** Het aantal colli dat je net met − of + koos en dat nog niet verstuurd is: een paar tikken achter elkaar worden
+     * samen één verzoek (zie kiesAantal). */
+    private var aantalNieuw: Int? = null
     private val wachtrij = Handler(Looper.getMainLooper())
-    private val bijstellingVersturen = Runnable { verstuurBijstelling() }
+    private val aantalVersturen = Runnable { verstuurAantal(aantalNieuw ?: return@Runnable) }
 
     /** Zoals de handterminal van de supermarkt: tot wanneer je moet bestellen, wat er tot de levering daarna verwacht
-     * wordt, en die prognose met − en + bijstellen (per besteleenheid; tik op het getal voor een eigen aantal). De
-     * bijstelling telt mee in het advies en bij "Voorgesteld om te bestellen" op de bestellijst (bestelvoorstel.py). */
+     * wordt, het advies, en met − en + hoeveel colli je bestelt (tik op het getal om het in te vullen). Dat aantal staat
+     * dan zo bij "Voorgesteld om te bestellen" en bij Bestelling klaarzetten, tot het besteld is (bestelvoorstel.py). */
     private fun toonBestellen() {
         val blok = bestelBlok ?: return
         blok.removeAllViews()
         val best = verkoop?.optJSONObject("bestellen") ?: return
         val eenheid = best.optString("eenheid")
+        val colli = best.optString("besteleenheid")
         val factor = maxOf(1, best.optInt("factor", 1))
-        val bij = bijstellingNieuw ?: best.optInt("bijstelling")
-        val verwacht = best.optDouble("verwacht")
-        // Lager dan het hoge punt van de prognose heeft geen zin: dan is het advies al nul.
-        val ondergrens = -ceil(best.optDouble("hoog")).toInt()
-        val metBij = maxOf(0.0, verwacht + bij)
+        val gekozen = !best.isNull("gekozen")
+        val n = aantalNieuw ?: best.optInt("bestellen_eenheden")
 
         Lijst.kop(blok, best.tekstOfNull("leverancier")?.let { getString(R.string.bestellen_bij, it) } ?: getString(R.string.bestellen_titel))
         val kaart = Lijst.kaart(blok)
@@ -547,108 +544,108 @@ class ProductActivity : BasisActivity() {
             Lijst.tekst(kaart, getString(R.string.uiterlijk_bestellen, it, best.optString("levering_tekst")), kleur = R.color.tekst, vet = true)
         }
         if (!best.optBoolean("prognose_beschikbaar")) Lijst.tekst(kaart, getString(R.string.prognose_nog_niet))
+        val bij = best.optInt("bijstelling")
+        Lijst.info(kaart, getString(R.string.prognose_kort), "${best.optDouble("met_bijstelling").roundToInt()} $eenheid",
+            (best.tekstOfNull("volgende_levering_tekst")?.let { getString(R.string.prognose_tot, it) }
+                ?: getString(R.string.prognose_komende_dagen, best.optInt("dagen", 7))) +
+                if (bij != 0) " · " + getString(R.string.bijgesteld_n, (if (bij > 0) "+" else "") + bij) else "")
+        Lijst.info(kaart, getString(R.string.voorraad), "${best.optInt("voorraad")} $eenheid",
+            listOfNotNull(getString(R.string.minimum, best.optInt("min_voorraad")),
+                best.optInt("onderweg").takeIf { it > 0 }?.let { getString(R.string.n_onderweg, it) }).joinToString(" · "))
+        val advies = best.optInt("advies_eenheden")
+        Lijst.info(kaart, getString(R.string.advies_kort), if (advies > 0) "$advies $colli" else getString(R.string.advies_niets),
+            if (advies > 0 && factor > 1) "${best.optInt("advies_stuks")} $eenheid" else null)
 
+        // Bestellen: − [aantal colli] +
+        Lijst.subkop(kaart, getString(R.string.bestellen_titel))
         val rij = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(this@ProductActivity, 8), dp(this@ProductActivity, 4), dp(this@ProductActivity, 8), dp(this@ProductActivity, 4))
+            setPadding(dp(this@ProductActivity, 8), 0, dp(this@ProductActivity, 8), dp(this@ProductActivity, 4))
         }
-        fun knop(icoon: Int, beschrijving: Int, aan: Boolean, nieuw: Int) = ImageButton(this).apply {
+        fun knop(icoon: Int, beschrijving: String, aan: Boolean, nieuw: Int) = ImageButton(this).apply {
             setImageResource(icoon)
             setColorFilter(getColor(R.color.navy))
-            contentDescription = getString(beschrijving)
+            contentDescription = beschrijving
             setBackgroundResource(R.drawable.toets_licht)
             isEnabled = aan
             alpha = if (aan) 1f else 0.35f
             setOnClickListener {
                 tril(15)
-                bijstellen(nieuw)
+                kiesAantal(nieuw)
             }
         }
         val maat = dp(this, 56)
-        rij.addView(knop(R.drawable.ic_min, R.string.prognose_omlaag, bij > ondergrens, maxOf(ondergrens, bij - factor)),
-            LinearLayout.LayoutParams(maat, maat))
+        rij.addView(knop(R.drawable.ic_min, getString(R.string.een_minder, colli), n > 0, n - 1), LinearLayout.LayoutParams(maat, maat))
         val midden = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setBackgroundResource(R.drawable.regel_klik_kaart)
             setPadding(0, dp(this@ProductActivity, 4), 0, dp(this@ProductActivity, 4))
-            setOnClickListener { vraagPrognose(best, verwacht, ondergrens) }
+            setOnClickListener { vraagAantal(best) }
         }
         midden.addView(TextView(this).apply {
-            text = "${metBij.roundToInt()} $eenheid"
+            text = if (n > 0) "$n $colli" else getString(R.string.niet_bestellen)
             textSize = 24f
             gravity = Gravity.CENTER
-            setTextColor(getColor(if (bij != 0) R.color.navy else R.color.tekst))
+            setTextColor(getColor(if (gekozen || aantalNieuw != null) R.color.navy else R.color.tekst))
             setTypeface(typeface, android.graphics.Typeface.BOLD)
         })
-        val uitleg = best.tekstOfNull("volgende_levering_tekst")?.let { getString(R.string.prognose_tot, it) }
-            ?: getString(R.string.prognose_komende_dagen, best.optInt("dagen", 7))
         midden.addView(TextView(this).apply {
-            text = uitleg + if (bij != 0) "\n" + getString(R.string.bijgesteld_n, (if (bij > 0) "+" else "") + bij) else ""
+            text = listOfNotNull(
+                if (n > 0 && factor > 1) "${n * factor} $eenheid" else null,
+                getString(if (gekozen || aantalNieuw != null) R.string.zelf_gekozen else R.string.volgens_advies),
+            ).joinToString(" · ")
             textSize = 11.5f
             gravity = Gravity.CENTER
-            setTextColor(getColor(if (bij != 0) R.color.navy else R.color.tekst_zacht))
+            setTextColor(getColor(R.color.tekst_zacht))
         })
         rij.addView(midden, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
             marginStart = dp(this@ProductActivity, 6)
             marginEnd = dp(this@ProductActivity, 6)
         })
-        rij.addView(knop(R.drawable.ic_plus, R.string.prognose_omhoog, bij < 9999, bij + factor), LinearLayout.LayoutParams(maat, maat))
+        rij.addView(knop(R.drawable.ic_plus, getString(R.string.een_meer, colli), n < 999, n + 1), LinearLayout.LayoutParams(maat, maat))
         kaart.addView(rij)
 
-        Lijst.info(kaart, getString(R.string.voorraad), "${best.optInt("voorraad")} $eenheid",
-            getString(R.string.minimum, best.optInt("min_voorraad")))
-        if (best.optInt("onderweg") > 0) Lijst.info(kaart, getString(R.string.onderweg_kort), "${best.optInt("onderweg")} $eenheid")
-        val eenheden = best.optInt("advies_eenheden")
-        val advies = when {
-            bijstellingNieuw != null -> getString(R.string.advies_rekent)
-            eenheden <= 0 -> getString(R.string.advies_niets)
-            else -> "$eenheden ${best.optString("besteleenheid")}"
-        }
-        Lijst.info(kaart, getString(R.string.advies_kort), advies,
-            if (bijstellingNieuw == null && eenheden > 0 && factor > 1) "${best.optInt("advies_stuks")} $eenheid" else null,
-            kleur = if (bijstellingNieuw == null && eenheden > 0) R.color.navy else R.color.tekst_zacht)
-        Lijst.tekst(kaart, best.tekstOfNull("bijgesteld_door")?.takeIf { bij != 0 }?.let { getString(R.string.bijgesteld_door, it) }
-            ?: getString(R.string.tik_om_bij_te_stellen), grootte = 11f)
-        if (bij != 0) Lijst.knop(kaart, getString(R.string.bijstelling_weghalen)) { bijstellen(0) }
+        Lijst.tekst(kaart, if (gekozen) getString(R.string.gekozen_uitleg, best.tekstOfNull("bijgesteld_door") ?: "?")
+            else getString(R.string.kies_aantal_uitleg, colli), grootte = 11f)
+        if (gekozen) Lijst.knop(kaart, getString(R.string.terug_naar_advies)) { verstuurAantal(null) }
     }
 
-    /** Tik op het getal: zelf invullen hoeveel je verwacht; de bijstelling is het verschil met de prognose. */
-    private fun vraagPrognose(best: JSONObject, verwacht: Double, ondergrens: Int) {
-        val bij = bijstellingNieuw ?: best.optInt("bijstelling")
-        val tot = best.tekstOfNull("volgende_levering_tekst") ?: getString(R.string.prognose_komende_dagen, best.optInt("dagen", 7))
-        Cijferpad.vraag(this, getString(R.string.hoeveel_verwacht, tot), maxOf(0.0, verwacht + bij).roundToInt().toString(),
-            eenheid = best.optString("eenheid"), max = 4) { tekst ->
-            val gewenst = tekst.toIntOrNull() ?: return@vraag
-            bijstellen(maxOf(ondergrens, gewenst - verwacht.roundToInt()), meteen = true)
+    /** Tik op het getal: zelf invullen hoeveel colli. */
+    private fun vraagAantal(best: JSONObject) {
+        val n = aantalNieuw ?: best.optInt("bestellen_eenheden")
+        Cijferpad.vraag(this, getString(R.string.hoeveel_bestellen, product?.naam ?: ""), n.toString(),
+            eenheid = best.optString("besteleenheid"), max = 3) { tekst ->
+            kiesAantal(tekst.toIntOrNull() ?: return@vraag, meteen = true)
         }
     }
 
-    /** Laat de nieuwe bijstelling meteen zien en verstuurt hem even later (nog een tik = het wachten begint opnieuw). */
-    private fun bijstellen(nieuw: Int, meteen: Boolean = false) {
-        bijstellingNieuw = nieuw
+    /** Laat het nieuwe aantal meteen zien en verstuurt het even later (nog een tik = het wachten begint opnieuw). */
+    private fun kiesAantal(nieuw: Int, meteen: Boolean = false) {
+        aantalNieuw = nieuw.coerceIn(0, 999)
         toonBestellen()
-        wachtrij.removeCallbacks(bijstellingVersturen)
-        if (meteen) verstuurBijstelling() else wachtrij.postDelayed(bijstellingVersturen, 700)
+        wachtrij.removeCallbacks(aantalVersturen)
+        if (meteen) verstuurAantal(aantalNieuw) else wachtrij.postDelayed(aantalVersturen, 700)
     }
 
-    private fun verstuurBijstelling() {
-        wachtrij.removeCallbacks(bijstellingVersturen)
-        val stuks = bijstellingNieuw ?: return
+    /** [eenheden] null: weer het advies volgen. */
+    private fun verstuurAantal(eenheden: Int?) {
+        wachtrij.removeCallbacks(aantalVersturen)
         bezig {
             try {
-                // Herhaalbaar: het zet de bijstelling op een vast getal, twee keer is hetzelfde als één keer.
-                val antwoord = Api.post(this, "/api/app/producten/$productId/bijstelling", JSONObject().put("stuks", stuks), herhaalbaar = true)
-                if (bijstellingNieuw == stuks) {
+                // Herhaalbaar: het zet een vast aantal, twee keer is hetzelfde als één keer.
+                val antwoord = Api.post(this, "/api/app/producten/$productId/bestelaantal",
+                    JSONObject().put("eenheden", eenheden ?: JSONObject.NULL), herhaalbaar = true)
+                if (aantalNieuw == eenheden) {
                     verkoop?.put("bestellen", antwoord.getJSONObject("bestellen"))
-                    bijstellingNieuw = null
+                    aantalNieuw = null
                     tril(30)
                     melding(antwoord.optString("melding"))
                 }
             } finally {
                 // Mislukt: terug naar wat de site heeft (de foutmelding komt via bezig).
-                if (bijstellingNieuw == stuks) bijstellingNieuw = null
+                if (aantalNieuw == eenheden) aantalNieuw = null
                 toonBestellen()
             }
         }
@@ -656,7 +653,7 @@ class ProductActivity : BasisActivity() {
 
     override fun onPause() {
         // Weg van het scherm terwijl er nog een tik wacht: nu versturen.
-        if (bijstellingNieuw != null) verstuurBijstelling()
+        aantalNieuw?.let { verstuurAantal(it) }
         super.onPause()
     }
 

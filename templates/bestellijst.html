@@ -1,6 +1,9 @@
 {% extends basis_template %}
 {% block titel %}Bestellijst{% endblock %}
 {% block inhoud %}
+{% macro gekozen_badge(keuze) -%}
+<span class="badge badge-in" title="Zelf gekozen bij het product{% if keuze.door %} door {{ keuze.door }}{% endif %}; geldt tot het besteld is">{{ 'niet bestellen' if keuze.eenheden == 0 else 'zelf gekozen' }}{% if keuze.door %} ({{ keuze.door }}){% endif %}</span>
+{%- endmacro %}
 <div class="actiebalk">
     {% if pda_modus %}
     <p class="subtitel" style="margin:0">Boek bestellingen in zodra de levering binnenkomt, en zie wat er nog besteld moet worden.</p>
@@ -89,10 +92,19 @@
     <p class="tekst-zacht" style="margin-top:-0.4rem">
         Wat onder het minimum zit, en wat volgens de prognose waarschijnlijk opraakt vóór de levering ná deze bestelling
         (per leverancier, uit de besteldagen; anders de komende 7 dagen). Thuiswedstrijden, trainingsavonden en het weer
-        tellen mee, net als een bijstelling die je bij het product deed (plus of min). Vraagt die periode meer dan het
-        minimum, dan staat het aantal al hoger. <a href="{{ url_for('prognose_pagina') }}">Bekijk de volledige prognose</a>.
+        tellen mee. Vraagt die periode meer dan het minimum, dan staat het aantal al hoger. Wat je bij een product zelf
+        koos (een aantal colli), staat er zo.
+        <a href="{{ url_for('prognose_pagina') }}">Bekijk de volledige prognose</a>.
     </p>
-    {% if suggesties or overige_producten or manco_extra %}
+    {% if suggesties or overige_producten or manco_extra or gekozen_extra %}
+    {# Scannen (een handscanner typt de barcode en een Enter) of een naam typen: het product komt erbij, aangevinkt; nog
+       een keer scannen is één colli meer. Zie bestellijst_zoek. #}
+    <div class="bestel-scan">
+        <input type="search" id="bestel-scan" placeholder="Scan een barcode of typ een naam + Enter" autocomplete="off"
+               aria-label="Product scannen of zoeken om toe te voegen" aria-describedby="bestel-scan-status">
+        <span class="tekst-zacht" id="bestel-scan-status" aria-live="polite" style="font-size:0.85rem"></span>
+        <div class="bestel-scan-keuzes" id="bestel-scan-keuzes"></div>
+    </div>
     <form method="post" action="{{ url_for('bestelling_aanmaken') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="tabel-wrap">
@@ -104,24 +116,27 @@
                     {% for p in suggesties %}
                     {% set tekort = p.bestel_hoeveelheid if p.bestel_hoeveelheid > 0 else (p.min_voorraad - p.voorraad) %}
                     {% set besteleenheden = tekort|naar_besteleenheden(p) %}
+                    {% set keuze = keuzes.get(p.id) %}
+                    {% set aantal = keuze.eenheden if keuze else besteleenheden %}
                     <tr data-product-id="{{ p.id }}">
-                        <td><input type="checkbox" name="product_id" value="{{ p.id }}" checked aria-label="{{ p.naam }} bestellen"></td>
+                        <td><input type="checkbox" name="product_id" value="{{ p.id }}"{% if aantal > 0 %} checked{% endif %} aria-label="{{ p.naam }} bestellen"></td>
                         <td>
                             {% if p.afbeelding %}
                             <img src="{{ url_for('static', filename='product_afbeeldingen/' + (p.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
                             {% endif %}
                         </td>
-                        <td>{{ p.naam }} <span class="badge badge-neutraal">Onder minimum</span>{% if manco_per_product.get(p.id) %} <span class="badge badge-laag" title="Bij een vorige bestelling niet (helemaal) geleverd">niet geleverd bij #{{ manco_per_product[p.id]|map(attribute='bestelling_id')|join(', #') }}</span>{% endif %}
+                        <td>{{ p.naam }} <span class="badge badge-neutraal">Onder minimum</span>{% if keuze %} {{ gekozen_badge(keuze) }}{% endif %}{% if manco_per_product.get(p.id) %} <span class="badge badge-laag" title="Bij een vorige bestelling niet (helemaal) geleverd">niet geleverd bij #{{ manco_per_product[p.id]|map(attribute='bestelling_id')|join(', #') }}</span>{% endif %}
                             {% if leverancier_namen.get(p.leverancier_id) %}<div class="tekst-zacht" style="font-size:0.72rem">bij {{ leverancier_namen[p.leverancier_id] }}</div>{% endif %}</td>
                         <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
                         <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
                         <td class="prognose-cel tekst-zacht" data-eenheid="{{ p.eenheid }}">&hellip;</td>
                         <td>
                             <input type="number" name="aantal_{{ p.id }}" min="0" style="width:6rem" aria-label="Aantal te bestellen {{ p.naam }}"
-                                   value="{{ besteleenheden }}" data-standaard="{{ besteleenheden }}" data-factor="{{ p.besteleenheid_factor }}">
+                                   value="{{ aantal }}" data-standaard="{{ besteleenheden }}" data-factor="{{ p.besteleenheid_factor }}"
+                                   data-eenheid="{{ p.eenheid }}"{% if keuze %} data-gekozen="1"{% endif %}>
                             {{ p|besteleenheid_naam }}
                             {% if p.besteleenheid_factor > 1 %}
-                            <div class="tekst-zacht aantal-uitleg" style="font-size:0.72rem">= {{ besteleenheden * p.besteleenheid_factor }} {{ p.eenheid }}</div>
+                            <div class="tekst-zacht aantal-uitleg" style="font-size:0.72rem">= {{ aantal * p.besteleenheid_factor }} {{ p.eenheid }}</div>
                             {% endif %}
                         </td>
                     </tr>
@@ -129,10 +144,12 @@
                     {# Niet (helemaal) geleverd bij een vorige bestelling, en nog niet weer besteld (zie manco.py). #}
                     {% for m in manco_extra %}
                     {% set besteleenheden = m.tekort|naar_besteleenheden(m) %}
+                    {% set keuze = keuzes.get(m.product_id) %}
+                    {% set aantal = keuze.eenheden if keuze else besteleenheden %}
                     <tr data-product-id="{{ m.product_id }}">
-                        <td><input type="checkbox" name="product_id" value="{{ m.product_id }}" checked aria-label="{{ m.naam }} bestellen"></td>
+                        <td><input type="checkbox" name="product_id" value="{{ m.product_id }}"{% if aantal > 0 %} checked{% endif %} aria-label="{{ m.naam }} bestellen"></td>
                         <td></td>
-                        <td>{{ m.naam }} <span class="badge badge-laag">niet geleverd bij #{{ m.bestellingen|join(', #') }}</span>
+                        <td>{{ m.naam }} <span class="badge badge-laag">niet geleverd bij #{{ m.bestellingen|join(', #') }}</span>{% if keuze %} {{ gekozen_badge(keuze) }}{% endif %}
                             {% if m.leverancier_naam %}<div class="tekst-zacht" style="font-size:0.72rem">bij {{ m.leverancier_naam }}</div>{% endif %}
                             <button type="submit" form="manco-af-{{ m.product_id }}" class="btn-tekstlink" style="font-size:0.75rem">Niet meer nodig</button></td>
                         <td>{{ m.voorraad }} {{ m.eenheid }}</td>
@@ -140,9 +157,35 @@
                         <td class="prognose-cel tekst-zacht" data-eenheid="{{ m.eenheid }}">&hellip;</td>
                         <td>
                             <input type="number" name="aantal_{{ m.product_id }}" min="0" style="width:6rem" aria-label="Aantal te bestellen {{ m.naam }}"
-                                   value="{{ besteleenheden }}" data-standaard="{{ besteleenheden }}" data-factor="{{ m.besteleenheid_factor }}">
+                                   value="{{ aantal }}" data-standaard="{{ besteleenheden }}" data-factor="{{ m.besteleenheid_factor }}"{% if keuze %} data-gekozen="1"{% endif %}>
                             {{ m|besteleenheid_naam }}
-                            <div class="tekst-zacht aantal-uitleg" style="font-size:0.72rem">{{ m.tekort }} {{ m.eenheid }} niet geleverd</div>
+                            <div class="tekst-zacht" style="font-size:0.72rem">{{ m.tekort }} {{ m.eenheid }} niet geleverd</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {# Zelf gekozen bij het product, terwijl het niet onder het minimum zit (bestelvoorstel.zet_bestelaantal). #}
+                    {% for p in gekozen_extra %}
+                    {% set keuze = keuzes[p.id] %}
+                    <tr data-product-id="{{ p.id }}">
+                        <td><input type="checkbox" name="product_id" value="{{ p.id }}" checked aria-label="{{ p.naam }} bestellen"></td>
+                        <td>
+                            {% if p.afbeelding %}
+                            <img src="{{ url_for('static', filename='product_afbeeldingen/' + (p.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
+                            {% endif %}
+                        </td>
+                        <td>{{ p.naam }} {{ gekozen_badge(keuze) }}
+                            {% if leverancier_namen.get(p.leverancier_id) %}<div class="tekst-zacht" style="font-size:0.72rem">bij {{ leverancier_namen[p.leverancier_id] }}</div>{% endif %}</td>
+                        <td>{{ p.voorraad }} {{ p.eenheid }}</td>
+                        <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
+                        <td class="prognose-cel tekst-zacht" data-eenheid="{{ p.eenheid }}">&hellip;</td>
+                        <td>
+                            <input type="number" name="aantal_{{ p.id }}" min="0" style="width:6rem" aria-label="Aantal te bestellen {{ p.naam }}"
+                                   value="{{ keuze.eenheden }}" data-standaard="0" data-factor="{{ p.besteleenheid_factor }}"
+                                   data-eenheid="{{ p.eenheid }}" data-gekozen="1">
+                            {{ p|besteleenheid_naam }}
+                            {% if p.besteleenheid_factor > 1 %}
+                            <div class="tekst-zacht aantal-uitleg" style="font-size:0.72rem">= {{ keuze.eenheden * p.besteleenheid_factor }} {{ p.eenheid }}</div>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -188,8 +231,16 @@
                 return kans > 0.99 ? '> 99%' : Math.round(kans * 100) + '%';
             }
 
-            // Een rij erbij: een ander product uit de keuzelijst, of een voorspeld tekort uit de prognose.
-            // o = {id, naam, foto, voorraad, minimum, eenheid, besteleenheid, factor, aantal, aan, badge, verwacht, optie}
+            // Het aantal in een rij zetten, met de uitleg in stuks eronder.
+            function zetAantal(invoer, n) {
+                invoer.value = String(n);
+                var factor = parseInt(invoer.dataset.factor, 10) || 1;
+                var uitleg = invoer.parentNode.querySelector('.aantal-uitleg');
+                if (uitleg && factor > 1) uitleg.textContent = '= ' + (n * factor) + ' ' + (invoer.dataset.eenheid || '');
+            }
+
+            // Een rij erbij: een ander product uit de keuzelijst, een gescand product, of een voorspeld tekort uit de prognose.
+            // o = {id, naam, foto, voorraad, minimum, eenheid, besteleenheid, factor, aantal, aan, badge, badgeKlasse, verwacht, optie}
             function voegRijToe(o) {
                 var rij = document.createElement('tr');
                 rij.dataset.productId = o.id;
@@ -209,7 +260,7 @@
                     thumb.appendChild(img);
                 }
                 var naam = cel(rij, document.createTextNode(o.naam + ' '));
-                if (o.badge) naam.appendChild(tekst(o.badge, 'badge badge-laag'));
+                if (o.badge) naam.appendChild(tekst(o.badge, 'badge ' + (o.badgeKlasse || 'badge-laag')));
                 if (o.optie) {
                     var weg = document.createElement('button');
                     weg.type = 'button';
@@ -235,6 +286,8 @@
                 aantal.min = '0';
                 aantal.value = String(o.aantal);
                 aantal.style.width = '6rem';
+                aantal.dataset.factor = String(o.factor || 1);
+                aantal.dataset.eenheid = o.eenheid || '';
                 aantal.setAttribute('aria-label', 'Aantal te bestellen ' + o.naam);
                 aantalTd.appendChild(aantal);
                 aantalTd.appendChild(document.createTextNode(' ' + o.besteleenheid));
@@ -266,6 +319,70 @@
                 });
             }
 
+            // Scannen of een naam typen (bestellijst_zoek): het product komt erbij, aangevinkt, met het aantal dat bij het
+            // product gekozen is (of 1). Staat het er al: aanvinken, of één colli meer als het al aangevinkt was.
+            var scan = document.getElementById('bestel-scan');
+            var scanStatus = document.getElementById('bestel-scan-status');
+            var scanKeuzes = document.getElementById('bestel-scan-keuzes');
+            function gescand(p) {
+                scanKeuzes.innerHTML = '';
+                var rij = tabel.querySelector('tbody tr[data-product-id="' + p.id + '"]');
+                var n;
+                if (rij) {
+                    var vinkje = rij.querySelector('input[type=checkbox]');
+                    var invoer = rij.querySelector('input[type=number]');
+                    n = parseInt(invoer.value, 10) || 0;
+                    if (!vinkje.checked) { vinkje.checked = true; n = Math.max(n, 1); } else { n += 1; }
+                    zetAantal(invoer, n);
+                    invoer.dataset.gekozen = '1';  // de prognose verandert dit niet meer
+                } else {
+                    if (select) {
+                        var optie = select.querySelector('option[value="' + p.id + '"]');
+                        if (optie) optie.remove();
+                    }
+                    n = p.gekozen > 0 ? p.gekozen : 1;
+                    rij = voegRijToe({
+                        id: p.id, naam: p.naam, foto: p.foto, eenheid: p.eenheid, factor: p.factor, besteleenheid: p.besteleenheid,
+                        voorraad: p.voorraad + ' ' + p.eenheid, minimum: p.min_voorraad + ' ' + p.eenheid, aantal: n, aan: true,
+                        badge: p.open_bestelling ? 'staat al op bestelling #' + p.open_bestelling : (p.actief ? 'gescand' : 'gescand (niet actief)'),
+                        badgeKlasse: p.open_bestelling || !p.actief ? 'badge-laag' : 'badge-in'
+                    });
+                    rij.querySelector('input[type=number]').dataset.gekozen = '1';
+                }
+                rij.classList.add('net-gescand');
+                setTimeout(function () { rij.classList.remove('net-gescand'); }, 1500);
+                rij.scrollIntoView({ block: 'nearest' });
+                scanStatus.textContent = p.naam + ': ' + n + ' ' + p.besteleenheid +
+                    (p.open_bestelling ? ' (let op: staat al op bestelling #' + p.open_bestelling + ')' : '');
+            }
+            if (scan) {
+                scan.addEventListener('keydown', function (e) {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    var q = scan.value.trim();
+                    if (!q) return;
+                    scan.value = '';
+                    scanStatus.textContent = 'Zoeken…';
+                    scanKeuzes.innerHTML = '';
+                    fetch('{{ url_for("bestellijst_zoek") }}?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+                        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+                        .then(function (data) {
+                            if (!data.producten.length) { scanStatus.textContent = data.melding; return; }
+                            if (data.producten.length === 1) { gescand(data.producten[0]); return; }
+                            scanStatus.textContent = 'Welke bedoel je?';
+                            data.producten.forEach(function (p) {
+                                var knop = document.createElement('button');
+                                knop.type = 'button';
+                                knop.className = 'btn btn-rand btn-klein';
+                                knop.textContent = p.naam;
+                                knop.addEventListener('click', function () { gescand(p); scan.focus(); });
+                                scanKeuzes.appendChild(knop);
+                            });
+                        })
+                        .catch(function () { scanStatus.textContent = 'Zoeken lukte niet. Probeer het nog eens.'; });
+                });
+            }
+
             // De prognose (routes/bestellijst.py, bestellijst_prognose): rekent soms enkele seconden, dus na het laden.
             fetch('{{ url_for("bestellijst_prognose") }}', { credentials: 'same-origin' })
                 .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -292,9 +409,9 @@
                             c.appendChild(tekst('bijgesteld ' + (p.bijstelling > 0 ? '+' : '') + p.bijstelling + (p.bijgesteld_door ? ' (' + p.bijgesteld_door + ')' : ''), 'badge badge-in'));
                         }
                         var invoer = rij.querySelector('input[type=number]');
-                        // Alleen aanpassen als het aantal nog op het gewone voorstel staat: wat je zelf invulde, blijft.
-                        // Omlaag alleen als iemand de prognose omlaag bijstelde.
-                        if (invoer && invoer.value === invoer.dataset.standaard &&
+                        // Alleen aanpassen als het aantal nog op het gewone voorstel staat: wat je zelf invulde (hier, bij het
+                        // product of met een scan), blijft. Omlaag alleen als iemand de prognose omlaag bijstelde.
+                        if (invoer && !invoer.dataset.gekozen && invoer.value === invoer.dataset.standaard &&
                             (p.advies_eenheden > p.basis_eenheden || (p.bijstelling < 0 && p.advies_eenheden !== p.basis_eenheden))) {
                             invoer.value = String(p.advies_eenheden);
                             var factor = parseInt(invoer.dataset.factor, 10) || 1;

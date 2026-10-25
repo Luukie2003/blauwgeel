@@ -10,8 +10,8 @@ import org.json.JSONObject
 /** De bestellijst: wat onder het minimum zit (en nog niet besteld is), met de prognose erbij (wat er de komende week
  * verwacht wordt, en hoeveel je dan bestelt), wat bij een vorige bestelling niet geleverd is, wat waarschijnlijk opraakt
  * terwijl het nog boven het minimum zit, wat bezoekers via de QR-code meldden, en wat er onderweg is (tik om de levering
- * in te scannen). "Bestelling klaarzetten" opent [KlaarzettenActivity]. De prognose rekent soms enkele seconden en komt
- * er apart bij. */
+ * in te scannen). "Bestelling klaarzetten" opent [KlaarzettenActivity]; een scan hier ook, met het gescande product er
+ * meteen bij. De prognose rekent soms enkele seconden en komt er apart bij. */
 class BestellijstActivity : BasisActivity() {
 
     private lateinit var b: ActivityLijstBinding
@@ -33,6 +33,9 @@ class BestellijstActivity : BasisActivity() {
     }
 
     override fun weerVerbonden() = laad()
+
+    /** Een product scannen op de bestellijst: een nieuwe bestelling klaarzetten, met dit product erbij. */
+    override fun bijScan(code: String) = KlaarzettenActivity.open(this, code)
 
     private fun laad() {
         bezig {
@@ -78,7 +81,10 @@ class BestellijstActivity : BasisActivity() {
         val inhoud = b.inhoud
         inhoud.removeAllViews()
         Lijst.ruimte(inhoud)
-        Lijst.knop(Lijst.kaart(inhoud), getString(R.string.bestelling_klaarzetten)) { KlaarzettenActivity.open(this) }
+        Lijst.kaart(inhoud).let {
+            Lijst.knop(it, getString(R.string.bestelling_klaarzetten)) { KlaarzettenActivity.open(this) }
+            Lijst.tekst(it, getString(R.string.bestellijst_scan_uitleg), grootte = 12f)
+        }
         val bestellen = data.getJSONArray("bestellen").objecten()
         Lijst.kop(inhoud, getString(R.string.bestellen_kop, bestellen.size))
         if (bestellen.isEmpty()) Lijst.leeg(inhoud, getString(R.string.niets_bestellen))

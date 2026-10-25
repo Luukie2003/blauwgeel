@@ -1,14 +1,19 @@
-"""Het bestelvoorstel per product: tot wanneer je moet bestellen, wat er tot de levering daarna verwacht wordt, en een
-eigen bijstelling (plus of min) op die prognose, zoals op de handterminal van de supermarkt.
+"""Het bestelvoorstel per product: tot wanneer je moet bestellen, wat er tot de levering daarna verwacht wordt, het
+advies, en hoeveel je zelf wilt bestellen (in hele colli), zoals op de handterminal van de supermarkt.
 
 Bestelperiode (bestelperiode): bestel je bij een leverancier op vaste dagen vóór een tijd (Leveranciers), dan is het
 uiterste bestelmoment de eerstvolgende besteldag vóór die tijd. Wat je dan bestelt, komt levertijd_dagen later; de
 voorraad moet het daarna uithouden tot de levering van de bestelling erna. De prognose loopt dus tot die tweede levering.
 Zonder leverancier of besteldagen: de komende 7 dagen, zoals voorheen.
 
-Bijstelling: je ziet bij een product dat er bijvoorbeeld 14 verwacht worden, maar er komt een toernooi: +6. Dat telt
-op bij de prognose, en daarmee bij het advies. Zo komt een product met een prognose van 0 toch bij "Voorgesteld om te
-bestellen", of juist minder. De bijstelling geldt tot het product besteld is (wis_bij_bestelling), net als manco.
+Zelf gekozen aantal (zet_bestelaantal, 1.69.0): bij het product zie je het advies (bijvoorbeeld 1 tray) en zet je met
+min en plus hoeveel colli je wilt bestellen (bijvoorbeeld 3 tray, of 0: niet bestellen). Dat aantal staat dan zo bij
+"Voorgesteld om te bestellen", ook als het product boven het minimum zit of de prognose 0 is. Het geldt tot het product
+besteld is (wis_bij_bestelling), net als manco.
+
+Bijstelling in stuks (zet_bijstelling, 1.68.0): de prognose zelf plus of min. Dat gaf een krom aantal stuks dat naar
+colli werd afgerond; de app en de site doen het sinds 1.69.0 met het gekozen aantal colli. Een bijstelling die nog
+staat, telt gewoon mee in het advies tot het product besteld is of je een aantal kiest.
 
 Advies (advies): genoeg voor de periode (het 90%-punt van de verwachting plus de bijstelling, en minstens het minimum),
 min wat er ligt en wat al onderweg is, naar boven afgerond op hele besteleenheden."""
@@ -83,12 +88,35 @@ def periode_voor(db, product, nu=None):
 
 
 def bijstellingen(db):
-    """{product_id: {"stuks", "door", "op"}} van de bijstellingen die nog gelden."""
+    """{product_id: {"stuks", "eenheden", "door", "op"}} van wat nog geldt: "eenheden" is het zelf gekozen aantal colli
+    (None: het advies volgen), "stuks" een bijstelling van de prognose (0: geen)."""
     return {r["product_id"]: dict(r) for r in db.execute("SELECT * FROM bestel_bijstellingen").fetchall()}
 
 
+def gekozen(bij):
+    """Het zelf gekozen aantal colli uit een regel van bijstellingen(), of None."""
+    return bij.get("eenheden") if bij else None
+
+
+MAX_EENHEDEN = 999
+
+
+def zet_bestelaantal(db, product_id, eenheden, door=None, gebruiker_id=None):
+    """Zelf kiezen hoeveel colli je van dit product bestelt (0 = niet bestellen); None = weer het advies volgen."""
+    if eenheden is None:
+        db.execute("DELETE FROM bestel_bijstellingen WHERE product_id = ?", (product_id,))
+    else:
+        db.execute(
+            """INSERT OR REPLACE INTO bestel_bijstellingen (product_id, stuks, eenheden, door, gebruiker_id, op)
+               VALUES (?, 0, ?, ?, ?, ?)""",
+            (product_id, max(0, min(MAX_EENHEDEN, int(eenheden))), door, gebruiker_id, now_str()),
+        )
+    db.commit()
+
+
 def zet_bijstelling(db, product_id, stuks, door=None, gebruiker_id=None):
-    """De bijstelling van een product op 'stuks' (plus of min, in de eenheid van het product); 0 haalt hem weg."""
+    """De bijstelling van de prognose van een product op 'stuks' (plus of min, in de eenheid van het product); 0 haalt
+    hem weg. Een gekozen aantal colli vervalt dan."""
     stuks = int(stuks)
     if stuks == 0:
         db.execute("DELETE FROM bestel_bijstellingen WHERE product_id = ?", (product_id,))
@@ -168,6 +196,7 @@ def voor_product(db, product, nu=None):
     bij = bijstellingen(db).get(product["id"])
     uit = advies(product, per_id.get(product["id"]) if per_id else None, bij["stuks"] if bij else 0,
                  onderweg(db).get(product["id"], 0))
+    keuze = gekozen(bij)
     uit.update({
         "dagen": dagen,
         "prognose_beschikbaar": per_id is not None,
@@ -179,6 +208,9 @@ def voor_product(db, product, nu=None):
         "levering_tekst": dag_tekst(periode["levering"]) if periode else None,
         "volgende_levering_tekst": dag_tekst(periode["volgende_levering"]) if periode else None,
         "bijgesteld_door": bij["door"] if bij else None,
+        # Hoeveel colli je bestelt: wat je zelf koos, anders het advies.
+        "gekozen": keuze,
+        "bestellen_eenheden": keuze if keuze is not None else uit["advies_eenheden"],
         "voorraad": product["voorraad"],
         "min_voorraad": product["min_voorraad"] or 0,
         "eenheid": product["eenheid"],

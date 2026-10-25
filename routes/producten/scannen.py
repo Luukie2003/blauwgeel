@@ -144,24 +144,35 @@ def register_routes(app):
         except Exception as fout:  # het blok mag de productpagina nooit stuk maken
             print(f"[productpagina] verkoop van {product_id} mislukt: {fout}")
             verkoop = None
-        return render_template("_product_verkoop.html", product=product, verkoop=verkoop)
+        bestellen = verkoop["bestellen"] if verkoop else productinfo.bestelblok(db, product)
+        return render_template("_product_verkoop.html", product=product, verkoop=verkoop, bestellen=bestellen)
 
-    @app.route("/producten/<int:product_id>/bijstelling", methods=["POST"])
-    def product_bijstelling(product_id):
-        """De prognose tot de volgende levering bijstellen (plus of min); zie bestelvoorstel.py."""
+    @app.route("/producten/<int:product_id>/bestellen", methods=["POST"])
+    def product_bestelaantal(product_id):
+        """Zelf kiezen hoeveel colli je van dit product bestelt (min en plus, of een aantal invullen); 'advies' = weer
+        het advies volgen. Zie bestelvoorstel.py."""
         import bestelvoorstel
 
         db = get_db()
         if db.execute("SELECT 1 FROM producten WHERE id = ?", (product_id,)).fetchone() is None:
             flash("Product niet gevonden.", "error")
             return redirect(url_for("producten_lijst"))
-        try:
-            stuks = int(request.form.get("stuks", "0"))
-        except ValueError:
-            stuks = 0
-        stuks = max(-100000, min(100000, stuks))
-        bestelvoorstel.zet_bijstelling(db, product_id, stuks, session.get("gebruiker_naam"), session.get("gebruiker_id"))
-        flash("Prognose bijgesteld; dat telt mee bij Voorgesteld om te bestellen." if stuks else "Bijstelling weggehaald.", "success")
+        # De knoppen sturen 'eenheden' mee; Enter in het invulvak (een lege 'eenheden') het getal uit 'aantal'.
+        keuze = request.form.get("eenheden") or request.form.get("aantal", "")
+        if keuze == "advies":
+            eenheden = None
+        else:
+            try:
+                eenheden = max(0, min(bestelvoorstel.MAX_EENHEDEN, int(keuze)))
+            except ValueError:
+                flash("Vul een aantal in.", "error")
+                return redirect(url_for("product_detail", product_id=product_id) + "#verkoop")
+        bestelvoorstel.zet_bestelaantal(db, product_id, eenheden, session.get("gebruiker_naam"), session.get("gebruiker_id"))
+        if eenheden is None:
+            flash("Weer het advies.", "success")
+        else:
+            flash("Niet bestellen; staat zo op de bestellijst." if eenheden == 0
+                  else "Opgeslagen; staat zo bij Voorgesteld om te bestellen.", "success")
         return redirect(url_for("product_detail", product_id=product_id) + "#verkoop")
 
     @app.route("/producten/<int:product_id>/melden", methods=["POST"])

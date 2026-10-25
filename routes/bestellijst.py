@@ -1,11 +1,17 @@
+import re
+
 from flask import Response, flash, g, jsonify, redirect, render_template, request, session, url_for
 
+import barcodes
+import bestelvoorstel
 from database import get_db
 from helpers import (
     bereken_bestellijst_meldingen,
     bereken_voorspelde_tekorten,
     bestel_advies,
     bestel_suggesties,
+    besteleenheid_factor,
+    besteleenheid_naam,
     kleine_afbeelding,
     naar_besteleenheden,
     naar_voorraadeenheden,
@@ -18,6 +24,38 @@ import manco
 from bestellen import maak_bestelling
 from leveranciers import GEEN, filter_suggesties, per_leverancier
 from pdf import bestellijst_pdf
+
+
+def zoek_product(db, tekst):
+    """Een scan (of getypte naam) op de bestellijst: ([producten], melding). Een barcode (ook de doos van een bekend
+    artikel), een QR-code van een schaplabel (/scan/12), of anders producten waarvan de naam alle woorden bevat."""
+    tekst = (tekst or "").strip()
+    if not tekst:
+        return [], "Scan een barcode of typ (een deel van) de naam."
+    qr = re.search(r"/(?:scan|producten)/(\d+)", tekst)
+    if qr:
+        p = db.execute("SELECT * FROM producten WHERE id = ?", (int(qr.group(1)),)).fetchone()
+        return ([p], None) if p else ([], "Dit product bestaat niet meer.")
+    uitkomst = barcodes.zoek_barcode(db, tekst)
+    if uitkomst["geldig"]:
+        artikel = uitkomst["artikel"] or uitkomst["suggestie"]
+        if artikel is None:
+            return [], f"Barcode {uitkomst['code']} hoort nog bij geen enkel product. Koppel hem eerst (Barcodes of de handterminal)."
+        p = db.execute("SELECT * FROM producten WHERE id = ?", (artikel["product_id"],)).fetchone()
+        return ([p], None) if p else ([], "Dit product bestaat niet meer.")
+    woorden = tekst.lower().split()
+    if tekst.isdigit():
+        return [], uitkomst["melding"] or f"{tekst} is geen geldige barcode."
+    voorwaarden = " AND ".join("lower(naam) LIKE ?" for _ in woorden)
+    rijen = db.execute(
+        f"SELECT * FROM producten WHERE {voorwaarden} ORDER BY actief DESC, naam COLLATE NOCASE LIMIT 9",
+        [f"%{w}%" for w in woorden],
+    ).fetchall()
+    if not rijen:
+        return [], f"Geen product gevonden voor '{tekst}'."
+    # Precies de naam: dat is hem, ook als er meer zijn die erop lijken.
+    precies = [p for p in rijen if p["naam"].lower() == tekst.lower()]
+    return (precies[:1] if precies else rijen), None
 
 
 def register_routes(app):
@@ -39,6 +77,15 @@ def register_routes(app):
                                     "bestellingen": [m["bestelling_id"] for m in regels]}
                        for pid, regels in manco_per_product.items() if pid not in suggestie_ids]
         suggestie_ids |= set(manco_per_product)
+        # Bij het product zelf gekozen aantal colli (bestelvoorstel.zet_bestelaantal): dat staat er meteen zo, ook als
+        # het product niet onder het minimum zit.
+        keuzes = {pid: b for pid, b in bestelvoorstel.bijstellingen(db).items() if bestelvoorstel.gekozen(b) is not None}
+        gekozen_extra = [
+            p for p in db.execute("SELECT * FROM producten WHERE id IN (%s) ORDER BY naam COLLATE NOCASE"
+                                  % ",".join("?" * len(keuzes)), list(keuzes)).fetchall()
+            if p["id"] not in suggestie_ids and keuzes[p["id"]]["eenheden"] > 0
+        ] if keuzes else []
+        suggestie_ids |= {p["id"] for p in gekozen_extra}
         product_ids_in_open_bestelling = {
             row["product_id"]
             for row in db.execute(
@@ -79,6 +126,8 @@ def register_routes(app):
             meldingen=bereken_bestellijst_meldingen(db),
             manco_per_product=manco_per_product,
             manco_extra=manco_extra,
+            keuzes=keuzes,
+            gekozen_extra=gekozen_extra,
             open_bestellingen=open_bestellingen_met_regels,
             recent_ontvangen=recent_ontvangen_met_regels,
             per_leverancier=per_leverancier(db, suggesties, vandaag_amsterdam()),
@@ -105,6 +154,33 @@ def register_routes(app):
             p["foto"] = (url_for("static", filename="product_afbeeldingen/" + kleine_afbeelding(p["afbeelding"], "klein"))
                          if p["afbeelding"] else None)
         return jsonify(advies)
+
+    @app.route("/bestellijst/zoek")
+    def bestellijst_zoek():
+        """Een scan op de bestellijst (?q=barcode, QR-link of naam): de producten om toe te voegen, met wat de tabel
+        nodig heeft. Zie zoek_product."""
+        db = get_db()
+        producten, melding = zoek_product(db, request.args.get("q"))
+        keuzes = bestelvoorstel.bijstellingen(db)
+        open_bestelling = {
+            r["product_id"]: r["bestelling_id"]
+            for r in db.execute(
+                """SELECT br.product_id, MAX(b.id) AS bestelling_id FROM bestelregels br
+                   JOIN bestellingen b ON b.id = br.bestelling_id WHERE b.status = 'besteld' GROUP BY br.product_id"""
+            ).fetchall()
+        }
+        return jsonify({
+            "melding": melding,
+            "producten": [{
+                "id": p["id"], "naam": p["naam"], "eenheid": p["eenheid"], "actief": bool(p["actief"]),
+                "voorraad": p["voorraad"], "min_voorraad": p["min_voorraad"] or 0,
+                "besteleenheid": besteleenheid_naam(p), "factor": besteleenheid_factor(p),
+                "foto": (url_for("static", filename="product_afbeeldingen/" + kleine_afbeelding(p["afbeelding"], "klein"))
+                         if p["afbeelding"] else None),
+                "gekozen": bestelvoorstel.gekozen(keuzes.get(p["id"])),
+                "open_bestelling": open_bestelling.get(p["id"]),
+            } for p in producten],
+        })
 
     @app.route("/bestellijst/pdf")
     def bestellijst_pdf_route():

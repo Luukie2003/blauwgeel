@@ -11,16 +11,22 @@ import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
 /** Een bestelling klaarzetten, zoals "Voorgesteld om te bestellen" op de bestellijst van de site. Staan klaar (met het
- * voorgestelde aantal): wat onder het minimum zit (met het advies van de prognose als die meer vraagt), en wat bij een
- * vorige bestelling niet geleverd is. Wat waarschijnlijk opraakt staat eronder, nog op 0. Tik op een product om het
- * aantal te veranderen (0 = niet bestellen). "Klaarzetten" maakt de bestelling; hij staat dan bij Factuur inboeken. */
+ * voorgestelde aantal): wat onder het minimum zit (met het advies van de prognose als die meer vraagt), wat bij een
+ * vorige bestelling niet geleverd is, en wat iemand bij het product zelf koos (een aantal colli, ook boven het minimum).
+ * Wat waarschijnlijk opraakt staat eronder, nog op 0. Tik op een product om het aantal te veranderen (0 = niet
+ * bestellen). Scan een product om het toe te voegen; nog een keer scannen is één colli meer. "Klaarzetten" maakt de
+ * bestelling; hij staat dan bij Factuur inboeken. */
 class KlaarzettenActivity : BasisActivity() {
 
-    private class Regel(val p: JSONObject, val soort: String, var aantal: Int)
+    /** [vast]: zelf gekozen (bij het product, hier getikt of gescand): dan verandert de prognose het aantal niet. */
+    private class Regel(val p: JSONObject, val soort: String, var aantal: Int, var vast: Boolean = false)
 
     private lateinit var b: ActivityLijstBinding
     private val regels = mutableListOf<Regel>()
     private var verzoekId: String? = null
+    private var geladen = false
+    /** Een scan van voordat de lijst er was (of waarmee de bestellijst dit scherm opende). */
+    private var wachtendeScan: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,6 +36,7 @@ class KlaarzettenActivity : BasisActivity() {
         b.verversen.isEnabled = false
         b.onderKnop.isVisible = true
         b.onderKnop.setOnClickListener { klaarzetten() }
+        wachtendeScan = intent.getStringExtra(EXTRA_SCAN)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (regels.none { it.aantal > 0 }) return finish()
@@ -43,9 +50,17 @@ class KlaarzettenActivity : BasisActivity() {
         werkKnopBij()
         bezig {
             val lijst = Api.getJson(this, "/api/app/bestellijst")
-            lijst.getJSONArray("bestellen").objecten().forEach { regels += Regel(it, "laag", basis(it)) }
-            lijst.optJSONArray("manco")?.objecten()?.forEach { regels += Regel(it, "manco", it.optInt("tekort_besteleenheden")) }
+            lijst.getJSONArray("bestellen").objecten().forEach { regels += Regel(it, "laag", gekozenOf(it, basis(it)), vast = it.heeftGekozen()) }
+            lijst.optJSONArray("manco")?.objecten()?.forEach {
+                regels += Regel(it, "manco", gekozenOf(it, it.optInt("tekort_besteleenheden")), vast = it.heeftGekozen())
+            }
+            lijst.optJSONArray("gekozen")?.objecten()?.forEach { regels += Regel(it, "gekozen", it.optInt("gekozen"), vast = true) }
+            geladen = true
             toon()
+            wachtendeScan?.let {
+                wachtendeScan = null
+                scan(it)
+            }
             // De prognose rekent soms even: daarna het advies erbij, en wat waarschijnlijk opraakt.
             val prognose = Api.getJson(this, "/api/app/bestellijst/prognose")
             val advies = prognose.optJSONObject("producten")
@@ -54,17 +69,23 @@ class KlaarzettenActivity : BasisActivity() {
                 r.p.put("advies", x.optInt("advies_eenheden"))
                 r.p.put("bijstelling", x.optInt("bijstelling"))
                 // Hoger als de prognose meer vraagt; lager alleen als iemand de prognose omlaag bijstelde.
-                if (r.soort == "laag" && (x.optInt("advies_eenheden") > r.aantal || x.optInt("bijstelling") < 0)) r.aantal = x.optInt("advies_eenheden")
+                if (r.soort == "laag" && !r.vast && (x.optInt("advies_eenheden") > r.aantal || x.optInt("bijstelling") < 0)) {
+                    r.aantal = x.optInt("advies_eenheden")
+                }
             }
             val al = regels.map { it.p.getInt("id") }.toSet()
             prognose.optJSONArray("extra")?.objecten()?.filter { it.getInt("id") !in al }?.forEach {
                 it.put("advies", it.optInt("advies_eenheden"))
-                // Zelf de prognose omhoog bijgesteld (bij het product): dan staat hij al klaar.
+                // Zelf de prognose omhoog bijgesteld (bij het product, app 2.13.0): dan staat hij al klaar.
                 regels += Regel(it, "opraken", if (it.optInt("bijstelling") > 0) it.optInt("advies_eenheden") else 0)
             }
             toon()
         }
     }
+
+    private fun JSONObject.heeftGekozen() = has("gekozen") && !isNull("gekozen")
+
+    private fun gekozenOf(p: JSONObject, anders: Int) = if (p.heeftGekozen()) p.optInt("gekozen") else anders
 
     /** Het gewone voorstel: de vaste bestelhoeveelheid, of tot het minimum, in hele besteleenheden. */
     private fun basis(p: JSONObject): Int {
@@ -80,7 +101,14 @@ class KlaarzettenActivity : BasisActivity() {
         inhoud.removeAllViews()
         Lijst.ruimte(inhoud)
         Lijst.kaart(inhoud, R.drawable.melding_info).let { Lijst.tekst(it, getString(R.string.klaarzetten_uitleg), kleur = R.color.tekst) }
-        for ((soort, kop) in listOf("laag" to R.string.klaarzetten_laag, "manco" to R.string.klaarzetten_manco, "opraken" to R.string.raakt_waarschijnlijk_op)) {
+        val groepen = listOf(
+            "gescand" to R.string.klaarzetten_gescand,
+            "gekozen" to R.string.klaarzetten_gekozen,
+            "laag" to R.string.klaarzetten_laag,
+            "manco" to R.string.klaarzetten_manco,
+            "opraken" to R.string.raakt_waarschijnlijk_op,
+        )
+        for ((soort, kop) in groepen) {
             val groep = regels.filter { it.soort == soort }
             if (groep.isEmpty()) continue
             Lijst.kop(inhoud, getString(kop))
@@ -91,7 +119,8 @@ class KlaarzettenActivity : BasisActivity() {
                     getString(R.string.voorraad_min, p.optInt("voorraad"), p.optInt("min_voorraad"), p.optString("eenheid")),
                     if (soort == "manco") getString(R.string.niet_geleverd_bij, p.optJSONArray("bestellingen")?.let { a -> (0 until a.length()).joinToString(", #") { a.optInt(it).toString() } } ?: "")
                     else null,
-                    if (p.has("advies")) getString(R.string.advies_kort_eenheden, p.optInt("advies"), eenheid(p)) else null,
+                    if (p.has("advies")) getString(R.string.advies_n, p.optInt("advies"), eenheid(p)) else null,
+                    if (p.heeftGekozen() && soort != "gekozen") getString(R.string.zelf_gekozen) else null,
                     p.optInt("bijstelling").takeIf { it != 0 }?.let { getString(R.string.bijgesteld_n, (if (it > 0) "+" else "") + it) },
                 ).joinToString(" · ")
                 Lijst.regel(kaart, p.optString("naam"), detail, if (r.aantal > 0) "${r.aantal} ${eenheid(p)}" else "–",
@@ -107,10 +136,62 @@ class KlaarzettenActivity : BasisActivity() {
         Cijferpad.vraag(this, getString(R.string.hoeveel_bestellen, p.optString("naam")), if (r.aantal > 0) r.aantal.toString() else "",
             eenheid = eenheid(p), max = 4) { tekst ->
             r.aantal = tekst.toIntOrNull() ?: 0
+            r.vast = true
             verzoekId = null
             toon()
         }
     }
+
+    // ---------------------------------------------------------------- scannen
+
+    override fun bijScan(code: String) = scan(code)
+
+    /** Een product scannen (barcode, ook van de doos, of de QR-code van een schaplabel): het komt erbij met 1 colli,
+     * of één colli meer als het er al op staat (en aan staat). */
+    private fun scan(code: String) {
+        tril()
+        if (!geladen) {
+            wachtendeScan = code
+            return
+        }
+        val id = Regex("/(?:scan|producten)/(\\d+)").find(code)?.groupValues?.get(1)?.toIntOrNull()
+            ?: Catalogus.opBarcode(code)?.product?.id
+        if (id != null) return voegToe(id)
+        if (Catalogus.normaliseerCode(code) == null) return melding(getString(R.string.scan_geen_barcode, code))
+        // Onbekend op het toestel: misschien net op een ander toestel gekoppeld. Eerst de lijst verversen.
+        bezig {
+            try {
+                Catalogus.ververs(this)
+            } catch (e: Api.Fout) {
+                // Geen verbinding: dan met wat we hebben.
+            }
+            val treffer = Catalogus.opBarcode(code)
+            if (treffer != null) voegToe(treffer.product.id) else melding(getString(R.string.barcode_onbekend_bestellen, code), lang = true)
+        }
+    }
+
+    private fun voegToe(id: Int) {
+        val bestaand = regels.firstOrNull { it.p.optInt("id") == id }
+        val regel = if (bestaand != null) {
+            bestaand.aantal = if (bestaand.aantal > 0) bestaand.aantal + 1 else maxOf(1, bestaand.p.optInt("advies"))
+            bestaand.vast = true
+            bestaand
+        } else {
+            val c = Catalogus.opId(id) ?: return melding(getString(R.string.product_niet_gevonden))
+            val p = JSONObject()
+                .put("id", c.id).put("naam", c.naam).put("eenheid", c.eenheid)
+                .put("voorraad", c.voorraad).put("min_voorraad", c.minVoorraad)
+                .put("besteleenheid", if (c.perBesteleenheid > 1) c.besteleenheid else JSONObject.NULL)
+                .put("per_besteleenheid", c.perBesteleenheid)
+            Regel(p, "gescand", 1, vast = true).also { regels.add(0, it) }
+        }
+        verzoekId = null
+        tril(60)
+        toon()
+        melding("${regel.p.optString("naam")}: ${regel.aantal} ${eenheid(regel.p)}")
+    }
+
+    // ---------------------------------------------------------------- klaarzetten
 
     private fun werkKnopBij() {
         val n = regels.count { it.aantal > 0 }
@@ -146,6 +227,10 @@ class KlaarzettenActivity : BasisActivity() {
     }
 
     companion object {
-        fun open(context: Context) = context.startActivity(Intent(context, KlaarzettenActivity::class.java))
+        private const val EXTRA_SCAN = "scan"
+
+        /** [scan]: een product dat net op de bestellijst gescand is; dat komt er meteen bij. */
+        fun open(context: Context, scan: String? = null) =
+            context.startActivity(Intent(context, KlaarzettenActivity::class.java).putExtra(EXTRA_SCAN, scan))
     }
 }

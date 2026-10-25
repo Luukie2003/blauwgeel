@@ -48,7 +48,9 @@ def test_vrijwilliger_ziet_geen_marge(app, db):
 
 def test_verkoop_en_verwachting(app_client, db):  # noqa: F811
     pid = _hertog(db)
-    assert app_client.get(f"/api/app/producten/{pid}/verkoop").get_json() == {"beschikbaar": False}
+    # Nog geen tellingen: geen verkoop, maar het bestelblok wel (zelf het aantal colli kiezen kan al).
+    verkoop = app_client.get(f"/api/app/producten/{pid}/verkoop").get_json()
+    assert verkoop["beschikbaar"] is False and verkoop["bestellen"]["bestellen_eenheden"] == 1
     _bouw_geschiedenis(db, {pid: 4}, tijdstippen=_weken_terug(8), open_dagen="2,5")
     verkoop = app_client.get(f"/api/app/producten/{pid}/verkoop").get_json()
     assert verkoop["beschikbaar"] and verkoop["weken"] and verkoop["per_week"] > 0

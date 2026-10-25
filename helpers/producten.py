@@ -281,8 +281,10 @@ def bestel_advies(db, dagen=7):
       besteleenheden je dan beter bestelt: genoeg voor een drukke periode (het 90%-punt van de verwachting plus de
       bijstelling, en minstens het minimum), nooit minder dan het gewone voorstel ("basis_eenheden") tenzij je de
       prognose omlaag bijstelde.
+      Ook de producten waarvan iemand zelf een aantal colli koos ("gekozen", zie bestelvoorstel.zet_bestelaantal),
+      die de bestellijst al meteen toont.
     - "extra": wat nog boven het minimum zit maar waarschijnlijk opraakt, of waar een bijstelling het advies boven 0
-      zet (ook als de prognose 0 is).
+      zet (ook als de prognose 0 is). Niet wat iemand zelf koos (ook niet 0: dan hoeft het niet).
     {"beschikbaar", "dagen", "producten": {id: {...}}, "extra": [...]}"""
     import bestelvoorstel
 
@@ -311,16 +313,22 @@ def bestel_advies(db, dagen=7):
 
     def bijstelling_json(pid):
         b = bij.get(pid)
-        return {"bijstelling": b["stuks"], "bijgesteld_door": b["door"]} if b else {"bijstelling": 0, "bijgesteld_door": None}
+        if not b:
+            return {"bijstelling": 0, "bijgesteld_door": None, "gekozen": None}
+        return {"bijstelling": b["stuks"], "bijgesteld_door": b["door"], "gekozen": bestelvoorstel.gekozen(b)}
 
+    keuzes = {pid for pid, b in bij.items() if bestelvoorstel.gekozen(b) is not None and pid in producten_db}
     producten = {}
-    for pid, s in suggesties.items():
+    for pid, s in [*suggesties.items(), *((pid, producten_db[pid]) for pid in keuzes if pid not in suggesties)]:
         r = regel(s)
         if r is None and pid not in bij:
             continue  # (nog) geen verkoop om van te leren en niets bijgesteld: het minimum blijft het voorstel
         a = advies(s)
-        basis = s["bestel_hoeveelheid"] if s["bestel_hoeveelheid"] > 0 else (s["min_voorraad"] - s["voorraad"])
-        basis_eenheden = naar_besteleenheden(basis, s)
+        if pid in suggesties:
+            basis = s["bestel_hoeveelheid"] if s["bestel_hoeveelheid"] > 0 else (s["min_voorraad"] - s["voorraad"])
+            basis_eenheden = naar_besteleenheden(basis, s)
+        else:
+            basis_eenheden = 0
         omlaag = bij.get(pid, {}).get("stuks", 0) < 0
         producten[pid] = {
             "verwacht": round(r["verwacht"]) if r else 0,
@@ -333,7 +341,7 @@ def bestel_advies(db, dagen=7):
         }
     extra = []
     for pid, product in producten_db.items():
-        if pid in suggesties:
+        if pid in suggesties or pid in keuzes:
             continue
         r = regel(product)
         a = advies(product)
