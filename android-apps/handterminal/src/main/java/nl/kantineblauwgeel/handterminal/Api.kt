@@ -37,8 +37,8 @@ object Api {
 
     fun nieuwVerzoekId(): String = UUID.randomUUID().toString()
 
-    suspend fun get(context: Context, pad: String, etag: String? = null): Antwoord = withContext(Dispatchers.IO) {
-        herhaal(pogingen = 3) { verzoek(context, "GET", pad, null, etag) }
+    suspend fun get(context: Context, pad: String, etag: String? = null, pogingen: Int = 3): Antwoord = withContext(Dispatchers.IO) {
+        herhaal(pogingen) { verzoek(context, "GET", pad, null, etag) }
     }
 
     suspend fun getJson(context: Context, pad: String): JSONObject =

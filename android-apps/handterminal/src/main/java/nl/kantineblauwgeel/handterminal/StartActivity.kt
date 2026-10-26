@@ -15,11 +15,13 @@ import androidx.activity.OnBackPressedCallback
 import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatDialog
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import nl.kantineblauwgeel.handterminal.databinding.ActivityStartBinding
 import nl.kantineblauwgeel.handterminal.databinding.ItemLetopBinding
 import nl.kantineblauwgeel.handterminal.databinding.DialogOnderwerpBinding
 import nl.kantineblauwgeel.handterminal.databinding.ItemOnderdeelBinding
 import nl.kantineblauwgeel.handterminal.databinding.TegelBinding
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 /** Het startscherm: zoeken of scannen, de vier dingen van het dagelijkse werk (Factuur inboeken, Tellen, Boeken,
@@ -93,6 +95,7 @@ class StartActivity : BasisActivity() {
                 inst.startCache = start.toString()
                 toon(start)
                 planHerinneringen(start.optJSONArray("bestelmomenten"))
+                warmOp(start)
             } finally {
                 b.verversen.isRefreshing = false
             }
@@ -111,6 +114,23 @@ class StartActivity : BasisActivity() {
         tegel.tegelTeller.text = teller?.toString()
         tegel.tegelTeller.setBackgroundResource(if (rood) R.drawable.badge_rood else R.drawable.badge_geel)
         tegel.tegelTeller.setTextColor(getColor(if (rood) R.color.wit else R.color.navy))
+    }
+
+    /** Het voorspelmodel op de site alvast laten rekenen (/voorspelling/opwarmen): na een nieuwe telling rekent het dan
+     * op de achtergrond, en hoeft niemand bij de bestellijst of een product te wachten. Staat het al klaar, dan kost het
+     * bijna niets. Hooguit eens per 10 minuten, en maar één poging: lukt het niet, dan rekent de pagina het zelf. */
+    private fun warmOp(start: JSONObject) {
+        if (start.optJSONObject("toegang")?.optBoolean("voorraad") != true) return
+        val nu = System.currentTimeMillis()
+        if (nu - laatsteOpwarmen < OPWARMEN_ELKE_MS) return
+        laatsteOpwarmen = nu
+        lifecycleScope.launch {
+            try {
+                Api.get(this@StartActivity, "/voorspelling/opwarmen", pogingen = 1)
+            } catch (e: Exception) {
+                // Niet erg: dan rekent de pagina die het nodig heeft het zelf.
+            }
+        }
     }
 
     /** De herinneringen om te bestellen bijwerken (zie Herinneringen.kt). Vanaf Android 13 is er toestemming nodig voor
@@ -418,6 +438,10 @@ class StartActivity : BasisActivity() {
     }
 
     companion object {
+        private const val OPWARMEN_ELKE_MS = 10 * 60_000L
+        /** Wanneer de app het voorspelmodel voor het laatst liet rekenen (zie warmOp); voor het hele proces. */
+        private var laatsteOpwarmen = 0L
+
         /** Is versie a (bijv. "2.1.0") nieuwer dan b? */
         fun nieuwer(a: String, b: String): Boolean {
             val x = a.split('.').map { it.toIntOrNull() ?: 0 }

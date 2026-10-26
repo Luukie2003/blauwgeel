@@ -12,7 +12,8 @@ WIJZIGINGEN = [
         "versie": "1.70.1",
         "datum": "26 oktober 2026",
         "punten": [
-            "De prognose is nu ook de eerste keer van de dag snel: het rekenmodel blijft bewaard tot er een nieuwe telling bijkomt (niet meer elke dag om 12.00 uur opnieuw), en na een telling rekent het vanzelf op de achtergrond zodra iemand met voorraadrechten een pagina van de site opent. Een wedstrijd of het weer van de komende dagen past alleen de verwachting aan, zonder het hele model opnieuw te rekenen.",
+            "De prognose is nu ook de eerste keer van de dag snel: het rekenmodel blijft bewaard tot er een nieuwe telling bijkomt (niet meer elke dag om 12.00 uur opnieuw), en na een telling rekent het vanzelf op de achtergrond zodra iemand met voorraadrechten een pagina van de site of het startscherm van de handterminal-app opent. Een wedstrijd of het weer van de komende dagen past alleen de verwachting aan, zonder het hele model opnieuw te rekenen.",
+            "Handterminal-app 2.15.1: het startscherm laat het rekenmodel op de achtergrond alvast rekenen, zodat ook na een telling op de handterminal de bestellijst en een gescand product meteen openen.",
         ],
     },
     {
@@ -1270,7 +1271,7 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.18.0", "sinds": "1.53.0", "laatst": "1.70.0",
+    {"naam": "Handterminal-app", "versie": "0.18.1", "sinds": "1.53.0", "laatst": "1.70.1",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst en dia's aan of uit), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.5", "sinds": "0.1.0", "laatst": "1.65.1",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
