@@ -72,14 +72,13 @@ def test_veranderde_gegevens_geven_een_nieuwe_berekening(db, schijf):
     assert schijf["aantal"]["model"] == 2  # de vingerafdruk klopte niet meer: het oude bestand telt niet
 
 
-def test_het_model_geldt_de_hele_kantinedag_ook_voor_een_ander_proces(db, schijf):
+def test_het_model_geldt_tot_er_een_telling_bijkomt_ook_voor_een_ander_proces(db, schijf):
     voorspelling.maak_prognose(db, dagen=7, nu=NU)
     _nieuw_proces()
     voorspelling.maak_prognose(db, dagen=14, nu=NU + timedelta(hours=3))  # ander uur, andere periode
-    assert schijf["aantal"]["model"] == 1
     _nieuw_proces()
     voorspelling.maak_prognose(db, dagen=7, nu=NU + timedelta(hours=25))  # de volgende kantinedag
-    assert schijf["aantal"]["model"] == 2
+    assert schijf["aantal"]["model"] == 1
 
 
 def test_een_nieuwe_versie_van_de_site_gebruikt_oude_bestanden_niet(db, schijf, monkeypatch):

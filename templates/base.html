@@ -125,5 +125,22 @@
         {% if huidige_gebruiker %} &middot; <a href="{{ url_for('tips_pagina') }}">💡 Tips &amp; functies</a>{% endif %}
         &middot; <a href="{{ url_for('privacyverklaring') }}">Privacy</a>
     </footer>
+    {% if sectie_toegang.voorraad and request.endpoint != 'dashboard' %}
+    <script>
+    // Het voorspelmodel alvast laten rekenen (zie voorspelling_opwarmen): na een nieuwe telling rekent het dan hier op
+    // de achtergrond, en hoeft niemand bij de bestellijst, de prognose of een product te wachten. Staat het al klaar,
+    // dan kost het bijna niets. Hooguit eens per 10 minuten per tabblad, en pas als de pagina zelf klaar is.
+    window.addEventListener('load', function () {
+        try {
+            var laatste = parseInt(sessionStorage.getItem('voorspelling-opgewarmd') || '0', 10);
+            if (Date.now() - laatste < 600000) return;
+            sessionStorage.setItem('voorspelling-opgewarmd', String(Date.now()));
+        } catch (e) { /* zonder opslag in de browser gewoon elke keer */ }
+        setTimeout(function () {
+            fetch('{{ url_for("voorspelling_opwarmen") }}', { credentials: 'same-origin' }).catch(function () {});
+        }, 2000);
+    });
+    </script>
+    {% endif %}
 </body>
 </html>

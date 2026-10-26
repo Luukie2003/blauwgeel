@@ -17,6 +17,7 @@ from voorspelling import (
     maak_prognose,
     terugblik,
     vat_terugblik_samen,
+    verdeling,
     wedstrijden_op_gesloten_dagen,
 )
 
@@ -159,11 +160,16 @@ def register_routes(app):
 
     @app.route("/voorspelling/opwarmen")
     def voorspelling_opwarmen():
-        """Laat het voorspelmodel alvast rekenen (en bewaren), zodat Bestellijst, Prognose en Tellingen daarna meteen
-        openen. Het overzicht roept dit op zodra het zelf klaar is. Geeft niets terug; mislukt het, dan merkt niemand
-        er iets van (de pagina's rekenen het dan zelf wel)."""
+        """Laat het voorspelmodel en de verdeling (de omzet per dag) alvast rekenen en bewaren (zie voorspelling.warm_op),
+        zodat Bestellijst, Prognose, Tellingen, de omzettrend en het product in de app daarna meteen openen. Elke pagina
+        van de site en het startscherm van de handterminal-app roepen dit op de achtergrond aan (hooguit eens per 10
+        minuten); staat alles al klaar, dan kost het bijna niets. Na een nieuwe telling rekent het hier, zodat niemand
+        daar op hoeft te wachten. Geeft niets terug; mislukt het, dan merkt niemand er iets van (de pagina's rekenen het
+        dan zelf wel)."""
         try:
-            maak_prognose(get_db(), dagen=7)
+            db = get_db()
+            maak_prognose(db, dagen=7)
+            verdeling(db)
         except Exception as fout:
             print(f"[voorspelling] voorverwarmen mislukt: {fout}")
         return "", 204

@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.70.0"
+HUIDIGE_VERSIE = "1.70.1"
 WIJZIGINGEN = [
+    {
+        "versie": "1.70.1",
+        "datum": "26 oktober 2026",
+        "punten": [
+            "De prognose is nu ook de eerste keer van de dag snel: het rekenmodel blijft bewaard tot er een nieuwe telling bijkomt (niet meer elke dag om 12.00 uur opnieuw), en na een telling rekent het vanzelf op de achtergrond zodra iemand met voorraadrechten een pagina van de site opent. Een wedstrijd of het weer van de komende dagen past alleen de verwachting aan, zonder het hele model opnieuw te rekenen.",
+        ],
+    },
     {
         "versie": "1.70.0",
         "datum": "26 oktober 2026",
@@ -1245,7 +1252,7 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.15.0", "sinds": "0.1.0", "laatst": "1.70.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.18.0", "sinds": "0.4.0", "laatst": "1.70.0",
+    {"naam": "Bestellen & prognose", "versie": "1.18.1", "sinds": "0.4.0", "laatst": "1.70.1",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "1.54.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},

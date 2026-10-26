@@ -93,10 +93,11 @@ def test_een_wijziging_in_de_gegevens_geeft_een_nieuwe_berekening(db, bewaren, w
     voorspelling.verdeling(db, NU)
 
     assert bewaren["aantal"]["prognose"] == 2, wijziging
-    # De verdeling (omzet per dag) hangt alleen van de geschiedenis af: een boeking of een bestelling rekent hem niet
+    # De verdeling (de omzet per dag tot de laatste telling) hangt alleen af van de tellingen en de kalender tot dan: een
+    # boeking, een bestelling of iets in de komende dagen (hier na de laatste telling van 3 oktober) rekent hem niet
     # opnieuw.
-    alleen_geschiedenis = not wijziging.startswith(("UPDATE producten", "INSERT INTO bestellingen"))
-    assert bewaren["aantal"]["verdeling"] == (2 if alleen_geschiedenis else 1), wijziging
+    geschiedenis = wijziging.startswith(("UPDATE telling_regels", "UPDATE instellingen"))
+    assert bewaren["aantal"]["verdeling"] == (2 if geschiedenis else 1), wijziging
 
 
 def test_een_nieuwe_telling_geeft_een_nieuwe_berekening(db, bewaren):
@@ -185,21 +186,62 @@ def test_een_voorraadwijziging_rekent_het_model_niet_opnieuw_maar_wel_het_advies
     assert tweede["model"] == eerste["model"]
 
 
-def test_het_model_rekent_een_keer_per_kantinedag_voor_alle_periodes(db, bewaren, monkeypatch):
-    """7 dagen, 14 dagen en de bestelperiode van een leverancier (bijv. 6 dagen), ook uren later op dezelfde
-    kantinedag: één keer het zware deel. De volgende kantinedag (die om 12.00 uur begint) opnieuw."""
+def test_het_model_rekent_pas_opnieuw_na_een_nieuwe_telling(db, bewaren, monkeypatch):
+    """7 dagen, 14 dagen en de bestelperiode van een leverancier (bijv. 6 dagen), uren later en ook de dagen erna: één
+    keer het zware deel. Pas na een nieuwe telling opnieuw (zie model_vingerafdruk)."""
     zeven = voorspelling.maak_prognose(db, dagen=7, nu=NU)
     veertien = voorspelling.maak_prognose(db, dagen=14, nu=NU + timedelta(hours=3))
     voorspelling.maak_prognose(db, dagen=6, nu=NU + timedelta(hours=20))
+    voorspelling.maak_prognose(db, dagen=7, nu=NU + timedelta(days=2))  # twee kantinedagen later
     assert bewaren["aantal"]["model"] == 1
     assert veertien["totaal"]["omzet"] > zeven["totaal"]["omzet"]
-    voorspelling.maak_prognose(db, dagen=7, nu=NU + timedelta(hours=25))
-    assert bewaren["aantal"]["model"] == 2
 
     # Uren later met het model van die middag: (bijna) hetzelfde als vers gerekend.
     monkeypatch.setattr(voorspelling, "CACHE_AAN", False)
     vers = voorspelling.maak_prognose(db, dagen=14, nu=NU + timedelta(hours=3))
     assert veertien["totaal"]["omzet"] == pytest.approx(vers["totaal"]["omzet"], rel=0.01)
+    monkeypatch.setattr(voorspelling, "CACHE_AAN", True)
+    gerekend = bewaren["aantal"]["model"]  # het vers rekenen hierboven telt ook mee
+
+    tid = db.execute("INSERT INTO tellingen (datum, naam) VALUES ('2026-10-10 23:00', 'x')").lastrowid
+    db.execute(
+        """INSERT INTO telling_regels (telling_id, product_id, voorraad_voor, geteld_aantal, verkocht, verkoopprijs)
+           VALUES (?, ?, 120, 50, 70, 2.0)""", (tid, bewaren["product"]),
+    )
+    db.commit()
+    voorspelling.maak_prognose(db, dagen=7, nu=NU + timedelta(days=2, hours=1))
+    assert bewaren["aantal"]["model"] == gerekend + 1
+
+
+def test_iets_in_de_komende_dagen_rekent_alleen_het_voorspelvenster_opnieuw(db, bewaren):
+    """Een thuiswedstrijd volgende week (of het weer, of een gesloten dag) verandert de prognose, maar niet het model:
+    dat kijkt alleen naar de tellingen en wat er tot de laatste telling gebeurde."""
+    voor = voorspelling.maak_prognose(db, dagen=7, nu=NU)
+    db.execute("INSERT INTO wedstrijden (team, datum, omschrijving, thuis) VALUES ('ZA 1', '2026-10-10', 'x', 1)")
+    db.commit()
+    na = voorspelling.maak_prognose(db, dagen=7, nu=NU)
+    assert bewaren["aantal"]["model"] == 1 and bewaren["aantal"]["prognose"] == 2
+    assert na["totaal"]["omzet"] > voor["totaal"]["omzet"]  # met een thuiswedstrijd erbij wordt het drukker
+
+
+def test_wat_net_gebruikt_is_blijft_bewaard(db, monkeypatch):
+    """Het geheugen houdt CACHE_MAX_ITEMS uitkomsten; is het vol, dan gaat de langst niet gebruikte eruit. Het model,
+    dat bij elke prognose weer gebruikt wordt, blijft zo staan terwijl er elk uur nieuwe prognoses bijkomen."""
+    monkeypatch.setattr(voorspelling, "CACHE_AAN", True)
+    monkeypatch.setattr(voorspelling, "SCHIJF_AAN", False)
+    monkeypatch.setattr(voorspelling, "CACHE_MAX_ITEMS", 3)
+    voorspelling.wis_bewaarde_resultaten()
+    gerekend = []
+
+    def bewaar(naam):
+        return voorspelling._bewaard(db, naam, NU, (), lambda: gerekend.append(naam) or naam, lambda _: "x", tijdvak="altijd")
+
+    bewaar("model")
+    for i in range(5):
+        bewaar(f"prognose-{i}")
+        bewaar("model")  # bij elke prognose weer gebruikt
+    assert gerekend.count("model") == 1 and len(gerekend) == 6
+    voorspelling.wis_bewaarde_resultaten()
 
 
 @pytest.mark.parametrize(
@@ -208,7 +250,8 @@ def test_het_model_rekent_een_keer_per_kantinedag_voor_alle_periodes(db, bewaren
         "INSERT INTO tellingen (datum, naam) VALUES ('2026-10-07 23:00', 'x')",
         "UPDATE telling_regels SET verkocht = verkocht + 1 WHERE id = (SELECT MAX(id) FROM telling_regels)",
         "UPDATE instellingen SET verkoopdagen = '1,2,3'",
-        "INSERT INTO wedstrijden (team, datum, omschrijving, thuis) VALUES ('ZA 1', '2026-10-10', 'x', 1)",
+        # Een wedstrijd die terug is gezet in de agenda, op een dag die al geteld is.
+        "INSERT INTO wedstrijden (team, datum, omschrijving, thuis) VALUES ('ZA 1', '2026-09-12', 'x', 1)",
     ],
 )
 def test_een_wijziging_in_de_geschiedenis_rekent_het_model_wel_opnieuw(db, bewaren, wijziging):
@@ -239,15 +282,18 @@ def test_binnen_een_uur_blijft_het_bewaarde_staan(db, bewaren):
     assert bewaren["aantal"]["prognose"] == 2
 
 
-def test_een_nieuwe_kantinedag_rekent_altijd_opnieuw_ook_bij_een_grotere_bewaartijd(db, bewaren, monkeypatch):
-    """De kantinedag wisselt om 12.00 uur: 'vandaag' schuift op, dus een uitkomst van daarvoor klopt niet meer."""
+def test_een_nieuwe_kantinedag_rekent_de_prognose_opnieuw_ook_bij_een_grotere_bewaartijd(db, bewaren, monkeypatch):
+    """De kantinedag wisselt om 12.00 uur: 'vandaag' schuift op, dus een prognose van daarvoor klopt niet meer. Het
+    model en de verdeling (wat al geteld is) blijven wel staan."""
     monkeypatch.setattr(voorspelling, "CACHE_BUCKET_SECONDEN", 24 * 3600)
     dinsdag = datetime(2026, 10, 6, 11, 59)
-    voorspelling.verdeling(db, dinsdag)
-    voorspelling.verdeling(db, dinsdag + timedelta(minutes=1))  # 12.00 uur: een nieuwe kantinedag
-    assert bewaren["aantal"]["verdeling"] == 2
-    voorspelling.verdeling(db, dinsdag + timedelta(hours=3))  # nog dezelfde kantinedag
-    assert bewaren["aantal"]["verdeling"] == 2
+    for nu in (dinsdag, dinsdag + timedelta(minutes=1)):  # 12.00 uur: een nieuwe kantinedag
+        voorspelling.maak_prognose(db, dagen=7, nu=nu)
+        voorspelling.verdeling(db, nu)
+    assert bewaren["aantal"]["prognose"] == 2
+    voorspelling.maak_prognose(db, dagen=7, nu=dinsdag + timedelta(hours=3))  # nog dezelfde kantinedag
+    assert bewaren["aantal"]["prognose"] == 2
+    assert bewaren["aantal"]["model"] == 1 and bewaren["aantal"]["verdeling"] == 1
 
 
 def test_twee_verzoeken_tegelijk_rekenen_maar_een_keer(app, monkeypatch):

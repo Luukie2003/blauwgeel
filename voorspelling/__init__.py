@@ -285,7 +285,7 @@ def _prognose_model(db, dagen, nu):
     """Het model (_prognose_fit, per kantinedag bewaard) plus het voorspelvenster van 'dagen' dagen vanaf 'nu': de
     blootstelling erin en de drukte per dag voor het overzicht. Dat laatste is licht, dus elke periode kost na de
     eerste keer van de dag bijna niets."""
-    fit = _bewaard(db, "prognose-fit", nu, (), lambda: _prognose_fit(db, nu), historie_vingerafdruk, per_dag=True)
+    fit = _bewaard(db, "prognose-fit", nu, (), lambda: _prognose_fit(db, nu), model_vingerafdruk, tijdvak="altijd")
     if not fit["beschikbaar"]:
         return dict(fit, dagen=dagen)
     effecten = fit["effecten"]
@@ -710,6 +710,40 @@ def historie_vingerafdruk(db):
     return hashlib.sha1(repr(delen).encode()).hexdigest()
 
 
+def model_vingerafdruk(db):
+    """Alleen waar het model (_prognose_fit) en de verdeling (_verdeling) van afhangen: de tellingen, en de kalender en
+    het weer tot en met de dag van de laatste telling (daar eindigen de perioden tussen twee tellingen). Wat daarna komt --
+    de wedstrijden, evenementen en het weer van de komende dagen -- telt alleen in het voorspelvenster, en dat wordt elke
+    keer vers gelezen (zie _prognose_model). Zo blijft het model geldig tot er een telling bijkomt of iets in het verleden
+    verandert, ook over de dagen heen."""
+    tellingen = db.execute("SELECT COUNT(*), COALESCE(MAX(id), 0), COALESCE(MAX(datum), '') FROM tellingen").fetchone()
+    tot = (tellingen[2] or "")[:10]
+    delen = [
+        tuple(tellingen),
+        tuple(
+            db.execute(
+                """SELECT COUNT(*), COALESCE(MAX(id), 0), TOTAL(verkocht), TOTAL(correctie),
+                          TOTAL(CAST(verkoopprijs * 100 AS INTEGER)), TOTAL(geteld_aantal)
+                   FROM telling_regels"""
+            ).fetchone()
+        ),
+        _hash_rijen(db.execute("SELECT * FROM wedstrijden WHERE substr(datum, 1, 10) <= ? ORDER BY id", (tot,))),
+        _hash_rijen(db.execute("SELECT * FROM weer_voorspelling WHERE substr(datum, 1, 10) <= ? ORDER BY datum", (tot,))),
+        tuple(db.execute(
+            "SELECT COUNT(*), TOTAL(max_temp), TOTAL(neerslag_kans) FROM weer_historie WHERE substr(datum, 1, 10) <= ?", (tot,)
+        ).fetchone()),
+    ]
+    try:
+        delen.append(_hash_rijen(db.execute(
+            "SELECT * FROM verkoop_uitzonderingen WHERE substr(datum, 1, 10) <= ? ORDER BY datum", (tot,))))
+        delen.append(tuple(db.execute("SELECT verkoopdagen, verkoopdagen_wedstrijd FROM instellingen WHERE id = 1").fetchone()))
+        delen.append(_hash_rijen(db.execute(
+            "SELECT datum, naam, soort, groep FROM evenementen WHERE substr(datum, 1, 10) <= ? ORDER BY id", (tot,))))
+    except Exception:  # oudere database zonder deze tabel/kolom
+        pass
+    return hashlib.sha1(repr(delen).encode()).hexdigest()
+
+
 def data_vingerafdruk(db):
     """Als historie_vingerafdruk, plus alles wat de uitkomst per product beïnvloedt: de voorraad en
     de bestellingen die onderweg zijn."""
@@ -774,7 +808,9 @@ def _lees_van_schijf(sleutel):
         return None, False
     try:
         with open(pad, "rb") as f:
-            return pickle.load(f), True
+            uitkomst = pickle.load(f)
+        os.utime(pad)  # net gebruikt: het opruimen (_ruim_schijf_op) gooit eerst wat het langst niet gebruikt is weg
+        return uitkomst, True
     except Exception as fout:  # een kapot of onleesbaar bestand is gewoon een gemiste: opnieuw rekenen
         print(f"[voorspelling] bewaard bestand onleesbaar, opnieuw rekenen: {fout}")
         return None, False
@@ -810,31 +846,33 @@ def _ruim_schijf_op(map_):
             p.unlink(missing_ok=True)
 
 
-def _bewaard(db, naam, nu, argumenten, bereken, vingerafdruk=None, per_dag=False):
+def _bewaard(db, naam, nu, argumenten, bereken, vingerafdruk=None, tijdvak="uur"):
     """Geeft de bewaarde uitkomst als de gegevens en het tijdvenster hetzelfde zijn, anders
     rekent het opnieuw (zie CACHE_AAN). vingerafdruk: de functie die bepaalt wanneer de gegevens
-    veranderd zijn (standaard data_vingerafdruk). per_dag: de hele kantinedag geldig in plaats van
-    een uur (CACHE_BUCKET_SECONDEN), voor wat niet van het tijdstip afhangt (zie _prognose_fit)."""
+    veranderd zijn (standaard data_vingerafdruk). tijdvak: hoe lang een uitkomst verder geldt:
+    "uur" (CACHE_BUCKET_SECONDEN, binnen de kantinedag), "dag" (de kantinedag, die om 12.00 uur
+    wisselt) of "altijd" (tot de vingerafdruk verandert), voor wat niet van het tijdstip afhangt
+    (zie _prognose_fit)."""
     if not CACHE_AAN:
         return bereken()
     sleutel = (
         db.execute("PRAGMA database_list").fetchone()[2],
         naam,
         argumenten,
-        None if per_dag else int(nu.timestamp() // CACHE_BUCKET_SECONDEN),
-        (nu - timedelta(hours=DAG_BEGIN_UUR)).date().toordinal(),  # de kantinedag, die om 12.00 uur wisselt
+        int(nu.timestamp() // CACHE_BUCKET_SECONDEN) if tijdvak == "uur" else None,
+        None if tijdvak == "altijd" else (nu - timedelta(hours=DAG_BEGIN_UUR)).date().toordinal(),
         (vingerafdruk or data_vingerafdruk)(db),
     )
     with _CACHE_SLOT:
         if sleutel in _CACHE:
-            return _CACHE[sleutel]
+            return _recent_gebruikt(sleutel)
         slot = _BEZIG.setdefault(sleutel, threading.Lock())
     # Vraagt een tweede verzoek hetzelfde terwijl de eerste nog rekent (bijvoorbeeld de pagina en het voorverwarmen vanaf
     # het overzicht), dan wacht die op de eerste in plaats van het nog eens uit te rekenen.
     with slot:
         with _CACHE_SLOT:
             if sleutel in _CACHE:
-                return _CACHE[sleutel]
+                return _recent_gebruikt(sleutel)
         try:
             uitkomst, van_schijf = _lees_van_schijf(sleutel)  # een ander proces kan het al hebben uitgerekend
             if not van_schijf:
@@ -848,6 +886,15 @@ def _bewaard(db, naam, nu, argumenten, bereken, vingerafdruk=None, per_dag=False
         finally:
             with _CACHE_SLOT:
                 _BEZIG.pop(sleutel, None)
+
+
+def _recent_gebruikt(sleutel):
+    """Een uitkomst die net weer gebruikt is, achteraan zetten: als het geheugen vol is (CACHE_MAX_ITEMS), gaat de minst
+    recent gebruikte eruit en niet het model dat al dagen meegaat terwijl er elk uur nieuwe uitkomsten bijkomen. Alleen
+    binnen _CACHE_SLOT aanroepen."""
+    uitkomst = _CACHE.pop(sleutel)
+    _CACHE[sleutel] = uitkomst
+    return uitkomst
 
 
 def wis_bewaarde_resultaten():
@@ -868,9 +915,9 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
 @functools.wraps(_verdeling)
 def verdeling(db, nu=None):
     nu = nu or datetime.now()
-    # Hangt alleen van de telgeschiedenis af (niet van de voorraad of de bestellingen): een boeking rekent het niet
-    # opnieuw, en het geldt de hele kantinedag (zie _prognose_fit waarom het tijdstip daarbinnen niet telt).
-    uitkomst = _bewaard(db, "verdeling", nu, (), lambda: _verdeling(db, nu), historie_vingerafdruk, per_dag=True)
+    # Hangt alleen van de telgeschiedenis af (niet van de voorraad, de bestellingen of de komende dagen): een boeking of
+    # een nieuwe kantinedag rekent het niet opnieuw, een nieuwe telling wel (zie model_vingerafdruk).
+    uitkomst = _bewaard(db, "verdeling", nu, (), lambda: _verdeling(db, nu), model_vingerafdruk, tijdvak="altijd")
     return dict(uitkomst) if uitkomst is not None else None
 
 
@@ -1045,7 +1092,7 @@ def terugblik(db, nu=None):
     daarvoor, en wat er werkelijk verkocht is, met de producten waar het het verst naast zat. Zo zie je hoe goed de
     prognose is. Wordt bewaard tot de telgeschiedenis verandert (zie historie_vingerafdruk)."""
     nu = nu or datetime.now()
-    return _bewaard(db, "terugblik", nu, (), lambda: _terugblik(db, nu), historie_vingerafdruk, per_dag=True)
+    return _bewaard(db, "terugblik", nu, (), lambda: _terugblik(db, nu), historie_vingerafdruk, tijdvak="dag")
 
 
 def vat_terugblik_samen(perioden):
