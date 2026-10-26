@@ -1,0 +1,77 @@
+{# Schaplabels printen: het formaat kiezen en (met met_prijs) of de verkoopprijs erop moet. Opent met
+   labelsPrinten(url, aantal), of vanzelf bij een link met data-schaplabel; de keuze blijft bewaard in deze browser.
+   Zie label_opties in pdf/labels.py. #}
+<dialog id="labels-dialoog" class="labels-dialoog">
+    <form method="dialog" id="labels-form">
+        <h3 style="margin-top:0" id="labels-titel">Schaplabels printen</h3>
+        <label class="labels-keuze">
+            <input type="radio" name="formaat" value="groot" checked>
+            <span><strong>Groot</strong> <span class="tekst-zacht">&mdash; 6 per A4, met logo en foto</span></span>
+        </label>
+        <label class="labels-keuze">
+            <input type="radio" name="formaat" value="klein">
+            <span><strong>Klein</strong> <span class="tekst-zacht">&mdash; 16 per A4, voor een smal schap of de koeling</span></span>
+        </label>
+        {% if met_prijs %}
+        <label class="labels-keuze" style="margin-top:0.8rem">
+            <input type="checkbox" name="prijs" value="1">
+            <span>Met de verkoopprijs erop</span>
+        </label>
+        {% endif %}
+        <p class="tekst-zacht">Scan je de QR-code op het label met de handterminal, dan opent het {{ 'product' if met_prijs else 'verbruiksvoorwerp' }} en zet je het zo op de bestellijst.</p>
+        <div class="labels-knoppen">
+            <button type="button" class="btn btn-rand" id="labels-annuleren">Annuleren</button>
+            <button type="submit" class="btn btn-geel">Labels maken</button>
+        </div>
+    </form>
+</dialog>
+<style>
+    .labels-dialoog { border: 0; border-radius: 12px; padding: 1.2rem 1.4rem; width: min(30rem, 94vw); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .labels-dialoog::backdrop { background: rgba(15, 31, 77, 0.45); }
+    .labels-keuze { display: flex; gap: 0.55rem; align-items: flex-start; font-weight: 400; cursor: pointer; margin-bottom: 0.5rem; }
+    .labels-keuze input { width: auto; margin-top: 0.25rem; }
+    .labels-knoppen { display: flex; gap: 0.5rem; justify-content: flex-end; }
+</style>
+<script>
+var labelsPrinten = (function () {
+    var dialoog = document.getElementById('labels-dialoog');
+    var form = document.getElementById('labels-form');
+    var prijs = form.querySelector('input[name="prijs"]');
+    var basis = '';
+    try {
+        var bewaard = JSON.parse(localStorage.getItem('schaplabels') || '{}');
+        var keuze = form.querySelector('input[name="formaat"][value="' + bewaard.formaat + '"]');
+        if (keuze) keuze.checked = true;
+        if (prijs) prijs.checked = !!bewaard.prijs;
+    } catch (e) { /* geen opslag: dan gewoon groot, zonder prijs */ }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var formaat = form.querySelector('input[name="formaat"]:checked').value;
+        var metPrijs = !!(prijs && prijs.checked);
+        try {
+            var bewaard = JSON.parse(localStorage.getItem('schaplabels') || '{}');
+            bewaard.formaat = formaat;
+            if (prijs) bewaard.prijs = metPrijs;
+            localStorage.setItem('schaplabels', JSON.stringify(bewaard));
+        } catch (e2) { /* niet bewaren is ook goed */ }
+        dialoog.close();
+        window.open(basis + (basis.indexOf('?') < 0 ? '?' : '&') + 'formaat=' + formaat + (metPrijs ? '&prijs=1' : ''), '_blank');
+    });
+    document.getElementById('labels-annuleren').addEventListener('click', function () { dialoog.close(); });
+
+    function open(url, aantal) {
+        basis = url;
+        document.getElementById('labels-titel').textContent = aantal > 1 ? aantal + ' schaplabels printen' : 'Schaplabel printen';
+        if (typeof dialoog.showModal === 'function') dialoog.showModal();
+        else window.open(url, '_blank');
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('a[data-schaplabel]'), function (link) {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            open(link.href, 1);
+        });
+    });
+    return open;
+})();
+</script>

@@ -273,15 +273,15 @@ def bereken_voorspelde_tekorten(db, nu=None):
 
 def bestel_advies(db, dagen=7, nu=None):
     """De prognose bij de bestellijst, met het ene besteladvies (bestelvoorstel.adviezen: per product tot de levering
-    na het eerstvolgende bestelmoment van zijn leverancier, plus een eventuele bijstelling, minstens het minimum en de
-    vaste bestelhoeveelheid; rekent soms even, dus de bestellijst haalt dit apart op).
+    na het eerstvolgende bestelmoment van zijn leverancier, minstens het minimum en de vaste bestelhoeveelheid; rekent
+    soms even, dus de bestellijst haalt dit apart op).
     - "producten": per product dat nu besteld moet worden (bestel_suggesties) wat er verwacht wordt en het advies in
       besteleenheden, met het gewone voorstel ("basis_eenheden": tot het minimum of de vaste bestelhoeveelheid) erbij.
       Ook de producten waarvan iemand zelf een aantal colli koos ("gekozen", zie bestelvoorstel.zet_bestelaantal),
       die de bestellijst al meteen toont.
     - "extra": wat nog boven het minimum zit maar waar het advies boven 0 komt: het kan opraken voor de levering ná de
-      volgende bestelling (of iemand stelde de prognose bij). Niet wat iemand zelf koos (ook niet 0: dan hoeft het
-      niet). Dezelfde lijst is "Voorspelde tekorten" (bereken_voorspelde_tekorten).
+      volgende bestelling. Niet wat iemand zelf koos (ook niet 0: dan hoeft het niet). Dezelfde lijst is "Voorspelde
+      tekorten" (bereken_voorspelde_tekorten).
     'dagen' is alleen nog voor wat de pagina's laten zien; de periode volgt de leverancier.
     {"beschikbaar", "dagen", "producten": {id: {...}}, "extra": [...]}"""
     import bestelvoorstel
@@ -293,18 +293,16 @@ def bestel_advies(db, dagen=7, nu=None):
     adviezen = alles["producten"]
     suggesties = {p["id"]: p for p in bestel_suggesties(db)}
 
-    def bijstelling_json(pid):
+    def keuze_json(pid):
         b = bij.get(pid)
-        if not b:
-            return {"bijstelling": 0, "bijgesteld_door": None, "gekozen": None}
-        return {"bijstelling": b["stuks"], "bijgesteld_door": b["door"], "gekozen": bestelvoorstel.gekozen(b)}
+        return {"bijgesteld_door": b["door"] if b else None, "gekozen": bestelvoorstel.gekozen(b)}
 
     keuzes = {pid for pid, b in bij.items() if bestelvoorstel.gekozen(b) is not None and pid in adviezen}
     producten = {}
     for pid in [*suggesties, *(pid for pid in keuzes if pid not in suggesties)]:
         a = adviezen.get(pid)
         if a is None or (a["regel"] is None and pid not in bij):
-            continue  # (nog) geen verkoop om van te leren en niets bijgesteld: het minimum blijft het voorstel
+            continue  # (nog) geen verkoop om van te leren en niets gekozen: het minimum blijft het voorstel
         r, s = a["regel"], a["product"]
         if pid in suggesties:
             basis = s["bestel_hoeveelheid"] if s["bestel_hoeveelheid"] > 0 else (s["min_voorraad"] - s["voorraad"])
@@ -318,14 +316,13 @@ def bestel_advies(db, dagen=7, nu=None):
             "basis_eenheden": basis_eenheden,
             "advies_eenheden": a["advies_eenheden"],
             "dagen": a["dagen"],
-            **bijstelling_json(pid),
+            **keuze_json(pid),
         }
     extra = []
     for pid, a in adviezen.items():
         if pid in suggesties or pid in keuzes or a["advies_eenheden"] <= 0:
             continue
-        bijgesteld = pid in bij
-        if a["regel"] is None and not bijgesteld:
+        if a["regel"] is None:
             continue
         product, r = a["product"], a["regel"]
         extra.append({
@@ -340,23 +337,24 @@ def bestel_advies(db, dagen=7, nu=None):
             "leverancier_id": product["leverancier_id"],
             "verwacht": round(r["verwacht"]) if r else 0,
             "kans_tekort": a["kans_tekort"],
-            "status": "bijgesteld" if bijgesteld and a["status"] == "ok" else a["status"],
+            "status": a["status"],
             "onderweg": a["onderweg"],
             "advies_eenheden": a["advies_eenheden"],
             "dagen": a["dagen"],
-            **bijstelling_json(pid),
+            **keuze_json(pid),
         })
-    extra.sort(key=lambda x: (x["bijstelling"] == 0, -x["kans_tekort"], x["naam"].lower()))
+    extra.sort(key=lambda x: (-x["kans_tekort"], x["naam"].lower()))
     return {"beschikbaar": True, "dagen": dagen, "producten": producten, "extra": extra}
 
 
 def bereken_bestellijst_meldingen(db):
     """Onafgehandelde meldingen voor de bestellijst die niet uit de gewone
-    voorraadberekening komen: bezoekers die zonder account de QR-code van
-    een product scanden en op 'Melden voor bestellijst' drukten (per
-    product gegroepeerd, met een teller en het laatste tijdstip), en losse
-    tekstmeldingen voor verbruiksvoorwerpen die een beheerder handmatig op
-    de bestellijst heeft gezet. Zie bestellijst_meldingen in schema.sql."""
+    voorraadberekening komen: productmeldingen van de QR-code op een
+    schaplabel (per product gegroepeerd, met een teller en het laatste
+    tijdstip; melden met een telefoon kan sinds 1.72.0 niet meer, maar oude
+    kunnen nog openstaan), en losse tekstmeldingen voor verbruiksvoorwerpen
+    die op zijn (gescand met de handterminal of met de knop bij
+    Verbruiksvoorwerpen). Zie bestellijst_meldingen in schema.sql."""
     product_rijen = db.execute(
         """SELECT product_id, COUNT(*) AS aantal, MAX(aangemaakt_op) AS laatste_melding
            FROM bestellijst_meldingen

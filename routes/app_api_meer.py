@@ -376,23 +376,10 @@ def register_routes(app):
 
     @app.route("/api/app/producten/<int:product_id>/bijstelling", methods=["POST"])
     def api_app_product_bijstelling(product_id):
-        """{stuks}: de prognose van dit product tot de volgende levering bijstellen (plus of min, in de eenheid van het
-        product; 0 = weg). Geeft het nieuwe bestelblok terug (zie bestelvoorstel.py). Voor handterminal-app 2.13.0;
-        sinds 2.14.0 kiest de app het aantal colli (api_app_product_bestelaantal)."""
-        db = get_db()
-        product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
-        if product is None:
-            return _fout("Dit product bestaat niet meer.", 404, "niet_gevonden")
-        stuks = _getal(_data().get("stuks"))
-        if stuks is None or abs(stuks) > MAX_STUKS:
-            return _fout("Geen geldig aantal.")
-        bestelvoorstel.zet_bijstelling(db, product_id, stuks, session.get("gebruiker_naam"), session.get("gebruiker_id"))
-        blok = bestelvoorstel.voor_product(db, product)
-        if stuks:
-            melding = f"Prognose {'+' if stuks > 0 else ''}{stuks} {product['eenheid']}: advies {blok['advies_eenheden']} {blok['besteleenheid']}."
-        else:
-            melding = "Bijstelling weggehaald."
-        return jsonify({"bestellen": blok, "melding": melding})
+        """De bijstelling van de prognose in stuks van handterminal-app 2.13.0 bestaat sinds 1.72.0 niet meer: sinds
+        2.14.0 kiest de app het aantal colli (api_app_product_bestelaantal). Een oude app krijgt te horen dat hij
+        bijgewerkt moet worden."""
+        return _fout("Bijstellen in stuks kan niet meer. Werk de app bij; daarna kies je het aantal colli.", 410, "verouderd")
 
     @app.route("/api/app/producten/<int:product_id>/melden", methods=["POST"])
     def api_app_product_melden(product_id):
@@ -408,6 +395,37 @@ def register_routes(app):
                 "SELECT COUNT(*) FROM bestellijst_meldingen WHERE product_id = ? AND afgehandeld = 0", (product_id,)
             ).fetchone()[0]
             return {"melding": melding, "meldingen": meldingen, "bestellen": blok}, 200
+
+        return eenmalig(actie)
+
+    @app.route("/api/app/verbruiksvoorwerpen/<int:item_id>")
+    def api_app_verbruiksvoorwerp(item_id):
+        """Een gescande QR-code van een verbruiksvoorwerp-schaplabel (toiletpapier, schoonmaakmiddel): wat het is, en of
+        het al op de bestellijst staat (een open melding met die naam)."""
+        db = get_db()
+        item = db.execute("SELECT id, naam, categorie FROM verbruiksvoorwerpen WHERE id = ?", (item_id,)).fetchone()
+        if item is None:
+            return _fout("Dit verbruiksvoorwerp bestaat niet (meer).", 404, "niet_gevonden")
+        open_melding = db.execute(
+            """SELECT aangemaakt_op FROM bestellijst_meldingen WHERE product_id IS NULL AND tekst = ? AND afgehandeld = 0
+               ORDER BY aangemaakt_op DESC LIMIT 1""", (item["naam"],),
+        ).fetchone()
+        return jsonify({**dict(item), "al_gemeld_op": open_melding["aangemaakt_op"] if open_melding else None})
+
+    @app.route("/api/app/verbruiksvoorwerpen/<int:item_id>/melden", methods=["POST"])
+    def api_app_verbruiksvoorwerp_melden(item_id):
+        """Een verbruiksvoorwerp op de bestellijst zetten na een scan van zijn QR-code met de handterminal (zoals de knop
+        bij Verbruiksvoorwerpen op de site): het komt bij "Gemeld" op de bestellijst."""
+
+        def actie(db):
+            item = db.execute("SELECT id, naam FROM verbruiksvoorwerpen WHERE id = ?", (item_id,)).fetchone()
+            if item is None:
+                return {"fout": "niet_gevonden", "melding": "Dit verbruiksvoorwerp bestaat niet (meer)."}, 404
+            db.execute(
+                "INSERT INTO bestellijst_meldingen (tekst, bron, aangemaakt_op) VALUES (?, 'verbruiksvoorwerp', ?)",
+                (item["naam"], now_str()),
+            )
+            return {"melding": f"{item['naam']} staat op de bestellijst."}, 200
 
         return eenmalig(actie)
 

@@ -11,11 +11,19 @@ def _maak_product(db, naam="Gemeld product"):
     return cursor.lastrowid
 
 
-def test_qr_meldingen_verschijnen_gegroepeerd_op_bestellijst(client, ingelogde_client, db):
+def _meld(db, product_id, keer=1):
+    """Een productmelding zoals de QR-code op het schaplabel die tot 1.72.0 maakte; die kunnen nog openstaan."""
+    for _ in range(keer):
+        db.execute(
+            "INSERT INTO bestellijst_meldingen (product_id, bron, aangemaakt_op) VALUES (?, 'qr_scan', '2026-10-20 10:00')",
+            (product_id,),
+        )
+    db.commit()
+
+
+def test_qr_meldingen_verschijnen_gegroepeerd_op_bestellijst(ingelogde_client, db):
     product_id = _maak_product(db)
-    for _ in range(3):
-        csrf = _csrf(client)
-        client.post(f"/scan/{product_id}/melden", data={"csrf_token": csrf})
+    _meld(db, product_id, keer=3)
 
     resp = ingelogde_client.get("/bestellijst")
     assert resp.status_code == 200
@@ -39,10 +47,9 @@ def test_verbruiksvoorwerp_tekstmelding_verschijnt_op_bestellijst(ingelogde_clie
     assert b"verbruiksvoorwerp" in resp.data
 
 
-def test_product_melding_afhandelen_verbergt_hem(client, ingelogde_client, db):
+def test_product_melding_afhandelen_verbergt_hem(ingelogde_client, db):
     product_id = _maak_product(db)
-    csrf = _csrf(client)
-    client.post(f"/scan/{product_id}/melden", data={"csrf_token": csrf})
+    _meld(db, product_id)
 
     resp = ingelogde_client.post(
         f"/bestellijst/meldingen/product/{product_id}/afhandelen",
@@ -62,11 +69,9 @@ def test_product_melding_afhandelen_verbergt_hem(client, ingelogde_client, db):
     assert b"x gemeld" not in resp.data
 
 
-def test_product_afhandelen_dekt_alle_openstaande_meldingen_voor_dat_product(client, ingelogde_client, db):
+def test_product_afhandelen_dekt_alle_openstaande_meldingen_voor_dat_product(ingelogde_client, db):
     product_id = _maak_product(db)
-    for _ in range(2):
-        csrf = _csrf(client)
-        client.post(f"/scan/{product_id}/melden", data={"csrf_token": csrf})
+    _meld(db, product_id, keer=2)
 
     ingelogde_client.post(
         f"/bestellijst/meldingen/product/{product_id}/afhandelen",

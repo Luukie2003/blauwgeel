@@ -6,8 +6,19 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.71.0"
+HUIDIGE_VERSIE = "1.72.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.72.0",
+        "datum": "26 oktober 2026",
+        "punten": [
+            "Schaplabels scannen met de handterminal: scan de QR-code op een schaplabel met de Zebra en je staat meteen bij het product, met 'Bestellen' om het aantal colli te kiezen. Bij een verbruiksvoorwerp (toiletpapier, bakjes) vraagt de app of het op de bestellijst moet, en zegt hij het als het er al staat. Melden voor de bestellijst met een telefooncamera kan niet meer; met een telefoon zie je alleen wat het is.",
+            "Uitgebreide schaplabels: naast het minimum (ook in colli, bijvoorbeeld '48 stuks (2 tray)') staat erop hoe je het bestelt ('Bestellen per tray van 24') en bij wie, met het artikelnummer, en onder de QR-code 'Scan met de handterminal'. Bij het printen kies je groot (6 per A4, met logo en foto) of klein (16 per A4, voor een smal schap of de koeling), en of de verkoopprijs erop moet. Een product zonder foto krijgt geen leeg fotovak meer.",
+            "Prognose en 'Prognose en verkoop' zijn één menu-item geworden, met twee tabbladen.",
+            "De bijstelling van de prognose in stuks (uit 1.68.0) is weg: sinds 1.69.0 kies je het aantal colli. Wat er nog van stond, vervalt; een gekozen aantal blijft staan.",
+            "Handterminal-app 2.15.2: scant ook de QR-code van een verbruiksvoorwerp. De lijst onderaan de Bestellijst en bij Bestelling klaarzetten heet nu 'Kan opraken', want daar staat ook wat maar een kleine kans heeft om op te raken. Op de bestellijst op de telefoon staat nu dat je ook met de app een bestelling klaarzet.",
+        ],
+    },
     {
         "versie": "1.71.0",
         "datum": "26 oktober 2026",
@@ -1259,11 +1270,11 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.15.0", "sinds": "0.1.0", "laatst": "1.70.0",
+    {"naam": "Voorraad & tellen", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "1.72.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.19.0", "sinds": "0.4.0", "laatst": "1.71.0",
+    {"naam": "Bestellen & prognose", "versie": "1.19.1", "sinds": "0.4.0", "laatst": "1.72.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
-    {"naam": "Producten & prijzen", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "1.54.0",
+    {"naam": "Producten & prijzen", "versie": "1.16.1", "sinds": "0.1.0", "laatst": "1.72.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
     {"naam": "Geld (kassa & kluis)", "versie": "1.4.0", "sinds": "1.0.0", "laatst": "1.45.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
@@ -1279,8 +1290,8 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.18.1", "sinds": "1.53.0", "laatst": "1.70.1",
-     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst en dia's aan of uit), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
+    {"naam": "Handterminal-app", "versie": "0.19.0", "sinds": "1.53.0", "laatst": "1.72.0",
+     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (ook bestellingen klaarzetten en verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst en dia's aan of uit), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.5", "sinds": "0.1.0", "laatst": "1.65.1",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",

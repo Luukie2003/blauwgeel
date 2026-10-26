@@ -29,17 +29,12 @@ OPEN_ENDPOINTS = {
     # 'm via een QR-code of stemmen.kantineblauwgeel.nl, ze loggen nergens in.
     "stem_pagina",
     "stem_overzicht_publiek",
-    # Waar de QR-code op een schaplabel naartoe wijst: iedereen mag zonder
-    # account een product melden voor de bestellijst. "Naar productpagina"
-    # op die landingspagina vraagt daarna alsnog om in te loggen, want
-    # product_detail zelf staat niet in deze lijst.
+    # Waar de QR-code op een schaplabel naartoe wijst, voor wie hem met een
+    # telefoon scant: wat het is, en "Naar productpagina" (die alsnog om
+    # inloggen vraagt, want product_detail zelf staat niet in deze lijst).
+    # Melden voor de bestellijst gaat met de handterminal (sinds 1.72.0).
     "scan_landing",
-    "scan_melden",
-    # Zelfde als hierboven, maar dan voor de QR-code op een
-    # verbruiksvoorwerp-schaplabel (geen productpagina om naartoe te gaan,
-    # dus alleen een meld-knop).
     "scan_landing_verbruiksvoorwerp",
-    "scan_melden_verbruiksvoorwerp",
     # De twee Kantine Kiosk-schermen draaien op een TV via Chromecast --
     # daar kan niemand op inloggen, dus moeten ze net als de stempagina's
     # zonder account bereikbaar zijn. Het beheer ervan (wat erop staat) zit
@@ -299,6 +294,8 @@ SECTIE_ENDPOINTS = {
         "api_app_bestellijst_prognose",
         "api_app_product_verkoop",
         "api_app_product_melden",
+        "api_app_verbruiksvoorwerp",
+        "api_app_verbruiksvoorwerp_melden",
         "api_app_boodschappen",
         "api_app_boodschap_afvinken",
         "api_app_boodschap_verwijderen",

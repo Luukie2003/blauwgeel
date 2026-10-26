@@ -70,6 +70,24 @@ def test_op_de_bestellijst_maar_een_keer_per_verzoek(app_client, db):  # noqa: F
     assert nog_eens["melding"] == "Hertog Jan Fles staat al bij Voorgesteld om te bestellen: 1 krat."
 
 
+def test_verbruiksvoorwerp_scannen_en_op_de_bestellijst(app_client, db):  # noqa: F811
+    """De QR-code op het schaplabel van een verbruiksvoorwerp, gescand met de handterminal: wat het is, en het melden
+    voor de bestellijst (bij Gemeld). Een herhaald verzoek meldt het niet nog eens."""
+    item = db.execute(
+        "INSERT INTO verbruiksvoorwerpen (naam, categorie, aangemaakt_op) VALUES ('Frietbakjes', 'Verpakking', '2026-01-01 10:00')"
+    ).lastrowid
+    db.commit()
+    info = app_client.get(f"/api/app/verbruiksvoorwerpen/{item}").get_json()
+    assert (info["naam"], info["categorie"], info["al_gemeld_op"]) == ("Frietbakjes", "Verpakking", None)
+    antwoorden = [_post(app_client, f"/api/app/verbruiksvoorwerpen/{item}/melden", verzoek_id="vv-1").get_json() for _ in range(2)]
+    assert antwoorden[0] == antwoorden[1] and antwoorden[0]["melding"] == "Frietbakjes staat op de bestellijst."
+    meldingen = db.execute("SELECT product_id, bron FROM bestellijst_meldingen WHERE tekst = 'Frietbakjes'").fetchall()
+    assert [(m["product_id"], m["bron"]) for m in meldingen] == [(None, "verbruiksvoorwerp")]
+    assert app_client.get(f"/api/app/verbruiksvoorwerpen/{item}").get_json()["al_gemeld_op"]
+    assert app_client.get("/api/app/verbruiksvoorwerpen/99999").status_code == 404
+    assert _post(app_client, "/api/app/verbruiksvoorwerpen/99999/melden", verzoek_id="vv-2").status_code == 404
+
+
 # ---------- Kassa en kluis ----------
 
 

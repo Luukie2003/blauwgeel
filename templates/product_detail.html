@@ -35,7 +35,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-rand btn-klein" title="Zet het bij Voorgesteld om te bestellen (met het advies, minstens 1 colli), bijvoorbeeld als het bijna op is">Op de bestellijst</button>
             </form>
-            <a href="{{ url_for('product_label_pdf', product_id=product.id) }}" class="btn btn-rand btn-klein">Schaplabel</a>
+            <a href="{{ url_for('product_label_pdf', product_id=product.id) }}" class="btn btn-rand btn-klein" data-schaplabel>Schaplabel</a>
             <a href="{{ url_for('geschiedenis', product_id=product.id) }}" class="btn btn-rand btn-klein">Alle boekingen</a>
         </div>
     </div>
@@ -263,4 +263,5 @@
     </div>
 </div>
 {% include "_boeking_formulier_script.html" %}
+{% with met_prijs=True %}{% include "_labels_dialoog.html" %}{% endwith %}
 {% endblock %}

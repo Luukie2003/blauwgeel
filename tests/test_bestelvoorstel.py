@@ -55,41 +55,36 @@ def test_uiterste_bestelmoment_en_de_periode_tot_de_levering_daarna():
     assert bestelvoorstel.bestelperiode(_lev(besteldagen=""), datetime(2026, 10, 23)) is None
 
 
-def test_bijstelling_telt_op_bij_de_prognose_in_hele_besteleenheden():
+def test_advies_in_hele_besteleenheden():
     product = {"voorraad": 0, "min_voorraad": 0, "besteleenheid": "tray", "besteleenheid_factor": 24, "eenheid": "stuks"}
-    a = bestelvoorstel.advies(product, None, bijstelling=6)
-    assert (a["met_bijstelling"], a["advies_eenheden"], a["advies_stuks"]) == (6, 1, 24)
-    a = bestelvoorstel.advies(product, {"verwacht": 20, "hoog": 30}, bijstelling=-30)
-    assert a["advies_eenheden"] == 0 and a["met_bijstelling"] == 0
+    a = bestelvoorstel.advies(product, {"verwacht": 20, "hoog": 30})
+    assert (a["verwacht"], a["nodig"], a["advies_eenheden"], a["advies_stuks"]) == (20, 30, 2, 48)
+    assert bestelvoorstel.advies(product, None)["advies_eenheden"] == 0
 
 
-def test_prognose_nul_bijgesteld_komt_bij_voorgesteld(db, prognose):
-    pid = _product(db, "Ranja Toernooi", voorraad=4)
-    assert all(e["id"] != pid for e in bestel_advies(db)["extra"])
-    bestelvoorstel.zet_bijstelling(db, pid, 10, "Luuk")
-    extra = {e["id"]: e for e in bestel_advies(db)["extra"]}
-    assert extra[pid]["status"] == "bijgesteld" and extra[pid]["bijstelling"] == 10
-    assert extra[pid]["advies_eenheden"] == 6 and extra[pid]["bijgesteld_door"] == "Luuk"
+def test_de_bijstelling_in_stuks_is_weg(app_client, db, prognose):  # noqa: F811
+    """Sinds 1.72.0: de oude bijstellingen vervallen bij de migratie (een gekozen aantal colli blijft), en een app die
+    nog in stuks bijstelt, hoort dat hij bijgewerkt moet worden."""
+    from database.migraties import _m6_bijstelling_in_stuks_weg
 
+    oud = _product(db, "Ranja Oud Bijgesteld", voorraad=4)
+    gekozen = _product(db, "Cola Gekozen", voorraad=4)
+    db.execute("INSERT INTO bestel_bijstellingen (product_id, stuks, door, op) VALUES (?, 10, 'Luuk', '2026-10-20 10:00')", (oud,))
+    db.execute(
+        "INSERT INTO bestel_bijstellingen (product_id, stuks, eenheden, door, op) VALUES (?, 6, 2, 'Luuk', '2026-10-20 10:00')",
+        (gekozen,),
+    )
+    _m6_bijstelling_in_stuks_weg(db)
+    db.commit()
+    over = bestelvoorstel.bijstellingen(db)
+    assert oud not in over and (over[gekozen]["stuks"], over[gekozen]["eenheden"]) == (0, 2)
 
-def test_omlaag_bijgesteld_mag_onder_het_gewone_voorstel(db, prognose):
-    pid = _product(db, "Cola Omlaag", voorraad=2, minimum=10)
-    prognose[pid] = (20, 30)
-    assert bestel_advies(db)["producten"][pid]["advies_eenheden"] == 28
-    bestelvoorstel.zet_bijstelling(db, pid, -25)
-    regel = bestel_advies(db)["producten"][pid]
-    assert regel["advies_eenheden"] == 8 and regel["bijstelling"] == -25
-
-
-def test_app_stelt_bij_en_krijgt_het_nieuwe_blok(app_client, db, prognose):  # noqa: F811
-    pid = _product(db, "Chips App", voorraad=0, factor=12, besteleenheid="doos")
-    resp = _post(app_client, f"/api/app/producten/{pid}/bijstelling", stuks=12)
-    blok = resp.get_json()["bestellen"]
-    assert resp.status_code == 200 and blok["bijstelling"] == 12 and blok["advies_eenheden"] == 1
-    assert "Prognose +12" in resp.get_json()["melding"]
-    assert _post(app_client, f"/api/app/producten/{pid}/bijstelling", stuks="veel").status_code == 400
-    assert _post(app_client, f"/api/app/producten/{pid}/bijstelling", stuks=0).get_json()["bestellen"]["bijstelling"] == 0
-    assert bestelvoorstel.bijstellingen(db) == {}
+    resp = _post(app_client, f"/api/app/producten/{oud}/bijstelling", stuks=12)
+    assert resp.status_code == 410 and "Werk de app bij" in resp.get_json()["melding"]
+    # Het bestelblok heeft voor de oudere apps nog "met_bijstelling": gewoon de prognose.
+    prognose[gekozen] = (10, 15)
+    blok = app_client.get(f"/api/app/producten/{gekozen}/verkoop").get_json()["bestellen"]
+    assert (blok["bijstelling"], blok["met_bijstelling"], blok["gekozen"]) == (0, 10, 2)
 
 
 def test_site_kiest_het_aantal_colli_en_bestellen_wist_het(ingelogde_client, db, prognose):

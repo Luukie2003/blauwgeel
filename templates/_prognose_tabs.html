@@ -1,0 +1,9 @@
+{# Prognose en Prognose en verkoop als tabbladen van één menu-item (zie navigatie.py): wat er komt, en hoe het
+   eerder uitkwam. Twee losse routes, dus "actief" is gewoon request.endpoint vergelijken, net als
+   _kiosk_prijzen_subnav.html. #}
+<div class="tab-balk">
+    <a href="{{ url_for('prognose_pagina') }}"
+       class="tab-knop{{ ' actief' if request.endpoint == 'prognose_pagina' else '' }}">Prognose</a>
+    <a href="{{ url_for('prognose_terugblik') }}"
+       class="tab-knop{{ ' actief' if request.endpoint == 'prognose_terugblik' else '' }}">Prognose en verkoop</a>
+</div>

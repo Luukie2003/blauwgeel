@@ -3,7 +3,7 @@ from flask import Response, flash, redirect, render_template, request, url_for
 import qr
 from database import get_db
 from helpers import now_str
-from pdf import schaplabels_pdf
+from pdf import label_opties, schaplabels_pdf
 
 
 def register_routes(app):
@@ -61,19 +61,15 @@ def register_routes(app):
             "naam": item["naam"],
             "categorie": item["categorie"] or "Verbruiksvoorwerp",
             "qr_png": qr.qr_png_bytes(url),
-            # Verbruiksvoorwerpen hebben geen eigen afbeeldingsveld (in
-            # tegenstelling tot producten) -- dus geen leeg foto-kadertje op
-            # het label, de tekst krijgt die ruimte erbij.
-            "heeft_foto_kolom": False,
+            "qr_hint": "Op? Scan met de handterminal",
         }
 
     @app.route("/scan/verbruiksvoorwerp/<int:item_id>")
     def scan_landing_verbruiksvoorwerp(item_id):
-        """Waar de QR-code op een verbruiksvoorwerp-schaplabel naartoe wijst
-        -- publiek, geen account nodig (zie OPEN_ENDPOINTS in app.py), zelfde
-        opzet als scan_landing voor gewone producten. Geen 'naar
-        productpagina'-knop: een verbruiksvoorwerp heeft geen eigen pagina
-        om naartoe te gaan, alleen de melding is relevant."""
+        """Waar de QR-code op een verbruiksvoorwerp-schaplabel naartoe wijst -- publiek, geen account nodig (zie
+        OPEN_ENDPOINTS in rechten.py). Scan je hem met de handterminal, dan vraagt de app of hij op de bestellijst moet
+        (api_app_verbruiksvoorwerp_melden); met een telefoon zie je alleen wat het is. Melden via de QR-code met een
+        telefoon kan sinds 1.72.0 niet meer."""
         db = get_db()
         item = db.execute(
             "SELECT * FROM verbruiksvoorwerpen WHERE id = ?", (item_id,)
@@ -81,24 +77,6 @@ def register_routes(app):
         if item is None:
             return render_template("scan_landing_verbruiksvoorwerp.html", item=None), 404
         return render_template("scan_landing_verbruiksvoorwerp.html", item=item)
-
-    @app.route("/scan/verbruiksvoorwerp/<int:item_id>/melden", methods=["POST"])
-    def scan_melden_verbruiksvoorwerp(item_id):
-        db = get_db()
-        item = db.execute(
-            "SELECT * FROM verbruiksvoorwerpen WHERE id = ?", (item_id,)
-        ).fetchone()
-        if item is None:
-            flash("Verbruiksvoorwerp niet gevonden.", "error")
-            return redirect(url_for("scan_landing_verbruiksvoorwerp", item_id=item_id))
-        db.execute(
-            """INSERT INTO bestellijst_meldingen (tekst, bron, aangemaakt_op)
-               VALUES (?, 'verbruiksvoorwerp', ?)""",
-            (item["naam"], now_str()),
-        )
-        db.commit()
-        flash("Bedankt! Dit is doorgegeven voor de bestellijst.", "success")
-        return redirect(url_for("scan_landing_verbruiksvoorwerp", item_id=item_id))
 
     @app.route("/verbruiksvoorwerpen/<int:item_id>/label.pdf")
     def verbruiksvoorwerp_label_pdf(item_id):
@@ -109,7 +87,7 @@ def register_routes(app):
         if item is None:
             flash("Verbruiksvoorwerp niet gevonden.", "error")
             return redirect(url_for("verbruiksvoorwerpen_lijst"))
-        pdf_bytes = schaplabels_pdf([_label_gegevens_verbruiksvoorwerp(item)])
+        pdf_bytes = schaplabels_pdf([_label_gegevens_verbruiksvoorwerp(item)], **label_opties(request.args))
         return Response(
             pdf_bytes,
             mimetype="application/pdf",
@@ -136,7 +114,7 @@ def register_routes(app):
         if not items:
             flash("Geen van de geselecteerde items kon gevonden worden.", "error")
             return redirect(url_for("verbruiksvoorwerpen_lijst"))
-        pdf_bytes = schaplabels_pdf([_label_gegevens_verbruiksvoorwerp(i) for i in items])
+        pdf_bytes = schaplabels_pdf([_label_gegevens_verbruiksvoorwerp(i) for i in items], **label_opties(request.args))
         return Response(
             pdf_bytes,
             mimetype="application/pdf",

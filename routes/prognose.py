@@ -300,7 +300,7 @@ def register_routes(app):
 
     @app.route("/prognose/terugblik")
     def prognose_terugblik():
-        """Bestellen > Prognose en verkoop: per telling wat de prognose was en wat er werkelijk verkocht is. Het
+        """Bestellen > Prognose, tabblad Prognose en verkoop: per telling wat de prognose was en wat er werkelijk verkocht is. Het
         terugrekenen gebruikt het voorspelmodel, dus dat haalt de pagina na het laden apart op (zie data-lazy-bron)."""
         return render_template("prognose_terugblik.html")
 

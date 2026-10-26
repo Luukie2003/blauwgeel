@@ -496,8 +496,7 @@
     <string name="uiterlijk_bestellen">Uiterlijk %1$s · levering %2$s</string>
     <string name="prognose_tot">verwacht tot %1$s</string>
     <string name="prognose_komende_dagen">verwacht de komende %1$d dagen</string>
-    <string name="bijgesteld_n">bijgesteld %1$s</string>
-    <string name="prognose_nog_niet">De prognose rekent nog niet (te weinig tellingen); je bijstelling telt wel mee.</string>
+    <string name="prognose_nog_niet">De prognose rekent nog niet (te weinig tellingen); het advies gaat uit van het minimum.</string>
     <string name="advies_kort">Advies</string>
     <string name="advies_niets">niets bestellen</string>
     <string name="prognose_kort">Prognose</string>
@@ -538,6 +537,9 @@
     <string name="nog_niets_ingeboekt">nog niets ingeboekt</string>
     <string name="van_datum">van %1$s</string>
     <string name="op_de_bestellijst">Op de bestellijst</string>
+    <string name="verbruik_vraag">Op? Zet het op de bestellijst (bij Gemeld).</string>
+    <string name="verbruik_al_gemeld">Staat al op de bestellijst (gemeld %1$s).</string>
+    <string name="toch_nog_eens">Toch nog eens</string>
     <string name="op_de_bestellijst_nog_eens">Op de bestellijst (is al gemeld)</string>
     <string name="derving_regel">Derving de laatste %1$d dagen: %2$d %3$s (%4$d× afgeboekt met een reden)</string>
     <string name="derving_waarde">, %1$s tegen inkoopprijs</string>
@@ -755,6 +757,7 @@
     <string name="per_dag">Per dag</string>
     <string name="evenement">evenement</string>
     <string name="raakt_waarschijnlijk_op">Raakt waarschijnlijk op</string>
+    <string name="kan_opraken">Kan opraken</string>
     <string name="advies_kort_eenheden">bestel %1$d %2$s</string>
     <string name="advies_kort_stuks">bestel %1$d %2$s</string>
     <string name="advies_n">advies %1$d %2$s</string>

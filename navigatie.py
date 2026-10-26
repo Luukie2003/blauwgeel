@@ -111,15 +111,10 @@ NAV_ITEMS = [
     },
     {
         "groep": "Bestellen",
-        "endpoints": ["prognose_pagina", "prognose_resultaat"],
+        # Met Prognose en verkoop als tweede tabblad (_prognose_tabs.html).
+        "endpoints": ["prognose_pagina", "prognose_resultaat", "prognose_terugblik"],
         "url_endpoint": "prognose_pagina",
         "label": "Prognose",
-    },
-    {
-        "groep": "Bestellen",
-        "endpoints": ["prognose_terugblik"],
-        "url_endpoint": "prognose_terugblik",
-        "label": "Prognose en verkoop",
     },
     {
         "groep": "Bestellen",

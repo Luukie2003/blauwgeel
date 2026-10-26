@@ -14,7 +14,7 @@
         <div><span class="label">Voorraad</span><strong>{{ b.voorraad }}</strong></div>
         <div><span class="label">Onderweg</span><strong>{{ b.onderweg }}</strong></div>
         <div><span class="label">Prognose {% if b.volgende_levering %}tot {{ b.volgende_levering_tekst }}{% else %}{{ b.dagen }} dagen{% endif %}</span>
-            <strong>{{ '%.0f'|format(b.met_bijstelling) }}</strong>{% if b.bijstelling %} <span class="badge badge-in" title="Bijgesteld door {{ b.bijgesteld_door or 'onbekend' }}">{{ '+' if b.bijstelling > 0 }}{{ b.bijstelling }}</span>{% endif %}</div>
+            <strong>{{ '%.0f'|format(b.verwacht) }}</strong></div>
         <div><span class="label">Advies</span><strong>{{ b.advies_eenheden }} {{ b.besteleenheid }}</strong>{% if b.factor > 1 and b.advies_stuks %} <span class="tekst-zacht">({{ b.advies_stuks }})</span>{% endif %}</div>
     </div>
     <form method="post" action="{{ url_for('product_bestelaantal', product_id=product.id) }}" class="bestelblok-knoppen">

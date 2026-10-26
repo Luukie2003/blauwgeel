@@ -393,8 +393,9 @@
     knop.addEventListener('click', function () {
         var ids = vakjes.filter(function (v) { return v.checked; }).map(function (v) { return v.value; });
         if (!ids.length) return;
-        window.open('/producten/labels.pdf?ids=' + ids.join(','), '_blank');
+        labelsPrinten('/producten/labels.pdf?ids=' + ids.join(','), ids.length);
     });
 })();
 </script>
+{% with met_prijs=True %}{% include "_labels_dialoog.html" %}{% endwith %}
 {% endblock %}

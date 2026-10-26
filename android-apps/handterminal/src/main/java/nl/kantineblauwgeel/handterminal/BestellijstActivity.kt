@@ -111,7 +111,7 @@ class BestellijstActivity : BasisActivity() {
 
         val extra = prognose?.optJSONArray("extra")?.objecten().orEmpty()
         if (extra.isNotEmpty()) {
-            Lijst.kop(inhoud, getString(R.string.raakt_waarschijnlijk_op))
+            Lijst.kop(inhoud, getString(R.string.kan_opraken))
             val kaart = Lijst.kaart(inhoud, R.drawable.rand_links_oranje)
             for (p in extra) {
                 val urgent = p.optString("status") == "urgent"

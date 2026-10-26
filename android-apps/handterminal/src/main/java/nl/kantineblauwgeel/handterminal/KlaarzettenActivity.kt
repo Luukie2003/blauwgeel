@@ -61,23 +61,21 @@ class KlaarzettenActivity : BasisActivity() {
                 wachtendeScan = null
                 scan(it)
             }
-            // De prognose rekent soms even: daarna het advies erbij, en wat waarschijnlijk opraakt.
+            // De prognose rekent soms even: daarna het advies erbij, en wat kan opraken.
             val prognose = Api.getJson(this, "/api/app/bestellijst/prognose")
             val advies = prognose.optJSONObject("producten")
             for (r in regels) {
                 val x = advies?.optJSONObject(r.p.getInt("id").toString()) ?: continue
                 r.p.put("advies", x.optInt("advies_eenheden"))
-                r.p.put("bijstelling", x.optInt("bijstelling"))
-                // Hoger als de prognose meer vraagt; lager alleen als iemand de prognose omlaag bijstelde.
-                if (r.soort == "laag" && !r.vast && (x.optInt("advies_eenheden") > r.aantal || x.optInt("bijstelling") < 0)) {
+                // Hoger als de prognose meer vraagt; wat iemand zelf koos, blijft.
+                if (r.soort == "laag" && !r.vast && x.optInt("advies_eenheden") > r.aantal) {
                     r.aantal = x.optInt("advies_eenheden")
                 }
             }
             val al = regels.map { it.p.getInt("id") }.toSet()
             prognose.optJSONArray("extra")?.objecten()?.filter { it.getInt("id") !in al }?.forEach {
                 it.put("advies", it.optInt("advies_eenheden"))
-                // Zelf de prognose omhoog bijgesteld (bij het product, app 2.13.0): dan staat hij al klaar.
-                regels += Regel(it, "opraken", if (it.optInt("bijstelling") > 0) it.optInt("advies_eenheden") else 0)
+                regels += Regel(it, "opraken", 0)
             }
             toon()
         }
@@ -106,7 +104,7 @@ class KlaarzettenActivity : BasisActivity() {
             "gekozen" to R.string.klaarzetten_gekozen,
             "laag" to R.string.klaarzetten_laag,
             "manco" to R.string.klaarzetten_manco,
-            "opraken" to R.string.raakt_waarschijnlijk_op,
+            "opraken" to R.string.kan_opraken,
         )
         for ((soort, kop) in groepen) {
             val groep = regels.filter { it.soort == soort }
@@ -121,7 +119,6 @@ class KlaarzettenActivity : BasisActivity() {
                     else null,
                     if (p.has("advies")) getString(R.string.advies_n, p.optInt("advies"), eenheid(p)) else null,
                     if (p.heeftGekozen() && soort != "gekozen") getString(R.string.zelf_gekozen) else null,
-                    p.optInt("bijstelling").takeIf { it != 0 }?.let { getString(R.string.bijgesteld_n, (if (it > 0) "+" else "") + it) },
                 ).joinToString(" · ")
                 Lijst.regel(kaart, p.optString("naam"), detail, if (r.aantal > 0) "${r.aantal} ${eenheid(p)}" else "–",
                     if (r.aantal > 0) R.color.navy else R.color.tekst_zacht) { vraag(r) }

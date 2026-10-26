@@ -51,14 +51,8 @@
             <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-geel scan-grote-knop">
                 Naar productpagina
             </a>
-            <form method="post" action="{{ url_for('scan_melden', product_id=product.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-rand scan-grote-knop">
-                    Melden voor bestellijst
-                </button>
-            </form>
             <p class="tekst-zacht" style="margin-top:1rem; margin-bottom:0">
-                Geen account nodig — een beheerder ziet je melding bij de bestellijst.
+                Met de handterminal scan je deze code voor de productinformatie en om het te bestellen.
             </p>
         </div>
         {% else %}

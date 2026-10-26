@@ -707,12 +707,20 @@ def _m5_oud_manco_afgehandeld(db):
     db.execute("UPDATE bestelregels SET manco_afgehandeld = 1")
 
 
+def _m6_bijstelling_in_stuks_weg(db):
+    """De bijstelling van de prognose in stuks (1.68.0) bestaat niet meer (1.72.0): je kiest het aantal colli. Wat er
+    nog van stond, vervalt; een gekozen aantal colli blijft."""
+    db.execute("DELETE FROM bestel_bijstellingen WHERE eenheden IS NULL")
+    db.execute("UPDATE bestel_bijstellingen SET stuks = 0")
+
+
 GENUMMERDE_MIGRATIES = [
     (1, _m1_tapbier_in_de_omzet),
     (2, _m2_opmerking_none_leegmaken),
     (3, _m3_eigenaar_aanwijzen),
     (4, _m4_codeblokkades_opheffen),
     (5, _m5_oud_manco_afgehandeld),
+    (6, _m6_bijstelling_in_stuks_weg),
 ]
 
 

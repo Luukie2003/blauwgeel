@@ -7,17 +7,18 @@ import productinfo
 import qr
 from database import get_db
 from derving import DERVING_REDENEN
-from helpers import PRODUCT_AFBEELDINGEN_MAP, kleine_afbeelding, now_str
-from pdf import schaplabels_pdf
+from helpers import PRODUCT_AFBEELDINGEN_MAP, besteleenheid_factor, kleine_afbeelding
+from pdf import label_opties, schaplabels_pdf
+
+
+# Een product met de naam van zijn leverancier, voor op het schaplabel.
+_LABEL_SQL = "SELECT p.*, l.naam AS leverancier_naam FROM producten p LEFT JOIN leveranciers l ON l.id = p.leverancier_id"
 
 
 def _label_gegevens(product):
-    """Zet een productrij om in wat schaplabels_pdf nodig heeft: de
-    gewone velden plus een kant-en-klare QR (PNG-bytes) die naar de
-    publieke scan-landingspagina linkt (geen account nodig, zie
-    scan_landing) -- scanbaar met elke telefooncamera, niet alleen
-    vanuit de handterminal-weergave zelf -- en het pad naar de
-    productfoto, dezelfde die ook op de site wordt getoond."""
+    """Zet een productrij (uit _LABEL_SQL) om in wat schaplabels_pdf nodig heeft: de gewone velden, een kant-en-klare QR
+    (PNG-bytes) naar /scan/<id> -- de handterminal opent daarmee het product, met de bestelknoppen; een telefooncamera
+    komt op de publieke landingspagina (scan_landing) -- en het pad naar de productfoto, dezelfde als op de site."""
     url = url_for("scan_landing", product_id=product["id"], _external=True)
     foto_pad = PRODUCT_AFBEELDINGEN_MAP / product["afbeelding"] if product["afbeelding"] else None
     return {
@@ -25,9 +26,14 @@ def _label_gegevens(product):
         "categorie": product["categorie"],
         "subcategorie": product["subcategorie"],
         "artikelcode": product["artikelcode"],
+        "leverancier": product["leverancier_naam"],
         "min_voorraad": product["min_voorraad"],
         "eenheid": product["eenheid"],
+        "besteleenheid": product["besteleenheid"],
+        "besteleenheid_factor": besteleenheid_factor(product),
+        "verkoopprijs": product["verkoopprijs"],
         "qr_png": qr.qr_png_bytes(url),
+        "qr_hint": "Scan met de handterminal",
         "foto_pad": foto_pad if foto_pad and foto_pad.exists() else None,
     }
 
@@ -39,35 +45,19 @@ def register_routes(app):
 
     @app.route("/scan/<int:product_id>")
     def scan_landing(product_id):
-        """Waar de QR-code op een schaplabel naartoe wijst -- publiek, geen
-        account nodig (zie OPEN_ENDPOINTS in app.py), met twee grote
-        knoppen: naar de echte productpagina (die alsnog om inloggen vraagt)
-        of direct -- zonder account -- melden voor de bestellijst."""
+        """Waar de QR-code op een schaplabel naartoe wijst. Op de handterminal opent de app bij een scan meteen het
+        product (informatie, en bestellen). Met een telefoon: ben je ingelogd, dan meteen de productpagina; anders deze
+        publieke pagina met het product en een knop naar de productpagina (die om inloggen vraagt). Melden voor de
+        bestellijst via de QR-code kan sinds 1.72.0 niet meer: dat gaat via de handterminal of de productpagina."""
         db = get_db()
         product = db.execute(
             "SELECT * FROM producten WHERE id = ?", (product_id,)
         ).fetchone()
         if product is None:
             return render_template("scan_landing.html", product=None), 404
+        if session.get("gebruiker_id"):
+            return redirect(url_for("product_detail", product_id=product_id))
         return render_template("scan_landing.html", product=product)
-
-    @app.route("/scan/<int:product_id>/melden", methods=["POST"])
-    def scan_melden(product_id):
-        db = get_db()
-        product = db.execute(
-            "SELECT id FROM producten WHERE id = ?", (product_id,)
-        ).fetchone()
-        if product is None:
-            flash("Product niet gevonden.", "error")
-            return redirect(url_for("scan_landing", product_id=product_id))
-        db.execute(
-            """INSERT INTO bestellijst_meldingen (product_id, bron, aangemaakt_op)
-               VALUES (?, 'qr_scan', ?)""",
-            (product_id, now_str()),
-        )
-        db.commit()
-        flash("Bedankt! Dit is doorgegeven voor de bestellijst.", "success")
-        return redirect(url_for("scan_landing", product_id=product_id))
 
     @app.route("/producten/zoeken")
     def product_zoeken():
@@ -178,7 +168,7 @@ def register_routes(app):
     @app.route("/producten/<int:product_id>/melden", methods=["POST"])
     def product_melden(product_id):
         """'Op de bestellijst': het product bij "Voorgesteld om te bestellen" zetten (zie bestelvoorstel.zet_op_bestellijst).
-        Bezoekers zonder account melden het met de QR-code op het schaplabel; dat staat bij "Gemeld"."""
+        Op de handterminal: de QR-code op het schaplabel of de barcode scannen, en dan dezelfde knop."""
         import bestelvoorstel
 
         db = get_db()
@@ -193,13 +183,11 @@ def register_routes(app):
     @app.route("/producten/<int:product_id>/label.pdf")
     def product_label_pdf(product_id):
         db = get_db()
-        product = db.execute(
-            "SELECT * FROM producten WHERE id = ?", (product_id,)
-        ).fetchone()
+        product = db.execute(_LABEL_SQL + " WHERE p.id = ?", (product_id,)).fetchone()
         if product is None:
             flash("Product niet gevonden.", "error")
             return redirect(url_for("producten_lijst"))
-        pdf_bytes = schaplabels_pdf([_label_gegevens(product)])
+        pdf_bytes = schaplabels_pdf([_label_gegevens(product)], **label_opties(request.args))
         return Response(
             pdf_bytes,
             mimetype="application/pdf",
@@ -222,14 +210,11 @@ def register_routes(app):
         ids = ids[:200]
         db = get_db()
         placeholders = ",".join("?" * len(ids))
-        producten = db.execute(
-            f"SELECT * FROM producten WHERE id IN ({placeholders}) ORDER BY categorie, naam",
-            ids,
-        ).fetchall()
+        producten = db.execute(f"{_LABEL_SQL} WHERE p.id IN ({placeholders}) ORDER BY p.categorie, p.naam", ids).fetchall()
         if not producten:
             flash("Geen van de geselecteerde producten kon gevonden worden.", "error")
             return redirect(url_for("producten_lijst"))
-        pdf_bytes = schaplabels_pdf([_label_gegevens(p) for p in producten])
+        pdf_bytes = schaplabels_pdf([_label_gegevens(p) for p in producten], **label_opties(request.args))
         return Response(
             pdf_bytes,
             mimetype="application/pdf",

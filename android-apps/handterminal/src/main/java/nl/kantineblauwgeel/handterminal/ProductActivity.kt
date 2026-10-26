@@ -555,11 +555,9 @@ class ProductActivity : BasisActivity() {
             Lijst.tekst(kaart, getString(R.string.uiterlijk_bestellen, it, best.optString("levering_tekst")), kleur = R.color.tekst, vet = true)
         }
         if (!best.optBoolean("prognose_beschikbaar")) Lijst.tekst(kaart, getString(R.string.prognose_nog_niet))
-        val bij = best.optInt("bijstelling")
-        Lijst.info(kaart, getString(R.string.prognose_kort), "${best.optDouble("met_bijstelling").roundToInt()} $eenheid",
-            (best.tekstOfNull("volgende_levering_tekst")?.let { getString(R.string.prognose_tot, it) }
-                ?: getString(R.string.prognose_komende_dagen, best.optInt("dagen", 7))) +
-                if (bij != 0) " · " + getString(R.string.bijgesteld_n, (if (bij > 0) "+" else "") + bij) else "")
+        Lijst.info(kaart, getString(R.string.prognose_kort), "${best.optDouble("verwacht", 0.0).roundToInt()} $eenheid",
+            best.tekstOfNull("volgende_levering_tekst")?.let { getString(R.string.prognose_tot, it) }
+                ?: getString(R.string.prognose_komende_dagen, best.optInt("dagen", 7)))
         Lijst.info(kaart, getString(R.string.voorraad), "${best.optInt("voorraad")} $eenheid",
             listOfNotNull(getString(R.string.minimum, best.optInt("min_voorraad")),
                 best.optInt("onderweg").takeIf { it > 0 }?.let { getString(R.string.n_onderweg, it) }).joinToString(" · "))

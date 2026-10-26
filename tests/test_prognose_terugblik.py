@@ -49,7 +49,10 @@ def test_de_pagina_laadt_de_vergelijking_apart(ingelogde_client, db):
     tekst = ingelogde_client.get("/prognose/terugblik").data.decode()
     assert 'data-lazy-bron="/prognose/terugblik/resultaat"' in tekst
     assert "te weinig tellingen" in ingelogde_client.get("/prognose/terugblik/resultaat").data.decode()
-    assert 'href="/prognose/terugblik"' in ingelogde_client.get("/").data.decode()  # in het menu
+    # Sinds 1.72.0 geen eigen menu-item meer, maar een tabblad naast de prognose.
+    assert 'tab-knop actief">Prognose en verkoop<' in tekst
+    assert 'href="/prognose/terugblik"' in ingelogde_client.get("/prognose").data.decode()
+    assert 'href="/prognose/terugblik"' not in ingelogde_client.get("/").data.decode()
 
     bier = _product(db, "Bier")
     _bouw_geschiedenis(db, {bier: 20}, tijdstippen=_twee_keer_per_week(4))

@@ -49,7 +49,7 @@
                     <td>{{ item.naam }}</td>
                     <td>{{ item.categorie or '—' }}</td>
                     <td class="tabel-acties">
-                        <a href="{{ url_for('verbruiksvoorwerp_label_pdf', item_id=item.id) }}" class="btn btn-rand btn-klein">Label printen</a>
+                        <a href="{{ url_for('verbruiksvoorwerp_label_pdf', item_id=item.id) }}" class="btn btn-rand btn-klein" data-schaplabel>Label printen</a>
                         <form method="post" action="{{ url_for('verbruiksvoorwerp_bestellijst_melden', item_id=item.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-rand btn-klein">Zet op bestellijst</button>
@@ -93,8 +93,9 @@
     knop.addEventListener('click', function () {
         var ids = vakjes.filter(function (v) { return v.checked; }).map(function (v) { return v.value; });
         if (!ids.length) return;
-        window.open('/verbruiksvoorwerpen/labels.pdf?ids=' + ids.join(','), '_blank');
+        labelsPrinten('/verbruiksvoorwerpen/labels.pdf?ids=' + ids.join(','), ids.length);
     });
 })();
 </script>
+{% with met_prijs=False %}{% include "_labels_dialoog.html" %}{% endwith %}
 {% endblock %}

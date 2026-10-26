@@ -256,6 +256,11 @@ abstract class BasisActivity : AppCompatActivity() {
                 else melding(getString(R.string.geen_rechten_tv), lang = true)
                 return
             }
+            // Het schaplabel van een verbruiksvoorwerp (toiletpapier, schoonmaakmiddel): op de bestellijst zetten?
+            Regex("^/scan/verbruiksvoorwerp/(\\d+)").find(link.path ?: "")?.groupValues?.get(1)?.toIntOrNull()?.let {
+                verbruiksvoorwerpGescand(it)
+                return
+            }
             val id = Regex("^/(?:scan|producten)/(\\d+)").find(link.path ?: "")?.groupValues?.get(1)?.toIntOrNull()
             if (id != null) ProductActivity.open(this, id, alleenInfo = alleenInfo) else melding(getString(R.string.qr_niet_voor_app))
             return
@@ -279,6 +284,28 @@ abstract class BasisActivity : AppCompatActivity() {
             val treffer = Catalogus.opBarcode(code)
             if (treffer != null) ProductActivity.open(this@BasisActivity, treffer.product.id, scan = treffer.barcode.code, alleenInfo = alleenInfo)
             else KoppelenActivity.open(this@BasisActivity, code)
+        }
+    }
+
+    /** Een verbruiksvoorwerp gescand (de QR-code op zijn schaplabel): wat het is, en het op de bestellijst zetten (bij
+     * "Gemeld"). Staat het er al, dan zegt de app sinds wanneer. Zie api_app_verbruiksvoorwerp op de site. */
+    private fun verbruiksvoorwerpGescand(id: Int) {
+        bezig {
+            val item = Api.getJson(this, "/api/app/verbruiksvoorwerpen/$id")
+            val al = item.tekstOfNull("al_gemeld_op")
+            AlertDialog.Builder(this)
+                .setTitle(item.optString("naam"))
+                .setMessage(if (al != null) getString(R.string.verbruik_al_gemeld, Lijst.datum(al)) else getString(R.string.verbruik_vraag))
+                .setNegativeButton(R.string.annuleren, null)
+                .setPositiveButton(if (al != null) R.string.toch_nog_eens else R.string.op_de_bestellijst) { _, _ ->
+                    val verzoek = Api.nieuwVerzoekId()
+                    bezig {
+                        val antwoord = Api.post(this, "/api/app/verbruiksvoorwerpen/$id/melden", verzoekId = verzoek)
+                        tril(60)
+                        melding(antwoord.optString("melding"))
+                    }
+                }
+                .show()
         }
     }
 

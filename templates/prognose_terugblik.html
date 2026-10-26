@@ -1,13 +1,11 @@
 {% extends basis_template %}
 {% block titel %}Prognose en verkoop{% endblock %}
 {% block inhoud %}
-<div class="actiebalk">
-    <p class="subtitel" style="margin:0">
-        Per telling: wat de prognose voor die periode voorspelde, en wat er werkelijk verkocht is. De prognose is
-        teruggerekend met alleen de tellingen van daarvoor, zoals het model het toen had kunnen weten.
-    </p>
-    <a href="{{ url_for('prognose_pagina') }}" class="btn btn-rand">Naar de prognose</a>
-</div>
+{% include "_prognose_tabs.html" %}
+<p class="subtitel">
+    Per telling: wat de prognose voor die periode voorspelde, en wat er werkelijk verkocht is. De prognose is
+    teruggerekend met alleen de tellingen van daarvoor, zoals het model het toen had kunnen weten.
+</p>
 <div data-lazy-bron="{{ url_for('prognose_terugblik_resultaat') }}"
      data-lazy-fout="De vergelijking kon niet worden berekend. Ververs de pagina om het opnieuw te proberen.">
     <div class="kaart"><p class="tekst-zacht" data-lazy-status style="margin:0">De prognose wordt teruggerekend&hellip;</p></div>
