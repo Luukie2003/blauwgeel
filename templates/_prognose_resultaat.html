@@ -92,8 +92,9 @@
 <div class="kaart">
     <h2>Producten{% if categorie %} &middot; {{ categorie }}{% endif %}</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Op volgorde van kans dat het product opraakt voordat de komende {{ prognose.dagen }} dagen om zijn.
-        Het advies dekt de vraag in 9 van de 10 gevallen, rekening houdend met wat er al onderweg is.
+        Op volgorde van kans dat het product opraakt voordat de komende {{ prognose.dagen }} dagen om zijn. Het advies
+        is hetzelfde als op de bestellijst en bij het product: genoeg tot de levering ná de volgende bestelling bij de
+        leverancier (in 9 van de 10 gevallen), minstens het minimum, rekening houdend met wat er al onderweg is.
     </p>
     {% if prognose.producten %}
     <div class="tabel-wrap">
@@ -117,9 +118,10 @@
                         </span>
                     </td>
                     <td>
-                        {% if p.advies_stuks > 0 %}
-                        <strong>Bestel {% if p.advies_eenheden %}{{ p.advies_eenheden }} {{ p.besteleenheid }}{% else %}{{ p.advies_stuks }} {{ p.product.eenheid }}{% endif %}</strong>
-                        {% if p.advies_eenheden %}<span class="tekst-zacht">({{ p.advies_stuks }} {{ p.product.eenheid }})</span>{% endif %}
+                        {% set a = adviezen.get(p.product.id) %}
+                        {% if a and a.advies_eenheden > 0 %}
+                        <strong>Bestel {{ a.advies_eenheden }} {{ a.besteleenheid }}</strong>
+                        {% if a.factor > 1 %}<span class="tekst-zacht">({{ a.advies_stuks }} {{ p.product.eenheid }})</span>{% endif %}
                         {% if p.al_op_bestellijst %}<span class="tekst-zacht">staat al op de bestellijst</span>{% endif %}
                         {% else %}<span class="tekst-zacht">voldoende</span>{% endif %}
                     </td>

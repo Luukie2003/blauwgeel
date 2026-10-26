@@ -167,3 +167,45 @@ def test_scannen_op_de_bestellijst(ingelogde_client, db):
     assert "hoort nog bij geen enkel product" in zoek("8712345678906")["melding"]
     assert zoek("snoep")["producten"] == [] and "Geen product" in zoek("snoep")["melding"]
     assert 'id="bestel-scan"' in ingelogde_client.get("/bestellijst").data.decode()
+
+
+# ---------- Eén besteladvies (1.71.0) ----------
+
+
+def test_overal_hetzelfde_besteladvies(ingelogde_client, app_client, db):  # noqa: F811
+    """Bij het product, op de bestellijst, bij de voorspelde tekorten, op de Prognose-pagina en in de app: hetzelfde
+    aantal (bestelvoorstel.adviezen). Eerder rekenden de Prognose-pagina en de voorspelde tekorten elk anders."""
+    from datetime import timedelta
+
+    from test_voorspelling import _bouw_geschiedenis, _product as _product_met_verkoop
+
+    from helpers.producten import bereken_voorspelde_tekorten
+
+    pid = _product_met_verkoop(db, "Pils Een Advies", voorraad=60, factor=24, besteleenheid="krat", min_voorraad=10)
+    nu = datetime.now().replace(minute=0, second=0, microsecond=0)
+    _bouw_geschiedenis(db, {pid: 30}, tijdstippen=[nu - timedelta(days=7 * (6 - i)) for i in range(7)])
+    product = db.execute("SELECT * FROM producten WHERE id = ?", (pid,)).fetchone()
+
+    eenheden = bestelvoorstel.voor_product(db, product)["advies_eenheden"]
+    assert eenheden >= 1
+    assert bestelvoorstel.adviezen(db)["producten"][pid]["advies_eenheden"] == eenheden
+    assert next(e for e in bestel_advies(db)["extra"] if e["id"] == pid)["advies_eenheden"] == eenheden
+    assert next(t for t in bereken_voorspelde_tekorten(db) if t["product"]["id"] == pid)["advies_eenheden"] == eenheden
+    assert f"Bestel {eenheden} krat" in ingelogde_client.get("/prognose/resultaat?dagen=14").data.decode()
+    app = next(p for p in app_client.get("/api/app/prognose?dagen=3").get_json()["producten"] if p["id"] == pid)
+    assert app["advies_eenheden"] == eenheden and app["advies_stuks"] == eenheden * 24
+
+
+def test_vaste_bestelhoeveelheid_telt_mee_in_het_advies(db, prognose):
+    pid = _product(db, "Bier Vast", voorraad=2, minimum=10)
+    db.execute("UPDATE producten SET bestel_hoeveelheid = 30 WHERE id = ?", (pid,))
+    db.commit()
+    prognose[pid] = (5, 8)
+    product = db.execute("SELECT * FROM producten WHERE id = ?", (pid,)).fetchone()
+    assert bestelvoorstel.voor_product(db, product)["advies_stuks"] == 30  # nodig is 8, maar je bestelt er altijd 30
+    assert bestel_advies(db)["producten"][pid]["advies_eenheden"] == 30
+    # Hoeft er niets besteld te worden, dan ook geen vaste hoeveelheid.
+    db.execute("UPDATE producten SET voorraad = 50 WHERE id = ?", (pid,))
+    db.commit()
+    product = db.execute("SELECT * FROM producten WHERE id = ?", (pid,)).fetchone()
+    assert bestelvoorstel.voor_product(db, product)["advies_stuks"] == 0

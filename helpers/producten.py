@@ -235,81 +235,63 @@ def regels_per_bestelling(db, bestelling_ids):
     return per_bestelling
 
 
-def bereken_voorspelde_tekorten(db, dagen_vooruit=7):
-    """Producten die waarschijnlijk uitverkocht raken in de komende
-    `dagen_vooruit` dagen, ook als de voorraad nu nog boven het minimum zit --
-    in tegenstelling tot bestel_suggesties(), dat pas waarschuwt als het al te
-    laat is. Gebruikt het voorspelmodel in voorspelling.py (leert uit de eigen
-    tellingen hoeveel een thuiswedstrijd, trainingsavond en het weer
-    uitmaken). Een product dat al onder het minimum zit en dus op de
-    bestellijst staat, of waarvan de vraag al gedekt is door een bestelling die
-    onderweg is, komt hier niet nog eens in."""
-    from voorspelling import maak_prognose
-
+def bereken_voorspelde_tekorten(db, nu=None):
+    """Producten die nog boven het minimum zitten maar volgens het besteladvies (zie bestel_advies, "extra") toch besteld
+    moeten worden: ze kunnen opraken voor de levering ná de volgende bestelling. Zelfde lijst en zelfde aantallen als
+    op de bestellijst ("Kan opraken"), voor de kaart Voorspelde tekorten, de thuiswedstrijd op het overzicht en de
+    compacte uitdraai. Wat al onder het minimum zit of al onderweg is, staat hier niet (nog eens) in. Op kans."""
     try:
-        prognose = maak_prognose(db, dagen=dagen_vooruit)
-    except Exception as fout:  # de bestellijst mag nooit stuk gaan door de voorspelling
+        extra = bestel_advies(db, nu=nu)["extra"]
+    except Exception as fout:  # de bestellijst en het overzicht mogen nooit stuk gaan door de voorspelling
         print(f"[voorspelling] mislukt: {fout}")
         return []
-    if not prognose["beschikbaar"]:
+    if not extra:
         return []
+    producten = {
+        p["id"]: p
+        for p in db.execute(
+            f"SELECT * FROM producten WHERE id IN ({','.join('?' * len(extra))})", [e["id"] for e in extra]
+        ).fetchall()
+    }
     resultaat = []
-    for p in prognose["producten"]:
-        tekort = p["verwacht"] - p["voorraad"] - p["onderweg"]
-        if p["al_op_bestellijst"] or tekort <= 0:
-            continue
-        resultaat.append(
-            {
-                "product": p["product"],
-                "verwacht_verbruik": round(p["verwacht"]),
-                "verwacht_tekort": round(tekort),
-                "kans_tekort": p["kans_tekort"],
-                "advies_stuks": p["advies_stuks"],
-                "advies_eenheden": p["advies_eenheden"],
-                "besteleenheid": p["besteleenheid"],
-            }
-        )
-    resultaat.sort(key=lambda x: x["verwacht_tekort"], reverse=True)
+    for e in extra:
+        factor = e["factor"]
+        resultaat.append({
+            "product": producten[e["id"]],
+            "verwacht_verbruik": e["verwacht"],
+            "verwacht_tekort": max(0, e["verwacht"] - e["voorraad"] - e["onderweg"]),
+            "kans_tekort": e["kans_tekort"],
+            "status": e["status"],
+            "advies_stuks": e["advies_eenheden"] * factor,
+            "advies_eenheden": e["advies_eenheden"] if factor > 1 else None,
+            "besteleenheid": e["besteleenheid"] if factor > 1 else None,
+            "dagen": e["dagen"],
+        })
+    resultaat.sort(key=lambda r: -r["kans_tekort"])
     return resultaat
 
 
-def bestel_advies(db, dagen=7):
-    """De prognose bij de bestellijst (zie bestelvoorstel.py en voorspelling.maak_prognose; rekent soms enkele seconden,
-    dus de bestellijst haalt dit apart op). Per product geldt de bestelperiode van zijn leverancier (tot de levering na
-    het eerstvolgende bestelmoment; zonder leverancier 'dagen' dagen) en een eventuele bijstelling (plus of min).
-    - "producten": per product dat nu besteld moet worden (bestel_suggesties) wat er verwacht wordt en hoeveel
-      besteleenheden je dan beter bestelt: genoeg voor een drukke periode (het 90%-punt van de verwachting plus de
-      bijstelling, en minstens het minimum), nooit minder dan het gewone voorstel ("basis_eenheden") tenzij je de
-      prognose omlaag bijstelde.
+def bestel_advies(db, dagen=7, nu=None):
+    """De prognose bij de bestellijst, met het ene besteladvies (bestelvoorstel.adviezen: per product tot de levering
+    na het eerstvolgende bestelmoment van zijn leverancier, plus een eventuele bijstelling, minstens het minimum en de
+    vaste bestelhoeveelheid; rekent soms even, dus de bestellijst haalt dit apart op).
+    - "producten": per product dat nu besteld moet worden (bestel_suggesties) wat er verwacht wordt en het advies in
+      besteleenheden, met het gewone voorstel ("basis_eenheden": tot het minimum of de vaste bestelhoeveelheid) erbij.
       Ook de producten waarvan iemand zelf een aantal colli koos ("gekozen", zie bestelvoorstel.zet_bestelaantal),
       die de bestellijst al meteen toont.
-    - "extra": wat nog boven het minimum zit maar waarschijnlijk opraakt, of waar een bijstelling het advies boven 0
-      zet (ook als de prognose 0 is). Niet wat iemand zelf koos (ook niet 0: dan hoeft het niet).
+    - "extra": wat nog boven het minimum zit maar waar het advies boven 0 komt: het kan opraken voor de levering ná de
+      volgende bestelling (of iemand stelde de prognose bij). Niet wat iemand zelf koos (ook niet 0: dan hoeft het
+      niet). Dezelfde lijst is "Voorspelde tekorten" (bereken_voorspelde_tekorten).
+    'dagen' is alleen nog voor wat de pagina's laten zien; de periode volgt de leverancier.
     {"beschikbaar", "dagen", "producten": {id: {...}}, "extra": [...]}"""
     import bestelvoorstel
 
-    leeg = {"beschikbaar": False, "dagen": dagen, "producten": {}, "extra": []}
-    producten_db = {p["id"]: p for p in db.execute("SELECT * FROM producten WHERE actief = 1").fetchall()}
-    leveranciers = {r["id"]: r for r in db.execute("SELECT * FROM leveranciers WHERE actief = 1").fetchall()}
-    periodes = {lid: bestelvoorstel.bestelperiode(lev) for lid, lev in leveranciers.items()}
-
-    def periode_dagen(p):
-        per = periodes.get(p["leverancier_id"])
-        return per["dagen"] if per else dagen
-
+    alles = bestelvoorstel.adviezen(db, nu)
     bij = bestelvoorstel.bijstellingen(db)
-    onderweg = bestelvoorstel.onderweg(db)
-    prognoses = bestelvoorstel.prognoses(db, {periode_dagen(p) for p in producten_db.values()} | {dagen})
-    if all(v is None for v in prognoses.values()) and not bij:
-        return leeg
+    if not alles["beschikbaar"] and not bij:
+        return {"beschikbaar": False, "dagen": dagen, "producten": {}, "extra": []}
+    adviezen = alles["producten"]
     suggesties = {p["id"]: p for p in bestel_suggesties(db)}
-
-    def regel(p):
-        per_id = prognoses.get(periode_dagen(p))
-        return per_id.get(p["id"]) if per_id else None
-
-    def advies(p):
-        return bestelvoorstel.advies(p, regel(p), bij.get(p["id"], {}).get("stuks", 0), onderweg.get(p["id"], 0))
 
     def bijstelling_json(pid):
         b = bij.get(pid)
@@ -317,39 +299,35 @@ def bestel_advies(db, dagen=7):
             return {"bijstelling": 0, "bijgesteld_door": None, "gekozen": None}
         return {"bijstelling": b["stuks"], "bijgesteld_door": b["door"], "gekozen": bestelvoorstel.gekozen(b)}
 
-    keuzes = {pid for pid, b in bij.items() if bestelvoorstel.gekozen(b) is not None and pid in producten_db}
+    keuzes = {pid for pid, b in bij.items() if bestelvoorstel.gekozen(b) is not None and pid in adviezen}
     producten = {}
-    for pid, s in [*suggesties.items(), *((pid, producten_db[pid]) for pid in keuzes if pid not in suggesties)]:
-        r = regel(s)
-        if r is None and pid not in bij:
+    for pid in [*suggesties, *(pid for pid in keuzes if pid not in suggesties)]:
+        a = adviezen.get(pid)
+        if a is None or (a["regel"] is None and pid not in bij):
             continue  # (nog) geen verkoop om van te leren en niets bijgesteld: het minimum blijft het voorstel
-        a = advies(s)
+        r, s = a["regel"], a["product"]
         if pid in suggesties:
             basis = s["bestel_hoeveelheid"] if s["bestel_hoeveelheid"] > 0 else (s["min_voorraad"] - s["voorraad"])
             basis_eenheden = naar_besteleenheden(basis, s)
         else:
             basis_eenheden = 0
-        omlaag = bij.get(pid, {}).get("stuks", 0) < 0
         producten[pid] = {
             "verwacht": round(r["verwacht"]) if r else 0,
             "hoog": round(r["hoog"]) if r else 0,
-            "kans_tekort": round(r["kans_tekort"], 3) if r else 0,
+            "kans_tekort": a["kans_tekort"],
             "basis_eenheden": basis_eenheden,
-            "advies_eenheden": a["advies_eenheden"] if omlaag else max(basis_eenheden, a["advies_eenheden"]),
-            "dagen": periode_dagen(s),
+            "advies_eenheden": a["advies_eenheden"],
+            "dagen": a["dagen"],
             **bijstelling_json(pid),
         }
     extra = []
-    for pid, product in producten_db.items():
-        if pid in suggesties or pid in keuzes:
+    for pid, a in adviezen.items():
+        if pid in suggesties or pid in keuzes or a["advies_eenheden"] <= 0:
             continue
-        r = regel(product)
-        a = advies(product)
         bijgesteld = pid in bij
-        if a["advies_eenheden"] <= 0:
+        if a["regel"] is None and not bijgesteld:
             continue
-        if not bijgesteld and (r is None or r["status"] == "ok" or r["advies_stuks"] <= 0):
-            continue
+        product, r = a["product"], a["regel"]
         extra.append({
             "id": pid,
             "naam": product["naam"],
@@ -361,11 +339,11 @@ def bestel_advies(db, dagen=7):
             "factor": besteleenheid_factor(product),
             "leverancier_id": product["leverancier_id"],
             "verwacht": round(r["verwacht"]) if r else 0,
-            "kans_tekort": round(r["kans_tekort"], 3) if r else 0,
-            "status": (r["status"] if r and r["status"] != "ok" else "bijgesteld") if bijgesteld else r["status"],
-            "onderweg": onderweg.get(pid, 0),
+            "kans_tekort": a["kans_tekort"],
+            "status": "bijgesteld" if bijgesteld and a["status"] == "ok" else a["status"],
+            "onderweg": a["onderweg"],
             "advies_eenheden": a["advies_eenheden"],
-            "dagen": periode_dagen(product),
+            "dagen": a["dagen"],
             **bijstelling_json(pid),
         })
     extra.sort(key=lambda x: (x["bijstelling"] == 0, -x["kans_tekort"], x["naam"].lower()))

@@ -15,7 +15,7 @@
     <p style="margin:0 0 0.4rem">
         <strong>{% if dringend %}Bestel nu: {% endif %}</strong>
         {% if onder_minimum %}{{ onder_minimum }} {{ 'product zit' if onder_minimum == 1 else 'producten zitten' }} onder het minimum.{% endif %}
-        {% if aantal_tekorten %}{{ aantal_tekorten }} {{ 'product kan' if aantal_tekorten == 1 else 'producten kunnen' }} de komende 7 dagen opraken:{% endif %}
+        {% if aantal_tekorten %}{{ aantal_tekorten }} {{ 'product kan' if aantal_tekorten == 1 else 'producten kunnen' }} opraken voor de volgende levering:{% endif %}
     </p>
     {% if tekorten %}
     <ul style="margin:0 0 0.6rem; padding-left:1.2rem">

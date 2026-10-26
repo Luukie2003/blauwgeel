@@ -6,8 +6,16 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.70.1"
+HUIDIGE_VERSIE = "1.71.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.71.0",
+        "datum": "26 oktober 2026",
+        "punten": [
+            "Eén besteladvies: bij het product, op de bestellijst, op de Prognose-pagina, bij de voorspelde tekorten, de thuiswedstrijd op het overzicht, de compacte uitdraai en in de app staat nu overal hetzelfde aantal. Het advies is genoeg tot de levering ná de volgende bestelling (in 9 van de 10 gevallen), minstens het minimum en minstens de vaste bestelhoeveelheid als je die gebruikt, min de voorraad en wat al onderweg is, in hele colli. Eerder rekenden de Prognose-pagina en de voorspelde tekorten elk op hun eigen manier, waardoor je soms verschillende aantallen zag.",
+            "Op de bestellijst staat nu alles waarvoor dat advies boven 0 komt. Een product met een kleinere kans op tekort staat er niet aangevinkt bij als 'Kan opraken (…%)'; vanaf 50% heet het 'Raakt waarschijnlijk op' en is het aangevinkt.",
+        ],
+    },
     {
         "versie": "1.70.1",
         "datum": "26 oktober 2026",
@@ -1253,7 +1261,7 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.15.0", "sinds": "0.1.0", "laatst": "1.70.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.18.1", "sinds": "0.4.0", "laatst": "1.70.1",
+    {"naam": "Bestellen & prognose", "versie": "1.19.0", "sinds": "0.4.0", "laatst": "1.71.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "1.54.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},

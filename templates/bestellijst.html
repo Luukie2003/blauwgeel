@@ -468,7 +468,7 @@
                             besteleenheid: p.besteleenheid, aantal: p.advies_eenheden,
                             badge: p.status === 'bijgesteld'
                                 ? 'Prognose bijgesteld ' + (p.bijstelling > 0 ? '+' : '') + p.bijstelling + (p.bijgesteld_door ? ' (' + p.bijgesteld_door + ')' : '')
-                                : 'Raakt waarschijnlijk op (' + procent(p.kans_tekort) + ')' + (p.bijstelling ? ', bijgesteld ' + (p.bijstelling > 0 ? '+' : '') + p.bijstelling : ''),
+                                : (p.status === 'urgent' ? 'Raakt waarschijnlijk op (' : 'Kan opraken (') + procent(p.kans_tekort) + ')' + (p.bijstelling ? ', bijgesteld ' + (p.bijstelling > 0 ? '+' : '') + p.bijstelling : ''),
                             verwacht: '~' + (p.verwacht + (p.bijstelling || 0)) + ' ' + p.eenheid + (p.onderweg ? ' · ' + p.onderweg + ' onderweg' : ''),
                             aan: p.status === 'urgent' || p.bijstelling > 0
                         });
@@ -476,7 +476,7 @@
                     });
                     var zinnen = [];
                     if (verhoogd) zinnen.push(verhoogd + (verhoogd === 1 ? ' aantal is' : ' aantallen zijn') + ' verhoogd omdat de komende week meer vraagt dan het minimum.');
-                    if (erbij) zinnen.push(erbij + (erbij === 1 ? ' product zit' : ' producten zitten') + ' nog boven het minimum maar raakt waarschijnlijk op; die staan er onderaan bij (aangevinkt als de kans 50% of meer is).');
+                    if (erbij) zinnen.push(erbij + (erbij === 1 ? ' product zit' : ' producten zitten') + ' nog boven het minimum maar kan opraken voor de levering na de volgende bestelling; die staan er onderaan bij (aangevinkt als de kans 50% of meer is).');
                     status.textContent = zinnen.length ? 'Prognose: ' + zinnen.join(' ') : 'Prognose: de voorgestelde aantallen zijn genoeg voor de komende week.';
                 })
                 .catch(function () {

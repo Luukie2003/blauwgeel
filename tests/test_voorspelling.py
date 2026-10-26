@@ -3,6 +3,8 @@ from datetime import date, datetime, timedelta
 
 import pytest
 
+import bestelvoorstel
+
 from app import bereken_komende_thuiswedstrijden, bereken_voorspelde_tekorten
 from helpers import bereken_week_overzicht
 from voorspelling import (
@@ -158,22 +160,12 @@ def test_bestelling_onderweg_dekt_het_tekort(db):
     assert bereken_voorspelde_tekorten_op(db, nu) == []
     prog = maak_prognose(db, nu=nu)
     p = next(x for x in prog["producten"] if x["product"]["id"] == pid)
-    assert p["onderweg"] == 1000 and p["advies_stuks"] == 0
+    assert p["onderweg"] == 1000 and bestelvoorstel.adviezen(db, nu)["producten"][pid]["advies_stuks"] == 0
 
 
 def bereken_voorspelde_tekorten_op(db, nu):
-    """De tekortenlijst voor een vast 'nu' (de echte functie gebruikt de klok)."""
-    prog = maak_prognose(db, dagen=7, nu=nu)
-    return [
-        r for r in (
-            {"product": p["product"], "verwacht_verbruik": round(p["verwacht"]),
-             "verwacht_tekort": round(p["verwacht"] - p["voorraad"] - p["onderweg"]),
-             "kans_tekort": p["kans_tekort"], "advies_stuks": p["advies_stuks"],
-             "al_op_bestellijst": p["al_op_bestellijst"]}
-            for p in prog["producten"]
-        )
-        if r["verwacht_tekort"] > 0 and not r["al_op_bestellijst"]
-    ]
+    """De tekortenlijst voor een vast 'nu' (zonder 'nu' gebruikt de functie de klok)."""
+    return bereken_voorspelde_tekorten(db, nu=nu)
 
 
 # ---------------------------------------------------------------------------
@@ -355,20 +347,19 @@ def test_kans_op_tekort_stijgt_als_de_voorraad_daalt(db):
 
 
 def test_advies_rondt_af_naar_hele_besteleenheden(db):
+    """Het besteladvies (bestelvoorstel.adviezen: hetzelfde op de bestellijst, bij het product en op de Prognose-pagina)
+    is in hele besteleenheden en dekt de vraag in 9 van de 10 gevallen."""
     pid = _product(db, "Pils", voorraad=50, factor=24, besteleenheid="krat")
     laatste = _bouw_geschiedenis(db, {pid: 30})
-    prog = maak_prognose(db, dagen=7, nu=laatste + timedelta(hours=1))
-    p = next(x for x in prog["producten"] if x["product"]["id"] == pid)
-    assert p["advies_eenheden"] >= 1 and p["besteleenheid"] == "krat"
-    assert p["advies_stuks"] == p["advies_eenheden"] * 24
-    # Het advies dekt de vraag in 9 van de 10 gevallen.
-    assert p["voorraad"] + p["advies_stuks"] >= p["hoog"]
+    a = bestelvoorstel.adviezen(db, laatste + timedelta(hours=1))["producten"][pid]
+    assert a["advies_eenheden"] >= 1 and a["besteleenheid"] == "krat"
+    assert a["advies_stuks"] == a["advies_eenheden"] * 24
+    assert 50 + a["advies_stuks"] >= a["hoog"]
     # Zonder besteleenheid: gewoon stuks.
     pid2 = _product(db, "Chips", voorraad=10)
     laatste = _bouw_geschiedenis(db, {pid2: 30}, tijdstippen=[MAANDAG + timedelta(days=100 + 7 * i) for i in range(6)])
-    prog = maak_prognose(db, dagen=7, nu=laatste + timedelta(hours=1))
-    p2 = next(x for x in prog["producten"] if x["product"]["id"] == pid2)
-    assert p2["advies_eenheden"] is None and p2["advies_stuks"] > 0
+    a2 = bestelvoorstel.adviezen(db, laatste + timedelta(hours=1))["producten"][pid2]
+    assert a2["factor"] == 1 and a2["advies_stuks"] == a2["advies_eenheden"] > 0
 
 
 def test_weinig_data_wordt_gemarkeerd(db):

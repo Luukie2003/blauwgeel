@@ -160,9 +160,17 @@ def _verkoop_json(verkoop, bestellen=None):
     verwachting = None
     if v:
         verwachting = {k: v[k] for k in (
-            "verwacht", "laag", "hoog", "status", "nu_op", "dekking_dagen", "kans_tekort", "onderweg", "advies_stuks",
-            "advies_eenheden", "besteleenheid", "al_op_bestellijst", "weinig_data",
+            "verwacht", "laag", "hoog", "status", "nu_op", "dekking_dagen", "kans_tekort", "onderweg", "al_op_bestellijst",
+            "weinig_data",
         )}
+        # Voor oudere apps (tot 2.12) die het advies hier lezen: het ene advies, uit het bestelblok.
+        b = verkoop.get("bestellen")
+        colli = bool(b) and b["factor"] > 1
+        verwachting.update({
+            "advies_stuks": b["advies_stuks"] if b else 0,
+            "advies_eenheden": b["advies_eenheden"] if colli else None,
+            "besteleenheid": b["besteleenheid"] if colli else None,
+        })
     return {
         "beschikbaar": True,
         "weken": [{"week": w["week"], "maandag": w["maandag"].isoformat(), "aantal": w["aantal"], "omzet": w["omzet"],
@@ -926,6 +934,17 @@ def register_routes(app):
             return _fout("De prognose kon niet worden berekend. Probeer het straks opnieuw.", 500, "server")
         if not prognose.get("beschikbaar"):
             return jsonify({"beschikbaar": False, "reden": prognose.get("reden"), "dagen": dagen})
+        # Het besteladvies: hetzelfde als op de bestellijst en bij het product (bestelvoorstel.adviezen).
+        adviezen = bestelvoorstel.adviezen(get_db())["producten"]
+
+        def advies_json(pid):
+            a = adviezen.get(pid)
+            if a is None:
+                return {"advies_stuks": 0, "advies_eenheden": None, "besteleenheid": None}
+            colli = a["factor"] > 1
+            return {"advies_stuks": a["advies_stuks"], "advies_eenheden": a["advies_eenheden"] if colli else None,
+                    "besteleenheid": a["besteleenheid"] if colli else None}
+
         return jsonify({
             "beschikbaar": True,
             "dagen": dagen,
@@ -942,8 +961,8 @@ def register_routes(app):
                 {"id": p["product"]["id"], "naam": p["product"]["naam"], "categorie": p["product"]["categorie"],
                  "eenheid": p["product"]["eenheid"], "voorraad": p["voorraad"], "verwacht": p["verwacht"],
                  "laag": p["laag"], "hoog": p["hoog"], "kans_tekort": p["kans_tekort"], "dekking_dagen": p["dekking_dagen"],
-                 "status": p["status"], "advies_stuks": p["advies_stuks"], "advies_eenheden": p["advies_eenheden"],
-                 "besteleenheid": p["besteleenheid"], "onderweg": p["onderweg"], "al_op_bestellijst": p["al_op_bestellijst"]}
+                 "status": p["status"], **advies_json(p["product"]["id"]),
+                 "onderweg": p["onderweg"], "al_op_bestellijst": p["al_op_bestellijst"]}
                 for p in prognose["producten"]
             ],
         })

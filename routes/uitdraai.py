@@ -162,7 +162,7 @@ def bouw_bestellijst_gegevens(db):
             }
         )
     tekorten = []
-    for t in bereken_voorspelde_tekorten(db, dagen_vooruit=PROGNOSE_DAGEN):
+    for t in bereken_voorspelde_tekorten(db):
         p = t["product"]
         tekorten.append(
             {

@@ -128,7 +128,7 @@ def _uitdraai_bestellijst(pdf, bestellijst):
     if bestellijst["tekorten"]:
         pdf.ln(3)
         pdf.kop_rij(
-            [(f"Verwacht tekort binnen {bestellijst['dagen']} dagen", 75, "L"), ("Voorraad", 30, "R"), ("Kans", 30, "R"), ("Bestellen", 55, "R")]
+            [("Kan opraken voor de volgende levering", 75, "L"), ("Voorraad", 30, "R"), ("Kans", 30, "R"), ("Bestellen", 55, "R")]
         )
         for i, p in enumerate(bestellijst["tekorten"]):
             pdf.data_rij(

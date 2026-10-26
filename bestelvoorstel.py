@@ -16,7 +16,10 @@ colli werd afgerond; de app en de site doen het sinds 1.69.0 met het gekozen aan
 staat, telt gewoon mee in het advies tot het product besteld is of je een aantal kiest.
 
 Advies (advies): genoeg voor de periode (het 90%-punt van de verwachting plus de bijstelling, en minstens het minimum),
-min wat er ligt en wat al onderweg is, naar boven afgerond op hele besteleenheden."""
+min wat er ligt en wat al onderweg is, naar boven afgerond op hele besteleenheden; moet er besteld worden en heeft het
+product een vaste bestelhoeveelheid, dan minstens die. Dit is het enige besteladvies (sinds 1.71.0): de bestellijst, het
+product, de Prognose, de tekorten op het overzicht, de uitdraai en de app halen het hier (adviezen, voor_product), zodat
+er overal hetzelfde aantal staat. Het voorspelmodel zelf geeft alleen de verwachting en de kansen."""
 
 import math
 from datetime import datetime, time, timedelta
@@ -162,6 +165,9 @@ def advies(product, regel, bijstelling=0, al_onderweg=0):
     voorraad = max(0, product["voorraad"])
     nodig = max(product["min_voorraad"] or 0, hoog + bijstelling) - voorraad - onderweg
     stuks = max(0, math.ceil(nodig - 1e-9))
+    vast = product["bestel_hoeveelheid"] if "bestel_hoeveelheid" in product.keys() else 0
+    if stuks and vast and vast > 0:
+        stuks = max(stuks, vast)  # een vaste bestelhoeveelheid: als er besteld moet worden, minstens die
     eenheden = -(-stuks // factor) if stuks else 0
     return {
         "verwacht": round(verwacht, 1),
@@ -175,6 +181,40 @@ def advies(product, regel, bijstelling=0, al_onderweg=0):
         "factor": factor,
         "onderweg": onderweg,
     }
+
+
+def adviezen(db, nu=None):
+    """Het besteladvies (advies) van alle actieve producten, elk met de bestelperiode van zijn leverancier (zonder
+    besteldagen: STANDAARD_DAGEN) en een eventuele bijstelling. {"beschikbaar": of er een prognose is, "producten":
+    {product_id: {**advies(...), "product", "regel" (de prognose van het product, of None), "dagen", "kans_tekort",
+    "status"}}}. De kans en de status gaan over dezelfde periode, met de voorraad en wat onderweg is."""
+    nu = nu or datetime.now()
+    producten = {p["id"]: p for p in db.execute("SELECT * FROM producten WHERE actief = 1").fetchall()}
+    periodes = {
+        lev["id"]: bestelperiode(lev, nu)
+        for lev in db.execute("SELECT * FROM leveranciers WHERE actief = 1").fetchall()
+    }
+
+    def dagen_van(p):
+        periode = periodes.get(p["leverancier_id"])
+        return periode["dagen"] if periode else STANDAARD_DAGEN
+
+    bij = bijstellingen(db)
+    al_onderweg = onderweg(db)
+    per_dagen = prognoses(db, {dagen_van(p) for p in producten.values()} or {STANDAARD_DAGEN}, nu)
+    uitkomst = {}
+    for pid, p in producten.items():
+        dagen = dagen_van(p)
+        regel = (per_dagen.get(dagen) or {}).get(pid)
+        uitkomst[pid] = {
+            **advies(p, regel, (bij.get(pid) or {}).get("stuks", 0), al_onderweg.get(pid, 0)),
+            "product": p,
+            "regel": regel,
+            "dagen": dagen,
+            "kans_tekort": round(regel["kans_tekort"], 3) if regel else 0.0,
+            "status": regel["status"] if regel else "ok",
+        }
+    return {"beschikbaar": any(v is not None for v in per_dagen.values()), "producten": uitkomst}
 
 
 def prognoses(db, dagen_set, nu=None):

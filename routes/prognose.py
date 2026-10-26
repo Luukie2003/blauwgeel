@@ -7,6 +7,7 @@ from datetime import date, timedelta
 
 from flask import flash, redirect, render_template, request, session, url_for
 
+import bestelvoorstel
 from database import get_db
 from helpers import bereken_komende_thuiswedstrijden, now_str
 from voorspelling import (
@@ -150,9 +151,13 @@ def register_routes(app):
                 categorie = ""
         else:
             categorieen = []
+        # Het besteladvies is hetzelfde als op de bestellijst en bij het product (bestelvoorstel.adviezen): tot de
+        # levering na de volgende bestelling, los van hoeveel dagen je hier bekijkt.
+        adviezen = bestelvoorstel.adviezen(db)["producten"] if prognose["beschikbaar"] else {}
         return render_template(
             "_prognose_resultaat.html",
             prognose=prognose,
+            adviezen=adviezen,
             dagen=dagen,
             categorie=categorie,
             categorieen=categorieen,

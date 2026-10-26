@@ -374,10 +374,8 @@ def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
         status = "urgent" if kans >= 0.5 else "let_op" if kans >= 0.2 else "ok"
         q90 = kwantiel(mu, var, serviceniveau)
         q10 = kwantiel(mu, var, 0.1)
-        # Alleen adviseren als er echt een risico is; voor de rest "voldoende".
-        tekort_na_dekking = max(0, q90 - aanwezig) if status != "ok" else 0
-        factor = max(1, product["besteleenheid_factor"] or 1)
-        eenheden = -(-tekort_na_dekking // factor) if tekort_na_dekking else 0
+        # Het besteladvies zelf rekent bestelvoorstel.advies uit (met het minimum, de bestelperiode van de leverancier
+        # en een eigen bijstelling): hier alleen de verwachting en de kansen.
         per_dag = mu / dagen if dagen else 0
         omzet_gem += mu * product["verkoopprijs"]
         omzet_toeval += (product["verkoopprijs"] ** 2) * mu
@@ -393,10 +391,6 @@ def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
                 "dekking_dagen": (voorraad / per_dag) if per_dag > 1e-9 else None,
                 "status": status,
                 "nu_op": voorraad == 0,
-                "advies_stuks": eenheden * factor if factor > 1 else tekort_na_dekking,
-                "advies_eenheden": eenheden if factor > 1 else None,
-                "besteleenheid": product["besteleenheid"] if factor > 1 else None,
-                "besteleenheid_factor": factor,
                 "al_op_bestellijst": pid in op_bestellijst,
                 "onderweg": onderweg.get(pid, 0),
                 "waarnemingen": aantal_waarnemingen,
@@ -771,7 +765,7 @@ def data_vingerafdruk(db):
 # model zelf uit, en na elke update van de server opnieuw. De sleutel bevat de vingerafdruk van de gegevens en de versie van
 # de site, dus een bestand van oudere gegevens of oudere code wordt nooit gebruikt.
 SCHIJF_AAN = True
-SCHIJF_VERSIE = 7  # ophogen als de vorm van een uitkomst verandert zonder dat de siteversie meegaat
+SCHIJF_VERSIE = 8  # ophogen als de vorm van een uitkomst verandert zonder dat de siteversie meegaat
 SCHIJF_MAX_LEEFTIJD_SECONDEN = 3 * 24 * 3600
 SCHIJF_MAX_BESTANDEN = 60
 
