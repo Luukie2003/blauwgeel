@@ -231,6 +231,18 @@ class TestOmzetTrendPeriode:
         assert balk["aantal_dagen"] == 7
         assert balk["periode_afwijkend"] is False
 
+    def test_twee_keer_per_week_tellen_is_niet_afwijkend(self, db):
+        """Wie op woensdag en zaterdag telt, heeft perioden van 3 en 4 dagen: dat is het gewone ritme, geen
+        waarschuwing. Een keer overgeslagen (8 dagen) of twee keer op één dag geteld valt wel op."""
+        product = db.execute("SELECT * FROM producten WHERE actief = 1 LIMIT 1").fetchone()
+        for datum in ("2024-01-03", "2024-01-06", "2024-01-10", "2024-01-13", "2024-01-17", "2024-01-25", "2024-01-25"):
+            self._maak_telling(db, product["id"], verkocht=10, datum=f"{datum} 12:00")
+
+        resultaat = bereken_omzet_trend_periode(db, "2024-01-04", "2024-01-25")
+        assert [(b["aantal_dagen"], b["periode_afwijkend"]) for b in resultaat["balken"]] == [
+            (3, False), (4, False), (3, False), (4, False), (8, True), (0, True)]
+        assert resultaat["gebruikelijke_periode"] == 4  # de mediaan van 3, 3, 4, 4 en 8
+
 
 class TestWeekOverzicht:
     def _maak_telling(self, db, product_id, verkocht, datum):

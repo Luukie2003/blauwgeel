@@ -17,7 +17,7 @@ def bewaren(monkeypatch, db):
     _weekelijkse_tellingen(db, {pils: (70, 2.0)}, van=date(2026, 6, 27), tot=date(2026, 10, 3))
     aantal = {"prognose": 0, "verdeling": 0, "model": 0}
     echte_prognose, echte_verdeling = voorspelling._maak_prognose, voorspelling._verdeling
-    echt_model = voorspelling._prognose_model
+    echt_model = voorspelling._prognose_fit
 
     def geteld_model(*a, **k):
         aantal["model"] += 1
@@ -33,7 +33,7 @@ def bewaren(monkeypatch, db):
 
     monkeypatch.setattr(voorspelling, "_maak_prognose", geteld_prognose)
     monkeypatch.setattr(voorspelling, "_verdeling", geteld_verdeling)
-    monkeypatch.setattr(voorspelling, "_prognose_model", geteld_model)
+    monkeypatch.setattr(voorspelling, "_prognose_fit", geteld_model)
     yield {"aantal": aantal, "product": pils}
     voorspelling.wis_bewaarde_resultaten()
 
@@ -92,7 +92,11 @@ def test_een_wijziging_in_de_gegevens_geeft_een_nieuwe_berekening(db, bewaren, w
     voorspelling.maak_prognose(db, dagen=7, nu=NU)
     voorspelling.verdeling(db, NU)
 
-    assert bewaren["aantal"]["prognose"] == 2 and bewaren["aantal"]["verdeling"] == 2, wijziging
+    assert bewaren["aantal"]["prognose"] == 2, wijziging
+    # De verdeling (omzet per dag) hangt alleen van de geschiedenis af: een boeking of een bestelling rekent hem niet
+    # opnieuw.
+    alleen_geschiedenis = not wijziging.startswith(("UPDATE producten", "INSERT INTO bestellingen"))
+    assert bewaren["aantal"]["verdeling"] == (2 if alleen_geschiedenis else 1), wijziging
 
 
 def test_een_nieuwe_telling_geeft_een_nieuwe_berekening(db, bewaren):
@@ -179,6 +183,23 @@ def test_een_voorraadwijziging_rekent_het_model_niet_opnieuw_maar_wel_het_advies
     na = next(p for p in tweede["producten"] if p["product"]["id"] == bewaren["product"])
     assert na["voorraad"] == voor + 500
     assert tweede["model"] == eerste["model"]
+
+
+def test_het_model_rekent_een_keer_per_kantinedag_voor_alle_periodes(db, bewaren, monkeypatch):
+    """7 dagen, 14 dagen en de bestelperiode van een leverancier (bijv. 6 dagen), ook uren later op dezelfde
+    kantinedag: één keer het zware deel. De volgende kantinedag (die om 12.00 uur begint) opnieuw."""
+    zeven = voorspelling.maak_prognose(db, dagen=7, nu=NU)
+    veertien = voorspelling.maak_prognose(db, dagen=14, nu=NU + timedelta(hours=3))
+    voorspelling.maak_prognose(db, dagen=6, nu=NU + timedelta(hours=20))
+    assert bewaren["aantal"]["model"] == 1
+    assert veertien["totaal"]["omzet"] > zeven["totaal"]["omzet"]
+    voorspelling.maak_prognose(db, dagen=7, nu=NU + timedelta(hours=25))
+    assert bewaren["aantal"]["model"] == 2
+
+    # Uren later met het model van die middag: (bijna) hetzelfde als vers gerekend.
+    monkeypatch.setattr(voorspelling, "CACHE_AAN", False)
+    vers = voorspelling.maak_prognose(db, dagen=14, nu=NU + timedelta(hours=3))
+    assert veertien["totaal"]["omzet"] == pytest.approx(vers["totaal"]["omzet"], rel=0.01)
 
 
 @pytest.mark.parametrize(

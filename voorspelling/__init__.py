@@ -186,68 +186,27 @@ def _bijstellingen(kenmerken, effecten):
     return sum(effecten.get(s, 0.0) for s in (*kenmerken.get("groepen", ()), *kenmerken.get("teams", ())))
 
 
-def _prognose_model(db, dagen, nu):
+def _prognose_fit(db, nu):
     """Het zware deel van de prognose: alles wat alleen van de telgeschiedenis, de kalender (wedstrijden,
-    training, verkoopdagen) en het weer afhangt -- het model aanpassen en terugtoetsen. De voorraad en de
-    bestellingen doen hier niet mee, dus dit wordt bewaard tot de geschiedenis verandert (zie
-    historie_vingerafdruk) en niet bij elke boeking opnieuw uitgerekend."""
+    training, verkoopdagen) en het weer afhangt -- het model aanpassen en terugtoetsen. Hangt niet af van de
+    voorspelperiode (7 of 14 dagen, of de bestelperiode van een leverancier) en ook niet van de voorraad of de
+    bestellingen: het wordt één keer per kantinedag gerekend voor alle periodes samen, en opnieuw zodra de
+    geschiedenis verandert (een telling, een wedstrijd, het weer; zie historie_vingerafdruk). Het tijdstip telt
+    daarbinnen niet: alle gewichten (zie model._gewicht) schuiven even hard mee, dus hun verhouding blijft gelijk."""
     rijen, tellingen = lees_rijen(db, nu)
     if not rijen:
         return {
             "beschikbaar": False,
             "reden": "Er zijn minstens twee tellingen nodig om te kunnen voorspellen "
             f"(nu {len(tellingen)}). Na de volgende telling verschijnt de prognose.",
-            "dagen": dagen,
         }
 
-    eind = nu + timedelta(days=dagen)
-    kalender = lees_kalender(
-        db,
-        min(r["start"] for r in rijen).date() - timedelta(days=2),
-        eind.date() + timedelta(days=2),
-    )
+    kalender = lees_kalender(db, min(r["start"] for r in rijen).date() - timedelta(days=2), nu.date() + timedelta(days=2))
     _voeg_blootstelling_toe(rijen, kalender, nu)
     effecten, overspreiding, informatie = pas_model_aan(rijen)
     snelheid = _snelheden(rijen, effecten)
     sigma_gemeenschappelijk = _gemeenschappelijke_schommeling(rijen, effecten, snelheid)
 
-    # --- blootstelling in het voorspelvenster, ook per dag voor het overzicht
-    venster = blootstelling(nu, eind, kalender)
-    E_h = drukte(venster, effecten)
-    dagen_overzicht = []
-    dag = (nu - timedelta(hours=DAG_BEGIN_UUR)).date()
-    while _dag_venster(dag)[0] < eind:
-        d_begin, d_eind = _dag_venster(dag)
-        deel = (min(eind, d_eind) - max(nu, d_begin)).total_seconds() / 86400
-        if deel > 0.05:
-            kenmerken = kalender.get(dag) or _LEGE_DAG
-            open_ = kenmerken.get("open", True)
-            m = 1 + effecten["wedstrijd"] * wedstrijd_gewicht(kenmerken["wedstrijden"]) + effecten["training"] * (
-                1.0 if kenmerken["training"] else 0.0
-            ) + effecten["weer"] * (kenmerken["weer"] or 0.0) + effecten["evenement"] * (
-                1.0 if kenmerken.get("evenementen") else 0.0
-            ) + effecten["rustig"] * (1.0 if kenmerken.get("rustig") else 0.0) + _bijstellingen(kenmerken, effecten)
-            if not open_:
-                m = 0.0  # gesloten: er wordt niets verkocht
-            dagen_overzicht.append(
-                {
-                    "open": open_,
-                    "datum": dag,
-                    "weekdag": _WEEKDAG[dag.weekday()],
-                    "weekdag_kort": _WEEKDAG_KORT[dag.weekday()],
-                    "deel": min(1.0, deel),
-                    "wedstrijden": kenmerken["wedstrijden"],
-                    "evenementen": kenmerken.get("evenementen", 0),
-                    "rustig": kenmerken.get("rustig", False),
-                    "groepen": kenmerken.get("groepen", ()),
-                    "teams": kenmerken.get("teams", ()),
-                    "training": kenmerken["training"],
-                    "weer_score": kenmerken["weer"],
-                    "drukte": m,
-                    "weekend": dag.weekday() >= 5,
-                }
-            )
-        dag += timedelta(days=1)
 
 
     rijen_per_product = {}
@@ -301,8 +260,6 @@ def _prognose_model(db, dagen, nu):
         betrouwbaarheid = "laag"
     return {
         "beschikbaar": True,
-        "dagen_overzicht": dagen_overzicht,
-        "E_h": E_h,
         "effecten": effecten,
         "overspreiding": overspreiding,
         "snelheid": snelheid,
@@ -324,13 +281,65 @@ def _prognose_model(db, dagen, nu):
     }
 
 
+def _prognose_model(db, dagen, nu):
+    """Het model (_prognose_fit, per kantinedag bewaard) plus het voorspelvenster van 'dagen' dagen vanaf 'nu': de
+    blootstelling erin en de drukte per dag voor het overzicht. Dat laatste is licht, dus elke periode kost na de
+    eerste keer van de dag bijna niets."""
+    fit = _bewaard(db, "prognose-fit", nu, (), lambda: _prognose_fit(db, nu), historie_vingerafdruk, per_dag=True)
+    if not fit["beschikbaar"]:
+        return dict(fit, dagen=dagen)
+    effecten = fit["effecten"]
+    eind = nu + timedelta(days=dagen)
+    kalender = lees_kalender(db, (nu - timedelta(days=1)).date(), eind.date() + timedelta(days=2))
+
+    # --- blootstelling in het voorspelvenster, ook per dag voor het overzicht
+    venster = blootstelling(nu, eind, kalender)
+    E_h = drukte(venster, effecten)
+    dagen_overzicht = []
+    dag = (nu - timedelta(hours=DAG_BEGIN_UUR)).date()
+    while _dag_venster(dag)[0] < eind:
+        d_begin, d_eind = _dag_venster(dag)
+        deel = (min(eind, d_eind) - max(nu, d_begin)).total_seconds() / 86400
+        if deel > 0.05:
+            kenmerken = kalender.get(dag) or _LEGE_DAG
+            open_ = kenmerken.get("open", True)
+            m = 1 + effecten["wedstrijd"] * wedstrijd_gewicht(kenmerken["wedstrijden"]) + effecten["training"] * (
+                1.0 if kenmerken["training"] else 0.0
+            ) + effecten["weer"] * (kenmerken["weer"] or 0.0) + effecten["evenement"] * (
+                1.0 if kenmerken.get("evenementen") else 0.0
+            ) + effecten["rustig"] * (1.0 if kenmerken.get("rustig") else 0.0) + _bijstellingen(kenmerken, effecten)
+            if not open_:
+                m = 0.0  # gesloten: er wordt niets verkocht
+            dagen_overzicht.append(
+                {
+                    "open": open_,
+                    "datum": dag,
+                    "weekdag": _WEEKDAG[dag.weekday()],
+                    "weekdag_kort": _WEEKDAG_KORT[dag.weekday()],
+                    "deel": min(1.0, deel),
+                    "wedstrijden": kenmerken["wedstrijden"],
+                    "evenementen": kenmerken.get("evenementen", 0),
+                    "rustig": kenmerken.get("rustig", False),
+                    "groepen": kenmerken.get("groepen", ()),
+                    "teams": kenmerken.get("teams", ()),
+                    "training": kenmerken["training"],
+                    "weer_score": kenmerken["weer"],
+                    "drukte": m,
+                    "weekend": dag.weekday() >= 5,
+                }
+            )
+        dag += timedelta(days=1)
+
+    return dict(fit, dagen_overzicht=dagen_overzicht, E_h=E_h)
+
+
 def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
     """De complete prognose voor de komende 'dagen' dagen vanaf 'nu'. Zie de
     moduledocstring voor hoe het werkt. Geeft {"beschikbaar": False, ...} als er
     nog te weinig tellingen zijn."""
     nu = nu or datetime.now()
     dagen = max(1, min(int(dagen), 28))
-    m = _bewaard(db, "prognose-model", nu, (dagen,), lambda: _prognose_model(db, dagen, nu), historie_vingerafdruk)
+    m = _prognose_model(db, dagen, nu)
     if not m["beschikbaar"]:
         return dict(m)
     E_h, overspreiding, snelheid = m["E_h"], m["overspreiding"], m["snelheid"]
@@ -728,7 +737,7 @@ def data_vingerafdruk(db):
 # model zelf uit, en na elke update van de server opnieuw. De sleutel bevat de vingerafdruk van de gegevens en de versie van
 # de site, dus een bestand van oudere gegevens of oudere code wordt nooit gebruikt.
 SCHIJF_AAN = True
-SCHIJF_VERSIE = 6  # ophogen als de vorm van een uitkomst verandert zonder dat de siteversie meegaat
+SCHIJF_VERSIE = 7  # ophogen als de vorm van een uitkomst verandert zonder dat de siteversie meegaat
 SCHIJF_MAX_LEEFTIJD_SECONDEN = 3 * 24 * 3600
 SCHIJF_MAX_BESTANDEN = 60
 
@@ -801,17 +810,18 @@ def _ruim_schijf_op(map_):
             p.unlink(missing_ok=True)
 
 
-def _bewaard(db, naam, nu, argumenten, bereken, vingerafdruk=None):
+def _bewaard(db, naam, nu, argumenten, bereken, vingerafdruk=None, per_dag=False):
     """Geeft de bewaarde uitkomst als de gegevens en het tijdvenster hetzelfde zijn, anders
     rekent het opnieuw (zie CACHE_AAN). vingerafdruk: de functie die bepaalt wanneer de gegevens
-    veranderd zijn (standaard data_vingerafdruk)."""
+    veranderd zijn (standaard data_vingerafdruk). per_dag: de hele kantinedag geldig in plaats van
+    een uur (CACHE_BUCKET_SECONDEN), voor wat niet van het tijdstip afhangt (zie _prognose_fit)."""
     if not CACHE_AAN:
         return bereken()
     sleutel = (
         db.execute("PRAGMA database_list").fetchone()[2],
         naam,
         argumenten,
-        int(nu.timestamp() // CACHE_BUCKET_SECONDEN),
+        None if per_dag else int(nu.timestamp() // CACHE_BUCKET_SECONDEN),
         (nu - timedelta(hours=DAG_BEGIN_UUR)).date().toordinal(),  # de kantinedag, die om 12.00 uur wisselt
         (vingerafdruk or data_vingerafdruk)(db),
     )
@@ -858,7 +868,9 @@ def maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
 @functools.wraps(_verdeling)
 def verdeling(db, nu=None):
     nu = nu or datetime.now()
-    uitkomst = _bewaard(db, "verdeling", nu, (), lambda: _verdeling(db, nu))
+    # Hangt alleen van de telgeschiedenis af (niet van de voorraad of de bestellingen): een boeking rekent het niet
+    # opnieuw, en het geldt de hele kantinedag (zie _prognose_fit waarom het tijdstip daarbinnen niet telt).
+    uitkomst = _bewaard(db, "verdeling", nu, (), lambda: _verdeling(db, nu), historie_vingerafdruk, per_dag=True)
     return dict(uitkomst) if uitkomst is not None else None
 
 
@@ -1033,7 +1045,7 @@ def terugblik(db, nu=None):
     daarvoor, en wat er werkelijk verkocht is, met de producten waar het het verst naast zat. Zo zie je hoe goed de
     prognose is. Wordt bewaard tot de telgeschiedenis verandert (zie historie_vingerafdruk)."""
     nu = nu or datetime.now()
-    return _bewaard(db, "terugblik", nu, (), lambda: _terugblik(db, nu), historie_vingerafdruk)
+    return _bewaard(db, "terugblik", nu, (), lambda: _terugblik(db, nu), historie_vingerafdruk, per_dag=True)
 
 
 def vat_terugblik_samen(perioden):

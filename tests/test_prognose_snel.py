@@ -120,13 +120,13 @@ def test_voorverwarmen_maakt_de_pagina_daarna_snel(ingelogde_client, db, monkeyp
         tijdstippen=[datetime.now().replace(minute=0, second=0, microsecond=0) - timedelta(days=7 * (6 - i)) for i in range(7)],
     )
     aantal = {"model": 0}
-    echt = voorspelling._prognose_model
+    echt = voorspelling._prognose_fit
 
     def geteld(*a, **k):
         aantal["model"] += 1
         return echt(*a, **k)
 
-    monkeypatch.setattr(voorspelling, "_prognose_model", geteld)
+    monkeypatch.setattr(voorspelling, "_prognose_fit", geteld)
     try:
         ingelogde_client.get("/voorspelling/opwarmen")
         assert aantal["model"] == 1

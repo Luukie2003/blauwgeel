@@ -23,13 +23,13 @@ def schijf(monkeypatch, db, app):
     pils = _product(db, "Pils", 2.0)
     _weekelijkse_tellingen(db, {pils: (70, 2.0)}, van=date(2026, 6, 27), tot=date(2026, 10, 3))
     aantal = {"model": 0}
-    echt = voorspelling._prognose_model
+    echt = voorspelling._prognose_fit
 
     def geteld(*a, **k):
         aantal["model"] += 1
         return echt(*a, **k)
 
-    monkeypatch.setattr(voorspelling, "_prognose_model", geteld)
+    monkeypatch.setattr(voorspelling, "_prognose_fit", geteld)
     map_ = Path(app.config["DATABASE"]).parent / "voorspelling_cache"
     yield {"aantal": aantal, "map": map_, "product": pils}
     voorspelling.wis_bewaarde_resultaten()
@@ -72,10 +72,13 @@ def test_veranderde_gegevens_geven_een_nieuwe_berekening(db, schijf):
     assert schijf["aantal"]["model"] == 2  # de vingerafdruk klopte niet meer: het oude bestand telt niet
 
 
-def test_een_ander_tijdvenster_of_een_andere_kantinedag_gebruikt_het_bestand_niet(db, schijf):
+def test_het_model_geldt_de_hele_kantinedag_ook_voor_een_ander_proces(db, schijf):
     voorspelling.maak_prognose(db, dagen=7, nu=NU)
     _nieuw_proces()
-    voorspelling.maak_prognose(db, dagen=7, nu=NU + timedelta(hours=3))  # ander uur
+    voorspelling.maak_prognose(db, dagen=14, nu=NU + timedelta(hours=3))  # ander uur, andere periode
+    assert schijf["aantal"]["model"] == 1
+    _nieuw_proces()
+    voorspelling.maak_prognose(db, dagen=7, nu=NU + timedelta(hours=25))  # de volgende kantinedag
     assert schijf["aantal"]["model"] == 2
 
 

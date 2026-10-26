@@ -573,6 +573,8 @@ fieldset.groupbox legend {
     color: var(--tekst-zacht);
     margin-top: 0.15rem;
     white-space: nowrap;
+    text-align: center;
+    line-height: 1.25;
 }
 
 .omzet-bar-afwijkend {

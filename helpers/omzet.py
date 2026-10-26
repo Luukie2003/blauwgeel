@@ -125,6 +125,31 @@ def _aantal_dagen_met_weekdag(van, tot, weekdag, inclusief_van=True):
     return aantal
 
 
+# Afwijkend: korter dan de helft of langer dan anderhalf keer de gebruikelijke periode tussen twee tellingen.
+AFWIJKEND_KORTER = 0.5
+AFWIJKEND_LANGER = 1.5
+# Zo veel recente perioden bepalen het gebruikelijke ritme; zonder (genoeg) tellingen: een week.
+RITME_PERIODES = 12
+STANDAARD_PERIODE = 7
+
+
+def gebruikelijke_periode(db, tot):
+    """Hoeveel dagen er gewoonlijk tussen twee tellingen zitten: de mediaan van de laatste perioden tot en met 'tot'
+    (een tweede telling op dezelfde dag telt niet mee). Een week als dat nog niet te zeggen is."""
+    datums = [
+        datetime.strptime(r["datum"][:10], "%Y-%m-%d").date()
+        for r in db.execute(
+            "SELECT datum FROM tellingen WHERE datum <= ? ORDER BY datum DESC LIMIT ?",
+            (f"{tot} 23:59", RITME_PERIODES + 1),
+        ).fetchall()
+    ]
+    lengtes = sorted(d for d in ((a - b).days for a, b in zip(datums, datums[1:])) if d > 0)
+    if len(lengtes) < 2:
+        return STANDAARD_PERIODE
+    midden = len(lengtes) // 2
+    return lengtes[midden] if len(lengtes) % 2 else (lengtes[midden - 1] + lengtes[midden]) / 2
+
+
 def bereken_omzet_trend_periode(db, van, tot):
     """Omzet + best verkopende producten voor alle tellingen binnen een zelf
     gekozen periode -- gebruikt door het verkooprapport en het weekoverzicht.
@@ -135,8 +160,10 @@ def bereken_omzet_trend_periode(db, van, tot):
     per se een week beslaat (dat hangt af van wanneer er geteld is). Om
     balken van sterk wisselende lengte niet stilzwijgend als gelijkwaardige
     'weken' te laten ogen, krijgt elke balk ook het aantal dagen, de omzet
-    per dag, en een 'periode_afwijkend'-vlag (korter dan 5 of langer dan 9
-    dagen) mee."""
+    per dag, en een 'periode_afwijkend'-vlag mee: veel korter of langer dan
+    je gewoonlijk telt (zie gebruikelijke_periode), want dan zegt de hoogte
+    van de balk weinig en vergelijk je beter de omzet per dag. Wie twee keer
+    per week telt, krijgt zo niet bij elke balk een waarschuwing."""
     tellingen = db.execute(
         """SELECT t.id, t.datum, t.naam,
                   COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0) AS omzet
@@ -195,6 +222,7 @@ def bereken_omzet_trend_periode(db, van, tot):
     ).fetchone()
     periode_start = werkelijke_vorige_telling["datum"][:10] if werkelijke_vorige_telling else van
 
+    ritme = gebruikelijke_periode(db, tot)
     balken = []
     vorige_datum = van
     vorige_periode_start = periode_start
@@ -228,7 +256,7 @@ def bereken_omzet_trend_periode(db, van, tot):
                 "trainingsavonden": aantal_trainingsavonden,
                 "aantal_dagen": aantal_dagen,
                 "omzet_per_dag": t["omzet"] / max(aantal_dagen, 1),
-                "periode_afwijkend": aantal_dagen < 5 or aantal_dagen > 9,
+                "periode_afwijkend": not ritme * AFWIJKEND_KORTER <= aantal_dagen <= ritme * AFWIJKEND_LANGER,
             }
         )
         vorige_datum = periode_eind
@@ -239,6 +267,7 @@ def bereken_omzet_trend_periode(db, van, tot):
         "top_verkopers": top_verkopers,
         "totale_omzet": totale_omzet,
         "bevat_afwijkende_periode": any(b["periode_afwijkend"] for b in balken),
+        "gebruikelijke_periode": ritme,
     }
 
 

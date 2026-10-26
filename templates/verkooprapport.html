@@ -42,9 +42,9 @@
         <div class="omzet-bar-kolom">
             <span class="omzet-bar-waarde">€{{ '%.0f'|format(balk.omzet) }}</span>
             <div class="omzet-bar{{ ' omzet-bar-afwijkend' if balk.periode_afwijkend else '' }}" style="height: {{ balk.hoogte_pct }}%"
-                 title="€ {{ '%.2f'|format(balk.omzet) }} over {{ balk.aantal_dagen }} dag{{ '' if balk.aantal_dagen == 1 else 'en' }} (€ {{ '%.2f'|format(balk.omzet_per_dag) }}/dag){% if balk.periode_afwijkend %} — afwijkende periodelengte, vergelijk met voorzichtigheid{% endif %}"></div>
+                 title="€ {{ '%.2f'|format(balk.omzet) }} over {{ balk.aantal_dagen }} dag{{ '' if balk.aantal_dagen == 1 else 'en' }} (€ {{ '%.2f'|format(balk.omzet_per_dag) }}/dag){% if balk.periode_afwijkend %} — veel korter of langer dan je gewoonlijk telt, vergelijk de omzet per dag{% endif %}"></div>
             <span class="omzet-bar-label">{{ balk.datum_kort }}</span>
-            <span class="omzet-bar-dagen">{{ balk.aantal_dagen }}d · €{{ '%.0f'|format(balk.omzet_per_dag) }}/dag{% if balk.periode_afwijkend %} ⚠️{% endif %}</span>
+            <span class="omzet-bar-dagen">{{ balk.aantal_dagen }}d{% if balk.periode_afwijkend %} ⚠️{% endif %}<br>€{{ '%.0f'|format(balk.omzet_per_dag) }}/dag</span>
             {% if balk.thuiswedstrijden %}
             <span class="omzet-bar-wedstrijden" title="{{ balk.thuiswedstrijden }} thuiswedstrijd{{ '' if balk.thuiswedstrijden == 1 else 'en' }} in deze periode">
                 🏠{{ '×%d'|format(balk.thuiswedstrijden) if balk.thuiswedstrijden > 1 else '' }}
@@ -58,6 +58,13 @@
         </div>
         {% endfor %}
     </div>
+    {% if omzet_trend.bevat_afwijkende_periode %}
+    {% set ritme = omzet_trend.gebruikelijke_periode %}
+    <p class="tekst-zacht" style="font-size:0.8rem; margin:0.4rem 0 0">
+        Elke balk is de periode sinds de vorige telling. Je telt gewoonlijk om de {{ '%.0f'|format(ritme) if ritme == ritme|round else '%.1f'|format(ritme)|replace('.', ',') }} dagen;
+        een gestippelde balk (⚠️) is veel korter of langer, dus vergelijk daar de omzet per dag in plaats van de hoogte.
+    </p>
+    {% endif %}
     {% if omzet_trend.top_verkopers %}
     <h3 style="margin-top:1.2rem">Top verkopers in deze periode</h3>
     <div class="tabel-wrap">
