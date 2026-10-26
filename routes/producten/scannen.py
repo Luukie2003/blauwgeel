@@ -177,19 +177,18 @@ def register_routes(app):
 
     @app.route("/producten/<int:product_id>/melden", methods=["POST"])
     def product_melden(product_id):
-        """'Op de bestellijst': net als de QR-code op het schaplabel, maar dan vanaf de productpagina."""
+        """'Op de bestellijst': het product bij "Voorgesteld om te bestellen" zetten (zie bestelvoorstel.zet_op_bestellijst).
+        Bezoekers zonder account melden het met de QR-code op het schaplabel; dat staat bij "Gemeld"."""
+        import bestelvoorstel
+
         db = get_db()
-        product = db.execute("SELECT id, naam FROM producten WHERE id = ?", (product_id,)).fetchone()
+        product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
         if product is None:
             flash("Product niet gevonden.", "error")
             return redirect(url_for("producten_lijst"))
-        db.execute(
-            "INSERT INTO bestellijst_meldingen (product_id, tekst, bron, aangemaakt_op) VALUES (?, ?, 'productpagina', ?)",
-            (product_id, f"Gemeld door {session.get('gebruiker_naam') or 'onbekend'}", now_str()),
-        )
-        db.commit()
-        flash(f"'{product['naam']}' staat op de bestellijst.", "success")
-        return redirect(url_for("product_detail", product_id=product_id))
+        _, melding = bestelvoorstel.zet_op_bestellijst(db, product, session.get("gebruiker_naam"), session.get("gebruiker_id"))
+        flash(melding, "success")
+        return redirect(url_for("product_detail", product_id=product_id) + "#verkoop")
 
     @app.route("/producten/<int:product_id>/label.pdf")
     def product_label_pdf(product_id):

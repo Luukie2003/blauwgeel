@@ -383,8 +383,9 @@ class ProductActivity : BasisActivity() {
         Lijst.knop(beheer, getString(R.string.schaplabel_printen)) { nietInApp(getString(R.string.wat_schaplabel)) }
     }
 
-    /** (Beheerders) Het minimum en de besteleenheid aanpassen, wat je juist aan de bar of in het hok ziet. De rest van
-     * het product (naam, prijzen, ...) blijft op de computer. */
+    /** (Beheerders) De naam, de verkoopprijs, het minimum en de besteleenheid aanpassen, wat je juist aan de bar of in
+     * het hok ziet. Een andere prijs komt in de prijsgeschiedenis, net als op de site. De rest van het product
+     * (categorie, foto, ...) blijft op de computer. */
     private fun instellingenAanpassen() {
         val p = product ?: return
         val dp = { n: Int -> dp(this, n) }
@@ -392,7 +393,7 @@ class ProductActivity : BasisActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(8), dp(22), 0)
         }
-        fun veld(label: String, waarde: String, getal: Boolean): android.widget.EditText {
+        fun veld(label: String, waarde: String, getal: Boolean, decimaal: Boolean = false): android.widget.EditText {
             vak.addView(TextView(this).apply {
                 text = label
                 textSize = 13f
@@ -401,11 +402,19 @@ class ProductActivity : BasisActivity() {
             })
             return android.widget.EditText(this).apply {
                 setText(waarde)
-                inputType = if (getal) android.text.InputType.TYPE_CLASS_NUMBER else android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                inputType = when {
+                    decimaal -> android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+                    getal -> android.text.InputType.TYPE_CLASS_NUMBER
+                    else -> android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                }
                 setSelectAllOnFocus(true)
                 vak.addView(this)
             }
         }
+        val productNaam = veld(getString(R.string.naam), p.naam, false)
+        val prijsNu = info?.takeIf { !it.isNull("verkoopprijs") }?.optDouble("verkoopprijs")
+        val prijs = veld(getString(R.string.verkoopprijs_in, p.eenheid), prijsNu?.let { String.format(java.util.Locale("nl", "NL"), "%.2f", it) } ?: "",
+            getal = true, decimaal = true)
         val minimum = veld(getString(R.string.minimumvoorraad_in, p.eenheid), p.minVoorraad.toString(), true)
         val naam = veld(getString(R.string.besteleenheid_naam_vraag), p.besteleenheid ?: "", false)
         val factor = veld(getString(R.string.aantal_per_besteleenheid, p.eenheid), p.perBesteleenheid.toString(), true)
@@ -415,6 +424,8 @@ class ProductActivity : BasisActivity() {
             .setNegativeButton(R.string.annuleren, null)
             .setPositiveButton(R.string.opslaan) { _, _ ->
                 val body = JSONObject().put("min_voorraad", minimum.text.toString().toIntOrNull() ?: -1)
+                    .put("naam", productNaam.text.toString().trim())
+                    .put("verkoopprijs", prijs.text.toString().trim())
                     .put("besteleenheid", naam.text.toString().trim())
                     .put("besteleenheid_factor", factor.text.toString().toIntOrNull() ?: 0)
                 bezig {
@@ -685,12 +696,18 @@ class ProductActivity : BasisActivity() {
     }
 
     /** "Op de bestellijst", net als de knop op de productpagina van de site. */
+    /** "Op de bestellijst": het product bij "Voorgesteld om te bestellen" zetten (1 colli of het advies), zie
+     * bestelvoorstel.zet_op_bestellijst. Het bestelblok laat het meteen zien. */
     private fun meld() {
         val id = Api.nieuwVerzoekId()
         bezig {
             val antwoord = Api.post(this, "/api/app/producten/$productId/melden", verzoekId = id)
             tril(60)
-            melding(antwoord.optString("melding"))
+            melding(antwoord.optString("melding"), lang = true)
+            antwoord.optJSONObject("bestellen")?.let {
+                verkoop?.put("bestellen", it)
+                toonBestellen()
+            }
             laadDetail()
         }
     }

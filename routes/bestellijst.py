@@ -21,9 +21,9 @@ from helpers import (
 )
 from helpers.tijd import vandaag_amsterdam
 import manco
-from bestellen import maak_bestelling
+from bestellen import bestel_tekst, bestelling_gegevens, klaargezet_melding, maak_bestellingen
 from leveranciers import GEEN, filter_suggesties, per_leverancier
-from pdf import bestellijst_pdf
+from pdf import bestelling_pdf, bestellijst_pdf
 
 
 def zoek_product(db, tekst):
@@ -103,7 +103,8 @@ def register_routes(app):
         ]
 
         open_bestellingen = db.execute(
-            "SELECT * FROM bestellingen WHERE status = 'besteld' ORDER BY id DESC"
+            """SELECT b.*, l.naam AS leverancier_naam FROM bestellingen b LEFT JOIN leveranciers l ON l.id = b.leverancier_id
+               WHERE b.status = 'besteld' ORDER BY b.id DESC"""
         ).fetchall()
         recent_ontvangen = db.execute(
             """SELECT * FROM bestellingen WHERE status = 'ontvangen'
@@ -129,6 +130,8 @@ def register_routes(app):
             keuzes=keuzes,
             gekozen_extra=gekozen_extra,
             open_bestellingen=open_bestellingen_met_regels,
+            # De tekst per bestelling om naar de leverancier te sturen (kopieerknop).
+            bestel_teksten={b["id"]: bestel_tekst(bestelling_gegevens(db, b["id"])) for b in open_bestellingen},
             recent_ontvangen=recent_ontvangen_met_regels,
             per_leverancier=per_leverancier(db, suggesties, vandaag_amsterdam()),
             leverancier_namen={r["id"]: r["naam"] for r in db.execute("SELECT id, naam FROM leveranciers").fetchall()},
@@ -220,13 +223,14 @@ def register_routes(app):
             if aantal_besteleenheden > 0:
                 aantallen_per_pid[int(pid)] = aantal_besteleenheden
 
-        bestelling_id, aantal_regels = maak_bestelling(db, aantallen_per_pid, besteld_door, besteld_door_id)
-        if bestelling_id is None:
+        bestellingen = maak_bestellingen(db, aantallen_per_pid, besteld_door, besteld_door_id)
+        if not bestellingen:
             flash("Geen producten geselecteerd voor de bestelling.", "error")
             return redirect(url_for("bestellijst"))
         flash(
-            f"Bestelling #{bestelling_id} klaargezet met {aantal_regels} product(en). Hij staat nu als concept bij Factuur "
-            "inboeken: scan de levering daar in zodra hij binnenkomt (ook met de handterminal).",
+            klaargezet_melding(bestellingen) + " Onder Openstaande bestellingen staat per bestelling de lijst voor de "
+            "leverancier (pdf of tekst). Elke bestelling staat ook als concept bij Factuur inboeken: scan de levering daar "
+            "in zodra hij binnenkomt (ook met de handterminal).",
             "success",
         )
         return redirect(url_for("bestellijst"))
@@ -583,6 +587,21 @@ def register_routes(app):
 
     # ---------- Meldingen (QR-scans van bezoekers, verbruiksvoorwerpen) ----------
 
+    @app.route("/bestellingen/<int:bestelling_id>/pdf")
+    def bestelling_pdf_route(bestelling_id):
+        """De bestelling voor de leverancier als pdf: met het klantnummer en per product het aantal besteleenheden."""
+        gegevens = bestelling_gegevens(get_db(), bestelling_id)
+        if gegevens is None:
+            flash("Deze bestelling bestaat niet (meer).", "error")
+            return redirect(url_for("bestellijst"))
+        lev = gegevens["leverancier"]
+        naam = "".join(c for c in (lev["naam"] if lev else "").lower().replace(" ", "-") if c.isalnum() or c == "-")
+        return Response(
+            bestelling_pdf(gegevens),
+            mimetype="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=bestelling-{bestelling_id}{'-' + naam if naam else ''}.pdf"},
+        )
+
     @app.route("/bestellingen")
     def bestellingen_overzicht():
         """Alle bestellingen, ook de ontvangen: die blijven bewaard. Bovenaan per leverancier wat er nog niet geleverd is
@@ -594,7 +613,8 @@ def register_routes(app):
         voorwaarde, waarden = ("WHERE status = ?", [status]) if status in ("besteld", "ontvangen") else ("", [])
         totaal = db.execute(f"SELECT COUNT(*) FROM bestellingen {voorwaarde}", waarden).fetchone()[0]
         bestellingen = db.execute(
-            f"SELECT * FROM bestellingen {voorwaarde} ORDER BY id DESC LIMIT ? OFFSET ?",
+            f"""SELECT b.*, l.naam AS leverancier_naam FROM bestellingen b LEFT JOIN leveranciers l ON l.id = b.leverancier_id
+                {voorwaarde.replace('status', 'b.status')} ORDER BY b.id DESC LIMIT ? OFFSET ?""",
             [*waarden, per_pagina, (pagina - 1) * per_pagina],
         ).fetchall()
         regels = regels_per_bestelling(db, [b["id"] for b in bestellingen])

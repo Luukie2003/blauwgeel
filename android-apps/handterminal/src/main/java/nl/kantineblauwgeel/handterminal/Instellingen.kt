@@ -30,6 +30,16 @@ class Instellingen(context: Context) {
         get() = prefs.getBoolean("trillen", true)
         set(waarde) = prefs.edit().putBoolean("trillen", waarde).apply()
 
+    /** Een notificatie een paar uur voor het uiterste bestelmoment van een leverancier (zie Herinneringen.kt). */
+    var bestelHerinnering: Boolean
+        get() = prefs.getBoolean("bestel_herinnering", true)
+        set(waarde) = prefs.edit().putBoolean("bestel_herinnering", waarde).apply()
+
+    /** Is de toestemming voor notificaties al een keer gevraagd (Android 13 en nieuwer)? Dan niet steeds opnieuw. */
+    var meldingenGevraagd: Boolean
+        get() = prefs.getBoolean("meldingen_gevraagd", false)
+        set(waarde) = prefs.edit().putBoolean("meldingen_gevraagd", waarde).apply()
+
     // ---- De sessie (zie Sessie.kt) ----
 
     var naam: String?

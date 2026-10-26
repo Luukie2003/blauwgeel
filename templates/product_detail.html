@@ -33,7 +33,7 @@
             {% if beheerder %}<a href="{{ url_for('product_bewerken', product_id=product.id) }}" class="btn btn-rand btn-klein">Bewerken</a>{% endif %}
             <form method="post" action="{{ url_for('product_melden', product_id=product.id) }}" style="margin:0">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-rand btn-klein" title="Zet het op de bestellijst, bijvoorbeeld als het bijna op is">Op de bestellijst</button>
+                <button type="submit" class="btn btn-rand btn-klein" title="Zet het bij Voorgesteld om te bestellen (met het advies, minstens 1 colli), bijvoorbeeld als het bijna op is">Op de bestellijst</button>
             </form>
             <a href="{{ url_for('product_label_pdf', product_id=product.id) }}" class="btn btn-rand btn-klein">Schaplabel</a>
             <a href="{{ url_for('geschiedenis', product_id=product.id) }}" class="btn btn-rand btn-klein">Alle boekingen</a>

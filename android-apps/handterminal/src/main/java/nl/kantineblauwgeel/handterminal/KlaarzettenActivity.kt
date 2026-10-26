@@ -183,6 +183,7 @@ class KlaarzettenActivity : BasisActivity() {
                 .put("voorraad", c.voorraad).put("min_voorraad", c.minVoorraad)
                 .put("besteleenheid", if (c.perBesteleenheid > 1) c.besteleenheid else JSONObject.NULL)
                 .put("per_besteleenheid", c.perBesteleenheid)
+                .put("leverancier", c.leverancier ?: JSONObject.NULL)
             Regel(p, "gescand", 1, vast = true).also { regels.add(0, it) }
         }
         verzoekId = null
@@ -203,9 +204,16 @@ class KlaarzettenActivity : BasisActivity() {
     private fun klaarzetten() {
         val gekozen = regels.filter { it.aantal > 0 }
         if (gekozen.isEmpty()) return
+        // Per leverancier een eigen bestelling (zie bestellen.maak_bestellingen op de site): zo staat het ook hier.
+        val perLeverancier = gekozen.groupBy { it.p.tekstOfNull("leverancier") }.entries
+            .sortedWith(compareBy({ it.key == null }, { it.key?.lowercase() }))
+        val tekst = perLeverancier.joinToString("\n\n") { (lev, groep) ->
+            (lev ?: getString(R.string.zonder_leverancier)) + ":\n" +
+                groep.joinToString("\n") { "${it.aantal} ${eenheid(it.p)} ${it.p.optString("naam")}" }
+        }
         AlertDialog.Builder(this)
-            .setTitle(R.string.bestelling_klaarzetten)
-            .setMessage(gekozen.joinToString("\n") { "${it.aantal} ${eenheid(it.p)} ${it.p.optString("naam")}" })
+            .setTitle(if (perLeverancier.size > 1) getString(R.string.n_bestellingen_klaarzetten, perLeverancier.size) else getString(R.string.bestelling_klaarzetten))
+            .setMessage(tekst)
             .setNegativeButton(R.string.annuleren, null)
             .setPositiveButton(R.string.klaarzetten) { _, _ ->
                 val id = verzoekId ?: Api.nieuwVerzoekId().also { verzoekId = it }

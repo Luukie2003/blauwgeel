@@ -10,6 +10,113 @@ from pdf import periode_verkoop_pdf, verkoop_pdf
 from voorspelling import maak_prognose, omzet_per_week as omzet_per_week_berekend
 
 
+def _later_geteld(db, telling):
+    """De producten uit deze telling die daarna nog eens geteld zijn. Voor die producten is deze telling niet meer
+    de laatste: de voorraad is sindsdien opnieuw vastgesteld, dus een correctie hier raakt de voorraad niet."""
+    return {
+        r[0]
+        for r in db.execute(
+            """SELECT DISTINCT tr.product_id FROM telling_regels tr JOIN tellingen t ON t.id = tr.telling_id
+               WHERE (t.datum > ? OR (t.datum = ? AND t.id > ?))
+                 AND tr.product_id IN (SELECT product_id FROM telling_regels WHERE telling_id = ?)""",
+            (telling["datum"], telling["datum"], telling["id"], telling["id"]),
+        ).fetchall()
+    }
+
+
+def _pas_voorraad_aan(db, product_id, verschil):
+    """Telt 'verschil' bij de voorraad op; geeft (oud, nieuw, gedeactiveerde naam of None) terug."""
+    oud = db.execute("SELECT voorraad FROM producten WHERE id = ?", (product_id,)).fetchone()["voorraad"]
+    db.execute("UPDATE producten SET voorraad = voorraad + ? WHERE id = ?", (verschil, product_id))
+    return oud, oud + verschil, verwerk_auto_inactief(db, product_id, oud + verschil)
+
+
+def corrigeer_regel(db, regel, nieuw_geteld, opmerking, voorraad_aanpassen, naam=None, gebruiker_id=None):
+    """Het geteld aantal van één productregel in een eerdere telling corrigeren (op de site: Tellingen > een telling; in
+    de handterminal-app: Tellingen). Past verkocht/correctie (en daarmee de omzet) en de geschiedenis aan; is dit de
+    laatste telling van het product en 'voorraad_aanpassen', dan gaat de voorraad mee met het verschil. 'regel': de
+    telling_regels-rij met product_naam, eenheid en telling_datum. Geeft de tekst voor de melding. Commit."""
+    verschil = nieuw_geteld - regel["voorraad_voor"]
+    nieuw_verkocht = max(0, -verschil)
+    nieuw_correctie = max(0, verschil)
+    telling = db.execute("SELECT * FROM tellingen WHERE id = ?", (regel["telling_id"],)).fetchone()
+    is_laatste = regel["product_id"] not in _later_geteld(db, telling)
+    voorraad_mee = is_laatste and voorraad_aanpassen
+
+    db.execute(
+        """UPDATE telling_regels
+           SET geteld_aantal_voor_correctie = ?,
+               gecorrigeerd_door_id = ?,
+               gecorrigeerd_door = ?,
+               gecorrigeerd_op = ?,
+               correctie_opmerking = ?,
+               geteld_aantal = ?,
+               verkocht = ?,
+               correctie = ?
+           WHERE id = ?""",
+        (
+            regel["geteld_aantal"],
+            gebruiker_id,
+            naam,
+            now_str(),
+            opmerking,
+            nieuw_geteld,
+            nieuw_verkocht,
+            nieuw_correctie,
+            regel["id"],
+        ),
+    )
+    voorraad_tekst = ""
+    if voorraad_mee and nieuw_geteld != regel["geteld_aantal"]:
+        oud, nieuw, gedeactiveerd = _pas_voorraad_aan(db, regel["product_id"], nieuw_geteld - regel["geteld_aantal"])
+        voorraad_tekst = f" De voorraad is aangepast van {oud} naar {nieuw} {regel['eenheid']}."
+        if gedeactiveerd:
+            voorraad_tekst += f" '{gedeactiveerd}' staat nu op inactief (voorraad op 0)."
+
+    # De mutatie die destijds voor dit product bij deze telling is
+    # aangemaakt moet meeveranderen, anders blijft de geschiedenis het
+    # oude (foute) verkocht/correctie-cijfer tonen.
+    db.execute(
+        "DELETE FROM mutaties WHERE telling_id = ? AND product_id = ?",
+        (regel["telling_id"], regel["product_id"]),
+    )
+    if nieuw_verkocht > 0:
+        db.execute(
+            """INSERT INTO mutaties
+               (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, telling_id)
+               VALUES (?, 'uit', ?, ?, ?, ?, ?, ?)""",
+            (
+                regel["product_id"],
+                nieuw_verkocht,
+                regel["telling_datum"],
+                naam,
+                gebruiker_id,
+                f"Verkocht (telling #{regel['telling_id']}, gecorrigeerd)",
+                regel["telling_id"],
+            ),
+        )
+    elif nieuw_correctie > 0:
+        db.execute(
+            """INSERT INTO mutaties
+               (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, telling_id)
+               VALUES (?, 'in', ?, ?, ?, ?, ?, ?)""",
+            (
+                regel["product_id"],
+                nieuw_correctie,
+                regel["telling_datum"],
+                naam,
+                gebruiker_id,
+                f"Correctie (telling #{regel['telling_id']}, gecorrigeerd)",
+                regel["telling_id"],
+            ),
+        )
+    db.commit()
+
+    return f"Telling voor '{regel['product_naam']}' gecorrigeerd: {regel['geteld_aantal']} → {nieuw_geteld} {regel['eenheid']} geteld." + (
+        voorraad_tekst or ("" if is_laatste else " De huidige voorraad is niet aangepast: dit product is daarna opnieuw geteld.")
+    )
+
+
 def register_routes(app):
     @app.route("/tellingen")
     def tellingen_overzicht():
@@ -112,19 +219,6 @@ def register_routes(app):
             },
         )
 
-    def _later_geteld(db, telling):
-        """De producten uit deze telling die daarna nog eens geteld zijn. Voor die producten is deze telling niet meer
-        de laatste: de voorraad is sindsdien opnieuw vastgesteld, dus een correctie hier raakt de voorraad niet."""
-        return {
-            r[0]
-            for r in db.execute(
-                """SELECT DISTINCT tr.product_id FROM telling_regels tr JOIN tellingen t ON t.id = tr.telling_id
-                   WHERE (t.datum > ? OR (t.datum = ? AND t.id > ?))
-                     AND tr.product_id IN (SELECT product_id FROM telling_regels WHERE telling_id = ?)""",
-                (telling["datum"], telling["datum"], telling["id"], telling["id"]),
-            ).fetchall()
-        }
-
     def _voorraad_volgens_telling(db, regel, telling):
         """Wat de voorraad zou moeten zijn volgens deze telling: het getelde aantal plus alles wat daarna is in- en
         uitgeboekt. Alleen zinvol als dit de laatste telling van het product is."""
@@ -149,12 +243,6 @@ def register_routes(app):
             if huidig != verwacht:
                 uitkomst[r["id"]] = (huidig, verwacht)
         return uitkomst
-
-    def _pas_voorraad_aan(db, product_id, verschil):
-        """Telt 'verschil' bij de voorraad op; geeft (oud, nieuw, gedeactiveerde naam of None) terug."""
-        oud = db.execute("SELECT voorraad FROM producten WHERE id = ?", (product_id,)).fetchone()["voorraad"]
-        db.execute("UPDATE producten SET voorraad = voorraad + ? WHERE id = ?", (verschil, product_id))
-        return oud, oud + verschil, verwerk_auto_inactief(db, product_id, oud + verschil)
 
     @app.route("/tellingen/<int:telling_id>")
     def telling_detail(telling_id):
@@ -219,93 +307,11 @@ def register_routes(app):
             flash("Aantal kan niet negatief zijn.", "error")
             return redirect(url_for("telling_detail", telling_id=regel["telling_id"]))
 
-        opmerking = request.form.get("correctie_opmerking", "").strip()
-        naam = session.get("gebruiker_naam")
-        gebruiker_id = session.get("gebruiker_id")
-
-        verschil = nieuw_geteld - regel["voorraad_voor"]
-        nieuw_verkocht = max(0, -verschil)
-        nieuw_correctie = max(0, verschil)
-        telling = db.execute("SELECT * FROM tellingen WHERE id = ?", (regel["telling_id"],)).fetchone()
-        is_laatste = regel["product_id"] not in _later_geteld(db, telling)
-        voorraad_mee = is_laatste and bool(request.form.get("voorraad_aanpassen"))
-
-        db.execute(
-            """UPDATE telling_regels
-               SET geteld_aantal_voor_correctie = ?,
-                   gecorrigeerd_door_id = ?,
-                   gecorrigeerd_door = ?,
-                   gecorrigeerd_op = ?,
-                   correctie_opmerking = ?,
-                   geteld_aantal = ?,
-                   verkocht = ?,
-                   correctie = ?
-               WHERE id = ?""",
-            (
-                regel["geteld_aantal"],
-                gebruiker_id,
-                naam,
-                now_str(),
-                opmerking,
-                nieuw_geteld,
-                nieuw_verkocht,
-                nieuw_correctie,
-                regel_id,
-            ),
+        tekst = corrigeer_regel(
+            db, regel, nieuw_geteld, request.form.get("correctie_opmerking", "").strip(),
+            bool(request.form.get("voorraad_aanpassen")), session.get("gebruiker_naam"), session.get("gebruiker_id"),
         )
-        voorraad_tekst = ""
-        if voorraad_mee and nieuw_geteld != regel["geteld_aantal"]:
-            oud, nieuw, gedeactiveerd = _pas_voorraad_aan(db, regel["product_id"], nieuw_geteld - regel["geteld_aantal"])
-            voorraad_tekst = f" De voorraad is aangepast van {oud} naar {nieuw} {regel['eenheid']}."
-            if gedeactiveerd:
-                voorraad_tekst += f" '{gedeactiveerd}' staat nu op inactief (voorraad op 0)."
-
-        # De mutatie die destijds voor dit product bij deze telling is
-        # aangemaakt moet meeveranderen, anders blijft de geschiedenis het
-        # oude (foute) verkocht/correctie-cijfer tonen.
-        db.execute(
-            "DELETE FROM mutaties WHERE telling_id = ? AND product_id = ?",
-            (regel["telling_id"], regel["product_id"]),
-        )
-        if nieuw_verkocht > 0:
-            db.execute(
-                """INSERT INTO mutaties
-                   (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, telling_id)
-                   VALUES (?, 'uit', ?, ?, ?, ?, ?, ?)""",
-                (
-                    regel["product_id"],
-                    nieuw_verkocht,
-                    regel["telling_datum"],
-                    naam,
-                    gebruiker_id,
-                    f"Verkocht (telling #{regel['telling_id']}, gecorrigeerd)",
-                    regel["telling_id"],
-                ),
-            )
-        elif nieuw_correctie > 0:
-            db.execute(
-                """INSERT INTO mutaties
-                   (product_id, type, aantal, datum, naam, gebruiker_id, opmerking, telling_id)
-                   VALUES (?, 'in', ?, ?, ?, ?, ?, ?)""",
-                (
-                    regel["product_id"],
-                    nieuw_correctie,
-                    regel["telling_datum"],
-                    naam,
-                    gebruiker_id,
-                    f"Correctie (telling #{regel['telling_id']}, gecorrigeerd)",
-                    regel["telling_id"],
-                ),
-            )
-        db.commit()
-
-        flash(
-            f"Telling voor '{regel['product_naam']}' gecorrigeerd: {regel['geteld_aantal']} → "
-            f"{nieuw_geteld} {regel['eenheid']} geteld." + (voorraad_tekst or (
-                "" if is_laatste else " De huidige voorraad is niet aangepast: dit product is daarna opnieuw geteld."
-            )),
-            "success",
-        )
+        flash(tekst, "success")
         return redirect(url_for("telling_detail", telling_id=regel["telling_id"]))
 
     @app.route("/tellingen/regels/<int:regel_id>/voorraad-bijwerken", methods=["POST"])

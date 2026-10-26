@@ -26,7 +26,7 @@
     <div style="border:1px solid var(--rand); border-radius:8px; padding:0.9rem; margin-bottom:0.9rem;">
         <div class="actiebalk" style="margin-bottom:0.6rem">
             <div>
-                <strong>Bestelling #{{ b.id }}</strong>{% if b.referentie %} — <span>{{ b.referentie }}</span>{% endif %}
+                <strong>Bestelling #{{ b.id }}</strong>{% if b.leverancier_naam %} bij <strong>{{ b.leverancier_naam }}</strong>{% endif %}{% if b.referentie %} — <span>{{ b.referentie }}</span>{% endif %}
                 <span class="tekst-zacht">— aangemaakt {{ b.aangemaakt_op|datum_nl }}{% if b.besteld_door %} door {{ b.besteld_door }}{% endif %}</span>
             </div>
             <div class="tabel-acties">
@@ -38,6 +38,12 @@
                     {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>{% endif %}
                     Bewerken
                 </a>
+                {% if not pda_modus %}
+                {# Voor de leverancier: de lijst als pdf, of als tekst om in een mail of WhatsApp te plakken. #}
+                <a href="{{ url_for('bestelling_pdf_route', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">PDF voor de leverancier</a>
+                <button type="button" class="btn btn-rand btn-klein" data-kopieer="bestel-tekst-{{ b.id }}">Tekst kopiëren</button>
+                <textarea id="bestel-tekst-{{ b.id }}" class="visueel-verborgen" readonly tabindex="-1" aria-hidden="true">{{ bestel_teksten[b.id] }}</textarea>
+                {% endif %}
                 <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
                       onsubmit="return bevestigEnVerstuur(this, 'Bestelling #{{ b.id }} verwijderen?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -56,6 +62,29 @@
         </ul>
     </div>
     {% endfor %}
+    <script>
+    // "Tekst kopiëren": de bestelling als tekst op het klembord, om naar de leverancier te sturen.
+    document.querySelectorAll('[data-kopieer]').forEach(function (knop) {
+        knop.addEventListener('click', function () {
+            var veld = document.getElementById(knop.dataset.kopieer);
+            var klaar = function () {
+                knop.textContent = 'Gekopieerd ✓';
+                setTimeout(function () { knop.textContent = 'Tekst kopiëren'; }, 2000);
+            };
+            // Het klembord van de browser; lukt dat niet (oudere browser, geen https), dan de oude manier.
+            var oudeManier = function () {
+                veld.select();
+                try { document.execCommand('copy'); } catch (e) { /* dan staat de tekst in elk geval geselecteerd */ }
+                klaar();
+            };
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(veld.value).then(klaar, oudeManier);
+            } else {
+                oudeManier();
+            }
+        });
+    });
+    </script>
     {% else %}
     <p class="leeg">Geen openstaande bestellingen.</p>
     {% endif %}

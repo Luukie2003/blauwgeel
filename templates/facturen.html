@@ -16,7 +16,7 @@
         {% for b in klaar %}
         <li style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center; flex-wrap:wrap">
             <div style="min-width:0">
-                <strong>Bestelling #{{ b.id }}</strong>{% if b.referentie %} ({{ b.referentie }}){% endif %}
+                <strong>Bestelling #{{ b.id }}</strong>{% if b.leverancier %} bij {{ b.leverancier }}{% endif %}{% if b.referentie %} ({{ b.referentie }}){% endif %}
                 <span class="tekst-zacht">&middot; {{ b.producten }} product{{ 'en' if b.producten != 1 }} &middot; klaargezet {{ b.aangemaakt_op|datum_nl }}{% if b.besteld_door %} door {{ b.besteld_door }}{% endif %}</span>
                 <div class="tekst-zacht" style="font-size:0.82rem">{{ b.samenvatting }}</div>
             </div>

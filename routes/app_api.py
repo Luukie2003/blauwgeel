@@ -23,7 +23,7 @@ import barcodes
 import bestelvoorstel
 import kiosk_timers
 import manco
-from bestellen import maak_bestelling
+from bestellen import klaargezet_melding, maak_bestellingen
 from database import get_db
 from derving import DERVING_REDENEN, kies_reden
 from helpers import (
@@ -46,11 +46,12 @@ from productkaart import TELLEN_VOORWAARDE
 from routes.logboek import schrijf_logboek
 from routes.tellen.looplijst import controle_regels, optellen
 from routes.tellen.looplijst_opslag import bewaar_stand, bewaarde_stand, stand_verlopen, wis_stand
+from routes.tellen.tellingen import _later_geteld, corrigeer_regel
 from routes.tellen.verwerken import verwerk_telling
 from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 # De nieuwste versie van de app. Draait er een oudere, dan meldt de app dat er een nieuwe is.
-HANDTERMINAL_APP_VERSIE = "2.14.0"
+HANDTERMINAL_APP_VERSIE = "2.15.0"
 
 MAX_AANTAL = 100000
 
@@ -110,6 +111,8 @@ def _product_json(rij, codes):
         "besteleenheid": (rij["besteleenheid"] or "doos") if factor > 1 else None,
         "per_besteleenheid": factor,
         "barcodes": codes.get(rij["id"], []),
+        # Bij het klaarzetten: een bestelling per leverancier (zie bestellen.maak_bestellingen).
+        "leverancier": rij["leverancier"],
         "foto": _foto(rij["afbeelding"], "klein"),
         "foto_groot": _foto(rij["afbeelding"], "middel"),
     }
@@ -123,7 +126,8 @@ def _foto(afbeelding, formaat):
 
 
 _PRODUCT_SELECT = """SELECT id, naam, categorie, subcategorie, merk, eenheid, voorraad, min_voorraad, actief, besteleenheid,
-                            besteleenheid_factor, afbeelding
+                            besteleenheid_factor, afbeelding,
+                            (SELECT l.naam FROM leveranciers l WHERE l.id = producten.leverancier_id) AS leverancier
                      FROM producten"""
 
 
@@ -275,6 +279,8 @@ def register_routes(app):
             "paginas": _webpaginas(rol, secties, pda),
             # De timers op de tv's (zie kiosk_timers.py) en wat er op het prijzenscherm als uitverkocht staat.
             "timers": kiosk_timers.actieve(db),
+            # De uiterste bestelmomenten van de komende dagen: de app herinnert eraan (zie bestelvoorstel.bestelmomenten).
+            "bestelmomenten": bestelvoorstel.bestelmomenten(db) if toegang["voorraad"] else [],
             "uitverkocht_op_tv": [r[0] for r in db.execute(
                 """SELECT naam FROM producten WHERE actief = 1 AND toon_op_kiosk = 1 AND kiosk_uitverkocht = 1
                    ORDER BY naam COLLATE NOCASE""").fetchall()] if toegang["voorraad"] else None,
@@ -593,13 +599,39 @@ def register_routes(app):
         if telling is None:
             return _fout("Deze telling bestaat niet (meer).", 404, "niet_gevonden")
         regels = db.execute(
-            """SELECT tr.product_id, p.naam AS product, p.eenheid, tr.voorraad_voor, tr.geteld_aantal, tr.verkocht,
-                      tr.correctie, tr.verkoopprijs
+            """SELECT tr.id AS regel_id, tr.product_id, p.naam AS product, p.eenheid, tr.voorraad_voor, tr.geteld_aantal,
+                      tr.verkocht, tr.correctie, tr.verkoopprijs, tr.gecorrigeerd_door, tr.geteld_aantal_voor_correctie
                FROM telling_regels tr JOIN producten p ON p.id = tr.product_id
                WHERE tr.telling_id = ? ORDER BY p.categorie, p.naam""", (telling_id,),
         ).fetchall()
-        return jsonify({"telling": dict(telling), "regels": [dict(r) for r in regels],
+        # Bij welke producten dit de laatste telling is: een correctie zet daar ook de voorraad goed.
+        later = _later_geteld(db, db.execute("SELECT * FROM tellingen WHERE id = ?", (telling_id,)).fetchone())
+        return jsonify({"telling": dict(telling),
+                        "regels": [dict(r) | {"laatste": r["product_id"] not in later} for r in regels],
                         "omzet": round(sum(r["verkocht"] * (r["verkoopprijs"] or 0) for r in regels), 2)})
+
+    @app.route("/api/app/tellingen/regels/<int:regel_id>/corrigeren", methods=["POST"])
+    def api_app_telling_regel_corrigeren(regel_id):
+        """{geteld, opmerking}: het geteld aantal van een product in een eerdere telling corrigeren, zoals op de site
+        (zie routes.tellen.tellingen.corrigeer_regel): bij de laatste telling van het product gaat de voorraad mee."""
+
+        def actie(db):
+            regel = db.execute(
+                """SELECT tr.*, p.naam AS product_naam, p.eenheid, t.datum AS telling_datum
+                   FROM telling_regels tr JOIN producten p ON p.id = tr.product_id JOIN tellingen t ON t.id = tr.telling_id
+                   WHERE tr.id = ?""", (regel_id,),
+            ).fetchone()
+            if regel is None:
+                return {"fout": "niet_gevonden", "melding": "Deze regel van de telling bestaat niet (meer)."}, 404
+            data = _data()
+            geteld = _getal(data.get("geteld"))
+            if geteld is None or not 0 <= geteld <= MAX_AANTAL:
+                return {"fout": "fout", "melding": "Vul een geldig aantal in."}, 400
+            opmerking = (str(data.get("opmerking") or "").strip() or "via de handterminal")[:200]
+            tekst = corrigeer_regel(db, regel, geteld, opmerking, True, session.get("gebruiker_naam"), session.get("gebruiker_id"))
+            return {"melding": tekst}, 200
+
+        return eenmalig(actie)
 
     @app.route("/api/app/bestellijst")
     def api_app_bestellijst():
@@ -609,6 +641,7 @@ def register_routes(app):
         Klaarzetten: zie api_app_bestellijst_bestellen."""
         db = get_db()
         keuzes = bestelvoorstel.bijstellingen(db)
+        leveranciers = {r["id"]: r["naam"] for r in db.execute("SELECT id, naam FROM leveranciers").fetchall()}
         meldingen = bereken_bestellijst_meldingen(db)
         open_bestellingen = db.execute(
             "SELECT id, aangemaakt_op, referentie FROM bestellingen WHERE status = 'besteld' ORDER BY id DESC"
@@ -621,7 +654,8 @@ def register_routes(app):
                     "voorraad": p["voorraad"], "min_voorraad": p["min_voorraad"] or 0,
                     "bestel_hoeveelheid": p["bestel_hoeveelheid"],
                     "besteleenheid": besteleenheid_naam(p) if factor > 1 else None, "per_besteleenheid": factor,
-                    "gekozen": bestelvoorstel.gekozen(keuzes.get(p["id"]))}
+                    "gekozen": bestelvoorstel.gekozen(keuzes.get(p["id"])),
+                    "leverancier": leveranciers.get(p["leverancier_id"]) if "leverancier_id" in p.keys() else None}
 
         suggesties = bestel_suggesties(db)
         suggestie_ids = {p["id"] for p in suggesties}
@@ -667,8 +701,9 @@ def register_routes(app):
 
     @app.route("/api/app/bestellijst/bestellen", methods=["POST"])
     def api_app_bestellijst_bestellen():
-        """{aantallen: {product_id: besteleenheden}, verzoek_id}: een bestelling klaarzetten, zoals Bestellijst >
-        Voorgesteld om te bestellen op de site. Hij staat daarna bij Factuur inboeken als concept."""
+        """{aantallen: {product_id: besteleenheden}, verzoek_id}: klaarzetten, zoals Bestellijst > Voorgesteld om te
+        bestellen op de site: een bestelling per leverancier (zie bestellen.maak_bestellingen). Ze staan daarna bij
+        Factuur inboeken als concept."""
         aantallen = {}
         for sleutel, waarde in (_data().get("aantallen") or {}).items():
             pid, n = _getal(sleutel), _getal(waarde)
@@ -676,19 +711,20 @@ def register_routes(app):
                 aantallen[pid] = n
 
         def actie(db):
-            bestelling_id, n = maak_bestelling(db, aantallen, session.get("gebruiker_naam"), session.get("gebruiker_id"))
-            if bestelling_id is None:
+            bestellingen = maak_bestellingen(db, aantallen, session.get("gebruiker_naam"), session.get("gebruiker_id"))
+            if not bestellingen:
                 return {"fout": "leeg", "melding": "Kies eerst wat je wilt bestellen."}, 400
-            return {"bestelling_id": bestelling_id,
-                    "melding": f"Bestelling #{bestelling_id} klaargezet ({n} {'product' if n == 1 else 'producten'}). "
-                               "Hij staat bij Factuur inboeken."}, 200
+            return {"bestelling_id": bestellingen[0]["id"], "bestellingen": bestellingen,
+                    "melding": klaargezet_melding(bestellingen) + " Ze staan bij Factuur inboeken; de lijst voor de "
+                               "leverancier (pdf of tekst) staat op de bestellijst op de computer."}, 200
 
         return eenmalig(actie)
 
     @app.route("/api/app/producten/<int:product_id>/instellingen", methods=["POST"])
     def api_app_product_instellingen(product_id):
-        """(Beheerders) {min_voorraad, besteleenheid, besteleenheid_factor}: het minimum en de besteleenheid van een
-        product aanpassen vanaf de handterminal. De rest (prijzen, naam, ...) blijft op de site."""
+        """(Beheerders) {min_voorraad, besteleenheid, besteleenheid_factor, naam, verkoopprijs}: het minimum, de
+        besteleenheid, de naam en de verkoopprijs van een product aanpassen vanaf de handterminal (naam en prijs mogen
+        ontbreken). Een andere prijs komt in de prijsgeschiedenis, net als op de site. De rest blijft op de site."""
         db = get_db()
         p = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
         if p is None:
@@ -701,11 +737,34 @@ def register_routes(app):
             return _fout("Vul een minimum van 0 of meer in.")
         if factor is None or factor < 1 or factor > 1000:
             return _fout("Vul in hoeveel er in een besteleenheid zit (1 of meer).")
-        db.execute("UPDATE producten SET min_voorraad = ?, besteleenheid = ?, besteleenheid_factor = ? WHERE id = ?",
-                   (minimum, naam if factor > 1 else None, factor, product_id))
-        schrijf_logboek(db, "api_app_product_instellingen",
-                        f"{p['naam']}: minimum {p['min_voorraad']} → {minimum}, besteleenheid "
-                        f"{p['besteleenheid'] or '-'} van {p['besteleenheid_factor']} → {naam or '-'} van {factor} (handterminal)")
+        productnaam = str(data.get("naam") or "").strip()[:100] if "naam" in data else p["naam"]
+        if not productnaam:
+            return _fout("Vul een naam in.")
+        prijs = p["verkoopprijs"]
+        if data.get("verkoopprijs") not in (None, ""):
+            try:
+                prijs = round(float(str(data["verkoopprijs"]).replace("€", "").replace(",", ".").strip()), 2)
+            except ValueError:
+                return _fout("Vul een geldige prijs in, bijvoorbeeld 2,50.")
+            if not 0 <= prijs <= 1000:
+                return _fout("Vul een geldige prijs in, bijvoorbeeld 2,50.")
+        db.execute(
+            "UPDATE producten SET naam = ?, verkoopprijs = ?, min_voorraad = ?, besteleenheid = ?, besteleenheid_factor = ? WHERE id = ?",
+            (productnaam, prijs, minimum, naam if factor > 1 else None, factor, product_id),
+        )
+        if abs((p["verkoopprijs"] or 0) - prijs) > 0.001:
+            db.execute(
+                """INSERT INTO prijs_geschiedenis (product_id, veld, oude_prijs, nieuwe_prijs, datum, naam, gebruiker_id)
+                   VALUES (?, 'verkoopprijs', ?, ?, ?, ?, ?)""",
+                (product_id, p["verkoopprijs"] or 0, prijs, now_str(), session.get("gebruiker_naam"), session.get("gebruiker_id")),
+            )
+        wijzigingen = [f"minimum {p['min_voorraad']} → {minimum}",
+                       f"besteleenheid {p['besteleenheid'] or '-'} van {p['besteleenheid_factor']} → {naam or '-'} van {factor}"]
+        if productnaam != p["naam"]:
+            wijzigingen.insert(0, f"naam → {productnaam}")
+        if abs((p["verkoopprijs"] or 0) - prijs) > 0.001:
+            wijzigingen.insert(0, f"verkoopprijs € {p['verkoopprijs'] or 0:.2f} → € {prijs:.2f}")
+        schrijf_logboek(db, "api_app_product_instellingen", f"{p['naam']}: " + ", ".join(wijzigingen) + " (handterminal)")
         db.commit()
         return jsonify({"product": _product(db, product_id), "melding": "Opgeslagen."})
 

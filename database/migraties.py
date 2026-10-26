@@ -388,6 +388,8 @@ KOLOM_MIGRATIES = [
     ("inboekronde_regels", "prijs_aangepast", "INTEGER NOT NULL DEFAULT 0"),
     # Zelf gekozen aantal colli om te bestellen (1.69.0), zie bestelvoorstel.zet_bestelaantal.
     ("bestel_bijstellingen", "eenheden", "INTEGER"),
+    # Een bestelling per leverancier (1.70.0), zie bestellen.maak_bestellingen.
+    ("bestellingen", "leverancier_id", "INTEGER REFERENCES leveranciers(id) ON DELETE SET NULL"),
 ]
 
 

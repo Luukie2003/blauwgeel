@@ -25,7 +25,9 @@ CREATE TABLE IF NOT EXISTS bestellingen (
     besteld_door TEXT,
     besteld_door_id INTEGER REFERENCES gebruikers(id),
     ontvangen_op TEXT,
-    referentie TEXT
+    referentie TEXT,
+    -- Bij welke leverancier (1.70.0): bij het klaarzetten wordt per leverancier een aparte bestelling gemaakt.
+    leverancier_id INTEGER REFERENCES leveranciers(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS bestelregels (

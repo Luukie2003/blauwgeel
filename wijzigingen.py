@@ -6,8 +6,20 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.69.0"
+HUIDIGE_VERSIE = "1.70.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.70.0",
+        "datum": "26 oktober 2026",
+        "punten": [
+            "De prognose is veel sneller: het zware rekenwerk gebeurt nog maar één keer per dag (en opnieuw na een nieuwe telling), voor alle periodes tegelijk. Een product scannen op de handterminal, de bestellijst, de agenda-omzet en de omzettrend op het overzicht wachten daardoor niet meer steeds 10 tot 20 seconden. Alleen de eerste keer van de dag kan nog even duren.",
+            "Klaarzetten per leverancier: kies je op de bestellijst (of in de app) producten van Sligro en van de Makro, dan worden het twee bestellingen, een per leverancier. Bij elke openstaande bestelling staan nu 'PDF voor de leverancier' (met je klantnummer en de artikelnummers) en 'Tekst kopiëren', om in een mail of WhatsApp te plakken. Bij het inboeken krijgt de factuur meteen de goede leverancier.",
+            "'Op de bestellijst' bij een product zet het nu echt bij 'Voorgesteld om te bestellen', met het advies en minstens 1 colli (op de site en in de app). Bezoekers die met de QR-code op een schaplabel iets melden, staan nog steeds bij 'Gemeld'.",
+            "Handterminal-app 2.15.0: een herinnering om te bestellen. Een paar uur voor het uiterste bestelmoment van een leverancier (of de avond ervoor als dat 's ochtends vroeg is) komt er een melding op het toestel, ook als de app dicht is, en staat het bij 'Let op' op het startscherm: 'Vandaag vóór 16:00 bestellen bij Sligro'. Uit te zetten in Instellingen.",
+            "Handterminal-app 2.15.0: een telling corrigeren kan nu ook in de app (Tellingen, tik op een product), en beheerders passen de naam en de verkoopprijs van een product aan in hetzelfde venster als het minimum en de besteleenheid.",
+            "Verkooprapport: een balk is alleen nog gestippeld (⚠️) als die periode veel korter of langer is dan je gewoonlijk telt. Wie twee keer per week telt, kreeg eerst bij bijna elke balk een waarschuwing. Onder de grafiek staat nu wat het betekent.",
+        ],
+    },
     {
         "versie": "1.69.0",
         "datum": "26 oktober 2026",
@@ -1231,9 +1243,9 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.14.1", "sinds": "0.1.0", "laatst": "1.64.0",
+    {"naam": "Voorraad & tellen", "versie": "1.15.0", "sinds": "0.1.0", "laatst": "1.70.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.17.0", "sinds": "0.4.0", "laatst": "1.69.0",
+    {"naam": "Bestellen & prognose", "versie": "1.18.0", "sinds": "0.4.0", "laatst": "1.70.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "1.54.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
@@ -1247,11 +1259,11 @@ MODULES = [
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.0", "sinds": "", "laatst": "",
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
-    {"naam": "Rapporten", "versie": "1.14.0", "sinds": "0.1.0", "laatst": "1.47.0",
+    {"naam": "Rapporten", "versie": "1.14.1", "sinds": "0.1.0", "laatst": "1.70.0",
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.17.0", "sinds": "1.53.0", "laatst": "1.69.0",
+    {"naam": "Handterminal-app", "versie": "0.18.0", "sinds": "1.53.0", "laatst": "1.70.0",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie, boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst, boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst en dia's aan of uit), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.5", "sinds": "0.1.0", "laatst": "1.65.1",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},

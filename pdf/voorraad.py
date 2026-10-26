@@ -1,6 +1,6 @@
 """PDF's over voorraad: bestellijst en voorraadoverzicht."""
 
-from pdf.basis import Rapport, _euro, _kort
+from pdf.basis import Rapport, _datum_nl, _euro, _kort
 
 
 def bestellijst_pdf(suggesties, ondertitel="Producten onder de minimumvoorraad"):
@@ -35,6 +35,31 @@ def bestellijst_pdf(suggesties, ondertitel="Producten onder de minimumvoorraad")
         )
     if not suggesties:
         pdf.leeg_bericht("Niets te bestellen - alle voorraad zit boven het minimum.")
+    return bytes(pdf.output())
+
+
+def bestelling_pdf(gegevens):
+    """Een klaargezette bestelling voor de leverancier (zie bestellen.bestelling_gegevens): met het klantnummer, en per
+    product hoeveel besteleenheden (en het artikelnummer als dat bekend is)."""
+    b, lev = gegevens["bestelling"], gegevens["leverancier"]
+    ondertitel = f"Voor {lev['naam']}" if lev else "Zonder leverancier"
+    if lev and lev["klantnummer"]:
+        ondertitel += f"  -  klantnummer {lev['klantnummer']}"
+    pdf = Rapport(f"Bestelling #{b['id']}", ondertitel)
+    pdf.statregel("Klaargezet:", _datum_nl(b["aangemaakt_op"]) + (f" door {b['besteld_door']}" if b["besteld_door"] else ""))
+    if b["referentie"]:
+        pdf.statregel("Referentie:", b["referentie"])
+    if lev and lev["bestelwijze"]:
+        pdf.statregel("Bestelwijze:", lev["bestelwijze"])
+    pdf.ln(3)
+    kolommen = [("Product", 92, "L"), ("Artikelnummer", 38, "L"), ("Aantal", 56, "R")]
+    pdf.kop_rij(kolommen)
+    for i, r in enumerate(gegevens["regels"]):
+        aantal = f"{r['eenheden']} {r['besteleenheid']}" + (f" ({r['stuks']} {r['eenheid']})" if r["factor"] > 1 else "")
+        pdf.data_rij([(_kort(pdf, r["naam"], 92), 92, "L"), (r["artikelcode"] or "", 38, "L"), (aantal, 56, "R")],
+                     zebra=i % 2 == 1)
+    if not gegevens["regels"]:
+        pdf.leeg_bericht("Er staat niets op deze bestelling.")
     return bytes(pdf.output())
 
 

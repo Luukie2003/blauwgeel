@@ -120,12 +120,21 @@ def test_al_weken_niets_verkocht(db):
 
 
 def test_op_de_bestellijst_zetten(ingelogde_client, db):
-    pid = _hertog(db)
-    resp = ingelogde_client.post(f"/producten/{pid}/melden", data={"csrf_token": _csrf(ingelogde_client)})
-    assert resp.status_code == 302 and resp.headers["Location"].endswith(f"/producten/{pid}")
-    rij = db.execute("SELECT bron, afgehandeld FROM bestellijst_meldingen WHERE product_id = ?", (pid,)).fetchone()
-    assert (rij["bron"], rij["afgehandeld"]) == ("productpagina", 0)
-    assert "Hertog Jan Fles" in ingelogde_client.get("/bestellijst").data.decode()
+    """Sinds 1.70.0 zet de knop het product bij "Voorgesteld om te bestellen" (niet meer een losse melding onder Gemeld):
+    met het advies en minstens 1 colli. Onder het minimum staat het er al."""
+    import bestelvoorstel
+
+    pid = _hertog(db, min_voorraad=0)
+    resp = ingelogde_client.post(f"/producten/{pid}/melden", data={"csrf_token": _csrf(ingelogde_client)}, follow_redirects=True)
+    assert "Hertog Jan Fles staat bij Voorgesteld om te bestellen: 1 krat." in resp.data.decode()
+    assert bestelvoorstel.bijstellingen(db)[pid]["eenheden"] == 1
+    assert db.execute("SELECT COUNT(*) FROM bestellijst_meldingen").fetchone()[0] == 0
+    assert 'name="aantal_%d"' % pid in ingelogde_client.get("/bestellijst").data.decode()
+
+    laag = _product(db, "Grolsch Laag", voorraad=2, min_voorraad=24)
+    resp = ingelogde_client.post(f"/producten/{laag}/melden", data={"csrf_token": _csrf(ingelogde_client)})
+    assert resp.headers["Location"].endswith(f"/producten/{laag}#verkoop")
+    assert laag not in bestelvoorstel.bijstellingen(db)  # onder het minimum: staat er al
 
 
 def test_melden_hoort_bij_de_voorraad_sectie(client, db):

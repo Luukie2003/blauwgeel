@@ -60,7 +60,8 @@ class InlogActivity : BasisActivity() {
     }
 
     private fun naarStart() {
-        startActivity(Intent(this, StartActivity::class.java))
+        // Vanuit een notificatie (zie Herinneringen.kt): na het inloggen meteen door naar de bestellijst.
+        startActivity(Intent(this, StartActivity::class.java).putExtra(EXTRA_OPEN, intent.getStringExtra(EXTRA_OPEN)))
         finish()
     }
 
@@ -231,5 +232,7 @@ class InlogActivity : BasisActivity() {
 
     companion object {
         const val EXTRA_MELDING = "melding"
+        const val EXTRA_OPEN = "open"
+        const val OPEN_BESTELLIJST = "bestellijst"
     }
 }

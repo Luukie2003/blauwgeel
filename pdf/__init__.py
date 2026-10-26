@@ -23,7 +23,7 @@ from pdf.basis import (
     _euro,
     _kort,
 )
-from pdf.voorraad import bestellijst_pdf, voorraadoverzicht_pdf
+from pdf.voorraad import bestelling_pdf, bestellijst_pdf, voorraadoverzicht_pdf
 from pdf.prijslijst import prijslijst_pdf
 from pdf.kas import kassa_pdf
 from pdf.kaartjes import (
@@ -80,6 +80,7 @@ __all__ = [
     "Rapport",
     "_euro",
     "_kort",
+    "bestelling_pdf",
     "bestellijst_pdf",
     "voorraadoverzicht_pdf",
     "kassa_pdf",

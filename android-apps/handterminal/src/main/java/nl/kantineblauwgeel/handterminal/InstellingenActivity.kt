@@ -48,6 +48,11 @@ class InstellingenActivity : AppCompatActivity() {
         }
         b.trillenSchakelaar.isChecked = inst.trillen
         b.trillenSchakelaar.setOnCheckedChangeListener { _, aan -> inst.trillen = aan }
+        b.herinneringSchakelaar.isChecked = inst.bestelHerinnering
+        b.herinneringSchakelaar.setOnCheckedChangeListener { _, aan ->
+            inst.bestelHerinnering = aan
+            Herinneringen.planOpnieuw(this) // uit: de wekkers weg; aan: weer zetten
+        }
 
         b.websiteAdres.setText(inst.basisUrl)
         b.websiteAdres.isEnabled = BuildConfig.DEBUG

@@ -1,7 +1,10 @@
 package nl.kantineblauwgeel.handterminal
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -54,6 +57,20 @@ class StartActivity : BasisActivity() {
             } catch (e: Exception) {
             }
         }
+        openGevraagd(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        openGevraagd(intent)
+    }
+
+    /** Vanuit een notificatie (zie Herinneringen.kt), na het inloggen: meteen door naar de bestellijst. */
+    private fun openGevraagd(intent: Intent?) {
+        if (intent?.getStringExtra(InlogActivity.EXTRA_OPEN) == InlogActivity.OPEN_BESTELLIJST) {
+            intent.removeExtra(InlogActivity.EXTRA_OPEN)
+            BestellijstActivity.open(this)
+        }
     }
 
     override fun onResume() {
@@ -75,6 +92,7 @@ class StartActivity : BasisActivity() {
                 val start = Api.getJson(this, "/api/app/start")
                 inst.startCache = start.toString()
                 toon(start)
+                planHerinneringen(start.optJSONArray("bestelmomenten"))
             } finally {
                 b.verversen.isRefreshing = false
             }
@@ -93,6 +111,19 @@ class StartActivity : BasisActivity() {
         tegel.tegelTeller.text = teller?.toString()
         tegel.tegelTeller.setBackgroundResource(if (rood) R.drawable.badge_rood else R.drawable.badge_geel)
         tegel.tegelTeller.setTextColor(getColor(if (rood) R.color.wit else R.color.navy))
+    }
+
+    /** De herinneringen om te bestellen bijwerken (zie Herinneringen.kt). Vanaf Android 13 is er toestemming nodig voor
+     * een notificatie: die vragen we één keer, zodra er iets te herinneren is. */
+    private fun planHerinneringen(momenten: org.json.JSONArray?) {
+        Herinneringen.plan(this, momenten)
+        if (Build.VERSION.SDK_INT >= 33 && (momenten?.length() ?: 0) > 0 && inst.bestelHerinnering &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+            !inst.meldingenGevraagd
+        ) {
+            inst.meldingenGevraagd = true
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
     }
 
     private fun toon(start: JSONObject) {
@@ -133,6 +164,22 @@ class StartActivity : BasisActivity() {
         val toegang = start.optJSONObject("toegang")
         fun heeft(sectie: String) = toegang?.optBoolean(sectie) ?: false
         val beheerder = start.optBoolean("beheerder")
+        // Bestellen: het uiterste bestelmoment van een leverancier komt eraan (vanaf de herinnering tot het moment zelf).
+        val nu = System.currentTimeMillis()
+        start.optJSONArray("bestelmomenten")?.objecten()?.forEach { m ->
+            val herinnering = Herinneringen.tijd(m.tekstOfNull("herinnering")) ?: return@forEach
+            val uiterst = Herinneringen.tijd(m.tekstOfNull("uiterst")) ?: return@forEach
+            if (m.optBoolean("al_besteld") || nu < herinnering || nu >= uiterst) return@forEach
+            val aantal = m.optInt("aantal")
+            letOp(
+                getString(R.string.letop_bestellen, Herinneringen.wanneerTekst(this, uiterst, m.optString("uiterst_tekst"))
+                    .replaceFirstChar { it.uppercase() }, m.optString("tijd"), m.optString("leverancier")),
+                getString(R.string.letop_bestellen_detail,
+                    if (aantal > 0) resources.getQuantityString(R.plurals.n_producten_klaar, aantal, aantal) else getString(R.string.letop_bestellen_niets),
+                    m.optString("levering_tekst")),
+                R.drawable.rand_links_oranje,
+            ) { BestellijstActivity.open(this) }
+        }
         // De timers op de tv's (bijvoorbeeld de gehaktballen): wat er loopt, of wat klaar is.
         start.optJSONArray("timers")?.objecten()?.forEach { t ->
             val klaar = t.optBoolean("klaar")

@@ -39,6 +39,8 @@ object Catalogus {
         val barcodes: List<Barcode>,
         val foto: String? = null,
         val fotoGroot: String? = null,
+        /** De leverancier: bij het klaarzetten wordt het een bestelling per leverancier. */
+        val leverancier: String? = null,
     ) {
         val laag get() = actief && voorraad < minVoorraad
         internal val zoektekst = normaal("$naam $categorie $subcategorie $merk")
@@ -51,7 +53,7 @@ object Catalogus {
         }
 
         fun metVoorraad(nieuw: Int) = Product(id, naam, categorie, subcategorie, merk, eenheid, nieuw, minVoorraad, actief,
-            besteleenheid, perBesteleenheid, barcodes, foto, fotoGroot)
+            besteleenheid, perBesteleenheid, barcodes, foto, fotoGroot, leverancier)
 
         /** Hoeveel er in een volle doos of krat zit, bij een losse verpakking van [barcode]: de doos van dat artikel,
          * of anders de besteleenheid van het product. Null als er niets groters is. */
@@ -136,6 +138,7 @@ object Catalogus {
         } ?: emptyList(),
         foto = json.tekstOfNull("foto"),
         fotoGroot = json.tekstOfNull("foto_groot"),
+        leverancier = json.tekstOfNull("leverancier"),
     )
 
     /** Een product dat net is bijgewerkt (geboekt, barcode gekoppeld): meteen goed in de lijst, zonder op het

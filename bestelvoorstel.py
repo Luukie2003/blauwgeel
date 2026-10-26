@@ -21,12 +21,16 @@ min wat er ligt en wat al onderweg is, naar boven afgerond op hele besteleenhede
 import math
 from datetime import datetime, time, timedelta
 
-from helpers.producten import besteleenheid_factor, besteleenheid_naam
+from helpers.producten import besteleenheid_factor, besteleenheid_naam, bestel_suggesties
 from helpers.tijd import now_str
 from leveranciers import besteldagen
 
 STANDAARD_DAGEN = 7
 MAX_DAGEN = 21
+# De herinnering om te bestellen (bestelmomenten): zo lang van tevoren, maar niet 's nachts (dan de avond ervoor).
+HERINNER_UREN = 3
+NACHT_VAN, NACHT_TOT, AVOND = 22, 8, 20
+HERINNER_DAGEN = 8  # zo ver vooruit plant de app de herinneringen
 _DAG_KORT = ("ma", "di", "wo", "do", "vr", "za", "zo")
 
 
@@ -216,3 +220,88 @@ def voor_product(db, product, nu=None):
         "eenheid": product["eenheid"],
     })
     return uit
+
+
+def zet_op_bestellijst(db, product, door=None, gebruiker_id=None, nu=None):
+    """"Op de bestellijst" (de knop op de productpagina en in de app): het product bij "Voorgesteld om te bestellen"
+    zetten, met het advies en minstens 1 colli, als iemand nog geen aantal koos. Zit het onder het minimum, of koos
+    iemand al een aantal, dan staat het er al. Geeft (het nieuwe bestelblok, melding)."""
+    blok = voor_product(db, product, nu)
+    keuze, colli = blok["gekozen"], blok["besteleenheid"]
+    if keuze:
+        return blok, f"{product['naam']} staat al bij Voorgesteld om te bestellen: {keuze} {colli}."
+    if keuze is None and any(p["id"] == product["id"] for p in bestel_suggesties(db)):
+        return blok, (f"{product['naam']} zit onder het minimum en staat al bij Voorgesteld om te bestellen "
+                      f"(advies {blok['advies_eenheden']} {colli}).")
+    aantal = max(1, blok["advies_eenheden"])
+    zet_bestelaantal(db, product["id"], aantal, door, gebruiker_id)
+    blok = voor_product(db, product, nu)
+    al = f" Er is al {blok['onderweg']} {product['eenheid']} onderweg." if blok["onderweg"] else ""
+    return blok, f"{product['naam']} staat bij Voorgesteld om te bestellen: {aantal} {colli}.{al}"
+
+
+def herinner_moment(uiterst):
+    """Wanneer de app eraan herinnert dat je moet bestellen: HERINNER_UREN voor het uiterste moment, maar valt dat 's
+    nachts (22.00-8.00 uur), dan om 20.00 uur de avond ervoor."""
+    moment = uiterst - timedelta(hours=HERINNER_UREN)
+    if moment.hour >= NACHT_VAN:
+        return datetime.combine(moment.date(), time(AVOND))
+    if moment.hour < NACHT_TOT:
+        return datetime.combine(moment.date() - timedelta(days=1), time(AVOND))
+    return moment
+
+
+def _vorig_bestelmoment(lev, uiterst):
+    dagen, voor = besteldagen(lev), _bestellen_voor(lev)
+    for i in range(1, 8):
+        dag = uiterst.date() - timedelta(days=i)
+        if dag.weekday() in dagen:
+            return datetime.combine(dag, voor)
+    return uiterst - timedelta(days=7)
+
+
+def _voorgesteld_per_leverancier(db):
+    """{leverancier_id: aantal producten} van wat nu bij "Voorgesteld om te bestellen" staat zonder de prognose: onder
+    het minimum (en nog niet besteld) of zelf gekozen (zie zet_bestelaantal)."""
+    ids = {p["id"] for p in bestel_suggesties(db)}
+    ids |= {pid for pid, b in bijstellingen(db).items() if (gekozen(b) or 0) > 0}
+    if not ids:
+        return {}
+    uitkomst = {}
+    for r in db.execute(
+        f"SELECT leverancier_id FROM producten WHERE id IN ({','.join('?' * len(ids))}) AND leverancier_id IS NOT NULL",
+        tuple(ids),
+    ).fetchall():
+        uitkomst[r["leverancier_id"]] = uitkomst.get(r["leverancier_id"], 0) + 1
+    return uitkomst
+
+
+def bestelmomenten(db, nu=None, dagen=HERINNER_DAGEN):
+    """De uiterste bestelmomenten van de komende 'dagen' dagen, van elke actieve leverancier met besteldagen: voor de
+    herinnering in de handterminal-app (een melding op het startscherm en een notificatie, ook als de app dicht is).
+    Per moment: wanneer de app herinnert, hoeveel producten er nu voor die leverancier klaarstaan (zonder de prognose,
+    zie _voorgesteld_per_leverancier) en of er sinds het vorige bestelmoment al een bestelling is klaargezet. Op tijd."""
+    nu = nu or datetime.now()
+    aantallen = _voorgesteld_per_leverancier(db)
+    uitkomst = []
+    for lev in db.execute("SELECT * FROM leveranciers WHERE actief = 1 ORDER BY naam COLLATE NOCASE").fetchall():
+        vanaf = nu
+        while (periode := bestelperiode(lev, vanaf)) is not None and periode["uiterst"] <= nu + timedelta(days=dagen):
+            uiterst = periode["uiterst"]
+            al_besteld = db.execute(
+                "SELECT 1 FROM bestellingen WHERE leverancier_id = ? AND aangemaakt_op > ? AND aangemaakt_op <= ? LIMIT 1",
+                (lev["id"], _vorig_bestelmoment(lev, uiterst).strftime("%Y-%m-%d %H:%M"), uiterst.strftime("%Y-%m-%d %H:%M")),
+            ).fetchone() is not None
+            uitkomst.append({
+                "leverancier_id": lev["id"],
+                "leverancier": lev["naam"],
+                "uiterst": uiterst.strftime("%Y-%m-%d %H:%M"),
+                "uiterst_tekst": dag_tekst(uiterst, met_tijd=True),
+                "tijd": uiterst.strftime("%H:%M"),
+                "levering_tekst": dag_tekst(periode["levering"]),
+                "herinnering": herinner_moment(uiterst).strftime("%Y-%m-%d %H:%M"),
+                "aantal": aantallen.get(lev["id"], 0),
+                "al_besteld": al_besteld,
+            })
+            vanaf = uiterst + timedelta(minutes=1)
+    return sorted(uitkomst, key=lambda m: m["uiterst"])

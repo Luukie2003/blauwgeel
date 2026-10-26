@@ -59,12 +59,15 @@ def test_verkoop_en_verwachting(app_client, db):  # noqa: F811
 
 
 def test_op_de_bestellijst_maar_een_keer_per_verzoek(app_client, db):  # noqa: F811
-    pid = _hertog(db)
-    for _ in range(2):
-        resp = _post(app_client, f"/api/app/producten/{pid}/melden", verzoek_id="melden-1")
-        assert resp.status_code == 200 and resp.get_json()["meldingen"] == 1
-    assert db.execute("SELECT COUNT(*) FROM bestellijst_meldingen WHERE product_id = ?", (pid,)).fetchone()[0] == 1
-    assert app_client.get(f"/api/app/producten/{pid}").get_json()["info"]["meldingen"] == 1
+    """"Op de bestellijst" zet het product bij Voorgesteld (1 colli of het advies); een herhaald verzoek doet dat niet
+    nog eens, en een nieuw verzoek zegt dat het er al staat."""
+    pid = _hertog(db, min_voorraad=0)
+    antwoorden = [_post(app_client, f"/api/app/producten/{pid}/melden", verzoek_id="melden-1").get_json() for _ in range(2)]
+    assert antwoorden[0] == antwoorden[1]
+    assert antwoorden[0]["melding"] == "Hertog Jan Fles staat bij Voorgesteld om te bestellen: 1 krat."
+    assert antwoorden[0]["bestellen"]["gekozen"] == 1
+    nog_eens = _post(app_client, f"/api/app/producten/{pid}/melden", verzoek_id="melden-2").get_json()
+    assert nog_eens["melding"] == "Hertog Jan Fles staat al bij Voorgesteld om te bestellen: 1 krat."
 
 
 # ---------- Kassa en kluis ----------

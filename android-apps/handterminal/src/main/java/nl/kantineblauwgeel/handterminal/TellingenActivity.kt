@@ -3,11 +3,13 @@ package nl.kantineblauwgeel.handterminal
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import androidx.appcompat.app.AlertDialog
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
-/** De laatste tellingen, en per telling wat er per product geteld en verkocht is. Corrigeren kan alleen op de
- * website. */
+/** De laatste tellingen, en per telling wat er per product geteld en verkocht is. Tik op een product om de telling te
+ * corrigeren (zoals op de site: verkocht en de omzet gaan mee, en bij de laatste telling van het product ook de
+ * voorraad), of om het product te openen. */
 class TellingenActivity : BasisActivity() {
 
     private lateinit var b: ActivityLijstBinding
@@ -66,20 +68,55 @@ class TellingenActivity : BasisActivity() {
             val eenheid = r.optString("eenheid")
             val verkocht = r.optInt("verkocht")
             val correctie = r.optInt("correctie")
+            val gecorrigeerd = r.tekstOfNull("gecorrigeerd_door")?.let { " · " + getString(R.string.gecorrigeerd_door, it, r.optInt("geteld_aantal_voor_correctie")) } ?: ""
             Lijst.regel(
                 kaart,
                 r.optString("product"),
-                getString(R.string.was_geteld, r.optInt("voorraad_voor"), r.optInt("geteld_aantal"), eenheid),
+                getString(R.string.was_geteld, r.optInt("voorraad_voor"), r.optInt("geteld_aantal"), eenheid) + gecorrigeerd,
                 when {
                     verkocht > 0 -> getString(R.string.verkocht_n, verkocht)
                     correctie > 0 -> "+$correctie"
                     else -> "0"
                 },
                 if (correctie > 0) R.color.oranje_balk else R.color.tekst,
-            ) { ProductActivity.open(this, r.getInt("product_id")) }
+            ) { kiesActie(r) }
         }
-        Lijst.kop(b.inhoud, getString(R.string.op_de_computer))
-        Lijst.knop(Lijst.kaart(b.inhoud), getString(R.string.telling_corrigeren)) { nietInApp(getString(R.string.wat_telling_corrigeren)) }
+        Lijst.tekst(Lijst.kaart(b.inhoud, R.drawable.melding_info), getString(R.string.tik_om_te_corrigeren), kleur = R.color.tekst)
+    }
+
+    /** Tik op een product in een telling: de telling corrigeren, of het product openen. */
+    private fun kiesActie(r: JSONObject) {
+        AlertDialog.Builder(this)
+            .setTitle(r.optString("product"))
+            .setItems(arrayOf(getString(R.string.telling_corrigeren_kort), getString(R.string.product_openen))) { _, keuze ->
+                if (keuze == 0) corrigeer(r) else ProductActivity.open(this, r.getInt("product_id"))
+            }
+            .show()
+    }
+
+    private fun corrigeer(r: JSONObject) {
+        val eenheid = r.optString("eenheid")
+        val titel = getString(R.string.hoeveel_geteld, r.optString("product"))
+        Cijferpad.vraag(this, titel, r.optInt("geteld_aantal").toString(), eenheid = eenheid, max = 5) { tekst ->
+            val geteld = tekst.toIntOrNull() ?: return@vraag
+            if (geteld == r.optInt("geteld_aantal")) return@vraag
+            val uitleg = if (r.optBoolean("laatste")) getString(R.string.correctie_voorraad_mee) else getString(R.string.correctie_voorraad_niet)
+            AlertDialog.Builder(this)
+                .setTitle(r.optString("product"))
+                .setMessage(getString(R.string.correctie_vraag, r.optInt("geteld_aantal"), geteld, eenheid) + "\n\n" + uitleg)
+                .setNegativeButton(R.string.annuleren, null)
+                .setPositiveButton(R.string.corrigeren) { _, _ ->
+                    val id = Api.nieuwVerzoekId()
+                    bezig {
+                        val antwoord = Api.post(this, "/api/app/tellingen/regels/${r.getInt("regel_id")}/corrigeren",
+                            JSONObject().put("geteld", geteld), verzoekId = id)
+                        tril(60)
+                        melding(antwoord.optString("melding"), lang = true)
+                        laad()
+                    }
+                }
+                .show()
+        }
     }
 
     companion object {

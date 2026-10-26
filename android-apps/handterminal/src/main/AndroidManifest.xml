@@ -7,6 +7,9 @@
     <!-- Voor de wifi-lock: houdt de wifi op volle kracht zolang de app voorin staat (zie BasisActivity). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- De herinnering om te bestellen (Herinneringen.kt): een notificatie, ook na een herstart van het toestel. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -235,5 +238,14 @@
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Thema.Handterminal.Instellingen" />
+        <!-- De wekker van een bestelherinnering, en na een herstart of update de wekkers opnieuw zetten. -->
+        <receiver
+            android:name=".HerinneringOntvanger"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

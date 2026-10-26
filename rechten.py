@@ -288,6 +288,7 @@ SECTIE_ENDPOINTS = {
         "api_app_geschiedenis",
         "api_app_tellingen",
         "api_app_telling",
+        "api_app_telling_regel_corrigeren",
         "api_app_bestellijst",
         "api_app_bestellijst_melding_afhandelen",
         "api_app_bestellijst_bestellen",
@@ -404,6 +405,7 @@ SECTIE_ENDPOINTS = {
         # De verwachte omzet in de agenda (de agenda zelf mag iedereen zien).
         "agenda_omzet",
         "bestellijst_pdf_route",
+        "bestelling_pdf_route",
         "bestelling_aanmaken",
         "bestelling_nieuw",
         "bestelling_bewerken",

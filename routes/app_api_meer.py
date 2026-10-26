@@ -388,20 +388,18 @@ def register_routes(app):
 
     @app.route("/api/app/producten/<int:product_id>/melden", methods=["POST"])
     def api_app_product_melden(product_id):
-        """"Op de bestellijst", net als op de productpagina van de site."""
+        """"Op de bestellijst", net als op de productpagina van de site: het product bij "Voorgesteld om te bestellen"
+        zetten (zie bestelvoorstel.zet_op_bestellijst). Geeft het nieuwe bestelblok terug."""
 
         def actie(db):
-            product = db.execute("SELECT id, naam FROM producten WHERE id = ?", (product_id,)).fetchone()
+            product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
             if product is None:
                 return {"fout": "niet_gevonden", "melding": "Dit product bestaat niet meer."}, 404
-            db.execute(
-                "INSERT INTO bestellijst_meldingen (product_id, tekst, bron, aangemaakt_op) VALUES (?, ?, 'app', ?)",
-                (product_id, f"Gemeld door {session.get('gebruiker_naam') or 'onbekend'}", now_str()),
-            )
+            blok, melding = bestelvoorstel.zet_op_bestellijst(db, product, session.get("gebruiker_naam"), session.get("gebruiker_id"))
             meldingen = db.execute(
                 "SELECT COUNT(*) FROM bestellijst_meldingen WHERE product_id = ? AND afgehandeld = 0", (product_id,)
             ).fetchone()[0]
-            return {"melding": f"{product['naam']} staat op de bestellijst.", "meldingen": meldingen}, 200
+            return {"melding": melding, "meldingen": meldingen, "bestellen": blok}, 200
 
         return eenmalig(actie)
 

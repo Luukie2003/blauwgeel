@@ -49,7 +49,7 @@
     {% for b, regels in bestellingen %}
     <details style="border-top:1px solid var(--rand-licht); padding:0.6rem 0">
         <summary style="cursor:pointer">
-            <strong>#{{ b.id }}</strong>{% if b.referentie %} &mdash; {{ b.referentie }}{% endif %}
+            <strong>#{{ b.id }}</strong>{% if b.leverancier_naam %} bij {{ b.leverancier_naam }}{% endif %}{% if b.referentie %} &mdash; {{ b.referentie }}{% endif %}
             &middot; {{ b.aangemaakt_op|datum_nl }}{% if b.besteld_door %} &middot; {{ b.besteld_door }}{% endif %}
             &middot; {{ regels|length }} {{ 'product' if regels|length == 1 else 'producten' }}
             {% if b.status == 'besteld' %}<span class="badge badge-in">klaargezet</span>
@@ -81,6 +81,7 @@
             {% if b.status == 'besteld' %}
             <a href="{{ url_for('factuur_voor_bestelling', bestelling_id=b.id) }}" class="btn btn-geel btn-klein">Inboeken (factuur)</a>
             <a href="{{ url_for('bestelling_bewerken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+            <a href="{{ url_for('bestelling_pdf_route', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">PDF voor de leverancier</a>
             {% else %}
             <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Ontvangen aantallen corrigeren</a>
             {% endif %}

@@ -76,6 +76,14 @@
     <string name="inst_uitloggen_uitleg">Iedereen gebruikt dezelfde handterminal met een eigen code. Na deze tijd zonder aanraken of scannen logt de app uit, zodat niemand op jouw naam verder werkt.</string>
     <string name="inst_scanner">Scanner</string>
     <string name="inst_trillen">Kort trillen bij een scan</string>
+    <string name="inst_bestel_herinnering">Herinnering om te bestellen (een melding een paar uur voor het uiterste bestelmoment van een leverancier)</string>
+    <string name="kanaal_bestellen">Herinnering om te bestellen</string>
+    <string name="herinnering_titel">%1$s bestellen bij %2$s</string>
+    <string name="herinnering_voor">Uiterlijk vóór %1$s, levering %2$s.</string>
+    <string name="herinnering_niets">Nu staat er niets onder het minimum; kijk ook even naar de prognose.</string>
+    <string name="letop_bestellen">%1$s vóór %2$s bestellen bij %3$s</string>
+    <string name="letop_bestellen_detail">%1$s · levering %2$s</string>
+    <string name="letop_bestellen_niets">Niets onder het minimum</string>
     <string name="inst_scanner_zebra">Zebra-scanner gevonden. Scans gaan rechtstreeks naar de app, ook als er geen veld is geselecteerd.</string>
     <string name="inst_scanner_geen">Geen Zebra-scanner gevonden. Een scanner die als toetsenbord werkt, typt in het geselecteerde veld.</string>
     <string name="inst_scanner_opnieuw">Scanner opnieuw instellen</string>
@@ -321,6 +329,14 @@
         <item quantity="one">%d onderdeel</item>
         <item quantity="other">%d onderdelen</item>
     </plurals>
+    <plurals name="herinnering_aantal">
+        <item quantity="one">%d product staat klaar om te bestellen.</item>
+        <item quantity="other">%d producten staan klaar om te bestellen.</item>
+    </plurals>
+    <plurals name="n_producten_klaar">
+        <item quantity="one">%d product klaar om te bestellen</item>
+        <item quantity="other">%d producten klaar om te bestellen</item>
+    </plurals>
     <plurals name="n_producten">
         <item quantity="one">%d product</item>
         <item quantity="other">%d producten</item>
@@ -418,12 +434,20 @@
     <string name="wat_geld_afdragen">Geld afdragen of overboeken naar de kluis</string>
     <string name="wat_geld_corrigeren">Een telling corrigeren, bewerken of heropenen</string>
     <string name="wat_geld_storten">Storten of opnemen</string>
-    <string name="wat_product_bewerken">Een product bewerken (prijzen, minimum, gegevens)</string>
+    <string name="wat_product_bewerken">Een product verder bewerken (categorie, foto, prijsopties en de rest)</string>
     <string name="wat_schaplabel">Een schaplabel printen</string>
     <string name="wat_telling_corrigeren">Een telling corrigeren</string>
     <string name="wat_verkoopdagen">De verkoopdagen en evenementen instellen</string>
     <string name="bestelling_klaarzetten">Bestelling klaarzetten</string>
     <string name="telling_corrigeren">Telling corrigeren of heropenen</string>
+    <string name="tik_om_te_corrigeren">Tik op een product om de telling te corrigeren (bijvoorbeeld een krat die je over het hoofd zag) of om het product te openen.</string>
+    <string name="telling_corrigeren_kort">Telling corrigeren</string>
+    <string name="product_openen">Product openen</string>
+    <string name="hoeveel_geteld">%1$s: hoeveel had je moeten tellen?</string>
+    <string name="correctie_vraag">Geteld %1$d → %2$d %3$s.</string>
+    <string name="correctie_voorraad_mee">Dit is de laatste telling van dit product: de voorraad gaat mee met het verschil.</string>
+    <string name="correctie_voorraad_niet">Dit product is daarna opnieuw geteld: de voorraad blijft zoals hij is.</string>
+    <string name="gecorrigeerd_door">gecorrigeerd door %1$s (was %2$d)</string>
     <string name="product_bewerken">Product bewerken</string>
     <string name="schaplabel_printen">Schaplabel printen</string>
     <string name="verkoopdagen_instellen">Verkoopdagen en evenementen instellen</string>
@@ -643,6 +667,8 @@
     <string name="frituurvet_interval_vraag">Om de hoeveel dagen moet het frituurvet vervangen?</string>
     <string name="inkoop_per_stuk_kort">inkoop %1$s per %2$s</string>
     <string name="klaarzetten">Klaarzetten</string>
+    <string name="zonder_leverancier">Zonder leverancier</string>
+    <string name="n_bestellingen_klaarzetten">%1$d bestellingen klaarzetten (een per leverancier)</string>
     <string name="klaarzetten_n">Klaarzetten (%1$d)</string>
     <string name="klaarzetten_uitleg">Scan een product om het toe te voegen; nog een keer scannen is één colli meer. Tik op een product om het aantal te veranderen; 0 is niet bestellen. De bestelling staat daarna bij Factuur inboeken.</string>
     <string name="product_niet_gevonden">Dit product staat (nog) niet op dit toestel.</string>
@@ -657,8 +683,10 @@
     <string name="niet_geleverd_detail">%1$d %2$s niet geleverd</string>
     <string name="hoeveel_bestellen">%1$s: hoeveel bestellen?</string>
     <string name="n_eenheid">%1$d %2$s</string>
-    <string name="minimum_en_besteleenheid">Minimum en besteleenheid aanpassen</string>
-    <string name="product_bewerken_rest">Naam, prijzen en de rest bewerken</string>
+    <string name="minimum_en_besteleenheid">Naam, prijs, minimum en besteleenheid aanpassen</string>
+    <string name="product_bewerken_rest">Categorie, foto en de rest bewerken</string>
+    <string name="naam">Naam</string>
+    <string name="verkoopprijs_in">Verkoopprijs per %1$s (bijv. 2,50)</string>
     <string name="minimumvoorraad_in">Minimumvoorraad (in %1$s)</string>
     <string name="besteleenheid_naam_vraag">Besteleenheid (bijv. Krat, Doos, Tray; leeg als je los bestelt)</string>
     <string name="aantal_per_besteleenheid">Hoeveel %1$s zitten erin?</string>

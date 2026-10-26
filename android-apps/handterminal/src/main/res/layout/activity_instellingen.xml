@@ -69,6 +69,15 @@
                 android:textColor="@color/tekst"
                 android:textSize="15sp" />
 
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/herinneringSchakelaar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/inst_bestel_herinnering"
+                android:textColor="@color/tekst"
+                android:textSize="15sp" />
+
             <Button
                 android:id="@+id/scannerOpnieuw"
                 android:layout_width="match_parent"

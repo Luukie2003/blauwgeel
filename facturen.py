@@ -57,9 +57,10 @@ def open_bestellingen(db):
     bestellingen = [
         dict(r)
         for r in db.execute(
-            """SELECT b.id, b.aangemaakt_op, b.referentie, b.besteld_door,
+            """SELECT b.id, b.aangemaakt_op, b.referentie, b.besteld_door, l.naam AS leverancier,
                       (SELECT MAX(r.id) FROM inboekrondes r WHERE r.bestelling_id = b.id AND r.status = 'open') AS ronde_id
-               FROM bestellingen b WHERE b.status = 'besteld' ORDER BY b.aangemaakt_op DESC, b.id DESC"""
+               FROM bestellingen b LEFT JOIN leveranciers l ON l.id = b.leverancier_id
+               WHERE b.status = 'besteld' ORDER BY b.aangemaakt_op DESC, b.id DESC"""
         ).fetchall()
     ]
     for b in bestellingen:
@@ -94,11 +95,14 @@ def _bestelregels(db, bestelling_id):
 
 
 def ronde_voor_bestelling(db, bestelling_id, door=None, door_id=None, bron="site"):
-    """Een klaargezette bestelling inboeken: de open ronde die er al bij hoort, of een nieuwe (met de leverancier als
-    alle producten van dezelfde leverancier komen). Geeft het id van de ronde, of None als de bestelling niet (meer)
-    openstaat."""
+    """Een klaargezette bestelling inboeken: de open ronde die er al bij hoort, of een nieuwe (met de leverancier van de
+    bestelling, of anders als alle producten van dezelfde leverancier komen). Geeft het id van de ronde, of None als de
+    bestelling niet (meer) openstaat."""
     bestelling_id = _getal(bestelling_id) or 0
-    if not db.execute("SELECT 1 FROM bestellingen WHERE id = ? AND status = 'besteld'", (bestelling_id,)).fetchone():
+    bestelling = db.execute(
+        "SELECT leverancier_id FROM bestellingen WHERE id = ? AND status = 'besteld'", (bestelling_id,)
+    ).fetchone()
+    if not bestelling:
         return None
     bestaand = db.execute(
         "SELECT id FROM inboekrondes WHERE bestelling_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1",
@@ -114,7 +118,7 @@ def ronde_voor_bestelling(db, bestelling_id, door=None, door_id=None, bron="site
             (bestelling_id,),
         ).fetchall()
     }
-    leverancier_id = next(iter(leveranciers)) if len(leveranciers) == 1 else None
+    leverancier_id = bestelling["leverancier_id"] or (next(iter(leveranciers)) if len(leveranciers) == 1 else None)
     return start_ronde(db, leverancier_id, None, bestelling_id, door=door, door_id=door_id, bron=bron)
 
 
