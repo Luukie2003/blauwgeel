@@ -118,6 +118,15 @@ class KantineTvActivity : BasisActivity() {
             stuur("/api/app/kantine-tv/wissel", JSONObject().put("toont", if (wisselDias) "prijzen" else "dias"))
         }
 
+        // Het thema op alle schermen (zoals Halloween): met één tik aan of uit.
+        val halloween = d.tekstOfNull("thema") == "halloween"
+        Lijst.regel(Lijst.kaart(inhoud), getString(R.string.halloween_thema),
+            getString(if (halloween) R.string.halloween_aan_uitleg else R.string.halloween_uit_uitleg),
+            getString(if (halloween) R.string.aan else R.string.uit),
+            if (halloween) R.color.oranje_balk else R.color.tekst_zacht) {
+            stuur("/api/app/kantine-tv/thema", JSONObject().put("thema", if (halloween) JSONObject.NULL else "halloween"))
+        }
+
         // Op het prijzenscherm: uitverkocht en de timer
         Lijst.kop(inhoud, getString(R.string.op_het_prijzenscherm))
         val prijzen = Lijst.kaart(inhoud)

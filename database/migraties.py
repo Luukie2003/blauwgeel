@@ -392,6 +392,8 @@ KOLOM_MIGRATIES = [
     ("bestellingen", "leverancier_id", "INTEGER REFERENCES leveranciers(id) ON DELETE SET NULL"),
     # Gecontroleerd op de bestellijst in de app (1.73.0), zie bestelvoorstel.zet_bestelaantal.
     ("bestel_bijstellingen", "gecontroleerd", "INTEGER NOT NULL DEFAULT 0"),
+    # Een thema over alle kantine-tv-schermen (1.74.0, bijvoorbeeld Halloween), zie routes/kiosk/gedeeld.py.
+    ("kiosk_scherm_instellingen", "thema", "TEXT"),
 ]
 
 

@@ -36,6 +36,33 @@ def _scherm_instellingen(db):
     return db.execute("SELECT * FROM kiosk_scherm_instellingen WHERE id = 1").fetchone()
 
 
+# Een thema over alle schermen heen (1.74.0): versiering die over het prijzenscherm en de dia's komt, zonder iets aan
+# de inhoud te veranderen (zie templates/_kiosk_thema.html). Aan of uit met één klik op de Kiosk-hub of in de
+# handterminal-app (Kantine-tv).
+THEMAS = {"halloween": "Halloween"}
+
+
+def kiosk_thema(db):
+    """Het thema dat nu op de schermen staat ("halloween"), of None."""
+    rij = _scherm_instellingen(db)
+    thema = rij["thema"] if rij is not None and "thema" in rij.keys() else None
+    return thema if thema in THEMAS else None
+
+
+def zet_kiosk_thema(db, thema):
+    """Een thema aan (een sleutel uit THEMAS) of uit (None). De schermen nemen het binnen 10 seconden over: het thema
+    telt mee in hun versie (dias_versie en _prijzen_poll_van). Geeft het thema dat nu staat."""
+    thema = thema if thema in THEMAS else None
+    db.execute("UPDATE kiosk_scherm_instellingen SET thema = ? WHERE id = 1", (thema,))
+    db.commit()
+    return thema
+
+
+def dias_versie(db, slides, *extra):
+    """De versie van het dia-scherm: de dia's en het thema. [extra] geeft een eigen versie, zoals voor /kiosk/tv."""
+    return _versie(*extra, slides, kiosk_thema(db))
+
+
 def _prijzen_instellingen(db):
     return db.execute("SELECT * FROM kiosk_prijzen_instellingen WHERE id = 1").fetchone()
 

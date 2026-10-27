@@ -31,7 +31,28 @@
     .tv-velden label { display:flex; flex-direction:column; gap:0.25rem; font-size:0.85rem; color:var(--tekst-zacht, #5b6478); }
     .tv-koppel-form .tv-velden { margin-top:0.4rem; }
     .tv-code-veld { font-size:1.3rem; letter-spacing:0.12em; font-variant-numeric:tabular-nums; }
+    .kiosk-thema { margin-bottom:1.4rem; }
+    .kiosk-thema--aan { border:2px solid #ff8a1f; background:#fff6ec; }
 </style>
+
+{# Het thema van alle schermen (zie THEMAS in routes/kiosk/gedeeld.py): met één klik aan of uit. #}
+{% set thema = kiosk_thema() %}
+<div class="kaart kiosk-thema{{ ' kiosk-thema--aan' if thema == 'halloween' else '' }}" id="thema">
+    <div class="actiebalk" style="margin:0">
+        <div>
+            <h2 style="margin:0">&#127875; Halloween-thema{% if thema == 'halloween' %} <span class="badge badge-ok">staat aan</span>{% endif %}</h2>
+            <p class="tekst-zacht" style="margin:0.3rem 0 0">
+                Vleermuizen, een spin, spinnenwebben, pompoenen, een spookje en mist op alle tv's, met de prijzen in
+                het oranje. Wat er op de schermen staat, blijft gewoon leesbaar. Binnen 10 seconden op de tv.
+            </p>
+        </div>
+        <form method="post" action="{{ url_for('kiosk_thema_zetten') }}" style="margin:0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="thema" value="{{ '' if thema == 'halloween' else 'halloween' }}">
+            <button type="submit" class="btn {{ 'btn-rand' if thema == 'halloween' else 'btn-geel' }}">{{ 'Uitzetten' if thema == 'halloween' else 'Aanzetten' }}</button>
+        </form>
+    </div>
+</div>
 
 <h2 id="tvs" style="margin:0 0 0.7rem">Tv's</h2>
 <div class="kiosk-schermen-grid" id="tv-lijst">

@@ -5,7 +5,7 @@ from datetime import date, timedelta
 
 from helpers import bepaal_tegenstander, vandaag_amsterdam
 from sponsoren import bouw_sponsor_dias
-from routes.kiosk.gedeeld import _prijzen_instellingen, _scherm_instellingen, _versie, bewaarde_uitkomst
+from routes.kiosk.gedeeld import _prijzen_instellingen, _scherm_instellingen, _versie, bewaarde_uitkomst, kiosk_thema
 
 
 def _prijzen_categorieen(db, uitgelicht_product_id=None):
@@ -324,8 +324,10 @@ def _prijzen_poll_van(
 ):
     """Wat de versie-poll van een prijzenscherm teruggeeft, uit de gegevens die het scherm zelf ook gebruikt."""
     return {
+        # Het thema telt mee, zodat het scherm het overneemt (zie kiosk_thema).
         "versie": _prijzen_versie(
-            categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, uitgelicht, *extra, sponsoren=sponsoren
+            categorieen, acties, bardiensten, wedstrijden_vandaag, indeling, uitgelicht, *extra, kiosk_thema(db),
+            sponsoren=sponsoren,
         ),
         "uitverkocht": _uitverkocht_namen(categorieen),
         "wedstrijddag_test": instellingen["wedstrijddag_test_teller"],

@@ -21,7 +21,7 @@ from routes.kiosk.dia_gegevens import (
     _stand_poule_sleutels,
     _unieke_poule_sleutel,
 )
-from routes.kiosk.gedeeld import _scherm_instellingen, _versie, bewaarde_uitkomst
+from routes.kiosk.gedeeld import THEMAS, _scherm_instellingen, bewaarde_uitkomst, dias_versie, zet_kiosk_thema
 from routes.kiosk.prijzen_gegevens import (
     _prijzen_poll,
     _prijzen_render_kwargs,
@@ -392,7 +392,7 @@ def register_routes(app):
             "kiosk_scherm.html",
             slides=slides,
             sponsors_elke=_scherm_instellingen(db)["sponsors_elke_dias"],
-            versie=bewaarde_uitkomst("scherm", lambda: _versie(slides)),
+            versie=bewaarde_uitkomst("scherm", lambda: dias_versie(db, slides)),
             versie_url=url_for("kiosk_scherm_versie"),
         )
 
@@ -412,7 +412,7 @@ def register_routes(app):
     @app.route("/kiosk/scherm/versie")
     def kiosk_scherm_versie():
         db = get_db()
-        return jsonify({"versie": bewaarde_uitkomst("scherm", lambda: _versie(_bouw_slides(db)))})
+        return jsonify({"versie": bewaarde_uitkomst("scherm", lambda: dias_versie(db, _bouw_slides(db)))})
 
     # ---------- Gedeeld scherm: 1 fysiek scherm wisselen tussen prijzen/dia's ----------
     # Losstaand van de 2 vaste schermen hierboven (die blijven ongewijzigd
@@ -430,7 +430,7 @@ def register_routes(app):
                 "kiosk_scherm.html",
                 slides=slides,
                 sponsors_elke=instellingen["sponsors_elke_dias"],
-                versie=bewaarde_uitkomst("tv-dias", lambda: _versie("tv", slides)),
+                versie=bewaarde_uitkomst("tv-dias", lambda: dias_versie(db, slides, "tv")),
                 versie_url=url_for("kiosk_tv_versie"),
             )
         return render_template(
@@ -443,8 +443,18 @@ def register_routes(app):
         db = get_db()
         instellingen = _scherm_instellingen(db)
         if instellingen["actief_tv_scherm"] == "dias":
-            return jsonify({"versie": bewaarde_uitkomst("tv-dias", lambda: _versie("tv", _bouw_slides(db)))})
+            return jsonify({"versie": bewaarde_uitkomst("tv-dias", lambda: dias_versie(db, _bouw_slides(db), "tv"))})
         return jsonify(_prijzen_poll(db, ("tv",)))
+
+    @app.route("/kiosk/thema", methods=["POST"])
+    def kiosk_thema_zetten():
+        """Kiosk-hub: een thema (zoals Halloween) op alle schermen aan, of met één klik weer uit (thema leeg)."""
+        thema = zet_kiosk_thema(get_db(), request.form.get("thema") or None)
+        if thema:
+            flash(f"{THEMAS[thema]}-thema staat aan: binnen 10 seconden op alle tv's.", "success")
+        else:
+            flash("Thema uit: de tv's zijn binnen 10 seconden weer gewoon.", "success")
+        return redirect(request.referrer or url_for("kiosk_hub"))
 
     @app.route("/kiosk/tv/wisselen", methods=["POST"])
     def kiosk_tv_wisselen():

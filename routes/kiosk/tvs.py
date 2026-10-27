@@ -7,7 +7,7 @@ import qr
 from database import get_db
 from helpers import is_ajax_verzoek
 from routes.kiosk.dia_gegevens import _bouw_slides
-from routes.kiosk.gedeeld import _scherm_instellingen, _versie, bewaarde_uitkomst
+from routes.kiosk.gedeeld import _scherm_instellingen, bewaarde_uitkomst, dias_versie
 from routes.kiosk.prijzen_gegevens import _prijzen_poll, _prijzen_render_kwargs
 
 # De tv vraagt zijn pagina even op voordat hij herlaadt (zie _kiosk_herstel.html): dat is geen echte herstart.
@@ -65,7 +65,7 @@ def register_routes(app):
                 "kiosk_scherm.html",
                 slides=slides,
                 sponsors_elke=instellingen["sponsors_elke_dias"],
-                versie=bewaarde_uitkomst("scherm", lambda: _versie(slides)) + "-" + eigen,
+                versie=bewaarde_uitkomst("scherm", lambda: dias_versie(db, slides)) + "-" + eigen,
                 versie_url=versie_url,
                 tv_koppeling=koppeling,
             ))
@@ -92,7 +92,7 @@ def register_routes(app):
             kiosk_tvs.hartslag(db, tv, toont=effectief, beeld=request.args.get("beeld"), app_versie=request.args.get("app"))
         eigen = kiosk_tvs.tv_versie(tv, effectief)
         if effectief == "dias":
-            return jsonify({"versie": bewaarde_uitkomst("scherm", lambda: _versie(_bouw_slides(db))) + "-" + eigen})
+            return jsonify({"versie": bewaarde_uitkomst("scherm", lambda: dias_versie(db, _bouw_slides(db))) + "-" + eigen})
         poll = dict(_prijzen_poll(db))
         poll["versie"] = poll["versie"] + "-" + eigen
         return jsonify(poll)

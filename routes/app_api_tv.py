@@ -17,7 +17,7 @@ import kiosk_tvs
 from database import get_db
 from helpers import KIOSK_SPONSOR_SJABLONEN, KIOSK_TIJD_PATROON, now_str, vandaag_amsterdam
 from routes.app_api import _data, _fout, eenmalig
-from routes.kiosk.gedeeld import _scherm_instellingen
+from routes.kiosk.gedeeld import THEMAS, _scherm_instellingen, kiosk_thema, zet_kiosk_thema
 from routes.kiosk.prijzen_gegevens import _uitgelicht_product
 
 SJABLOON_NAMEN = dict(KIOSK_SPONSOR_SJABLONEN) | {"aangepast": "Eigen sjabloon"}
@@ -87,7 +87,8 @@ def _overzicht(db):
         "SELECT COUNT(*) FROM producten WHERE actief = 1 AND toon_op_kiosk = 1 AND kiosk_uitverkocht = 1"
     ).fetchone()[0]
     return {**_tvs(db), **_specials(db), **_bardiensten(db), "uitverkocht": uitverkocht,
-            "timers": len(kiosk_timers.actieve(db))}
+            "timers": len(kiosk_timers.actieve(db)), "thema": kiosk_thema(db),
+            "themas": [{"sleutel": k, "naam": naam} for k, naam in THEMAS.items()]}
 
 
 def _dia_titel(db, dia):
@@ -175,6 +176,15 @@ def register_routes(app):
             return _fout("Deze tv is niet meer gekoppeld.", 404, "niet_gevonden")
         kiosk_tvs.herlaad(db, tv_id)
         return jsonify({**_overzicht(db), "melding": f"{tv['naam']} laadt binnen 10 seconden opnieuw (als hij aan staat)."})
+
+    @app.route("/api/app/kantine-tv/thema", methods=["POST"])
+    def api_app_tv_thema():
+        """{thema: "halloween" of null}: een thema op alle schermen aan, of uit (zoals op de Kiosk-hub)."""
+        db = get_db()
+        thema = zet_kiosk_thema(db, _data().get("thema") or None)
+        melding = f"{THEMAS[thema]}-thema staat aan: binnen 10 seconden op alle tv's." if thema \
+            else "Thema uit: de tv's zijn binnen 10 seconden weer gewoon."
+        return jsonify({**_overzicht(db), "melding": melding})
 
     @app.route("/api/app/kantine-tv/wissel", methods=["POST"])
     def api_app_tv_wissel():

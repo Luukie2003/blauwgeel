@@ -751,6 +751,9 @@
     <string name="evenement">evenement</string>
     <string name="raakt_waarschijnlijk_op">Raakt waarschijnlijk op</string>
     <string name="kan_opraken">Kan opraken</string>
+    <string name="halloween_thema">🎃 Halloween-thema</string>
+    <string name="halloween_aan_uitleg">Staat aan op alle tv\'s. Tik om het uit te zetten.</string>
+    <string name="halloween_uit_uitleg">Vleermuizen, pompoenen en spinnenwebben op alle tv\'s. Tik om het aan te zetten.</string>
     <!-- De bestellijst nalopen en klaarzetten (2.16.0) -->
     <string name="bestellijst_uitleg">Tik op een product om het aantal colli te kiezen en te bevestigen; dan krijgt het een vinkje. Klaarzetten neemt alleen wat gecontroleerd is.</string>
     <string name="te_bestellen_kop">Te bestellen (%1$d)</string>
