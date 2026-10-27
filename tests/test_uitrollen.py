@@ -1,7 +1,10 @@
+import importlib.util
 import json
 import os
 import subprocess
+import sys
 import time
+from pathlib import Path
 
 import pytest
 
@@ -383,3 +386,46 @@ def test_voorbeelden_voor_paginas_met_een_nummer(app, db):
     pid = db.execute("SELECT id FROM producten WHERE actief = 1 ORDER BY id LIMIT 1").fetchone()[0]
     assert f"/producten/{pid}" in urls and f"/producten/{pid}/verkoop" in urls
     assert not any("wachtwoord-instellen" in u or "/api/barcode/" in u for u in urls)
+
+
+# ---------- Het script op de laptop (scripts/zet_live.py) ----------
+
+
+@pytest.fixture
+def zet_live(monkeypatch):
+    """scripts/zet_live.py als module, zonder tests en push, met git en het wachten nagebootst."""
+    spec = importlib.util.spec_from_file_location("zet_live", Path(__file__).resolve().parent.parent / "scripts" / "zet_live.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module, "lees_geheim", lambda: GEHEIM)
+    monkeypatch.setattr(module, "controleer_git_status", lambda: None)
+    monkeypatch.setattr(module, "git", lambda *a, **k: subprocess.CompletedProcess(a, 0, stdout="abc1234\n", stderr=""))
+    monkeypatch.setattr(module, "WACHT_OP_STATUS_SECONDEN", 0.1)
+    monkeypatch.setattr(module.time, "sleep", lambda seconden: None)
+    monkeypatch.setattr(sys, "argv", ["zet_live.py", "--zonder-tests", "--zonder-push"])
+    return module
+
+
+def test_zet_live_vangt_een_weggevallen_verbinding_op(zet_live, monkeypatch):
+    def verbroken(*args, **kwargs):
+        raise ConnectionResetError(54, "Connection reset by peer")
+
+    monkeypatch.setattr(zet_live.urllib.request, "urlopen", verbroken)
+    code, antwoord = zet_live.vraag_server(GEHEIM)
+    assert code is None and "Connection reset by peer" in antwoord["verbinding"]
+
+
+def test_zet_live_kijkt_via_status_als_de_server_niet_antwoordt(zet_live, monkeypatch, capsys):
+    """Zo ging het bij 1.72.0: de server was klaar en herstartte, maar het antwoord kwam niet meer aan."""
+    monkeypatch.setattr(zet_live, "vraag_server", lambda geheim: (None, {"verbinding": "Connection reset by peer"}))
+    monkeypatch.setattr(zet_live, "lees_status", lambda: {"commit": "abc1234", "versie": "9.9.9"})
+    assert zet_live.main() == 0
+    uit = capsys.readouterr().out
+    assert "Geen antwoord van de server (Connection reset by peer)" in uit and "✓ Live: versie 9.9.9 (abc1234)" in uit
+
+
+def test_zet_live_zegt_het_als_de_nieuwe_versie_dan_niet_draait(zet_live, monkeypatch, capsys):
+    monkeypatch.setattr(zet_live, "vraag_server", lambda geheim: (None, {"verbinding": "The read operation timed out"}))
+    monkeypatch.setattr(zet_live, "lees_status", lambda: {"commit": "oud1234", "versie": "9.9.8"})
+    assert zet_live.main() == 1
+    assert "de server antwoordde niet" in capsys.readouterr().err

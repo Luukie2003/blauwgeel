@@ -13,6 +13,9 @@ Wat het doet:
      en de web-app te herstarten;
   5. wacht tot /status laat zien dat de nieuwe versie echt draait.
 
+Valt de verbinding met de server weg voordat er een antwoord is (dat gebeurt soms als de server na een gelukte uitrol
+al herstart), dan kijkt het script via /status of de nieuwe versie draait, in plaats van te stoppen met een fout.
+
 Eenmalig instellen (zie ook uitrollen.py):
     venv/bin/python scripts/zet_live.py --maak-geheim
 Dat maakt een geheim aan op jouw computer en toont de ene regel die je daarna in een Bash-console
@@ -25,6 +28,7 @@ Opties:
 """
 
 import argparse
+import http.client
 import json
 import os
 import secrets
@@ -119,6 +123,10 @@ def vraag_server(geheim):
             return e.code, json.loads(e.read().decode())
         except ValueError:
             return e.code, {}
+    except (OSError, http.client.HTTPException, ValueError) as e:
+        # Geen (bruikbaar) antwoord: de verbinding viel weg of het duurde te lang. De server kan dan toch klaar zijn,
+        # want na een gelukte uitrol herstart hij en dat breekt dit verzoek soms af. Wat er draait, zegt /status (main).
+        return None, {"verbinding": str(getattr(e, "reason", None) or e) or type(e).__name__}
 
 
 def lees_status():
@@ -170,6 +178,20 @@ def main():
     lokaal = git("rev-parse", "--short", "HEAD").stdout.strip()
     print(f"→ Server bijwerken naar {lokaal} ...", flush=True)
     code, antwoord = vraag_server(geheim)
+    if code is None:
+        print(f"! Geen antwoord van de server ({antwoord['verbinding']}). Kijken via /status of {lokaal} draait ...",
+              flush=True)
+        status = wacht_tot_actief(lokaal)
+        if not status:
+            return fout(
+                f"de server antwoordde niet en na {WACHT_OP_STATUS_SECONDEN} s draait {lokaal} nog niet. Misschien is "
+                "hij nog bezig, of heeft de rooktest de vorige versie teruggezet. Kijk over een paar minuten op /status; "
+                "draait hij dan nog niet, start dit script opnieuw met --zonder-tests: dan zegt de server wat er misging."
+            )
+        print(f"✓ Live: versie {status['versie']} ({status['commit']}) op {BASIS_URL}. Hoe de rooktest op de server "
+              "uitkwam, is niet bekend (er kwam geen antwoord); was er een fout, dan had de server de vorige versie "
+              "teruggezet.")
+        return 0
     if code == 404:
         return fout("live zetten staat nog niet aan op de server (uitrol_geheim.txt ontbreekt daar). Zie --maak-geheim.")
     if code == 403:
