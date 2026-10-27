@@ -874,7 +874,8 @@ CREATE TABLE IF NOT EXISTS bestel_bijstellingen (
     eenheden INTEGER,
     door TEXT,
     gebruiker_id INTEGER REFERENCES gebruikers(id),
-    op TEXT NOT NULL
+    op TEXT NOT NULL,
+    gecontroleerd INTEGER NOT NULL DEFAULT 0
 );
 
 -- Evenementen (1.45.0): een toernooi, feest of verhuur. De prognose rekent zo'n dag als verkoopdag met een eigen,

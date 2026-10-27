@@ -11,6 +11,12 @@ min en plus hoeveel colli je wilt bestellen (bijvoorbeeld 3 tray, of 0: niet bes
 "Voorgesteld om te bestellen", ook als het product boven het minimum zit of de prognose 0 is. Het geldt tot het product
 besteld is (wis_bij_bestelling), net als manco.
 
+Controleren (1.73.0): op de bestellijst in de app loop je het voorstel na. Per product kies je het aantal colli en
+bevestig je het; dat wordt zo'n zelf gekozen aantal met "gecontroleerd" erbij, zodat het na uitloggen of op een ander
+toestel nog staat. Klaarzetten neemt in de app alleen wat gecontroleerd is. Daarna is de ronde voorbij: wat
+gecontroleerd maar niet besteld is (bijvoorbeeld "niet bestellen"), vervalt (wis_controle). Een aantal dat je ergens
+anders kiest (bij het product), is weer niet gecontroleerd.
+
 De bijstelling in stuks van 1.68.0 (de prognose zelf plus of min) is sinds 1.72.0 weg: dat gaf een krom aantal dat
 naar colli werd afgerond, en sinds 1.69.0 kies je gewoon het aantal colli.
 
@@ -94,8 +100,9 @@ def periode_voor(db, product, nu=None):
 
 
 def bijstellingen(db):
-    """{product_id: {"eenheden", "door", "op", ...}} van wat nog geldt: "eenheden" is het zelf gekozen aantal colli en
-    "door" wie het koos. (De tabel heet nog naar de bijstelling in stuks van 1.68.0; die kolom is altijd 0.)"""
+    """{product_id: {"eenheden", "door", "op", "gecontroleerd", ...}} van wat nog geldt: "eenheden" is het zelf gekozen
+    aantal colli, "door" wie het koos en "gecontroleerd" of dat op de bestellijst in de app bevestigd is. (De tabel heet
+    nog naar de bijstelling in stuks van 1.68.0; die kolom is altijd 0.)"""
     return {r["product_id"]: dict(r) for r in db.execute("SELECT * FROM bestel_bijstellingen").fetchall()}
 
 
@@ -107,17 +114,24 @@ def gekozen(bij):
 MAX_EENHEDEN = 999
 
 
-def zet_bestelaantal(db, product_id, eenheden, door=None, gebruiker_id=None):
-    """Zelf kiezen hoeveel colli je van dit product bestelt (0 = niet bestellen); None = weer het advies volgen."""
+def zet_bestelaantal(db, product_id, eenheden, door=None, gebruiker_id=None, gecontroleerd=False):
+    """Zelf kiezen hoeveel colli je van dit product bestelt (0 = niet bestellen); None = weer het advies volgen.
+    'gecontroleerd': bevestigd op de bestellijst in de app; een aantal dat ergens anders gekozen wordt, is dat niet."""
     if eenheden is None:
         db.execute("DELETE FROM bestel_bijstellingen WHERE product_id = ?", (product_id,))
     else:
         db.execute(
-            """INSERT OR REPLACE INTO bestel_bijstellingen (product_id, stuks, eenheden, door, gebruiker_id, op)
-               VALUES (?, 0, ?, ?, ?, ?)""",
-            (product_id, max(0, min(MAX_EENHEDEN, int(eenheden))), door, gebruiker_id, now_str()),
+            """INSERT OR REPLACE INTO bestel_bijstellingen (product_id, stuks, eenheden, door, gebruiker_id, op, gecontroleerd)
+               VALUES (?, 0, ?, ?, ?, ?, ?)""",
+            (product_id, max(0, min(MAX_EENHEDEN, int(eenheden))), door, gebruiker_id, now_str(), 1 if gecontroleerd else 0),
         )
     db.commit()
+
+
+def wis_controle(db):
+    """Klaargezet: de controle-ronde op de bestellijst is voorbij. Wat gecontroleerd maar niet besteld is (zoals "niet
+    bestellen"), vervalt; een aantal dat iemand bij het product koos en niet controleerde, blijft. Commit niet."""
+    db.execute("DELETE FROM bestel_bijstellingen WHERE gecontroleerd = 1")
 
 
 def wis_bij_bestelling(db, product_ids):

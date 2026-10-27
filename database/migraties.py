@@ -390,6 +390,8 @@ KOLOM_MIGRATIES = [
     ("bestel_bijstellingen", "eenheden", "INTEGER"),
     # Een bestelling per leverancier (1.70.0), zie bestellen.maak_bestellingen.
     ("bestellingen", "leverancier_id", "INTEGER REFERENCES leveranciers(id) ON DELETE SET NULL"),
+    # Gecontroleerd op de bestellijst in de app (1.73.0), zie bestelvoorstel.zet_bestelaantal.
+    ("bestel_bijstellingen", "gecontroleerd", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

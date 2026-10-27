@@ -145,7 +145,7 @@
             android:theme="@style/Thema.Handterminal.Licht" />
 
         <activity
-            android:name=".KlaarzettenActivity"
+            android:name=".BesteloverzichtActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Thema.Handterminal.Licht" />

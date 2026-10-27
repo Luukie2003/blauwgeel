@@ -1,6 +1,7 @@
 package nl.kantineblauwgeel.handterminal
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
@@ -14,21 +15,36 @@ import nl.kantineblauwgeel.handterminal.databinding.ActivityProductenBinding
 
 /** Zoeken, de voorraad bekijken of een product kiezen om te boeken: allemaal dezelfde lijst, op het toestel zelf
  * doorzocht (zie Catalogus), dus zonder wachten. Per categorie te filteren, of alleen wat onder het minimum zit.
- * Een product aantikken opent het; scannen opent meteen het gescande product. */
+ * Een product aantikken opent het; scannen opent meteen het gescande product. Met [Modus.KIEZEN] (een product
+ * toevoegen aan de bestellijst) geeft aantikken of scannen het product terug aan het scherm dat dit opende. */
 class ProductenActivity : BasisActivity() {
 
-    enum class Modus { ZOEKEN, VOORRAAD, BOEKEN }
+    enum class Modus { ZOEKEN, VOORRAAD, BOEKEN, KIEZEN }
 
     private lateinit var b: ActivityProductenBinding
     private lateinit var modus: Modus
     private var categorie: String? = null
     private var alleenLaag = false
-    private val adapter by lazy { ProductAdapter(this) { ProductActivity.open(this, it.id, alleenInfo = alleenInfo) } }
+    private val adapter by lazy { ProductAdapter(this) { kies(it.id) } }
 
     /** Bij Boeken staat boeken bovenaan; bij zoeken en Voorraad opent het product als informatie. */
     private val alleenInfo get() = modus != Modus.BOEKEN
 
-    override fun bijScan(code: String) = openScan(code, alleenInfo)
+    override fun bijScan(code: String) = if (modus == Modus.KIEZEN) kiesScan(code) else openScan(code, alleenInfo)
+
+    private fun kies(id: Int) {
+        if (modus != Modus.KIEZEN) return ProductActivity.open(this, id, alleenInfo = alleenInfo)
+        setResult(RESULT_OK, Intent().putExtra(EXTRA_PRODUCT, id))
+        finish()
+    }
+
+    /** Kiezen door te scannen: de barcode (ook van de doos) of de QR-code van een schaplabel. */
+    private fun kiesScan(code: String) {
+        tril()
+        val id = Regex("/(?:scan|producten)/(\\d+)").find(code)?.groupValues?.get(1)?.toIntOrNull()
+            ?: Catalogus.opBarcode(code)?.product?.id
+        if (id != null) kies(id) else melding(getString(R.string.barcode_onbekend_bestellen, code), lang = true)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,8 +58,9 @@ class ProductenActivity : BasisActivity() {
                 Modus.ZOEKEN -> R.string.titel_zoeken
                 Modus.VOORRAAD -> R.string.titel_voorraad
                 Modus.BOEKEN -> R.string.titel_boeken
+                Modus.KIEZEN -> R.string.product_toevoegen
             }),
-            sub = if (modus == Modus.BOEKEN) getString(R.string.kies_of_scan) else Sessie.naam,
+            sub = if (modus == Modus.BOEKEN || modus == Modus.KIEZEN) getString(R.string.kies_of_scan) else Sessie.naam,
         )
 
         adapter.koppel(b.lijst)
@@ -57,8 +74,8 @@ class ProductenActivity : BasisActivity() {
                 verbergToetsenbord()
                 // Een ingetikte barcode, of precies één uitkomst: meteen openen.
                 val term = b.zoekVeld.text.toString()
-                if (Catalogus.normaliseerCode(term)?.length in setOf(8, 13, 14)) openScan(term, alleenInfo)
-                else adapter.lijst.singleOrNull()?.let { ProductActivity.open(this, it.id, alleenInfo = alleenInfo) }
+                if (Catalogus.normaliseerCode(term)?.length in setOf(8, 13, 14)) bijScan(term)
+                else adapter.lijst.singleOrNull()?.let { kies(it.id) }
             }
             true
         }
@@ -70,7 +87,7 @@ class ProductenActivity : BasisActivity() {
         }
         bouwCategorieen()
         filter()
-        if (modus == Modus.ZOEKEN) {
+        if (modus == Modus.ZOEKEN || modus == Modus.KIEZEN) {
             b.zoekVeld.requestFocus()
             b.zoekVeld.post {
                 (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(b.zoekVeld, 0)
@@ -132,6 +149,11 @@ class ProductenActivity : BasisActivity() {
     companion object {
         private const val EXTRA_MODUS = "modus"
         private const val EXTRA_LAAG = "laag"
+        const val EXTRA_PRODUCT = "product"
+
+        /** Een product kiezen (zie [Modus.KIEZEN]); het id komt terug in [EXTRA_PRODUCT]. */
+        fun kiesIntent(context: Context): Intent =
+            Intent(context, ProductenActivity::class.java).putExtra(EXTRA_MODUS, Modus.KIEZEN.name)
 
         fun open(activity: Activity, modus: Modus, alleenLaag: Boolean = false) {
             activity.startActivity(

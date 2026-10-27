@@ -2,7 +2,12 @@
 {% block titel %}Bestellijst{% endblock %}
 {% block inhoud %}
 {% macro gekozen_badge(keuze) -%}
+{% if keuze.gecontroleerd %}
+{# Nagelopen en bevestigd op de bestellijst in de handterminal-app (zie Controleren in bestelvoorstel.py). #}
+<span class="badge badge-ok" title="Gecontroleerd op de handterminal{% if keuze.door %} door {{ keuze.door }}{% endif %}; geldt tot het klaargezet is">&#10003; {{ 'niet bestellen' if keuze.eenheden == 0 else 'gecontroleerd' }}{% if keuze.door %} ({{ keuze.door }}){% endif %}</span>
+{% else %}
 <span class="badge badge-in" title="Zelf gekozen bij het product{% if keuze.door %} door {{ keuze.door }}{% endif %}; geldt tot het besteld is">{{ 'niet bestellen' if keuze.eenheden == 0 else 'zelf gekozen' }}{% if keuze.door %} ({{ keuze.door }}){% endif %}</span>
+{% endif %}
 {%- endmacro %}
 <div class="actiebalk">
     {% if pda_modus %}

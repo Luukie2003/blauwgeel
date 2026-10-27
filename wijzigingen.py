@@ -6,8 +6,18 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.72.0"
+HUIDIGE_VERSIE = "1.73.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.73.0",
+        "datum": "27 oktober 2026",
+        "punten": [
+            "De bestelling nalopen op de handterminal: de Bestellijst in de app is nu de plek waar je de bestelling controleert. Tik op een product: er schuift een blad omhoog met het aantal colli, − en +, en Bevestigen; dan krijgt de regel een groen vinkje. Scan een product of zoek het op en het komt onder 'Erbij', met het blad meteen open; nog een keer scannen is één colli meer. Klaarzetten neemt alleen wat gecontroleerd is, een bestelling per leverancier, en zegt het als er nog iets niet gecontroleerd is.",
+            "Wat je bevestigt, wordt meteen op de site bewaard: logt de handterminal uit (na 15 minuten niets doen), dan staan je vinkjes er na het inloggen nog. Op de bestellijst op de computer staat bij zo'n product '✓ gecontroleerd'. Na het klaarzetten begint de volgende keer weer met een schone lijst.",
+            "Na het klaarzetten laat de app het besteloverzicht zien: per leverancier je klantnummer, tot wanneer je moet bestellen, en per product het artikelnummer en het aantal colli, om het bij de leverancier te bestellen. Met Kopiëren of Delen stuur je de lijst door. Onder Onderweg staan nu de leverancier en het aantal colli; tik erop voor hetzelfde overzicht, met Levering inscannen.",
+            "Handterminal-app 2.16.0: het aparte scherm 'Bestelling klaarzetten' is opgegaan in de Bestellijst.",
+        ],
+    },
     {
         "versie": "1.72.0",
         "datum": "26 oktober 2026",
@@ -1272,7 +1282,7 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "1.72.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.19.1", "sinds": "0.4.0", "laatst": "1.72.0",
+    {"naam": "Bestellen & prognose", "versie": "1.20.0", "sinds": "0.4.0", "laatst": "1.73.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.16.1", "sinds": "0.1.0", "laatst": "1.72.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
@@ -1290,8 +1300,8 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.19.0", "sinds": "1.53.0", "laatst": "1.72.0",
-     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (ook bestellingen klaarzetten en verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst en dia's aan of uit), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
+    {"naam": "Handterminal-app", "versie": "0.20.0", "sinds": "1.53.0", "laatst": "1.73.0",
+     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (nalopen met vinkjes, klaarzetten met het besteloverzicht, verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken, Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst en dia's aan of uit), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.5", "sinds": "0.1.0", "laatst": "1.65.1",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",

@@ -287,6 +287,8 @@ SECTIE_ENDPOINTS = {
         "api_app_bestellijst",
         "api_app_bestellijst_melding_afhandelen",
         "api_app_bestellijst_bestellen",
+        "api_app_bestellijst_controleren",
+        "api_app_bestelling",
         "api_app_product_bijstelling",
         "api_app_product_bestelaantal",
         "product_bestelaantal",

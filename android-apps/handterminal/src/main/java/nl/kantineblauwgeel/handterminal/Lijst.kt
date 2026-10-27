@@ -8,6 +8,7 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.ColorRes
@@ -46,13 +47,16 @@ object Lijst {
         return kaart
     }
 
-    /** Een regel: titel, daaronder een (grijze) uitleg, rechts eventueel een getal of woord. Aantikbaar met [klik]. */
+    /** Een regel: titel, daaronder een (grijze) uitleg, rechts eventueel een getal of woord, links eventueel een
+     * [icoon] (zoals het vinkje op de bestellijst). Aantikbaar met [klik]. */
     fun regel(
         kaart: LinearLayout,
         titel: String,
         detail: String? = null,
         rechts: String? = null,
         @ColorRes rechtsKleur: Int = R.color.tekst,
+        @DrawableRes icoon: Int? = null,
+        @ColorRes icoonKleur: Int? = null,
         klik: (() -> Unit)? = null,
     ): LinearLayout {
         val context = kaart.context
@@ -70,6 +74,11 @@ object Lijst {
                 setOnClickListener { klik() }
             }
         }
+        if (icoon != null) regel.addView(ImageView(context).apply {
+            setImageResource(icoon)
+            icoonKleur?.let { setColorFilter(context.getColor(it)) }
+            contentDescription = null
+        }, LinearLayout.LayoutParams(dp(context, 24), dp(context, 24)).apply { marginEnd = dp(context, 12) })
         val links = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         links.addView(TextView(context).apply {
             text = titel

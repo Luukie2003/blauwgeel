@@ -23,7 +23,7 @@ import barcodes
 import bestelvoorstel
 import kiosk_timers
 import manco
-from bestellen import klaargezet_melding, maak_bestellingen
+from bestellen import bestel_tekst, bestelling_gegevens, klaargezet_melding, maak_bestellingen
 from database import get_db
 from derving import DERVING_REDENEN, kies_reden
 from helpers import (
@@ -51,7 +51,7 @@ from routes.tellen.verwerken import verwerk_telling
 from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 # De nieuwste versie van de app. Draait er een oudere, dan meldt de app dat er een nieuwe is.
-HANDTERMINAL_APP_VERSIE = "2.15.2"
+HANDTERMINAL_APP_VERSIE = "2.16.0"
 
 MAX_AANTAL = 100000
 
@@ -636,25 +636,28 @@ def register_routes(app):
     @app.route("/api/app/bestellijst")
     def api_app_bestellijst():
         """Wat er besteld moet worden (onder het minimum en nog niet besteld), wat bij een vorige bestelling niet geleverd
-        is (manco), wat iemand bij het product zelf koos ("gekozen": aantal colli, ook boven het minimum; zie
-        bestelvoorstel.zet_bestelaantal), wat bezoekers via de QR-code meldden, en de bestellingen die onderweg zijn.
+        is (manco), wat iemand bij het product zelf koos ("gekozen": aantal colli, ook boven het minimum, of wat op de
+        bestellijst gecontroleerd is, ook "niet bestellen"; zie bestelvoorstel.zet_bestelaantal), wat er gemeld is, en de
+        bestellingen die onderweg zijn. Per product of het gecontroleerd is (api_app_bestellijst_controleren).
         Klaarzetten: zie api_app_bestellijst_bestellen."""
         db = get_db()
         keuzes = bestelvoorstel.bijstellingen(db)
         leveranciers = {r["id"]: r["naam"] for r in db.execute("SELECT id, naam FROM leveranciers").fetchall()}
         meldingen = bereken_bestellijst_meldingen(db)
         open_bestellingen = db.execute(
-            "SELECT id, aangemaakt_op, referentie FROM bestellingen WHERE status = 'besteld' ORDER BY id DESC"
+            "SELECT id, aangemaakt_op, referentie, leverancier_id FROM bestellingen WHERE status = 'besteld' ORDER BY id DESC"
         ).fetchall()
         regels = regels_per_bestelling(db, [b["id"] for b in open_bestellingen])
 
         def product(p):
             factor = besteleenheid_factor(p)
+            keuze = keuzes.get(p["id"]) or {}
             return {"id": p["id"], "naam": p["naam"], "categorie": p["categorie"] or "", "eenheid": p["eenheid"],
                     "voorraad": p["voorraad"], "min_voorraad": p["min_voorraad"] or 0,
                     "bestel_hoeveelheid": p["bestel_hoeveelheid"],
                     "besteleenheid": besteleenheid_naam(p) if factor > 1 else None, "per_besteleenheid": factor,
-                    "gekozen": bestelvoorstel.gekozen(keuzes.get(p["id"])),
+                    "gekozen": bestelvoorstel.gekozen(keuze), "gekozen_door": keuze.get("door"),
+                    "gecontroleerd": bool(keuze.get("gecontroleerd")),
                     "leverancier": leveranciers.get(p["leverancier_id"]) if "leverancier_id" in p.keys() else None}
 
         suggesties = bestel_suggesties(db)
@@ -669,7 +672,7 @@ def register_routes(app):
             x["bestellingen"].append(m["bestelling_id"])
         for x in manco_regels.values():
             x["tekort_besteleenheden"] = naar_besteleenheden(x["tekort"], {"besteleenheid_factor": x["per_besteleenheid"]})
-        gekozen_ids = [pid for pid, b in keuzes.items() if (bestelvoorstel.gekozen(b) or 0) > 0
+        gekozen_ids = [pid for pid, b in keuzes.items() if ((bestelvoorstel.gekozen(b) or 0) > 0 or b.get("gecontroleerd"))
                        and pid not in suggestie_ids and pid not in manco_regels]
         gekozen = db.execute(
             f"SELECT * FROM producten WHERE id IN ({','.join('?' * len(gekozen_ids))}) ORDER BY naam COLLATE NOCASE", gekozen_ids
@@ -683,6 +686,7 @@ def register_routes(app):
             "teksten": [{"id": t["id"], "tekst": t["tekst"], "aangemaakt_op": t["aangemaakt_op"]} for t in meldingen["teksten"]],
             "onderweg": [
                 {"id": b["id"], "aangemaakt_op": b["aangemaakt_op"], "referentie": b["referentie"],
+                 "leverancier": leveranciers.get(b["leverancier_id"]),
                  "regels": [{"product": r["product_naam"], "aantal": naar_besteleenheden(r["aantal_besteld"], r),
                              "eenheid": besteleenheid_naam(r)} for r in regels.get(b["id"], [])]}
                 for b in open_bestellingen
@@ -719,6 +723,56 @@ def register_routes(app):
                                "leverancier (pdf of tekst) staat op de bestellijst op de computer."}, 200
 
         return eenmalig(actie)
+
+    @app.route("/api/app/bestellijst/controleren", methods=["POST"])
+    def api_app_bestellijst_controleren():
+        """{product_id, eenheden}: een product op de bestellijst nagelopen en bevestigd: zoveel colli (0 = niet
+        bestellen), gecontroleerd (zie Controleren in bestelvoorstel.py). eenheden null: weer het advies, niet meer
+        gecontroleerd. Het zet een stand, dus een herhaald verzoek mag gewoon."""
+        db = get_db()
+        data = _data()
+        pid = _getal(data.get("product_id"))
+        product = db.execute("SELECT * FROM producten WHERE id = ?", (pid,)).fetchone() if pid is not None else None
+        if product is None:
+            return _fout("Dit product bestaat niet (meer).", 404, "niet_gevonden")
+        ruw = data.get("eenheden")
+        eenheden = None if ruw is None else _getal(ruw)
+        if ruw is not None and (eenheden is None or not 0 <= eenheden <= bestelvoorstel.MAX_EENHEDEN):
+            return _fout("Geen geldig aantal.")
+        naam = session.get("gebruiker_naam")
+        gecontroleerd = eenheden is not None
+        bestelvoorstel.zet_bestelaantal(db, pid, eenheden, naam, session.get("gebruiker_id"), gecontroleerd=gecontroleerd)
+        if eenheden is None:
+            melding = f"{product['naam']}: weer het advies."
+        elif eenheden == 0:
+            melding = f"{product['naam']}: niet bestellen."
+        else:
+            eenheid = besteleenheid_naam(product) if besteleenheid_factor(product) > 1 else product["eenheid"]
+            melding = f"{product['naam']}: {eenheden} {eenheid}."
+        return jsonify({"product_id": pid, "gekozen": eenheden, "gecontroleerd": gecontroleerd,
+                        "gekozen_door": naam if gecontroleerd else None, "melding": melding})
+
+    @app.route("/api/app/bestellingen/<int:bestelling_id>")
+    def api_app_bestelling(bestelling_id):
+        """Een klaargezette bestelling als lijst voor de leverancier, zoals de pdf op de site (bestellen.bestelling_gegevens):
+        per product het artikelnummer en het aantal colli, met het klantnummer, tot wanneer je bij die leverancier
+        bestelt, en de tekst om te delen (bestellen.bestel_tekst)."""
+        db = get_db()
+        gegevens = bestelling_gegevens(db, bestelling_id)
+        if gegevens is None:
+            return _fout("Deze bestelling bestaat niet (meer).", 404, "niet_gevonden")
+        b, lev = gegevens["bestelling"], gegevens["leverancier"]
+        periode = bestelvoorstel.bestelperiode(lev)
+        return jsonify({
+            "id": b["id"], "status": b["status"], "aangemaakt_op": b["aangemaakt_op"], "besteld_door": b["besteld_door"],
+            "referentie": b["referentie"],
+            "leverancier": lev["naam"] if lev is not None else None,
+            "klantnummer": lev["klantnummer"] if lev is not None else None,
+            "uiterst_tekst": bestelvoorstel.dag_tekst(periode["uiterst"], met_tijd=True) if periode else None,
+            "regels": [{k: r[k] for k in ("naam", "artikelcode", "eenheden", "besteleenheid", "stuks", "eenheid", "factor")}
+                       for r in gegevens["regels"]],
+            "tekst": bestel_tekst(gegevens),
+        })
 
     @app.route("/api/app/producten/<int:product_id>/instellingen", methods=["POST"])
     def api_app_product_instellingen(product_id):

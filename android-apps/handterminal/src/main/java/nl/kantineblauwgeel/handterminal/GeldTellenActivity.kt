@@ -170,7 +170,7 @@ class GeldTellenActivity : BasisActivity() {
     }
 
     private fun invulRegel(kaart: LinearLayout, label: String, actie: () -> Unit): TextView {
-        val regel = Lijst.regel(kaart, label, null, "–", R.color.navy, actie)
+        val regel = Lijst.regel(kaart, label, null, "–", R.color.navy, klik = actie)
         return regel.getChildAt(regel.childCount - 1) as TextView
     }
 

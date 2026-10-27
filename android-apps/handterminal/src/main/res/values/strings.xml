@@ -325,6 +325,10 @@
         <item quantity="one">Er staat een keukentelling klaar (hier of op de site) met %1$d geteld product. Daarmee verder, of opnieuw beginnen?</item>
         <item quantity="other">Er staat een keukentelling klaar (hier of op de site) met %1$d getelde producten. Daarmee verder, of opnieuw beginnen?</item>
     </plurals>
+    <plurals name="niet_gecontroleerd">
+        <item quantity="one">%1$d product is nog niet gecontroleerd en gaat niet mee: %2$s</item>
+        <item quantity="other">%1$d producten zijn nog niet gecontroleerd en gaan niet mee: %2$s</item>
+    </plurals>
     <plurals name="n_onderdelen">
         <item quantity="one">%d onderdeel</item>
         <item quantity="other">%d onderdelen</item>
@@ -402,18 +406,15 @@
     <string name="urgent_vraag">Urgent (bijv. een storing)</string>
     <string name="plaatsen">Plaatsen</string>
     <string name="bestellijst">Bestellijst</string>
-    <string name="bestellen_kop">Bestellen (%1$d)</string>
     <string name="niets_bestellen">Niets onder het minimum. Alles op voorraad!</string>
     <string name="voorraad_min">voorraad %1$d, minimum %2$d %3$s</string>
     <string name="minstens_n">minstens %1$d %2$s</string>
-    <string name="gemeld_kop">Gemeld via de QR-code</string>
+    <string name="gemeld_kop">Gemeld</string>
     <string name="gemeld_detail">laatst %1$s</string>
     <string name="n_keer">%1$d×</string>
     <string name="melding_afhandelen_vraag">Deze melding afhandelen (bijvoorbeeld omdat het al besteld is)?</string>
     <string name="onderweg_kop">Onderweg</string>
     <string name="prognose_bezig">Prognose wordt berekend…</string>
-    <string name="verwacht_7_dagen">Verwacht de komende 7 dagen: ~%1$d %2$s</string>
-    <string name="bestel_liever">bestel liever %1$d %2$s</string>
     <string name="tellingen">Tellingen</string>
     <string name="laatste_tellingen">Laatste tellingen</string>
     <string name="nog_geen_tellingen">Nog geen tellingen.</string>
@@ -671,16 +672,8 @@
     <string name="klaarzetten">Klaarzetten</string>
     <string name="zonder_leverancier">Zonder leverancier</string>
     <string name="n_bestellingen_klaarzetten">%1$d bestellingen klaarzetten (een per leverancier)</string>
-    <string name="klaarzetten_n">Klaarzetten (%1$d)</string>
-    <string name="klaarzetten_uitleg">Scan een product om het toe te voegen; nog een keer scannen is één colli meer. Tik op een product om het aantal te veranderen; 0 is niet bestellen. De bestelling staat daarna bij Factuur inboeken.</string>
     <string name="product_niet_gevonden">Dit product staat (nog) niet op dit toestel.</string>
-    <string name="klaarzetten_gescand">Gescand</string>
-    <string name="klaarzetten_gekozen">Zelf gekozen bij het product</string>
     <string name="barcode_onbekend_bestellen">Barcode %1$s hoort nog bij geen product. Koppel hem eerst: scan hem op het startscherm.</string>
-    <string name="bestellijst_scan_uitleg">Scan een product om het aan een nieuwe bestelling toe te voegen.</string>
-    <string name="klaarzetten_laag">Onder het minimum</string>
-    <string name="klaarzetten_manco">Niet geleverd bij een vorige bestelling</string>
-    <string name="klaarzetten_weggooien_vraag">Stoppen? De bestelling is nog niet klaargezet.</string>
     <string name="niet_geleverd_bij">niet geleverd bij #%1$s</string>
     <string name="niet_geleverd_detail">%1$d %2$s niet geleverd</string>
     <string name="hoeveel_bestellen">%1$s: hoeveel bestellen?</string>
@@ -758,6 +751,34 @@
     <string name="evenement">evenement</string>
     <string name="raakt_waarschijnlijk_op">Raakt waarschijnlijk op</string>
     <string name="kan_opraken">Kan opraken</string>
+    <!-- De bestellijst nalopen en klaarzetten (2.16.0) -->
+    <string name="bestellijst_uitleg">Tik op een product om het aantal colli te kiezen en te bevestigen; dan krijgt het een vinkje. Klaarzetten neemt alleen wat gecontroleerd is.</string>
+    <string name="te_bestellen_kop">Te bestellen (%1$d)</string>
+    <string name="erbij_kop">Erbij</string>
+    <string name="product_zoeken">Product zoeken (of scan het)</string>
+    <string name="product_toevoegen">Product toevoegen</string>
+    <string name="gecontroleerd">gecontroleerd</string>
+    <string name="gecontroleerd_door">gecontroleerd door %1$s</string>
+    <string name="zelf_gekozen_door">zelf gekozen door %1$s</string>
+    <string name="kans_n">kans op tekort %1$d%%</string>
+    <string name="prognose_in_dagen">prognose ~%1$d %2$s in %3$d dagen</string>
+    <string name="voorraad_kort">Voorraad %1$d %2$s</string>
+    <string name="is_n_stuks">= %1$d %2$s</string>
+    <string name="niet">niet</string>
+    <string name="bevestigen">Bevestigen</string>
+    <string name="productinfo">Productinfo</string>
+    <string name="klaarzetten_gecontroleerd">Klaarzetten (%1$d van %2$d gecontroleerd)</string>
+    <string name="eerst_bevestigen">Bevestig eerst wat je wilt bestellen: tik op een product en kies Bevestigen.</string>
+    <string name="besteloverzicht">Besteloverzicht</string>
+    <string name="besteloverzicht_uitleg">Klaargezet. Bestel dit nu bij de leverancier (op zijn site, in zijn app of aan de telefoon). De bestellingen staan bij Factuur inboeken, om de levering in te scannen.</string>
+    <string name="besteloverzicht_klaar">Klaar</string>
+    <string name="klantnummer_n">Klantnummer %1$s</string>
+    <string name="uiterlijk_n">uiterlijk %1$s bestellen</string>
+    <string name="art_nr">art.nr. %1$s</string>
+    <string name="kopieren">Kopiëren</string>
+    <string name="gekopieerd">Gekopieerd</string>
+    <string name="delen">Delen</string>
+    <string name="levering_inscannen">Levering inscannen</string>
     <string name="advies_kort_eenheden">bestel %1$d %2$s</string>
     <string name="advies_kort_stuks">bestel %1$d %2$s</string>
     <string name="advies_n">advies %1$d %2$s</string>

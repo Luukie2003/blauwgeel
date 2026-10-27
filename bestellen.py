@@ -32,6 +32,9 @@ def maak_bestellingen(db, besteleenheden_per_product, door=None, door_id=None):
         bestelling_id, n = maak_bestelling(db, groep, door, door_id, leverancier_id=lev_id)
         if bestelling_id:
             uitkomst.append({"id": bestelling_id, "leverancier_id": lev_id, "leverancier": naam, "regels": n})
+    if uitkomst:
+        bestelvoorstel.wis_controle(db)  # de controle-ronde op de bestellijst is voorbij
+        db.commit()
     return uitkomst
 
 

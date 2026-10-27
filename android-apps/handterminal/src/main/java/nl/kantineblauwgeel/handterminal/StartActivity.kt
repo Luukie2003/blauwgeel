@@ -1,24 +1,18 @@
 package nl.kantineblauwgeel.handterminal
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
-import android.view.MotionEvent
-import android.view.WindowManager
 import android.widget.LinearLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.DrawableRes
-import androidx.appcompat.app.AppCompatDialog
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import nl.kantineblauwgeel.handterminal.databinding.ActivityStartBinding
 import nl.kantineblauwgeel.handterminal.databinding.ItemLetopBinding
-import nl.kantineblauwgeel.handterminal.databinding.DialogOnderwerpBinding
 import nl.kantineblauwgeel.handterminal.databinding.ItemOnderdeelBinding
 import nl.kantineblauwgeel.handterminal.databinding.TegelBinding
 import kotlinx.coroutines.launch
@@ -355,69 +349,36 @@ class StartActivity : BasisActivity() {
         }
     }
 
-    /** Een onderwerp openen: een blad dat van onderen omhoog schuift, met de onderdelen als kaarten. Dicht met terug,
-     * door ernaast te tikken of door de kop omlaag te vegen. Heeft het maar één onderdeel (bijvoorbeeld alleen de
-     * kassa), dan meteen dat scherm. */
-    @SuppressLint("ClickableViewAccessibility")  // vegen is een extra; terug en ernaast tikken werken ook
+    /** Een onderwerp openen: een blad dat van onderen omhoog schuift (zie [Blad]), met de onderdelen als kaarten.
+     * Heeft het maar één onderdeel (bijvoorbeeld alleen de kassa), dan meteen dat scherm. */
     private fun openOnderwerp(o: Onderwerp) {
         if (o.onderdelen.size == 1) return o.onderdelen[0].actie()
-        val blad = DialogOnderwerpBinding.inflate(layoutInflater)
-        val dialoog = AppCompatDialog(this, R.style.Blad)
-        blad.bladIcoon.setImageResource(o.icoon)
-        blad.bladTitel.text = o.naam
-        blad.bladSub.text = resources.getQuantityString(R.plurals.n_onderdelen, o.onderdelen.size, o.onderdelen.size)
-        o.onderdelen.chunked(2).forEach { paar ->
-            val rij = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            paar.forEach { m ->
-                val kaart = ItemOnderdeelBinding.inflate(layoutInflater, rij, false)
-                kaart.onderdeelIcoon.setImageResource(m.icoon)
-                kaart.onderdeelNaam.text = m.naam
-                kaart.onderdeelUitleg.text = m.uitleg
-                kaart.onderdeelTeller.isVisible = m.teller > 0
-                kaart.onderdeelTeller.text = m.label ?: m.teller.toString()
-                if (m.rood) {
-                    kaart.onderdeelTeller.setBackgroundResource(R.drawable.badge_rood)
-                    kaart.onderdeelTeller.setTextColor(getColor(R.color.wit))
-                }
-                kaart.root.setOnClickListener {
-                    dialoog.dismiss()
-                    m.actie()
-                }
-                rij.addView(kaart.root)
-            }
-            if (paar.size == 1) {
-                rij.addView(android.view.View(this), LinearLayout.LayoutParams(0, 1, 1f).apply { setMargins(dp(this@StartActivity, 5), 0, dp(this@StartActivity, 5), 0) })
-            }
-            blad.bladLijst.addView(rij)
-        }
-        // De kop omlaag vegen: het blad gaat mee, en verder dan een kwart is dicht.
-        var beginY = 0f
-        // Eén keer sluiten: tijdens dismiss() krijgt de kop zelf nog een ACTION_CANCEL (het venster gaat weg), nog voordat
-        // isShowing false is. Twee keer dismiss() laat de app vastlopen.
-        var gesloten = false
-        blad.bladKop.setOnTouchListener { _, e ->
-            when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> beginY = e.rawY
-                MotionEvent.ACTION_MOVE -> if (!gesloten) blad.root.translationY = maxOf(0f, e.rawY - beginY)
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> when {
-                    gesloten -> Unit
-                    blad.root.translationY > blad.root.height / 4f -> {
-                        gesloten = true
-                        dialoog.dismiss()
+        Blad.toon(this, o.naam, resources.getQuantityString(R.plurals.n_onderdelen, o.onderdelen.size, o.onderdelen.size), o.icoon) { inhoud, blad ->
+            o.onderdelen.chunked(2).forEach { paar ->
+                val rij = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+                paar.forEach { m ->
+                    val kaart = ItemOnderdeelBinding.inflate(layoutInflater, rij, false)
+                    kaart.onderdeelIcoon.setImageResource(m.icoon)
+                    kaart.onderdeelNaam.text = m.naam
+                    kaart.onderdeelUitleg.text = m.uitleg
+                    kaart.onderdeelTeller.isVisible = m.teller > 0
+                    kaart.onderdeelTeller.text = m.label ?: m.teller.toString()
+                    if (m.rood) {
+                        kaart.onderdeelTeller.setBackgroundResource(R.drawable.badge_rood)
+                        kaart.onderdeelTeller.setTextColor(getColor(R.color.wit))
                     }
-                    else -> blad.root.animate().translationY(0f).setDuration(150).start()
+                    kaart.root.setOnClickListener {
+                        blad.sluit()
+                        m.actie()
+                    }
+                    rij.addView(kaart.root)
                 }
+                if (paar.size == 1) {
+                    rij.addView(android.view.View(this), LinearLayout.LayoutParams(0, 1, 1f).apply { setMargins(dp(this@StartActivity, 5), 0, dp(this@StartActivity, 5), 0) })
+                }
+                inhoud.addView(rij)
             }
-            true
         }
-        dialoog.setContentView(blad.root)
-        dialoog.setCanceledOnTouchOutside(true)
-        dialoog.window?.apply {
-            setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
-            setGravity(Gravity.BOTTOM)
-        }
-        tril(15)
-        dialoog.show()
     }
 
     private fun letOp(titel: String, detail: String, @DrawableRes rand: Int, actie: (() -> Unit)?) {
