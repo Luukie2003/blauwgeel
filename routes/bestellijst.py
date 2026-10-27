@@ -24,6 +24,7 @@ import manco
 from bestellen import bestel_tekst, bestelling_gegevens, klaargezet_melding, maak_bestellingen
 from leveranciers import GEEN, filter_suggesties, per_leverancier
 from pdf import bestelling_pdf, bestellijst_pdf
+from productkaart import KEUKEN_CATEGORIE
 
 
 def zoek_product(db, tekst):
@@ -97,7 +98,7 @@ def register_routes(app):
         overige_producten = [
             p
             for p in db.execute(
-                "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"
+                "SELECT * FROM producten WHERE actief = 1 AND categorie != ? ORDER BY categorie, naam", (KEUKEN_CATEGORIE,)
             ).fetchall()
             if p["id"] not in suggestie_ids and p["id"] not in product_ids_in_open_bestelling
         ]

@@ -252,9 +252,15 @@ NAV_ITEMS = [
     },
     {
         "groep": "Keuken",
-        "endpoints": ["keuken_inboeken", "keuken_barcode_koppelen"],
+        "endpoints": ["keuken_inboeken", "keuken_barcode_koppelen", "keuken_verpakking_zetten", "keuken_product_verpakking"],
         "url_endpoint": "keuken_inboeken",
         "label": "Inboeken",
+    },
+    {
+        "groep": "Keuken",
+        "endpoints": ["keuken_muteren"],
+        "url_endpoint": "keuken_muteren",
+        "label": "Muteren",
     },
     {
         "groep": "Keuken",

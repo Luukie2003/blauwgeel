@@ -12,7 +12,8 @@ import org.json.JSONObject
  * - een krat of doos van de besteleenheid, of met een ander aantal;
  * - een verpakking met meer stuks, zoals een zak AH frikandellen van 20 voor € 20 (spullen uit de keuken): dan ook een
  *   naam en eventueel de inkoopprijs, zodat AH en Plus naast elkaar bij "Frikandel" kunnen staan.
- * Gebruikt door het productscherm en het koppelscherm. */
+ * Bij een keukenproduct is het altijd zo'n verpakking (minstens 2 erin): de keuken boekt nooit per stuk in. Gebruikt door
+ * het productscherm en het koppelscherm. */
 object Koppelvraag {
 
     fun vraag(
@@ -23,12 +24,9 @@ object Koppelvraag {
         anderProduct: (() -> Unit)? = null,
         klaar: (Catalogus.Product) -> Unit,
     ) {
+        if (keuken(p)) return vraagVerpakking(activity, code, p, klaar)
         val keuzes = mutableListOf<Pair<String, () -> Unit>>()
-        val los = activity.getString(R.string.koppel_los, p.eenheid) to { koppel(activity, code, p, JSONObject(), klaar) }
-        val meerStuks = activity.getString(R.string.koppel_verpakking) to { vraagVerpakking(activity, code, p, klaar) }
-        keuzes += los
-        // Bij de keuken is een verpakking met meer stuks het gewoonst (een zak frikandellen); dan staat die bovenaan.
-        if (p.categorie.equals("Keuken", ignoreCase = true)) keuzes.add(0, meerStuks)
+        keuzes += activity.getString(R.string.koppel_los, p.eenheid) to { koppel(activity, code, p, JSONObject(), klaar) }
         if (p.besteleenheid != null && p.perBesteleenheid > 1) {
             keuzes += activity.getString(R.string.koppel_doos, p.besteleenheid, p.perBesteleenheid, p.eenheid) to {
                 koppel(activity, code, p, JSONObject().put("per_doos", p.perBesteleenheid), klaar)
@@ -39,7 +37,7 @@ object Koppelvraag {
                 n.toIntOrNull()?.takeIf { it > 0 }?.let { koppel(activity, code, p, JSONObject().put("per_doos", it), klaar) }
             }
         }
-        if (!p.categorie.equals("Keuken", ignoreCase = true)) keuzes += meerStuks
+        keuzes += activity.getString(R.string.koppel_verpakking) to { vraagVerpakking(activity, code, p, klaar) }
         if (anderProduct != null) keuzes += activity.getString(R.string.ander_product) to anderProduct
         activity.tril()
         AlertDialog.Builder(activity)
@@ -48,6 +46,8 @@ object Koppelvraag {
             .setNegativeButton(R.string.annuleren, null)
             .show()
     }
+
+    private fun keuken(p: Catalogus.Product) = p.categorie.equals("Keuken", ignoreCase = true)
 
     /** Een verpakking met meer stuks: naam, hoeveel erin en (mag leeg) de inkoopprijs. */
     private fun vraagVerpakking(activity: BasisActivity, code: String, p: Catalogus.Product, klaar: (Catalogus.Product) -> Unit) {
@@ -89,8 +89,8 @@ object Koppelvraag {
             .setNegativeButton(R.string.annuleren, null)
             .setPositiveButton(R.string.koppelen) { _, _ ->
                 val n = aantal.text.toString().toIntOrNull()
-                if (n == null || n < 1) {
-                    activity.melding(activity.getString(R.string.koppel_aantal_nodig), lang = true)
+                if (n == null || n < (if (keuken(p)) 2 else 1)) {
+                    activity.melding(activity.getString(if (keuken(p)) R.string.keuken_minstens_twee else R.string.koppel_aantal_nodig), lang = true)
                     return@setPositiveButton
                 }
                 val body = JSONObject().put("per_verpakking", n)

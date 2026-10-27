@@ -3,6 +3,7 @@
 from flask import request
 
 from helpers.tijd import now_str
+from productkaart import KEUKEN_CATEGORIE
 
 
 def verwerk_auto_inactief(db, product_id, nieuwe_voorraad):
@@ -196,6 +197,8 @@ def vervang_product_prijsopties(db, product_id):
 
 
 def bestel_suggesties(db):
+    """De producten onder hun minimum die nog niet besteld zijn, voor de bestellijst. Zonder de keuken: die koopt zelf in
+    en zet wat op raakt op de boodschappenlijst (zie keukenbeheer.boodschappen_bij_tekort)."""
     product_ids_in_open_bestelling = {
         row["product_id"]
         for row in db.execute(
@@ -208,8 +211,9 @@ def bestel_suggesties(db):
         p
         for p in db.execute(
             """SELECT * FROM producten
-               WHERE actief = 1 AND voorraad < min_voorraad
-               ORDER BY categorie, naam"""
+               WHERE actief = 1 AND voorraad < min_voorraad AND categorie != ?
+               ORDER BY categorie, naam""",
+            (KEUKEN_CATEGORIE,),
         ).fetchall()
         if p["id"] not in product_ids_in_open_bestelling
     ]

@@ -4,9 +4,8 @@
 <h1>Keuken inboeken</h1>
 {% include '_keuken_subnav.html' %}
 <p class="subtitel">
-    Scan wat er binnenkomt: de site weet per barcode hoeveel erin zit, ook als dat per supermarkt verschilt. Zonder
-    barcode vul je in de tabel in hoeveel verpakkingen er binnen zijn. Is de inkoopprijs veranderd, pas hem dan meteen
-    aan (per verpakking): dan klopt de marge.
+    Scan wat er binnenkomt: elke scan is een zak of doos, en de site weet per merk hoeveel erin zit. Zonder barcode vul
+    je hieronder in hoeveel verpakkingen er binnen zijn. Je boekt altijd per verpakking in, nooit per stuk.
 </p>
 {% if producten %}
 <form method="post" class="kaart" id="ki-formulier">
@@ -33,28 +32,41 @@
     <h3 style="margin:1rem 0 0.4rem">Zonder barcode</h3>
     <div class="tabel-wrap">
         <table>
-            <thead><tr><th>Product</th><th>Verpakking</th><th>Aantal binnen</th><th>Inkoop per verpakking</th></tr></thead>
+            <thead><tr><th>Product</th><th>Hoeveel verpakkingen binnen</th><th>Inkoop</th></tr></thead>
             <tbody>
                 {% for p in producten %}
+                {% set product_pakket = verpakkingen.get(p.id, [])|selectattr('sleutel', 'equalto', 'product')|first %}
                 <tr>
                     <td>{{ p.naam }}<div class="tekst-zacht" style="font-size:0.75rem">voorraad {{ p.voorraad }} {{ p.eenheid|lower }}</div></td>
-                    <td>{% if p.besteleenheid_factor > 1 %}{{ p.besteleenheid or 'verpakking' }} van {{ p.besteleenheid_factor }}{% else %}per {{ p.eenheid|lower }}{% endif %}</td>
-                    <td><input type="number" inputmode="numeric" min="0" name="aantal_{{ p.id }}" style="width:5rem" aria-label="Aantal {{ p.naam }}"></td>
-                    <td>&euro; <input type="text" inputmode="decimal" name="inkoop_{{ p.id }}" style="width:6rem; text-align:right"
-                                      value="{{ '%.2f'|format(p.inkoopprijs)|replace('.', ',') }}" aria-label="Inkoopprijs {{ p.naam }}"></td>
+                    <td id="ki-pakket-{{ p.id }}"></td>
+                    <td id="ki-inkoop-{{ p.id }}">
+                        {% if p.id in prijs_per_merk %}
+                        <span class="tekst-zacht" style="font-size:0.85rem">per merk, gem. &euro;&nbsp;{{ '%.2f'|format(p.inkoopprijs / (p.besteleenheid_factor if p.besteleenheid_factor and p.besteleenheid_factor > 0 else 1))|replace('.', ',') }} per {{ 'stuk' if p.eenheid|lower == 'stuks' else p.eenheid|lower }}</span>
+                        {% elif product_pakket %}
+                        &euro; <input type="text" inputmode="decimal" name="inkoop_{{ p.id }}" style="width:6rem; text-align:right"
+                                      value="{{ '%.2f'|format(p.inkoopprijs)|replace('.', ',') }}" aria-label="Inkoopprijs {{ p.naam }}">
+                        <span class="tekst-zacht" style="font-size:0.85rem">per {{ product_pakket.naam }}</span>
+                        {% else %}<span class="tekst-zacht">&mdash;</span>{% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     <button type="submit" class="btn btn-geel" style="margin-top:0.8rem">Inboeken</button>
+    <p class="tekst-zacht" style="margin-bottom:0">De inkoopprijs van een merk staat bij zijn barcode; die van een product zonder barcode pas je hier aan.</p>
 </form>
 {% include '_keuken_koppelen.html' %}
 <script>
 var KI_PRODUCTEN = {{ producten|map(attribute='id')|list|tojson }};
 var KI_NAMEN = {{ producten|map(attribute='naam')|list|tojson }};
 var KI_BARCODES = {{ barcodes|tojson }};
+var KI_VERPAKKINGEN = {{ verpakkingen|tojson }};
+var KI_PRIJS_PER_MERK = {{ prijs_per_merk|list|tojson }};
+var KI_SLEUTEL = 'kantine-keuken-inboeken';
+// Wat er gescand is ({code, product_id, aantal, omschrijving}): in de browser bewaard tot je inboekt, dus herladen kan.
 var kiScans = [];
+try { kiScans = JSON.parse(sessionStorage.getItem(KI_SLEUTEL) || '[]') || []; } catch (e) { kiScans = []; }
 
 function kiMelding(tekst, fout) {
     var m = document.getElementById('ki-melding');
@@ -66,11 +78,12 @@ function kiMelding(tekst, fout) {
 function kiNaam(pid) { return KI_NAMEN[KI_PRODUCTEN.indexOf(pid)] || ''; }
 
 function kiToon() {
+    try { sessionStorage.setItem(KI_SLEUTEL, JSON.stringify(kiScans)); } catch (e) { /* privénavigatie */ }
     var regels = document.getElementById('ki-regels');
     regels.innerHTML = '';
-    var totalen = {};
+    var velden = document.getElementById('ki-velden');
+    velden.innerHTML = '';
     kiScans.forEach(function (scan, i) {
-        totalen[scan.product_id] = (totalen[scan.product_id] || 0) + scan.aantal;
         var tr = document.createElement('tr');
         tr.innerHTML = '<td><strong></strong><div class="tekst-zacht" style="font-size:0.75rem"></div></td><td style="text-align:right"></td><td><button type="button" class="btn btn-rand btn-klein">Weg</button></td>';
         tr.querySelector('strong').textContent = kiNaam(scan.product_id);
@@ -78,14 +91,11 @@ function kiToon() {
         tr.children[1].textContent = '+' + scan.aantal;
         tr.querySelector('button').onclick = function () { kiScans.splice(i, 1); kiToon(); };
         regels.appendChild(tr);
-    });
-    var velden = document.getElementById('ki-velden');
-    velden.innerHTML = '';
-    Object.keys(totalen).forEach(function (pid) {
+        // De server rekent zelf uit hoeveel erin zit (van het merk); hier gaat alleen de barcode mee.
         var v = document.createElement('input');
         v.type = 'hidden';
-        v.name = 'gescand_' + pid;
-        v.value = totalen[pid];
+        v.name = 'scan';
+        v.value = scan.code;
         velden.appendChild(v);
     });
     document.getElementById('ki-gescand').hidden = !kiScans.length;
@@ -100,7 +110,15 @@ function kiScan(tekst) {
         keukenKoppelVragen(code, lijst, null, function (code, gegevens) { KI_BARCODES[code] = gegevens; kiScan(code); });
         return;
     }
-    kiScans.push(gevonden);
+    if (KI_PRODUCTEN.indexOf(gevonden.product_id) < 0) {
+        kiMelding('Deze barcode hoort bij een product dat niet (meer) actief is in de keuken.', true);
+        return;
+    }
+    if (!gevonden.aantal) {
+        keukenAantalVragen(code, gevonden, function (code, gegevens) { KI_BARCODES[code] = gegevens; kiScan(code); });
+        return;
+    }
+    kiScans.push({ code: code, product_id: gevonden.product_id, aantal: gevonden.aantal, omschrijving: gevonden.omschrijving });
     kiToon();
     kiMelding('+' + gevonden.aantal + ' ' + kiNaam(gevonden.product_id) + ' (' + gevonden.omschrijving + ')');
 }
@@ -109,16 +127,72 @@ function kiScanVeld() {
     var veld = document.getElementById('ki-scan');
     if (veld.value.trim()) kiScan(veld.value);
     veld.value = '';
-    veld.focus();
+    // Vraagt de scan iets (koppelen, hoeveel erin), dan blijft de cursor in dat venster.
+    if (!document.querySelector('.modal-overlay.open')) veld.focus();
 }
+
+// Per product een veld per verpakking (de zak van 20, de doos van 40), of een knop om er één in te stellen.
+function kiPakketCel(pid, lijst) {
+    var cel = document.getElementById('ki-pakket-' + pid);
+    cel.innerHTML = '';
+    if (!lijst.length) {
+        var knop = document.createElement('button');
+        knop.type = 'button';
+        knop.className = 'btn btn-rand btn-klein';
+        knop.textContent = 'Verpakking instellen';
+        knop.onclick = function () {
+            keukenVerpakkingVragen({ id: pid, naam: kiNaam(pid) }, function (nieuw) {
+                KI_VERPAKKINGEN[pid] = nieuw;
+                kiPakketCel(pid, nieuw);
+                var product = nieuw.filter(function (v) { return v.sleutel === 'product'; })[0];
+                if (product && KI_PRIJS_PER_MERK.indexOf(pid) < 0) {
+                    var inkoop = document.getElementById('ki-inkoop-' + pid);
+                    inkoop.innerHTML = '&euro; <input type="text" inputmode="decimal" style="width:6rem; text-align:right"> <span class="tekst-zacht" style="font-size:0.85rem"></span>';
+                    var veld = inkoop.querySelector('input');
+                    veld.name = 'inkoop_' + pid;
+                    veld.value = product.per_stuk ? (product.per_stuk * product.aantal).toFixed(2).replace('.', ',') : '';
+                    veld.setAttribute('aria-label', 'Inkoopprijs ' + kiNaam(pid));
+                    inkoop.querySelector('span').textContent = 'per ' + product.naam;
+                }
+            });
+        };
+        cel.appendChild(knop);
+        return;
+    }
+    var vak = document.createElement('div');
+    vak.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.3rem 0.9rem';
+    lijst.forEach(function (v) {
+        var label = document.createElement('label');
+        label.style.cssText = 'display:flex; align-items:center; gap:0.35rem; font-weight:normal';
+        var veld = document.createElement('input');
+        veld.type = 'number';
+        veld.inputMode = 'numeric';
+        veld.min = '0';
+        veld.style.width = '4.2rem';
+        veld.name = 'pakket_' + pid + '__' + v.sleutel;
+        veld.setAttribute('aria-label', kiNaam(pid) + ': ' + v.naam);
+        var tekst = document.createElement('span');
+        tekst.textContent = '× ' + v.naam + ' (' + v.aantal + ')';
+        label.appendChild(veld);
+        label.appendChild(tekst);
+        vak.appendChild(label);
+    });
+    cel.appendChild(vak);
+}
+KI_PRODUCTEN.forEach(function (pid) { kiPakketCel(pid, KI_VERPAKKINGEN[pid] || []); });
+
 // Een handscanner drukt na de barcode op Enter: dat is hier een scan, niet het formulier versturen.
 document.getElementById('ki-scan').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') { e.preventDefault(); kiScanVeld(); }
 });
+document.getElementById('ki-formulier').addEventListener('submit', function () {
+    try { sessionStorage.removeItem(KI_SLEUTEL); } catch (e) {}
+});
 var kiCamera = cameraScanner(document.getElementById('ki-video'), document.getElementById('ki-camera'), kiScan,
     function () { kiMelding('De camera kon niet worden geopend.', true); });
+kiScans = kiScans.filter(function (s) { return KI_BARCODES[s.code] && KI_BARCODES[s.code].aantal; });
+kiToon();
 </script>
-<p class="tekst-zacht">Staat het aantal per verpakking niet goed? Pas het aan bij het product (&ldquo;Aantal per besteleenheid&rdquo;).</p>
 {% else %}
 <p class="leeg">Nog geen actieve producten in de categorie Keuken.</p>
 {% endif %}

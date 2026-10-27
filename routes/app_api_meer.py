@@ -24,6 +24,7 @@ from activiteiten import bouw_agenda, kies_dagen
 from aanmeldingen import aanmelden_status, bestaand_lid_voor, keur_goed, ruim_op, splits_naam, wijs_af
 from club_van_20 import BETAALWIJZEN
 from database import get_db
+from derving import DERVING_REDENEN
 from eigen_taken import rond_af, taak_voor_persoon, vind_taak, vink_stap
 from helpers import (
     bereken_frituurvet_status,
@@ -37,18 +38,26 @@ from helpers.kas import KASSA_COUPURES
 from helpers.tijd import vandaag_amsterdam
 from helpers.producten import inkoop_per_stuk, omzet_per_eenheid
 from keukenbeheer import (
+    KEUKEN_NIET_BESTELLEN,
     boek_keuken_in,
+    boodschap_tekst,
     keuken_barcodes,
     keuken_producten,
     bewaar_keuken_stand,
     keuken_stand,
     keuken_tellingen,
+    keuken_verpakkingen,
+    koppel_keuken_barcode,
+    muteer_keuken,
     verwerk_keuken_telling,
     wis_keuken_stand,
     zet_keuken_prijzen,
+    zet_keuken_verpakking,
+    zet_op_boodschappenlijst,
+    zet_product_verpakking,
 )
 from leveranciers import alle_leveranciers
-from productkaart import BESTELEENHEDEN, EENHEDEN
+from productkaart import BESTELEENHEDEN, EENHEDEN, KEUKEN_CATEGORIE
 from routes.app_api import _data, _foto, _fout, _getal, _product, eenmalig, taak_vragen
 from routes.kassa import keur_kassa_telling_goed, maak_kassa_telling
 from routes.kluis import keur_kluis_telling_goed, maak_kluis_telling
@@ -360,6 +369,8 @@ def register_routes(app):
         product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
         if product is None:
             return _fout("Dit product bestaat niet meer.", 404, "niet_gevonden")
+        if product["categorie"] == KEUKEN_CATEGORIE:
+            return _fout(KEUKEN_NIET_BESTELLEN, 400, "keuken")
         ruw = _data().get("eenheden")
         eenheden = None if ruw is None else _getal(ruw)
         if ruw is not None and (eenheden is None or not 0 <= eenheden <= bestelvoorstel.MAX_EENHEDEN):
@@ -506,18 +517,17 @@ def register_routes(app):
         return {"datum": laatste["datum"] if laatste else None, "naam": laatste["naam"] if laatste else None,
                 "dagen_geleden": f["dagen_geleden"], "interval": f["interval"], "ok": f["ok"]}
 
-    def _keuken_boodschap(p):
-        return f"{p['naam']} (keuken)"
-
     @app.route("/api/app/keuken")
     def api_app_keuken():
         """De keuken voor de app: per product de voorraad, de verkoopprijs (voor de omzet op het controlescherm), de
-        gekoppelde dozen en zakken (wat een scan oplevert, per supermarkt anders) en of hij al op de boodschappenlijst
-        staat; de laatste keukentellingen en het frituurvet."""
+        gekoppelde dozen en zakken (wat een scan oplevert, per merk anders; "aantal" null: nog niet bekend hoeveel erin
+        zit, dat vraagt de app dan), de verpakkingen om zonder barcode in te boeken (keuken_verpakkingen) en of hij al op
+        de boodschappenlijst staat; de laatste keukentellingen, het frituurvet en de redenen voor derving."""
         db = get_db()
         dozen = {}
         for code, d in keuken_barcodes(db).items():
             dozen.setdefault(d["product_id"], []).append({"code": code, "aantal": d["aantal"], "omschrijving": d["omschrijving"]})
+        verpakkingen = keuken_verpakkingen(db)
         open_boodschappen = {b["tekst"] for b in db.execute("SELECT tekst FROM boodschappen WHERE afgevinkt = 0").fetchall()}
         producten = [
             {"id": p["id"], "naam": p["naam"], "subcategorie": p["subcategorie"] or "", "eenheid": p["eenheid"] or "stuks",
@@ -525,8 +535,10 @@ def register_routes(app):
              "verpakking": (p["besteleenheid"] or p["eenheid"] or "verpakking").lower(),
              "per_verpakking": max(1, p["besteleenheid_factor"] or 1), "foto": _foto(p["afbeelding"], "klein"),
              "foto_groot": _foto(p["afbeelding"], "middel"), "verkoopprijs": round(omzet_per_eenheid(p), 4),
-             "dozen": sorted(dozen.get(p["id"], []), key=lambda d: d["aantal"]),
-             "op_boodschappenlijst": _keuken_boodschap(p) in open_boodschappen}
+             "dozen": sorted(dozen.get(p["id"], []), key=lambda d: d["aantal"] or 0),
+             "verpakkingen": [{"sleutel": v["sleutel"], "naam": v["naam"], "aantal": v["aantal"]}
+                              for v in verpakkingen.get(p["id"], [])],
+             "op_boodschappenlijst": boodschap_tekst(p) in open_boodschappen}
             for p in keuken_producten(db)
         ]
         tellingen = [
@@ -536,7 +548,8 @@ def register_routes(app):
         ]
         eerste = db.execute("SELECT 1 FROM keuken_tellingen LIMIT 1").fetchone() is None
         return jsonify({"producten": producten, "frituurvet": _frituurvet(db), "tellingen": tellingen,
-                        "eerste_telling": eerste})
+                        "eerste_telling": eerste,
+                        "derving_redenen": [{"sleutel": k, "naam": v} for k, v in DERVING_REDENEN.items()]})
 
     def _aantallen(waarden):
         if not isinstance(waarden, dict):
@@ -622,10 +635,7 @@ def register_routes(app):
             p = next((p for p in keuken_producten(db) if p["id"] == product_id), None)
             if p is None:
                 return {"fout": "niet_gevonden", "melding": "Dit is geen keukenproduct."}, 404
-            tekst = _keuken_boodschap(p)
-            if not db.execute("SELECT 1 FROM boodschappen WHERE tekst = ? AND afgevinkt = 0", (tekst,)).fetchone():
-                db.execute("INSERT INTO boodschappen (tekst, aangemaakt_door, aangemaakt_op) VALUES (?, ?, ?)",
-                           (tekst, session.get("gebruiker_naam"), now_str()))
+            zet_op_boodschappenlijst(db, p, session.get("gebruiker_naam"))
             return {"melding": f"{p['naam']} staat op de boodschappenlijst."}, 200
 
         return eenmalig(actie)
@@ -668,22 +678,106 @@ def register_routes(app):
         db.commit()
         return jsonify({"frituurvet": _frituurvet(db), "melding": f"Het frituurvet moet nu om de {dagen} dagen vervangen."})
 
+    def _verpakkingen(waarden):
+        """{product_id: {sleutel: aantal}} (zie keuken_verpakkingen). Een app van voor 2.18.0 stuurt {product_id: aantal}
+        voor de verpakking van het product zelf."""
+        if not isinstance(waarden, dict):
+            return {}
+        uit = {}
+        for sleutel, waarde in waarden.items():
+            pid = _getal(sleutel)
+            for soort, n in (waarde if isinstance(waarde, dict) else {"product": waarde}).items():
+                n = _getal(n)
+                if pid is not None and n is not None and 0 < n <= MAX_STUKS:
+                    uit.setdefault(pid, {})[str(soort)[:40]] = n
+        return uit
+
     @app.route("/api/app/keuken/inboeken", methods=["POST"])
     def api_app_keuken_inboeken():
-        """Keuken inboeken per verpakking (een doos frikandellen van 40: 1), zoals Keuken > Inboeken op de site, en/of
-        "gescand": {product_id: stuks} uit gescande barcodes (wat er in een doos zit, verschilt per supermarkt)."""
+        """Keuken inboeken, altijd per verpakking, zoals Keuken > Inboeken op de site: "scans" (de gescande barcodes,
+        één per zak of doos; hoeveel erin zit komt van het merk) en/of "verpakkingen" {product_id: {sleutel: aantal}}
+        zonder barcode. Een app van voor 2.18.0 stuurt "gescand": {product_id: stuks}."""
         data = _data()
-        verpakkingen = {pid: n for pid, n in _aantallen(data.get("verpakkingen")).items() if n > 0}
+        scans = [str(s).strip()[:32] for s in (data.get("scans") or []) if isinstance(s, (str, int))][:1000]
+        verpakkingen = _verpakkingen(data.get("verpakkingen"))
         gescand = {pid: n for pid, n in _aantallen(data.get("gescand")).items() if n > 0}
 
         def actie(db):
-            aantal = boek_keuken_in(db, verpakkingen, session.get("gebruiker_naam"), now_str(), session.get("gebruiker_id"),
-                                    gescand=gescand)
+            uitkomst = boek_keuken_in(db, verpakkingen, session.get("gebruiker_naam"), now_str(),
+                                      session.get("gebruiker_id"), gescand=gescand, scans=scans)
+            aantal, overgeslagen = uitkomst["producten"], uitkomst["overgeslagen"]
+            niet = (" Niet ingeboekt: " + "; ".join(overgeslagen) + ".") if overgeslagen else ""
             if not aantal:
-                return {"fout": "leeg", "melding": "Niets ingevuld om in te boeken."}, 400
-            return {"melding": f"{aantal} {'product' if aantal == 1 else 'producten'} ingeboekt."}, 200
+                return {"fout": "leeg", "melding": ("Er is niets ingeboekt." + niet) if overgeslagen
+                        else "Niets ingevuld om in te boeken.", "overgeslagen": overgeslagen}, 400
+            return {"melding": f"{aantal} {'product' if aantal == 1 else 'producten'} ingeboekt." + niet,
+                    "overgeslagen": overgeslagen}, 200
 
         return eenmalig(actie)
+
+    @app.route("/api/app/keuken/muteren", methods=["POST"])
+    def api_app_keuken_muteren():
+        """{product_id, soort: derving|erbij|eraf, aantal, reden (bij derving, zie DERVING_REDENEN), opmerking}: wat er
+        weggegooid wordt of een correctie, per stuk (zie muteer_keuken)."""
+        data = _data()
+
+        def actie(db):
+            melding, fout = muteer_keuken(
+                db, _getal(data.get("product_id")), str(data.get("soort") or ""), _getal(data.get("aantal")),
+                session.get("gebruiker_naam"), session.get("gebruiker_id"), data.get("reden"),
+                str(data.get("opmerking") or ""),
+            )
+            if fout:
+                return {"fout": "ongeldig", "melding": fout}, 400
+            return {"melding": melding}, 200
+
+        return eenmalig(actie)
+
+    @app.route("/api/app/keuken/koppelen", methods=["POST"])
+    def api_app_keuken_koppelen():
+        """{code, product_id, aantal, naam, inkoopprijs, verzoek_id}: een onbekende barcode bij het tellen of inboeken aan
+        een keukenproduct koppelen, met hoeveel erin zit (2 of meer), zoals Keuken > Inboeken op de site. Ook voor wie
+        alleen keukenrechten heeft. Geeft de barcode zoals in "dozen" bij /api/app/keuken."""
+        data = _data()
+
+        def actie(db):
+            d, fout = koppel_keuken_barcode(db, data.get("code"), _getal(data.get("product_id")), _getal(data.get("aantal")),
+                                            data.get("naam"), data.get("inkoopprijs"), session.get("gebruiker_naam"),
+                                            session.get("gebruiker_id"))
+            if fout:
+                return {"fout": "ongeldig", "melding": fout}, 400
+            return {"code": d["code"], "product_id": d["product_id"], "aantal": d["aantal"],
+                    "omschrijving": d["omschrijving"], "melding": f"Gekoppeld: {d['omschrijving']}."}, 200
+
+        return eenmalig(actie)
+
+    @app.route("/api/app/keuken/verpakking", methods=["POST"])
+    def api_app_keuken_verpakking():
+        """{code, aantal}: hoeveel er in een gekoppelde zak of doos zit, als dat er nog niet bij stond. Geeft de barcode
+        zoals in "dozen" bij /api/app/keuken."""
+        data = _data()
+        db = get_db()
+        d, fout = zet_keuken_verpakking(db, data.get("code"), _getal(data.get("aantal")), session.get("gebruiker_naam"),
+                                        session.get("gebruiker_id"))
+        if fout:
+            return _fout(fout)
+        code = barcodes.normaliseer(str(data.get("code")))
+        return jsonify({"code": code, "product_id": d["product_id"], "aantal": d["aantal"],
+                        "omschrijving": d["omschrijving"], "melding": f"Opgeslagen: {d['omschrijving']}."})
+
+    @app.route("/api/app/keuken/product-verpakking", methods=["POST"])
+    def api_app_keuken_product_verpakking():
+        """{product_id, naam, aantal}: een keukenproduct zonder barcode (gehaktballen van de slager) één keer een
+        verpakking geven, zodat je het per verpakking inboekt. Geeft de verpakkingen van het product."""
+        data = _data()
+        db = get_db()
+        product_id = _getal(data.get("product_id"))
+        fout = zet_product_verpakking(db, product_id, data.get("naam"), _getal(data.get("aantal")))
+        if fout:
+            return _fout(fout)
+        return jsonify({"verpakkingen": [{"sleutel": v["sleutel"], "naam": v["naam"], "aantal": v["aantal"]}
+                                         for v in keuken_verpakkingen(db).get(product_id, [])],
+                        "melding": "Verpakking opgeslagen."})
 
     @app.route("/api/app/frituurvet", methods=["POST"])
     def api_app_frituurvet():

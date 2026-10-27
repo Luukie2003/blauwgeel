@@ -474,10 +474,12 @@ class BestellijstActivity : BasisActivity() {
         if (openId == id) bladMeer?.invoke() else voegToe(id)
     }
 
-    /** Een product erbij (gescand of gezocht): onderaan bij Erbij, met 1 colli en het blad meteen open. */
+    /** Een product erbij (gescand of gezocht): onderaan bij Erbij, met 1 colli en het blad meteen open. Niet uit de
+     * keuken: die koopt zelf in (de boodschappenlijst). */
     private fun voegToe(id: Int) {
         regels.firstOrNull { it.id == id }?.let { return openBladVoor(it) }
         val c = Catalogus.opId(id) ?: return melding(getString(R.string.product_niet_gevonden))
+        if (c.categorie.equals("Keuken", ignoreCase = true)) return melding(getString(R.string.keuken_niet_op_bestellijst), lang = true)
         val p = JSONObject()
             .put("id", c.id).put("naam", c.naam).put("eenheid", c.eenheid)
             .put("voorraad", c.voorraad).put("min_voorraad", c.minVoorraad)

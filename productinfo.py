@@ -11,6 +11,7 @@ import barcodes
 from helpers.producten import besteleenheid_factor, inkoop_per_stuk, omzet_per_eenheid
 from leveranciers import besteldagen_tekst
 from marge import lees_doelmarge
+from productkaart import KEUKEN_CATEGORIE
 
 TELLINGEN = 6  # zoveel van de laatste tellingen staan op de pagina
 PRIJS_GESCHIEDENIS = 5
@@ -102,9 +103,12 @@ def _maandag(dag):
 
 
 def bestelblok(db, product, nu=None):
-    """Het bestelblok los (bestelvoorstel.voor_product), voor als er nog geen verkoopinfo is; None als het mislukt."""
+    """Het bestelblok los (bestelvoorstel.voor_product), voor als er nog geen verkoopinfo is; None als het mislukt, en
+    bij de keuken (die koopt zelf in: de boodschappenlijst)."""
     import bestelvoorstel
 
+    if product["categorie"] == KEUKEN_CATEGORIE:
+        return None
     try:
         return bestelvoorstel.voor_product(db, product, nu)
     except Exception as fout:  # het blok mag de productpagina nooit stuk maken
@@ -162,7 +166,8 @@ def verkoopinfo(db, product_id, vandaag=None, nu=None):
     import bestelvoorstel
 
     product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
-    bestellen = bestelvoorstel.voor_product(db, product, nu) if product is not None else None
+    bestellen = (bestelvoorstel.voor_product(db, product, nu)
+                 if product is not None and product["categorie"] != KEUKEN_CATEGORIE else None)
 
     hoogste = max((w["aantal"] for w in weken), default=0)
     return {

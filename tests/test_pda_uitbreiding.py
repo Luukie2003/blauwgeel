@@ -52,7 +52,8 @@ def test_start_toont_wat_aandacht_nodig_heeft(ingelogde_client, db):
 
     tekst = _pda(ingelogde_client).get("/").data.decode()
 
-    laag = db.execute("SELECT COUNT(*) AS n FROM producten WHERE actief = 1 AND voorraad < min_voorraad").fetchone()["n"]
+    laag = db.execute("SELECT COUNT(*) AS n FROM producten WHERE actief = 1 AND voorraad < min_voorraad "
+                      "AND categorie != 'Keuken'").fetchone()["n"]
     assert laag >= 1
     assert f"{laag} {'product' if laag == 1 else 'producten'} onder het minimum" in tekst
     assert "/voorraadoverzicht?alleen=laag" in tekst

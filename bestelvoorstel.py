@@ -32,6 +32,7 @@ from datetime import datetime, time, timedelta
 from helpers.producten import besteleenheid_factor, besteleenheid_naam, bestel_suggesties
 from helpers.tijd import now_str
 from leveranciers import besteldagen
+from productkaart import KEUKEN_CATEGORIE
 
 STANDAARD_DAGEN = 7
 MAX_DAGEN = 21
@@ -180,12 +181,15 @@ def advies(product, regel, al_onderweg=0):
 
 
 def adviezen(db, nu=None):
-    """Het besteladvies (advies) van alle actieve producten, elk met de bestelperiode van zijn leverancier (zonder
-    besteldagen: STANDAARD_DAGEN). {"beschikbaar": of er een prognose is, "producten":
+    """Het besteladvies (advies) van alle actieve producten (niet die van de keuken: die koopt zelf in, zie
+    keukenbeheer), elk met de bestelperiode van zijn leverancier (zonder besteldagen: STANDAARD_DAGEN). {"beschikbaar": of er een prognose is, "producten":
     {product_id: {**advies(...), "product", "regel" (de prognose van het product, of None), "dagen", "kans_tekort",
     "status"}}}. De kans en de status gaan over dezelfde periode, met de voorraad en wat onderweg is."""
     nu = nu or datetime.now()
-    producten = {p["id"]: p for p in db.execute("SELECT * FROM producten WHERE actief = 1").fetchall()}
+    producten = {
+        p["id"]: p
+        for p in db.execute("SELECT * FROM producten WHERE actief = 1 AND categorie != ?", (KEUKEN_CATEGORIE,)).fetchall()
+    }
     periodes = {
         lev["id"]: bestelperiode(lev, nu)
         for lev in db.execute("SELECT * FROM leveranciers WHERE actief = 1").fetchall()

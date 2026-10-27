@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.LinearLayout
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import nl.kantineblauwgeel.handterminal.databinding.ActivityTellenBinding
@@ -16,10 +15,11 @@ import org.json.JSONObject
 import java.util.UUID
 
 /** De keukentelling als looplijst, net als Tellen (en de keukenlooplijst op de site): product voor product, met foto,
- * voortgang, de snelknoppen en de rekenmachine. Losse stuks tik je in; een volle doos of zak scan je, en wat erin zit
- * (uit het artikel, dus per supermarkt anders) telt er meteen bij. Onder de naam staat wat er gescand is ("Gescand: +40
- * · +15"); tik erop om een verkeerde scan weg te halen. Scan je een ander keukenproduct, dan springt de lijst daarheen; een
- * onbekende barcode koppel je meteen (KoppelenActivity) en die scan telt dan alsnog mee.
+ * voortgang, de snelknoppen en de rekenmachine. Blind: wat er op de site staat, zie je pas op het controlescherm. Losse
+ * stuks tik je in; een volle doos of zak scan je, en wat erin zit (van de barcode, dus per merk anders) telt er meteen
+ * bij, of je tikt op de knop van die verpakking (+20 voor de zak van 20). Onder de naam staat wat er gescand is
+ * ("Gescand: +40 · +15"); tik erop om een verkeerde scan weg te halen. Scan je een ander keukenproduct, dan springt de
+ * lijst daarheen; een onbekende barcode koppel je meteen ([KeukenKoppelen]) en die scan telt dan alsnog mee.
  *
  * De stand staat op het toestel (SharedPreferences "keuken_tellen") en gaat ook naar de site (/api/app/keuken/stand):
  * na Terug, de slaapstand of een herstart ga je verder waar je was, en verder gaan kan ook op de site (Keuken > Tellen
@@ -37,8 +37,8 @@ class KeukenTellenActivity : BasisActivity() {
         val voorraad: Int,
         val verkoopprijs: Double,
         val foto: String?,
-        val verpakking: String,
-        val perVerpakking: Int,
+        /** (naam, aantal erin) van de verpakkingen, voor de snelknop: de zak van 20 is +20. */
+        val verpakkingen: List<Pair<String, Int>>,
         val dozen: List<JSONObject>,
     )
 
@@ -48,7 +48,8 @@ class KeukenTellenActivity : BasisActivity() {
 
     private lateinit var b: ActivityTellenBinding
     private var producten: List<KeukenProduct> = emptyList()
-    /** Barcode -> {product_id, aantal, omschrijving}, uit de gekoppelde dozen en zakken van de keukenproducten. */
+    /** Barcode -> {product_id, aantal (null: nog niet bekend), omschrijving}, uit de gekoppelde dozen en zakken van de
+     * keukenproducten. */
     private val opCode = HashMap<String, JSONObject>()
     private var index = 0
     private val waarden = LinkedHashMap<Int, String>()
@@ -58,27 +59,12 @@ class KeukenTellenActivity : BasisActivity() {
     private var laag = Laag.LADEN
     private var opslaanId: String? = null
     private var tellingId: Int? = null
-    /** De scan die moest worden gekoppeld: na het koppelen telt hij alsnog mee. */
-    private var teKoppelen: String? = null
     /** Welke telling dit is, of de site hem al kent, en hoe vaak hij is veranderd (zie bewaar). */
     private var loopId = UUID.randomUUID().toString()
     private var opSite = false
     private var versie = 0
 
     private val lokaal by lazy { getSharedPreferences("keuken_tellen", Context.MODE_PRIVATE) }
-
-    private val koppelen = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
-        val code = r.data?.getStringExtra(KoppelenActivity.EXTRA_CODE)?.takeIf { r.resultCode == RESULT_OK } ?: teKoppelen
-        teKoppelen = null
-        if (code != null) bezig {
-            laadDozen(Api.getJson(this, "/api/app/keuken"))
-            try {
-                Catalogus.ververs(this)
-            } catch (f: Api.Fout) {
-            }
-            telScan(code, naKoppelen = true)
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -99,7 +85,7 @@ class KeukenTellenActivity : BasisActivity() {
         b.snelMin1.setOnClickListener { pasAan(-1) }
         b.snelPlus1.setOnClickListener { pasAan(1) }
         b.snelPlus2.setOnClickListener { pasAan(2) }
-        b.snelKrat.setOnClickListener { pasAan(producten[index].perVerpakking) }
+        b.snelKrat.setOnClickListener { verpakkingErbij() }
         b.rekenKnop.setOnClickListener {
             Rekenmachine.open(this, waarde) {
                 waarde = it.toString()
@@ -164,7 +150,8 @@ class KeukenTellenActivity : BasisActivity() {
                 KeukenProduct(
                     p.getInt("id"), p.optString("naam"), p.optString("subcategorie"), p.optString("eenheid"),
                     p.optInt("voorraad"), p.optDouble("verkoopprijs", 0.0), p.tekstOfNull("foto_groot") ?: p.tekstOfNull("foto"),
-                    p.optString("verpakking"), p.optInt("per_verpakking", 1), p.optJSONArray("dozen")?.objecten().orEmpty(),
+                    p.optJSONArray("verpakkingen")?.objecten().orEmpty().map { it.optString("naam") to it.optInt("aantal") },
+                    p.optJSONArray("dozen")?.objecten().orEmpty(),
                 )
             }
             laadDozen(keuken)
@@ -201,11 +188,14 @@ class KeukenTellenActivity : BasisActivity() {
     private fun laadDozen(keuken: JSONObject) {
         opCode.clear()
         for (p in keuken.getJSONArray("producten").objecten()) {
-            for (d in p.optJSONArray("dozen")?.objecten().orEmpty()) {
-                opCode[d.optString("code")] = JSONObject().put("product_id", p.getInt("id")).put("aantal", d.optInt("aantal"))
-                    .put("omschrijving", d.optString("omschrijving"))
-            }
+            for (d in p.optJSONArray("dozen")?.objecten().orEmpty()) zetCode(d.put("product_id", p.getInt("id")))
         }
+    }
+
+    private fun zetCode(d: JSONObject) {
+        opCode[d.optString("code")] = JSONObject().put("product_id", d.getInt("product_id"))
+            .put("aantal", if (d.isNull("aantal")) JSONObject.NULL else d.getInt("aantal"))
+            .put("omschrijving", d.optString("omschrijving"))
     }
 
     private fun vraagVerder(stand: JSONObject) {
@@ -327,9 +317,11 @@ class KeukenTellenActivity : BasisActivity() {
         b.telCategorie.text = p.subcategorie
         b.telNaam.text = p.naam
         b.telEenheid.text = p.eenheid
-        b.telVoorraad.text = getString(R.string.geregistreerde_voorraad, p.voorraad, p.eenheid)
-        b.snelKrat.isVisible = p.perVerpakking > 1
-        b.snelKrat.text = getString(R.string.plus_een_besteleenheid, p.verpakking, p.perVerpakking)
+        // Blind tellen: wat de site verwacht, staat pas op het controlescherm.
+        b.telVoorraad.isVisible = false
+        val pakken = snelPakken(p)
+        b.snelKrat.isVisible = pakken.isNotEmpty()
+        b.snelKrat.text = if (pakken.size == 1) "+${pakken[0].second}" else getString(R.string.plus_verpakking)
         waarde = waarden[p.id] ?: ""
         toonWaarde()
         toonScans()
@@ -351,7 +343,7 @@ class KeukenTellenActivity : BasisActivity() {
             b.telVerwacht.setOnClickListener { kiesScanWeg() }
         } else {
             b.telVerwacht.text = if (p.dozen.isEmpty()) getString(R.string.keuken_geen_dozen)
-            else getString(R.string.keuken_dozen, p.dozen.joinToString(" · ") { "${it.optInt("aantal")}" })
+            else getString(R.string.keuken_dozen, p.dozen.joinToString(" · ") { if (it.isNull("aantal")) "?" else "${it.optInt("aantal")}" })
             b.telVerwacht.setTextColor(getColor(R.color.tekst_zacht))
             b.telVerwacht.setOnClickListener(null)
             b.telVerwacht.isClickable = false
@@ -384,6 +376,20 @@ class KeukenTellenActivity : BasisActivity() {
     private fun toonWaarde() {
         b.telWaarde.text = waarde.ifEmpty { "–" }
         b.telWaarde.setTextColor(getColor(if (waarde.isEmpty()) R.color.rand_licht else R.color.tekst))
+    }
+
+    /** De verpakkingen voor de snelknop, zonder wat +1 en +2 al doen. */
+    private fun snelPakken(p: KeukenProduct) = p.verpakkingen.filter { it.second > 2 }.distinctBy { it.second }
+
+    /** De snelknop: één verpakking telt meteen bij, bij meer kies je welke. */
+    private fun verpakkingErbij() {
+        val pakken = snelPakken(producten[index])
+        if (pakken.size == 1) return pasAan(pakken[0].second)
+        AlertDialog.Builder(this)
+            .setCustomTitle(dialoogTitel(getString(R.string.welke_verpakking_erbij)))
+            .setItems(pakken.map { "+${it.second}   ${it.first}" }.toTypedArray()) { _, i -> pasAan(pakken[i].second) }
+            .setNegativeButton(R.string.annuleren, null)
+            .show()
     }
 
     private fun pasAan(stap: Int) {
@@ -421,23 +427,31 @@ class KeukenTellenActivity : BasisActivity() {
         telScan(code)
     }
 
-    /** Een doos of zak: naar dat product en wat erin zit erbij. Onbekend: eerst koppelen. */
-    private fun telScan(code: String, naKoppelen: Boolean = false) {
+    /** Een doos of zak: naar dat product en wat erin zit erbij. Onbekend: eerst koppelen; nog niet bekend hoeveel erin
+     * zit: eerst vragen. */
+    private fun telScan(code: String) {
         val norm = Catalogus.normaliseerCode(code) ?: return melding(getString(R.string.scan_geen_barcode, code))
         val doos = opCode[norm]
-        val productId = doos?.optInt("product_id") ?: Catalogus.opBarcode(norm)?.product?.id
-        val positie = productId?.let { id -> producten.indexOfFirst { it.id == id } } ?: -1
-        if (positie < 0) {
-            if (productId != null) return melding(getString(R.string.geen_keukenproduct))
-            if (naKoppelen) return melding(getString(R.string.keuken_nog_onbekend), lang = true)
-            tril(150)
-            teKoppelen = norm
+        if (doos == null) {
+            // De barcode van een gewoon product (als de app de productlijst kent): dat is geen keukenproduct.
+            if (Catalogus.opBarcode(norm) != null) return melding(getString(R.string.geen_keukenproduct))
             legVast()
-            koppelen.launch(KoppelenActivity.intent(this, norm))
-            return
+            return KeukenKoppelen.koppel(this, norm, producten.map { it.id to it.naam }, producten[index].id) { nieuw ->
+                zetCode(nieuw)
+                if (laag == Laag.TELLEN) telScan(norm)
+            }
         }
-        val aantal = doos?.optInt("aantal") ?: Catalogus.opBarcode(norm)?.barcode?.aantal ?: 1
-        val omschrijving = doos?.optString("omschrijving") ?: Catalogus.opBarcode(norm)?.barcode?.artikel ?: norm
+        val positie = producten.indexOfFirst { it.id == doos.getInt("product_id") }
+        if (positie < 0) return melding(getString(R.string.geen_keukenproduct))
+        if (doos.isNull("aantal")) {
+            legVast()
+            return KeukenKoppelen.vraagAantal(this, norm, doos.optString("omschrijving"), producten[positie].eenheid) { nieuw ->
+                zetCode(nieuw)
+                if (laag == Laag.TELLEN) telScan(norm)
+            }
+        }
+        val aantal = doos.getInt("aantal")
+        val omschrijving = doos.optString("omschrijving")
         if (laag == Laag.TELLEN) legVast()
         index = positie
         val p = producten[index]

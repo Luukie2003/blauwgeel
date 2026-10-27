@@ -24,8 +24,8 @@ android {
         // De Zebra TC51 kwam uit met Android 6.0 (API 23).
         minSdk = 23
         targetSdk = 34
-        versionCode = 22
-        versionName = "2.17.0"
+        versionCode = 23
+        versionName = "2.18.0"
     }
 
     signingConfigs {

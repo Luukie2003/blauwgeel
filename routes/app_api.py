@@ -42,7 +42,8 @@ from helpers import (
     stuur_tag_notificaties,
 )
 from helpers.afbeeldingen import kleine_afbeelding
-from productkaart import TELLEN_VOORWAARDE
+from keukenbeheer import KEUKEN_NIET_BESTELLEN
+from productkaart import KEUKEN_CATEGORIE, TELLEN_VOORWAARDE
 from routes.logboek import schrijf_logboek
 from routes.tellen.looplijst import controle_regels, optellen
 from routes.tellen.looplijst_opslag import bewaar_stand, bewaarde_stand, stand_verlopen, wis_stand
@@ -51,7 +52,7 @@ from routes.tellen.verwerken import verwerk_telling
 from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 # De nieuwste versie van de app. Draait er een oudere, dan meldt de app dat er een nieuwe is.
-HANDTERMINAL_APP_VERSIE = "2.17.0"
+HANDTERMINAL_APP_VERSIE = "2.18.0"
 
 MAX_AANTAL = 100000
 
@@ -735,6 +736,8 @@ def register_routes(app):
         product = db.execute("SELECT * FROM producten WHERE id = ?", (pid,)).fetchone() if pid is not None else None
         if product is None:
             return _fout("Dit product bestaat niet (meer).", 404, "niet_gevonden")
+        if product["categorie"] == KEUKEN_CATEGORIE:
+            return _fout(KEUKEN_NIET_BESTELLEN, 400, "keuken")
         ruw = data.get("eenheden")
         eenheden = None if ruw is None else _getal(ruw)
         if ruw is not None and (eenheden is None or not 0 <= eenheden <= bestelvoorstel.MAX_EENHEDEN):

@@ -8,8 +8,18 @@ from helpers.producten import bereken_bestellijst_meldingen
 from helpers.tijd import vandaag_amsterdam
 from helpers.toegang import heeft_sectie_toegang
 from helpers.wedstrijden import bereken_komende_thuiswedstrijden
+from productkaart import KEUKEN_CATEGORIE
 
 _WEEKDAGEN = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
+
+
+def _onder_minimum(db):
+    """Hoeveel producten onder hun minimum zitten, voor de bestellijst: zonder de keuken (die zet het op de
+    boodschappenlijst, zie keukenbeheer)."""
+    return db.execute(
+        "SELECT COUNT(*) AS n FROM producten WHERE actief = 1 AND voorraad < min_voorraad AND categorie != ?",
+        (KEUKEN_CATEGORIE,),
+    ).fetchone()["n"]
 
 
 def bereken_laatste_telling_status(db):
@@ -72,9 +82,7 @@ def bereken_pda_start(db, rol, secties, gebruiker_id=None):
         "eigen_taken": _eigen_taken(db, gebruiker_id) if gebruiker_id else [],  # door een beheerder voor jou klaargezet
     }
     if heeft("voorraad"):
-        uitkomst["laag"] = db.execute(
-            "SELECT COUNT(*) AS n FROM producten WHERE actief = 1 AND voorraad < min_voorraad"
-        ).fetchone()["n"]
+        uitkomst["laag"] = _onder_minimum(db)
         uitkomst["open_bestellingen"] = db.execute(
             "SELECT COUNT(*) AS n FROM bestellingen WHERE status = 'besteld'"
         ).fetchone()["n"]
@@ -170,9 +178,7 @@ def bouw_taken(db, rol, secties, gebruiker_id=None):
         bestelling = bereken_bestelling_status(db)
         if bestelling["status"] == "oranje":
             taken.append(_taak("Bestelling inboeken", "Er staat een bestelling open: boek 'm in zodra de levering binnen is", "bestellijst"))
-        laag = db.execute(
-            "SELECT COUNT(*) AS n FROM producten WHERE actief = 1 AND voorraad < min_voorraad"
-        ).fetchone()["n"]
+        laag = _onder_minimum(db)
         if laag:
             taken.append(
                 _taak(

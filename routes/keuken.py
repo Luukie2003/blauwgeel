@@ -2,15 +2,22 @@ from flask import flash, g, jsonify, redirect, render_template, request, session
 
 import barcodes
 from database import get_db
+from derving import DERVING_REDENEN
 from helpers import bereken_frituurvet_status, inkoop_per_stuk, kleine_afbeelding, now_str
 from keukenbeheer import (
+    KEUKEN_MUTATIES,
     boek_keuken_in,
     keuken_barcodes,
     keuken_producten,
     keuken_tellingen,
+    keuken_verpakkingen,
+    koppel_keuken_barcode,
+    muteer_keuken,
     verwerk_keuken_telling,
     wis_keuken_stand,
     zet_keuken_prijzen,
+    zet_keuken_verpakking,
+    zet_product_verpakking,
 )
 from routes.producten import render_producten_pagina, render_voorraad_pda
 
@@ -100,7 +107,8 @@ def register_routes(app):
             if request.form.get("bron") == "looplijst":
                 return redirect(url_for("keuken_tellingen_overzicht", opgeslagen=1))
             return redirect(url_for("keuken_tellingen_overzicht"))
-        return render_template("keuken_tellen.html", producten=keuken_producten(db), eerste_telling=_eerste_telling(db))
+        return render_template("keuken_tellen.html", producten=keuken_producten(db), eerste_telling=_eerste_telling(db),
+                               verpakkingen=keuken_verpakkingen(db))
 
     def _eerste_telling(db):
         """Nog nooit een keukentelling: dan staat 'begintelling' alvast aan."""
@@ -108,15 +116,17 @@ def register_routes(app):
 
     @app.route("/keuken/tellen/lopen")
     def keuken_tellen_lopen():
-        """De looplijst van de keuken: product voor product tellen, losse stuks met de hand en volle dozen met een scan.
-        Alles gebeurt in de browser (de stand blijft op het toestel bewaard, ook zonder bereik); aan het eind gaat de
-        telling in één keer naar keuken_tellen."""
+        """De looplijst van de keuken: product voor product tellen, losse stuks met de hand en volle dozen met een scan
+        of een knop per verpakking (+20 voor de zak van 20). Blind: wat er op de site staat, zie je pas op het
+        controlescherm. Alles gebeurt in de browser (de stand blijft op het toestel bewaard, ook zonder bereik); aan het
+        eind gaat de telling in één keer naar keuken_tellen."""
         db = get_db()
+        verpakkingen = keuken_verpakkingen(db)
         producten = [
             {
                 "id": p["id"], "naam": p["naam"], "subcategorie": p["subcategorie"] or "", "eenheid": p["eenheid"],
-                "voorraad": p["voorraad"], "factor": p["besteleenheid_factor"] or 1,
-                "besteleenheid": (p["besteleenheid"] or "").lower(),
+                "voorraad": p["voorraad"],
+                "verpakkingen": [{"naam": v["naam"], "aantal": v["aantal"]} for v in verpakkingen.get(p["id"], [])],
                 "foto": url_for("static", filename="product_afbeeldingen/" + kleine_afbeelding(p["afbeelding"], "middel"))
                 if p["afbeelding"] else "",
             }
@@ -131,46 +141,91 @@ def register_routes(app):
     @app.route("/keuken/barcode-koppelen", methods=["POST"])
     def keuken_barcode_koppelen():
         """Een onbekende barcode bij het tellen of inboeken meteen aan een keukenproduct koppelen, met hoeveel erin zit
-        (een zak van 20, een doos van 40): die verschilt per supermarkt, dus elke verpakking wordt een eigen artikel."""
+        (een zak van 20, een doos van 40): die verschilt per supermarkt, dus elke verpakking wordt een eigen artikel.
+        Minstens 2: de keuken boekt per verpakking in, nooit per stuk."""
         db = get_db()
         gegevens = request.get_json(silent=True) or request.form
-        product_id = barcodes._getal(gegevens, "product_id")
-        if product_id not in {p["id"] for p in keuken_producten(db)}:
-            return jsonify({"fout": "Kies een keukenproduct."}), 400
-        aantal = barcodes._getal(gegevens, "aantal")
-        if not aantal or aantal < 1:
-            return jsonify({"fout": "Vul in hoeveel er in deze verpakking of doos zit."}), 400
-        artikel_id, fout = barcodes.snel_koppelen(
-            db, gegevens.get("code"), product_id, door=session.get("gebruiker_naam"),
-            gebruiker_id=session.get("gebruiker_id"), per_verpakking=aantal,
-            inkoopprijs=str(gegevens.get("inkoopprijs") or "").replace(",", ".") or None,
-            naam=(gegevens.get("naam") or "").strip() or None,
+        d, fout = koppel_keuken_barcode(
+            db, gegevens.get("code"), barcodes._getal(gegevens, "product_id"), barcodes._getal(gegevens, "aantal"),
+            gegevens.get("naam"), gegevens.get("inkoopprijs"), session.get("gebruiker_naam"), session.get("gebruiker_id"),
         )
         if fout:
             return jsonify({"fout": fout}), 400
-        code = barcodes.normaliseer(gegevens.get("code"))
-        return jsonify({"code": code, **keuken_barcodes(db)[code]})
+        return jsonify(d)
+
+    @app.route("/keuken/verpakking", methods=["POST"])
+    def keuken_verpakking_zetten():
+        """Hoeveel er in een gekoppelde zak of doos zit, als dat er nog niet bij stond: de eerste scan vraagt het."""
+        db = get_db()
+        gegevens = request.get_json(silent=True) or request.form
+        d, fout = zet_keuken_verpakking(db, gegevens.get("code"), barcodes._getal(gegevens, "aantal"),
+                                        session.get("gebruiker_naam"), session.get("gebruiker_id"))
+        if fout:
+            return jsonify({"fout": fout}), 400
+        return jsonify({"code": barcodes.normaliseer(str(gegevens.get("code"))), **d})
+
+    @app.route("/keuken/product-verpakking", methods=["POST"])
+    def keuken_product_verpakking():
+        """Een keukenproduct zonder barcode (gehaktballen van de slager): één keer instellen in welke verpakking het komt
+        en hoeveel erin zit, dan boek je het daarna per verpakking in."""
+        db = get_db()
+        gegevens = request.get_json(silent=True) or request.form
+        product_id = barcodes._getal(gegevens, "product_id")
+        fout = zet_product_verpakking(db, product_id, gegevens.get("naam"), barcodes._getal(gegevens, "aantal"))
+        if fout:
+            return jsonify({"fout": fout}), 400
+        return jsonify({"product_id": product_id, "verpakkingen": keuken_verpakkingen(db).get(product_id, [])})
 
     @app.route("/keuken/inboeken", methods=["GET", "POST"])
     def keuken_inboeken():
+        """Inboeken wat er binnenkomt, altijd per verpakking: scannen (hoeveel erin zit, komt van het merk) of zonder
+        barcode per verpakking ("pakket_<product>__<verpakking>", zie keuken_verpakkingen). De inkoopprijs pas je hier
+        alleen aan bij een product zonder prijs per merk; die van een merk staat bij zijn barcode (Barcodes)."""
         db = get_db()
         if request.method == "POST":
-            verpakkingen, inkoop, gescand = {}, {}, {}
+            verpakkingen, inkoop = {}, {}
+            for sleutel, waarde in request.form.items():
+                pid, _, soort = sleutel.removeprefix("pakket_").partition("__")
+                n = _getal(waarde) if sleutel.startswith("pakket_") else None
+                if pid.isdigit() and soort and n and n > 0:
+                    verpakkingen.setdefault(int(pid), {})[soort] = n
             for p in keuken_producten(db):
-                n = _getal(request.form.get(f"aantal_{p['id']}"))
-                if n:
-                    verpakkingen[p["id"]] = n
-                stuks = _getal(request.form.get(f"gescand_{p['id']}"))
-                if stuks:
-                    gescand[p["id"]] = stuks
                 prijs = _getal(request.form.get(f"inkoop_{p['id']}"), float)
                 if prijs is not None and prijs >= 0:
                     inkoop[p["id"]] = round(prijs, 2)
-            aantal = boek_keuken_in(db, verpakkingen, session.get("gebruiker_naam"), now_str(), session.get("gebruiker_id"), inkoop,
-                                    gescand=gescand)
-            flash(f"{aantal} {'product' if aantal == 1 else 'producten'} ingeboekt." if aantal else "Inkoopprijzen opgeslagen; er is niets ingeboekt.", "success")
+            uitkomst = boek_keuken_in(db, verpakkingen, session.get("gebruiker_naam"), now_str(), session.get("gebruiker_id"),
+                                      inkoop, scans=request.form.getlist("scan"))
+            aantal = uitkomst["producten"]
+            if aantal:
+                flash(f"{aantal} {'product' if aantal == 1 else 'producten'} ingeboekt.", "success")
+            elif not uitkomst["overgeslagen"]:
+                flash("Er is niets ingeboekt (de inkoopprijzen zijn wel bewaard).", "success")
+            if uitkomst["overgeslagen"]:
+                flash("Niet ingeboekt: " + "; ".join(uitkomst["overgeslagen"]) + ".", "error")
             return redirect(url_for("keuken_inboeken"))
-        return render_template("keuken_inboeken.html", producten=keuken_producten(db), barcodes=keuken_barcodes(db))
+        prijs_per_merk = {r["product_id"] for r in db.execute("SELECT DISTINCT product_id FROM artikelen WHERE inkoopprijs > 0")}
+        return render_template("keuken_inboeken.html", producten=keuken_producten(db), barcodes=keuken_barcodes(db),
+                               verpakkingen=keuken_verpakkingen(db), prijs_per_merk=prijs_per_merk)
+
+    @app.route("/keuken/muteren", methods=["GET", "POST"])
+    def keuken_muteren():
+        """Wat er weggegooid wordt (derving, met een reden) of een correctie erbij of eraf, per stuk. Zonder derving telt
+        wat weg is bij de volgende telling als verkocht."""
+        db = get_db()
+        if request.method == "POST":
+            melding, fout = muteer_keuken(
+                db, _getal(request.form.get("product_id")), request.form.get("soort"), _getal(request.form.get("aantal")),
+                session.get("gebruiker_naam"), session.get("gebruiker_id"), request.form.get("reden"),
+                request.form.get("opmerking", ""),
+            )
+            flash(fout or melding, "error" if fout else "success")
+            return redirect(url_for("keuken_muteren", product=request.form.get("product_id") if fout else None))
+        recent = db.execute(
+            """SELECT m.*, p.naam AS product_naam, p.eenheid FROM mutaties m JOIN producten p ON p.id = m.product_id
+               WHERE p.categorie = 'Keuken' AND m.opmerking LIKE 'Keuken:%' ORDER BY m.datum DESC, m.id DESC LIMIT 20"""
+        ).fetchall()
+        return render_template("keuken_muteren.html", producten=keuken_producten(db), soorten=KEUKEN_MUTATIES,
+                               redenen=DERVING_REDENEN, recent=recent, gekozen=_getal(request.args.get("product")))
 
     @app.route("/keuken/prijzen", methods=["GET", "POST"])
     def keuken_prijzen():

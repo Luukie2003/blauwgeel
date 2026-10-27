@@ -2,9 +2,10 @@
 {% block titel %}Keuken tellen (looplijst){% endblock %}
 {% block inhoud %}
 {# De looplijst van de keuken (zie keuken_tellen_lopen in routes/keuken.py): product voor product, losse stuks met de
-   hand en volle dozen of zakken met een scan. De stand staat in de browser (localStorage), dus zonder bereik ben je
-   niets kwijt, en gaat ook naar de site (/api/app/keuken/stand): zo ga je verder op de handterminal-app, of andersom.
-   Pas bij "Opslaan" verandert de voorraad. #}
+   hand en volle dozen of zakken met een scan of een knop per verpakking. Blind: wat de site verwacht, staat pas op het
+   controlescherm. De stand staat in de browser (localStorage), dus zonder bereik ben je niets kwijt, en gaat ook naar
+   de site (/api/app/keuken/stand): zo ga je verder op de handterminal-app, of andersom. Pas bij "Opslaan" verandert de
+   voorraad. #}
 <p class="subtitel">
     <span id="kl-positie"></span>
     &nbsp;&middot;&nbsp; <a href="#" onclick="klOpnieuw(); return false;">Opnieuw beginnen</a>
@@ -17,7 +18,6 @@
     <img id="kl-foto" alt="" class="product-thumb-groot" hidden>
     <div class="loop-categorie" id="kl-subcategorie"></div>
     <h1 class="loop-product" id="kl-naam"></h1>
-    <p class="tekst-zacht">Op de site: <span id="kl-voorraad"></span></p>
 
     <input type="number" id="loop-invoer" inputmode="numeric" min="0" class="loop-invoer" autofocus
            aria-label="Geteld aantal">
@@ -29,8 +29,7 @@
         <button type="button" class="btn btn-rand loop-snelknop" onclick="klAanpassen(-1)">−1</button>
         <button type="button" class="btn btn-rand loop-snelknop" onclick="klAanpassen(1)">+1</button>
         <button type="button" class="btn btn-rand loop-snelknop" onclick="klAanpassen(5)">+5</button>
-        <button type="button" class="btn btn-rand loop-snelknop loop-snelknop-breed" id="kl-doosknop" hidden
-                onclick="klAanpassen(klHuidig().factor)"></button>
+        <span id="kl-pakknoppen" style="display:contents"></span>
         <button type="button" class="btn btn-rand loop-snelknop" onclick="rekenmachineOpenen()" title="Rekenmachine" aria-label="Rekenmachine">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><path d="M8 11h.01"/><path d="M12 11h.01"/><path d="M16 11h.01"/><path d="M8 15h.01"/><path d="M12 15h.01"/><path d="M16 15h.01"/><path d="M8 18h8"/></svg>
         </button>
@@ -61,7 +60,7 @@
         <input type="hidden" name="bron" value="looplijst">
         <div class="tabel-wrap">
             <table>
-                <thead><tr><th>Product</th><th style="text-align:right">Op de site</th><th>Geteld</th><th style="text-align:right">Verschil</th></tr></thead>
+                <thead><tr><th>Product</th><th style="text-align:right">Verwacht</th><th>Geteld</th><th style="text-align:right">Verschil</th></tr></thead>
                 <tbody id="kl-regels"></tbody>
             </table>
         </div>
@@ -163,13 +162,25 @@ function klToon() {
     if (p.foto) foto.src = p.foto;
     document.getElementById('kl-subcategorie').textContent = p.subcategorie;
     document.getElementById('kl-naam').textContent = p.naam;
-    document.getElementById('kl-voorraad').textContent = p.voorraad + ' ' + klEenheid(p);
     var veld = document.getElementById('loop-invoer');
     veld.value = kl.waarden[p.id] !== undefined ? kl.waarden[p.id] : '';
     veld.placeholder = 'Aantal ' + klEenheid(p);
-    var doos = document.getElementById('kl-doosknop');
-    doos.hidden = !(p.factor > 1);
-    doos.textContent = '+1 ' + (p.besteleenheid || 'doos') + ' (' + p.factor + ')';
+    // Een knop per verpakking: +20 voor de zak van 20, +40 voor de doos van 40 (per merk anders).
+    var pakknoppen = document.getElementById('kl-pakknoppen');
+    pakknoppen.innerHTML = '';
+    var gehad = [1, 5];
+    (p.verpakkingen || []).forEach(function (v) {
+        if (gehad.indexOf(v.aantal) >= 0) return;
+        gehad.push(v.aantal);
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-rand loop-snelknop';
+        b.textContent = '+' + v.aantal;
+        b.title = v.naam;
+        b.setAttribute('aria-label', 'Een ' + v.naam + ' erbij (' + v.aantal + ')');
+        b.onclick = function () { klAanpassen(v.aantal); };
+        pakknoppen.appendChild(b);
+    });
     document.getElementById('kl-vorige').disabled = kl.index === 0;
     document.getElementById('kl-volgende').textContent = kl.index === KL_PRODUCTEN.length - 1 ? 'Bekijken en opslaan →' : 'Volgende →';
     klToonScans();
@@ -234,6 +245,11 @@ function klScan(tekst) {
     if (!code || code.length < 8) { klMelding('Dat is geen barcode.', true); return; }
     var gevonden = KL_BARCODES[code];
     if (!gevonden) { klKoppelVragen(code); return; }
+    if (!gevonden.aantal) {
+        // Gekoppeld, maar er staat nog niet bij hoeveel erin zit: één keer vragen.
+        keukenAantalVragen(code, gevonden, function (code, gegevens) { KL_BARCODES[code] = gegevens; klScan(code); });
+        return;
+    }
     klZet(document.getElementById('loop-invoer').value === '' ? '' : parseInt(document.getElementById('loop-invoer').value, 10));
     var index = KL_PRODUCTEN.findIndex(function (p) { return p.id === gevonden.product_id; });
     if (index < 0) { klMelding('Deze barcode hoort bij een product dat niet (meer) actief is in de keuken.', true); return; }

@@ -9,13 +9,15 @@ import org.json.JSONObject
 
 /** De keuken: het frituurvet (wanneer het voor het laatst is vervangen, en vervangen registreren), de keukentelling (de
  * looplijst in [KeukenTellenActivity], met "verder" als er een op het toestel klaarstaat) en inboeken
- * ([KeukenInvoerActivity]), de voorraad van de keukenproducten met hun gekoppelde dozen, en de laatste keukentellingen
- * (tik om te bekijken, [KeukenTellingActivity]). Tik op een product voor de productinformatie of om het op de
- * boodschappenlijst te zetten. Zelfde als Keuken op de site; de keukenprijzen en de instellingen kunnen alleen op de
- * website. */
+ * ([KeukenInvoerActivity]), de voorraad van de keukenproducten met hun verpakkingen, en de laatste keukentellingen
+ * (tik om te bekijken, [KeukenTellingActivity]). Tik op een product voor een blad met wat je ermee kunt: weggooien
+ * (derving, met een reden: dan telt het niet als verkocht), erbij of eraf (correctie), op de boodschappenlijst, en de
+ * productinformatie. Zelfde als Keuken op de site. */
 class KeukenActivity : BasisActivity() {
 
     private lateinit var b: ActivityLijstBinding
+    /** De redenen voor derving ({sleutel, naam}), van de site. */
+    private var redenen: List<JSONObject> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +48,7 @@ class KeukenActivity : BasisActivity() {
     private fun toon(data: JSONObject) {
         val inhoud = b.inhoud
         inhoud.removeAllViews()
+        redenen = data.optJSONArray("derving_redenen")?.objecten().orEmpty()
 
         val vet = data.getJSONObject("frituurvet")
         Lijst.kop(inhoud, getString(R.string.frituurvet))
@@ -78,12 +81,12 @@ class KeukenActivity : BasisActivity() {
             val kaart = Lijst.kaart(inhoud)
             for (p in producten) {
                 val laag = p.optInt("voorraad") < p.optInt("min_voorraad")
-                val dozen = p.optJSONArray("dozen")?.objecten().orEmpty()
+                val pakken = p.optJSONArray("verpakkingen")?.objecten().orEmpty()
                 Lijst.regel(
                     kaart, p.optString("naam"),
                     listOfNotNull(p.tekstOfNull("subcategorie"), getString(R.string.minimum, p.optInt("min_voorraad")),
-                        if (dozen.isNotEmpty()) getString(R.string.keuken_dozen, dozen.joinToString(" · ") { "${it.optInt("aantal")}" })
-                        else if (p.optInt("per_verpakking") > 1) getString(R.string.per_verpakking, p.optString("verpakking"), p.optInt("per_verpakking")) else null,
+                        if (pakken.isNotEmpty()) getString(R.string.keuken_verpakkingen_kort, pakken.joinToString(" · ") { "${it.optInt("aantal")}" })
+                        else null,
                         if (p.optBoolean("op_boodschappenlijst")) getString(R.string.op_boodschappenlijst_kort) else null,
                     ).joinToString(" · "),
                     "${p.optInt("voorraad")} ${p.optString("eenheid")}",
@@ -111,21 +114,70 @@ class KeukenActivity : BasisActivity() {
         Lijst.knop(beheer, getString(R.string.frituurvet_interval_aanpassen, vet.optInt("interval"))) { interval(vet.optInt("interval")) }
     }
 
-    /** Een keukenproduct aangetikt: de productinformatie (met voorraadrechten), en op de boodschappenlijst zetten. */
+    /** Een keukenproduct aangetikt: een blad met de voorraad en de verpakkingen, en wat je ermee kunt. */
     private fun productKeuze(p: JSONObject) {
-        val keuzes = mutableListOf<Pair<String, () -> Unit>>()
-        if (!p.optBoolean("op_boodschappenlijst")) keuzes += getString(R.string.op_boodschappenlijst_zetten) to { opBoodschappenlijst(p) }
-        if (inst.toegang("voorraad")) keuzes += getString(R.string.productinformatie) to { ProductActivity.open(this, p.getInt("id")) }
-        val dozen = p.optJSONArray("dozen")?.objecten().orEmpty()
-        val uitleg = if (dozen.isEmpty()) getString(R.string.keuken_geen_dozen_lang)
-        else dozen.joinToString("\n") { "• " + it.optString("omschrijving") }
+        val pakken = p.optJSONArray("verpakkingen")?.objecten().orEmpty()
+        Blad.toon(this, p.optString("naam"), getString(R.string.voorraad_nu, p.optInt("voorraad"), p.optString("eenheid")),
+            R.drawable.ic_keuken) { inhoud, blad ->
+            Lijst.tekst(Lijst.kaart(inhoud),
+                if (pakken.isEmpty()) getString(R.string.keuken_geen_verpakking_lang)
+                else getString(R.string.keuken_verpakkingen_lijst, pakken.joinToString("\n") {
+                    "• " + getString(R.string.verpakking_van, it.optString("naam"), it.optInt("aantal"))
+                }))
+            val acties = Lijst.kaart(inhoud)
+            Lijst.regel(acties, getString(R.string.weggooien_derving), getString(R.string.weggooien_derving_uitleg),
+                icoon = R.drawable.ic_eruit, icoonKleur = R.color.rood_balk) { blad.sluit(); derving(p) }
+            Lijst.regel(acties, getString(R.string.erbij_of_eraf), getString(R.string.erbij_of_eraf_uitleg),
+                icoon = R.drawable.ic_boeken, icoonKleur = R.color.navy) { blad.sluit(); correctie(p) }
+            if (p.optBoolean("op_boodschappenlijst")) {
+                Lijst.regel(acties, getString(R.string.staat_op_boodschappenlijst), icoon = R.drawable.ic_vink, icoonKleur = R.color.groen_tekst)
+            } else {
+                Lijst.regel(acties, getString(R.string.op_boodschappenlijst_zetten), icoon = R.drawable.ic_boodschappen,
+                    icoonKleur = R.color.navy) { blad.sluit(); opBoodschappenlijst(p) }
+            }
+            if (inst.toegang("voorraad")) Lijst.regel(acties, getString(R.string.productinformatie), icoon = R.drawable.ic_voorraad,
+                icoonKleur = R.color.navy) { blad.sluit(); ProductActivity.open(this, p.getInt("id")) }
+        }
+    }
+
+    /** Weggooien: waarom (de redenen van derving) en hoeveel. Dan telt het bij de volgende telling niet als verkocht. */
+    private fun derving(p: JSONObject) {
+        if (redenen.isEmpty()) return
         AlertDialog.Builder(this)
-            .setCustomTitle(dialoogTitel(p.optString("naam")))
-            .setMessage(getString(R.string.voorraad_nu, p.optInt("voorraad"), p.optString("eenheid")) + "\n\n" + uitleg)
-            .apply { if (keuzes.isNotEmpty()) setPositiveButton(keuzes[0].first) { _, _ -> keuzes[0].second() } }
-            .apply { if (keuzes.size > 1) setNeutralButton(keuzes[1].first) { _, _ -> keuzes[1].second() } }
-            .setNegativeButton(R.string.sluiten, null)
+            .setCustomTitle(dialoogTitel(getString(R.string.waarom_weg, p.optString("naam"))))
+            .setItems(redenen.map { it.optString("naam") }.toTypedArray()) { _, i ->
+                Cijferpad.vraag(this, getString(R.string.hoeveel_weggegooid, p.optString("naam")), eenheid = p.optString("eenheid"), max = 4) { tekst ->
+                    val n = tekst.toIntOrNull()?.takeIf { it > 0 } ?: return@vraag
+                    muteer(p, JSONObject().put("soort", "derving").put("aantal", n).put("reden", redenen[i].optString("sleutel")))
+                }
+            }
+            .setNegativeButton(R.string.annuleren, null)
             .show()
+    }
+
+    /** De voorraad klopt niet: er zijn er meer of minder dan de app denkt. */
+    private fun correctie(p: JSONObject) {
+        val keuzes = listOf("erbij" to getString(R.string.erbij), "eraf" to getString(R.string.eraf))
+        AlertDialog.Builder(this)
+            .setCustomTitle(dialoogTitel(getString(R.string.erbij_of_eraf_titel, p.optString("naam"))))
+            .setItems(keuzes.map { it.second }.toTypedArray()) { _, i ->
+                Cijferpad.vraag(this, "${keuzes[i].second}: ${p.optString("naam")}", eenheid = p.optString("eenheid"), max = 4) { tekst ->
+                    val n = tekst.toIntOrNull()?.takeIf { it > 0 } ?: return@vraag
+                    muteer(p, JSONObject().put("soort", keuzes[i].first).put("aantal", n))
+                }
+            }
+            .setNegativeButton(R.string.annuleren, null)
+            .show()
+    }
+
+    private fun muteer(p: JSONObject, body: JSONObject) {
+        val id = Api.nieuwVerzoekId()
+        bezig {
+            val antwoord = Api.post(this, "/api/app/keuken/muteren", body.put("product_id", p.getInt("id")), verzoekId = id)
+            tril(60)
+            melding(antwoord.optString("melding"), lang = true)
+            laad()
+        }
     }
 
     private fun opBoodschappenlijst(p: JSONObject) {

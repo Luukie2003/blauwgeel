@@ -6,42 +6,35 @@ import android.os.Bundle
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
+import org.json.JSONArray
 import org.json.JSONObject
 
-/** Keuken inboeken. Scan wat er binnenkomt: elke scan is een doos of zak met het aantal dat erin zit (uit het artikel,
- * dus per supermarkt anders), en staat bovenaan in de lijst "Gescand", met een kruisje om hem weg te halen. Een
- * onbekende barcode koppel je meteen (KoppelenActivity) en die scan telt dan alsnog mee. Wat geen barcode heeft: tik
- * op het product en vul in hoeveel verpakkingen er binnenkwamen (bijvoorbeeld 2 dozen). Inboeken doet hetzelfde als
- * Keuken > Inboeken op de site. De keukentelling zelf is de looplijst in [KeukenTellenActivity]. */
+/** Keuken inboeken, altijd per verpakking. Scan wat er binnenkomt: elke scan is een zak of doos met wat erin zit (van de
+ * barcode, dus per merk anders), en staat bovenaan bij "Gescand", met een kruisje om hem weg te halen. Een onbekende
+ * barcode koppel je meteen ([KeukenKoppelen]: alleen keukenproducten, en hoeveel zit erin); staat bij een barcode nog niet
+ * hoeveel erin zit, dan vraagt de app dat één keer. Zonder barcode: tik op het product en kies de verpakking (de zak van
+ * 20 van AH, de zak van 15 van Plus), of stel er een in. Wat je invult, blijft op het toestel bewaard (ook als de app
+ * uitlogt) tot je inboekt. Inboeken doet hetzelfde als Keuken > Inboeken op de site. De keukentelling zelf is de
+ * looplijst in [KeukenTellenActivity]. */
 class KeukenInvoerActivity : BasisActivity() {
 
-    private class Scan(val productId: Int, val aantal: Int, val omschrijving: String)
+    private class Scan(val code: String, val productId: Int, val aantal: Int, val omschrijving: String)
 
     private lateinit var b: ActivityLijstBinding
     private var producten: List<JSONObject> = emptyList()
+    /** Barcode -> {product_id, aantal (null: nog niet bekend), omschrijving}. */
     private val opCode = HashMap<String, JSONObject>()
-    /** Zonder barcode: aantal verpakkingen per product. */
-    private val verpakkingen = mutableMapOf<Int, Int>()
+    /** Zonder barcode: per product per verpakking (de sleutel uit "verpakkingen") hoeveel er binnen zijn. */
+    private val verpakkingen = mutableMapOf<Int, MutableMap<String, Int>>()
     private val scans = mutableListOf<Scan>()
     private var verzoekId: String? = null
-    private var teKoppelen: String? = null
 
-    private val koppelen = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
-        val code = r.data?.getStringExtra(KoppelenActivity.EXTRA_CODE)?.takeIf { r.resultCode == RESULT_OK } ?: teKoppelen
-        teKoppelen = null
-        if (code != null) bezig {
-            laad(Api.getJson(this, "/api/app/keuken"))
-            try {
-                Catalogus.ververs(this)
-            } catch (f: Api.Fout) {
-            }
-            scan(code, naKoppelen = true)
-        }
-    }
+    private val lokaal by lazy { getSharedPreferences("keuken_inboeken", MODE_PRIVATE) }
+    /** Per persoon: wie na het uitloggen inlogt, ziet niet wat een ander aan het inboeken was. */
+    private val sleutel get() = "stand_" + (Sessie.naam ?: "")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,8 +48,12 @@ class KeukenInvoerActivity : BasisActivity() {
             override fun handleOnBackPressed() {
                 if (verpakkingen.isEmpty() && scans.isEmpty()) return finish()
                 AlertDialog.Builder(this@KeukenInvoerActivity)
-                    .setMessage(R.string.invoer_weggooien_vraag)
-                    .setPositiveButton(R.string.weggooien) { _, _ -> finish() }
+                    .setMessage(R.string.keuken_inboeken_bewaard_vraag)
+                    .setPositiveButton(R.string.later_verder) { _, _ -> finish() }
+                    .setNeutralButton(R.string.wissen) { _, _ ->
+                        lokaal.edit().remove(sleutel).apply()
+                        finish()
+                    }
                     .setNegativeButton(R.string.annuleren, null)
                     .show()
             }
@@ -64,6 +61,7 @@ class KeukenInvoerActivity : BasisActivity() {
         werkKnopBij()
         bezig {
             laad(Api.getJson(this, "/api/app/keuken"))
+            herstel()
             bouw()
         }
     }
@@ -72,12 +70,61 @@ class KeukenInvoerActivity : BasisActivity() {
         producten = keuken.getJSONArray("producten").objecten()
         opCode.clear()
         for (p in producten) for (d in p.optJSONArray("dozen")?.objecten().orEmpty()) {
-            opCode[d.optString("code")] = JSONObject().put("product_id", p.getInt("id")).put("aantal", d.optInt("aantal"))
-                .put("omschrijving", d.optString("omschrijving"))
+            zetCode(d.put("product_id", p.getInt("id")))
         }
     }
 
+    private fun zetCode(d: JSONObject) {
+        opCode[d.optString("code")] = JSONObject().put("product_id", d.getInt("product_id"))
+            .put("aantal", if (d.isNull("aantal")) JSONObject.NULL else d.getInt("aantal"))
+            .put("omschrijving", d.optString("omschrijving"))
+    }
+
     private fun product(id: Int) = producten.firstOrNull { it.getInt("id") == id }
+
+    private fun pakketten(p: JSONObject) = p.optJSONArray("verpakkingen")?.objecten().orEmpty()
+
+    /** Wat er de vorige keer is ingevuld en nog niet ingeboekt (bijvoorbeeld voordat de app uitlogde). */
+    private fun herstel() {
+        val stand = lokaal.getString(sleutel, null)?.let { runCatching { JSONObject(it) }.getOrNull() } ?: return
+        for (s in stand.optJSONArray("scans")?.objecten().orEmpty()) {
+            val code = s.optString("code")
+            val d = opCode[code] ?: continue
+            if (d.isNull("aantal") || product(d.getInt("product_id")) == null) continue
+            scans += Scan(code, d.getInt("product_id"), d.getInt("aantal"), d.optString("omschrijving"))
+        }
+        stand.optJSONObject("verpakkingen")?.let { alle ->
+            for (pid in alle.keys()) {
+                val p = pid.toIntOrNull()?.let { product(it) } ?: continue
+                val bekend = pakketten(p).map { it.optString("sleutel") }.toSet()
+                val keuzes = alle.optJSONObject(pid) ?: continue
+                for (s in keuzes.keys()) {
+                    val n = keuzes.optInt(s)
+                    if (n > 0 && s in bekend) verpakkingen.getOrPut(p.getInt("id")) { mutableMapOf() }[s] = n
+                }
+            }
+        }
+        verzoekId = stand.tekstOfNull("verzoek_id")
+        if (scans.isNotEmpty() || verpakkingen.isNotEmpty()) melding(getString(R.string.keuken_inboeken_verder))
+    }
+
+    /** Op het toestel bewaren, tot er is ingeboekt. */
+    private fun bewaar() {
+        if (scans.isEmpty() && verpakkingen.isEmpty()) return lokaal.edit().remove(sleutel).apply()
+        val v = JSONObject()
+        verpakkingen.forEach { (pid, keuzes) -> v.put(pid.toString(), JSONObject(keuzes.toMap())) }
+        lokaal.edit().putString(sleutel, JSONObject()
+            .put("scans", JSONArray(scans.map { JSONObject().put("code", it.code) }))
+            .put("verpakkingen", v)
+            .put("verzoek_id", verzoekId ?: JSONObject.NULL)
+            .toString()).apply()
+    }
+
+    private fun veranderd() {
+        verzoekId = null
+        bewaar()
+        bouw()
+    }
 
     private fun bouw() {
         val inhoud = b.inhoud
@@ -104,8 +151,7 @@ class KeukenInvoerActivity : BasisActivity() {
                 contentDescription = getString(R.string.scan_weghalen)
                 setOnClickListener {
                     scans.removeAt(i)
-                    verzoekId = null
-                    bouw()
+                    veranderd()
                 }
             })
         }
@@ -121,23 +167,56 @@ class KeukenInvoerActivity : BasisActivity() {
                 kaart = Lijst.kaart(inhoud)
                 groep = sub
             }
-            val id = p.getInt("id")
-            val n = verpakkingen[id]
+            val lijst = pakketten(p)
+            val gekozen = verpakkingen[p.getInt("id")].orEmpty()
+            val stuks = lijst.sumOf { (gekozen[it.optString("sleutel")] ?: 0) * it.optInt("aantal") }
             Lijst.regel(kaart, p.optString("naam"),
-                getString(R.string.per_verpakking, p.optString("verpakking"), p.optInt("per_verpakking")) + " " + p.optString("eenheid"),
-                n?.let { "$it ${p.optString("verpakking")}" } ?: "–", R.color.navy) { vraag(p) }
+                if (lijst.isEmpty()) getString(R.string.keuken_geen_verpakking)
+                else lijst.joinToString(" · ") { v ->
+                    (gekozen[v.optString("sleutel")]?.let { "$it× " } ?: "") + getString(R.string.verpakking_van, v.optString("naam"), v.optInt("aantal"))
+                },
+                if (stuks > 0) "+$stuks ${p.optString("eenheid")}" else "–", if (stuks > 0) R.color.groen_tekst else R.color.navy) { kies(p) }
         }
         werkKnopBij()
     }
 
-    private fun vraag(p: JSONObject) {
+    /** Zonder barcode: welke verpakking (bij meer dan één), en hoeveel zijn er binnen? Zonder verpakking: eerst instellen. */
+    private fun kies(p: JSONObject) {
+        val lijst = pakketten(p)
+        val gekozen = verpakkingen[p.getInt("id")].orEmpty()
+        when (lijst.size) {
+            0 -> KeukenKoppelen.vraagProductVerpakking(this, p.getInt("id") to p.optString("naam")) { nieuw ->
+                p.put("verpakkingen", JSONArray(nieuw))
+                bouw()
+                kies(p)
+            }
+            1 -> vraagAantal(p, lijst[0])
+            else -> AlertDialog.Builder(this)
+                .setCustomTitle(dialoogTitel(getString(R.string.keuken_welke_verpakking, p.optString("naam"))))
+                .setItems(lijst.map { v ->
+                    getString(R.string.verpakking_van, v.optString("naam"), v.optInt("aantal")) +
+                        (gekozen[v.optString("sleutel")]?.let { "   · " + getString(R.string.n_binnen, it) } ?: "")
+                }.toTypedArray()) { _, i -> vraagAantal(p, lijst[i]) }
+                .setNegativeButton(R.string.annuleren, null)
+                .show()
+        }
+    }
+
+    private fun vraagAantal(p: JSONObject, v: JSONObject) {
         val id = p.getInt("id")
-        Cijferpad.vraag(this, getString(R.string.hoeveel_binnen, p.optString("naam")), verpakkingen[id]?.toString() ?: "",
-            eenheid = p.optString("verpakking"), max = 4) { tekst ->
+        val s = v.optString("sleutel")
+        // Een merk zegt zelf wat het is ("AH frikandellen"); de verpakking van het product ("doos") niet.
+        val wat = if (s == "product") "${p.optString("naam")}, ${v.optString("naam")}" else v.optString("naam")
+        Cijferpad.vraag(this, getString(R.string.keuken_hoeveel_binnen, wat, v.optInt("aantal")),
+            verpakkingen[id]?.get(s)?.toString() ?: "", eenheid = "×", max = 3) { tekst ->
             val n = tekst.toIntOrNull()
-            if (n == null || n == 0) verpakkingen.remove(id) else verpakkingen[id] = n
-            verzoekId = null
-            bouw()
+            if (n == null || n == 0) {
+                verpakkingen[id]?.remove(s)
+                if (verpakkingen[id].isNullOrEmpty()) verpakkingen.remove(id)
+            } else {
+                verpakkingen.getOrPut(id) { mutableMapOf() }[s] = n
+            }
+            veranderd()
         }
     }
 
@@ -152,41 +231,49 @@ class KeukenInvoerActivity : BasisActivity() {
 
     override fun bijScan(code: String) = scan(code)
 
-    private fun scan(code: String, naKoppelen: Boolean = false) {
+    /** Een zak of doos: wat erin zit erbij. Onbekend: eerst koppelen; nog niet bekend hoeveel erin zit: eerst vragen. */
+    private fun scan(code: String) {
         val norm = Catalogus.normaliseerCode(code) ?: return melding(getString(R.string.scan_geen_barcode, code))
         val doos = opCode[norm]
-        val treffer = Catalogus.opBarcode(norm)
-        val productId = doos?.optInt("product_id") ?: treffer?.product?.id
-        val p = productId?.let { product(it) }
-        if (p == null) {
-            if (productId != null) return melding(getString(R.string.geen_keukenproduct))
-            if (naKoppelen) return melding(getString(R.string.keuken_nog_onbekend), lang = true)
-            tril(150)
-            teKoppelen = norm
-            koppelen.launch(KoppelenActivity.intent(this, norm))
-            return
+        if (doos == null) {
+            // De barcode van een gewoon product (als de app de productlijst kent): dat is geen keukenproduct.
+            if (Catalogus.opBarcode(norm) != null) return melding(getString(R.string.geen_keukenproduct))
+            return KeukenKoppelen.koppel(this, norm, producten.map { it.getInt("id") to it.optString("naam") }) { nieuw ->
+                zetCode(nieuw)
+                scan(norm)
+            }
         }
-        val aantal = doos?.optInt("aantal") ?: treffer?.barcode?.aantal ?: 1
-        val omschrijving = doos?.optString("omschrijving") ?: treffer?.barcode?.artikel ?: norm
-        scans += Scan(p.getInt("id"), aantal, omschrijving)
-        verzoekId = null
+        val p = product(doos.getInt("product_id")) ?: return melding(getString(R.string.geen_keukenproduct))
+        if (doos.isNull("aantal")) {
+            return KeukenKoppelen.vraagAantal(this, norm, doos.optString("omschrijving"), p.optString("eenheid")) { nieuw ->
+                zetCode(nieuw)
+                scan(norm)
+            }
+        }
+        val aantal = doos.getInt("aantal")
+        val omschrijving = doos.optString("omschrijving")
+        scans += Scan(norm, p.getInt("id"), aantal, omschrijving)
         tril()
         melding(getString(R.string.keuken_scan_erbij, aantal, p.optString("eenheid"), p.optString("naam"), omschrijving))
-        bouw()
+        veranderd()
     }
 
     private fun opslaan() {
         if (aantalProducten == 0) return
-        val id = verzoekId ?: Api.nieuwVerzoekId().also { verzoekId = it }
+        val id = verzoekId ?: Api.nieuwVerzoekId().also {
+            verzoekId = it
+            bewaar()  // gaat het mis na het versturen, dan herkent de site een tweede poging
+        }
         val lijst = JSONObject()
-        verpakkingen.forEach { (pid, n) -> lijst.put(pid.toString(), n) }
-        val gescand = JSONObject()
-        scans.groupBy { it.productId }.forEach { (pid, s) -> gescand.put(pid.toString(), s.sumOf { it.aantal }) }
+        verpakkingen.forEach { (pid, keuzes) -> lijst.put(pid.toString(), JSONObject(keuzes.toMap())) }
+        val body = JSONObject().put("scans", JSONArray(scans.map { it.code })).put("verpakkingen", lijst)
         b.onderKnop.isEnabled = false
         bezig {
             try {
-                val antwoord = Api.post(this, "/api/app/keuken/inboeken",
-                    JSONObject().put("verpakkingen", lijst).put("gescand", gescand), verzoekId = id)
+                val antwoord = Api.post(this, "/api/app/keuken/inboeken", body, verzoekId = id)
+                lokaal.edit().remove(sleutel).apply()
+                scans.clear()
+                verpakkingen.clear()
                 tril(60)
                 melding(antwoord.optString("melding"), lang = true)
                 finish()

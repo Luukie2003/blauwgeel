@@ -6,6 +6,7 @@ een vaste besteldag staat op het overzicht 'Vandaag bestellen bij ...' zodra er 
 
 from helpers.producten import naar_besteleenheden
 from helpers.tijd import now_str
+from productkaart import KEUKEN_CATEGORIE
 
 DAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"]
 DAGEN_LANG = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
@@ -160,10 +161,10 @@ def vandaag_bestellen(db, vandaag):
             continue
         aantal = db.execute(
             """SELECT COUNT(*) FROM producten
-               WHERE leverancier_id = ? AND actief = 1 AND voorraad < min_voorraad
+               WHERE leverancier_id = ? AND actief = 1 AND voorraad < min_voorraad AND categorie != ?
                  AND id NOT IN (SELECT br.product_id FROM bestelregels br JOIN bestellingen b ON b.id = br.bestelling_id
                                 WHERE b.status = 'besteld')""",
-            (lev["id"],),
+            (lev["id"], KEUKEN_CATEGORIE),
         ).fetchone()[0]
         if aantal:
             uitkomst.append((lev, aantal))

@@ -28,7 +28,8 @@ def _voorraad(db, pid):
 
 def test_inboeken_per_doos_en_tellen_geeft_de_verkoop(db):
     pid = _keuken(db)
-    assert boek_keuken_in(db, {pid: 2}, "Kok", "2026-10-10 10:00", inkoopprijzen={pid: 13.0}) == 1
+    uitkomst = boek_keuken_in(db, {pid: {"product": 2}}, "Kok", "2026-10-10 10:00", inkoopprijzen={pid: 13.0})
+    assert uitkomst == {"producten": 1, "overgeslagen": []}
     assert _voorraad(db, pid) == 120  # 40 + 2 dozen van 40
     assert db.execute("SELECT inkoopprijs FROM producten WHERE id = ?", (pid,)).fetchone()[0] == 13.0
 
@@ -39,12 +40,13 @@ def test_inboeken_per_doos_en_tellen_geeft_de_verkoop(db):
     assert _voorraad(db, pid) == 70
     assert db.execute("SELECT COUNT(*) FROM telling_regels WHERE product_id = ?", (pid,)).fetchone()[0] == 0  # niet in de gewone telling
     mutaties = [m["opmerking"] for m in db.execute("SELECT opmerking FROM mutaties WHERE product_id = ? ORDER BY id", (pid,))]
-    assert mutaties == ["Ingeboekt (keuken): 2 doos", f"Verkocht (keukentelling #{telling})"]
+    assert mutaties == ["Ingeboekt (keuken): 2× doos (80 stuks)", f"Verkocht (keukentelling #{telling})"]
 
 
 def test_de_keukenpaginas_werken(ingelogde_client, db):
     pid = _keuken(db)
-    ingelogde_client.post("/keuken/inboeken", data={"csrf_token": _csrf(ingelogde_client), f"aantal_{pid}": "1", f"inkoop_{pid}": "12,00"})
+    ingelogde_client.post("/keuken/inboeken", data={"csrf_token": _csrf(ingelogde_client), f"pakket_{pid}__product": "1",
+                                                    f"inkoop_{pid}": "12,00"})
     assert _voorraad(db, pid) == 80
     resp = ingelogde_client.post("/keuken/tellen", data={"csrf_token": _csrf(ingelogde_client), f"geteld_{pid}": "60"}, follow_redirects=True)
     tekst = resp.data.decode()
@@ -52,7 +54,7 @@ def test_de_keukenpaginas_werken(ingelogde_client, db):
     ingelogde_client.post("/keuken/prijzen", data={"csrf_token": _csrf(ingelogde_client), f"prijs_{pid}": "2,00"})
     assert db.execute("SELECT verkoopprijs FROM producten WHERE id = ?", (pid,)).fetchone()[0] == 2.0
     assert db.execute("SELECT COUNT(*) FROM prijs_geschiedenis WHERE product_id = ? AND veld = 'verkoopprijs'", (pid,)).fetchone()[0] == 1
-    for url in ("/keuken", "/keuken/tellen", "/keuken/inboeken", "/keuken/prijzen", "/keuken/tellingen"):
+    for url in ("/keuken", "/keuken/tellen", "/keuken/inboeken", "/keuken/muteren", "/keuken/prijzen", "/keuken/tellingen"):
         assert 'href="/keuken/tellen"' in ingelogde_client.get(url).data.decode(), url
 
 
@@ -123,12 +125,13 @@ def test_keuken_barcodes_tellen_per_supermarkt_anders(db):
     assert all(c["product_id"] == pid for c in codes.values())
 
 
-def test_gescand_inboeken_telt_stuks(db):
+def test_gescand_inboeken_van_een_oude_app_telt_stuks(db):
+    """De app tot en met 2.17.0 stuurt {product_id: verpakkingen} en "gescand": {product_id: stuks}."""
     pid = _keuken(db, voorraad=10, factor=40)
-    assert boek_keuken_in(db, {pid: 1}, "Kok", "2026-10-10 10:00", gescand={pid: 55}) == 1  # één product, twee boekingen
+    assert boek_keuken_in(db, {pid: 1}, "Kok", "2026-10-10 10:00", gescand={pid: 55})["producten"] == 1  # twee boekingen
     assert _voorraad(db, pid) == 10 + 40 + 55
     opmerkingen = [m[0] for m in db.execute("SELECT opmerking FROM mutaties WHERE product_id = ? ORDER BY id", (pid,))]
-    assert opmerkingen == ["Ingeboekt (keuken, gescand): 55 stuks", "Ingeboekt (keuken): 1 doos"]
+    assert opmerkingen == ["Ingeboekt (keuken): 55 stuks (gescand)", "Ingeboekt (keuken): 1× doos (40 stuks)"]
 
 
 def test_looplijst_koppelen_en_opslaan_via_de_site(ingelogde_client, db):

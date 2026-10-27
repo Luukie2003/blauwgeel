@@ -8,7 +8,9 @@ import qr
 from database import get_db
 from derving import DERVING_REDENEN
 from helpers import PRODUCT_AFBEELDINGEN_MAP, besteleenheid_factor, kleine_afbeelding
+from keukenbeheer import KEUKEN_NIET_BESTELLEN
 from pdf import label_opties, schaplabels_pdf
+from productkaart import KEUKEN_CATEGORIE
 
 
 # Een product met de naam van zijn leverancier, voor op het schaplabel.
@@ -144,9 +146,13 @@ def register_routes(app):
         import bestelvoorstel
 
         db = get_db()
-        if db.execute("SELECT 1 FROM producten WHERE id = ?", (product_id,)).fetchone() is None:
+        product = db.execute("SELECT categorie FROM producten WHERE id = ?", (product_id,)).fetchone()
+        if product is None:
             flash("Product niet gevonden.", "error")
             return redirect(url_for("producten_lijst"))
+        if product["categorie"] == KEUKEN_CATEGORIE:
+            flash(KEUKEN_NIET_BESTELLEN, "error")
+            return redirect(url_for("product_detail", product_id=product_id))
         # De knoppen sturen 'eenheden' mee; Enter in het invulvak (een lege 'eenheden') het getal uit 'aantal'.
         keuze = request.form.get("eenheden") or request.form.get("aantal", "")
         if keuze == "advies":

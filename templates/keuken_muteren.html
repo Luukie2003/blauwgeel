@@ -1,0 +1,89 @@
+{% extends basis_template %}
+{% block titel %}Keuken muteren{% endblock %}
+{% block inhoud %}
+<h1>Keuken muteren</h1>
+{% include '_keuken_subnav.html' %}
+<p class="subtitel">
+    Iets weggegooid (verbrand, over de datum, op de grond gevallen)? Boek het hier als derving, dan telt het bij de
+    volgende telling niet als verkocht. Klopt de voorraad niet, zet hem dan bij met erbij of eraf. Gewoon per stuk.
+</p>
+{% if producten %}
+<div class="kaart">
+    <form method="post" id="km-formulier">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="toggle-type">
+            {% for sleutel, naam in soorten.items() %}
+            <label><input type="radio" name="soort" value="{{ sleutel }}" {{ 'checked' if loop.first }}><span>{{ naam }}</span></label>
+            {% endfor %}
+        </div>
+        <div class="formgrid">
+            <div class="veld">
+                <label for="km-product">Product</label>
+                <select id="km-product" name="product_id" required>
+                    <option value="" disabled {{ 'selected' if not gekozen }}>Kies een product</option>
+                    {% for p in producten %}
+                    <option value="{{ p.id }}" {{ 'selected' if p.id == gekozen }}>{{ p.naam }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="veld">
+                <label for="km-aantal">Aantal (stuks)</label>
+                <input type="number" id="km-aantal" name="aantal" inputmode="numeric" min="1" required>
+            </div>
+        </div>
+        <div class="veld" id="km-reden-veld">
+            <label for="km-reden">Waarom is het weg?</label>
+            <select id="km-reden" name="reden">
+                <option value="" disabled selected>Kies een reden</option>
+                {% for sleutel, naam in redenen.items() %}<option value="{{ sleutel }}">{{ naam }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="veld">
+            <label for="km-opmerking">Opmerking (optioneel)</label>
+            <input type="text" id="km-opmerking" name="opmerking" maxlength="200" placeholder="Bijv. aangebrand, doos nat geworden">
+        </div>
+        <button type="submit" class="btn btn-geel">Boeken</button>
+    </form>
+</div>
+<script>
+(function () {
+    var formulier = document.getElementById('km-formulier');
+    var veld = document.getElementById('km-reden-veld');
+    var reden = document.getElementById('km-reden');
+    function bijwerken() {
+        var derving = formulier.querySelector('input[name=soort]:checked').value === 'derving';
+        veld.hidden = !derving;
+        reden.required = derving;
+    }
+    formulier.querySelectorAll('input[name=soort]').forEach(function (r) { r.addEventListener('change', bijwerken); });
+    bijwerken();
+})();
+</script>
+
+<div class="kaart">
+    <h2>Laatst gemuteerd</h2>
+    {% if recent %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Wanneer</th><th>Product</th><th style="text-align:right">Aantal</th><th>Wat</th><th>Door</th></tr></thead>
+            <tbody>
+                {% for m in recent %}
+                <tr>
+                    <td>{{ m.datum|datum_nl }}</td>
+                    <td>{{ m.product_naam }}</td>
+                    <td style="text-align:right">{{ '+' if m.type == 'in' else '−' }}{{ m.aantal }} {{ m.eenheid|lower }}</td>
+                    <td>{{ m.opmerking|replace('Keuken: ', '') }}{% if m.reden %} &middot; {{ m.reden|reden_naam }}{% endif %}</td>
+                    <td>{{ m.naam or '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog niets gemuteerd in de keuken.</p>
+    {% endif %}
+</div>
+{% else %}
+<p class="leeg">Nog geen actieve producten in de categorie Keuken.</p>
+{% endif %}
+{% endblock %}

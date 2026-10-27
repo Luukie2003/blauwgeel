@@ -1,6 +1,8 @@
 {# Een barcode die de site nog niet kent: meteen koppelen aan een keukenproduct, met hoeveel erin zit (dat verschilt per
-   supermarkt). Gebruikt door de keukenlooplijst en Keuken inboeken: keukenKoppelVragen(code, producten, standaard_id,
-   naKoppelen(code, {product_id, aantal, omschrijving})). #}
+   merk). Gebruikt door de keukenlooplijst en Keuken inboeken: keukenKoppelVragen(code, producten, standaard_id,
+   naKoppelen(code, {product_id, aantal, omschrijving})). Ook: keukenAantalVragen(code, gegevens, naOpslaan) voor een
+   gekoppelde zak of doos waar nog niet bij staat hoeveel erin zit, en keukenVerpakkingVragen(product, naOpslaan) voor
+   een product zonder barcode. De keuken boekt per verpakking in, nooit per stuk: er zit altijd minstens 2 in. #}
 <div class="modal-overlay" id="kl-koppelen">
     <div class="modal-venster">
         <div class="modal-kop">
@@ -9,21 +11,74 @@
         </div>
         <p class="tekst-zacht" style="margin-top:0">Barcode <strong id="kl-koppel-code"></strong> kent de site nog niet. Koppel hem één keer, dan telt hij voortaan vanzelf mee.</p>
         <div class="veld"><label for="kl-koppel-product">Product</label><select id="kl-koppel-product"></select></div>
-        <div class="veld"><label for="kl-koppel-aantal">Hoeveel zit erin? (in de eenheid van het product)</label>
-            <input type="number" id="kl-koppel-aantal" inputmode="numeric" min="1" placeholder="bijv. 40"></div>
+        <div class="veld"><label for="kl-koppel-aantal">Hoeveel zit erin?</label>
+            <input type="number" id="kl-koppel-aantal" inputmode="numeric" min="2" placeholder="bijv. 20"></div>
         <div class="veld"><label for="kl-koppel-naam">Naam (optioneel)</label>
-            <input type="text" id="kl-koppel-naam" placeholder="bijv. AH frikandellen, doos van 40"></div>
+            <input type="text" id="kl-koppel-naam" placeholder="bijv. AH frikandellen"></div>
         <div class="veld"><label for="kl-koppel-prijs">Inkoopprijs van deze verpakking (optioneel)</label>
             <input type="text" id="kl-koppel-prijs" inputmode="decimal" placeholder="bijv. 12,50"></div>
         <p id="kl-koppel-fout" class="kl-melding kl-melding-fout" hidden></p>
         <div style="display:flex; gap:0.5rem; justify-content:flex-end">
             <button type="button" class="btn btn-rand" onclick="modalSluiten('kl-koppelen')">Annuleren</button>
-            <button type="button" class="btn btn-geel" onclick="keukenKoppelen()">Koppelen en meetellen</button>
+            <button type="button" class="btn btn-geel" onclick="keukenKoppelen()">Koppelen</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="kl-aantal">
+    <div class="modal-venster">
+        <div class="modal-kop">
+            <h2 style="margin:0">Hoeveel zit erin?</h2>
+            <button type="button" class="modal-sluiten" onclick="modalSluiten('kl-aantal')">&times;</button>
+        </div>
+        <p class="tekst-zacht" style="margin-top:0">Bij <strong id="kl-aantal-wat"></strong> staat nog niet hoeveel erin zit. Vul het één keer in, dan weet de site het voortaan.</p>
+        <div class="veld"><label for="kl-aantal-veld">Aantal erin</label>
+            <input type="number" id="kl-aantal-veld" inputmode="numeric" min="2" placeholder="bijv. 15"></div>
+        <p id="kl-aantal-fout" class="kl-melding kl-melding-fout" hidden></p>
+        <div style="display:flex; gap:0.5rem; justify-content:flex-end">
+            <button type="button" class="btn btn-rand" onclick="modalSluiten('kl-aantal')">Annuleren</button>
+            <button type="button" class="btn btn-geel" onclick="keukenAantalOpslaan()">Opslaan</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="kl-verpakking">
+    <div class="modal-venster">
+        <div class="modal-kop">
+            <h2 style="margin:0">Verpakking instellen</h2>
+            <button type="button" class="modal-sluiten" onclick="modalSluiten('kl-verpakking')">&times;</button>
+        </div>
+        <p class="tekst-zacht" style="margin-top:0"><strong id="kl-verpakking-product"></strong> heeft geen barcode. In welke verpakking komt het binnen? Eén keer instellen, daarna boek je het per verpakking in.</p>
+        <div class="veld"><label for="kl-verpakking-naam">Soort verpakking</label>
+            <input type="text" id="kl-verpakking-naam" maxlength="30" placeholder="bijv. doos, zak, bak"></div>
+        <div class="veld"><label for="kl-verpakking-aantal">Hoeveel zit erin?</label>
+            <input type="number" id="kl-verpakking-aantal" inputmode="numeric" min="2" placeholder="bijv. 24"></div>
+        <p id="kl-verpakking-fout" class="kl-melding kl-melding-fout" hidden></p>
+        <div style="display:flex; gap:0.5rem; justify-content:flex-end">
+            <button type="button" class="btn btn-rand" onclick="modalSluiten('kl-verpakking')">Annuleren</button>
+            <button type="button" class="btn btn-geel" onclick="keukenVerpakkingOpslaan()">Opslaan</button>
         </div>
     </div>
 </div>
 
 <script>
+function keukenPost(url, gegevens, foutVak) {
+    foutVak.hidden = true;
+    return fetch(url, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': {{ csrf_token()|tojson }} },
+        body: JSON.stringify(gegevens)
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (a) {
+        if (!a.ok) throw new Error(a.j.fout || 'Opslaan is niet gelukt.');
+        return a.j;
+    }).catch(function (e) {
+        foutVak.textContent = e.message && e.message !== 'Failed to fetch' ? e.message : 'Geen verbinding: probeer het zo nog eens.';
+        foutVak.hidden = false;
+        throw e;
+    });
+}
+
 var keukenKoppelCode = null, keukenNaKoppelen = null;
 function keukenKoppelVragen(code, producten, standaardId, naKoppelen) {
     keukenKoppelCode = code;
@@ -44,25 +99,56 @@ function keukenKoppelVragen(code, producten, standaardId, naKoppelen) {
     document.getElementById('kl-koppel-aantal').focus();
 }
 function keukenKoppelen() {
-    var fout = document.getElementById('kl-koppel-fout');
-    fetch({{ url_for('keuken_barcode_koppelen')|tojson }}, {
-        method: 'POST', credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': {{ csrf_token()|tojson }} },
-        body: JSON.stringify({
-            code: keukenKoppelCode,
-            product_id: document.getElementById('kl-koppel-product').value,
-            aantal: document.getElementById('kl-koppel-aantal').value,
-            naam: document.getElementById('kl-koppel-naam').value,
-            inkoopprijs: document.getElementById('kl-koppel-prijs').value
-        })
-    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (a) {
-        if (!a.ok) throw new Error(a.j.fout || 'Koppelen is niet gelukt.');
+    keukenPost({{ url_for('keuken_barcode_koppelen')|tojson }}, {
+        code: keukenKoppelCode,
+        product_id: document.getElementById('kl-koppel-product').value,
+        aantal: document.getElementById('kl-koppel-aantal').value,
+        naam: document.getElementById('kl-koppel-naam').value,
+        inkoopprijs: document.getElementById('kl-koppel-prijs').value
+    }, document.getElementById('kl-koppel-fout')).then(function (j) {
         modalSluiten('kl-koppelen');
-        keukenNaKoppelen(a.j.code, { product_id: a.j.product_id, aantal: a.j.aantal, omschrijving: a.j.omschrijving });
-    }).catch(function (e) {
-        fout.textContent = e.message && e.message !== 'Failed to fetch' ? e.message : 'Geen verbinding: probeer het zo nog eens.';
-        fout.hidden = false;
-    });
+        keukenNaKoppelen(j.code, { product_id: j.product_id, aantal: j.aantal, omschrijving: j.omschrijving });
+    }).catch(function () {});
+}
+
+var keukenAantalCode = null, keukenNaAantal = null;
+function keukenAantalVragen(code, gegevens, naOpslaan) {
+    keukenAantalCode = code;
+    keukenNaAantal = naOpslaan;
+    document.getElementById('kl-aantal-wat').textContent = gegevens.omschrijving.split(',')[0];
+    document.getElementById('kl-aantal-veld').value = '';
+    document.getElementById('kl-aantal-fout').hidden = true;
+    modalOpenen('kl-aantal');
+    document.getElementById('kl-aantal-veld').focus();
+}
+function keukenAantalOpslaan() {
+    keukenPost({{ url_for('keuken_verpakking_zetten')|tojson }}, {
+        code: keukenAantalCode, aantal: document.getElementById('kl-aantal-veld').value
+    }, document.getElementById('kl-aantal-fout')).then(function (j) {
+        modalSluiten('kl-aantal');
+        keukenNaAantal(j.code, { product_id: j.product_id, aantal: j.aantal, omschrijving: j.omschrijving });
+    }).catch(function () {});
+}
+
+var keukenVerpakkingProduct = null, keukenNaVerpakking = null;
+function keukenVerpakkingVragen(product, naOpslaan) {
+    keukenVerpakkingProduct = product;
+    keukenNaVerpakking = naOpslaan;
+    document.getElementById('kl-verpakking-product').textContent = product.naam;
+    document.getElementById('kl-verpakking-naam').value = '';
+    document.getElementById('kl-verpakking-aantal').value = '';
+    document.getElementById('kl-verpakking-fout').hidden = true;
+    modalOpenen('kl-verpakking');
+    document.getElementById('kl-verpakking-naam').focus();
+}
+function keukenVerpakkingOpslaan() {
+    keukenPost({{ url_for('keuken_product_verpakking')|tojson }}, {
+        product_id: keukenVerpakkingProduct.id,
+        naam: document.getElementById('kl-verpakking-naam').value,
+        aantal: document.getElementById('kl-verpakking-aantal').value
+    }, document.getElementById('kl-verpakking-fout')).then(function (j) {
+        modalSluiten('kl-verpakking');
+        keukenNaVerpakking(j.verpakkingen);
+    }).catch(function () {});
 }
 </script>

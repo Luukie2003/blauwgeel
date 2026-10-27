@@ -4,39 +4,104 @@
 <h1>Keuken tellen</h1>
 {% include '_keuken_subnav.html' %}
 <p class="subtitel">
-    Tel wat er in de keuken ligt. Wat er minder is dan de voorraad hieronder (die al rekening houdt met wat je hebt
-    ingeboekt), telt als verkocht. Laat een veld leeg om dat product over te slaan. Deze telling staat los van de gewone telling.
+    Tel wat er in de keuken ligt; laat een veld leeg om dat product over te slaan. Wat de site verwacht, zie je pas bij
+    het controleren, na het tellen. Wat er minder is dan verwacht (na wat er is ingeboekt), telt als verkocht. Deze
+    telling staat los van de gewone telling.
 </p>
 {% if producten %}
 <div class="kaart" style="display:flex; flex-wrap:wrap; gap:0.8rem; align-items:center; justify-content:space-between">
     <span>💡 Liever product voor product, en volle dozen scannen?</span>
     <a href="{{ url_for('keuken_tellen_lopen') }}" class="btn btn-geel">Tellen met de looplijst &rarr;</a>
 </div>
-<form method="post" class="kaart">
+<form method="post" class="kaart" id="kt-formulier">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="tabel-wrap">
         <table>
-            <thead><tr><th>Product</th><th style="text-align:right">Voorraad nu</th><th>Geteld</th></tr></thead>
+            <thead><tr><th>Product</th><th>Geteld</th></tr></thead>
             <tbody>
                 {% for p in producten %}
+                {% set stappen = [1, 5] %}
+                {% for v in verpakkingen.get(p.id, []) %}{% if v.aantal not in stappen %}{% set _ = stappen.append(v.aantal) %}{% endif %}{% endfor %}
                 <tr>
-                    <td>{{ p.naam }}{% if p.besteleenheid and p.besteleenheid_factor > 1 %}<div class="tekst-zacht" style="font-size:0.75rem">{{ p.besteleenheid }} = {{ p.besteleenheid_factor }} {{ p.eenheid|lower }}</div>{% endif %}</td>
-                    <td style="text-align:right">{{ p.voorraad }} {{ p.eenheid|lower }}</td>
+                    <td>{{ p.naam }}{% if verpakkingen.get(p.id) %}<div class="tekst-zacht" style="font-size:0.75rem">{% for v in verpakkingen[p.id] %}{{ v.naam }} = {{ v.aantal }}{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}</td>
                     <td><input type="number" inputmode="numeric" min="0" name="geteld_{{ p.id }}" id="geteld_{{ p.id }}" style="width:6rem"
-                               aria-label="Geteld {{ p.naam }}" data-turf="1,5{% if p.besteleenheid_factor > 1 %},{{ p.besteleenheid_factor }}:{{ p.besteleenheid|lower }}{% endif %}"></td>
+                               aria-label="Geteld {{ p.naam }}" data-turf="{{ stappen|join(',') }}"></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     <label style="display:flex; gap:0.5rem; align-items:flex-start; margin-top:0.9rem">
-        <input type="checkbox" name="begintelling" value="1" {{ 'checked' if eerste_telling }}>
+        <input type="checkbox" name="begintelling" value="1" id="kt-begintelling" {{ 'checked' if eerste_telling }}>
         <span><strong>Begintelling</strong> &mdash; zet alleen de voorraad goed; wat er minder ligt telt niet als verkocht.
             Gebruik dit de eerste keer, of als de voorraad op de site niet meer klopt.</span>
     </label>
     <div class="veld" style="margin-top:0.8rem"><label for="opmerking">Opmerking (optioneel)</label><input type="text" id="opmerking" name="opmerking"></div>
-    <button type="submit" class="btn btn-geel">Telling opslaan</button>
+    <button type="submit" class="btn btn-geel">Controleren</button>
 </form>
+
+{# Het controlescherm: pas na het tellen wat de site verwacht, met het verschil. Dan pas opslaan. #}
+<div class="modal-overlay" id="kt-controle">
+    <div class="modal-venster" style="max-width:640px">
+        <div class="modal-kop">
+            <h2 style="margin:0">Controleren</h2>
+            <button type="button" class="modal-sluiten" onclick="modalSluiten('kt-controle')">&times;</button>
+        </div>
+        <p class="tekst-zacht" style="margin-top:0" id="kt-uitleg"></p>
+        <div class="tabel-wrap">
+            <table>
+                <thead><tr><th>Product</th><th style="text-align:right">Verwacht</th><th style="text-align:right">Geteld</th><th style="text-align:right">Verschil</th></tr></thead>
+                <tbody id="kt-regels"></tbody>
+            </table>
+        </div>
+        <div style="display:flex; gap:0.5rem; justify-content:flex-end; flex-wrap:wrap; margin-top:0.8rem">
+            <button type="button" class="btn btn-rand" onclick="modalSluiten('kt-controle')">&larr; Terug, aanpassen</button>
+            <button type="button" class="btn btn-geel" onclick="ktOpslaan()">Telling opslaan</button>
+        </div>
+    </div>
+</div>
+<script>
+var KT_PRODUCTEN = {{ producten|map(attribute='id')|list|tojson }};
+var KT_VERWACHT = {{ producten|map(attribute='voorraad')|list|tojson }};
+var KT_NAMEN = {{ producten|map(attribute='naam')|list|tojson }};
+var KT_EENHEDEN = {{ producten|map(attribute='eenheid')|list|tojson }};
+var ktKlaar = false;
+document.getElementById('kt-formulier').addEventListener('submit', function (e) {
+    if (ktKlaar) return;
+    e.preventDefault();
+    var begin = document.getElementById('kt-begintelling').checked;
+    var regels = document.getElementById('kt-regels');
+    regels.innerHTML = '';
+    var geteld = 0;
+    KT_PRODUCTEN.forEach(function (pid, i) {
+        var waarde = document.getElementById('geteld_' + pid).value;
+        if (waarde === '') return;
+        geteld++;
+        var verschil = parseInt(waarde, 10) - KT_VERWACHT[i];
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td></td><td style="text-align:right"></td><td style="text-align:right"></td><td style="text-align:right"></td>';
+        tr.children[0].textContent = KT_NAMEN[i];
+        tr.children[1].textContent = KT_VERWACHT[i] + ' ' + (KT_EENHEDEN[i] || 'stuks').toLowerCase();
+        tr.children[2].textContent = waarde;
+        tr.children[3].textContent = (verschil > 0 ? '+' : '') + verschil;
+        tr.children[3].className = verschil < 0 && !begin ? '' : 'tekst-zacht';
+        tr.children[3].title = verschil < 0 ? (begin ? 'Begintelling: geen verkoop' : 'Telt als verkocht') : '';
+        regels.appendChild(tr);
+    });
+    if (!geteld) {
+        toonToast('Je hebt nog niets ingevuld: er is niets om op te slaan.');
+        return;
+    }
+    document.getElementById('kt-uitleg').textContent = begin
+        ? 'Begintelling: de voorraad wordt wat je geteld hebt; wat er minder is, telt niet als verkocht.'
+        : 'Wat er minder is dan verwacht, telt als verkocht. Is iets weggegooid? Boek het dan eerst bij Muteren als derving.';
+    modalOpenen('kt-controle');
+});
+function ktOpslaan() {
+    ktKlaar = true;
+    document.getElementById('kt-formulier').submit();
+}
+</script>
 {% else %}
 <p class="leeg">Nog geen actieve producten in de categorie Keuken.</p>
 {% endif %}
