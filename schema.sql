@@ -438,6 +438,19 @@ CREATE TABLE IF NOT EXISTS kiosk_sponsoren (
 );
 CREATE INDEX IF NOT EXISTS idx_kiosk_sponsoren_volgorde ON kiosk_sponsoren(volgorde);
 
+-- Mappen voor de dia's (1.76.0, zie kiosk_momenten.py), zoals "Halloween feest" of "Sponsoren". Een map zet je met
+-- één klik aan of uit, en hij kan een begin en einde met tijd hebben (vanaf en tot, 'YYYY-MM-DD HH:MM'): dan gaat hij
+-- vanzelf aan en uit. Een dia zonder map (kiosk_sponsoren.map_id leeg) hoort bij "Algemeen".
+CREATE TABLE IF NOT EXISTS kiosk_dia_mappen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    naam TEXT NOT NULL,
+    actief INTEGER NOT NULL DEFAULT 1,
+    vanaf TEXT,
+    tot TEXT,
+    volgorde INTEGER NOT NULL DEFAULT 0,
+    aangemaakt_op TEXT NOT NULL
+);
+
 -- Zelfgebouwde sjablonen (drag-and-drop bouwer, zie kiosk_sjabloon_bouwer.html)
 -- naast de vaste lay-outs hierboven. elementen is een JSON-array van vrij
 -- gepositioneerde onderdelen (titel/tekst/foto/vrije_tekst), zie

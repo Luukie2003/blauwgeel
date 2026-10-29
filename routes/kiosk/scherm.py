@@ -22,6 +22,7 @@ from routes.kiosk.dia_gegevens import (
     _unieke_poule_sleutel,
 )
 from routes.kiosk.gedeeld import THEMAS, _scherm_instellingen, bewaarde_uitkomst, dias_versie, zet_kiosk_thema
+from routes.kiosk.momenten import schermgegevens
 from routes.kiosk.prijzen_gegevens import (
     _prijzen_poll,
     _prijzen_render_kwargs,
@@ -400,11 +401,15 @@ def register_routes(app):
     def kiosk_welkom():
         """Meldingen voor nieuwe en verlengde leden van de Club van 20, voor elk scherm (zie
         templates/_kiosk_welkom.html): ?na=<id van de laatst getoonde melding>. Met de timers die linksonder op elk
-        scherm staan (zie kiosk_timers.py en templates/_kiosk_timer.html)."""
+        scherm staan (zie kiosk_timers.py en templates/_kiosk_timer.html), de klok van de server ("nu") en de momenten
+        voor de schijnwerper (zie templates/_kiosk_moment.html): alleen als ze anders zijn dan ?mv=<hun versie>."""
         db = get_db()
+        momenten = schermgegevens(db)
         antwoord = jsonify({
             **welkom_wachtrij(db, _scherm_instellingen(db), request.args.get("na", type=int)),
             "timers": kiosk_timers.voor_scherm(db),
+            "nu": momenten["nu"],
+            "momenten": None if request.args.get("mv") == momenten["versie"] else momenten,
         })
         antwoord.headers["Cache-Control"] = "no-store"
         return antwoord

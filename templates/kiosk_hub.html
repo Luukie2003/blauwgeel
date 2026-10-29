@@ -54,6 +54,59 @@
     </div>
 </div>
 
+{# Het programma (1.76.0, zie kiosk_momenten.py): dia's met een moment, en bijsturen op de avond. #}
+{% set terug_hub = url_for('kiosk_hub') ~ '#momenten' %}
+{% set moment_status = {'straks': ('Straks', 'badge-neutraal'), 'schijnwerper': ('Nu groot op de tv', 'badge-ok'), 'bezig': ('Nu', 'badge-ok'), 'klaar': ('Geweest', 'badge-neutraal'), 'map_uit': ('Map staat uit', 'badge-laag'), 'dia_uit': ('Dia staat uit', 'badge-laag')} %}
+<div class="kaart" id="momenten" style="margin-bottom:1.4rem">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:0.8rem; flex-wrap:wrap">
+        <div>
+            <h2 style="margin:0">&#128294; Momenten</h2>
+            <p class="tekst-zacht" style="margin:0.3rem 0 0">Een dia met een moment staat de eerste minuten groot op alle tv's (de schijnwerper), ook op het prijzenscherm. Loopt het uit? Schuif een moment op of zet een dia met de hand in de schijnwerper.</p>
+        </div>
+        {% if schijnwerper or programma|selectattr('status', 'equalto', 'schijnwerper')|list %}
+        <form method="post" action="{{ url_for('kiosk_moment_stop') }}" style="margin:0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="terug" value="{{ terug_hub }}">
+            <button type="submit" class="btn btn-gevaar">Stop de schijnwerper</button>
+        </form>
+        {% endif %}
+    </div>
+    {% if programma %}
+    <div class="tabel-wrap" style="margin-top:0.8rem">
+        <table>
+            <thead><tr><th>Wanneer</th><th>Dia</th><th>Map</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+                {% for m in programma %}
+                <tr>
+                    <td style="white-space:nowrap"><strong>{{ m.van.strftime('%H:%M') }}</strong> <span class="tekst-zacht">{{ m.van.strftime('%d-%m') }}</span></td>
+                    <td>{{ m.dia.titel or '—' }}{% if m.dia.balk_tekst %}<div class="tekst-zacht" style="font-size:0.75rem">{{ m.dia.balk_tekst }}</div>{% endif %}</td>
+                    <td>{{ m.map.naam if m.map else 'Algemeen' }}</td>
+                    <td><span class="badge {{ moment_status[m.status][1] }}">{{ moment_status[m.status][0] }}</span></td>
+                    <td class="tabel-acties">
+                        <form method="post" action="{{ url_for('kiosk_moment_nu', dia_id=m.dia.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="terug" value="{{ terug_hub }}">
+                            <button type="submit" class="btn btn-rand btn-klein">Nu tonen</button>
+                        </form>
+                        {% if m.status in ('straks', 'schijnwerper', 'bezig') %}
+                        <form method="post" action="{{ url_for('kiosk_moment_later', dia_id=m.dia.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="terug" value="{{ terug_hub }}">
+                            <button type="submit" class="btn btn-rand btn-klein" title="Dit moment een kwartier later">+15 min</button>
+                        </form>
+                        {% endif %}
+                        <a href="{{ url_for('kiosk_moment_voorbeeld', dia_id=m.dia.id) }}" target="_blank" class="btn btn-rand btn-klein">Voorbeeld</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg" style="margin:0.8rem 0 0">Nog geen dia's met een moment. Geef een dia een moment bij <a href="{{ url_for('kiosk_sponsoren_leden') }}#dias-tabel">Dia's</a>.</p>
+    {% endif %}
+</div>
+
 <h2 id="tvs" style="margin:0 0 0.7rem">Tv's</h2>
 <div class="kiosk-schermen-grid" id="tv-lijst">
     {% for tv in tvs %}

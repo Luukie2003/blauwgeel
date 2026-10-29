@@ -19,6 +19,8 @@
 </div>
 
 <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='kiosk_effecten.css') }}?v={{ kiosk_effecten_versie }}">
+<script src="{{ url_for('static', filename='kiosk_effecten.js') }}?v={{ kiosk_effecten_versie }}"></script>
 <style>
     .kiosk-sponsor-layout { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
     .kiosk-sponsor-layout > .kaart { flex: 1 1 420px; min-width: 0; margin: 0; }
@@ -185,6 +187,77 @@
             </div>
             <span class="tekst-zacht" style="font-size:0.82rem">Zo zet een actie of sponsordia zichzelf aan en uit. Leeg laten: altijd tonen zolang hij actief is.</span>
         </fieldset>
+        {# Mappen, momenten en effecten (1.76.0, zie kiosk_momenten.py). #}
+        <fieldset class="groupbox">
+            <legend>Map, moment en effect</legend>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="map_id">Map</label>
+                    <select id="map_id" name="map_id">
+                        <option value="">Algemeen</option>
+                        {% for m in mappen %}
+                        <option value="{{ m.id }}" {{ 'selected' if (sponsor and sponsor.map_id == m.id) or (not sponsor and gekozen_map == m.id) }}>{{ m.naam }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="tekst-zacht">Een map zet je met één klik aan of uit, bij Dia's.</span>
+                </div>
+                <div class="veld">
+                    <label for="effect">Effect</label>
+                    <select id="effect" name="effect">
+                        <option value="">Geen</option>
+                        {% for sleutel, e in effecten.items() %}
+                        <option value="{{ sleutel }}" {{ 'selected' if sponsor and sponsor.effect == sleutel }}>{{ e[0] }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="tekst-zacht">Bewegende effecten over de dia, op de tv en in de schijnwerper.</span>
+                </div>
+            </div>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="moment">Moment (optioneel)</label>
+                    <input type="datetime-local" id="moment" name="moment" value="{{ sponsor.moment|replace(' ', 'T') if sponsor and sponsor.moment else '' }}">
+                    <span class="tekst-zacht">Dan staat de dia alleen in de diashow van dit moment tot het volgende moment in dezelfde map.</span>
+                </div>
+                <div class="veld">
+                    <label for="schijnwerper_minuten">Schijnwerper (minuten)</label>
+                    <input type="number" id="schijnwerper_minuten" name="schijnwerper_minuten" min="0" max="{{ max_schijnwerper }}"
+                           value="{{ sponsor.schijnwerper_minuten if sponsor and sponsor.schijnwerper_minuten is not none else 5 }}">
+                    <span class="tekst-zacht">Zo lang neemt de dia bij zijn moment alle tv's over, ook het prijzenscherm. 0: niet.</span>
+                </div>
+            </div>
+            <div class="formgrid">
+                <div class="veld">
+                    <label for="moment_tot">Tot (optioneel)</label>
+                    <input type="datetime-local" id="moment_tot" name="moment_tot" value="{{ sponsor.moment_tot|replace(' ', 'T') if sponsor and sponsor.moment_tot else '' }}">
+                    <span class="tekst-zacht">Leeg: tot het volgende moment in de map, het einde van de map of een uur.</span>
+                </div>
+                <div class="veld" id="label-veld">
+                    <label for="label">Label linksboven (griezeldia)</label>
+                    <input type="text" id="label" name="label" maxlength="30" value="{{ sponsor.label if sponsor and sponsor.label else '' }}"
+                           placeholder="Leeg: de tijd, zoals 16:00 uur">
+                </div>
+            </div>
+            <div class="veld">
+                <label for="balk_tekst">Balk op het prijzenscherm (optioneel)</label>
+                <input type="text" id="balk_tekst" name="balk_tekst" maxlength="80" value="{{ sponsor.balk_tekst if sponsor and sponsor.balk_tekst else '' }}"
+                       placeholder="Bijv. Heksenbrouwsel: 4 shotjes voor € 6">
+                <span class="tekst-zacht">Na de schijnwerper staat dit bovenaan de prijzen, met "Nu aan de bar", tot het volgende moment.</span>
+            </div>
+            <div class="veld" id="prijs-plek-veld" hidden>
+                <span class="tekst-zacht">&#128070; Tik in het live voorbeeld op de prijs: daar klopt de gloed.</span>
+                <input type="hidden" id="prijs_links" name="prijs_links" value="{{ opties.prijs[0] if opties.prijs else '' }}">
+                <input type="hidden" id="prijs_boven" name="prijs_boven" value="{{ opties.prijs[1] if opties.prijs else '' }}">
+            </div>
+            <div class="veld" id="rijen-veld" hidden>
+                <label for="programma_rijen">Tijden van de regels in het programma (van boven naar beneden)</label>
+                <input type="text" id="programma_rijen" name="programma_rijen" value="{{ (opties.rijen or programma_standaard.rijen)|join(', ') }}">
+                <span class="tekst-zacht">Het tijdslot van nu licht op, met NU erbij.</span>
+            </div>
+            {% if sponsor %}
+            <p style="margin:0.6rem 0 0"><a href="{{ url_for('kiosk_moment_voorbeeld', dia_id=sponsor.id) }}" target="_blank" class="btn btn-rand btn-klein">&#9654; Voorbeeld schijnwerper</a>
+                <span class="tekst-zacht" style="font-size:0.82rem">precies zoals op de tv (na opslaan), zonder dat de tv's iets merken</span></p>
+            {% endif %}
+        </fieldset>
         <button type="submit" class="btn btn-geel">{{ 'Opslaan' if sponsor else 'Toevoegen' }}</button>
     </form>
 </div>
@@ -210,6 +283,7 @@
     var achtergrondVeld = document.getElementById('achtergrond_afbeelding');
     var overgangVeld = document.getElementById('overgang');
     var tekstGrootteVeld = document.getElementById('tekst_grootte');
+    var effectVeld = document.getElementById('effect');
     var voorbeelden = {{ sjabloon_voorbeelden|tojson }};
 
     {% set afbeelding_url = url_for('static', filename='kiosk_afbeeldingen/' + sponsor.afbeelding) if sponsor and sponsor.afbeelding else None %}
@@ -249,6 +323,28 @@
         document.getElementById('tekst-grootte-veld').hidden = sjabloon === 'aangepast';
         document.getElementById('achtergrond-afbeelding-veld').hidden = sjabloon !== 'mededeling_groot';
         document.getElementById('video-veld').hidden = sjabloon !== 'video_volledig';
+        var effect = effectVeld.value;
+        document.getElementById('label-veld').hidden = sjabloon !== 'griezel';
+        document.getElementById('prijs-plek-veld').hidden = !effect || effect === 'programma' || sjabloon === 'griezel';
+        document.getElementById('rijen-veld').hidden = effect !== 'programma';
+    }
+
+    // Het effect in het live voorbeeld, met de plek van de prijs (aantikken) en bij het programma de eerste regel aan.
+    var effecten = {{ effecten_json|tojson }};
+    var programmaStandaard = {{ programma_standaard|tojson }};
+    var prijsLinks = document.getElementById('prijs_links');
+    var prijsBoven = document.getElementById('prijs_boven');
+    function effectOpties(effect) {
+        var opties = {};
+        if (effect === 'programma') {
+            Object.keys(programmaStandaard).forEach(function (k) { opties[k] = programmaStandaard[k]; });
+            var rijen = document.getElementById('programma_rijen').value.split(',').map(function (r) { return r.trim(); }).filter(Boolean);
+            if (rijen.length) opties.rijen = rijen;
+            opties.momenten = [{ tijd: opties.rijen[0], van: 0, einde: 9e15 }];
+        } else if (effecten[effect] && effecten[effect].prijs && sjabloonVeld.value !== 'griezel') {
+            opties.prijs = prijsLinks.value !== '' ? [parseFloat(prijsLinks.value), parseFloat(prijsBoven.value)] : effecten[effect].prijs;
+        }
+        return opties;
     }
 
     function renderVoorbeeld() {
@@ -283,6 +379,18 @@
             html += '<div class="mededeling-label">Mededeling</div>';
             if (titel) html += '<h2>' + escapeHtml(titel) + '</h2>';
             if (tekst) html += '<p>' + escapeHtml(tekst) + '</p>';
+        } else if (sjabloon === 'griezel') {
+            var regels = tekst.split('\n').map(function (r) { return r.trim(); }).filter(Boolean);
+            var label = document.getElementById('label').value || (document.getElementById('moment').value ? document.getElementById('moment').value.slice(11, 16) + ' uur' : '');
+            var kleur = (effecten[effectVeld.value] || {}).kleur || '#ff9326';
+            html += '<div class="gz" style="--gz-kleur:' + kleur + '"><div class="gz-maan"></div>';
+            if (label) html += '<div class="gz-label">' + escapeHtml(label) + '</div>';
+            html += '<div class="gz-midden">';
+            if (titel) html += '<h2 class="gz-titel">' + escapeHtml(titel) + '</h2>';
+            regels.forEach(function (r) {
+                html += '<p class="gz-regel' + (r.indexOf('€') >= 0 ? ' gz-prijs' : '') + '">' + escapeHtml(r) + '</p>';
+            });
+            html += '</div></div>';
         } else if (sjabloon === 'video_volledig') {
             if (videoUrl) html += '<video class="sponsor-video" src="' + videoUrl + '" muted loop autoplay playsinline></video>';
             if (titel) html += '<div class="onderschrift">' + escapeHtml(titel) + '</div>';
@@ -318,6 +426,7 @@
             if (tekst) html += '<p>' + escapeHtml(tekst) + '</p>';
         }
         slide.innerHTML = html;
+        if (effectVeld.value && window.KioskEffecten) window.KioskEffecten.maak(slide, effectVeld.value, effectOpties(effectVeld.value));
     }
 
     function schaalVoorbeeld() {
@@ -333,7 +442,16 @@
         renderVoorbeeld();
     }
 
-    [sjabloonVeld, customSjabloonVeld, titelVeld, tekstVeld, overgangVeld, tekstGrootteVeld].forEach(function (veld) {
+    // De plek van de prijs: tik in het voorbeeld op de prijs.
+    document.getElementById('voorbeeld-venster').addEventListener('click', function (e) {
+        if (!effectVeld.value || effectVeld.value === 'programma') return;
+        var vak = this.getBoundingClientRect();
+        prijsLinks.value = (100 * (e.clientX - vak.left) / vak.width).toFixed(1);
+        prijsBoven.value = (100 * (e.clientY - vak.top) / vak.height).toFixed(1);
+        renderVoorbeeld();
+    });
+    [sjabloonVeld, customSjabloonVeld, titelVeld, tekstVeld, overgangVeld, tekstGrootteVeld, effectVeld,
+     document.getElementById('label'), document.getElementById('moment'), document.getElementById('programma_rijen')].forEach(function (veld) {
         veld.addEventListener('input', allesBijwerken);
         veld.addEventListener('change', allesBijwerken);
     });

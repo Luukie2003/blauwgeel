@@ -90,9 +90,19 @@
     }
 
     function poll() {
-        fetch(url + (cursor === null ? '' : '?na=' + cursor), { cache: 'no-store' })
+        // De momenten voor de schijnwerper (_kiosk_moment.html) komen alleen mee als ze anders zijn dan wat dit scherm al
+        // heeft (mv); de klok van de server komt altijd mee.
+        var vragen = [];
+        if (cursor !== null) vragen.push('na=' + cursor);
+        if (window.kioskMomentenVersie) vragen.push('mv=' + encodeURIComponent(window.kioskMomentenVersie()));
+        var verstuurd = Date.now();
+        fetch(url + (vragen.length ? '?' + vragen.join('&') : ''), { cache: 'no-store' })
             .then(function (r) { return r.json(); })
             .then(function (data) {
+                var terug = Date.now();
+                // Het verschil met de klok van de server, gemeten halverwege de vraag (zie _kiosk_klok.html).
+                if (data.nu && terug - verstuurd < 3000) window.kioskKlokVerschil = data.nu - (verstuurd + terug) / 2;
+                if (window.kioskMomentenBijwerken) window.kioskMomentenBijwerken(data.momenten || null);
                 // De noodstop (zie noodstop_bewaken in app.py): meteen herladen, dan komt het vergrendel-scherm.
                 if (data.noodstop) {
                     if (window.kioskScherm) window.kioskScherm.herlaad(); else window.location.reload();

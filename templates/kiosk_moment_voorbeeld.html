@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voorbeeld schijnwerper · s.v. Blauw-Geel 1915</title>
+    {# Voorbeeld (1.76.0): de schijnwerper van één dia in de browser, precies zoals de tv's hem tonen, zonder dat de tv's
+       iets merken (zie kiosk_moment_voorbeeld in routes/kiosk/momenten.py). Herladen speelt hem opnieuw af. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie }}">
+    {% include '_kiosk_klok.html' %}
+    <style>html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }</style>
+</head>
+<body>
+    {% include '_kiosk_moment.html' %}
+</body>
+</html>

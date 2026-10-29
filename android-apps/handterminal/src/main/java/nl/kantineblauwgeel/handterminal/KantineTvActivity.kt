@@ -18,8 +18,9 @@ import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
 /** De kantine-tv vanaf de bar: hoe de tv's erbij staan (aan of uit, wat ze tonen, opnieuw laden, de wisselknop),
- * uitverkocht en de timer, de specials (het uitgelichte product en de prijs-acties), de bardienst van vandaag en morgen,
- * en de diashow (DiasActivity). Dia's maken, de indeling en een nieuwe tv koppelen doe je op de site. Zie
+ * het programma met momenten (de schijnwerper: nu tonen, stoppen, een kwartier later), uitverkocht en de timer, de
+ * specials (het uitgelichte product en de prijs-acties), de bardienst van vandaag en morgen, en de diashow
+ * (DiasActivity, ook de mappen). Dia's maken, de indeling en een nieuwe tv koppelen doe je op de site. Zie
  * routes/app_api_tv.py. */
 class KantineTvActivity : BasisActivity() {
 
@@ -127,6 +128,31 @@ class KantineTvActivity : BasisActivity() {
             stuur("/api/app/kantine-tv/thema", JSONObject().put("thema", if (halloween) JSONObject.NULL else "halloween"))
         }
 
+        // Het programma (zie kiosk_momenten.py): een dia met een moment staat de eerste minuten groot op alle tv's.
+        val momenten = d.optJSONArray("momenten")?.objecten().orEmpty()
+        if (momenten.isNotEmpty() || d.optBoolean("schijnwerper")) {
+            Lijst.kop(inhoud, getString(R.string.momenten))
+            val kaart = Lijst.kaart(inhoud)
+            for (m in momenten) {
+                val status = m.optString("status")
+                val (wat, kleur) = when (status) {
+                    "schijnwerper" -> getString(R.string.moment_schijnwerper) to R.color.oranje_balk
+                    "bezig" -> getString(R.string.moment_bezig) to R.color.groen_tekst
+                    "klaar" -> getString(R.string.moment_klaar) to R.color.tekst_zacht
+                    "map_uit" -> getString(R.string.moment_map_uit) to R.color.rood_balk
+                    "dia_uit" -> getString(R.string.moment_dia_uit) to R.color.rood_balk
+                    else -> getString(R.string.moment_straks) to R.color.navy
+                }
+                Lijst.regel(kaart, m.optString("tijd") + "  " + (m.tekstOfNull("titel") ?: ""),
+                    listOfNotNull(m.tekstOfNull("map"), m.tekstOfNull("balk")).joinToString(" · ").ifEmpty { null }, wat, kleur) {
+                    momentMenu(m)
+                }
+            }
+            if (d.optBoolean("schijnwerper")) {
+                Lijst.knop(kaart, getString(R.string.schijnwerper_stop)) { stuur("/api/app/kantine-tv/schijnwerper/stop") }
+            }
+        }
+
         // Op het prijzenscherm: uitverkocht en de timer
         Lijst.kop(inhoud, getString(R.string.op_het_prijzenscherm))
         val prijzen = Lijst.kaart(inhoud)
@@ -179,6 +205,23 @@ class KantineTvActivity : BasisActivity() {
         Lijst.kop(inhoud, getString(R.string.diashow))
         Lijst.regel(Lijst.kaart(inhoud), getString(R.string.dias_aan_uit), getString(R.string.dias_aan_uit_uitleg)) { DiasActivity.open(this) }
         Lijst.tekst(inhoud, getString(R.string.kantine_tv_op_site), grootte = 11.5f)
+    }
+
+    // ---------------------------------------------------------------- momenten
+
+    /** Een moment aangetikt: nu groot op alle tv's, of het moment een kwartier later of eerder (het programma loopt uit). */
+    private fun momentMenu(m: JSONObject) {
+        val id = m.getInt("id")
+        val keuzes = listOf(
+            getString(R.string.moment_nu_tonen) to { stuur("/api/app/kantine-tv/momenten/$id/nu", verzoekId = Api.nieuwVerzoekId()) },
+            getString(R.string.moment_later) to { stuur("/api/app/kantine-tv/momenten/$id/later", JSONObject().put("minuten", 15), Api.nieuwVerzoekId()) },
+            getString(R.string.moment_eerder) to { stuur("/api/app/kantine-tv/momenten/$id/later", JSONObject().put("minuten", -15), Api.nieuwVerzoekId()) },
+        )
+        AlertDialog.Builder(this)
+            .setCustomTitle(dialoogTitel(m.optString("tijd") + "  " + (m.tekstOfNull("titel") ?: "")))
+            .setItems(keuzes.map { it.first }.toTypedArray()) { _, i -> keuzes[i].second() }
+            .setNegativeButton(R.string.annuleren, null)
+            .show()
     }
 
     // ---------------------------------------------------------------- tv's

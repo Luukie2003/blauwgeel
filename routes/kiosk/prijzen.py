@@ -4,6 +4,7 @@ import json
 
 from flask import flash, jsonify, redirect, render_template, request, url_for
 
+import kiosk_momenten
 import kiosk_tvs
 import qr
 from database import get_db
@@ -44,6 +45,9 @@ def register_routes(app):
             schermen=kiosk_tvs.SCHERMEN,
             zooms=kiosk_tvs.ZOOMS,
             koppel_url=url_for("kiosk_koppelen", _external=True).split("://", 1)[-1],
+            # Het programma met momenten en de schijnwerper (zie kiosk_momenten.py).
+            programma=kiosk_momenten.programma(db),
+            schijnwerper=kiosk_momenten.handmatige_schijnwerper(db),
         )
 
     # ---------- Onderdeel 1: Prijzenscherm ----------

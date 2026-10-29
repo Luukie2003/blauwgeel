@@ -133,7 +133,8 @@ def test_zonder_datum_geen_terugkerende_taak_via_het_formulier(ingelogde_client,
 
 
 def test_de_beheerpagina_toont_terugkerende_en_geplande_taken(ingelogde_client, db):
-    deadline = _vandaag() + timedelta(days=1)
+    # Een maandelijkse taak mag niet na de 28e vallen: de 10e van volgende maand, ook als vandaag de 29e is.
+    deadline = (_vandaag().replace(day=1) + timedelta(days=32)).replace(day=10)
     taak_id = _maak(db, "maand", deadline=deadline)
     rond_af(db, taak_id, ADMIN, "admin")
     tekst = ingelogde_client.get("/taken").data.decode()

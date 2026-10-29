@@ -1,0 +1,10 @@
+{# De klok van de server (1.76.0): de schermen rekenen hiermee wanneer een dia met een tijdslot of de schijnwerper in beeld
+   komt (zie kiosk_momenten.py), ook op een tv waarvan de eigen klok niet goed staat. _kiosk_welkom.html werkt het
+   verschil elke 5 seconden bij. Met de stijl van de effecten, griezeldia's en de schijnwerper (kiosk_effecten.css),
+   zodat een griezeldia meteen goed in beeld komt. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='kiosk_effecten.css') }}?v={{ kiosk_effecten_versie|default('') }}">
+{% set klok_ms = kiosk_nu_ms() if kiosk_nu_ms is defined else 0 %}
+<script>
+window.kioskKlokVerschil = {{ klok_ms|tojson }} ? {{ klok_ms|tojson }} - Date.now() : 0;
+window.kioskNu = function () { return Date.now() + (window.kioskKlokVerschil || 0); };
+</script>

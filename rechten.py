@@ -511,6 +511,14 @@ SECTIE_ENDPOINTS = {
         "api_tablet_bardiensten",
         "kiosk_tv_wisselen",
         "kiosk_thema_zetten",
+        # Mappen, momenten en de schijnwerper (1.76.0, zie kiosk_momenten.py).
+        "kiosk_moment_nu",
+        "kiosk_moment_stop",
+        "kiosk_moment_later",
+        "kiosk_moment_voorbeeld",
+        "kiosk_dia_map_opslaan",
+        "kiosk_dia_map_wisselen",
+        "kiosk_dia_map_verwijderen",
         "kiosk_sponsoren_leden",
         "kiosk_sponsor_nieuw",
         "kiosk_sponsor_bewerken",
@@ -557,6 +565,10 @@ SECTIE_ENDPOINTS = {
         "api_app_tv_dias",
         "api_app_tv_dia",
         "api_app_tv_dia_blok",
+        "api_app_tv_map",
+        "api_app_tv_moment_nu",
+        "api_app_tv_moment_later",
+        "api_app_tv_schijnwerper_stop",
     },
     # Club van 20: ledenadministratie + betalingen + projecten + de
     # Club van 20-dia's. Eigen sectie (los van Kantine-tv) zodat bijv. de

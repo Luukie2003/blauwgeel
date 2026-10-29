@@ -1,0 +1,370 @@
+/* Effecten, griezeldia's en de schijnwerper op de kantine-tv (1.76.0, zie kiosk_momenten.py).
+
+   - .fx: de laag met bewegende deeltjes die kiosk_effecten.js over een dia legt (bubbels, vonken, glitters, bliksem,
+     slijm, confetti, vleermuizen, de puls op de prijs, en bij het programma het tijdslot van nu).
+   - .gz: de griezeldia (sjabloon 'griezel'): griezelletters in de kleur van het effect, met maan, webben en pompoenen.
+   - .km: de schijnwerper (templates/_kiosk_moment.html): de eerste minuten van een moment over alle tv's heen, en de
+     balk "Nu aan de bar" op het prijzenscherm.
+
+   Alles beweegt met transform en opacity en de maten zijn in vw/vh (geen min()/max()): licht genoeg voor de
+   tv-kastjes, ook met een oudere webweergave. Met "minder beweging" aan op het toestel staat alles stil. */
+
+@font-face {
+    font-family: "Creepster";
+    src: url("fonts/Creepster-Regular.ttf") format("truetype");
+    font-display: swap;
+}
+
+/* ---------- De effectlaag ---------- */
+.fx { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.fx i { position: absolute; display: block; will-change: transform, opacity; }
+.slide:not(.actief) .fx i, .km-bezig .scherm .fx i { animation-play-state: paused; }
+.fx--heksenketel { --fx-kleur: #7dff3a; --fx-donker: #2c7a00; --fx-gloed: rgba(125, 255, 58, 0.5); --fx-damp: rgba(125, 255, 58, 0.22); }
+.fx--vuur { --fx-kleur: #ff8a1f; --fx-donker: #b33a00; --fx-gloed: rgba(255, 150, 40, 0.55); --fx-damp: rgba(255, 120, 30, 0.18); }
+.fx--toverglans { --fx-kleur: #e255ff; --fx-donker: #6b1490; --fx-gloed: rgba(226, 85, 255, 0.5); --fx-damp: rgba(200, 90, 255, 0.2); }
+.fx--duivel { --fx-kleur: #ff2a2a; --fx-donker: #6e0000; --fx-gloed: rgba(255, 40, 40, 0.55); --fx-damp: rgba(255, 40, 40, 0.18); }
+.fx--zombie { --fx-kleur: #9dff2e; --fx-donker: #3c8f00; --fx-gloed: rgba(157, 255, 46, 0.5); --fx-damp: rgba(170, 90, 255, 0.2); }
+.fx--programma { --fx-kleur: #ff9326; --fx-donker: #8a3d00; --fx-gloed: rgba(255, 147, 38, 0.5); --fx-damp: rgba(210, 198, 255, 0.15); }
+
+/* Bubbels uit de ketel */
+.fx-bel {
+    width: calc(var(--s) * 1.7vw); height: calc(var(--s) * 1.7vw); border-radius: 50%; opacity: 0;
+    background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95), var(--fx-kleur) 42%, rgba(0, 0, 0, 0) 72%);
+    animation: fx-stijg 4s ease-in infinite;
+}
+@keyframes fx-stijg {
+    0% { transform: translateY(0) scale(0.35); opacity: 0; }
+    15% { opacity: 0.95; }
+    80% { opacity: 0.8; }
+    100% { transform: translateY(-30vh) scale(1.15); opacity: 0; }
+}
+
+/* Damp en mist */
+.fx-damp {
+    width: calc(var(--s) * 20vw); height: calc(var(--s) * 11vw); border-radius: 50%; opacity: 0;
+    background: radial-gradient(ellipse at center, var(--fx-damp), rgba(0, 0, 0, 0) 68%);
+    animation: fx-damp 10s ease-in-out infinite;
+}
+@keyframes fx-damp {
+    0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+    30% { opacity: 1; }
+    100% { transform: translate(7vw, -16vh) scale(1.45); opacity: 0; }
+}
+
+/* Druppels (heksenbrouwsel, bloed) */
+.fx-drup {
+    width: calc(var(--s) * 0.6vw); height: calc(var(--s) * 1.35vw); opacity: 0;
+    border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+    background: linear-gradient(var(--fx-kleur), var(--fx-donker));
+    animation: fx-val 3.4s cubic-bezier(0.55, 0, 0.9, 0.45) infinite;
+}
+@keyframes fx-val {
+    0% { transform: translateY(0) scaleY(0.25); opacity: 0; }
+    14% { transform: translateY(0) scaleY(1); opacity: 1; }
+    85% { opacity: 1; }
+    100% { transform: translateY(58vh) scaleY(1.7); opacity: 0; }
+}
+
+/* Vonken en sintels */
+.fx-vonk {
+    width: calc(var(--s) * 0.55vw); height: calc(var(--s) * 0.55vw); border-radius: 50%; opacity: 0;
+    background: radial-gradient(circle, #fff6c8, var(--fx-kleur) 50%, rgba(0, 0, 0, 0) 72%);
+    animation: fx-vonk 3.6s ease-out infinite;
+}
+@keyframes fx-vonk {
+    0% { transform: translate(0, 0) scale(1); opacity: 0; }
+    10% { opacity: 1; }
+    100% { transform: translate(calc(var(--dx) * 1vw), -40vh) scale(0.25); opacity: 0; }
+}
+
+/* Vlammen: een flakkerende gloed */
+.fx-vlam {
+    width: calc(var(--s) * 13vw); height: calc(var(--s) * 15vw); margin: calc(var(--s) * -10vw) 0 0 calc(var(--s) * -6.5vw);
+    border-radius: 50% 50% 45% 45%; transform-origin: 50% 100%;
+    background: radial-gradient(ellipse at 50% 72%, rgba(255, 215, 100, 0.6), rgba(255, 110, 0, 0.36) 42%, rgba(0, 0, 0, 0) 70%);
+    animation: fx-flakker 0.9s ease-in-out infinite alternate;
+}
+@keyframes fx-flakker {
+    0% { transform: scale(1, 1); opacity: 0.7; }
+    50% { transform: scale(1.06, 1.14); opacity: 1; }
+    100% { transform: scale(0.94, 0.95); opacity: 0.78; }
+}
+
+/* Glitters: een sterretje dat opflitst */
+.fx-glitter { width: calc(var(--s) * 2.4vw); height: calc(var(--s) * 2.4vw); opacity: 0; animation: fx-twinkel 2.6s ease-in-out infinite; }
+.fx-glitter::before, .fx-glitter::after {
+    content: ""; position: absolute; left: 0; top: 44%; width: 100%; height: 12%; border-radius: 50%;
+    background: radial-gradient(ellipse, #ffffff, var(--fx-kleur) 45%, rgba(0, 0, 0, 0) 72%);
+}
+.fx-glitter::after { transform: rotate(90deg); }
+@keyframes fx-twinkel {
+    0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+    50% { transform: scale(1) rotate(45deg); opacity: 1; }
+}
+
+/* Bliksem: het hele scherm licht op, met een schicht */
+.fx-flits {
+    top: 0; left: 0; width: 100%; height: 100%; opacity: 0;
+    background: radial-gradient(ellipse 70% 80% at var(--x) 0%, rgba(255, 255, 255, 0.85), var(--fx-gloed) 38%, rgba(0, 0, 0, 0) 75%);
+    animation: fx-flits var(--d) linear infinite;
+}
+.fx-schicht { top: 0; width: 7vw; opacity: 0; animation: fx-flits var(--d) linear infinite; }
+.fx-schicht svg { display: block; width: 100%; fill: #fff8f0; stroke: var(--fx-kleur); stroke-width: 3; }
+@keyframes fx-flits {
+    0%, 86%, 100% { opacity: 0; }
+    87% { opacity: 1; }
+    88.5% { opacity: 0.15; }
+    90% { opacity: 0.95; }
+    93% { opacity: 0; }
+}
+
+/* Slijm dat van boven druipt */
+.fx-slijm {
+    top: -1vh; width: calc(var(--s) * 1.6vw); height: calc(var(--s) * 11vh); transform-origin: 50% 0;
+    border-radius: 0 0 50% 50% / 0 0 34% 34%;
+    background: linear-gradient(var(--fx-donker), var(--fx-kleur));
+    animation: fx-slijm 6s ease-in-out infinite;
+}
+@keyframes fx-slijm { 0%, 100% { transform: scaleY(0.25); } 70% { transform: scaleY(1); } }
+
+/* Confetti (beste outfit): een regen die om de zoveel seconden valt */
+.fx-confetti {
+    top: -4vh; width: calc(var(--s) * 0.75vw); height: calc(var(--s) * 1.3vw); background: var(--c); opacity: 0;
+    animation: fx-confetti 12s linear infinite;
+}
+@keyframes fx-confetti {
+    0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+    33% { transform: translate(calc(var(--dx) * 1vw), 112vh) rotate(760deg); opacity: 1; }
+    34%, 100% { transform: translate(calc(var(--dx) * 1vw), 112vh) rotate(760deg); opacity: 0; }
+}
+
+/* Een heks op een bezem die overvliegt */
+.fx-heks { top: 7vh; left: -16vw; width: 14vw; animation: fx-heks 17s linear infinite; }
+.fx-heks svg { display: block; width: 100%; fill: #12061a; stroke: var(--fx-kleur); stroke-width: 1.4; stroke-linejoin: round; }
+@keyframes fx-heks {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(33vw, -3vh); }
+    50% { transform: translate(66vw, 1vh); }
+    75% { transform: translate(99vw, -2vh); }
+    100% { transform: translate(134vw, 1vh); }
+}
+
+/* Vleermuizen */
+.fx-vleermuis { left: -10vw; top: var(--top); width: var(--maat); animation: fx-vlieg var(--d) linear var(--w) infinite both; }
+.fx-vleermuis--terug { left: auto; right: -10vw; animation-name: fx-vlieg-terug; }
+.fx-vleermuis svg { display: block; width: 100%; fill: #160a20; stroke: var(--fx-kleur); stroke-width: 1.3; stroke-linejoin: round; }
+.fx-vleermuis .vl { transform-box: fill-box; transform-origin: right center; animation: fx-klap-l 0.26s ease-in-out infinite alternate; }
+.fx-vleermuis .vr { transform-box: fill-box; transform-origin: left center; animation: fx-klap-r 0.26s ease-in-out infinite alternate; }
+@keyframes fx-vlieg {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(30vw, -4vh); }
+    50% { transform: translate(60vw, 3vh); }
+    75% { transform: translate(90vw, -3vh); }
+    100% { transform: translate(122vw, 2vh); }
+}
+@keyframes fx-vlieg-terug {
+    0% { transform: translate(0, 0) scaleX(-1); }
+    25% { transform: translate(-30vw, 3vh) scaleX(-1); }
+    50% { transform: translate(-60vw, -4vh) scaleX(-1); }
+    75% { transform: translate(-90vw, 2vh) scaleX(-1); }
+    100% { transform: translate(-122vw, -2vh) scaleX(-1); }
+}
+@keyframes fx-klap-l { from { transform: rotate(18deg) scaleY(0.75); } to { transform: rotate(-14deg); } }
+@keyframes fx-klap-r { from { transform: rotate(-18deg) scaleY(0.75); } to { transform: rotate(14deg); } }
+
+/* De puls op de prijs: een gloed die klopt */
+.fx-prijs {
+    width: 24vw; height: 24vw; margin: -12vw 0 0 -12vw; border-radius: 50%;
+    background: radial-gradient(circle, var(--fx-gloed) 0%, rgba(0, 0, 0, 0) 64%);
+    animation: fx-puls 1.7s ease-in-out infinite;
+}
+@keyframes fx-puls {
+    0%, 100% { transform: scale(0.72); opacity: 0.3; }
+    50% { transform: scale(1.08); opacity: 1; }
+}
+
+/* Kaarslicht */
+.fx-kaars {
+    width: calc(var(--s) * 9vw); height: calc(var(--s) * 9vw); margin: calc(var(--s) * -4.5vw) 0 0 calc(var(--s) * -4.5vw);
+    border-radius: 50%; background: radial-gradient(circle, rgba(255, 205, 100, 0.55), rgba(255, 140, 0, 0) 66%);
+    animation: fx-kaars 2.3s ease-in-out infinite alternate;
+}
+@keyframes fx-kaars {
+    0% { opacity: 0.45; transform: scale(0.92); }
+    40% { opacity: 0.9; transform: scale(1.04); }
+    70% { opacity: 0.6; transform: scale(0.97); }
+    100% { opacity: 1; transform: scale(1.06); }
+}
+
+/* Het programma: het tijdslot van nu, met NU erbij */
+.fx-rij {
+    margin-top: calc(var(--h) / -2); border: 0.32vw solid #ffffff; border-radius: 1vw; opacity: 0;
+    box-shadow: 0 0 1.6vw var(--fx-kleur), 0 0 4vw var(--fx-kleur), inset 0 0 1.6vw var(--fx-kleur);
+    transition: opacity 0.6s;
+}
+.fx-rij--nu { opacity: 1; animation: fx-rij 1.1s ease-in-out infinite alternate; }
+@keyframes fx-rij { from { transform: scale(1); } to { transform: scale(1.018); } }
+.fx-nu {
+    top: 50%; right: -1.5vw; padding: 0.3vh 1.2vw; margin-top: -3.4vh; border-radius: 0.6vw;
+    background: #ff1e1e; color: #ffffff; font-family: "Creepster", Impact, sans-serif; font-size: 4.4vw; line-height: 1;
+    transform: rotate(-8deg); box-shadow: 0 0 2vw rgba(255, 30, 30, 0.9);
+    animation: fx-nu-puls 0.9s ease-in-out infinite alternate;
+}
+@keyframes fx-nu-puls { from { transform: rotate(-8deg) scale(1); } to { transform: rotate(-8deg) scale(1.12); } }
+
+/* ---------- De griezeldia ---------- */
+.slide-sponsor.sjabloon-griezel { padding: 0; }
+.sjabloon-griezel .fx-vlam { display: none; }  /* de vlammen horen bij de schaal in het snack-ontwerp */
+.gz {
+    position: absolute; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; color: #ffffff;
+    background: radial-gradient(ellipse 80% 65% at 50% 38%, rgba(64, 18, 86, 0.9), rgba(8, 2, 14, 1) 76%), #05010a;
+}
+.gz::before {
+    content: ""; position: absolute; left: -10vw; right: -10vw; bottom: -20vh; height: 60vh; opacity: 0.4;
+    background: radial-gradient(ellipse at 50% 100%, var(--gz-kleur), rgba(0, 0, 0, 0) 68%);
+}
+.gz-maan {
+    position: absolute; top: 6vh; right: 11vw; width: 12vw; height: 12vw; border-radius: 50%; opacity: 0.9;
+    background: radial-gradient(circle at 38% 35%, #fffae6 0%, #f4e4ad 50%, #cbb175 100%);
+    box-shadow: 0 0 5vw 1vw rgba(255, 236, 170, 0.3);
+}
+.gz-web { position: absolute; top: 0; width: 15vw; height: 15vw; }
+.gz-web--links { left: 0; }
+.gz-web--rechts { right: 0; transform: scaleX(-1); }
+.gz-web path { fill: none; stroke: rgba(255, 255, 255, 0.4); stroke-width: 1.2; }
+.gz-label {
+    position: absolute; top: 5vh; left: 4vw; z-index: 2; padding: 1.4vh 2.6vw; border-radius: 0.5vw;
+    background: var(--gz-kleur); color: #0b0610; font: 900 4vw/1 Impact, "Arial Black", sans-serif; text-transform: uppercase;
+    transform: rotate(-3deg) skewX(-6deg); box-shadow: 0 0 2.6vw var(--gz-kleur);
+}
+.gz-midden {
+    position: absolute; left: 8vw; right: 8vw; top: 15vh; bottom: 18vh; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+}
+.gz-titel {
+    margin: 0 0 2vh; font-family: "Creepster", Impact, sans-serif; font-weight: 400; font-size: 12.5vw; line-height: 0.95;
+    letter-spacing: 0.02em; color: var(--gz-kleur);
+    text-shadow: 0 0.45vw 0 #000000, 0 0 0.5vw var(--gz-kleur), 0 0 2.6vw var(--gz-kleur);
+    animation: gz-gloei 2.4s ease-in-out infinite alternate;
+}
+.gz-regel {
+    margin: 0.4vh 0; font: 900 4.2vw/1.1 Impact, "Arial Black", sans-serif; text-transform: uppercase; color: #ffffff;
+    text-shadow: 0 0.3vw 0 #000000, 0 0 1.5vw rgba(0, 0, 0, 0.8);
+}
+.gz-prijs {
+    font-family: "Creepster", Impact, sans-serif; font-weight: 400; font-size: 9vw; text-transform: none; color: var(--gz-kleur);
+    text-shadow: 0 0 1vw var(--gz-kleur), 0 0 3vw var(--gz-kleur), 0 0.5vw 0 #000000;
+    animation: gz-klop 1.6s ease-in-out infinite;
+}
+@keyframes gz-gloei { from { opacity: 0.88; } to { opacity: 1; } }
+@keyframes gz-klop { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+.gz-pompoen { position: absolute; bottom: 1vh; width: 12vw; z-index: 1; }
+.gz-pompoen--links { left: 2vw; }
+.gz-pompoen--rechts { right: 17vw; width: 8.5vw; }
+.gz-pompoen svg { position: relative; display: block; width: 100%; }
+.gz-gloed {
+    position: absolute; top: 10%; left: 0; right: 0; bottom: -10%; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 190, 60, 0.55), rgba(0, 0, 0, 0) 68%);
+    animation: fx-kaars 2.6s ease-in-out infinite alternate;
+}
+.gz-kaarsen i {
+    position: absolute; bottom: 2vh; width: 1.3vw; height: 7vh; border-radius: 0.3vw; z-index: 1;
+    background: linear-gradient(#f6efd9, #c7b68b);
+}
+.gz-kaarsen i::before {
+    content: ""; position: absolute; left: 50%; top: -3.4vh; width: 1.6vw; height: 3.4vh; margin-left: -0.8vw;
+    border-radius: 50% 50% 45% 45%; background: radial-gradient(ellipse at 50% 70%, #fff7c8, #ffb21e 45%, rgba(255, 120, 0, 0) 72%);
+    transform-origin: 50% 100%; animation: fx-flakker 0.7s ease-in-out infinite alternate;
+}
+.gz-kaarsen i:nth-child(1) { left: 15vw; height: 6vh; }
+.gz-kaarsen i:nth-child(2) { left: 17.6vw; height: 9vh; }
+.gz-kaarsen i:nth-child(3) { left: 20.2vw; height: 5vh; }
+.gz-kaarsen i:nth-child(4) { left: 62vw; height: 8vh; }
+.gz-kaarsen i:nth-child(5) { left: 64.6vw; height: 5.5vh; }
+.gz-kaarsen i:nth-child(6) { left: 67.2vw; height: 7vh; }
+
+/* ---------- De schijnwerper ---------- */
+.km {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 800; overflow: hidden; background: #000000;
+    opacity: 0; visibility: hidden; transition: opacity 0.4s, visibility 0s linear 0.4s; --km-kleur: #ff9326;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Calibri, sans-serif; color: #ffffff;
+}
+.km--aan { opacity: 1; visibility: visible; transition: opacity 0.4s; }
+.km .km-dia { opacity: 0; transition: none; }
+.km--dia .km-dia { opacity: 1; animation: km-knal 1.2s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
+.km--puls .km-dia { animation: km-puls 0.9s ease-in-out both; }
+@keyframes km-knal {
+    0% { transform: scale(1.4) rotate(-2.5deg); opacity: 0; }
+    50% { transform: scale(0.96) rotate(0.6deg); opacity: 1; }
+    64% { transform: translate(-0.7vw, 0.5vh) scale(1.01); }
+    76% { transform: translate(0.7vw, -0.5vh); }
+    88% { transform: translate(-0.3vw, 0.2vh); }
+    100% { transform: none; opacity: 1; }
+}
+@keyframes km-puls {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.05) rotate(-0.6deg); }
+    55% { transform: translate(-0.5vw, 0.3vh) scale(1.02); }
+    75% { transform: translate(0.5vw, -0.3vh); }
+    100% { transform: none; }
+}
+.km-rand {
+    position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 6; pointer-events: none; opacity: 0;
+    border: 0.7vw solid var(--km-kleur); box-shadow: inset 0 0 3.5vw var(--km-kleur), 0 0 3.5vw var(--km-kleur);
+}
+.km--dia .km-rand { animation: km-rand 1.5s ease-in-out infinite alternate; }
+@keyframes km-rand { from { opacity: 0.3; } to { opacity: 1; } }
+.km-flits { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 9; background: #ffffff; opacity: 0; pointer-events: none; }
+.km-flits--aan { animation: km-flits 1.3s linear both; }
+@keyframes km-flits {
+    0% { opacity: 0; }
+    6% { opacity: 1; }
+    14% { opacity: 0.1; }
+    22% { opacity: 0.9; }
+    42% { opacity: 0; }
+    100% { opacity: 0; }
+}
+.km-intro {
+    position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 8; opacity: 0; visibility: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 55%, rgba(60, 10, 70, 0.9), #000000 72%);
+}
+.km--intro .km-intro { opacity: 1; visibility: visible; }
+.km-tijd {
+    font: 900 6.5vw/1 Impact, "Arial Black", sans-serif; letter-spacing: 0.06em; color: #ffffff;
+    text-shadow: 0 0 2vw var(--km-kleur); animation: km-in 0.5s 0.5s both;
+}
+.km-nu {
+    font-family: "Creepster", Impact, sans-serif; font-size: 25vw; line-height: 0.95; color: var(--km-kleur);
+    text-shadow: 0 0 3vw var(--km-kleur), 0 0 8vw var(--km-kleur), 0 1vw 0 #000000;
+    animation: km-slam 0.8s 1s cubic-bezier(0.2, 1.8, 0.4, 1) both;
+}
+.km-naam {
+    font: 900 4.4vw/1.1 Impact, "Arial Black", sans-serif; text-transform: uppercase; color: #ffffff;
+    text-shadow: 0 0.3vw 0 #000000; animation: km-in 0.5s 1.6s both;
+}
+@keyframes km-in { from { opacity: 0; transform: translateY(3vh); } to { opacity: 1; transform: none; } }
+@keyframes km-slam {
+    0% { transform: scale(3.2) rotate(-6deg); opacity: 0; }
+    60% { transform: scale(0.9) rotate(2deg); opacity: 1; }
+    80% { transform: translate(-0.6vw, 0.4vh) scale(1.02); }
+    100% { transform: none; opacity: 1; }
+}
+
+/* De balk op het prijzenscherm, na de schijnwerper tot het volgende moment */
+.km-balk {
+    display: none; align-items: center; gap: 1.4vw; margin: 0 0 1.4vh; padding: 1vh 1.8vw; border-radius: 1vw;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.88), rgba(42, 12, 64, 0.92));
+    border: 0.25vw solid var(--km-kleur); box-shadow: 0 0 1.6vw var(--km-kleur); --km-kleur: #ff9326;
+}
+.km-balk--aan { display: flex; animation: km-in 0.6s ease-out both; }
+.km-balk-label {
+    flex: none; font-family: "Creepster", Impact, sans-serif; font-size: 2.8vw; line-height: 1; color: var(--km-kleur);
+    text-shadow: 0 0 1vw var(--km-kleur); animation: gz-gloei 1.2s ease-in-out infinite alternate;
+}
+.km-balk-tekst { font-size: 2.3vw; font-weight: 800; color: #ffffff; }
+
+@media (prefers-reduced-motion: reduce) {
+    .fx i, .gz-titel, .gz-prijs, .gz-gloed, .gz-kaarsen i::before, .km-dia, .km-rand, .km-nu, .km-tijd, .km-naam,
+    .km-balk, .km-balk-label { animation: none !important; }
+}

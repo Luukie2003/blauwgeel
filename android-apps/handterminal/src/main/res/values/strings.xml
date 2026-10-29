@@ -692,6 +692,27 @@
     <string name="staat_op_boodschappenlijst">Staat op de boodschappenlijst</string>
     <string name="waarom_weg">%1$s: waarom is het weg?</string>
     <string name="hoeveel_weggegooid">%1$s: hoeveel weggegooid?</string>
+    <!-- Momenten en mappen op de kantine-tv (2.19.0). -->
+    <string name="momenten">Momenten</string>
+    <string name="moment_straks">straks</string>
+    <string name="moment_schijnwerper">groot op de tv</string>
+    <string name="moment_bezig">nu</string>
+    <string name="moment_klaar">geweest</string>
+    <string name="moment_map_uit">map uit</string>
+    <string name="moment_dia_uit">dia uit</string>
+    <string name="moment_nu_tonen">Nu tonen: groot op alle tv\'s</string>
+    <string name="moment_later">Een kwartier later</string>
+    <string name="moment_eerder">Een kwartier eerder</string>
+    <string name="schijnwerper_stop">Stop de schijnwerper</string>
+    <string name="mappen">Mappen</string>
+    <string name="map_straks">gaat aan op %1$s</string>
+    <string name="map_voorbij">voorbij</string>
+    <string name="map_tot">tot %1$s</string>
+    <string name="dia_moment">om %1$s</string>
+    <plurals name="n_dias">
+        <item quantity="one">%1$d dia</item>
+        <item quantity="other">%1$d dia\'s</item>
+    </plurals>
     <string name="keuken_niet_op_bestellijst">Keukenspullen staan niet op de bestellijst: de keuken koopt zelf in. Zet het op de boodschappenlijst (bij Keuken).</string>
     <string name="keukentelling_verder">Keukentelling: verder waar je was</string>
     <string name="terug_naar_keuken">Terug naar de keuken</string>

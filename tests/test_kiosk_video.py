@@ -313,8 +313,9 @@ def test_het_scherm_haalt_video_s_eerst_binnen_en_slaat_een_nog_ladende_dia_over
     tekst = client.get("/kiosk/scherm").data.decode()
     assert "function laadVideo" in tekst and "URL.createObjectURL" in tekst  # eerst helemaal binnenhalen
     assert "VIDEO_MAX_IN_GEHEUGEN" in tekst  # een te groot bestand laat de browser zelf streamen
-    assert "function videoKlaar" in tekst and "if (videoKlaar(kandidaat)) return kandidaat;" in tekst  # overslaan tot klaar
-    assert "if (!videoKlaar(huidige)) huidige = volgende();" in tekst  # niet beginnen met een zwart scherm
+    # overslaan tot klaar (en buiten zijn tijdslot, zie kiosk_momenten.py)
+    assert "function videoKlaar" in tekst and "if (videoKlaar(kandidaat) && inVenster(kandidaat)) return kandidaat;" in tekst
+    assert "if (!videoKlaar(huidige) || !inVenster(huidige)) huidige = volgende();" in tekst  # niet met een zwart scherm
     assert "setTimeout(function () { laadVideo(v); }, 30000)" in tekst  # mislukt het ophalen: opnieuw proberen
 
 

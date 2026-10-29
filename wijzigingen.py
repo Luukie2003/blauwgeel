@@ -6,8 +6,20 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.75.0"
+HUIDIGE_VERSIE = "1.76.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.76.0",
+        "datum": "29 oktober 2026",
+        "punten": [
+            "Mappen voor de dia's: zet dia's bij elkaar in een map, zoals 'Halloween feest'. Een hele map zet je met één klik aan of uit (bij Kantine-tv > Dia's of in de handterminal-app), en met een begin en einde gaat hij vanzelf aan en uit.",
+            "Momenten: een dia kan een tijdslot krijgen, zoals 17:00 Heksenbrouwsel. Hij staat dan alleen in de diashow van zijn moment tot het volgende moment in dezelfde map.",
+            "De schijnwerper: de eerste minuten van een moment (standaard 5) neemt de dia alle tv's over, ook het prijzenscherm. Eerst bliksem en een groot NU!, dan knalt de dia in beeld met een kloppende rand, en elke halve minuut volgt een flits. Daarna staat er bovenaan de prijzen een balk 'Nu aan de bar' tot het volgende moment. De tv's rekenen met de klok van de server, dus het begint op de minuut.",
+            "Effecten over een dia: groene bubbels uit de heksenketel, vonken en vlammen, paarse glitters met een heks op een bezem, rode bliksem met bloed, groen slijm met confetti, en bij het programma licht het tijdslot van nu op met NU. Tik in het voorbeeld aan waar de prijs staat; daar klopt een gloed. Nieuw is ook de griezeldia: griezelletters in de kleur van het effect, met maan, spinnenwebben, pompoenen en kaarsen.",
+            "Bijsturen op de avond: op de Kiosk-hub staat het programma met Nu tonen, +15 min en Voorbeeld (de schijnwerper in je browser, zonder dat de tv's iets merken), en Stop de schijnwerper.",
+            "Handterminal-app 2.19.0: bij Kantine-tv de momenten (nu tonen, een kwartier later of eerder, stoppen) en bij Diashow de mappen aan of uit.",
+        ],
+    },
     {
         "versie": "1.75.0",
         "datum": "27 oktober 2026",
@@ -1310,8 +1322,8 @@ MODULES = [
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.7.0", "sinds": "1.6.0", "laatst": "1.75.0",
      "inhoud": "Keukenvoorraad met een eigen, blinde telling (ook als looplijst met dozen scannen, en een begintelling), inboeken per verpakking (per merk, ook door te scannen), weggooien en bijstellen, prijzen, de boodschappenlijst bij een tekort, en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.23.0", "sinds": "1.10.1", "laatst": "1.74.0",
-     "inhoud": "Prijzenscherm, dia's, sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, het Halloween-thema, en de tablet-app Kantine Beheer"},
+    {"naam": "Kantine-tv", "versie": "1.24.0", "sinds": "1.10.1", "laatst": "1.76.0",
+     "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's en effecten), sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, het Halloween-thema, en de tablet-app Kantine Beheer"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.0", "sinds": "", "laatst": "",
@@ -1320,8 +1332,8 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.22.0", "sinds": "1.53.0", "laatst": "1.75.0",
-     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (nalopen met vinkjes, klaarzetten met het besteloverzicht, verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken (inboeken per verpakking, blind tellen, weggooien), Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst, dia's aan of uit en het Halloween-thema), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
+    {"naam": "Handterminal-app", "versie": "0.23.0", "sinds": "1.53.0", "laatst": "1.76.0",
+     "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (nalopen met vinkjes, klaarzetten met het besteloverzicht, verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken (inboeken per verpakking, blind tellen, weggooien), Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst, momenten met de schijnwerper, mappen en dia's aan of uit, en het Halloween-thema), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.5", "sinds": "0.1.0", "laatst": "1.65.1",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",

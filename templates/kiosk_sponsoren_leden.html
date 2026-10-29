@@ -573,19 +573,105 @@
 </script>
 
 <div data-tab-paneel="dias-tabel" hidden>
+{# Mappen (1.76.0, zie kiosk_momenten.py): een hele map met één klik aan of uit, eventueel met een begin en einde. #}
+{% set terug_dias = url_for('kiosk_sponsoren_leden') ~ '#dias-tabel' %}
+{% set map_status_label = {'aan': ('Aan', 'badge-ok'), 'uit': ('Uit', 'badge-neutraal'), 'straks': ('Straks', 'badge-laag'), 'voorbij': ('Voorbij', 'badge-neutraal')} %}
+<div class="kaart">
+    <div class="actiebalk">
+        <h2 style="margin:0">&#128193; Mappen</h2>
+    </div>
+    <p class="tekst-zacht" style="margin-top:0">Zet dia's bij elkaar in een map, zoals "Halloween feest". Een map zet je met één klik aan of uit; met een begin en einde gaat hij vanzelf aan en uit. Dia's zonder map staan bij Algemeen.</p>
+    {% if mappen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Map</th><th>Wanneer</th><th>Dia's</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+                {% for groep in dia_groepen if groep.map %}
+                {% set m = groep.map %}
+                <tr>
+                    <td><strong>{{ m.naam }}</strong></td>
+                    <td>{% if m.vanaf or m.tot %}{{ m.vanaf|datum_nl if m.vanaf else '…' }} &rarr; {{ m.tot|datum_nl if m.tot else '…' }}{% else %}<span class="tekst-zacht">altijd</span>{% endif %}</td>
+                    <td>{{ groep.dias|length }}</td>
+                    <td><span class="badge {{ map_status_label[groep.status][1] }}">{{ map_status_label[groep.status][0] }}</span></td>
+                    <td class="tabel-acties">
+                        <form method="post" action="{{ url_for('kiosk_dia_map_wisselen', map_id=m.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="terug" value="{{ terug_dias }}">
+                            <input type="hidden" name="aan" value="{{ '0' if m.actief else '1' }}">
+                            <button type="submit" class="btn {{ 'btn-rand' if m.actief else 'btn-geel' }} btn-klein">{{ 'Uitzetten' if m.actief else 'Aanzetten' }}</button>
+                        </form>
+                        <details class="map-bewerken">
+                            <summary class="btn btn-rand btn-klein">Bewerken</summary>
+                            <form method="post" action="{{ url_for('kiosk_dia_map_opslaan') }}" class="map-formulier">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="terug" value="{{ terug_dias }}">
+                                <input type="hidden" name="map_id" value="{{ m.id }}">
+                                <input type="hidden" name="actief" value="{{ '1' if m.actief else '0' }}">
+                                <input type="text" name="naam" value="{{ m.naam }}" maxlength="60" aria-label="Naam van de map" required>
+                                <label>Vanaf <input type="datetime-local" name="vanaf" value="{{ m.vanaf|replace(' ', 'T') if m.vanaf else '' }}"></label>
+                                <label>Tot <input type="datetime-local" name="tot" value="{{ m.tot|replace(' ', 'T') if m.tot else '' }}"></label>
+                                <button type="submit" class="btn btn-geel btn-klein">Opslaan</button>
+                            </form>
+                        </details>
+                        <form method="post" action="{{ url_for('kiosk_dia_map_verwijderen', map_id=m.id) }}"
+                              onsubmit="return bevestigEnVerstuur(this, 'Map \'{{ m.naam }}\' verwijderen? De dia\'s erin blijven, bij Algemeen.');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="terug" value="{{ terug_dias }}">
+                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    <details{% if not mappen %} open{% endif %} style="margin-top:0.6rem">
+        <summary class="btn btn-rand btn-klein">+ Nieuwe map</summary>
+        <form method="post" action="{{ url_for('kiosk_dia_map_opslaan') }}" class="map-formulier" style="margin-top:0.6rem">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="terug" value="{{ terug_dias }}">
+            <input type="text" name="naam" maxlength="60" placeholder="Bijv. Halloween feest" aria-label="Naam van de nieuwe map" required>
+            <label>Vanaf (optioneel) <input type="datetime-local" name="vanaf"></label>
+            <label>Tot (optioneel) <input type="datetime-local" name="tot"></label>
+            <button type="submit" class="btn btn-geel btn-klein">Toevoegen</button>
+        </form>
+    </details>
+</div>
+<style>
+    .map-formulier { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .map-formulier input[type=text] { flex: 1 1 12rem; }
+    .map-formulier label { display: flex; align-items: center; gap: 0.35rem; font-weight: 400; font-size: 0.85rem; }
+    .map-bewerken { display: inline-block; }
+    .map-bewerken[open] { display: block; flex-basis: 100%; margin-top: 0.4rem; }
+    .map-bewerken summary { list-style: none; }
+    .map-bewerken summary::-webkit-details-marker { display: none; }
+    .dia-groep-kop { display: flex; align-items: center; gap: 0.6rem; margin: 1.1rem 0 0.5rem; }
+    .dia-groep-kop h3 { margin: 0; }
+    .dia-moment { white-space: nowrap; }
+</style>
+
 <div class="kaart">
     <div class="actiebalk">
         <h2 style="margin:0">Dia's</h2>
         <a href="{{ url_for('kiosk_sponsor_nieuw') }}" class="btn btn-geel">Nieuwe dia</a>
     </div>
     {% if sponsoren %}
+    {% for groep in dia_groepen if groep.dias or groep.map %}
+    <div class="dia-groep-kop">
+        <h3>{{ '&#128193;'|safe if groep.map else '' }} {{ groep.naam }}</h3>
+        {% if groep.map %}<span class="badge {{ map_status_label[groep.status][1] }}">{{ map_status_label[groep.status][0] }}</span>{% endif %}
+        <span class="tekst-zacht" style="font-size:0.85rem">{{ groep.dias|length }} dia{{ "'s" if groep.dias|length != 1 else '' }}</span>
+        {% if groep.map %}<a href="{{ url_for('kiosk_sponsor_nieuw', map=groep.map.id) }}" class="btn btn-rand btn-klein">+ Dia in deze map</a>{% endif %}
+    </div>
+    {% if groep.dias %}
     <div class="tabel-wrap">
         <table>
             <thead>
-                <tr><th></th><th>Titel</th><th>Sjabloon</th><th>Duur</th><th>Volgorde</th><th>Status</th><th></th></tr>
+                <tr><th></th><th>Titel</th><th>Sjabloon</th><th>Moment</th><th>Duur</th><th>Volgorde</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
-                {% for s in sponsoren %}
+                {% for s in groep.dias %}
                 <tr>
                     <td>
                         {% if s.afbeelding %}
@@ -593,8 +679,9 @@
                         {% endif %}
                         {% if s.video %}<span class="badge badge-neutraal">Video</span>{% endif %}
                     </td>
-                    <td>{{ s.titel or '—' }}</td>
+                    <td>{{ s.titel or '—' }}{% if s.effect %}<div class="tekst-zacht" style="font-size:0.75rem">&#10024; {{ effecten[s.effect][0].split(':')[0] if s.effect in effecten else s.effect }}</div>{% endif %}</td>
                     <td>{{ sjabloon_labels.get(s.sjabloon, s.sjabloon) }}</td>
+                    <td class="dia-moment">{% if s.moment %}{{ s.moment|datum_nl }}{% if s.schijnwerper_minuten %}<div class="tekst-zacht" style="font-size:0.75rem">&#128294; {{ s.schijnwerper_minuten }} min schijnwerper</div>{% endif %}{% else %}<span class="tekst-zacht">—</span>{% endif %}</td>
                     <td>{% if s.sjabloon == 'video_volledig' and s.video_hele_duur and s.video_duur %}{{ s.video_duur|round|int }}s (video){% else %}{{ s.weergave_duur_seconden }}s{% endif %}{% if s.herhalingen > 1 %} <span class="tekst-zacht">&times;{{ s.herhalingen }} per ronde</span>{% endif %}</td>
                     <td>{{ s.volgorde }}</td>
                     <td>
@@ -611,6 +698,12 @@
                     </td>
                     <td class="tabel-acties">
                         <a href="{{ url_for('kiosk_sponsor_bewerken', sponsor_id=s.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+                        <form method="post" action="{{ url_for('kiosk_moment_nu', dia_id=s.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="terug" value="{{ terug_dias }}">
+                            <button type="submit" class="btn btn-rand btn-klein" title="Nu groot op alle tv's (de schijnwerper)">Nu tonen</button>
+                        </form>
+                        <a href="{{ url_for('kiosk_moment_voorbeeld', dia_id=s.id) }}" target="_blank" class="btn btn-rand btn-klein" title="De schijnwerper in je browser, zonder dat de tv's iets merken">Voorbeeld</a>
                         <form method="post" action="{{ url_for('kiosk_sponsor_verwijderen', sponsor_id=s.id) }}"
                               onsubmit="return bevestigEnVerstuur(this, 'Dia \'{{ s.titel or 'zonder titel' }}\' verwijderen?');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -622,6 +715,10 @@
             </tbody>
         </table>
     </div>
+    {% else %}
+    <p class="leeg" style="margin:0">Nog geen dia's in deze map.</p>
+    {% endif %}
+    {% endfor %}
     {% else %}
     <p class="leeg">Nog geen dia's toegevoegd.</p>
     {% endif %}

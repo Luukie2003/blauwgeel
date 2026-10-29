@@ -1,10 +1,11 @@
 """Sponsoren, mededelingen en de sjabloonbouwer voor de dia's."""
 
 import json
-from datetime import date
+from datetime import date, datetime
 
 from flask import flash, redirect, render_template, request, url_for
 
+import kiosk_momenten
 from club_van_20 import bereken_club_van_20_status
 from database import get_db
 from helpers import (
@@ -77,7 +78,30 @@ def _sponsor_uit_formulier():
     if vanaf and tot and tot < vanaf:
         vanaf, tot = tot, vanaf
         datum_melding = "De einddatum lag voor de begindatum: ik heb ze omgewisseld."
+    # Map, moment en effect (1.76.0, zie kiosk_momenten.py).
+    try:
+        map_id = int(request.form.get("map_id") or 0) or None
+    except ValueError:
+        map_id = None
+    if map_id and get_db().execute("SELECT 1 FROM kiosk_dia_mappen WHERE id = ?", (map_id,)).fetchone() is None:
+        map_id = None
+    effect = request.form.get("effect", "").strip()
+    effect = effect if effect in kiosk_momenten.EFFECTEN else None
+    moment = kiosk_momenten.tijdstip(request.form.get("moment"))
+    moment_tot = kiosk_momenten.tijdstip(request.form.get("moment_tot"))
+    if moment_tot and (not moment or moment_tot <= moment):
+        moment_tot = None
+        datum_melding = "Het einde van het moment lag niet na het begin: dat heb ik leeggelaten."
     return {
+        "map_id": map_id,
+        "moment": kiosk_momenten.tekst(moment),
+        "moment_tot": kiosk_momenten.tekst(moment_tot),
+        "schijnwerper_minuten": kiosk_momenten.schoon_minuten(request.form.get("schijnwerper_minuten")),
+        "effect": effect,
+        "effect_opties": kiosk_momenten.schoon_opties(effect, request.form.get("prijs_links"), request.form.get("prijs_boven"),
+                                                      request.form.get("programma_rijen"), sjabloon),
+        "balk_tekst": " ".join((request.form.get("balk_tekst") or "").split())[:80] or None,
+        "label": " ".join((request.form.get("label") or "").split())[:30] or None,
         "zichtbaar_vanaf": vanaf,
         "zichtbaar_tot": tot,
         "datum_melding": datum_melding,
@@ -93,6 +117,29 @@ def _sponsor_uit_formulier():
         "tekst_grootte": tekst_grootte,
         "video_hele_duur": 1 if request.form.get("video_hele_duur") else 0,
         "video_geluid": 1 if request.form.get("video_geluid") else 0,
+    }
+
+
+def _moment_waarden(gegevens):
+    """De kolommen voor map, moment en effect, in de volgorde van de INSERT en UPDATE hieronder."""
+    return tuple(gegevens[k] for k in ("map_id", "moment", "moment_tot", "schijnwerper_minuten", "effect", "effect_opties",
+                                        "balk_tekst", "label"))
+
+
+def _moment_context(db, sponsor):
+    """Wat kiosk_sponsor_form.html nodig heeft voor map, moment en effect."""
+    try:
+        gekozen_map = int(request.args.get("map") or 0) or None
+    except ValueError:
+        gekozen_map = None
+    return {
+        "mappen": kiosk_momenten.mappen(db),
+        "gekozen_map": gekozen_map,
+        "effecten": {k: v for k, v in kiosk_momenten.EFFECTEN.items()},
+        "effecten_json": {k: {"kleur": v[1], "prijs": list(v[2]) if v[2] else None} for k, v in kiosk_momenten.EFFECTEN.items()},
+        "opties": kiosk_momenten.effect_opties(sponsor) if sponsor and sponsor["effect"] else {},
+        "programma_standaard": kiosk_momenten.PROGRAMMA_STANDAARD,
+        "max_schijnwerper": kiosk_momenten.MAX_SCHIJNWERPER_MINUTEN,
     }
 
 
@@ -219,8 +266,23 @@ def register_routes(app):
             s["id"]: len(json.loads(s["elementen"])) for s in sjablonen_custom
         }
         instellingen = _scherm_instellingen(db)
+        # De dia's per map (1.76.0, zie kiosk_momenten.py): eerst Algemeen, dan de mappen; binnen een map op moment.
+        nu = datetime.now()
+        alle_mappen = kiosk_momenten.mappen(db)
+        bekend = {m["id"] for m in alle_mappen}
+        dia_groepen = [{"map": None, "naam": "Algemeen", "status": None,
+                        "dias": [s for s in sponsoren if s["map_id"] not in bekend]}]
+        for m in alle_mappen:
+            dia_groepen.append({
+                "map": m, "naam": m["naam"], "status": kiosk_momenten.map_status(m, nu),
+                "dias": sorted((s for s in sponsoren if s["map_id"] == m["id"]),
+                               key=lambda s: (s["moment"] or "9999", s["volgorde"], s["id"])),
+            })
         return render_template(
             "kiosk_sponsoren_leden.html",
+            dia_groepen=dia_groepen,
+            mappen=alle_mappen,
+            effecten=kiosk_momenten.EFFECTEN,
             sponsoren=sponsoren,
             vandaag=vandaag_amsterdam().isoformat(),
             club_van_20=club_van_20,
@@ -260,8 +322,9 @@ def register_routes(app):
                     achtergrond_afbeelding, overgang, tekst_grootte,
                     weergave_duur_seconden, volgorde, actief, aangemaakt_op,
                     video, video_duur, video_hele_duur, video_geluid, herhalingen,
-                    zichtbaar_vanaf, zichtbaar_tot)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    zichtbaar_vanaf, zichtbaar_tot, map_id, moment, moment_tot, schijnwerper_minuten,
+                    effect, effect_opties, balk_tekst, label)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     gegevens["sjabloon"],
                     gegevens["custom_sjabloon_id"],
@@ -282,10 +345,11 @@ def register_routes(app):
                     gegevens["herhalingen"],
                     gegevens["zichtbaar_vanaf"],
                     gegevens["zichtbaar_tot"],
+                    *_moment_waarden(gegevens),
                 ),
             )
             db.commit()
-            flash("Sponsor toegevoegd.", "success")
+            flash("Dia toegevoegd.", "success")
             if gegevens["datum_melding"]:
                 flash(gegevens["datum_melding"], "warning")
             for tekst in video_meldingen:
@@ -296,7 +360,7 @@ def register_routes(app):
                 flash(zwaarte_melding(video_info(video, video_duur), video_duur), "warning")
             elif gegevens["sjabloon"] == "video_volledig" and not video:
                 flash("Er is nog geen video gekozen: deze dia verschijnt pas op het scherm zodra je er een toevoegt.", "warning")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_sponsoren_leden") + "#dias-tabel")
         sjablonen_custom, sjablonen_custom_json = _sjablonen_custom_context(db)
         return render_template(
             "kiosk_sponsor_form.html",
@@ -310,6 +374,7 @@ def register_routes(app):
             overgangen=KIOSK_OVERGANGEN,
             tekst_groottes=KIOSK_TEKST_GROOTTES,
             producten=_sjabloon_producten(db),
+            **_moment_context(db, None),
         )
 
     @app.route("/kiosk/sponsoren-leden/sponsoren/<int:sponsor_id>/bewerken", methods=["GET", "POST"])
@@ -367,7 +432,9 @@ def register_routes(app):
                        afbeelding = ?, achtergrond_afbeelding = ?, overgang = ?,
                        tekst_grootte = ?, weergave_duur_seconden = ?, volgorde = ?,
                        actief = ?, video = ?, video_duur = ?, video_hele_duur = ?,
-                       video_geluid = ?, herhalingen = ?, zichtbaar_vanaf = ?, zichtbaar_tot = ?
+                       video_geluid = ?, herhalingen = ?, zichtbaar_vanaf = ?, zichtbaar_tot = ?,
+                       map_id = ?, moment = ?, moment_tot = ?, schijnwerper_minuten = ?, effect = ?, effect_opties = ?,
+                       balk_tekst = ?, label = ?
                    WHERE id = ?""",
                 (
                     gegevens["sjabloon"],
@@ -388,11 +455,12 @@ def register_routes(app):
                     gegevens["herhalingen"],
                     gegevens["zichtbaar_vanaf"],
                     gegevens["zichtbaar_tot"],
+                    *_moment_waarden(gegevens),
                     sponsor_id,
                 ),
             )
             db.commit()
-            flash("Sponsor bijgewerkt.", "success")
+            flash("Dia bijgewerkt.", "success")
             if gegevens["datum_melding"]:
                 flash(gegevens["datum_melding"], "warning")
             for tekst in video_meldingen:
@@ -403,7 +471,7 @@ def register_routes(app):
                 flash(zwaarte_melding(video_info(video, video_duur), video_duur), "warning")
             elif gegevens["sjabloon"] == "video_volledig" and not video:
                 flash("Er is nog geen video gekozen: deze dia verschijnt pas op het scherm zodra je er een toevoegt.", "warning")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_sponsoren_leden") + "#dias-tabel")
         sjablonen_custom, sjablonen_custom_json = _sjablonen_custom_context(db)
         return render_template(
             "kiosk_sponsor_form.html",
@@ -419,6 +487,7 @@ def register_routes(app):
             max_herhalingen=KIOSK_MAX_HERHALINGEN,
             ffmpeg_beschikbaar=ffmpeg_beschikbaar(),
             VIDEO_ZWAAR_MBIT=VIDEO_ZWAAR_MBIT,
+            **_moment_context(db, sponsor),
         )
 
     @app.route("/kiosk/sponsoren-leden/sponsoren/<int:sponsor_id>/verwijderen", methods=["POST"])
@@ -429,8 +498,8 @@ def register_routes(app):
         db.commit()
         if rij:
             verwijder_video(rij["video"])  # zonder dia is het bestand alleen nog schijfruimte
-        flash("Sponsor verwijderd.", "success")
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        flash("Dia verwijderd.", "success")
+        return redirect(url_for("kiosk_sponsoren_leden") + "#dias-tabel")
 
     @app.route("/kiosk/sponsoren-leden/sjablonen/nieuw", methods=["GET", "POST"])
     def kiosk_sjabloon_nieuw():

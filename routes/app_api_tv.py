@@ -12,6 +12,7 @@ from datetime import timedelta
 
 from flask import jsonify, session
 
+import kiosk_momenten
 import kiosk_timers
 import kiosk_tvs
 from database import get_db
@@ -82,11 +83,26 @@ def _bardiensten(db):
     }
 
 
+def _momenten(db):
+    """Het programma (zie kiosk_momenten.programma) van de afgelopen 12 uur tot twee dagen vooruit, en of er nu iets
+    in de schijnwerper staat."""
+    programma = kiosk_momenten.programma(db, dagen=2)
+    return {
+        "momenten": [
+            {"id": m["dia"]["id"], "titel": _dia_titel(db, m["dia"]), "tijd": f"{m['van']:%H:%M}", "datum": m["van"].isoformat(),
+             "map": m["map"]["naam"] if m["map"] else None, "status": m["status"], "balk": m["dia"]["balk_tekst"]}
+            for m in programma
+        ],
+        "schijnwerper": bool(kiosk_momenten.handmatige_schijnwerper(db))
+        or any(m["status"] == "schijnwerper" for m in programma),
+    }
+
+
 def _overzicht(db):
     uitverkocht = db.execute(
         "SELECT COUNT(*) FROM producten WHERE actief = 1 AND toon_op_kiosk = 1 AND kiosk_uitverkocht = 1"
     ).fetchone()[0]
-    return {**_tvs(db), **_specials(db), **_bardiensten(db), "uitverkocht": uitverkocht,
+    return {**_tvs(db), **_specials(db), **_bardiensten(db), **_momenten(db), "uitverkocht": uitverkocht,
             "timers": len(kiosk_timers.actieve(db)), "thema": kiosk_thema(db),
             "themas": [{"sleutel": k, "naam": naam} for k, naam in THEMAS.items()]}
 
@@ -114,16 +130,32 @@ def _dias(db):
         dias.append({
             "id": s["id"],
             "titel": _dia_titel(db, s),
+            "map_id": s["map_id"],
+            "moment": s["moment"],
             "soort": SJABLOON_NAMEN.get(s["sjabloon"], s["sjabloon"]),
             "actief": bool(s["actief"]),
             "vanaf": s["zichtbaar_vanaf"],
             "tot": s["zichtbaar_tot"],
             "periode": periode,
         })
+    mappen = [
+        {"id": m["id"], "naam": m["naam"], "aan": bool(m["actief"]), "status": kiosk_momenten.map_status(m),
+         "vanaf": m["vanaf"], "tot": m["tot"],
+         "dias": db.execute("SELECT COUNT(*) FROM kiosk_sponsoren WHERE map_id = ?", (m["id"],)).fetchone()[0]}
+        for m in kiosk_momenten.mappen(db)
+    ]
     return {
         "blokken": [{"sleutel": k, "naam": naam, "aan": bool(instellingen[k])} for k, naam in DIA_BLOKKEN],
+        "mappen": mappen,
         "dias": dias,
     }
+
+
+def _getal_of(waarde, standaard):
+    try:
+        return int(str(waarde).strip())
+    except (TypeError, ValueError):
+        return standaard
 
 
 def _tijd(waarde, standaard):
@@ -323,6 +355,44 @@ def register_routes(app):
         titel = _dia_titel(db, dia)
         naam = f"'{titel}'" if titel else "De dia"
         return jsonify({**_dias(db), "melding": f"{naam} staat nu {'aan' if actief else 'uit'}."})
+
+    @app.route("/api/app/kantine-tv/mappen/<int:map_id>", methods=["POST"])
+    def api_app_tv_map(map_id):
+        """{aan: true/false}: een hele map dia's (zoals "Halloween feest") aan of uit."""
+        db = get_db()
+        m = db.execute("SELECT * FROM kiosk_dia_mappen WHERE id = ?", (map_id,)).fetchone()
+        if m is None:
+            return _fout("Deze map bestaat niet meer.", 404, "niet_gevonden")
+        aan = bool(_data().get("aan"))
+        kiosk_momenten.zet_map_aan(db, map_id, aan)
+        return jsonify({**_dias(db), "melding": f"{m['naam']} staat nu {'aan' if aan else 'uit'}."})
+
+    # ------------------------------------------------------------ momenten en de schijnwerper
+
+    @app.route("/api/app/kantine-tv/momenten/<int:dia_id>/nu", methods=["POST"])
+    def api_app_tv_moment_nu(dia_id):
+        """Deze dia nu in de schijnwerper op alle tv's (zie kiosk_momenten.toon_nu)."""
+        db = get_db()
+        melding, fout = kiosk_momenten.toon_nu(db, dia_id)
+        if fout:
+            return _fout(fout, 404, "niet_gevonden")
+        return jsonify({**_overzicht(db), "melding": melding})
+
+    @app.route("/api/app/kantine-tv/momenten/<int:dia_id>/later", methods=["POST"])
+    def api_app_tv_moment_later(dia_id):
+        """{minuten} (standaard 15): het moment van deze dia later, of met een negatief aantal eerder."""
+        db = get_db()
+        minuten = _getal_of(_data().get("minuten"), kiosk_momenten.SCHUIF_MINUTEN)
+        melding, fout = kiosk_momenten.schuif_op(db, dia_id, max(-120, min(120, minuten)))
+        if fout:
+            return _fout(fout)
+        return jsonify({**_overzicht(db), "melding": melding})
+
+    @app.route("/api/app/kantine-tv/schijnwerper/stop", methods=["POST"])
+    def api_app_tv_schijnwerper_stop():
+        db = get_db()
+        melding = kiosk_momenten.stop_schijnwerper(db)
+        return jsonify({**_overzicht(db), "melding": melding})
 
     @app.route("/api/app/kantine-tv/dia-blokken/<sleutel>", methods=["POST"])
     def api_app_tv_dia_blok(sleutel):

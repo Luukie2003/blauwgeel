@@ -1,0 +1,154 @@
+{# De schijnwerper (1.76.0, zie kiosk_momenten.py): in de eerste minuten van een moment (bijvoorbeeld 17:00 Heksenbrouwsel)
+   neemt de dia elk scherm over, ook het prijzenscherm. Eerst bliksem en een groot "NU!", dan knalt de dia in beeld met
+   zijn effect en een kloppende rand; elke halve minuut volgt een korte flits, zodat ook wie net binnenkomt het ziet.
+   Daarna staat er op het prijzenscherm een balk "Nu aan de bar" tot het volgende moment.
+
+   De gegevens komen bij het laden mee (kiosk_momenten()) en daarna met de vraag die het scherm toch al elke 5 seconden
+   stelt (_kiosk_welkom.html, alleen als er iets veranderd is). Het scherm rekent zelf met de klok van de server
+   (_kiosk_klok.html), dus het begint op de minuut, ook als de verbinding even hapert. moment_voorbeeld: alleen deze dia,
+   meteen, voor Voorbeeld (zonder dat de tv's iets merken). #}
+<div id="kiosk-moment" class="km" aria-live="polite"></div>
+<script src="{{ url_for('static', filename='kiosk_effecten.js') }}?v={{ kiosk_effecten_versie|default('') }}"></script>
+<script>
+(function () {
+    var voorbeeld = {{ (moment_voorbeeld|default(none))|tojson }};
+    var data = {{ (kiosk_momenten(moment_voorbeeld|default(none)) if kiosk_momenten is defined else none)|tojson }}
+        || { momenten: [], handmatig: null, gestopt: null, versie: '' };
+    var laag = document.getElementById('kiosk-moment');
+    var inhoud = document.getElementById('inhoud');  // alleen op het prijzenscherm
+    var balk = null;
+    var huidig = null, flitsKlok = null, introKlok = null;
+    var INTRO_MS = 3200, HERHAAL_MS = 30000;
+
+    function nu() { return window.kioskNu ? window.kioskNu() : Date.now(); }
+    function vind(id) {
+        for (var i = 0; i < data.momenten.length; i++) if (data.momenten[i].id === id) return data.momenten[i];
+        return null;
+    }
+    function tekst(t) { var d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML; }
+
+    // Wat er nu in de schijnwerper hoort: Voorbeeld, een dia die met de hand is gestart, of een moment dat net begon
+    // (en niet met Stop is afgebroken).
+    function actief(t) {
+        if (voorbeeld) return vind(voorbeeld);
+        var h = data.handmatig, g = data.gestopt;
+        if (h && t < h.tot && vind(h.id)) return vind(h.id);
+        for (var i = 0; i < data.momenten.length; i++) {
+            var m = data.momenten[i];
+            if (m.van && m.spot && m.van <= t && t < m.spot && !(g && g.id === m.id && t < g.tot)) return m;
+        }
+        return null;
+    }
+
+    function flits() {
+        var f = laag.querySelector('.km-flits');
+        if (!f) return;
+        f.classList.remove('km-flits--aan');
+        void f.offsetWidth;  // de animatie opnieuw laten beginnen
+        f.classList.add('km-flits--aan');
+    }
+
+    function herhaal() {
+        flits();
+        laag.classList.remove('km--puls');
+        void laag.offsetWidth;
+        laag.classList.add('km--puls');
+    }
+
+    function toon(m) {
+        laag.style.setProperty('--km-kleur', m.kleur || '#ff9326');
+        laag.innerHTML = '<section class="' + m.klasse + ' actief km-dia">' + m.inhoud + '</section>' +
+            '<div class="km-rand"></div><div class="km-flits"></div>' +
+            '<div class="km-intro">' + (m.tijd ? '<div class="km-tijd">' + tekst(m.tijd) + ' UUR</div>' : '') +
+            '<div class="km-nu">NU!</div>' + (m.titel ? '<div class="km-naam">' + tekst(m.titel) + '</div>' : '') + '</div>';
+        var dia = laag.querySelector('.km-dia');
+        if (m.effect && window.KioskEffecten) window.KioskEffecten.maak(dia, m.effect, m.opties);
+        laag.className = 'km km--aan km--intro';
+        document.body.classList.add('km-bezig');
+        flits();
+        clearTimeout(introKlok);
+        introKlok = setTimeout(function () {
+            laag.className = 'km km--aan km--dia';
+            flits();
+        }, INTRO_MS);
+        clearInterval(flitsKlok);
+        flitsKlok = setInterval(herhaal, HERHAAL_MS);
+    }
+
+    function verberg() {
+        clearTimeout(introKlok);
+        clearInterval(flitsKlok);
+        laag.className = 'km';
+        document.body.classList.remove('km-bezig');
+        setTimeout(function () { if (!huidig) laag.innerHTML = ''; }, 500);
+    }
+
+    // Op het prijzenscherm: na de schijnwerper tot het volgende moment een balk bovenaan de prijzen.
+    function balkVoor(t) {
+        var beste = null;
+        for (var i = 0; i < data.momenten.length; i++) {
+            var m = data.momenten[i];
+            if (m.balk && m.van && m.van <= t && t < m.einde && (!beste || m.van > beste.van)) beste = m;
+        }
+        return beste;
+    }
+    function werkBalkBij(m) {
+        if (!inhoud) return;
+        if (!balk) {
+            balk = document.createElement('div');
+            balk.className = 'km-balk';
+            balk.innerHTML = '<span class="km-balk-label">Nu aan de bar</span><span class="km-balk-tekst"></span>';
+            var kop = inhoud.querySelector('header');
+            inhoud.insertBefore(balk, kop ? kop.nextSibling : inhoud.firstChild);
+        }
+        var sleutel = m ? m.id + ':' + m.balk : '';
+        if (balk.getAttribute('data-sleutel') === sleutel) return;
+        balk.setAttribute('data-sleutel', sleutel);
+        balk.className = 'km-balk' + (m ? ' km-balk--aan' : '');
+        if (m) {
+            balk.style.setProperty('--km-kleur', m.kleur || '#ff9326');
+            balk.querySelector('.km-balk-tekst').textContent = m.balk;
+        }
+        if (typeof window.pasInhoudSchaalAan === 'function') window.pasInhoudSchaalAan();
+    }
+
+    function kies() {
+        var t = nu();
+        var m = actief(t);
+        var sleutel = m ? m.id + ':' + (m.van || 'h') + ':' + (data.handmatig ? data.handmatig.tot : '') : null;
+        if (sleutel !== huidig) {
+            huidig = sleutel;
+            if (m) toon(m); else verberg();
+        }
+        werkBalkBij(m ? null : balkVoor(t));
+    }
+
+    // De afbeeldingen van de momenten alvast binnenhalen: anders blijft het scherm na de intro even zwart, zeker op het
+    // prijzenscherm (dat ze nog nooit liet zien).
+    var voorgeladen = {};
+    function laadVoor() {
+        data.momenten.forEach(function (m) {
+            (m.inhoud.match(/src="[^"]+"/g) || []).forEach(function (bron) {
+                var url = bron.slice(5, -1).replace(/&amp;/g, '&');
+                if (voorgeladen[url]) return;
+                voorgeladen[url] = new Image();
+                voorgeladen[url].src = url;
+            });
+        });
+    }
+
+    window.kioskMomentenVersie = function () { return voorbeeld ? '' : (data.versie || ''); };
+    window.kioskMomentenBijwerken = function (nieuw) {
+        if (voorbeeld || !nieuw || !nieuw.momenten) return;
+        data = nieuw;
+        laadVoor();
+        kies();
+    };
+    // Laat de versiepoll van het scherm wachten met herladen zolang de schijnwerper aan staat.
+    window.kioskMomentBezig = function () { return !!huidig; };
+
+    laadVoor();
+    kies();
+    setInterval(kies, 1000);
+})();
+</script>

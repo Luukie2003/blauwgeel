@@ -39,6 +39,7 @@
         .club-badge img { height: max(1.5rem, calc(34 * var(--u))); width: auto; display: block; }
         .club-badge span { font-size: max(0.7rem, calc(15 * var(--u))); font-weight: 800; letter-spacing: 0.04em; color: var(--geel); white-space: nowrap; }
     </style>
+    {% include '_kiosk_klok.html' %}
 </head>
 <body>
     {% include '_kiosk_herstel.html' %}
@@ -47,58 +48,11 @@
         {% for slide in slides %}
         <section class="slide slide-{{ slide.type }}{% if slide.type.startswith('club_van_20') or slide.type == 'sponsorlogos' %} c20{% endif %}{% if slide.type == 'sponsor' %} sjabloon-{{ slide.sjabloon }} overgang-{{ slide.overgang }} tekst-{{ slide.tekst_grootte }}{% endif %}{% if loop.first %} actief{% endif %}"
                  data-duur="{{ slide.duur }}"{% if slide.herhalingen and slide.herhalingen > 1 %} data-herhaal="{{ slide.herhalingen }}"{% endif %}
+                 {% if slide.van %} data-van="{{ slide.van }}"{% endif %}{% if slide.tot %} data-tot="{{ slide.tot }}"{% endif %}
+                 {% if slide.effect %} data-effect="{{ slide.effect }}" data-opties="{{ slide.opties|tojson|forceescape }}"{% endif %}
                  {% if slide.sjabloon == 'aangepast' and slide.custom_achtergrond_kleur %}style="background: {{ slide.custom_achtergrond_kleur }};"{% endif %}>
             {% if slide.type == 'sponsor' %}
-                {% if slide.sjabloon == 'afbeelding_volledig' %}
-                    {% if slide.afbeelding %}
-                    <img class="sponsor-afbeelding" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.afbeelding) }}" alt="">
-                    {% endif %}
-                    {% if slide.titel %}<div class="onderschrift">{{ slide.titel }}</div>{% endif %}
-                {% elif slide.sjabloon == 'afbeelding_titel_tekst' %}
-                    {% if slide.afbeelding %}
-                    <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.afbeelding) }}" alt="">
-                    {% endif %}
-                    <div class="inhoud">
-                        {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
-                        {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
-                    </div>
-                {% elif slide.sjabloon == 'titel_ondertitel_banner' %}
-                    <div class="banner">
-                        {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
-                        {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
-                    </div>
-                {% elif slide.sjabloon == 'mededeling_groot' %}
-                    {% if slide.achtergrond_afbeelding %}
-                    <img class="mededeling-achtergrond-img" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.achtergrond_afbeelding) }}" alt="">
-                    <div class="mededeling-overlay"></div>
-                    {% endif %}
-                    <div class="mededeling-label">Mededeling</div>
-                    {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
-                    {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
-                {% elif slide.sjabloon == 'video_volledig' %}
-                    {% if slide.video %}
-                    <video class="sponsor-video" data-bron="{{ url_for('static', filename='kiosk_videos/' + slide.video) }}" data-bytes="{{ slide.video_bytes }}" preload="none" muted loop playsinline{% if slide.video_geluid %} data-geluid="1"{% endif %}></video>
-                    {% endif %}
-                    {% if slide.titel %}<div class="onderschrift">{{ slide.titel }}</div>{% endif %}
-                {% elif slide.sjabloon == 'aangepast' %}
-                    {% if slide.custom_achtergrond_afbeelding %}
-                    <img class="canvas-achtergrond-img" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.custom_achtergrond_afbeelding) }}" alt="">
-                    {% if slide.custom_overlay_donker %}<div class="canvas-overlay"></div>{% endif %}
-                    {% endif %}
-                    {% for element in slide.elementen %}
-                    <div class="canvas-element canvas-element--{{ element.type|replace('_', '-') }} canvas-lettergrootte-{{ element.lettergrootte }}"
-                         style="left:{{ element.x }}%; top:{{ element.y }}%; width:{{ element.breedte }}%; height:{{ element.hoogte }}%; color:{{ element.kleur }}; text-align:{{ element.uitlijning|css_uitlijning }};">
-                        {% if element.type == 'foto' %}
-                            {% if element.inhoud %}<img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + element.inhoud) }}" alt="">{% endif %}
-                        {% else %}
-                            {{ element.inhoud }}
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
-                    {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
-                {% endif %}
+                {% include '_kiosk_sponsor_inhoud.html' %}
             {% elif slide.type.startswith('club_van_20') %}
                 {% if slide.achtergrond %}
                 <img class="c20-achtergrond" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.achtergrond) }}" alt="">
@@ -511,12 +465,21 @@
             return gewoon[gewoonIndex];
         }
 
-        // De volgende dia die klaar is om getoond te worden: een video-dia waarvan de video nog binnenkomt
-        // slaan we over (hij komt in een volgende ronde). Is er niets anders, dan blijft de huidige staan.
+        // Een dia met een tijdslot (data-van/data-tot, zie kiosk_momenten.py) doet alleen mee binnen dat tijdslot, op de
+        // klok van de server (_kiosk_klok.html).
+        function inVenster(slide) {
+            var t = window.kioskNu ? window.kioskNu() : Date.now();
+            var van = parseFloat(slide.getAttribute('data-van')), tot = parseFloat(slide.getAttribute('data-tot'));
+            return !(van && t < van) && !(tot && t >= tot);
+        }
+
+        // De volgende dia die klaar is om getoond te worden: een video-dia waarvan de video nog binnenkomt, of een dia
+        // buiten zijn tijdslot, slaan we over (hij komt in een volgende ronde). Is er niets anders, dan blijft de huidige
+        // staan.
         function volgende() {
             for (var i = 0; i < slides.length; i++) {
                 var kandidaat = volgendeKandidaat();
-                if (videoKlaar(kandidaat)) return kandidaat;
+                if (videoKlaar(kandidaat) && inVenster(kandidaat)) return kandidaat;
             }
             return huidige;
         }
@@ -542,7 +505,8 @@
         }
 
         if (huidige === null) huidige = volgende();  // verder na een herlaadbeurt
-        if (!videoKlaar(huidige)) huidige = volgende();  // niet beginnen met een zwart scherm als er iets anders is
+        // Niet beginnen met een zwart scherm of een dia buiten zijn tijdslot als er iets anders is.
+        if (!videoKlaar(huidige) || !inVenster(huidige)) huidige = volgende();
         toon(huidige);
         plan();
     })();
@@ -566,8 +530,10 @@
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     if (data.versie && data.versie !== huidigeVersie) {
-                        // Een melding voor een nieuw/verlengd lid (_kiosk_welkom.html) eerst laten uitspelen.
+                        // Een melding voor een nieuw/verlengd lid (_kiosk_welkom.html) eerst laten uitspelen, en de
+                        // schijnwerper (_kiosk_moment.html): anders begint die na het herladen opnieuw met de bliksem.
                         if (window.kioskWelkomBezig && window.kioskWelkomBezig()) return;
+                        if (window.kioskMomentBezig && window.kioskMomentBezig()) return;
                         // Bij een diashow na de dia die nu in beeld is (zie plan() hierboven), anders meteen; in beide
                         // gevallen alleen als de site de nieuwe pagina ook echt geeft (zie _kiosk_herstel.html).
                         if (window.kioskDiaHerladen) window.kioskDiaHerladen(); else window.kioskScherm.herlaad();
@@ -578,6 +544,7 @@
     })();
     </script>
     {% include '_kiosk_timer.html' %}
+    {% include '_kiosk_moment.html' %}
     {% include '_kiosk_welkom.html' %}
 {% with thema_scherm="dias" %}{% include "_kiosk_thema.html" %}{% endwith %}
 </body>

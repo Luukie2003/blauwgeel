@@ -6,10 +6,9 @@
     <title>Prijslijst · s.v. Blauw-Geel 1915</title>
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
     <meta name="theme-color" content="#1e3a8a">
-    {% if sponsoren %}
-    {# Voor de sponsordia's (zelfde opmaak als op het kantine scherm). #}
+    {# Voor de sponsordia's en de schijnwerper (_kiosk_moment.html): zelfde opmaak als op het kantine scherm. Voor de
+       prijzen zelf maakt hij niets uit (de stijl hieronder komt erna). #}
     <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie }}">
-    {% endif %}
     <style>
         :root {
             --blauw: #1e3a8a;
@@ -185,6 +184,7 @@
             50% { box-shadow: 0 0 0 20px rgba(216, 30, 30, 0); }
         }
     </style>
+    {% include '_kiosk_klok.html' %}
 </head>
 <body>
     {% include '_kiosk_herstel.html' %}
@@ -541,8 +541,10 @@
                         bekendeUitverkocht = bekendeUitverkocht.concat(nieuwUitverkocht);
                         setTimeout(function () { window.kioskScherm.herlaad(); }, 8000);
                     } else {
-                        // Een melding voor een nieuw/verlengd lid (_kiosk_welkom.html) eerst laten uitspelen.
+                        // Een melding voor een nieuw/verlengd lid (_kiosk_welkom.html) eerst laten uitspelen, en de
+                        // schijnwerper (_kiosk_moment.html): anders begint die na het herladen opnieuw met de bliksem.
                         if (window.kioskWelkomBezig && window.kioskWelkomBezig()) return;
+                        if (window.kioskMomentBezig && window.kioskMomentBezig()) return;
                         // Alleen als de site de nieuwe pagina ook echt geeft (zie _kiosk_herstel.html).
                         window.kioskScherm.herlaad();
                     }
@@ -552,6 +554,7 @@
     })();
     </script>
     {% include '_kiosk_timer.html' %}
+    {% include '_kiosk_moment.html' %}
     {% include '_kiosk_welkom.html' %}
 {% with thema_scherm="prijzen" %}{% include "_kiosk_thema.html" %}{% endwith %}
 </body>

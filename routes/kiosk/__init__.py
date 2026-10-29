@@ -5,7 +5,7 @@ routes behouden hun eigen endpoint-namen, dus url_for() en de rechten in
 app.py werken ongewijzigd."""
 
 from database import get_db
-from routes.kiosk import prijzen, bardienst, acties, sponsoren_sjablonen, scherm, timer, tvs
+from routes.kiosk import prijzen, bardienst, acties, sponsoren_sjablonen, scherm, timer, tvs, momenten
 from routes.kiosk.gedeeld import kiosk_thema
 
 
@@ -22,3 +22,4 @@ def register_routes(app):
     scherm.register_routes(app)
     tvs.register_routes(app)
     timer.register_routes(app)
+    momenten.register_routes(app)

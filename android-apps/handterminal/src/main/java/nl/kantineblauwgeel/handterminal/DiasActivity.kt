@@ -6,9 +6,9 @@ import android.os.Bundle
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
-/** De diashow aan of uit: hele onderdelen (de standen, Man of the Match, ...) en losse dia's, bijvoorbeeld een
- * mededeling die niet meer klopt. Tik en hij draait wel of niet mee; maken en bewerken doe je op de site. Zie
- * routes/app_api_tv.py. */
+/** De diashow aan of uit: hele onderdelen (de standen, Man of the Match, ...), mappen (zoals "Halloween feest") en
+ * losse dia's, bijvoorbeeld een mededeling die niet meer klopt. Tik en hij draait wel of niet mee; maken en bewerken doe
+ * je op de site. Zie routes/app_api_tv.py. */
 class DiasActivity : BasisActivity() {
 
     private lateinit var b: ActivityLijstBinding
@@ -64,6 +64,26 @@ class DiasActivity : BasisActivity() {
             }
         }
 
+        // Mappen: een hele map dia's met één tik aan of uit; met een begin en einde gaat hij ook vanzelf.
+        val mappen = data.optJSONArray("mappen")?.objecten().orEmpty()
+        if (mappen.isNotEmpty()) {
+            Lijst.kop(inhoud, getString(R.string.mappen))
+            val kaart = Lijst.kaart(inhoud)
+            for (m in mappen) {
+                val aan = m.optBoolean("aan")
+                val wanneer = when (m.optString("status")) {
+                    "straks" -> getString(R.string.map_straks, Lijst.datum(m.tekstOfNull("vanaf")))
+                    "voorbij" -> getString(R.string.map_voorbij)
+                    else -> m.tekstOfNull("tot")?.let { getString(R.string.map_tot, Lijst.datum(it)) }
+                }
+                Lijst.regel(kaart, m.optString("naam"),
+                    listOfNotNull(resources.getQuantityString(R.plurals.n_dias, m.optInt("dias"), m.optInt("dias")), wanneer).joinToString(" · "),
+                    getString(if (aan) R.string.aan else R.string.uit), if (aan) R.color.groen_tekst else R.color.tekst_zacht) {
+                    zet("/api/app/kantine-tv/mappen/${m.getInt("id")}", JSONObject().put("aan", !aan))
+                }
+            }
+        }
+
         Lijst.kop(inhoud, getString(R.string.dias))
         if (!sponsorenAan) Lijst.tekst(inhoud, getString(R.string.dias_blok_uit), grootte = 12f, kleur = R.color.oranje_balk)
         val dias = data.optJSONArray("dias")?.objecten().orEmpty()
@@ -77,7 +97,8 @@ class DiasActivity : BasisActivity() {
                 else -> dia.tekstOfNull("tot")?.let { getString(R.string.dia_tot, Lijst.datum(it, metTijd = false)) }
             }
             Lijst.regel(kaart, dia.tekstOfNull("titel") ?: dia.optString("soort"),
-                listOfNotNull(dia.optString("soort").substringBefore(" ("), periode).joinToString(" · "),
+                listOfNotNull(dia.optString("soort").substringBefore(" ("),
+                    dia.tekstOfNull("moment")?.let { getString(R.string.dia_moment, Lijst.datum(it)) }, periode).joinToString(" · "),
                 getString(if (actief) R.string.aan else R.string.uit), if (actief) R.color.groen_tekst else R.color.tekst_zacht) {
                 zet("/api/app/kantine-tv/dias/${dia.getInt("id")}", JSONObject().put("actief", !actief))
             }

@@ -5,6 +5,7 @@ import re
 
 from flask import url_for
 
+import kiosk_momenten
 import qr
 from club_van_20 import bouw_slides as club_van_20_slides
 from helpers import (
@@ -28,7 +29,7 @@ def _poule_slug(titel):
     return sleutel or "poule"
 
 
-def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None):
+def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None, venster=None, tijden_per_map=None):
     """Bouwt de slide-dict voor 1 sponsor-/mededelingrij. Bij
     sjabloon == 'aangepast' wordt het gekoppelde zelfgebouwde sjabloon
     (kiosk_sjablonen_custom) verrijkt met de eigen titel/tekst/foto van
@@ -37,7 +38,10 @@ def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None):
     rest van _bouw_slides). Een 'prijs'-element krijgt hier zijn inhoud
     vers uit producten_bij_id -- dat gebeurt bij elke opbouw opnieuw
     (elke paginalaad/versiepoll), dus een latere prijswijziging van het
-    gekoppelde product komt vanzelf door, net als de rest van het scherm."""
+    gekoppelde product komt vanzelf door, net als de rest van het scherm.
+
+    venster: (van, tot) uit kiosk_momenten.vensters; de diashow toont de dia alleen daartussen (data-van en data-tot,
+    in ms). tijden_per_map: de tijdsloten per map, voor een dia met het effect 'programma'."""
     duur = s["weergave_duur_seconden"]
     if s["sjabloon"] == "video_volledig":
         if not s["video"]:
@@ -59,6 +63,21 @@ def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None):
         "tekst_grootte": s["tekst_grootte"],
         "achtergrond_afbeelding": s["achtergrond_afbeelding"],
     }
+    effect = s["effect"] if s["effect"] in kiosk_momenten.EFFECTEN else None
+    opties = kiosk_momenten.effect_opties(s) if effect else {}
+    if effect == "programma":
+        opties["momenten"] = (tijden_per_map or {}).get(s["map_id"], [])
+    start = kiosk_momenten.tijdstip(s["moment"])
+    slide.update({
+        "id": s["id"],
+        "van": kiosk_momenten.ms(venster[0]) if venster else None,
+        "tot": kiosk_momenten.ms(venster[1]) if venster else None,
+        "effect": effect,
+        "opties": opties,
+        "kleur": kiosk_momenten.kleur(effect),
+        "label": s["label"] or (f"{start:%H:%M} uur" if start else None),
+        "tekst_regels": [regel.strip() for regel in (s["tekst"] or "").splitlines() if regel.strip()],
+    })
     if s["sjabloon"] != KIOSK_SPONSOR_SJABLOON_AANGEPAST:
         return slide
     sjabloon = eigen_sjablonen.get(s["custom_sjabloon_id"])
@@ -121,10 +140,15 @@ def _bouw_slides(db):
             r["id"]: r
             for r in db.execute("SELECT id, verkoopprijs FROM producten").fetchall()
         }
+        # Mappen en momenten (kiosk_momenten.py): een dia in een map die uit staat, of waarvan het tijdslot voorbij is,
+        # doet niet mee; de rest krijgt zijn venster mee, zodat het scherm hem precies op tijd in de diashow neemt.
+        open_ = kiosk_momenten.vensters(db, sponsoren)
+        tijden = kiosk_momenten.tijden_per_map(db, sponsoren)
         slides = [
             slide
             for s in sponsoren
-            if (slide := _sponsor_slide(s, eigen_sjablonen, producten_bij_id)) is not None
+            if s["id"] in open_
+            and (slide := _sponsor_slide(s, eigen_sjablonen, producten_bij_id, open_[s["id"]], tijden)) is not None
         ]
         if slides:
             blokken.append((instellingen["sponsoren_volgorde"], slides))

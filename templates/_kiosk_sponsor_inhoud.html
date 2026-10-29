@@ -1,0 +1,72 @@
+{# De inhoud van een dia uit kiosk_sponsoren (zie _sponsor_slide in routes/kiosk/dia_gegevens.py), per sjabloon. Gedeeld
+   door de diashow (kiosk_scherm.html) en de schijnwerper (_kiosk_moment.html, die hem ook op het prijzenscherm toont). #}
+{% if slide.sjabloon == 'afbeelding_volledig' %}
+    {% if slide.afbeelding %}
+    <img class="sponsor-afbeelding" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.afbeelding) }}" alt="">
+    {% endif %}
+    {# Een ontwerp met een effect (zoals de dia's van het Halloween feest) heeft zijn eigen tekst: dan geen onderschrift. #}
+    {% if slide.titel and not slide.effect %}<div class="onderschrift">{{ slide.titel }}</div>{% endif %}
+{% elif slide.sjabloon == 'afbeelding_titel_tekst' %}
+    {% if slide.afbeelding %}
+    <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.afbeelding) }}" alt="">
+    {% endif %}
+    <div class="inhoud">
+        {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
+        {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
+    </div>
+{% elif slide.sjabloon == 'titel_ondertitel_banner' %}
+    <div class="banner">
+        {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
+        {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
+    </div>
+{% elif slide.sjabloon == 'mededeling_groot' %}
+    {% if slide.achtergrond_afbeelding %}
+    <img class="mededeling-achtergrond-img" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.achtergrond_afbeelding) }}" alt="">
+    <div class="mededeling-overlay"></div>
+    {% endif %}
+    <div class="mededeling-label">Mededeling</div>
+    {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
+    {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
+{% elif slide.sjabloon == 'video_volledig' %}
+    {% if slide.video %}
+    <video class="sponsor-video" data-bron="{{ url_for('static', filename='kiosk_videos/' + slide.video) }}" data-bytes="{{ slide.video_bytes }}" preload="none" muted loop playsinline{% if slide.video_geluid %} data-geluid="1"{% endif %}></video>
+    {% endif %}
+    {% if slide.titel %}<div class="onderschrift">{{ slide.titel }}</div>{% endif %}
+{% elif slide.sjabloon == 'aangepast' %}
+    {% if slide.custom_achtergrond_afbeelding %}
+    <img class="canvas-achtergrond-img" src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.custom_achtergrond_afbeelding) }}" alt="">
+    {% if slide.custom_overlay_donker %}<div class="canvas-overlay"></div>{% endif %}
+    {% endif %}
+    {% for element in slide.elementen %}
+    <div class="canvas-element canvas-element--{{ element.type|replace('_', '-') }} canvas-lettergrootte-{{ element.lettergrootte }}"
+         style="left:{{ element.x }}%; top:{{ element.y }}%; width:{{ element.breedte }}%; height:{{ element.hoogte }}%; color:{{ element.kleur }}; text-align:{{ element.uitlijning|css_uitlijning }};">
+        {% if element.type == 'foto' %}
+            {% if element.inhoud %}<img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + element.inhoud) }}" alt="">{% endif %}
+        {% else %}
+            {{ element.inhoud }}
+        {% endif %}
+    </div>
+    {% endfor %}
+{% elif slide.sjabloon == 'griezel' %}
+    {# Een griezeldia (1.76.0): griezelletters in de kleur van het effect, met maan, spinnenwebben, pompoenen en
+       kaarsen; de bewegende effecten (vleermuizen, druppels, vonken) komen erbij uit kiosk_effecten.js. Elke regel
+       van de tekst is een regel op de dia; een regel met een euroteken wordt de prijs. #}
+    <div class="gz" style="--gz-kleur: {{ slide.kleur or '#ff9326' }};">
+        <div class="gz-maan"></div>
+        <svg class="gz-web gz-web--links" viewBox="0 0 200 200"><path d="M0 0L200.0 0.0M0 0L193.2 51.8M0 0L173.2 100.0M0 0L141.4 141.4M0 0L100.0 173.2M0 0L51.8 193.2M0 0L0.0 200.0M34.0 0.0Q29.0 3.8 32.8 8.8Q27.0 11.2 29.4 17.0Q23.2 17.8 24.0 24.0Q17.8 23.2 17.0 29.4Q11.2 27.0 8.8 32.8Q3.8 29.0 0.0 34.0M68.0 0.0Q58.0 7.6 65.7 17.6Q54.0 22.4 58.9 34.0Q46.4 35.6 48.1 48.1Q35.6 46.4 34.0 58.9Q22.4 54.0 17.6 65.7Q7.6 58.0 0.0 68.0M104.0 0.0Q88.7 11.7 100.5 26.9Q82.6 34.2 90.1 52.0Q71.0 54.4 73.5 73.5Q54.4 71.0 52.0 90.1Q34.2 82.6 26.9 100.5Q11.7 88.7 0.0 104.0M142.0 0.0Q121.1 15.9 137.2 36.8Q112.8 46.7 123.0 71.0Q96.9 74.3 100.4 100.4Q74.3 96.9 71.0 123.0Q46.7 112.8 36.8 137.2Q15.9 121.1 0.0 142.0M182.0 0.0Q155.2 20.4 175.8 47.1Q144.6 59.9 157.6 91.0Q124.2 95.3 128.7 128.7Q95.3 124.2 91.0 157.6Q59.9 144.6 47.1 175.8Q20.4 155.2 0.0 182.0"/></svg>
+        <svg class="gz-web gz-web--rechts" viewBox="0 0 200 200"><path d="M0 0L200.0 0.0M0 0L193.2 51.8M0 0L173.2 100.0M0 0L141.4 141.4M0 0L100.0 173.2M0 0L51.8 193.2M0 0L0.0 200.0M34.0 0.0Q29.0 3.8 32.8 8.8Q27.0 11.2 29.4 17.0Q23.2 17.8 24.0 24.0Q17.8 23.2 17.0 29.4Q11.2 27.0 8.8 32.8Q3.8 29.0 0.0 34.0M68.0 0.0Q58.0 7.6 65.7 17.6Q54.0 22.4 58.9 34.0Q46.4 35.6 48.1 48.1Q35.6 46.4 34.0 58.9Q22.4 54.0 17.6 65.7Q7.6 58.0 0.0 68.0M104.0 0.0Q88.7 11.7 100.5 26.9Q82.6 34.2 90.1 52.0Q71.0 54.4 73.5 73.5Q54.4 71.0 52.0 90.1Q34.2 82.6 26.9 100.5Q11.7 88.7 0.0 104.0M142.0 0.0Q121.1 15.9 137.2 36.8Q112.8 46.7 123.0 71.0Q96.9 74.3 100.4 100.4Q74.3 96.9 71.0 123.0Q46.7 112.8 36.8 137.2Q15.9 121.1 0.0 142.0M182.0 0.0Q155.2 20.4 175.8 47.1Q144.6 59.9 157.6 91.0Q124.2 95.3 128.7 128.7Q95.3 124.2 91.0 157.6Q59.9 144.6 47.1 175.8Q20.4 155.2 0.0 182.0"/></svg>
+        {% if slide.label %}<div class="gz-label">{{ slide.label }}</div>{% endif %}
+        <div class="gz-midden">
+            {% if slide.titel %}<h2 class="gz-titel">{{ slide.titel }}</h2>{% endif %}
+            {% for regel in slide.tekst_regels %}
+            <p class="gz-regel{{ ' gz-prijs' if '€' in regel else '' }}">{{ regel }}</p>
+            {% endfor %}
+        </div>
+        <div class="gz-pompoen gz-pompoen--links"><div class="gz-gloed"></div><svg viewBox="0 0 120 100"><path d="M57 24c-1-8 2-15 9-19l4 4c-5 3-7 8-6 15z" fill="#4f7a2c"/><ellipse cx="36" cy="60" rx="30" ry="35" fill="#d95e08"/><ellipse cx="84" cy="60" rx="30" ry="35" fill="#d95e08"/><ellipse cx="60" cy="60" rx="31" ry="38" fill="#ff8a1f"/><path d="M60 23c-7 12-7 62 0 75M46 26c-14 10-16 58-3 71M74 26c14 10 16 58 3 71" fill="none" stroke="#c9520a" stroke-width="2"/><g class="gezicht" fill="#ffd23f"><path d="M34 50l12-13 10 13z"/><path d="M64 50l10-13 12 13z"/><path d="M55 58l5-7 5 7z"/><path d="M30 68c9 13 51 13 60 0l-6 4-4-5-5 6-5-5-5 6-5-6-5 5-5-6-4 5z"/></g></svg></div>
+        <div class="gz-pompoen gz-pompoen--rechts"><div class="gz-gloed"></div><svg viewBox="0 0 120 100"><path d="M57 24c-1-8 2-15 9-19l4 4c-5 3-7 8-6 15z" fill="#4f7a2c"/><ellipse cx="36" cy="60" rx="30" ry="35" fill="#d95e08"/><ellipse cx="84" cy="60" rx="30" ry="35" fill="#d95e08"/><ellipse cx="60" cy="60" rx="31" ry="38" fill="#ff8a1f"/><path d="M60 23c-7 12-7 62 0 75M46 26c-14 10-16 58-3 71M74 26c14 10 16 58 3 71" fill="none" stroke="#c9520a" stroke-width="2"/><g class="gezicht" fill="#ffd23f"><path d="M34 50l12-13 10 13z"/><path d="M64 50l10-13 12 13z"/><path d="M55 58l5-7 5 7z"/><path d="M30 68c9 13 51 13 60 0l-6 4-4-5-5 6-5-5-5 6-5-6-5 5-5-6-4 5z"/></g></svg></div>
+        <div class="gz-kaarsen"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+{% else %}
+    {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
+    {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
+{% endif %}
