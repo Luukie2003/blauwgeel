@@ -6,7 +6,8 @@
 
    opties.prijs: [links, boven] in % van de dia, waar de gloed op de prijs klopt. Bij het programma: opties.rijen (de
    tijd van elke regel, van boven naar beneden), opties.boven/onder (het midden van de bovenste en onderste regel),
-   hoogte, links en rechts (in %), en opties.momenten (de tijdsloten van de map, in ms): het tijdslot van nu licht op. */
+   hoogte, links en rechts (in %), en opties.momenten (de tijdsloten van de map, in ms): het tijdslot van nu licht op.
+   Is het programma een griezeldia (1.77.0), dan staan de regels in de dia zelf (.gz-rij) en kleurt dit script ze. */
 (function () {
     'use strict';
 
@@ -133,6 +134,33 @@
         setInterval(bijwerken, 5000);
     }
 
+    // Het programma als griezeldia: de regels (.gz-rij, met data-tijd) staan in de dia. Het tijdslot van nu licht op en
+    // voorbije tijdsloten worden zachter; welke regel bij welk tijdslot hoort, gaat net als in programma() hierboven.
+    function programmaLijst(lijst, o) {
+        var rijen = Array.prototype.slice.call(lijst.querySelectorAll('.gz-rij'));
+        var tijden = rijen.map(function (rij) { return rij.getAttribute('data-tijd'); });
+        var uniek = [];
+        tijden.forEach(function (tijd) { if (uniek.indexOf(tijd) < 0) uniek.push(tijd); });
+        var klok = null;
+        function bijwerken() {
+            if (!document.body.contains(lijst)) { clearInterval(klok); return; }  // het voorbeeld is vervangen
+            var nu = window.kioskNu ? window.kioskNu() : Date.now();
+            var momenten = o.momenten || [];
+            var stand = {};
+            momenten.forEach(function (m, i) {
+                var tijd = uniek.length === momenten.length ? uniek[i] : m.tijd;
+                if (m.van <= nu && nu < m.einde) stand[tijd] = 'nu';
+                else if (m.einde <= nu && stand[tijd] !== 'nu') stand[tijd] = 'geweest';
+            });
+            rijen.forEach(function (rij, i) {
+                rij.classList.toggle('gz-rij--nu', stand[tijden[i]] === 'nu');
+                rij.classList.toggle('gz-rij--geweest', stand[tijden[i]] === 'geweest');
+            });
+        }
+        bijwerken();
+        klok = setInterval(bijwerken, 5000);
+    }
+
     var EFFECTEN = {
         heksenketel: function (laag, o) {
             veel(laag, 14, 'fx-bel', [4, 30, 66, 82], [3, 5.5], [0.6, 1.4]);
@@ -169,6 +197,11 @@
         },
         programma: function (laag, o) {
             vleermuizen(laag, 4);
+            var lijst = laag.parentNode && laag.parentNode.querySelector('.gz-programma');
+            if (lijst) {
+                programmaLijst(lijst, o);
+                return;
+            }
             kaarsen(laag);
             programma(laag, o);
         }

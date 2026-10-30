@@ -233,3 +233,64 @@ def test_momenten_en_mappen_in_de_app(app_client, db):  # noqa: F811
     assert dias["mappen"][0]["naam"] == "Halloween feest" and dias["mappen"][0]["dias"] == 1
     uitgezet = _post(app_client, f"/api/app/kantine-tv/mappen/{m}", aan=False).get_json()
     assert uitgezet["mappen"][0]["aan"] is False and "staat nu uit" in uitgezet["melding"]
+
+
+# ---------- De griezeldia als poster en als programma (1.77.0) ----------
+
+
+def test_de_regels_van_een_poster_en_een_programma():
+    assert kiosk_momenten.griezel_delen(["Halloween shot!", "3 shotjes voor", "€ 6,-"]) == {
+        "onder_titel": ["Halloween shot!"], "aanbod": "3 shotjes voor", "prijs": "€ 6,-", "na_prijs": []}
+    assert kiosk_momenten.griezel_delen(["€ 8,-", "Bekendmaking beste outfit!"]) == {
+        "onder_titel": [], "aanbod": None, "prijs": "€ 8,-", "na_prijs": ["Bekendmaking beste outfit!"]}
+    assert kiosk_momenten.griezel_delen(["Super Saturday"])["onder_titel"] == ["Super Saturday"]  # geen prijs: geen bord
+    rijen, overig = kiosk_momenten.programma_regels(
+        ["16:00 Feest start!", "17.00 uur - Heksenbrouwsel", "De hele avond:", "€ 8,-", "25:00 Geen tijd"],
+        [{"tijd": "17:00", "kleur": "#7dff3a"}])
+    assert [(r["tijd"], r["naam"]) for r in rijen] == [("16:00", "Feest start!"), ("17:00", "Heksenbrouwsel")]
+    assert rijen[1]["kleur"] == "#7dff3a"  # de kleur van het moment op die tijd
+    assert rijen[0]["kleur"] == kiosk_momenten.PROGRAMMA_KLEUREN[0]  # geen moment: een vaste kleur
+    assert overig == ["De hele avond:", "€ 8,-", "25:00 Geen tijd"]
+    # De tekening hoort bij een griezeldia; een onbekende tekening wordt niet bewaard.
+    assert json.loads(kiosk_momenten.schoon_opties(None, None, None, None, "griezel", "ketel")) == {"tekening": "ketel"}
+    assert kiosk_momenten.schoon_opties("vuur", None, None, None, "afbeelding_volledig", "ketel") is None
+    assert kiosk_momenten.schoon_opties("vuur", None, None, None, "griezel", "onbekend") is None
+
+
+def test_een_poster_en_een_programma_op_de_tv(client, db):
+    m = _map(db)
+    moment = _straks()
+    poster = _dia(db, "Heksenbrouwsel", m, moment, sjabloon="griezel", effect="heksenketel",
+                  tekst="4 shotjes voor\n€ 6,-\nDe hele avond")
+    db.execute("UPDATE kiosk_sponsoren SET effect_opties = ? WHERE id = ?", (json.dumps({"tekening": "ketel"}), poster))
+    db.commit()
+    _dia(db, "Halloween feest", m, sjabloon="griezel", effect="programma",
+         tekst=f"{moment[11:16]} Heksenbrouwsel\n21:00 Eindshow!\nDe hele avond:\nGriezelshot\n€ 8,-")
+    html = client.get("/kiosk/scherm").get_data(as_text=True)
+    assert "gz gz--poster" in html and "gz-tekening--ketel" in html and "<svg" in html
+    assert '<p class="gz-bord-aanbod">4 shotjes voor</p>' in html and '<p class="gz-bord-prijs">€ 6,-</p>' in html
+    assert '<div class="gz-voet"><p>De hele avond</p></div>' in html  # een regel na de prijs
+    assert "gz gz--programma" in html and '<p class="gz-programma-kop">Programma</p>' in html
+    assert f'data-tijd="{moment[11:16]}" style="--rij-kleur: #7dff3a;"' in html  # de kleur van het Heksenbrouwsel
+    assert '<p class="gz-bord-kop">De hele avond:</p>' in html and '<p class="gz-bord-prijs">€ 8,-</p>' in html
+
+
+def test_een_griezeldia_met_tekening_opslaan_en_het_voorbeeld(ingelogde_client, db):
+    ingelogde_client.post("/kiosk/sponsoren-leden/sponsoren/nieuw", data={
+        "csrf_token": _csrf(ingelogde_client), "sjabloon": "griezel", "titel": "Duivelsbloed", "tekst": "2 voor\n€ 4,-",
+        "weergave_duur_seconden": "10", "actief": "1", "effect": "duivel", "tekening": "duivel"})
+    d = db.execute("SELECT * FROM kiosk_sponsoren ORDER BY id DESC").fetchone()
+    assert json.loads(d["effect_opties"]) == {"tekening": "duivel"} and kiosk_momenten.tekening_van(d) == "duivel"
+    pagina = ingelogde_client.get(f"/kiosk/sponsoren-leden/sponsoren/{d['id']}/bewerken").get_data(as_text=True)
+    assert '<option value="duivel" selected>' in pagina and 'id="griezel-voorbeeld"' in pagina
+    # Het live voorbeeld: de dia zoals op de tv, in een iframe op de eigen site.
+    resp = ingelogde_client.get("/kiosk/griezel-voorbeeld?titel=Duivelsbloed&tekst=2+voor%0A%E2%82%AC+4%2C-"
+                                "&effect=duivel&tekening=duivel")
+    assert resp.status_code == 200 and resp.headers["X-Frame-Options"] == "SAMEORIGIN"
+    html = resp.get_data(as_text=True)
+    assert "gz-tekening--duivel" in html and '<p class="gz-bord-prijs">€ 4,-</p>' in html and "kiosk_effecten.js" in html
+
+
+def test_het_griezelvoorbeeld_alleen_met_rechten(client):
+    resp = client.get("/kiosk/griezel-voorbeeld")
+    assert resp.status_code == 302 and "/login" in resp.headers["Location"]

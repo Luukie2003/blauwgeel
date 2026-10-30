@@ -2,7 +2,8 @@
 
    - .fx: de laag met bewegende deeltjes die kiosk_effecten.js over een dia legt (bubbels, vonken, glitters, bliksem,
      slijm, confetti, vleermuizen, de puls op de prijs, en bij het programma het tijdslot van nu).
-   - .gz: de griezeldia (sjabloon 'griezel'): griezelletters in de kleur van het effect, met maan, webben en pompoenen.
+   - .gz: de griezeldia (sjabloon 'griezel'): griezelletters in de kleur van het effect, met maan, webben en pompoenen;
+     met een tekening een poster (titel, tekening en een bord met de prijs), en als programma met het tijdslot van nu.
    - .km: de schijnwerper (templates/_kiosk_moment.html): de eerste minuten van een moment over alle tv's heen, en de
      balk "Nu aan de bar" op het prijzenscherm.
 
@@ -283,6 +284,194 @@
 .gz-kaarsen i:nth-child(5) { left: 64.6vw; height: 5.5vh; }
 .gz-kaarsen i:nth-child(6) { left: 67.2vw; height: 7vh; }
 
+/* ---------- De griezeldia als poster en als programma (1.77.0) ----------
+   Met een tekening: de titel bovenaan, de tekening linksonder en de prijs op een houten bord rechts, zoals de
+   ontwerpen van het Halloween feest. Met het effect programma: de regels als programma, het tijdslot van nu licht op
+   en voorbije tijdsloten worden zachter. */
+.gz--poster .gz-maan, .gz--programma .gz-maan { top: 3vh; right: 3vw; width: 9vw; height: 9vw; }
+.gz--poster .gz-pompoen, .gz--poster .gz-kaarsen, .gz--programma .gz-pompoen, .gz--programma .gz-kaarsen { display: none; }
+.gz-kop { position: absolute; left: 5vw; right: 5vw; top: 15vh; z-index: 2; text-align: center; }
+.gz-kop .gz-titel { margin: 0; }
+.gz-kop .gz-regel { margin: 0.8vh 0 0; }
+.gz--programma .gz-kop { top: 15vh; }
+.gz-programma-kop {
+    margin: 0.4vh 0 0; font: 900 2.2vw/1 Impact, "Arial Black", sans-serif; letter-spacing: 0.5em; text-transform: uppercase;
+    color: #ffffff; text-shadow: 0 0 1.2vw var(--gz-kleur);
+}
+.gz-tekening { position: absolute; left: 1vw; bottom: 0; width: 56vw; height: 58vh; z-index: 1; }
+.gz-tekening::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 20%; bottom: -10%; border-radius: 50%; opacity: 0.32;
+    background: radial-gradient(ellipse at 50% 70%, var(--gz-kleur), rgba(0, 0, 0, 0) 66%);
+}
+.gz-tekening svg { position: relative; display: block; width: 100%; height: 100%; overflow: visible; }
+.gz--programma .gz-tekening { left: auto; right: 1vw; width: 36vw; height: 30vh; }
+.gz--zonder-bord .gz-tekening { left: 22vw; }  /* geen prijs: de tekening in het midden */
+
+/* Het bord met de prijs */
+.gz-bord {
+    position: absolute; right: 4vw; bottom: 15vh; z-index: 3; width: 36vw; padding: 2.2vh 2vw 2.6vh; text-align: center;
+    border: 0.3vw solid var(--gz-kleur); border-radius: 1vw; transform: rotate(-3deg);
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0) 3.4vh, rgba(0, 0, 0, 0.22) 3.4vh, rgba(0, 0, 0, 0.22) 3.7vh),
+        linear-gradient(170deg, #5b3520, #29150b);
+    box-shadow: 0 0 2.2vw var(--gz-kleur), 0 1.2vh 2.4vh rgba(0, 0, 0, 0.7), inset 0 0 2.4vw rgba(0, 0, 0, 0.6);
+}
+.gz-bord::before, .gz-bord::after {
+    content: ""; position: absolute; top: 1.4vh; width: 0.9vw; height: 0.9vw; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #e9e2d0, #6e6656);
+}
+.gz-bord::before { left: 1.2vw; }
+.gz-bord::after { right: 1.2vw; }
+.gz--programma .gz-bord { top: 37vh; bottom: auto; right: 3vw; width: 32vw; }
+.gz-bord-kop { margin: 0; font: 900 2.4vw/1.15 Impact, "Arial Black", sans-serif; text-transform: uppercase; color: var(--gz-kleur); }
+.gz-bord-aanbod {
+    margin: 0.4vh 0 0; font: 900 3.4vw/1.05 Impact, "Arial Black", sans-serif; text-transform: uppercase; color: #ffffff;
+    text-shadow: 0 0.3vw 0 #000000;
+}
+.gz-bord-prijs {
+    margin: 0.6vh 0 0; font-family: "Creepster", Impact, sans-serif; font-size: 9vw; line-height: 1; color: var(--gz-kleur);
+    text-shadow: 0 0 1vw var(--gz-kleur), 0 0 3vw var(--gz-kleur), 0 0.5vw 0 #000000;
+    animation: gz-klop 1.6s ease-in-out infinite;
+}
+.gz--programma .gz-bord-prijs { font-size: 6.5vw; }
+.gz-voet {
+    position: absolute; right: 6vw; bottom: 3vh; z-index: 3; padding: 0.9vh 1.6vw; border-radius: 0.6vw;
+    background: #ffd23f; color: #1a0b02; transform: rotate(-2deg); box-shadow: 0 0 1.6vw rgba(255, 210, 63, 0.75);
+}
+.gz-voet p { margin: 0; font: 900 2.3vw/1.15 Impact, "Arial Black", sans-serif; text-transform: uppercase; }
+
+/* Het programma */
+.gz-programma {
+    position: absolute; left: 4vw; width: 58vw; top: 36vh; bottom: 3vh; z-index: 2; margin: 0; padding: 0; list-style: none;
+    display: flex; flex-direction: column; justify-content: space-between;
+}
+.gz-rij {
+    position: relative; display: flex; align-items: center; padding: 0.5vh 1vw; border-radius: 0.7vw;
+    background: rgba(8, 2, 14, 0.62); border-left: 0.5vw solid var(--rij-kleur); transition: opacity 0.6s;
+}
+.gz-rij-tijd {
+    flex: none; margin-right: 1.4vw; padding: 0.5vh 0.9vw; border-radius: 0.4vw; background: var(--rij-kleur); color: #0b0610;
+    font: 900 2.5vw/1 Impact, "Arial Black", sans-serif; transform: skewX(-8deg);
+}
+.gz-rij-naam {
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--rij-kleur);
+    font: 900 2.7vw/1.1 Impact, "Arial Black", sans-serif; text-transform: uppercase; text-shadow: 0 0.25vw 0 #000000;
+}
+.gz-rij--lang .gz-rij-naam { font-size: 2.1vw; }
+.gz-rij--geweest { opacity: 0.38; }
+.gz-rij--nu {
+    background: rgba(255, 255, 255, 0.14); border-left-width: 0.9vw;
+    box-shadow: 0 0 1.6vw var(--rij-kleur), inset 0 0 1.2vw var(--rij-kleur);
+}
+.gz-rij--nu::after {
+    content: "NU"; position: absolute; right: -1.6vw; top: 50%; margin-top: -2.6vh; padding: 0.3vh 1vw; border-radius: 0.5vw;
+    background: #ff1e1e; color: #ffffff; font-family: "Creepster", Impact, sans-serif; font-size: 3.4vw; line-height: 1;
+    transform: rotate(-8deg); box-shadow: 0 0 1.6vw rgba(255, 30, 30, 0.9);
+    animation: fx-nu-puls 0.9s ease-in-out infinite alternate;
+}
+
+/* In beeld komen, telkens als de dia aan de beurt is: het label schuift in, de titel knalt, het bord valt naar
+   beneden en de prijs wordt erop gestempeld; de tekening komt van onderen en de regels van het programma schuiven in. */
+.slide.actief .gz-label { animation: gz-in-label 0.6s ease-out 0.1s both; }
+.slide.actief .gz-titel { animation: gz-in-titel 0.9s ease-out 0.2s both, gz-gloei 2.4s ease-in-out 1.1s infinite alternate; }
+.slide.actief .gz-regel, .slide.actief .gz-programma-kop { animation: gz-in-op 0.6s ease-out 0.6s both; }
+.slide.actief .gz-prijs { animation: gz-in-stempel 0.7s ease-out 0.8s both, gz-klop 1.6s ease-in-out 1.5s infinite; }
+.slide.actief .gz-bord { animation: gz-in-bord 1s ease-out 0.5s both; }
+.slide.actief .gz-bord-prijs { animation: gz-in-stempel 0.7s ease-out 1.3s both, gz-klop 1.6s ease-in-out 2s infinite; }
+.slide.actief .gz-voet { animation: gz-in-voet 0.6s ease-out 1.7s both; }
+.slide.actief .gz-tekening { animation: gz-in-tekening 1s ease-out 0.3s both; }
+.slide.actief .gz-rij { animation: gz-in-rij 0.5s ease-out 0.5s both; }
+.slide.actief .gz-rij:nth-child(2) { animation-delay: 0.58s; }
+.slide.actief .gz-rij:nth-child(3) { animation-delay: 0.66s; }
+.slide.actief .gz-rij:nth-child(4) { animation-delay: 0.74s; }
+.slide.actief .gz-rij:nth-child(5) { animation-delay: 0.82s; }
+.slide.actief .gz-rij:nth-child(6) { animation-delay: 0.9s; }
+.slide.actief .gz-rij:nth-child(7) { animation-delay: 0.98s; }
+.slide.actief .gz-rij:nth-child(8) { animation-delay: 1.06s; }
+.slide.actief .gz-rij:nth-child(n+9) { animation-delay: 1.14s; }
+@keyframes gz-in-label { from { opacity: 0; transform: translateX(-30vw) rotate(-3deg) skewX(-6deg); } to { transform: rotate(-3deg) skewX(-6deg); } }
+@keyframes gz-in-titel {
+    0% { opacity: 0; transform: scale(2.4) rotate(-5deg); }
+    60% { opacity: 1; transform: scale(0.94) rotate(1deg); }
+    80% { transform: translate(-0.4vw, 0.3vh) scale(1.02); }
+    100% { transform: none; }
+}
+@keyframes gz-in-op { from { opacity: 0; transform: translateY(3vh); } to { transform: none; } }
+@keyframes gz-in-stempel {
+    0% { opacity: 0; transform: scale(2.6) rotate(-8deg); }
+    55% { opacity: 1; transform: scale(0.9) rotate(2deg); }
+    75% { transform: scale(1.06); }
+    100% { transform: none; }
+}
+@keyframes gz-in-bord {
+    0% { opacity: 0; transform: translateY(-45vh) rotate(-14deg); }
+    55% { opacity: 1; transform: translateY(1.5vh) rotate(1deg); }
+    75% { transform: translateY(-0.8vh) rotate(-5deg); }
+    100% { transform: rotate(-3deg); }
+}
+@keyframes gz-in-voet { from { opacity: 0; transform: translateY(6vh) rotate(-2deg); } to { transform: rotate(-2deg); } }
+@keyframes gz-in-tekening { from { opacity: 0; transform: translateY(16vh); } to { transform: none; } }
+@keyframes gz-in-rij { from { opacity: 0; transform: translateX(-8vw); } to { transform: none; } }
+
+/* De tekeningen (templates/_kiosk_tekening.html); ze staan stil zolang hun dia niet in beeld is. */
+.slide:not(.actief) .gz-tekening *, .km-bezig .scherm .gz-tekening * { animation-play-state: paused; }
+.gz-tekening .gz-gloei { animation: gz-gloeien 1.8s ease-in-out infinite alternate; }
+.gz-tekening .gz-belletje { animation: gz-belletje 2.4s ease-in infinite; }
+.gz-tekening .gz-vlammetje { transform-box: fill-box; transform-origin: 50% 100%; animation: fx-flakker 0.6s ease-in-out infinite alternate; }
+.gz-tekening .gz-brouwsel { animation: gz-gloeien 1.4s ease-in-out infinite alternate; }
+.gz-tekening .gz-plop { transform-box: fill-box; transform-origin: 50% 50%; animation: gz-plop 2.2s ease-in-out infinite; }
+.gz-tekening .gz-stijg { animation: gz-stijg 2.8s ease-in infinite; }
+.gz-tekening .gz-damp { animation: gz-damp 5s ease-in-out infinite; }
+.gz-tekening .gz-ketel-drup, .gz-tekening .gz-bloed { transform-box: fill-box; transform-origin: 50% 0; animation: gz-drup 3.2s ease-in infinite; }
+.gz-tekening .gz-lepel { transform-box: view-box; transform-origin: 257px 186px; animation: gz-roer 2.6s ease-in-out infinite alternate; }
+.gz-tekening .gz-deksel { transform-box: view-box; transform-origin: 496px 344px; animation: gz-deksel 7s ease-in-out infinite; }
+.gz-tekening--schaal .gz-damp { animation: gz-damp-deksel 7s ease-out infinite; }
+.gz-tekening .gz-vraag {
+    font-family: "Creepster", Impact, sans-serif; fill: #ff8a1f; stroke: #2a1200; stroke-width: 3;
+    animation: gz-vraag 1.6s ease-in-out infinite alternate;
+}
+.gz-tekening .gz-staf { transform-box: view-box; transform-origin: 300px 270px; animation: gz-zwaai 2.4s ease-in-out infinite alternate; }
+.gz-tekening .gz-ster { transform-box: fill-box; transform-origin: 50% 50%; animation: fx-twinkel 1.8s ease-in-out infinite; }
+.gz-tekening .gz-druppel { animation: gz-druppel 2.4s ease-in infinite; }
+.gz-tekening .gz-drietand { transform-box: view-box; transform-origin: 300px 400px; animation: gz-zwaai-klein 3.2s ease-in-out infinite alternate; }
+.gz-tekening .gz-hand { transform-box: view-box; transform-origin: 200px 400px; animation: gz-hand 4.4s ease-in-out infinite; }
+.gz-tekening .gz-vinger { transform-box: fill-box; transform-origin: 50% 100%; animation: gz-vinger 0.9s ease-in-out infinite alternate; }
+.gz-tekening .gz-gezicht { animation: gz-licht 1.3s ease-in-out infinite alternate; }
+@keyframes gz-gloeien { from { opacity: 0.25; } to { opacity: 0.7; } }
+@keyframes gz-belletje {
+    0% { transform: translateY(0); opacity: 0; }
+    15% { opacity: 0.9; }
+    85% { opacity: 0.7; }
+    100% { transform: translateY(-66px); opacity: 0; }
+}
+@keyframes gz-plop { 0%, 100% { transform: scale(0.2); opacity: 0; } 40% { transform: scale(1); opacity: 1; } 55% { transform: scale(1.3); opacity: 0; } }
+@keyframes gz-stijg { 0% { transform: translateY(0) scale(0.6); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-150px) scale(1.2); opacity: 0; } }
+@keyframes gz-damp { 0% { transform: translate(0, 0) scale(0.6); opacity: 0; } 30% { opacity: 0.18; } 100% { transform: translate(20px, -120px) scale(1.5); opacity: 0; } }
+@keyframes gz-drup { 0% { transform: scaleY(0.2); opacity: 1; } 70% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(1.15); opacity: 0; } }
+@keyframes gz-roer { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
+@keyframes gz-deksel {
+    0%, 52% { transform: none; }
+    60%, 82% { transform: translate(18px, -60px) rotate(-18deg); }
+    90% { transform: translate(0, 6px) rotate(1.5deg); }
+    94%, 100% { transform: none; }
+}
+@keyframes gz-damp-deksel {
+    0%, 55% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+    70% { opacity: 0.3; }
+    100% { transform: translate(10px, -140px) scale(1.6); opacity: 0; }
+}
+@keyframes gz-vraag { from { transform: translateY(0); } to { transform: translateY(-10px); } }
+@keyframes gz-zwaai { from { transform: rotate(-10deg); } to { transform: rotate(8deg); } }
+@keyframes gz-druppel { 0% { transform: translateY(0); opacity: 0; } 10%, 80% { opacity: 1; } 100% { transform: translateY(160px); opacity: 0; } }
+@keyframes gz-zwaai-klein { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+@keyframes gz-hand {
+    0%, 100% { transform: translateY(46px); }
+    35% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(6px) rotate(2deg); }
+    65% { transform: translateY(0) rotate(-1deg); }
+}
+@keyframes gz-vinger { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+@keyframes gz-licht { 0% { opacity: 0.7; } 40% { opacity: 1; } 70% { opacity: 0.8; } 100% { opacity: 1; } }
+
 /* ---------- De schijnwerper ---------- */
 .km {
     position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 800; overflow: hidden; background: #000000;
@@ -343,6 +532,10 @@
     font: 900 4.4vw/1.1 Impact, "Arial Black", sans-serif; text-transform: uppercase; color: #ffffff;
     text-shadow: 0 0.3vw 0 #000000; animation: km-in 0.5s 1.6s both;
 }
+/* Een griezeldia in de schijnwerper komt pas in beeld na de intro. */
+.km--intro .km-dia .gz-label, .km--intro .km-dia .gz-titel, .km--intro .km-dia .gz-regel, .km--intro .km-dia .gz-prijs,
+.km--intro .km-dia .gz-programma-kop, .km--intro .km-dia .gz-bord, .km--intro .km-dia .gz-bord-prijs,
+.km--intro .km-dia .gz-voet, .km--intro .km-dia .gz-tekening, .km--intro .km-dia .gz-rij { animation: none; }
 @keyframes km-in { from { opacity: 0; transform: translateY(3vh); } to { opacity: 1; transform: none; } }
 @keyframes km-slam {
     0% { transform: scale(3.2) rotate(-6deg); opacity: 0; }
@@ -366,5 +559,6 @@
 
 @media (prefers-reduced-motion: reduce) {
     .fx i, .gz-titel, .gz-prijs, .gz-gloed, .gz-kaarsen i::before, .km-dia, .km-rand, .km-nu, .km-tijd, .km-naam,
-    .km-balk, .km-balk-label { animation: none !important; }
+    .km-balk, .km-balk-label, .gz-label, .gz-regel, .gz-programma-kop, .gz-bord, .gz-bord-prijs, .gz-voet, .gz-tekening,
+    .gz-tekening *, .gz-rij, .gz-rij--nu::after { animation: none !important; }
 }

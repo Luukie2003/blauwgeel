@@ -1,0 +1,159 @@
+{# De tekeningen van een griezeldia (1.77.0, zie kiosk_momenten.TEKENINGEN): getekend in SVG, zodat ze op elk scherm
+   scherp zijn, en ze bewegen met CSS (kiosk_effecten.css, onder "De tekeningen"). Elementen die bewegen hebben zelf
+   geen transform-attribuut (dat zou de beweging overschrijven); waar een plek nodig is, staat er een <g> omheen.
+   Alles staat in een vlak van 600 bij 400, onderaan in het midden van .gz-tekening. #}
+{% macro glas(x, y, schaal, kleur, nr=0) -%}
+<g transform="translate({{ x }} {{ y }}) scale({{ schaal }})">
+    <ellipse class="gz-gloei" cx="0" cy="2" rx="54" ry="11" fill="{{ kleur }}" opacity="0.5" style="animation-delay: -{{ nr * 0.4 }}s"/>
+    <path d="M-38 -120H38L31 -9Q30 0 21 0H-21Q-30 0 -31 -9Z" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.75" stroke-width="3"/>
+    <path d="M-35.6 -90Q-18 -97 0 -90T35.6 -90L30.4 -14Q30 -9 24 -9H-24Q-30 -9 -30.4 -14Z" fill="{{ kleur }}"/>
+    <path d="M-35.6 -90Q-18 -97 0 -90T35.6 -90L35 -81Q0 -74 -35 -81Z" fill="#ffffff" fill-opacity="0.32"/>
+    <path d="M0 -70C-13 -70 -19 -61 -19 -53C-19 -47 -15 -43 -11 -42V-34H11V-42C15 -43 19 -47 19 -53C19 -61 13 -70 0 -70Z" fill="#0b0610" fill-opacity="0.82"/>
+    <circle cx="-7" cy="-54" r="4.6" fill="{{ kleur }}"/>
+    <circle cx="7" cy="-54" r="4.6" fill="{{ kleur }}"/>
+    <path d="M0 -48L-2.6 -43.5H2.6Z" fill="{{ kleur }}"/>
+    <path d="M-5.5 -38V-34M0 -38V-34M5.5 -38V-34" stroke="{{ kleur }}" stroke-width="2"/>
+    <circle class="gz-belletje" cx="-18" cy="-16" r="3" fill="#ffffff" fill-opacity="0.7" style="animation-delay: -{{ nr * 0.7 }}s"/>
+    <circle class="gz-belletje" cx="16" cy="-14" r="2.4" fill="#ffffff" fill-opacity="0.6" style="animation-delay: -{{ nr * 0.7 + 1.2 }}s"/>
+    <path d="M-28 -112L-23 -16" stroke="#ffffff" stroke-opacity="0.3" stroke-width="5" stroke-linecap="round"/>
+</g>
+{%- endmacro %}
+{% macro ster(x, y, schaal, kleur, vertraging=0) -%}
+<g transform="translate({{ x }} {{ y }}) scale({{ schaal }})"><path class="gz-ster" style="animation-delay: -{{ vertraging }}s" d="M0 -20L5 -5L20 0L5 5L0 20L-5 5L-20 0L-5 -5Z" fill="{{ kleur }}"/></g>
+{%- endmacro %}
+<svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false">
+{% if slide.tekening == 'ketel' %}
+    <ellipse class="gz-gloei" cx="210" cy="388" rx="150" ry="16" fill="#ff7a1a" opacity="0.35"/>
+    <path class="gz-vlammetje" d="M150 392Q128 352 150 322Q154 348 168 354Q160 318 186 292Q192 330 210 340Q214 316 206 300Q246 334 226 392Z" fill="#ff7a1a"/>
+    <path class="gz-vlammetje" style="animation-delay: -0.3s" d="M196 392Q178 358 198 332Q204 354 216 358Q212 330 234 310Q256 344 242 392Z" fill="#ffb52e"/>
+    <path class="gz-vlammetje" style="animation-delay: -0.6s" d="M232 392Q218 366 236 346Q240 362 250 364Q250 344 266 330Q284 360 270 392Z" fill="#ff7a1a"/>
+    <rect x="110" y="376" width="200" height="18" rx="9" fill="#3b2314" transform="rotate(-6 210 385)"/>
+    <rect x="110" y="376" width="200" height="18" rx="9" fill="#4a2c18" transform="rotate(7 210 385)"/>
+    <path d="M95 320L80 372H100L118 330ZM325 320L340 372H320L302 330Z" fill="#0d0912"/>
+    <path d="M58 176Q50 334 210 356Q370 334 362 176Z" fill="#17111f" stroke="#7dff3a" stroke-opacity="0.35" stroke-width="3"/>
+    <path d="M92 214Q90 292 146 326" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="12" stroke-linecap="round"/>
+    <path class="gz-ketel-drup" d="M98 190Q92 216 98 230Q106 226 104 190Z" fill="#7dff3a"/>
+    <path class="gz-ketel-drup" style="animation-delay: -1.2s" d="M290 192Q285 212 291 222Q298 218 295 192Z" fill="#7dff3a"/>
+    <path class="gz-ketel-drup" style="animation-delay: -2s" d="M332 186Q328 202 333 210Q339 207 336 186Z" fill="#7dff3a"/>
+    <ellipse cx="210" cy="176" rx="160" ry="30" fill="#241b30" stroke="#3b3049" stroke-width="7"/>
+    <ellipse cx="210" cy="179" rx="141" ry="21" fill="#4fc81a"/>
+    <ellipse class="gz-brouwsel" cx="198" cy="176" rx="108" ry="12" fill="#b5ff7d"/>
+    <circle class="gz-plop" cx="150" cy="180" r="10" fill="#c9ffa0"/>
+    <circle class="gz-plop" style="animation-delay: -0.8s" cx="250" cy="182" r="8" fill="#c9ffa0"/>
+    <circle class="gz-plop" style="animation-delay: -1.5s" cx="200" cy="172" r="6" fill="#e6ffd2"/>
+    <circle class="gz-stijg" cx="168" cy="166" r="7" fill="#9dff5e"/>
+    <circle class="gz-stijg" style="animation-delay: -1s" cx="226" cy="164" r="5" fill="#c9ffa0"/>
+    <circle class="gz-stijg" style="animation-delay: -1.9s" cx="196" cy="168" r="9" fill="#7dff3a"/>
+    <ellipse class="gz-damp" cx="180" cy="150" rx="60" ry="24" fill="#c9ffa0" opacity="0"/>
+    <ellipse class="gz-damp" style="animation-delay: -2.5s" cx="240" cy="146" rx="48" ry="20" fill="#e6ffd2" opacity="0"/>
+    <g class="gz-lepel">
+        <rect x="250" y="34" width="15" height="170" rx="7.5" fill="#7a4a25" transform="rotate(24 257 186)"/>
+        <rect x="252" y="40" width="5" height="150" rx="2.5" fill="#a46b3a" transform="rotate(24 257 186)"/>
+    </g>
+    {{ glas(400, 388, 0.7, '#7dff3a', 0) }}
+    {{ glas(455, 392, 0.7, '#9dff2e', 1) }}
+    {{ glas(510, 388, 0.7, '#7dff3a', 2) }}
+    {{ glas(565, 392, 0.7, '#5fe61f', 3) }}
+{% elif slide.tekening == 'schaal' %}
+    <ellipse class="gz-gloei" cx="300" cy="372" rx="250" ry="26" fill="#ff8a1f" opacity="0.4"/>
+    <ellipse cx="300" cy="352" rx="236" ry="40" fill="#8d94a3"/>
+    <ellipse cx="300" cy="346" rx="210" ry="30" fill="#e3e6ee"/>
+    <ellipse cx="300" cy="346" rx="168" ry="20" fill="#cfd3dd"/>
+    <ellipse class="gz-gloei" cx="300" cy="300" rx="150" ry="70" fill="#ffb347" opacity="0.65"/>
+    <text class="gz-vraag" x="214" y="330" font-size="96">?</text>
+    <text class="gz-vraag" style="animation-delay: -0.5s" x="276" y="318" font-size="120">?</text>
+    <text class="gz-vraag" style="animation-delay: -1s" x="350" y="332" font-size="92">?</text>
+    <ellipse class="gz-damp" cx="250" cy="280" rx="70" ry="26" fill="#ffffff" opacity="0"/>
+    <ellipse class="gz-damp" style="animation-delay: -1.2s" cx="350" cy="270" rx="56" ry="22" fill="#ffffff" opacity="0"/>
+    <g class="gz-deksel">
+        <path d="M104 344Q104 150 300 140Q496 150 496 344Z" fill="#b8bfcc" stroke="#ffffff" stroke-opacity="0.5" stroke-width="3"/>
+        <path d="M150 318Q146 214 262 176" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="16" stroke-linecap="round"/>
+        <path d="M432 318Q438 250 402 206" fill="none" stroke="#5c6272" stroke-opacity="0.45" stroke-width="14" stroke-linecap="round"/>
+        <rect x="98" y="336" width="404" height="16" rx="8" fill="#8d94a3"/>
+        <ellipse cx="300" cy="134" rx="30" ry="13" fill="#8d94a3"/>
+        <rect x="290" y="120" width="20" height="18" rx="5" fill="#8d94a3"/>
+        <path d="M300 214C278 214 268 230 268 244C268 254 274 260 280 262V274H320V262C326 260 332 254 332 244C332 230 322 214 300 214Z" fill="#2a2333" fill-opacity="0.75"/>
+        <circle cx="289" cy="244" r="6.5" fill="#b8bfcc"/>
+        <circle cx="311" cy="244" r="6.5" fill="#b8bfcc"/>
+    </g>
+{% elif slide.tekening == 'toverstaf' %}
+    {{ glas(170, 392, 1.05, '#e255ff', 0) }}
+    {{ glas(300, 396, 1.05, '#ff4fd8', 1) }}
+    {{ glas(430, 392, 1.05, '#b44dff', 2) }}
+    <circle class="gz-druppel" cx="436" cy="112" r="7" fill="#f08cff"/>
+    <circle class="gz-druppel" style="animation-delay: -1.2s" cx="426" cy="120" r="5" fill="#e255ff"/>
+    <g class="gz-staf">
+        <rect x="292" y="40" width="16" height="230" rx="8" fill="#1d0f26" stroke="#e255ff" stroke-opacity="0.7" stroke-width="3" transform="rotate(38 300 270)"/>
+        <rect x="292" y="40" width="16" height="44" rx="6" fill="#f2e6ff" transform="rotate(38 300 270)"/>
+        <g transform="translate(300 270) rotate(38) translate(0 -240)">
+            <path class="gz-ster" d="M0 -36L9 -9L36 0L9 9L0 36L-9 9L-36 0L-9 -9Z" fill="#fff6ff"/>
+        </g>
+    </g>
+    {{ ster(500, 60, 0.9, '#ffd6ff', 0) }}
+    {{ ster(380, 40, 0.6, '#f08cff', 0.6) }}
+    {{ ster(540, 150, 0.7, '#ffffff', 1.1) }}
+    {{ ster(330, 110, 0.5, '#e255ff', 0.3) }}
+    {{ ster(470, 190, 0.5, '#ffd6ff', 1.4) }}
+{% elif slide.tekening == 'duivel' %}
+    <ellipse class="gz-gloei" cx="300" cy="384" rx="250" ry="24" fill="#ff2a2a" opacity="0.45"/>
+    <g class="gz-drietand">
+        <rect x="293" y="120" width="14" height="280" rx="6" fill="#4a0707" stroke="#ff2a2a" stroke-opacity="0.75" stroke-width="3"/>
+        <path d="M236 120Q236 152 270 158H330Q364 152 364 120H352Q350 142 326 144H274Q250 142 248 120Z" fill="#6e0808" stroke="#ff2a2a" stroke-width="3"/>
+        <path d="M236 122V58L226 62L242 24L258 62L248 58V122ZM352 122V58L342 62L358 24L374 62L364 58V122ZM294 150V44L284 50L300 6L316 50L306 44V150Z" fill="#6e0808" stroke="#ff2a2a" stroke-width="3" stroke-linejoin="round"/>
+    </g>
+    <path class="gz-vlammetje" d="M90 392Q74 360 92 338Q96 356 106 360Q102 334 122 316Q130 348 142 356Q150 340 146 328Q170 356 156 392Z" fill="#ff2a2a"/>
+    <path class="gz-vlammetje" style="animation-delay: -0.35s" d="M454 392Q440 362 458 342Q462 358 472 362Q470 338 488 322Q506 352 498 392Z" fill="#ff5a1a"/>
+    {{ glas(205, 394, 1.3, '#ff2a2a', 0) }}
+    {{ glas(395, 394, 1.3, '#d4001a', 1) }}
+    <path class="gz-bloed" d="M165 240Q164 262 170 272Q176 262 175 240Z" fill="#ff2a2a"/>
+    <path class="gz-bloed" style="animation-delay: -1.4s" d="M238 240Q237 256 242 264Q247 256 246 240Z" fill="#ff2a2a"/>
+    <path class="gz-bloed" style="animation-delay: -0.7s" d="M360 240Q359 266 365 278Q371 266 370 240Z" fill="#d4001a"/>
+    <path class="gz-bloed" style="animation-delay: -2.1s" d="M428 240Q427 254 432 262Q437 254 436 240Z" fill="#d4001a"/>
+{% elif slide.tekening == 'zombie' %}
+    <ellipse class="gz-gloei" cx="200" cy="384" rx="190" ry="22" fill="#9dff2e" opacity="0.35"/>
+    <g class="gz-hand">
+        <path d="M168 400L174 262Q176 238 200 234Q224 238 226 262L234 400Z" fill="#6f8a4c"/>
+        <path d="M184 300L178 362M214 290L222 354" fill="none" stroke="#4d6533" stroke-width="5" stroke-linecap="round"/>
+        <path d="M160 276H242L246 318L230 306L218 330L206 310L192 334L180 310L164 322Z" fill="#3b2350"/>
+        <path d="M166 244C160 214 166 186 182 176H230C246 190 248 216 238 244Z" fill="#7f9c58"/>
+        <g fill="none" stroke="#7f9c58" stroke-width="20" stroke-linecap="round">
+            <path class="gz-vinger" d="M184 178L176 116"/>
+            <path class="gz-vinger" style="animation-delay: -0.3s" d="M202 174L203 102"/>
+            <path class="gz-vinger" style="animation-delay: -0.6s" d="M219 176L228 114"/>
+            <path class="gz-vinger" style="animation-delay: -0.9s" d="M234 186L250 140"/>
+            <path class="gz-vinger" style="animation-delay: -0.45s" d="M168 222L138 194"/>
+        </g>
+    </g>
+    <path d="M0 400Q40 352 110 348Q160 330 210 340Q270 334 312 356Q350 368 380 400Z" fill="#2b1d12"/>
+    <path d="M120 360L140 372L132 386M250 356L238 372L252 384" fill="none" stroke="#140c06" stroke-width="4"/>
+    <path d="M60 362L66 344L70 360L76 340L80 362M298 356L303 340L307 354L313 336L316 356" fill="none" stroke="#3c8f00" stroke-width="4" stroke-linecap="round"/>
+    {{ glas(400, 392, 0.95, '#9dff2e', 0) }}
+    {{ glas(478, 396, 0.95, '#7dff3a', 1) }}
+    {{ glas(556, 392, 0.95, '#9dff2e', 2) }}
+{% elif slide.tekening == 'shots' %}
+    {{ glas(120, 392, 1.1, '#7dff3a', 0) }}
+    {{ glas(240, 396, 1.1, '#ff4fd8', 1) }}
+    {{ glas(360, 396, 1.1, '#ff8a1f', 2) }}
+    {{ glas(480, 392, 1.1, '#4fc3ff', 3) }}
+    {{ ster(60, 150, 0.6, '#ffffff', 0.2) }}
+    {{ ster(300, 120, 0.7, '#ffd23f', 0.9) }}
+    {{ ster(545, 170, 0.6, '#ffffff', 1.5) }}
+{% elif slide.tekening == 'pompoen' %}
+    <ellipse class="gz-gloei" cx="300" cy="380" rx="230" ry="26" fill="#ff8a1f" opacity="0.45"/>
+    <g transform="translate(120 70) scale(3)">
+        <path d="M57 24c-1-8 2-15 9-19l4 4c-5 3-7 8-6 15z" fill="#4f7a2c"/>
+        <ellipse cx="36" cy="60" rx="30" ry="35" fill="#d95e08"/>
+        <ellipse cx="84" cy="60" rx="30" ry="35" fill="#d95e08"/>
+        <ellipse cx="60" cy="60" rx="31" ry="38" fill="#ff8a1f"/>
+        <path d="M60 23c-7 12-7 62 0 75M46 26c-14 10-16 58-3 71M74 26c14 10 16 58 3 71" fill="none" stroke="#c9520a" stroke-width="2"/>
+        <g class="gz-gezicht" fill="#ffd23f">
+            <path d="M34 50l12-13 10 13z"/>
+            <path d="M64 50l10-13 12 13z"/>
+            <path d="M55 58l5-7 5 7z"/>
+            <path d="M30 68c9 13 51 13 60 0l-6 4-4-5-5 6-5-5-5 6-5-6-5 5-5-6-4 5z"/>
+        </g>
+    </g>
+    {{ ster(90, 120, 0.6, '#ffd23f', 0.4) }}
+    {{ ster(520, 100, 0.7, '#ffffff', 1.2) }}
+{% endif %}
+</svg>

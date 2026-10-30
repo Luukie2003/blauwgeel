@@ -16,6 +16,7 @@ zo begint de schijnwerper op de minuut, ook als de verbinding even hapert, en oo
 staat."""
 
 import json
+import re
 from datetime import datetime, timedelta
 
 FORMAAT = "%Y-%m-%d %H:%M"
@@ -46,6 +47,21 @@ PROGRAMMA_STANDAARD = {
     "rijen": ["16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "21:00", "01:00"],
     "boven": 25.6, "onder": 87.5, "hoogte": 8.4, "links": 9.4, "rechts": 66.5,
 }
+# Tekeningen voor een griezeldia (1.77.0, templates/_kiosk_tekening.html). Met een tekening wordt de griezeldia een
+# poster zoals de ontwerpen van het Halloween feest: de titel bovenaan, de tekening linksonder en de prijs op een bord.
+TEKENINGEN = {
+    "ketel": "Heksenketel met shotjes",
+    "schaal": "Schaal met een verrassing",
+    "toverstaf": "Toverstaf met shotjes",
+    "duivel": "Duivelsdrietand met shotjes",
+    "zombie": "Zombiehand met shotjes",
+    "shots": "Rij gekleurde shotjes",
+    "pompoen": "Grote pompoen",
+}
+# Een regel van een programma op een griezeldia: "16:00 Feest start!" (of "16.00 uur - Feest start!").
+PROGRAMMA_REGEL = re.compile(r"^([01]?\d|2[0-3])[:.]([0-5]\d)(?:\s*uur)?\s*[-–:]?\s*(.+)$", re.IGNORECASE)
+# De kleuren van de regels van zo'n programma, als er geen moment bij hoort.
+PROGRAMMA_KLEUREN = ("#ff9326", "#7dff3a", "#ff5a36", "#e255ff", "#ff2a2a", "#9dff2e", "#c9a6ff", "#ffd23f")
 
 
 def tijdstip(tekst):
@@ -113,11 +129,59 @@ def effect_opties(dia):
     return opties
 
 
-def schoon_opties(effect, prijs_links, prijs_boven, rijen_tekst, sjabloon=None):
+def tekening_van(dia):
+    """De tekening van een griezeldia (een sleutel uit TEKENINGEN), of None. Hij staat bij de opties van het effect, maar
+    hoort bij de griezeldia: hij geldt ook zonder effect."""
+    if dia["sjabloon"] != "griezel":
+        return None
+    try:
+        opties = json.loads(dia["effect_opties"] or "{}")
+    except (TypeError, ValueError):
+        return None
+    waarde = opties.get("tekening") if isinstance(opties, dict) else None
+    return waarde if waarde in TEKENINGEN else None
+
+
+def griezel_delen(regels):
+    """De regels van een griezeldia als poster: de regel met een euroteken is de prijs (op het bord) en de regel ervoor
+    wat je ervoor krijgt ("4 shotjes voor"); regels daarvoor staan onder de titel, regels erna onder het bord. Zonder
+    prijs staat alles onder de titel."""
+    regels = list(regels)
+    plek = next((i for i, regel in enumerate(regels) if "€" in regel), None)
+    if plek is None:
+        return {"onder_titel": regels, "aanbod": None, "prijs": None, "na_prijs": []}
+    return {
+        "onder_titel": regels[:max(0, plek - 1)],
+        "aanbod": regels[plek - 1] if plek > 0 else None,
+        "prijs": regels[plek],
+        "na_prijs": regels[plek + 1:],
+    }
+
+
+def programma_regels(regels, momenten=()):
+    """De regels van een griezeldia met het effect programma: "16:00 Feest start!" wordt een regel van het programma
+    (tijd, naam en de kleur van het moment op die tijd in de map, anders een vaste kleur); de andere regels (zoals "De
+    hele avond", "Griezelshot", "€ 8,-") komen op een bord ernaast. Geeft (regels van het programma, overige regels)."""
+    kleuren = {m["tijd"]: m.get("kleur") for m in momenten}
+    rijen, overig = [], []
+    for regel in regels:
+        gevonden = PROGRAMMA_REGEL.match(regel)
+        if not gevonden:
+            overig.append(regel)
+            continue
+        tijd = f"{int(gevonden.group(1)):02d}:{gevonden.group(2)}"
+        rijen.append({"tijd": tijd, "naam": gevonden.group(3).strip(),
+                      "kleur": kleuren.get(tijd) or PROGRAMMA_KLEUREN[len(rijen) % len(PROGRAMMA_KLEUREN)]})
+    return rijen, overig
+
+
+def schoon_opties(effect, prijs_links, prijs_boven, rijen_tekst, sjabloon=None, tekening=None):
     """De opties uit het dia-formulier als JSON (of None): de aangetikte plek van de prijs (niet bij een griezeldia:
-    daar klopt de prijs zelf) en de tijden van de regels van het programma ("16:00, 17:00, ..."). De rest van het
-    programma (waar de regels staan) blijft de standaard."""
+    daar klopt de prijs zelf), de tijden van de regels van het programma ("16:00, 17:00, ...") en bij een griezeldia de
+    tekening. De rest van het programma (waar de regels staan) blijft de standaard."""
     opties = {}
+    if sjabloon == "griezel" and tekening in TEKENINGEN:
+        opties["tekening"] = tekening
     try:
         links, boven = float(prijs_links), float(prijs_boven)
         if (0 <= links <= 100 and 0 <= boven <= 100 and effect in EFFECTEN and EFFECTEN[effect][2]
@@ -248,8 +312,9 @@ def vensters(db, dias, nu=None):
 
 
 def tijden_per_map(db, dias):
-    """{map_id: [{"tijd": "17:00", "van", "einde"}]}: de tijdsloten per map (in ms, op tijd), voor het programma: dat
-    licht het tijdslot van nu op. Twee dia's op hetzelfde moment tellen één keer."""
+    """{map_id: [{"tijd": "17:00", "van", "einde", "kleur"}]}: de tijdsloten per map (in ms, op tijd), voor het
+    programma: dat licht het tijdslot van nu op (en kleurt zijn regels als de dia's). Twee dia's op hetzelfde moment
+    tellen één keer."""
     slots = _slots(db, dias)
     per_map = {}
     for d in dias:
@@ -258,7 +323,8 @@ def tijden_per_map(db, dias):
             continue
         lijst = per_map.setdefault(d["map_id"], [])
         if not any(m["van"] == ms(start) for m in lijst):
-            lijst.append({"tijd": f"{start:%H:%M}", "van": ms(start), "einde": ms(slots[d["id"]][1])})
+            lijst.append({"tijd": f"{start:%H:%M}", "van": ms(start), "einde": ms(slots[d["id"]][1]),
+                          "kleur": kleur(d["effect"])})
     for lijst in per_map.values():
         lijst.sort(key=lambda m: m["van"])
     return per_map

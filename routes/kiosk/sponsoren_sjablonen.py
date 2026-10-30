@@ -99,7 +99,8 @@ def _sponsor_uit_formulier():
         "schijnwerper_minuten": kiosk_momenten.schoon_minuten(request.form.get("schijnwerper_minuten")),
         "effect": effect,
         "effect_opties": kiosk_momenten.schoon_opties(effect, request.form.get("prijs_links"), request.form.get("prijs_boven"),
-                                                      request.form.get("programma_rijen"), sjabloon),
+                                                      request.form.get("programma_rijen"), sjabloon,
+                                                      request.form.get("tekening")),
         "balk_tekst": " ".join((request.form.get("balk_tekst") or "").split())[:80] or None,
         "label": " ".join((request.form.get("label") or "").split())[:30] or None,
         "zichtbaar_vanaf": vanaf,
@@ -138,6 +139,8 @@ def _moment_context(db, sponsor):
         "effecten": {k: v for k, v in kiosk_momenten.EFFECTEN.items()},
         "effecten_json": {k: {"kleur": v[1], "prijs": list(v[2]) if v[2] else None} for k, v in kiosk_momenten.EFFECTEN.items()},
         "opties": kiosk_momenten.effect_opties(sponsor) if sponsor and sponsor["effect"] else {},
+        "tekeningen": kiosk_momenten.TEKENINGEN,
+        "tekening": kiosk_momenten.tekening_van(sponsor) if sponsor else None,
         "programma_standaard": kiosk_momenten.PROGRAMMA_STANDAARD,
         "max_schijnwerper": kiosk_momenten.MAX_SCHIJNWERPER_MINUTEN,
     }

@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.76.0"
+HUIDIGE_VERSIE = "1.77.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.77.0",
+        "datum": "30 oktober 2026",
+        "punten": [
+            "Een griezeldia als poster: kies een tekening (heksenketel, schaal met een verrassing, toverstaf, duivelsdrietand, zombiehand, rij shotjes of pompoen) en de dia wordt een poster met de titel groot bovenaan, de bewegende tekening linksonder en de prijs op een houten bord. Alles knalt in beeld als de dia aan de beurt is (in de schijnwerper na de intro): de titel slaat in, het bord valt naar beneden en de prijs wordt erop gestempeld.",
+            "Het programma als griezeldia: met het effect Programma worden regels als '16:00 Feest start!' een programma in de kleuren van de momenten. Het tijdslot van nu licht op met NU en wat al geweest is, wordt zachter; de andere regels (zoals 'De hele avond: Griezelshot') komen op het bord.",
+            "Het live voorbeeld bij een griezeldia laat de dia nu precies zien zoals op de tv.",
+        ],
+    },
     {
         "versie": "1.76.0",
         "datum": "29 oktober 2026",
@@ -1322,8 +1331,8 @@ MODULES = [
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.7.0", "sinds": "1.6.0", "laatst": "1.75.0",
      "inhoud": "Keukenvoorraad met een eigen, blinde telling (ook als looplijst met dozen scannen, en een begintelling), inboeken per verpakking (per merk, ook door te scannen), weggooien en bijstellen, prijzen, de boodschappenlijst bij een tekort, en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.24.0", "sinds": "1.10.1", "laatst": "1.76.0",
-     "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's en effecten), sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, het Halloween-thema, en de tablet-app Kantine Beheer"},
+    {"naam": "Kantine-tv", "versie": "1.25.0", "sinds": "1.10.1", "laatst": "1.77.0",
+     "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's, effecten en griezelposters met tekeningen), sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, het Halloween-thema, en de tablet-app Kantine Beheer"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.0", "sinds": "", "laatst": "",

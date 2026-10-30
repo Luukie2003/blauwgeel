@@ -516,6 +516,7 @@ SECTIE_ENDPOINTS = {
         "kiosk_moment_stop",
         "kiosk_moment_later",
         "kiosk_moment_voorbeeld",
+        "kiosk_griezel_voorbeeld",  # het live voorbeeld van een griezeldia bij het dia-formulier (1.77.0)
         "kiosk_dia_map_opslaan",
         "kiosk_dia_map_wisselen",
         "kiosk_dia_map_verwijderen",

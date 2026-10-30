@@ -237,6 +237,16 @@
                            placeholder="Leeg: de tijd, zoals 16:00 uur">
                 </div>
             </div>
+            <div class="veld" id="tekening-veld">
+                <label for="tekening">Tekening (griezeldia)</label>
+                <select id="tekening" name="tekening">
+                    <option value="">Geen: titel en tekst in het midden</option>
+                    {% for sleutel, naam in tekeningen.items() %}
+                    <option value="{{ sleutel }}" {{ 'selected' if tekening == sleutel }}>{{ naam }}</option>
+                    {% endfor %}
+                </select>
+                <span class="tekst-zacht">Met een tekening wordt de dia een poster: de titel bovenaan, de tekening linksonder en de prijs op een bord (de regel met €, met de regel erboven, zoals "4 shotjes voor"). Met het effect Programma worden regels als "16:00 Feest start!" het programma, waarin het tijdslot van nu oplicht; de andere regels komen op het bord.</span>
+            </div>
             <div class="veld">
                 <label for="balk_tekst">Balk op het prijzenscherm (optioneel)</label>
                 <input type="text" id="balk_tekst" name="balk_tekst" maxlength="80" value="{{ sponsor.balk_tekst if sponsor and sponsor.balk_tekst else '' }}"
@@ -267,6 +277,7 @@
     <div class="kiosk-voorbeeld-venster" id="voorbeeld-venster">
         <div class="scherm kiosk-voorbeeld-scherm" id="voorbeeld-scherm">
             <section class="slide actief slide-sponsor" id="voorbeeld-slide"></section>
+            <iframe id="griezel-voorbeeld" title="Voorbeeld van de griezeldia" style="display:none; position:absolute; top:0; left:0; width:1920px; height:1080px; border:0; background:#000"></iframe>
         </div>
     </div>
     <p class="tekst-zacht" style="margin-bottom:0">Dit is precies hoe de slide er op het kantine scherm uit komt te zien.</p>
@@ -325,6 +336,7 @@
         document.getElementById('video-veld').hidden = sjabloon !== 'video_volledig';
         var effect = effectVeld.value;
         document.getElementById('label-veld').hidden = sjabloon !== 'griezel';
+        document.getElementById('tekening-veld').hidden = sjabloon !== 'griezel';
         document.getElementById('prijs-plek-veld').hidden = !effect || effect === 'programma' || sjabloon === 'griezel';
         document.getElementById('rijen-veld').hidden = effect !== 'programma';
     }
@@ -347,11 +359,38 @@
         return opties;
     }
 
+    // Een griezeldia staat in het voorbeeld precies zoals op de tv (1.77.0): de server maakt hem op een pagina van 1920
+    // bij 1080 (met tekening, bord en programma), en die staat hier verkleind in een iframe.
+    var griezelFrame = document.getElementById('griezel-voorbeeld');
+    var griezelUrl = "{{ url_for('kiosk_griezel_voorbeeld') }}";
+    var griezelKlok = null;
+    function griezelVoorbeeld() {
+        var velden = {
+            titel: titelVeld.value, tekst: tekstVeld.value, label: document.getElementById('label').value,
+            moment: document.getElementById('moment').value, effect: effectVeld.value,
+            tekening: document.getElementById('tekening').value, map_id: document.getElementById('map_id').value
+        };
+        var adres = griezelUrl + '?' + Object.keys(velden).map(function (k) {
+            return k + '=' + encodeURIComponent(velden[k]);
+        }).join('&');
+        clearTimeout(griezelKlok);
+        griezelKlok = setTimeout(function () {
+            if (griezelFrame.getAttribute('src') !== adres) griezelFrame.setAttribute('src', adres);
+        }, 300);
+    }
+
     function renderVoorbeeld() {
         var sjabloon = sjabloonVeld.value;
         var titel = titelVeld.value;
         var tekst = tekstVeld.value;
         var slide = document.getElementById('voorbeeld-slide');
+        var griezel = sjabloon === 'griezel';
+        griezelFrame.style.display = griezel ? 'block' : 'none';
+        slide.style.display = griezel ? 'none' : '';
+        if (griezel) {
+            griezelVoorbeeld();
+            return;
+        }
         slide.className = 'slide actief slide-sponsor sjabloon-' + sjabloon +
             ' overgang-' + overgangVeld.value + ' tekst-' + tekstGrootteVeld.value;
         slide.style.background = '';
@@ -379,18 +418,6 @@
             html += '<div class="mededeling-label">Mededeling</div>';
             if (titel) html += '<h2>' + escapeHtml(titel) + '</h2>';
             if (tekst) html += '<p>' + escapeHtml(tekst) + '</p>';
-        } else if (sjabloon === 'griezel') {
-            var regels = tekst.split('\n').map(function (r) { return r.trim(); }).filter(Boolean);
-            var label = document.getElementById('label').value || (document.getElementById('moment').value ? document.getElementById('moment').value.slice(11, 16) + ' uur' : '');
-            var kleur = (effecten[effectVeld.value] || {}).kleur || '#ff9326';
-            html += '<div class="gz" style="--gz-kleur:' + kleur + '"><div class="gz-maan"></div>';
-            if (label) html += '<div class="gz-label">' + escapeHtml(label) + '</div>';
-            html += '<div class="gz-midden">';
-            if (titel) html += '<h2 class="gz-titel">' + escapeHtml(titel) + '</h2>';
-            regels.forEach(function (r) {
-                html += '<p class="gz-regel' + (r.indexOf('€') >= 0 ? ' gz-prijs' : '') + '">' + escapeHtml(r) + '</p>';
-            });
-            html += '</div></div>';
         } else if (sjabloon === 'video_volledig') {
             if (videoUrl) html += '<video class="sponsor-video" src="' + videoUrl + '" muted loop autoplay playsinline></video>';
             if (titel) html += '<div class="onderschrift">' + escapeHtml(titel) + '</div>';
@@ -451,7 +478,8 @@
         renderVoorbeeld();
     });
     [sjabloonVeld, customSjabloonVeld, titelVeld, tekstVeld, overgangVeld, tekstGrootteVeld, effectVeld,
-     document.getElementById('label'), document.getElementById('moment'), document.getElementById('programma_rijen')].forEach(function (veld) {
+     document.getElementById('label'), document.getElementById('moment'), document.getElementById('programma_rijen'),
+     document.getElementById('tekening'), document.getElementById('map_id')].forEach(function (veld) {
         veld.addEventListener('input', allesBijwerken);
         veld.addEventListener('change', allesBijwerken);
     });

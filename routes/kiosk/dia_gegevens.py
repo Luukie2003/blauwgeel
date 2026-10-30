@@ -78,6 +78,13 @@ def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None, venster=None, tijd
         "label": s["label"] or (f"{start:%H:%M} uur" if start else None),
         "tekst_regels": [regel.strip() for regel in (s["tekst"] or "").splitlines() if regel.strip()],
     })
+    if s["sjabloon"] == "griezel":
+        # Met een tekening een poster, met het effect 'programma' een programma (1.77.0, zie _kiosk_sponsor_inhoud.html).
+        slide["tekening"] = kiosk_momenten.tekening_van(s)
+        regels = slide["tekst_regels"]
+        if effect == "programma":
+            slide["programma_rijen"], regels = kiosk_momenten.programma_regels(regels, opties.get("momenten", []))
+        slide["gz"] = kiosk_momenten.griezel_delen(regels)
     if s["sjabloon"] != KIOSK_SPONSOR_SJABLOON_AANGEPAST:
         return slide
     sjabloon = eigen_sjablonen.get(s["custom_sjabloon_id"])

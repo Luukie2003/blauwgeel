@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+{# Het live voorbeeld van een griezeldia bij het dia-formulier (1.77.0, zie kiosk_griezel_voorbeeld in
+   routes/kiosk/momenten.py): de dia zoals op de tv, op een pagina van 1920 bij 1080 die het formulier verkleind toont. #}
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Voorbeeld griezeldia</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie|default('') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_effecten.css') }}?v={{ kiosk_effecten_versie|default('') }}">
+    <style>
+        html, body { height: 100%; margin: 0; overflow: hidden; background: #000000; color: #ffffff; }
+        .scherm { position: relative; width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+<div class="scherm">
+    <section class="slide slide-sponsor actief sjabloon-griezel tekst-{{ slide.tekst_grootte }}"{% if slide.effect %} data-effect="{{ slide.effect }}" data-opties="{{ slide.opties|tojson|forceescape }}"{% endif %}>
+        {% include '_kiosk_sponsor_inhoud.html' %}
+    </section>
+</div>
+<script src="{{ url_for('static', filename='kiosk_effecten.js') }}?v={{ kiosk_effecten_versie|default('') }}"></script>
+</body>
+</html>

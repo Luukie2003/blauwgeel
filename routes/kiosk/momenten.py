@@ -130,6 +130,35 @@ def register_routes(app):
         return render_template("kiosk_moment_voorbeeld.html", moment_voorbeeld=dia_id,
                                prijzenscherm=request.args.get("scherm") == "prijzen")
 
+    @app.route("/kiosk/griezel-voorbeeld")
+    def kiosk_griezel_voorbeeld():
+        """Een griezeldia zoals hij op de tv komt, voor het live voorbeeld bij het dia-formulier: een pagina van 1920 bij
+        1080 die het formulier verkleind in een iframe toont, zodat de maten (in vw en vh) kloppen. Bij een programma
+        licht de eerste regel op, zodat je ziet hoe dat eruitziet."""
+        db = get_db()
+        args = request.args
+        effect = args.get("effect") if args.get("effect") in kiosk_momenten.EFFECTEN else None
+        try:
+            map_id = int(args.get("map_id") or 0) or None
+        except ValueError:
+            map_id = None
+        dia = {
+            "id": 0, "sjabloon": "griezel", "titel": (args.get("titel") or "").strip() or None,
+            "tekst": (args.get("tekst") or "").strip() or None,
+            "label": " ".join((args.get("label") or "").split())[:30] or None,
+            "moment": kiosk_momenten.tekst(kiosk_momenten.tijdstip(args.get("moment"))), "map_id": map_id,
+            "effect": effect, "effect_opties": kiosk_momenten.schoon_opties(effect, None, None, None, "griezel",
+                                                                            args.get("tekening")),
+            "weergave_duur_seconden": 10, "herhalingen": 1, "video": None, "video_duur": None, "video_hele_duur": 0,
+            "video_geluid": 0, "afbeelding": None, "overgang": "fade", "tekst_grootte": "normaal",
+            "achtergrond_afbeelding": None, "custom_sjabloon_id": None,
+        }
+        tijden = kiosk_momenten.tijden_per_map(db, db.execute("SELECT * FROM kiosk_sponsoren WHERE actief = 1").fetchall())
+        slide = _sponsor_slide(dia, {}, {}, None, tijden)
+        if slide.get("programma_rijen"):
+            slide["opties"]["momenten"] = [{"tijd": slide["programma_rijen"][0]["tijd"], "van": 0, "einde": 9 * 10**15}]
+        return render_template("kiosk_griezel_voorbeeld.html", slide=slide)
+
     # ---------- Mappen ----------
 
     @app.route("/kiosk/dia-mappen/opslaan", methods=["POST"])
