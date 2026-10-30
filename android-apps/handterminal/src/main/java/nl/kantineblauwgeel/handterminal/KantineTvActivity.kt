@@ -151,6 +151,8 @@ class KantineTvActivity : BasisActivity() {
             if (d.optBoolean("schijnwerper")) {
                 Lijst.knop(kaart, getString(R.string.schijnwerper_stop)) { stuur("/api/app/kantine-tv/schijnwerper/stop") }
             }
+            // Elke andere dia (zoals het programma) zet je groot vanuit de diashow.
+            Lijst.knop(kaart, getString(R.string.andere_dia_groot)) { DiasActivity.open(this) }
         }
 
         // Op het prijzenscherm: uitverkocht en de timer

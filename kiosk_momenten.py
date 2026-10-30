@@ -333,7 +333,8 @@ def tijden_per_map(db, dias):
 def programma(db, nu=None, dagen=7):
     """Alle dia's met een moment van de afgelopen 12 uur tot 'dagen' vooruit, op tijd, voor de Kiosk-hub en de app:
     [{"dia", "map", "van", "einde", "spot_tot", "status"}]. status: 'klaar', 'straks', 'schijnwerper', 'bezig',
-    'map_uit' (de map staat uit, of het moment valt buiten de map) of 'dia_uit'."""
+    'map_uit' (het moment valt buiten de map) of 'dia_uit'. Een map die uit staat (zoals een archief met een oude versie
+    van het feest) hoort niet bij het programma: die dia's staan er alleen bij als ze met de hand groot op de tv staan."""
     nu = nu or datetime.now()
     alle_mappen = {m["id"]: m for m in mappen(db)}
     dias = db.execute(
@@ -346,6 +347,9 @@ def programma(db, nu=None, dagen=7):
     for d in dias:
         start = tijdstip(d["moment"])
         if not start or not (nu - timedelta(hours=12) <= start <= nu + timedelta(days=dagen)):
+            continue
+        map_ = alle_mappen.get(d["map_id"])
+        if map_ is not None and not map_["actief"] and not (handmatig and handmatig["dia"]["id"] == d["id"]):
             continue
         van, einde = slots.get(d["id"], (None, None))
         minuten = schoon_minuten(d["schijnwerper_minuten"])

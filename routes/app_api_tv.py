@@ -116,6 +116,14 @@ def _dia_titel(db, dia):
     return sjabloon["naam"] if sjabloon else None
 
 
+def _schijnwerper(db):
+    """Wat er nu groot op alle tv's staat (met de hand, of de eerste minuten van een moment): {"id", "titel"} of None."""
+    handmatig = kiosk_momenten.handmatige_schijnwerper(db)
+    dia = handmatig["dia"] if handmatig else next(
+        (m["dia"] for m in kiosk_momenten.programma(db, dagen=1) if m["status"] == "schijnwerper"), None)
+    return {"id": dia["id"], "titel": _dia_titel(db, dia)} if dia else None
+
+
 def _dias(db):
     instellingen = _scherm_instellingen(db)
     vandaag = vandaag_amsterdam().isoformat()
@@ -148,6 +156,7 @@ def _dias(db):
         "blokken": [{"sleutel": k, "naam": naam, "aan": bool(instellingen[k])} for k, naam in DIA_BLOKKEN],
         "mappen": mappen,
         "dias": dias,
+        "schijnwerper": _schijnwerper(db),
     }
 
 
@@ -369,14 +378,20 @@ def register_routes(app):
 
     # ------------------------------------------------------------ momenten en de schijnwerper
 
+    def _bijgewerkt(db, melding):
+        """Het antwoord na de schijnwerper aan of uit: het hele overzicht, of met {lijst: "dias"} de diashow (vanuit
+        Diashow in de app, 2.20.0)."""
+        return jsonify({**(_dias(db) if _data().get("lijst") == "dias" else _overzicht(db)), "melding": melding})
+
     @app.route("/api/app/kantine-tv/momenten/<int:dia_id>/nu", methods=["POST"])
     def api_app_tv_moment_nu(dia_id):
-        """Deze dia nu in de schijnwerper op alle tv's (zie kiosk_momenten.toon_nu)."""
+        """Deze dia nu in de schijnwerper op alle tv's (zie kiosk_momenten.toon_nu); dat kan elke dia zijn, ook een dia
+        zonder moment (zoals het programma)."""
         db = get_db()
         melding, fout = kiosk_momenten.toon_nu(db, dia_id)
         if fout:
             return _fout(fout, 404, "niet_gevonden")
-        return jsonify({**_overzicht(db), "melding": melding})
+        return _bijgewerkt(db, melding)
 
     @app.route("/api/app/kantine-tv/momenten/<int:dia_id>/later", methods=["POST"])
     def api_app_tv_moment_later(dia_id):
@@ -391,8 +406,7 @@ def register_routes(app):
     @app.route("/api/app/kantine-tv/schijnwerper/stop", methods=["POST"])
     def api_app_tv_schijnwerper_stop():
         db = get_db()
-        melding = kiosk_momenten.stop_schijnwerper(db)
-        return jsonify({**_overzicht(db), "melding": melding})
+        return _bijgewerkt(db, kiosk_momenten.stop_schijnwerper(db))
 
     @app.route("/api/app/kantine-tv/dia-blokken/<sleutel>", methods=["POST"])
     def api_app_tv_dia_blok(sleutel):

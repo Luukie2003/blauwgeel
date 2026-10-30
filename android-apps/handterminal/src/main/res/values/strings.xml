@@ -704,6 +704,14 @@
     <string name="moment_later">Een kwartier later</string>
     <string name="moment_eerder">Een kwartier eerder</string>
     <string name="schijnwerper_stop">Stop de schijnwerper</string>
+    <string name="schijnwerper_nu">Nu groot op de tv\'s: %1$s</string>
+    <string name="andere_dia_groot">Een andere dia groot tonen</string>
+    <string name="dia_nu_groot">Nu groot op alle tv\'s</string>
+    <string name="dia_aanzetten">Aanzetten: draait mee in de diashow</string>
+    <string name="dia_uitzetten">Uitzetten</string>
+    <string name="dias_in">Dia\'s · %1$s</string>
+    <string name="algemeen">Algemeen</string>
+    <string name="map_staat_uit">%1$s (staat uit)</string>
     <string name="mappen">Mappen</string>
     <string name="map_straks">gaat aan op %1$s</string>
     <string name="map_voorbij">voorbij</string>
@@ -994,8 +1002,8 @@
     <string name="vul_namen_in">Vul in wie er bardienst heeft.</string>
     <string name="tijd_fout">Bijv. 14:00</string>
     <string name="diashow">Diashow</string>
-    <string name="dias_aan_uit">Dia\'s aan of uit</string>
-    <string name="dias_aan_uit_uitleg">Een mededeling, sponsor of de standen even uitzetten</string>
+    <string name="dias_aan_uit">Dia\'s groot tonen, aan of uit</string>
+    <string name="dias_aan_uit_uitleg">Een dia meteen groot op alle tv\'s, of een mededeling, sponsor of de standen even uitzetten</string>
     <string name="kantine_tv_op_site">Dia\'s maken en bewerken en de indeling van het prijzenscherm doe je op de site, bij Kantine-tv.</string>
     <string name="onderdelen">Onderdelen</string>
     <string name="dias">Dia\'s</string>
@@ -1004,7 +1012,7 @@
     <string name="dia_voorbij">tot en met %1$s, voorbij</string>
     <string name="dia_later">vanaf %1$s</string>
     <string name="dia_tot">tot en met %1$s</string>
-    <string name="dias_op_site">Tik op een dia om hem aan of uit te zetten. Een dia met een datum zet zichzelf aan en uit.</string>
+    <string name="dias_op_site">Tik op een dia om hem meteen groot op alle tv\'s te zetten, of om hem aan of uit te zetten. Een dia met een datum zet zichzelf aan en uit.</string>
 
     <!-- Koppelronde en artikel aanpassen (KoppelrondeActivity, ProductActivity) -->
     <string name="koppelronde">Koppelronde</string>

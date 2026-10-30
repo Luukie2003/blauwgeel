@@ -294,3 +294,24 @@ def test_een_griezeldia_met_tekening_opslaan_en_het_voorbeeld(ingelogde_client, 
 def test_het_griezelvoorbeeld_alleen_met_rechten(client):
     resp = client.get("/kiosk/griezel-voorbeeld")
     assert resp.status_code == 302 and "/login" in resp.headers["Location"]
+
+
+def test_een_map_die_uit_staat_hoort_niet_bij_het_programma(db):
+    feest = _map(db)
+    archief = _map(db, "Halloween feest (AI-versie)", actief=0)
+    _dia(db, "Heksenbrouwsel", feest, _t(30))
+    oud = _dia(db, "Heksenbrouwsel", archief, _t(30))
+    assert [m["map"]["naam"] for m in kiosk_momenten.programma(db, NU)] == ["Halloween feest"]
+    kiosk_momenten.toon_nu(db, oud, nu=NU)  # met de hand groot op de tv: dan staat hij er wel bij
+    assert oud in [m["dia"]["id"] for m in kiosk_momenten.programma(db, NU)]
+
+
+def test_elke_dia_groot_tonen_vanuit_de_diashow_in_de_app(app_client, db):  # noqa: F811
+    dia = _dia(db, "Griezelshot", _map(db))  # een dia zonder moment
+    assert app_client.get("/api/app/kantine-tv/dias").get_json()["schijnwerper"] is None
+    aan = _post(app_client, f"/api/app/kantine-tv/momenten/{dia}/nu", lijst="dias", verzoek_id="gs1").get_json()
+    assert aan["schijnwerper"] == {"id": dia, "titel": "Griezelshot"} and "dias" in aan and "Griezelshot" in aan["melding"]
+    uit = _post(app_client, "/api/app/kantine-tv/schijnwerper/stop", lijst="dias").get_json()
+    assert uit["schijnwerper"] is None and "dias" in uit
+    # Zonder 'lijst' blijft het antwoord het overzicht van Kantine-tv (zoals de app 2.19.0 het verwacht).
+    assert "momenten" in _post(app_client, f"/api/app/kantine-tv/momenten/{dia}/nu", verzoek_id="gs2").get_json()
