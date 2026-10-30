@@ -1,0 +1,416 @@
+{# Standen en Man of the Match bijwerken (verplaatst van Dia's naar Diashow in 1.79.0): de teams per poule en de
+   uitslagen van het weekend, met slepen op volgorde. #}
+<div class="kaart" id="standen-teams">
+    <h2 style="margin-top:0">Standen bijwerken</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Sleep de teams in de juiste volgorde (1e plaats bovenaan), pas de naam aan waar nodig en vul
+        W/GL/V bij -- Gespeeld en Punten volgen daar vanzelf uit. Het eigen team staat in het geel. Klik
+        het logo aan om er 1 te uploaden/vervangen (geldt meteen voor elk team van die club, in elke poule).
+    </p>
+    {% for poule in stand_poules %}
+    <div class="stand-poule">
+        <div class="stand-poule-kop">
+            <input type="text" class="stand-poule-titel-veld" value="{{ poule.titel }}" title="Titel van deze poule aanpassen">
+            <form method="post" action="{{ url_for('kiosk_stand_poule_verwijderen', poule=poule.sleutel) }}"
+                  onsubmit="return bevestigEnVerstuur(this, 'Poule \'{{ poule.titel }}\' en alle teams daarin verwijderen?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="stand-item-knop" title="Poule verwijderen">&times;</button>
+            </form>
+        </div>
+        <div class="stand-lijst" data-poule="{{ poule.sleutel }}">
+            {% for team in stand_teams[poule.sleutel] %}
+            <div class="stand-item{{ ' stand-item--eigen' if team.eigen_team else '' }}" draggable="true" data-id="{{ team.id }}">
+                <div class="stand-item-top">
+                    <form method="post" action="{{ url_for('kiosk_club_logo_opslaan') }}" enctype="multipart/form-data"
+                          class="stand-logo-form" draggable="false">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="club" value="{{ team.club }}">
+                        <label class="stand-logo-label" title="Logo uploaden/vervangen voor '{{ team.club }}'">
+                            {% if club_logos.get(team.club) %}
+                            <img src="{{ url_for('static', filename='club_logos/' ~ club_logos[team.club]) }}" alt="">
+                            {% else %}
+                            <span class="stand-logo-placeholder">+</span>
+                            {% endif %}
+                            <input type="file" name="logo" accept="image/*" onchange="this.form.requestSubmit()" aria-label="Logo van {{ team.naam }} vervangen">
+                        </label>
+                    </form>
+                    <input type="text" class="stand-item-naam-veld" value="{{ team.naam }}" title="Teamnaam aanpassen" draggable="false">
+                    <div class="stand-item-knoppen" draggable="false">
+                        <form method="post" action="{{ url_for('kiosk_stand_team_eigen_wisselen', team_id=team.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="stand-item-knop" title="{{ 'Niet meer het eigen team' if team.eigen_team else 'Dit is het eigen team' }}">&#9733;</button>
+                        </form>
+                        <form method="post" action="{{ url_for('kiosk_stand_team_verwijderen', team_id=team.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="stand-item-knop" title="Verwijderen">&times;</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="stand-item-stats" draggable="false">
+                    <label>W<input type="number" min="0" class="stand-stat-veld" data-veld="w" value="{{ team.gewonnen }}"></label>
+                    <label>GL<input type="number" min="0" class="stand-stat-veld" data-veld="gl" value="{{ team.gelijk }}"></label>
+                    <label>V<input type="number" min="0" class="stand-stat-veld" data-veld="v" value="{{ team.verloren }}"></label>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <form method="post" action="{{ url_for('kiosk_stand_volgorde_opslaan', poule=poule.sleutel) }}"
+              class="stand-volgorde-form" data-poule="{{ poule.sleutel }}" style="margin-top:0.6rem">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="volgorde" class="stand-volgorde-veld">
+            <input type="hidden" name="statistieken" class="stand-statistieken-veld">
+            <input type="hidden" name="namen" class="stand-namen-veld">
+            <input type="hidden" name="poule_titel" class="stand-poule-titel-veld-verborgen">
+            <button type="submit" class="btn btn-rand btn-klein">Stand opslaan</button>
+        </form>
+        <form method="post" action="{{ url_for('kiosk_stand_team_nieuw') }}" enctype="multipart/form-data"
+              style="margin-top:0.6rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="poule" value="{{ poule.sleutel }}">
+            <input type="text" name="naam" placeholder="Naam club toevoegen..." style="flex:1; min-width:10rem" aria-label="Naam club toevoegen">
+            <input type="file" name="logo" accept="image/*" title="Logo (optioneel)" aria-label="Logo (optioneel)" style="max-width:9rem">
+            <button type="submit" class="btn btn-rand btn-klein">+ Team</button>
+        </form>
+    </div>
+    {% endfor %}
+    <form method="post" action="{{ url_for('kiosk_stand_poule_nieuw') }}"
+          style="margin-top:1rem; display:flex; gap:0.5rem; align-items:center">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="text" name="titel" placeholder="Titel nieuwe poule (bijv. Zaterdag 4)..." style="flex:1; min-width:10rem" aria-label="Titel nieuwe poule">
+        <button type="submit" class="btn btn-rand btn-klein">+ Poule</button>
+    </form>
+</div>
+
+<div class="kaart" id="motm-teams">
+    <h2 style="margin-top:0">Man of the Match bijwerken</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Sleep in de gewenste volgorde, pas de teamnaam aan waar nodig en vul de tegenstander, de
+        uitslag en de naam in bij elk team dat afgelopen weekend heeft gespeeld. Kies ook of jullie
+        gewonnen, gelijkgespeeld of verloren hebben: dan zet de dia de uitslag zelf goed (eigen team links)
+        en maakt het niet uit in welke volgorde je de cijfers invult, bijvoorbeeld "1-2" zoals voetbal.nl
+        het noemt als jullie uit speelden. Zonder resultaat staat de uitslag precies zoals je 'm typt.
+        Meerdere mensen?
+        Scheid de namen met een komma (bijv. "Jan Jansen, Piet Pietersen"). Uitslag én naam leeg
+        laten = dat team heeft niet gespeeld en wordt overgeslagen op de dia. Staat de tegenstander
+        ook al in het clublogo-register (zie "Standen bijwerken" hieronder), dan verschijnt dat logo
+        automatisch mee op de dia.
+    </p>
+    <div class="motm-lijst">
+        {% for team in motm_teams %}
+        <div class="motm-item" draggable="true" data-id="{{ team.id }}">
+            <input type="text" class="motm-item-naam-veld" value="{{ team.team }}" title="Teamnaam aanpassen" draggable="false">
+            <input type="text" class="motm-tegenstander-veld" placeholder="Tegenstander..." value="{{ team.tegenstander or '' }}" draggable="false">
+            <input type="text" class="motm-uitslag-veld" placeholder="Uitslag (bijv. 3-1)..." value="{{ team.uitslag or '' }}" draggable="false">
+            <select class="motm-resultaat-veld" title="Gewonnen of verloren? Dan zet de dia de uitslag zelf goed, ook als je de cijfers in een andere volgorde invult." draggable="false">
+                <option value="">Resultaat...</option>
+                {% for sleutel, label in motm_resultaten.items() %}
+                <option value="{{ sleutel }}" {{ 'selected' if team.resultaat == sleutel }}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" class="motm-speler-veld" placeholder="Naam/namen invullen..." value="{{ team.speler or '' }}" draggable="false">
+            <form method="post" action="{{ url_for('kiosk_motm_team_verwijderen', team_id=team.id) }}" draggable="false">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="stand-item-knop" title="Team verwijderen">&times;</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    <form method="post" action="{{ url_for('kiosk_motm_volgorde_opslaan') }}" class="motm-volgorde-form"
+          style="margin-top:0.6rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="volgorde" class="motm-volgorde-veld">
+        <input type="hidden" name="spelers" class="motm-spelers-veld">
+        <input type="hidden" name="uitslagen" class="motm-uitslagen-veld">
+        <input type="hidden" name="resultaten" class="motm-resultaten-veld">
+        <input type="hidden" name="tegenstanders" class="motm-tegenstanders-veld">
+        <input type="hidden" name="teamnamen" class="motm-teamnamen-veld">
+        <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
+    </form>
+    <form method="post" action="{{ url_for('kiosk_motm_team_nieuw') }}"
+          style="margin-top:0.6rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="text" name="team" placeholder="Teamnaam toevoegen (bijv. ZA 1)..." style="flex:1">
+        <button type="submit" class="btn btn-rand btn-klein">+ Team</button>
+    </form>
+</div>
+
+<style>
+    .stand-poule + .stand-poule { margin-top: 1.5rem; }
+    .stand-poule-kop { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+    .stand-poule-kop form { margin: 0; }
+    .stand-poule-titel-veld {
+        flex: 1;
+        font-size: 0.9rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--tekst-zacht, #6b7280);
+        border: 1px solid transparent;
+        background: transparent;
+        padding: 0.15rem 0.3rem;
+        border-radius: 4px;
+    }
+    .stand-poule-titel-veld:hover, .stand-poule-titel-veld:focus { border-color: #d7dae2; background: #fff; }
+    .stand-lijst {
+        min-height: 3rem;
+        border: 2px dashed #d7dae2;
+        border-radius: 8px;
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+    .stand-lijst.sleep-over { border-color: #1e3a8a; background: rgba(30, 58, 138, 0.05); }
+    .stand-item {
+        background: #fff;
+        border: 1px solid #d7dae2;
+        border-radius: 6px;
+        padding: 0.4rem 0.6rem;
+        cursor: grab;
+        user-select: none;
+    }
+    .stand-item.wordt-gesleept { opacity: 0.4; }
+    .stand-item--eigen { background: rgba(252, 212, 47, 0.15); border-color: var(--geel-donker); font-weight: 700; }
+    .stand-item-top { display: flex; align-items: center; gap: 0.5rem; }
+    .stand-item-naam-veld {
+        flex: 1;
+        min-width: 0;
+        border: 1px solid transparent;
+        background: transparent;
+        font: inherit;
+        font-weight: inherit;
+        color: inherit;
+        padding: 0.15rem 0.3rem;
+        border-radius: 4px;
+    }
+    .stand-item-naam-veld:hover, .stand-item-naam-veld:focus { border-color: #d7dae2; background: #fff; }
+    .stand-item-knoppen { display: flex; gap: 0.3rem; flex-shrink: 0; }
+    .stand-item-knoppen form, .stand-logo-form { margin: 0; }
+    .stand-item-knop {
+        border: 1px solid #d7dae2;
+        background: #fff;
+        border-radius: 6px;
+        width: 1.8rem;
+        height: 1.8rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+    .stand-item--eigen .stand-item-knop:first-child { color: var(--geel-donker); }
+    .stand-logo-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 6px;
+        border: 1px dashed #d7dae2;
+        flex-shrink: 0;
+        cursor: pointer;
+        overflow: hidden;
+    }
+    .stand-logo-label img { width: 100%; height: 100%; object-fit: contain; }
+    .stand-logo-placeholder { color: var(--tekst-zacht, #6b7280); font-weight: 700; }
+    .stand-logo-label input[type="file"] { display: none; }
+    .stand-item-stats { display: flex; gap: 0.8rem; margin-top: 0.4rem; padding-left: 2.7rem; }
+    .stand-item-stats label {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--tekst-zacht, #6b7280);
+    }
+    .stand-stat-veld { width: 3rem; padding: 0.15rem 0.3rem; }
+
+    .motm-lijst {
+        min-height: 3rem;
+        border: 2px dashed #d7dae2;
+        border-radius: 8px;
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+    .motm-lijst.sleep-over { border-color: #1e3a8a; background: rgba(30, 58, 138, 0.05); }
+    .motm-item {
+        background: #fff;
+        border: 1px solid #d7dae2;
+        border-radius: 6px;
+        padding: 0.4rem 0.6rem;
+        cursor: grab;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+    .motm-item.wordt-gesleept { opacity: 0.4; }
+    .motm-item-naam-veld {
+        flex-shrink: 0;
+        width: 8rem;
+        font: inherit;
+        font-weight: 700;
+        border: 1px solid transparent;
+        background: transparent;
+        padding: 0.15rem 0.3rem;
+        border-radius: 4px;
+    }
+    .motm-item-naam-veld:hover, .motm-item-naam-veld:focus { border-color: #d7dae2; background: #fff; }
+    .motm-tegenstander-veld { flex-shrink: 0; width: 9rem; }
+    .motm-uitslag-veld { flex-shrink: 0; width: 6rem; }
+    .motm-resultaat-veld { flex-shrink: 0; width: 8rem; }
+    .motm-speler-veld { flex: 1; min-width: 12rem; }
+    .motm-item form { margin: 0; }
+</style>
+
+<script>
+(function () {
+    // Zelfde vanilla drag-and-drop-opzet als de kolomindeling van het
+    // prijzenscherm hierboven, maar dan 1 losse lijst per poule (geen
+    // slepen tussen ZA 2/ZA 3/O23 heen, dat zou toch nooit de bedoeling
+    // zijn) -- zie kiosk_stand_volgorde_opslaan in routes/kiosk.py.
+    var lijsten = Array.prototype.slice.call(document.querySelectorAll('.stand-lijst'));
+    var gesleeptItem = null;
+
+    lijsten.forEach(function (lijst) {
+        lijst.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            if (!gesleeptItem) return;
+            lijst.classList.add('sleep-over');
+            var voorDit = elementOpPositie(lijst, e.clientY);
+            if (voorDit) {
+                lijst.insertBefore(gesleeptItem, voorDit);
+            } else {
+                lijst.appendChild(gesleeptItem);
+            }
+        });
+        lijst.addEventListener('dragleave', function (e) {
+            if (e.target === lijst) lijst.classList.remove('sleep-over');
+        });
+        lijst.addEventListener('drop', function (e) {
+            e.preventDefault();
+            lijst.classList.remove('sleep-over');
+        });
+    });
+
+    document.querySelectorAll('.stand-item').forEach(function (item) {
+        item.addEventListener('dragstart', function () {
+            gesleeptItem = item;
+            setTimeout(function () { item.classList.add('wordt-gesleept'); }, 0);
+        });
+        item.addEventListener('dragend', function () {
+            item.classList.remove('wordt-gesleept');
+            lijsten.forEach(function (l) { l.classList.remove('sleep-over'); });
+            gesleeptItem = null;
+        });
+    });
+
+    function elementOpPositie(lijst, muisY) {
+        var items = Array.prototype.slice.call(
+            lijst.querySelectorAll('.stand-item:not(.wordt-gesleept)')
+        );
+        for (var i = 0; i < items.length; i++) {
+            var rect = items[i].getBoundingClientRect();
+            if (muisY < rect.top + rect.height / 2) return items[i];
+        }
+        return null;
+    }
+
+    document.querySelectorAll('.stand-volgorde-form').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            var lijst = document.querySelector('.stand-lijst[data-poule="' + form.dataset.poule + '"]');
+            var items = Array.prototype.slice.call(lijst.querySelectorAll('.stand-item'));
+            var volgorde = items.map(function (item) { return item.dataset.id; });
+            var statistieken = {};
+            var namen = {};
+            items.forEach(function (item) {
+                var velden = {};
+                item.querySelectorAll('.stand-stat-veld').forEach(function (input) {
+                    velden[input.dataset.veld] = input.value;
+                });
+                statistieken[item.dataset.id] = velden;
+                namen[item.dataset.id] = item.querySelector('.stand-item-naam-veld').value;
+            });
+            form.querySelector('.stand-volgorde-veld').value = JSON.stringify(volgorde);
+            form.querySelector('.stand-statistieken-veld').value = JSON.stringify(statistieken);
+            form.querySelector('.stand-namen-veld').value = JSON.stringify(namen);
+            var titelVeld = form.closest('.stand-poule').querySelector('.stand-poule-titel-veld');
+            form.querySelector('.stand-poule-titel-veld-verborgen').value = titelVeld.value;
+        });
+    });
+})();
+</script>
+
+<script>
+(function () {
+    // Zelfde vanilla drag-and-drop-opzet als de standen-lijst hierboven, maar
+    // dan 1 platte lijst (geen poules) -- zie kiosk_motm_volgorde_opslaan.
+    var lijst = document.querySelector('.motm-lijst');
+    if (!lijst) return;
+    var gesleeptItem = null;
+
+    lijst.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        if (!gesleeptItem) return;
+        lijst.classList.add('sleep-over');
+        var voorDit = elementOpPositie(e.clientY);
+        if (voorDit) {
+            lijst.insertBefore(gesleeptItem, voorDit);
+        } else {
+            lijst.appendChild(gesleeptItem);
+        }
+    });
+    lijst.addEventListener('dragleave', function (e) {
+        if (e.target === lijst) lijst.classList.remove('sleep-over');
+    });
+    lijst.addEventListener('drop', function (e) {
+        e.preventDefault();
+        lijst.classList.remove('sleep-over');
+    });
+
+    lijst.querySelectorAll('.motm-item').forEach(function (item) {
+        item.addEventListener('dragstart', function () {
+            gesleeptItem = item;
+            setTimeout(function () { item.classList.add('wordt-gesleept'); }, 0);
+        });
+        item.addEventListener('dragend', function () {
+            item.classList.remove('wordt-gesleept');
+            lijst.classList.remove('sleep-over');
+            gesleeptItem = null;
+        });
+    });
+
+    function elementOpPositie(muisY) {
+        var items = Array.prototype.slice.call(lijst.querySelectorAll('.motm-item:not(.wordt-gesleept)'));
+        for (var i = 0; i < items.length; i++) {
+            var rect = items[i].getBoundingClientRect();
+            if (muisY < rect.top + rect.height / 2) return items[i];
+        }
+        return null;
+    }
+
+    var form = document.querySelector('.motm-volgorde-form');
+    form.addEventListener('submit', function () {
+        var items = Array.prototype.slice.call(lijst.querySelectorAll('.motm-item'));
+        var volgorde = items.map(function (item) { return item.dataset.id; });
+        var spelers = {};
+        var uitslagen = {};
+        var resultaten = {};
+        var tegenstanders = {};
+        var teamnamen = {};
+        items.forEach(function (item) {
+            spelers[item.dataset.id] = item.querySelector('.motm-speler-veld').value;
+            uitslagen[item.dataset.id] = item.querySelector('.motm-uitslag-veld').value;
+            resultaten[item.dataset.id] = item.querySelector('.motm-resultaat-veld').value;
+            tegenstanders[item.dataset.id] = item.querySelector('.motm-tegenstander-veld').value;
+            teamnamen[item.dataset.id] = item.querySelector('.motm-item-naam-veld').value;
+        });
+        form.querySelector('.motm-volgorde-veld').value = JSON.stringify(volgorde);
+        form.querySelector('.motm-spelers-veld').value = JSON.stringify(spelers);
+        form.querySelector('.motm-uitslagen-veld').value = JSON.stringify(uitslagen);
+        form.querySelector('.motm-resultaten-veld').value = JSON.stringify(resultaten);
+        form.querySelector('.motm-tegenstanders-veld').value = JSON.stringify(tegenstanders);
+        form.querySelector('.motm-teamnamen-veld').value = JSON.stringify(teamnamen);
+    });
+})();
+</script>

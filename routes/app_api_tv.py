@@ -95,6 +95,8 @@ def _momenten(db):
         ],
         "schijnwerper": bool(kiosk_momenten.handmatige_schijnwerper(db))
         or any(m["status"] == "schijnwerper" for m in programma),
+        # Wat er groot staat, voor de gele balk bovenaan Kantine-tv in de app (2.21.0).
+        "schijnwerper_titel": (_schijnwerper(db) or {}).get("titel"),
     }
 
 
@@ -118,9 +120,7 @@ def _dia_titel(db, dia):
 
 def _schijnwerper(db):
     """Wat er nu groot op alle tv's staat (met de hand, of de eerste minuten van een moment): {"id", "titel"} of None."""
-    handmatig = kiosk_momenten.handmatige_schijnwerper(db)
-    dia = handmatig["dia"] if handmatig else next(
-        (m["dia"] for m in kiosk_momenten.programma(db, dagen=1) if m["status"] == "schijnwerper"), None)
+    dia = kiosk_momenten.in_schijnwerper(db)
     return {"id": dia["id"], "titel": _dia_titel(db, dia)} if dia else None
 
 
@@ -140,6 +140,9 @@ def _dias(db):
             "titel": _dia_titel(db, s),
             "map_id": s["map_id"],
             "moment": s["moment"],
+            # De kleur van het effect, voor de tegels in de app (2.21.0); zonder effect de standaardkleur.
+            "effect": s["effect"],
+            "kleur": kiosk_momenten.kleur(s["effect"]),
             "soort": SJABLOON_NAMEN.get(s["sjabloon"], s["sjabloon"]),
             "actief": bool(s["actief"]),
             "vanaf": s["zichtbaar_vanaf"],

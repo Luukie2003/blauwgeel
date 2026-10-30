@@ -517,6 +517,12 @@ SECTIE_ENDPOINTS = {
         "kiosk_moment_later",
         "kiosk_moment_voorbeeld",
         "kiosk_griezel_voorbeeld",  # het live voorbeeld van een griezeldia bij het dia-formulier (1.77.0)
+        # De nieuwe indeling (1.79.0): Tv's en Diashow als eigen tabblad, en een dia aan of uit vanaf zijn tegel, met een
+        # plaatje van de dia zelf.
+        "kiosk_tvs_beheer",
+        "kiosk_diashow",
+        "kiosk_dia_wisselen",
+        "kiosk_dia_miniatuur",
         "kiosk_dia_map_opslaan",
         "kiosk_dia_map_wisselen",
         "kiosk_dia_map_verwijderen",

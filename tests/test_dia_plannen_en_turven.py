@@ -116,7 +116,7 @@ def test_het_dialijstje_toont_gepland_actief_en_verlopen(ingelogde_client, db):
     _zet_data(db, "Nu", tot=_dag(3))
     _zet_data(db, "Voorbij", tot=_dag(-2))
     tekst = ingelogde_client.get("/kiosk/sponsoren-leden").data.decode()
-    assert "Gepland vanaf" in tekst and "Verlopen op" in tekst and f"t/m {_dag(3)[8:10]}-{_dag(3)[5:7]}" in tekst
+    assert "gepland vanaf" in tekst and "verlopen op" in tekst and f"t/m {_dag(3)[8:10]}-{_dag(3)[5:7]}" in tekst
 
 
 def test_de_tv_pakt_het_filter_ook_op_het_scherm(ingelogde_client, db):

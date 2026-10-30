@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block titel %}Diashow · Kantine-tv{% endblock %}
+{% block inhoud %}
+{# Diashow (1.79.0): welke onderdelen meedraaien en in welke volgorde (slepen, of de pijltjes op een tablet), de
+   standen en Man of the Match, de eigen sjablonen en de Club van 20, met rechts een live voorbeeld. De volgorde gaat
+   als volgnummers mee met hetzelfde formulier als vroeger (kiosk_scherm_instellingen). #}
+<div class="kt">
+{% include '_kt_kop.html' %}
+{% from '_kt_ikonen.html' import ikoon %}
+{% set onderdelen = [] %}
+{% for sleutel, titel, uitleg in [
+    ('sponsoren', "Dia's en mededelingen", "De dia's van het tabblad Dia's, elk met zijn eigen duur."),
+    ('club_van_20', 'Club van 20', 'De leden en de werving. Titel, namen per dia en wie erop komt: bij Club van 20 → Scherm en werving.'),
+    ('wedstrijden', 'Wedstrijden', 'De komende thuiswedstrijden uit de agenda (Club instellingen). Niets gepland: dan slaat hij dit over.'),
+    ('standen', 'Standen', 'Een dia per poule. Werk de teams wekelijks bij, hieronder.'),
+    ('motm', 'Man of the Match', 'Eén dia met de uitslagen van het weekend en de Man of the Match. De teams vul je hieronder in.')] %}
+{% set _ = onderdelen.append({'sleutel': sleutel, 'titel': titel, 'uitleg': uitleg, 'volgorde': instellingen[sleutel ~ '_volgorde'] or 99}) %}
+{% endfor %}
+
+<div class="kt-met-voorbeeld">
+<section style="min-width:0">
+    <div class="kt-kaart" id="onderdelen">
+        <div class="kt-kaart-kop">
+            <div>
+                <h2>{{ ikoon('diashow') }} Onderdelen</h2>
+                <p>Zet een onderdeel aan of uit, en sleep ze in de volgorde waarin ze op de tv komen.</p>
+            </div>
+        </div>
+        <form method="post" action="{{ url_for('kiosk_scherm_instellingen') }}" class="js-ajax-form" id="scherm-instellingen-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <ol class="kt-onderdelen" id="onderdelen-lijst">
+                {% for o in onderdelen|sort(attribute='volgorde') %}
+                <li class="kt-onderdeel" data-sleutel="{{ o.sleutel }}">
+                    <span class="kt-greep" title="Slepen">{{ ikoon('greep') }}</span>
+                    <div class="kt-onderdeel-hoofd">
+                        <div class="kt-onderdeel-titel">{{ o.titel }}</div>
+                        <div class="kt-uitleg">{{ o.uitleg }}</div>
+                        {% if o.sleutel in ('wedstrijden', 'standen', 'motm') %}
+                        <div class="kt-onderdeel-velden">
+                            {% if o.sleutel == 'motm' %}
+                            <label>Titel boven de dia <input type="text" name="motm_titel" value="{{ instellingen.motm_titel }}"></label>
+                            {% endif %}
+                            <label>Seconden in beeld
+                                <input type="number" name="{{ o.sleutel }}_duur_seconden" min="3" value="{{ instellingen[o.sleutel ~ '_duur_seconden'] }}">
+                            </label>
+                        </div>
+                        {% elif o.sleutel == 'club_van_20' %}
+                        <div class="kt-onderdeel-velden"><a href="{{ url_for('club_van_20_instellingen') }}" class="kt-knop kt-knop--klein">Scherm en werving instellen</a></div>
+                        {% endif %}
+                        <input type="hidden" name="{{ o.sleutel }}_volgorde" value="{{ o.volgorde }}" class="kt-volgorde">
+                    </div>
+                    <div class="kt-pijlen">
+                        <button type="button" data-omhoog aria-label="{{ o.titel }} eerder">&#9650;</button>
+                        <button type="button" data-omlaag aria-label="{{ o.titel }} later">&#9660;</button>
+                    </div>
+                    <input type="checkbox" class="kt-schakel" name="toon_{{ o.sleutel }}" aria-label="{{ o.titel }} tonen"
+                           {{ 'checked' if instellingen['toon_' ~ o.sleutel] }}>
+                </li>
+                {% endfor %}
+            </ol>
+            <button type="submit" class="kt-knop kt-knop--primair">Opslaan</button>
+        </form>
+    </div>
+
+    {% include '_kiosk_standen_motm.html' %}
+
+    <div class="kt-kaart" id="sjablonen">
+        <div class="kt-kaart-kop">
+            <div>
+                <h2>{{ ikoon('sjabloon') }} Eigen sjablonen</h2>
+                <p>Een eigen indeling voor dia's: sleep titel, tekst, foto en prijs waar je ze wilt hebben.</p>
+            </div>
+            <a href="{{ url_for('kiosk_sjabloon_nieuw') }}" class="kt-knop kt-knop--primair kt-knop--klein">{{ ikoon('plus') }} Nieuw sjabloon</a>
+        </div>
+        {% for s in sjablonen_custom %}
+        {% set aantal_gebruikt = gebruik_per_sjabloon.get(s.id, 0) %}
+        <div class="kt-rij">
+            <div class="kt-rij-hoofd">
+                <div class="kt-rij-titel">{{ s.naam }}</div>
+                <div class="kt-rij-sub">{{ aantal_elementen_per_sjabloon.get(s.id, 0) }} elementen</div>
+            </div>
+            {% if aantal_gebruikt %}
+            <span class="kt-pil kt-pil--aan">{{ aantal_gebruikt }} dia{{ "'s" if aantal_gebruikt != 1 }}</span>
+            {% else %}
+            <span class="kt-pil">Ongebruikt</span>
+            {% endif %}
+            <div class="kt-rij-acties">
+                <a href="{{ url_for('kiosk_sjabloon_bewerken', sjabloon_id=s.id) }}" class="kt-ikoon" title="Bewerken" aria-label="{{ s.naam }} bewerken">{{ ikoon('potlood') }}</a>
+                <form method="post" action="{{ url_for('kiosk_sjabloon_verwijderen', sjabloon_id=s.id) }}" class="kt-inline"
+                      onsubmit="return bevestigEnVerstuur(this, '\'{{ s.naam }}\' verwijderen?{{ (' Wordt gebruikt door ' ~ aantal_gebruikt ~ ' dia(s), die vallen dan terug op het standaardsjabloon.') if aantal_gebruikt else '' }}');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="kt-ikoon kt-ikoon--gevaar" title="Verwijderen" aria-label="{{ s.naam }} verwijderen">{{ ikoon('prullenbak') }}</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="kt-leeg">Nog geen eigen sjablonen.</div>
+        {% endfor %}
+    </div>
+
+    <div class="kt-kaart" id="club-van-20">
+        <div class="kt-kaart-kop">
+            <div>
+                <h2>Club van 20</h2>
+                <p>{% if club_van_20 %}Seizoen {{ club_van_20.seizoen }}: {{ club_van_20.betaald }} betaald{% if club_van_20.aantal %}, {{ club_van_20.aantal }} nog open{% endif %}.{% else %}De leden, betalingen en projecten staan bij Club van 20 in het menu.{% endif %}</p>
+            </div>
+        </div>
+        <div style="display:flex; gap:0.45rem; flex-wrap:wrap">
+            <a href="{{ url_for('club_van_20_overzicht') }}" class="kt-knop kt-knop--klein">Leden en betalingen</a>
+            <a href="{{ url_for('club_van_20_projecten') }}" class="kt-knop kt-knop--klein">Projecten</a>
+            <a href="{{ url_for('club_van_20_instellingen') }}" class="kt-knop kt-knop--klein">Scherm en werving</a>
+        </div>
+    </div>
+</section>
+
+<aside class="kt-plak">
+    <div class="kt-kaart">
+        <div class="kt-kaart-kop" style="margin-bottom:0.6rem">
+            <h2>Live voorbeeld</h2>
+            <button type="button" class="kt-ikoon" id="voorbeeld-verversen" title="Verversen" aria-label="Voorbeeld verversen">{{ ikoon('opnieuw') }}</button>
+        </div>
+        <div class="kt-scherm"><iframe id="scherm-preview" src="{{ url_for('kiosk_scherm') }}" title="Voorbeeld van de diashow"></iframe></div>
+        <p class="kt-uitleg">Ververst vanzelf als je de onderdelen opslaat.</p>
+    </div>
+</aside>
+</div>
+</div>
+
+<script>
+(function () {
+    var iframe = document.getElementById('scherm-preview');
+    function schaal() { iframe.style.transform = 'scale(' + (iframe.parentElement.clientWidth / 1920) + ')'; }
+    window.addEventListener('resize', schaal);
+    iframe.addEventListener('load', schaal);
+    schaal();
+    document.getElementById('voorbeeld-verversen').addEventListener('click', function () { iframe.contentWindow.location.reload(); });
+
+    // De volgorde: slepen aan de greep, of met de pijltjes; de volgnummers gaan met het formulier mee.
+    var lijst = document.getElementById('onderdelen-lijst');
+    var form = document.getElementById('scherm-instellingen-form');
+    function nummer() {
+        lijst.querySelectorAll('.kt-onderdeel').forEach(function (li, i) { li.querySelector('.kt-volgorde').value = i + 1; });
+    }
+    var gesleept = null;
+    lijst.querySelectorAll('.kt-greep').forEach(function (greep) {
+        greep.addEventListener('pointerdown', function () { greep.closest('.kt-onderdeel').setAttribute('draggable', 'true'); });
+    });
+    lijst.addEventListener('dragstart', function (e) {
+        gesleept = e.target.closest('.kt-onderdeel');
+        if (!gesleept) return;
+        gesleept.classList.add('sleept');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', gesleept.dataset.sleutel);
+    });
+    lijst.addEventListener('dragover', function (e) {
+        if (!gesleept) return;
+        e.preventDefault();
+        var doel = e.target.closest('.kt-onderdeel');
+        if (!doel || doel === gesleept) return;
+        var vak = doel.getBoundingClientRect();
+        lijst.insertBefore(gesleept, e.clientY > vak.top + vak.height / 2 ? doel.nextSibling : doel);
+    });
+    lijst.addEventListener('dragend', function () {
+        if (gesleept) {
+            gesleept.classList.remove('sleept');
+            gesleept.removeAttribute('draggable');
+        }
+        gesleept = null;
+        nummer();
+    });
+    lijst.addEventListener('click', function (e) {
+        var knop = e.target.closest('[data-omhoog], [data-omlaag]');
+        if (!knop) return;
+        var li = knop.closest('.kt-onderdeel');
+        if (knop.hasAttribute('data-omhoog') && li.previousElementSibling) lijst.insertBefore(li, li.previousElementSibling);
+        if (knop.hasAttribute('data-omlaag') && li.nextElementSibling) lijst.insertBefore(li.nextElementSibling, li);
+        nummer();
+    });
+    form.addEventListener('submit', nummer, true);
+    form.addEventListener('ajax-form:success', function () { iframe.contentWindow.location.reload(); });
+    nummer();
+})();
+</script>
+{% endblock %}

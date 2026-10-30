@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+{# Het plaatje op de tegel van een dia bij Dia's (1.79.0, zie kiosk_dia_miniatuur in routes/kiosk/momenten.py): de dia
+   zoals op de tv, op een pagina van 1920 bij 1080 die de tegel verkleind toont. Zonder kiosk_effecten.js, dus zonder
+   bewegende deeltjes: rustig op een pagina vol tegels. #}
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Dia</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie|default('') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_effecten.css') }}?v={{ kiosk_effecten_versie|default('') }}">
+    <style>
+        html, body { height: 100%; margin: 0; overflow: hidden; background: #000000; color: #ffffff; }
+        .scherm { position: relative; width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+<div class="scherm">
+    {% if slide %}
+    <section class="slide slide-sponsor actief sjabloon-{{ slide.sjabloon }} tekst-{{ slide.tekst_grootte }}"
+             {% if slide.sjabloon == 'aangepast' and slide.custom_achtergrond_kleur %}style="background: {{ slide.custom_achtergrond_kleur }};"{% endif %}>
+        {% include '_kiosk_sponsor_inhoud.html' %}
+    </section>
+    {% endif %}
+</div>
+</body>
+</html>

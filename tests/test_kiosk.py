@@ -1096,7 +1096,7 @@ def test_sponsoren_leden_pagina_toont_eigen_sjablonen(ingelogde_client, db):
         ],
     )
 
-    resp = ingelogde_client.get("/kiosk/sponsoren-leden")
+    resp = ingelogde_client.get("/kiosk/diashow")
 
     assert resp.status_code == 200
     assert b"Zichtbaar Sjabloon" in resp.data
@@ -1245,21 +1245,20 @@ def test_scherm_instellingen_accepteert_ajax_en_geeft_json(ingelogde_client, db)
     assert data["ok"] is True
 
 
-def test_scherm_instellingen_get_stuurt_door_naar_dias_pagina(ingelogde_client, db):
-    """Er is geen losse instellingenpagina meer -- de instellingen staan nu
-    op dezelfde pagina als de dia's zelf (kiosk_sponsoren_leden), dus een
-    oude bladwijzer naar /kiosk/scherm/instellingen stuurt gewoon door."""
+def test_scherm_instellingen_get_stuurt_door_naar_diashow(ingelogde_client, db):
+    """Er is geen losse instellingenpagina meer -- de instellingen staan op het tabblad Diashow (kiosk_diashow,
+    1.79.0), dus een oude bladwijzer naar /kiosk/scherm/instellingen stuurt gewoon door."""
     resp = ingelogde_client.get("/kiosk/scherm/instellingen")
     assert resp.status_code == 302
-    assert resp.headers["Location"].endswith("/kiosk/sponsoren-leden")
+    assert resp.headers["Location"].endswith("/kiosk/diashow")
 
 
-def test_dias_pagina_toont_diashow_instellingen_en_live_voorbeeld(ingelogde_client, db):
-    resp = ingelogde_client.get("/kiosk/sponsoren-leden")
+def test_diashow_toont_de_onderdelen_en_een_live_voorbeeld(ingelogde_client, db):
+    resp = ingelogde_client.get("/kiosk/diashow")
     assert resp.status_code == 200
     assert b'id="scherm-preview"' in resp.data
     assert b"js-ajax-form" in resp.data
-    assert b"Diashow instellen" in resp.data
+    assert b"Onderdelen" in resp.data and b'name="sponsoren_volgorde"' in resp.data
 
 
 def test_kiosk_schermen_staan_zichzelf_toe_te_framen(ingelogde_client, db):
@@ -1486,15 +1485,15 @@ def test_kiosk_tv_versie_verandert_bij_wisselen(ingelogde_client, db):
     assert versie1 != versie2
 
 
-def test_hub_pagina_toont_drie_schermen_en_instellen_snelkoppelingen(ingelogde_client, db):
+def test_nu_en_tvs_tonen_de_tabbladen_en_de_drie_schermen(ingelogde_client, db):
+    """De nieuwe indeling (1.79.0): elke pagina van de kantine-tv heeft dezelfde tabbladen; de drie vaste schermen
+    staan bij Tv's, de snelknoppen (wisselscherm, bardienst) bij Nu."""
     resp = ingelogde_client.get("/kiosk")
     assert resp.status_code == 200
-    assert b"Scherm 1" in resp.data
-    assert b"Scherm 2" in resp.data
-    assert b"Scherm 3" in resp.data
-    assert b"Wisselscherm" in resp.data
-    assert b"Bardienst" in resp.data
-    # De beknopte "Instellen"-snelkoppelingen naar Acties/Sponsoren/Club van 20.
-    assert b'href="/kiosk/prijzen/acties"' in resp.data
-    assert b"#dias-tabel" in resp.data
-    assert b'href="/club-van-20"' in resp.data
+    for adres in (b'href="/kiosk/sponsoren-leden"', b'href="/kiosk/diashow"', b'href="/kiosk/prijzen/instellingen"',
+                  b'href="/kiosk/sponsorlogos"', b'href="/kiosk/tvs"'):
+        assert adres in resp.data
+    assert b"Wisselscherm" in resp.data and b"Bardienst" in resp.data
+    tvs = ingelogde_client.get("/kiosk/tvs")
+    assert tvs.status_code == 200
+    assert b"Vaste schermen" in tvs.data and b"Prijzenlijst" in tvs.data and b"Wisselscherm" in tvs.data

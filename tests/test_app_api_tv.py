@@ -151,8 +151,8 @@ def test_qr_code_op_de_tv_en_het_koppel_adres(app, ingelogde_client):
     code = "".join(_code(tv))
     assert "<svg" in pagina and "handterminal-app" in pagina
     resp = ingelogde_client.get(f"/kiosk/koppel/{code}")
-    assert resp.status_code == 302 and resp.headers["Location"].endswith(f"/kiosk?code={code}#tvs")
-    hub = ingelogde_client.get(f"/kiosk?code={code}").get_data(as_text=True)
+    assert resp.status_code == 302 and resp.headers["Location"].endswith(f"/kiosk/tvs?code={code}")
+    hub = ingelogde_client.get(f"/kiosk/tvs?code={code}").get_data(as_text=True)
     assert f'value="{code}"' in hub
     # Zonder inloggen: eerst naar de inlogpagina.
     assert "/login" in app.test_client().get(f"/kiosk/koppel/{code}").headers["Location"]

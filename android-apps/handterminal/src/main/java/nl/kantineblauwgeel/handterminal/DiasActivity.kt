@@ -2,6 +2,7 @@ package nl.kantineblauwgeel.handterminal
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
@@ -81,11 +82,10 @@ class DiasActivity : BasisActivity() {
         val inhoud = b.inhoud
         inhoud.removeAllViews()
 
-        // Staat er nu iets groot op de tv's, dan bovenaan, met de knop om het eraf te halen.
+        // Staat er nu iets groot op de tv's, dan bovenaan in het geel, met Stop (2.21.0).
         data.optJSONObject("schijnwerper")?.let { s ->
-            val kaart = Lijst.kaart(inhoud)
-            Lijst.regel(kaart, getString(R.string.schijnwerper_nu, s.tekstOfNull("titel") ?: ""))
-            Lijst.knop(kaart, getString(R.string.schijnwerper_stop)) { schijnwerper("/api/app/kantine-tv/schijnwerper/stop") }
+            Lijst.balk(inhoud, getString(R.string.schijnwerper_nu, s.tekstOfNull("titel") ?: getString(R.string.een_dia)),
+                getString(R.string.stop_knop)) { schijnwerper("/api/app/kantine-tv/schijnwerper/stop") }
         }
 
         Lijst.kop(inhoud, getString(R.string.onderdelen))
@@ -95,7 +95,7 @@ class DiasActivity : BasisActivity() {
         for (blok in data.optJSONArray("blokken")?.objecten().orEmpty()) {
             val aan = blok.optBoolean("aan")
             Lijst.regel(blokken, blok.optString("naam"), null, getString(if (aan) R.string.aan else R.string.uit),
-                if (aan) R.color.groen_tekst else R.color.tekst_zacht) {
+                if (aan) R.color.groen_tekst else R.color.tekst_zacht, pil = true) {
                 zet("/api/app/kantine-tv/dia-blokken/${blok.optString("sleutel")}", JSONObject().put("aan", !aan))
             }
         }
@@ -114,7 +114,7 @@ class DiasActivity : BasisActivity() {
                 }
                 Lijst.regel(kaart, m.optString("naam"),
                     listOfNotNull(resources.getQuantityString(R.plurals.n_dias, m.optInt("dias"), m.optInt("dias")), wanneer).joinToString(" · "),
-                    getString(if (aan) R.string.aan else R.string.uit), if (aan) R.color.groen_tekst else R.color.tekst_zacht) {
+                    getString(if (aan) R.string.aan else R.string.uit), if (aan) R.color.groen_tekst else R.color.tekst_zacht, pil = true) {
                     zet("/api/app/kantine-tv/mappen/${m.getInt("id")}", JSONObject().put("aan", !aan))
                 }
             }
@@ -140,21 +140,27 @@ class DiasActivity : BasisActivity() {
                 else -> getString(R.string.map_staat_uit, m.optString("naam"))
             }
             Lijst.kop(inhoud, getString(R.string.dias_in, naam))
-            val kaart = Lijst.kaart(inhoud)
-            for (dia in groep) {
-                val actief = dia.optBoolean("actief")
+            // Elke dia als tegel (2.21.0): de titel in de kleur van zijn effect, het tijdstip in het geel.
+            Lijst.tegels(inhoud, groep.map { dia ->
+                val moment = dia.tekstOfNull("moment")
                 val periode = when (dia.tekstOfNull("periode")) {
                     "voorbij" -> getString(R.string.dia_voorbij, Lijst.datum(dia.tekstOfNull("tot"), metTijd = false))
                     "later" -> getString(R.string.dia_later, Lijst.datum(dia.tekstOfNull("vanaf"), metTijd = false))
                     else -> dia.tekstOfNull("tot")?.let { getString(R.string.dia_tot, Lijst.datum(it, metTijd = false)) }
                 }
-                Lijst.regel(kaart, dia.tekstOfNull("titel") ?: dia.optString("soort"),
-                    listOfNotNull(dia.optString("soort").substringBefore(" ("),
-                        dia.tekstOfNull("moment")?.let { getString(R.string.dia_moment, Lijst.datum(it)) }, periode).joinToString(" · "),
-                    getString(if (actief) R.string.aan else R.string.uit), if (actief) R.color.groen_tekst else R.color.tekst_zacht) {
-                    diaMenu(dia)
+                val kleur = try {
+                    Color.parseColor(dia.tekstOfNull("kleur") ?: "#FCD42F")
+                } catch (fout: IllegalArgumentException) {
+                    getColor(R.color.geel)
                 }
-            }
+                Lijst.Tegel(
+                    titel = dia.tekstOfNull("titel") ?: dia.optString("soort"),
+                    sub = periode ?: moment?.let { Lijst.datum(it, metTijd = false) } ?: dia.optString("soort").substringBefore(" ("),
+                    kleur = kleur,
+                    label = moment?.takeIf { it.length >= 16 }?.substring(11, 16),
+                    aan = dia.optBoolean("actief"),
+                ) { diaMenu(dia) }
+            })
         }
         Lijst.tekst(inhoud, getString(R.string.dias_op_site), grootte = 11.5f)
     }

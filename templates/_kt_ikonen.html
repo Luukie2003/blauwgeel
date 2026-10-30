@@ -1,0 +1,34 @@
+{# Lijnicoontjes voor het beheer van de kantine-tv (1.79.0): {% from '_kt_ikonen.html' import ikoon %} en dan
+   {{ ikoon('flits') }}, of {{ ikoon('video', 'kt-i--groot') }} voor een andere maat. Ze nemen de kleur van de tekst
+   eromheen over. #}
+{% macro ikoon(naam, extra='') -%}
+<svg class="kt-i {{ extra }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+{%- if naam == 'tv' %}<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/>
+{%- elif naam == 'nu' %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+{%- elif naam == 'dias' %}<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="15.5" cy="9" r="1.5"/>
+{%- elif naam == 'diashow' %}<path d="M4 6h11M4 12h11M4 18h7"/><path d="M17 14l5 3-5 3z"/>
+{%- elif naam == 'prijs' %}<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>
+{%- elif naam == 'sponsoren' %}<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>
+{%- elif naam == 'tvs' %}<path d="M2 16a5 5 0 0 1 5 5M2 12a9 9 0 0 1 9 9M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/>
+{%- elif naam == 'flits' %}<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>
+{%- elif naam == 'oog' %}<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>
+{%- elif naam == 'potlood' %}<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>
+{%- elif naam == 'prullenbak' %}<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>
+{%- elif naam == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{%- elif naam == 'opnieuw' %}<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>
+{%- elif naam == 'greep' %}<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>
+{%- elif naam == 'later' %}<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6"/>
+{%- elif naam == 'stop' %}<rect x="6" y="6" width="12" height="12" rx="2"/>
+{%- elif naam == 'map' %}<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+{%- elif naam == 'video' %}<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/>
+{%- elif naam == 'buiten' %}<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>
+{%- elif naam == 'qr' %}<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>
+{%- elif naam == 'wissel' %}<path d="M4 8h13l-3-3M20 16H7l3 3"/>
+{%- elif naam == 'timer' %}<circle cx="12" cy="13" r="8"/><path d="M12 9v4M9 2h6M19 6l1.5-1.5"/>
+{%- elif naam == 'thema' %}<path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/>
+{%- elif naam == 'meer' %}<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>
+{%- elif naam == 'sjabloon' %}<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+{%- elif naam == 'pijl' %}<path d="M5 12h14M13 6l6 6-6 6"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}

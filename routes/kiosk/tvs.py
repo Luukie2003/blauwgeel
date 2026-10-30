@@ -122,7 +122,7 @@ def register_routes(app):
         """Waar de QR-code op een nieuwe tv naartoe wijst: Kantine-tv met de code al ingevuld. De handterminal-app
         herkent dit adres zelf en koppelt de tv in de app (zie BasisActivity.openScan)."""
         code = "".join(c for c in code if c.isdigit())[:6]
-        return redirect(url_for("kiosk_hub", code=code) + "#tvs")
+        return redirect(url_for("kiosk_tvs_beheer", code=code))
 
     @app.route("/kiosk/tvs/koppelen", methods=["POST"])
     def kiosk_tv_koppelen():
@@ -135,7 +135,7 @@ def register_routes(app):
         else:
             tv = db.execute("SELECT naam FROM kiosk_tvs WHERE id = ?", (tv_id,)).fetchone()
             flash(f"Tv '{tv['naam']}' is gekoppeld. Binnen een paar seconden toont hij wat je hebt gekozen.", "success")
-        return redirect(url_for("kiosk_hub") + "#tvs")
+        return redirect(url_for("kiosk_tvs_beheer"))
 
     @app.route("/kiosk/tvs/<int:tv_id>/opslaan", methods=["POST"])
     def kiosk_tv_opslaan(tv_id):
@@ -149,7 +149,7 @@ def register_routes(app):
         if is_ajax_verzoek():
             return jsonify({"ok": not fout, "melding": melding, "fout": fout}), (400 if fout else 200)
         flash(melding, "error" if fout else "success")
-        return redirect(url_for("kiosk_hub") + "#tvs")
+        return redirect(url_for("kiosk_tvs_beheer"))
 
     @app.route("/kiosk/tvs/<int:tv_id>/herladen", methods=["POST"])
     def kiosk_tv_herladen(tv_id):
@@ -162,7 +162,7 @@ def register_routes(app):
         if is_ajax_verzoek():
             return jsonify({"ok": True, "melding": melding})
         flash(melding, "success")
-        return redirect(url_for("kiosk_hub") + "#tvs")
+        return redirect(url_for("kiosk_tvs_beheer"))
 
     @app.route("/kiosk/tvs/<int:tv_id>/verwijderen", methods=["POST"])
     def kiosk_tv_verwijderen(tv_id):
@@ -173,7 +173,7 @@ def register_routes(app):
         db.execute("DELETE FROM kiosk_tvs WHERE id = ?", (tv_id,))
         db.commit()
         flash(f"Tv '{tv['naam']}' is ontkoppeld. Hij toont nu weer een koppelcode.", "success")
-        return redirect(url_for("kiosk_hub") + "#tvs")
+        return redirect(url_for("kiosk_tvs_beheer"))
 
     @app.route("/kiosk/tvs/status")
     def kiosk_tvs_status():

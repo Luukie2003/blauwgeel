@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block titel %}Bardienst bewerken{% endblock %}
 {% block inhoud %}
+<div class="kt">
+{% include '_kt_kop.html' %}
 <h1>Bardienst bewerken</h1>
 <p class="subtitel"><a href="{{ url_for('kiosk_bardienst') }}">&larr; Terug naar bardienst</a></p>
 
@@ -27,5 +29,6 @@
         </div>
         <button type="submit" class="btn btn-geel" style="margin-top:1rem">Opslaan</button>
     </form>
+</div>
 </div>
 {% endblock %}

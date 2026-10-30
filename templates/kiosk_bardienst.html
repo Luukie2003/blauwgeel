@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block titel %}Bardienst{% endblock %}
 {% block inhoud %}
+<div class="kt">
+{% include '_kt_kop.html' %}
 <h1>Bardienst</h1>
 <p class="subtitel">
     Plan per dag wie er bardienst heeft; het prijzenscherm toont dit vanzelf onderaan in een
@@ -64,5 +66,6 @@
     {% else %}
     <p class="leeg">Nog geen bardiensten ingepland.</p>
     {% endif %}
+</div>
 </div>
 {% endblock %}

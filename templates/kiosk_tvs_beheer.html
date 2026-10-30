@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block titel %}Tv's · Kantine-tv{% endblock %}
+{% block inhoud %}
+{# Tv's (1.79.0): per gekoppelde tv kiezen wat hij toont en hoe groot, opnieuw laden of ontkoppelen; een nieuwe tv
+   koppelen; en de vaste adressen van de drie schermen, met een live voorbeeld en QR-code. #}
+<div class="kt">
+{% include '_kt_kop.html' %}
+{% from '_kt_ikonen.html' import ikoon %}
+<style>
+    .kt-tv-velden { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.6rem; margin-top: 0.8rem; }
+    .kt-tv-velden label { display: grid; gap: 0.2rem; font-size: 0.78rem; color: var(--kt-zacht); font-weight: 600; min-width: 0; }
+    .kt-tv-velden input, .kt-tv-velden select { width: 100%; min-width: 0; }
+    .kt-tv-acties { display: flex; gap: 0.45rem; flex-wrap: wrap; margin-top: 0.7rem; align-items: center; }
+    .kt-tv-code { font-size: 1.3rem; letter-spacing: 0.12em; font-variant-numeric: tabular-nums; }
+    .kt-qr { margin-top: 0.7rem; }
+    .kt-qr svg { max-width: 180px; height: auto; }
+</style>
+
+<div class="kt-sectie" id="tvs"><h2>Gekoppelde tv's</h2></div>
+<div class="kt-raster" id="tv-lijst">
+    {% for tv in tvs %}
+    <div class="kt-kaart" data-tv-id="{{ tv.id }}" style="margin:0">
+        <div class="kt-kaart-kop" style="margin-bottom:0.5rem">
+            <h2>{{ ikoon('tv') }} {{ tv.naam }}</h2>
+            <span class="kt-pil kt-pil--stip {{ 'kt-pil--aan' if tv.status.aan else 'kt-pil--rood' }}" data-tv-status>{{ tv.status.tekst }}</span>
+        </div>
+        <div class="kt-scherm"><iframe class="kiosk-mini-voorbeeld" data-bron="{{ url_for('kiosk_tv_scherm', token=tv.token, voorbeeld=1) }}" title="Live voorbeeld {{ tv.naam }}"></iframe></div>
+        <p class="kt-uitleg" data-tv-details>
+            {%- if tv.status.toont %}Toont {{ tv.status.toont }}{% endif %}
+            {%- if tv.status.beeld %} · beeld {{ tv.status.beeld }}{% endif %}
+            {%- if tv.status.app %} · {{ tv.status.app }}{% endif %}
+            {%- if tv.status.geladen %} · geladen {{ tv.status.geladen }}{% endif %}
+        </p>
+        <form method="post" action="{{ url_for('kiosk_tv_opslaan', tv_id=tv.id) }}" class="js-ajax-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="kt-tv-velden">
+                <label>Naam <input type="text" name="naam" value="{{ tv.naam }}" maxlength="40" required></label>
+                <label>Toont
+                    <select name="scherm">
+                        {% for sleutel, label in schermen.items() %}
+                        <option value="{{ sleutel }}" {{ 'selected' if tv.scherm == sleutel }}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Grootte
+                    <select name="zoom">
+                        {% for z in zooms %}
+                        <option value="{{ z }}" {{ 'selected' if tv.zoom == z }}>{{ z }}%{{ ' (standaard)' if z == 100 }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            <div class="kt-tv-acties"><button type="submit" class="kt-knop kt-knop--primair kt-knop--klein">Opslaan</button></div>
+        </form>
+        <div class="kt-tv-acties">
+            <form method="post" action="{{ url_for('kiosk_tv_herladen', tv_id=tv.id) }}" class="js-ajax-form kt-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="kt-knop kt-knop--klein">{{ ikoon('opnieuw') }} Opnieuw laden</button>
+            </form>
+            <form method="post" action="{{ url_for('kiosk_tv_verwijderen', tv_id=tv.id) }}" class="kt-inline"
+                  data-vraag="Tv '{{ tv.naam }}' ontkoppelen? Hij toont daarna weer een koppelcode."
+                  onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag, {ja: 'Ja, ontkoppelen'})">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="kt-knop kt-knop--klein kt-knop--gevaar">Ontkoppelen</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="kt-kaart" style="margin:0" id="koppelen">
+        <div class="kt-kaart-kop" style="margin-bottom:0.3rem"><h2>{{ ikoon('plus') }} Tv koppelen</h2></div>
+        <p class="kt-uitleg">
+            Open op de tv <strong>{{ koppel_url }}</strong> (in de tv-app: <em>Gekoppeld scherm</em>). De tv laat een code
+            van 6 cijfers en een QR-code zien: vul de code hier in, of scan de QR-code met de handterminal-app.
+        </p>
+        <form method="post" action="{{ url_for('kiosk_tv_koppelen') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="kt-tv-velden">
+                <label>Code op de tv
+                    <input type="text" name="code" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="123 456"
+                           class="kt-tv-code" required value="{{ request.args.get('code', '')[:7] }}">
+                </label>
+                <label>Naam <input type="text" name="naam" maxlength="40" placeholder="Bijv. Bar" required
+                                   {{ 'autofocus' if request.args.get('code') }}></label>
+                <label>Toont
+                    <select name="scherm">
+                        {% for sleutel, label in schermen.items() %}
+                        <option value="{{ sleutel }}" {{ 'selected' if sleutel == 'dias' }}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            <div class="kt-tv-acties"><button type="submit" class="kt-knop kt-knop--primair kt-knop--klein">Koppelen</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="kt-sectie"><h2>Vaste schermen</h2><span class="kt-uitleg" style="margin:0">Voor een tv die (nog) niet gekoppeld is, of een scherm dat je cast.</span></div>
+<div class="kt-raster">
+    {% for titel, url, endpoint, qr_id, qr_svg in [
+        ('Prijzenlijst', prijzen_url, 'kiosk_prijzen_scherm', 'qr-prijzen', prijzen_qr_svg),
+        ("Dia's", scherm_url, 'kiosk_scherm', 'qr-scherm', scherm_qr_svg),
+        ('Wisselscherm', tv_url, 'kiosk_tv', 'qr-tv', tv_qr_svg)] %}
+    <div class="kt-kaart" style="margin:0">
+        <div class="kt-kaart-kop" style="margin-bottom:0.6rem">
+            <h2>{{ titel }}</h2>
+            <a href="{{ url_for(endpoint) }}" target="_blank" rel="noopener" class="kt-ikoon" title="Openen" aria-label="{{ titel }} openen">{{ ikoon('buiten') }}</a>
+        </div>
+        <div class="kt-scherm"><iframe class="kiosk-mini-voorbeeld" data-bron="{{ url_for(endpoint) }}" title="Live voorbeeld {{ titel }}"></iframe></div>
+        {% if endpoint == 'kiosk_tv' %}
+        <p class="kt-uitleg">Voor wie maar één scherm heeft. Toont nu:
+            <strong id="tv-modus-tekst">{{ "de dia's" if instellingen.actief_tv_scherm == 'dias' else 'de prijzenlijst' }}</strong></p>
+        {% endif %}
+        <div class="kt-tv-acties">
+            {% if endpoint == 'kiosk_tv' %}
+            <form method="post" action="{{ url_for('kiosk_tv_wisselen') }}" class="js-ajax-form kt-inline" id="tv-wissel-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="kt-knop kt-knop--primair kt-knop--klein" id="tv-wissel-knop">{{ ikoon('wissel') }}
+                    Wissel naar {{ 'de prijzenlijst' if instellingen.actief_tv_scherm == 'dias' else "de dia's" }}</button>
+            </form>
+            {% endif %}
+            <button type="button" class="kt-knop kt-knop--klein" data-qr-toggle="{{ qr_id }}">{{ ikoon('qr') }} QR-code</button>
+        </div>
+        <div class="kt-qr" id="{{ qr_id }}" hidden>
+            <p class="kt-uitleg" style="word-break:break-all">{{ url }}</p>
+            {{ qr_svg|safe }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+</div>
+
+<script>
+(function () {
+    var form = document.getElementById('tv-wissel-form');
+    if (form) {
+        form.addEventListener('ajax-form:success', function (e) {
+            var modus = e.detail.modus;
+            document.getElementById('tv-modus-tekst').textContent = modus === 'dias' ? "de dia's" : 'de prijzenlijst';
+            document.getElementById('tv-wissel-knop').lastChild.textContent = ' Wissel naar ' + (modus === 'dias' ? 'de prijzenlijst' : "de dia's");
+        });
+    }
+    document.querySelectorAll('[data-qr-toggle]').forEach(function (knop) {
+        knop.addEventListener('click', function () {
+            var blok = document.getElementById(knop.dataset.qrToggle);
+            if (blok) blok.hidden = !blok.hidden;
+        });
+    });
+
+    // Of de tv's aan staan: elke halve minuut bijgewerkt, zonder de pagina (en de voorbeelden) te herladen.
+    function werkTvsBij() {
+        fetch({{ url_for('kiosk_tvs_status')|tojson }}, { cache: 'no-store', credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                (data.tvs || []).forEach(function (tv) {
+                    var kaart = document.querySelector('[data-tv-id="' + tv.id + '"]');
+                    if (!kaart) return;
+                    var status = kaart.querySelector('[data-tv-status]');
+                    status.textContent = tv.status.tekst;
+                    status.className = 'kt-pil kt-pil--stip ' + (tv.status.aan ? 'kt-pil--aan' : 'kt-pil--rood');
+                    var delen = [];
+                    if (tv.status.toont) delen.push('Toont ' + tv.status.toont);
+                    if (tv.status.beeld) delen.push('beeld ' + tv.status.beeld);
+                    if (tv.status.app) delen.push(tv.status.app);
+                    if (tv.status.geladen) delen.push('geladen ' + tv.status.geladen);
+                    kaart.querySelector('[data-tv-details]').textContent = delen.join(' · ');
+                });
+            })
+            .catch(function () {});
+    }
+    if (document.querySelector('[data-tv-id]')) setInterval(werkTvsBij, 30000);
+
+    // Live mini-voorbeelden: een scherm van 1920 bij 1080, verkleind, elke 30 seconden ververst.
+    document.querySelectorAll('.kiosk-mini-voorbeeld').forEach(function (iframe) {
+        function schaal() { iframe.style.transform = 'scale(' + (iframe.parentElement.clientWidth / 1920) + ')'; }
+        iframe.src = iframe.dataset.bron;
+        window.addEventListener('resize', schaal);
+        iframe.addEventListener('load', schaal);
+        setInterval(function () { iframe.src = iframe.dataset.bron; }, 30000);
+    });
+})();
+</script>
+{% endblock %}

@@ -384,6 +384,6 @@ def test_beheerpagina_toont_de_resultaatkeuze(ingelogde_client, db):
     team_id = _voeg_team_toe(db, "ZA 1", uitslag="2-1")
     db.execute("UPDATE kiosk_motm SET resultaat = 'gelijk' WHERE id = ?", (team_id,))
     db.commit()
-    tekst = ingelogde_client.get("/kiosk/sponsoren-leden").data.decode()
+    tekst = ingelogde_client.get("/kiosk/diashow").data.decode()
     assert 'class="motm-resultaat-veld"' in tekst
     assert '<option value="gelijk" selected>Gelijkspel</option>' in tekst

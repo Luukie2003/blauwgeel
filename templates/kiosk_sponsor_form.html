@@ -1,8 +1,10 @@
 {% extends "base.html" %}
-{% block titel %}{{ 'Sponsor bewerken' if sponsor else 'Nieuwe sponsor' }}{% endblock %}
+{% block titel %}{{ 'Dia bewerken' if sponsor else 'Nieuwe dia' }}{% endblock %}
 {% block inhoud %}
+<div class="kt">
+{% include '_kt_kop.html' %}
 <h1>{{ 'Sponsor bewerken' if sponsor else 'Nieuwe sponsor' }}</h1>
-<p class="subtitel"><a href="{{ url_for('kiosk_sponsoren_leden') }}">&larr; Terug naar sponsoren &amp; leden</a></p>
+<p class="subtitel"><a href="{{ url_for('kiosk_sponsoren_leden') }}">&larr; Terug naar Dia's</a></p>
 
 <div class="kaart" style="max-width:640px; margin-bottom:1.2rem">
     <h2 style="margin-top:0">Wat kun je hier laten zien?</h2>
@@ -507,4 +509,5 @@
     schaalVoorbeeld();
 })();
 </script>
+</div>
 {% endblock %}

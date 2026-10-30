@@ -82,6 +82,20 @@ class KantineTvActivity : BasisActivity() {
         val inhoud = b.inhoud
         inhoud.removeAllViews()
 
+        // Staat er nu iets groot op de tv's, dan bovenaan in het geel, met Stop (2.21.0).
+        if (d.optBoolean("schijnwerper")) {
+            Lijst.balk(inhoud, getString(R.string.schijnwerper_nu, d.tekstOfNull("schijnwerper_titel") ?: getString(R.string.een_dia)),
+                getString(R.string.stop_knop)) { stuur("/api/app/kantine-tv/schijnwerper/stop") }
+        }
+        // Snelknoppen voor wat je achter de bar het vaakst nodig hebt.
+        fun snelknop(tekst: String, icoon: Int, actie: () -> Unit) = Triple(tekst, icoon, actie)
+        Lijst.snelknoppen(inhoud, listOfNotNull(
+            snelknop(getString(R.string.snel_dia_groot), R.drawable.ic_kiosk) { DiasActivity.open(this) },
+            snelknop(getString(R.string.timer_titel), R.drawable.ic_timer) { TimerActivity.open(this) },
+            if (inst.toegang("voorraad")) snelknop(getString(R.string.uitverkocht_titel), R.drawable.ic_let_op) { UitverkochtActivity.open(this) } else null,
+            snelknop(getString(R.string.tv_koppelen), R.drawable.ic_koppelen) { koppelVenster(null) },
+        ))
+
         // Tv's
         Lijst.kop(inhoud, getString(R.string.tvs))
         val tvs = d.optJSONArray("tvs")?.objecten().orEmpty()
@@ -106,11 +120,8 @@ class KantineTvActivity : BasisActivity() {
                     status.tekstOfNull("app"),
                 ).joinToString(" · ")
                 Lijst.regel(kaart, tv.optString("naam"), detail, getString(if (aan) R.string.aan else R.string.uit),
-                    if (aan) R.color.groen_tekst else R.color.rood_balk) { tvMenu(tv, schermen) }
+                    if (aan) R.color.groen_tekst else R.color.rood_balk, pil = true) { tvMenu(tv, schermen) }
             }
-        }
-        Lijst.regel(Lijst.kaart(inhoud), getString(R.string.tv_koppelen), getString(R.string.tv_koppelen_uitleg), "+", R.color.navy) {
-            koppelVenster(null)
         }
         val wisselDias = d.optString("wissel") == "dias"
         Lijst.regel(Lijst.kaart(inhoud), getString(R.string.wisselscherm),
@@ -124,7 +135,7 @@ class KantineTvActivity : BasisActivity() {
         Lijst.regel(Lijst.kaart(inhoud), getString(R.string.halloween_thema),
             getString(if (halloween) R.string.halloween_aan_uitleg else R.string.halloween_uit_uitleg),
             getString(if (halloween) R.string.aan else R.string.uit),
-            if (halloween) R.color.oranje_balk else R.color.tekst_zacht) {
+            if (halloween) R.color.oranje_balk else R.color.tekst_zacht, pil = true) {
             stuur("/api/app/kantine-tv/thema", JSONObject().put("thema", if (halloween) JSONObject.NULL else "halloween"))
         }
 
@@ -144,12 +155,9 @@ class KantineTvActivity : BasisActivity() {
                     else -> getString(R.string.moment_straks) to R.color.navy
                 }
                 Lijst.regel(kaart, m.optString("tijd") + "  " + (m.tekstOfNull("titel") ?: ""),
-                    listOfNotNull(m.tekstOfNull("map"), m.tekstOfNull("balk")).joinToString(" · ").ifEmpty { null }, wat, kleur) {
+                    listOfNotNull(m.tekstOfNull("map"), m.tekstOfNull("balk")).joinToString(" · ").ifEmpty { null }, wat, kleur, pil = true) {
                     momentMenu(m)
                 }
-            }
-            if (d.optBoolean("schijnwerper")) {
-                Lijst.knop(kaart, getString(R.string.schijnwerper_stop)) { stuur("/api/app/kantine-tv/schijnwerper/stop") }
             }
             // Elke andere dia (zoals het programma) zet je groot vanuit de diashow.
             Lijst.knop(kaart, getString(R.string.andere_dia_groot)) { DiasActivity.open(this) }
@@ -161,11 +169,11 @@ class KantineTvActivity : BasisActivity() {
         if (inst.toegang("voorraad")) {  // uitverkocht zetten mag met voorraadrechten (zie rechten.py)
             val uitverkocht = d.optInt("uitverkocht")
             Lijst.regel(prijzen, getString(R.string.uitverkocht_titel), getString(R.string.uitverkocht_kort_uitleg),
-                if (uitverkocht > 0) uitverkocht.toString() else null, R.color.rood_balk) { UitverkochtActivity.open(this) }
+                if (uitverkocht > 0) uitverkocht.toString() else null, R.color.rood_balk, pil = true) { UitverkochtActivity.open(this) }
         }
         val timers = d.optInt("timers")
         Lijst.regel(prijzen, getString(R.string.timer_titel), getString(R.string.timer_kort_uitleg),
-            if (timers > 0) timers.toString() else null, R.color.navy) { TimerActivity.open(this) }
+            if (timers > 0) timers.toString() else null, R.color.navy, pil = true) { TimerActivity.open(this) }
 
         // Specials
         Lijst.kop(inhoud, getString(R.string.specials))
@@ -179,7 +187,7 @@ class KantineTvActivity : BasisActivity() {
         for (a in acties) {
             val actief = a.optBoolean("actief")
             Lijst.regel(specials, getString(R.string.actie_naam, a.optString("product")), a.tekstOfNull("tekst"),
-                getString(if (actief) R.string.aan else R.string.uit), if (actief) R.color.groen_tekst else R.color.tekst_zacht) {
+                getString(if (actief) R.string.aan else R.string.uit), if (actief) R.color.groen_tekst else R.color.tekst_zacht, pil = true) {
                 stuur("/api/app/kantine-tv/acties/${a.getInt("id")}", JSONObject().put("actief", !actief))
             }
         }
@@ -197,7 +205,7 @@ class KantineTvActivity : BasisActivity() {
                 val tijd = "${bd.optString("start_tijd")} – ${bd.optString("eind_tijd")}"
                 Lijst.regel(bardienst, bd.optString("namen"),
                     if (bd.optBoolean("bezig")) getString(R.string.nu_bezig, tijd) else tijd,
-                    if (bd.optBoolean("bezig")) getString(R.string.nu) else null, R.color.groen_tekst) { bardienstVenster(bd, vandaag) }
+                    if (bd.optBoolean("bezig")) getString(R.string.nu) else null, R.color.groen_tekst, pil = true) { bardienstVenster(bd, vandaag) }
             }
         }
         if (diensten.isEmpty()) Lijst.tekst(bardienst, getString(R.string.geen_bardienst), grootte = 12f)

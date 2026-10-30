@@ -1,6 +1,8 @@
 {% extends basis_template %}
 {% block titel %}Prijzenscherm instellen{% endblock %}
 {% block inhoud %}
+<div class="kt">
+{% include '_kt_kop.html' %}
 {% if pda_modus %}
 <p class="subtitel">Zet met 1 tik welke producten op het prijzenscherm staan.</p>
 
@@ -30,7 +32,6 @@
 {% else %}
 <p class="subtitel">
     Vink aan welke producten op het prijzenscherm getoond moeten worden en sla in één keer alles op.
-    <a href="{{ url_for('kiosk_hub') }}">&larr; Terug naar Kantine Kiosk</a>
 </p>
 {% include "_kiosk_prijzen_subnav.html" %}
 {% endif %}
@@ -340,4 +341,5 @@
     filter();
 })();
 </script>
+</div>
 {% endblock %}

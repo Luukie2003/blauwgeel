@@ -55,7 +55,7 @@ def test_koppelen_met_de_code(app, ingelogde_client, db):
     code = _code(tv)
     oude_versie = _versie(tv)
     resp = _koppel(ingelogde_client, code, naam="  Bar  ", scherm="dias")
-    assert resp.headers["Location"].endswith("/kiosk#tvs")
+    assert resp.headers["Location"].endswith("/kiosk/tvs")
     rij = _rij(db)
     assert rij["naam"] == "Bar" and rij["scherm"] == "dias" and rij["gekoppeld_door"] == "admin"
     # De tv merkt het bij de volgende vraag en toont dan de dia's.
@@ -200,13 +200,13 @@ def test_ontkoppelen(app, ingelogde_client, db):
 
 def test_kantine_tv_toont_de_tvs(app, ingelogde_client, db):
     tv = _gekoppeld(app, ingelogde_client)
-    hub = ingelogde_client.get("/kiosk").data.decode()
+    hub = ingelogde_client.get("/kiosk/tvs").data.decode()
     assert "Tv koppelen" in hub and "Bar" in hub and "Nog niet gezien" in hub
     assert f"/kiosk/t/{TOKEN}?voorbeeld=1" in hub
     tv.get(f"/kiosk/t/{TOKEN}")
     _versie(tv, beeld="1920x1080", app="browser")
-    hub = ingelogde_client.get("/kiosk").data.decode()
-    assert "tv-status--aan" in hub and "Toont de prijzenlijst · beeld 1920x1080 · in een browser" in hub
+    hub = ingelogde_client.get("/kiosk/tvs").data.decode()
+    assert "kt-pil--aan" in hub and "Toont de prijzenlijst · beeld 1920x1080 · in een browser" in hub
 
 
 def test_alleen_met_de_sectie_kantine_tv(app, db):

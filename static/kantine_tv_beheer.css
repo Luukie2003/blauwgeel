@@ -1,0 +1,217 @@
+/* Het beheer van de kantine-tv (1.79.0): een moderne stijl die alleen geldt binnen <div class="kt">, zodat de rest
+   van de site blijft zoals hij is. Bovenaan elke pagina staat _kt_kop.html (de titel, de tv's die aan staan en de
+   tabbladen); daaronder kaarten, tegels, schakelaars en labels. Wat nog met de gewone onderdelen van de site is
+   gebouwd (.kaart, .btn, fieldset.groupbox, tabellen) krijgt hier dezelfde ronde, rustige vormgeving. */
+
+.kt {
+    --kt-kaart: #ffffff;
+    --kt-vlak: #f5f7fb;
+    --kt-rand: #e2e6ee;
+    --kt-tekst: #1c2333;
+    --kt-zacht: #667085;
+    --kt-blauw: #1e3a8a;
+    --kt-blauw-licht: #edf1fa;
+    --kt-geel: #fcd42f;
+    --kt-groen: #12804a;
+    --kt-groen-bg: #e5f5eb;
+    --kt-rood: #b42318;
+    --kt-rood-bg: #fdecea;
+    --kt-oranje: #a65a07;
+    --kt-oranje-bg: #fff3e0;
+    --kt-radius: 14px;
+    --kt-schaduw: 0 1px 2px rgba(16, 24, 40, 0.06), 0 2px 6px rgba(16, 24, 40, 0.06);
+    color: var(--kt-tekst);
+}
+.kt *, .kt *::before, .kt *::after { box-sizing: border-box; }
+.kt [hidden] { display: none !important; }
+.kt-i { width: 1.1em; height: 1.1em; flex: none; vertical-align: -0.15em; }
+.kt-i--middel { width: 1.6rem; height: 1.6rem; }
+.kt-i--groot { width: 2.4rem; height: 2.4rem; }
+.kt-i--zacht { color: var(--kt-zacht); }
+
+/* Het plaatje op de tegel van een griezeldia, zolang de dia zelf nog laadt. */
+.kt-tegel-beeld.kt-tegel-beeld--griezel { background: radial-gradient(ellipse 80% 65% at 50% 38%, #40125a, #08020e 76%); }
+
+/* ---------- De kop met tabbladen ---------- */
+.kt-kop { margin: -0.2rem 0 1.2rem; }
+.kt-kop-rij { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+.kt-kop h1 { margin: 0; font-size: 1.45rem; font-weight: 700; color: var(--kt-blauw); display: flex; align-items: center; gap: 0.5rem; }
+.kt-kop h1 svg { width: 1.6rem; height: 1.6rem; }
+.kt-kop-rechts { margin-left: auto; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.kt-tabs {
+    display: flex; gap: 0.2rem; overflow-x: auto; border-bottom: 1px solid var(--kt-rand);
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.kt-tabs::-webkit-scrollbar { display: none; }
+.kt-tab {
+    display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 0.9rem 0.7rem; white-space: nowrap;
+    color: var(--kt-zacht); font-weight: 600; font-size: 0.95rem; border-bottom: 3px solid transparent; margin-bottom: -1px;
+    border-radius: 8px 8px 0 0;
+}
+.kt-tab svg { width: 1.1rem; height: 1.1rem; }
+.kt-tab:hover { color: var(--kt-tekst); background: var(--kt-blauw-licht); text-decoration: none; }
+.kt-tab.actief { color: var(--kt-blauw); border-bottom-color: var(--kt-geel); }
+.kt-subtabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0 0 1rem; }
+
+/* ---------- Kaarten en indeling ---------- */
+.kt-kaart, .kt .kaart {
+    background: var(--kt-kaart); border: 1px solid var(--kt-rand); border-radius: var(--kt-radius);
+    box-shadow: var(--kt-schaduw); padding: 1.1rem 1.25rem; margin-bottom: 1rem;
+}
+.kt-kaart-kop { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.8rem; }
+.kt-kaart-kop h2, .kt h2.kt-titel { margin: 0; font-size: 1.08rem; font-weight: 700; color: var(--kt-tekst); display: flex; align-items: center; gap: 0.45rem; }
+.kt-kaart-kop p, .kt-uitleg { margin: 0.2rem 0 0; color: var(--kt-zacht); font-size: 0.88rem; }
+.kt-sectie { margin: 1.4rem 0 0.7rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.kt-sectie h2, .kt-sectie h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
+.kt-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.kt-twee { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.kt-met-zij { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 1.1rem; align-items: start; }
+.kt-met-voorbeeld { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr); gap: 1.1rem; align-items: start; }
+.kt-plak { position: sticky; top: 1rem; }
+@media (max-width: 900px) {
+    .kt-twee, .kt-met-zij, .kt-met-voorbeeld { grid-template-columns: minmax(0, 1fr); }
+    .kt-plak { position: static; }
+}
+.kt-leeg { text-align: center; color: var(--kt-zacht); padding: 1.4rem 1rem; border: 1.5px dashed var(--kt-rand); border-radius: 12px; }
+
+/* ---------- Labels, knoppen en schakelaars ---------- */
+.kt-pil, .kt .badge {
+    display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.18rem 0.6rem; border-radius: 999px; border: 0;
+    font-size: 0.78rem; font-weight: 700; line-height: 1.4; white-space: nowrap; background: #eef0f4; color: #475467;
+}
+.kt-pil--aan, .kt .badge-ok, .kt .badge-in { background: var(--kt-groen-bg); color: var(--kt-groen); }
+.kt-pil--uit, .kt .badge-neutraal { background: #eef0f4; color: #475467; }
+.kt-pil--rood, .kt .badge-laag { background: var(--kt-rood-bg); color: var(--kt-rood); }
+.kt-pil--oranje, .kt .badge-uit { background: var(--kt-oranje-bg); color: var(--kt-oranje); }
+.kt-pil--blauw { background: var(--kt-blauw-licht); color: var(--kt-blauw); }
+.kt-pil--geel { background: var(--kt-geel); color: #3d3000; }
+.kt-pil--stip::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: currentColor; }
+
+.kt-knop, .kt .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 2.25rem;
+    padding: 0.4rem 0.95rem; border-radius: 10px; border: 1px solid var(--kt-rand); background: var(--kt-kaart);
+    color: var(--kt-tekst); font: inherit; font-weight: 600; font-size: 0.88rem; cursor: pointer; text-decoration: none;
+    box-shadow: 0 1px 1px rgba(16, 24, 40, 0.04);
+}
+.kt-knop:hover, .kt .btn:hover { background: var(--kt-vlak); text-decoration: none; }
+.kt-knop svg, .kt .btn svg { width: 1.05rem; height: 1.05rem; }
+.kt-knop--primair, .kt .btn-geel { background: var(--kt-geel); border-color: #e9c11c; color: #1f2a52; }
+.kt-knop--primair:hover, .kt .btn-geel:hover { background: #f4c919; }
+.kt-knop--gevaar, .kt .btn-gevaar { color: var(--kt-rood); border-color: #f3c3be; }
+.kt-knop--gevaar:hover, .kt .btn-gevaar:hover { background: var(--kt-rood-bg); }
+.kt-knop--klein, .kt .btn-klein { min-height: 1.95rem; padding: 0.25rem 0.7rem; font-size: 0.82rem; border-radius: 9px; }
+.kt-ikoon {
+    display: inline-flex; align-items: center; justify-content: center; width: 2.1rem; height: 2.1rem; padding: 0;
+    border-radius: 10px; border: 1px solid var(--kt-rand); background: var(--kt-kaart); color: #475467; cursor: pointer;
+}
+.kt-ikoon:hover { background: var(--kt-vlak); color: var(--kt-tekst); text-decoration: none; }
+.kt-ikoon svg { width: 1.1rem; height: 1.1rem; }
+.kt-ikoon--gevaar:hover { background: var(--kt-rood-bg); color: var(--kt-rood); }
+.kt form.kt-inline { display: inline; margin: 0; }
+
+/* Een schakelaar: een knop in een formulier (aan of uit met één klik), of een vinkje dat er zo uitziet. */
+.kt-schakelaar, .kt input[type="checkbox"].kt-schakel {
+    appearance: none; -webkit-appearance: none; position: relative; flex: none; width: 2.6rem; height: 1.5rem; margin: 0;
+    border-radius: 999px; border: 0; background: #cfd5df; cursor: pointer; padding: 0; transition: background 0.15s;
+}
+.kt-schakelaar::after, .kt input[type="checkbox"].kt-schakel::after {
+    content: ""; position: absolute; top: 0.2rem; left: 0.2rem; width: 1.1rem; height: 1.1rem; border-radius: 50%;
+    background: #ffffff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); transition: transform 0.15s;
+}
+.kt-schakelaar.aan, .kt input[type="checkbox"].kt-schakel:checked { background: #22a05a; }
+.kt-schakelaar.aan::after, .kt input[type="checkbox"].kt-schakel:checked::after { transform: translateX(1.1rem); }
+
+/* ---------- Formulieren en tabellen die nog uit de rest van de site komen ---------- */
+.kt input[type="text"], .kt input[type="number"], .kt input[type="date"], .kt input[type="datetime-local"],
+.kt input[type="time"], .kt input[type="search"], .kt select, .kt textarea {
+    border: 1px solid #d0d5dd; border-radius: 9px; padding: 0.45rem 0.65rem; background: #ffffff; font: inherit;
+}
+.kt input:focus, .kt select:focus, .kt textarea:focus { outline: none; border-color: #7a95d6; box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12); }
+.kt fieldset.groupbox { border: 1px solid var(--kt-rand); border-radius: 12px; padding: 0.9rem 1rem 0.4rem; background: var(--kt-vlak); }
+.kt fieldset.groupbox legend { text-transform: none; letter-spacing: 0; font-size: 0.9rem; color: var(--kt-tekst); padding: 0 0.4rem; }
+.kt .tabel-wrap { border: 1px solid var(--kt-rand); border-radius: 12px; overflow: auto; }
+.kt table { border-collapse: collapse; width: 100%; }
+.kt table th { background: var(--kt-vlak); color: var(--kt-zacht); font-size: 0.78rem; font-weight: 700; text-align: left; padding: 0.55rem 0.75rem; border: 0; border-bottom: 1px solid var(--kt-rand); }
+.kt table td { padding: 0.6rem 0.75rem; border: 0; border-bottom: 1px solid #eef0f4; vertical-align: middle; }
+.kt table tr:last-child td { border-bottom: 0; }
+.kt .tab-balk { border-bottom: 0; gap: 0.4rem; }
+.kt .tab-knop { border: 1px solid var(--kt-rand); border-radius: 999px; padding: 0.35rem 0.9rem; margin: 0; background: var(--kt-kaart); font-size: 0.88rem; }
+.kt .tab-knop.actief { background: var(--kt-blauw); border-color: var(--kt-blauw); color: #ffffff; }
+.kt .subtitel { color: var(--kt-zacht); }
+
+/* ---------- Lijstregels (momenten, tv's, sjablonen) ---------- */
+.kt-rij { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0; border-bottom: 1px solid #eef0f4; flex-wrap: wrap; }
+.kt-rij:last-child { border-bottom: 0; }
+.kt-rij-tijd { font-weight: 800; font-size: 1.02rem; min-width: 3.3rem; font-variant-numeric: tabular-nums; }
+.kt-rij-hoofd { flex: 1 1 12rem; min-width: 0; }
+.kt-rij-titel { font-weight: 700; }
+.kt-rij-sub { color: var(--kt-zacht); font-size: 0.84rem; overflow: hidden; text-overflow: ellipsis; }
+.kt-rij-acties { display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
+.kt-rij--nu { background: var(--kt-blauw-licht); margin: 0 -0.75rem; padding-left: 0.75rem; padding-right: 0.75rem; border-radius: 10px; }
+
+/* ---------- Tegels (dia's, tv's) ---------- */
+.kt-tegels { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 0.9rem; }
+.kt-tegel {
+    display: flex; flex-direction: column; background: var(--kt-kaart); border: 1px solid var(--kt-rand);
+    border-radius: var(--kt-radius); box-shadow: var(--kt-schaduw); overflow: hidden; min-width: 0;
+}
+.kt-tegel--uit .kt-tegel-beeld { filter: grayscale(0.85); opacity: 0.55; }
+.kt-tegel-beeld {
+    position: relative; aspect-ratio: 16 / 9; background: #13245c; color: #ffffff; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; text-align: center; padding: 0.6rem;
+}
+.kt-tegel-beeld img, .kt-tegel-beeld iframe { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border: 0; }
+.kt-tegel-beeld-titel { position: relative; font-weight: 800; font-size: 1.05rem; line-height: 1.15; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+.kt-tegel-beeld-sub { position: relative; display: block; font-weight: 600; font-size: 0.78rem; opacity: 0.85; margin-top: 0.25rem; }
+/* De dia zelf (kiosk_dia_miniatuur): op 1920 bij 1080 in een iframe, verkleind tot de breedte van de tegel. */
+.kt-tegel-beeld--dia { background: #000000; }
+.kt-tegel-beeld.kt-tegel-beeld--dia iframe {
+    inset: auto; top: 0; left: 0; width: 1920px; height: 1080px; transform-origin: top left;
+    transform: scale(var(--kt-schaal, 0.14)); pointer-events: none;
+}
+.kt-tegel-tekst { padding: 0.7rem 0.85rem 0.3rem; flex: 1; min-width: 0; }
+.kt-tegel-kop { display: flex; align-items: center; gap: 0.5rem; }
+.kt-tegel-titel { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kt-tegel-sub { color: var(--kt-zacht); font-size: 0.8rem; margin-top: 0.15rem; }
+.kt-tegel-acties { display: flex; align-items: center; gap: 0.35rem; padding: 0.55rem 0.85rem 0.75rem; }
+.kt-tegel-acties .kt-schakelaar { margin-right: auto; }
+.kt-tegel--nieuw {
+    align-items: center; justify-content: center; min-height: 12rem; border-style: dashed; box-shadow: none;
+    color: var(--kt-blauw); font-weight: 700; background: transparent;
+}
+.kt-tegel--nieuw:hover { background: var(--kt-blauw-licht); text-decoration: none; }
+
+/* Mini-voorbeeld van een scherm (een iframe van 1920x1080, verkleind) */
+.kt-scherm { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: #0f1f4d; }
+.kt-scherm iframe { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; border: 0; transform-origin: top left; pointer-events: none; }
+
+/* ---------- Mappen (Dia's) ---------- */
+.kt-map { display: block; padding: 0.65rem 0.75rem; border: 1px solid var(--kt-rand); border-radius: 12px; margin-bottom: 0.5rem; background: var(--kt-kaart); }
+.kt-map--uit { background: var(--kt-vlak); }
+.kt-map-kop { display: flex; align-items: center; gap: 0.5rem; }
+.kt-map-naam { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.kt-map-sub { color: var(--kt-zacht); font-size: 0.8rem; margin-top: 0.15rem; }
+.kt-map details { margin-top: 0.4rem; }
+.kt-map details > summary { cursor: pointer; color: var(--kt-zacht); font-size: 0.8rem; list-style: none; }
+.kt-map details > summary::-webkit-details-marker { display: none; }
+.kt-map-form { display: grid; gap: 0.4rem; margin-top: 0.45rem; }
+.kt-map-form label { display: grid; gap: 0.15rem; font-size: 0.78rem; color: var(--kt-zacht); font-weight: 600; }
+.kt-filter { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+.kt-filter button { border: 1px solid var(--kt-rand); background: var(--kt-kaart); border-radius: 999px; padding: 0.3rem 0.8rem; font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer; color: var(--kt-zacht); }
+.kt-filter button.actief { background: var(--kt-blauw); border-color: var(--kt-blauw); color: #ffffff; }
+.kt-zoek { flex: 1 1 12rem; max-width: 18rem; }
+
+/* ---------- Onderdelen van de diashow (slepen) ---------- */
+.kt-onderdelen { list-style: none; margin: 0; padding: 0; }
+.kt-onderdeel { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.8rem; border: 1px solid var(--kt-rand); border-radius: 12px; margin-bottom: 0.55rem; background: var(--kt-kaart); }
+.kt-onderdeel.sleept { opacity: 0.5; }
+.kt-onderdeel.erboven { box-shadow: 0 -3px 0 var(--kt-geel); }
+.kt-greep { cursor: grab; color: #98a2b3; padding-top: 0.15rem; touch-action: none; }
+.kt-greep svg { width: 1.2rem; height: 1.2rem; display: block; }
+.kt-onderdeel-hoofd { flex: 1; min-width: 0; }
+.kt-onderdeel-titel { font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+.kt-onderdeel-velden { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.kt-onderdeel-velden label { display: grid; gap: 0.15rem; font-size: 0.78rem; color: var(--kt-zacht); font-weight: 600; }
+.kt-onderdeel-velden input[type="number"] { width: 6rem; }
+.kt-pijlen { display: flex; flex-direction: column; gap: 0.2rem; }
+.kt-pijlen button { width: 1.8rem; height: 1.5rem; padding: 0; border: 1px solid var(--kt-rand); border-radius: 7px; background: var(--kt-kaart); cursor: pointer; color: var(--kt-zacht); font-size: 0.7rem; }

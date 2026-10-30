@@ -8,6 +8,7 @@ from datetime import datetime
 from flask import flash, jsonify, redirect, render_template, request, url_for
 
 import kiosk_momenten
+import kiosk_tvs
 from database import get_db
 from helpers import is_ajax_verzoek
 from routes.kiosk.dia_gegevens import _sponsor_slide
@@ -89,13 +90,22 @@ def _terug(melding, fout=None):
     return redirect(terug)
 
 
+def _kt_status(db):
+    """Voor de kop van de kantine-tv-pagina's (_kt_kop.html): hoeveel tv's er aan staan en wat er groot op de tv staat."""
+    tvs = [kiosk_tvs.status(tv) for tv in kiosk_tvs.alle_tvs(db)]
+    return {"tvs_aan": sum(1 for s in tvs if s["aan"]), "tvs": len(tvs),
+            "schijnwerper": kiosk_momenten.in_schijnwerper(db)}
+
+
 def register_routes(app):
     @app.context_processor
     def _momenten_voor_schermen():
-        # Voor templates/_kiosk_moment.html en _kiosk_klok.html: functies, dus alleen een query als een scherm erom vraagt.
+        # Voor templates/_kiosk_moment.html, _kiosk_klok.html en _kt_kop.html: functies, dus alleen een query als een
+        # pagina erom vraagt.
         return {
             "kiosk_momenten": lambda extra_dia_id=None: schermgegevens(get_db(), extra_dia_id),
             "kiosk_nu_ms": lambda: ms(datetime.now()),
+            "kt_status": lambda: _kt_status(get_db()),
         }
 
     # ---------- Bijsturen op de avond ----------
@@ -158,6 +168,32 @@ def register_routes(app):
         if slide.get("programma_rijen"):
             slide["opties"]["momenten"] = [{"tijd": slide["programma_rijen"][0]["tijd"], "van": 0, "einde": 9 * 10**15}]
         return render_template("kiosk_griezel_voorbeeld.html", slide=slide)
+
+    @app.route("/kiosk/dias/<int:dia_id>/miniatuur")
+    def kiosk_dia_miniatuur(dia_id):
+        """Het plaatje op de tegel van een dia bij Dia's (1.79.0): de dia zoals op de tv, op een pagina van 1920 bij 1080
+        die de tegel verkleind in een iframe toont. Zonder de bewegende effecten; die laat Voorbeeld zien."""
+        db = get_db()
+        dia = db.execute("SELECT * FROM kiosk_sponsoren WHERE id = ?", (dia_id,)).fetchone()
+        if dia is None:
+            return "Deze dia bestaat niet meer.", 404
+        eigen = {r["id"]: r for r in db.execute("SELECT * FROM kiosk_sjablonen_custom").fetchall()}
+        prijzen = {r["id"]: r for r in db.execute("SELECT id, verkoopprijs FROM producten").fetchall()}
+        tijden = kiosk_momenten.tijden_per_map(db, db.execute("SELECT * FROM kiosk_sponsoren WHERE actief = 1").fetchall())
+        return render_template("kiosk_dia_miniatuur.html", slide=_sponsor_slide(dia, eigen, prijzen, None, tijden))
+
+    @app.route("/kiosk/dias/<int:dia_id>/aan", methods=["POST"])
+    def kiosk_dia_wisselen(dia_id):
+        """Een dia aan of uit in de diashow (aan=1 of 0), met de schakelaar op zijn tegel bij Dia's (1.79.0)."""
+        db = get_db()
+        dia = db.execute("SELECT titel FROM kiosk_sponsoren WHERE id = ?", (dia_id,)).fetchone()
+        if dia is None:
+            return _terug(None, "Deze dia bestaat niet meer.")
+        aan = request.form.get("aan") == "1"
+        db.execute("UPDATE kiosk_sponsoren SET actief = ? WHERE id = ?", (1 if aan else 0, dia_id))
+        db.commit()
+        naam = f"'{dia['titel']}'" if dia["titel"] else "De dia"
+        return _terug(f"{naam} staat nu {'aan' if aan else 'uit'}.")
 
     # ---------- Mappen ----------
 

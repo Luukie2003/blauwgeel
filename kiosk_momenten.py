@@ -373,6 +373,15 @@ def programma(db, nu=None, dagen=7):
     return uit
 
 
+def in_schijnwerper(db, nu=None):
+    """De dia die nu groot op alle tv's staat (met de hand, of de eerste minuten van een moment), of None."""
+    nu = nu or datetime.now()
+    handmatig = handmatige_schijnwerper(db, nu)
+    if handmatig:
+        return handmatig["dia"]
+    return next((m["dia"] for m in programma(db, nu, dagen=1) if m["status"] == "schijnwerper"), None)
+
+
 def momenten(db, nu=None):
     """De momenten van nu tot VOORUIT_UREN vooruit, op tijd: [{"dia", "van", "spot_tot" (einde van de schijnwerper, of
     None zonder schijnwerper), "einde", "status": 'straks', 'schijnwerper', 'bezig'}], plus de dia die met de hand in

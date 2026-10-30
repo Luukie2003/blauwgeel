@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% block titel %}Acties{% endblock %}
 {% block inhoud %}
+<div class="kt">
+{% include '_kt_kop.html' %}
 <p class="subtitel">
     Een actie is een korte, opvallende pop-up met de foto en prijs van een bestaand product, die af en toe
     over het prijzenscherm heen verschijnt. Aan/uit zetten kan ook snel vanaf de handterminal, bij
     <a href="{{ url_for('kiosk_prijzen_instellingen') }}">Kiosk</a>.
-    <a href="{{ url_for('kiosk_hub') }}">&larr; Terug naar Kantine Kiosk</a>
 </p>
 
 {% include "_kiosk_prijzen_subnav.html" %}
@@ -54,5 +55,6 @@
     {% else %}
     <p class="leeg">Nog geen acties toegevoegd.</p>
     {% endif %}
+</div>
 </div>
 {% endblock %}

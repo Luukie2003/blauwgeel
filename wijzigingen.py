@@ -6,8 +6,18 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "1.78.0"
+HUIDIGE_VERSIE = "1.79.0"
 WIJZIGINGEN = [
+    {
+        "versie": "1.79.0",
+        "datum": "31 oktober 2026",
+        "punten": [
+            "De kantine-tv heeft een nieuwe, rustigere indeling met tabbladen: Nu (de tv's met een live beeld, de momenten van vanavond en snelknoppen), Dia's (mappen, en elke dia als tegel met een klein plaatje van hoe hij op de tv staat, een schakelaar, Nu groot, Voorbeeld en Bewerken; filteren en zoeken), Diashow (de onderdelen op volgorde slepen, de standen, Man of the Match en de eigen sjablonen), Prijzenscherm, Sponsoren en Tv's (koppelen en instellen). Bovenaan elke pagina zie je hoeveel tv's aan staan en wat er nu groot op de tv staat, met Stop.",
+            "Een staande foto op een dia krijgt nu zwarte balken ernaast in plaats van witte.",
+            "Eigen sjablonen: teksten slepen en groter maken werkt weer.",
+            "Handterminal-app 2.21.0: Kantine-tv met snelknoppen bovenaan (dia groot tonen, timer, uitverkocht, tv koppelen), een gele balk met Stop zolang er iets groot op de tv staat, labels voor wat aan of uit staat, en de dia's bij Diashow als tegels in de kleur van hun effect.",
+        ],
+    },
     {
         "versie": "1.78.0",
         "datum": "30 oktober 2026",
@@ -1339,7 +1349,7 @@ MODULES = [
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.7.0", "sinds": "1.6.0", "laatst": "1.75.0",
      "inhoud": "Keukenvoorraad met een eigen, blinde telling (ook als looplijst met dozen scannen, en een begintelling), inboeken per verpakking (per merk, ook door te scannen), weggooien en bijstellen, prijzen, de boodschappenlijst bij een tekort, en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.25.1", "sinds": "1.10.1", "laatst": "1.78.0",
+    {"naam": "Kantine-tv", "versie": "1.26.0", "sinds": "1.10.1", "laatst": "1.79.0",
      "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's, effecten en griezelposters met tekeningen), sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, het Halloween-thema, en de tablet-app Kantine Beheer"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
@@ -1349,7 +1359,7 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.24.0", "sinds": "1.53.0", "laatst": "1.78.0",
+    {"naam": "Handterminal-app", "versie": "0.25.0", "sinds": "1.53.0", "laatst": "1.79.0",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (nalopen met vinkjes, klaarzetten met het besteloverzicht, verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken (inboeken per verpakking, blind tellen, weggooien), Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst, momenten met de schijnwerper, mappen en dia's aan of uit, en het Halloween-thema), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.10.5", "sinds": "0.1.0", "laatst": "1.65.1",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},

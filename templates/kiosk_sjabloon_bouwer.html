@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}{{ 'Sjabloon bewerken' if sjabloon else 'Nieuw sjabloon' }}{% endblock %}
 {% block inhoud %}
+<div class="kt">
+{% include '_kt_kop.html' %}
 <h1>{{ 'Sjabloon bewerken' if sjabloon else 'Nieuw sjabloon' }}</h1>
-<p class="subtitel"><a href="{{ url_for('kiosk_sponsoren_leden') }}">&larr; Terug naar sponsoren &amp; leden</a></p>
+<p class="subtitel"><a href="{{ url_for('kiosk_diashow') }}#sjablonen">&larr; Terug naar Diashow</a></p>
 
 <div class="kaart" style="max-width:760px; margin-bottom:1.2rem">
     <p style="margin:0">
@@ -233,6 +235,7 @@
             var div = document.createElement('div');
             div.className = 'canvas-element bouwer-canvas-element canvas-element--' + e.type.replace('_', '-') +
                 ' canvas-lettergrootte-' + e.lettergrootte + (e._id === geselecteerdId ? ' geselecteerd' : '');
+            div.dataset.id = e._id;
             div.style.left = e.x + '%';
             div.style.top = e.y + '%';
             div.style.width = e.breedte + '%';
@@ -283,6 +286,8 @@
 
     function startSlepen(ev, e, div) {
         ev.preventDefault();
+        // Eerst selecteren zonder opnieuw te tekenen: anders wordt dit element vervangen en loopt het slepen dood.
+        selecteer(e._id, true);
         try { div.setPointerCapture(ev.pointerId); } catch (fout) { /* geen actieve pointer (bijv. bij geautomatiseerd testen) -- de sleepbeweging werkt hierna alsnog via de gewone bubbelende pointer-events */ }
         var rect = venster.getBoundingClientRect();
         var startX = ev.clientX, startY = ev.clientY;
@@ -304,12 +309,12 @@
         }
         div.addEventListener('pointermove', verplaatsen);
         div.addEventListener('pointerup', loslaten);
-        selecteer(e._id);
     }
 
     function startVergroten(ev, e, div) {
         ev.preventDefault();
         ev.stopPropagation();
+        selecteer(e._id, true);
         try { div.setPointerCapture(ev.pointerId); } catch (fout) { /* zie startSlepen hierboven */ }
         var rect = venster.getBoundingClientRect();
         var startX = ev.clientX, startY = ev.clientY;
@@ -329,12 +334,19 @@
         }
         div.addEventListener('pointermove', aanpassen);
         div.addEventListener('pointerup', loslaten);
-        selecteer(e._id);
     }
 
-    function selecteer(id) {
+    // zonderTekenen: alleen de rand van het geselecteerde element verplaatsen. Bij het slepen en vergroten moet dat: een
+    // nieuwe tekening vervangt het element dat je vasthebt, en dan beweegt er niets meer.
+    function selecteer(id, zonderTekenen) {
         geselecteerdId = id;
-        renderCanvas();
+        if (zonderTekenen) {
+            Array.prototype.forEach.call(laag.children, function (div) {
+                div.classList.toggle('geselecteerd', div.dataset.id === String(id));
+            });
+        } else {
+            renderCanvas();
+        }
         vulEigenschappenPaneel();
     }
 
@@ -453,4 +465,5 @@
     bijwerkenAchtergrond();
 })();
 </script>
+</div>
 {% endblock %}

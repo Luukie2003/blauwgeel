@@ -214,9 +214,7 @@ def test_subnav_markeert_actieve_pagina(ingelogde_client):
 
 
 def test_diaspagina_bevat_tabbladen(ingelogde_client):
-    resp = ingelogde_client.get("/kiosk/sponsoren-leden")
-    tekst = resp.data.decode()
-    assert 'data-tab-doel="diashow"' in tekst
-    assert 'data-tab-doel="dias-tabel"' in tekst
-    assert 'data-tab-doel="sjablonen"' in tekst
-    assert 'data-tab-doel="club-van-20"' in tekst
+    tekst = ingelogde_client.get("/kiosk/sponsoren-leden").data.decode()
+    assert 'href="/kiosk/sponsoren-leden" class="kt-tab actief"' in tekst and 'href="/kiosk/diashow"' in tekst
+    diashow = ingelogde_client.get("/kiosk/diashow").data.decode()
+    assert 'id="onderdelen"' in diashow and 'id="sjablonen"' in diashow and 'id="club-van-20"' in diashow

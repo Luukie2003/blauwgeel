@@ -253,9 +253,38 @@ def register_routes(app):
 
     @app.route("/kiosk/sponsoren-leden")
     def kiosk_sponsoren_leden():
+        """Dia's (1.79.0): de mappen, en elke dia als tegel met een schakelaar, Nu groot, Voorbeeld en Bewerken."""
         db = get_db()
         sponsoren = db.execute("SELECT * FROM kiosk_sponsoren ORDER BY volgorde, id").fetchall()
-        club_van_20 = bereken_club_van_20_status(db)
+        # De dia's per map (1.76.0, zie kiosk_momenten.py): eerst de mappen die aan staan (het feest), dan Algemeen, dan
+        # de mappen die uit staan (zoals een archief); binnen een map op moment.
+        nu = datetime.now()
+        alle_mappen = kiosk_momenten.mappen(db)
+        bekend = {m["id"] for m in alle_mappen}
+        algemeen = {"map": None, "naam": "Algemeen", "status": None,
+                    "dias": [s for s in sponsoren if s["map_id"] not in bekend]}
+        per_map = [{
+            "map": m, "naam": m["naam"], "status": kiosk_momenten.map_status(m, nu),
+            "dias": sorted((s for s in sponsoren if s["map_id"] == m["id"]),
+                           key=lambda s: (s["moment"] or "9999", s["volgorde"], s["id"])),
+        } for m in alle_mappen]
+        dia_groepen = [g for g in per_map if g["map"]["actief"]] + [algemeen] + [g for g in per_map if not g["map"]["actief"]]
+        return render_template(
+            "kiosk_sponsoren_leden.html",
+            dia_groepen=dia_groepen,
+            mappen=alle_mappen,
+            effecten=kiosk_momenten.EFFECTEN,
+            sponsoren=sponsoren,
+            vandaag=vandaag_amsterdam().isoformat(),
+            sjabloon_labels=dict(KIOSK_SPONSOR_SJABLONEN),
+            instellingen=_scherm_instellingen(db),
+        )
+
+    @app.route("/kiosk/diashow")
+    def kiosk_diashow():
+        """Diashow (1.79.0): welke onderdelen meedraaien en in welke volgorde (slepen), de standen en Man of the Match,
+        de eigen sjablonen en de Club van 20."""
+        db = get_db()
         sjablonen_custom = db.execute(
             "SELECT * FROM kiosk_sjablonen_custom ORDER BY naam COLLATE NOCASE"
         ).fetchall()
@@ -265,35 +294,13 @@ def register_routes(app):
                    WHERE custom_sjabloon_id IS NOT NULL GROUP BY custom_sjabloon_id"""
             ).fetchall()
         )
-        aantal_elementen_per_sjabloon = {
-            s["id"]: len(json.loads(s["elementen"])) for s in sjablonen_custom
-        }
-        instellingen = _scherm_instellingen(db)
-        # De dia's per map (1.76.0, zie kiosk_momenten.py): eerst Algemeen, dan de mappen; binnen een map op moment.
-        nu = datetime.now()
-        alle_mappen = kiosk_momenten.mappen(db)
-        bekend = {m["id"] for m in alle_mappen}
-        dia_groepen = [{"map": None, "naam": "Algemeen", "status": None,
-                        "dias": [s for s in sponsoren if s["map_id"] not in bekend]}]
-        for m in alle_mappen:
-            dia_groepen.append({
-                "map": m, "naam": m["naam"], "status": kiosk_momenten.map_status(m, nu),
-                "dias": sorted((s for s in sponsoren if s["map_id"] == m["id"]),
-                               key=lambda s: (s["moment"] or "9999", s["volgorde"], s["id"])),
-            })
         return render_template(
-            "kiosk_sponsoren_leden.html",
-            dia_groepen=dia_groepen,
-            mappen=alle_mappen,
-            effecten=kiosk_momenten.EFFECTEN,
-            sponsoren=sponsoren,
-            vandaag=vandaag_amsterdam().isoformat(),
-            club_van_20=club_van_20,
-            sjabloon_labels=dict(KIOSK_SPONSOR_SJABLONEN),
+            "kiosk_diashow.html",
+            club_van_20=bereken_club_van_20_status(db),
             sjablonen_custom=sjablonen_custom,
-            aantal_elementen_per_sjabloon=aantal_elementen_per_sjabloon,
+            aantal_elementen_per_sjabloon={s["id"]: len(json.loads(s["elementen"])) for s in sjablonen_custom},
             gebruik_per_sjabloon=gebruik_per_sjabloon,
-            instellingen=instellingen,
+            instellingen=_scherm_instellingen(db),
             stand_poules=_stand_poules(db),
             stand_teams={p["sleutel"]: _stand_teams(db, p["sleutel"]) for p in _stand_poules(db)},
             club_logos={
@@ -531,7 +538,7 @@ def register_routes(app):
             )
             db.commit()
             flash("Sjabloon opgeslagen.", "success")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_diashow") + "#sjablonen")
         return render_template(
             "kiosk_sjabloon_bouwer.html",
             sjabloon=None,
@@ -548,7 +555,7 @@ def register_routes(app):
         ).fetchone()
         if sjabloon is None:
             flash("Sjabloon niet gevonden.", "error")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_diashow") + "#sjablonen")
 
         if request.method == "POST":
             naam = request.form.get("naam", "").strip() or "Naamloos sjabloon"
@@ -580,7 +587,7 @@ def register_routes(app):
             )
             db.commit()
             flash("Sjabloon bijgewerkt.", "success")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_diashow") + "#sjablonen")
         return render_template(
             "kiosk_sjabloon_bouwer.html",
             sjabloon=sjabloon,
@@ -600,4 +607,4 @@ def register_routes(app):
         db.execute("DELETE FROM kiosk_sjablonen_custom WHERE id = ?", (sjabloon_id,))
         db.commit()
         flash("Sjabloon verwijderd.", "success")
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        return redirect(url_for("kiosk_diashow") + "#sjablonen")

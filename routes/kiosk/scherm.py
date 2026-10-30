@@ -73,12 +73,12 @@ def register_routes(app):
             if is_ajax_verzoek():
                 return jsonify({"ok": True, "melding": "Instellingen voor het kantine scherm opgeslagen."})
             flash("Instellingen voor het kantine scherm opgeslagen.", "success")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_diashow"))
 
         # Geen eigen pagina meer -- de instellingen staan nu op hetzelfde
         # scherm als de dia's zelf (zie kiosk_sponsoren_leden), dus een GET
         # hierheen (bijv. een oude bladwijzer) stuurt gewoon door.
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        return redirect(url_for("kiosk_diashow"))
 
     @app.route("/kiosk/scherm/standen/team-nieuw", methods=["POST"])
     def kiosk_stand_team_nieuw():
@@ -88,13 +88,13 @@ def register_routes(app):
             if is_ajax_verzoek():
                 return jsonify({"ok": False, "fout": "Onbekend team."}), 404
             flash("Onbekend team.", "error")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_diashow"))
         naam = request.form.get("naam", "").strip()
         if not naam:
             if is_ajax_verzoek():
                 return jsonify({"ok": False, "fout": "Vul een clubnaam in."}), 400
             flash("Vul een clubnaam in.", "error")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_diashow"))
         club = club_van_team_naam(naam)
         # Nieuw logo geupload? Gebruik dat. Anders: staat er al 1 geregistreerd
         # voor deze club (bijv. via een ander team/poule), hergebruik die.
@@ -118,7 +118,7 @@ def register_routes(app):
         if is_ajax_verzoek():
             return jsonify({"ok": True})
         flash(f"'{naam}' toegevoegd.", "success")
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        return redirect(url_for("kiosk_diashow"))
 
     @app.route("/kiosk/scherm/standen/team/<int:team_id>/verwijderen", methods=["POST"])
     def kiosk_stand_team_verwijderen(team_id):
@@ -128,7 +128,7 @@ def register_routes(app):
         if is_ajax_verzoek():
             return jsonify({"ok": True})
         flash("Team verwijderd.", "success")
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        return redirect(url_for("kiosk_diashow"))
 
     @app.route("/kiosk/scherm/standen/team/<int:team_id>/eigen-team", methods=["POST"])
     def kiosk_stand_team_eigen_wisselen(team_id):
@@ -141,7 +141,7 @@ def register_routes(app):
             if is_ajax_verzoek():
                 return jsonify({"ok": False, "fout": "Team niet gevonden."}), 404
             flash("Team niet gevonden.", "error")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_diashow"))
         nieuwe_status = 0 if team["eigen_team"] else 1
         db.execute("UPDATE kiosk_stand_teams SET eigen_team = 0 WHERE poule = ?", (team["poule"],))
         db.execute("UPDATE kiosk_stand_teams SET eigen_team = ? WHERE id = ?", (nieuwe_status, team_id))
@@ -152,7 +152,7 @@ def register_routes(app):
             f"'{team['naam']}' is nu het eigen team." if nieuwe_status else f"'{team['naam']}' is geen eigen team meer.",
             "success",
         )
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        return redirect(url_for("kiosk_diashow"))
 
     @app.route("/kiosk/scherm/standen/<poule>/volgorde", methods=["POST"])
     def kiosk_stand_volgorde_opslaan(poule):
@@ -161,7 +161,7 @@ def register_routes(app):
             if is_ajax_verzoek():
                 return jsonify({"ok": False, "fout": "Onbekend team."}), 404
             flash("Onbekend team.", "error")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_diashow"))
         # Titel van de poule zelf komt ook in dezelfde submit mee (het kopje
         # boven de sleeplijst is een tekstveld, zie kiosk_sponsoren_leden.html).
         poule_titel = request.form.get("poule_titel", "").strip()
@@ -218,7 +218,7 @@ def register_routes(app):
         if is_ajax_verzoek():
             return jsonify({"ok": True})
         flash("Stand opgeslagen.", "success")
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        return redirect(url_for("kiosk_diashow"))
 
     @app.route("/kiosk/scherm/standen/club-logo", methods=["POST"])
     def kiosk_club_logo_opslaan():
@@ -232,19 +232,19 @@ def register_routes(app):
             if is_ajax_verzoek():
                 return jsonify({"ok": False, "fout": "Onbekende club."}), 400
             flash("Onbekende club.", "error")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_diashow"))
         afbeelding = sla_club_logo_op(request.files.get("logo"))
         if not afbeelding:
             if is_ajax_verzoek():
                 return jsonify({"ok": False, "fout": "Kies een afbeelding om te uploaden."}), 400
             flash("Kies een afbeelding om te uploaden.", "error")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_diashow"))
         bewaar_club_logo(db, club, afbeelding)
         db.commit()
         if is_ajax_verzoek():
             return jsonify({"ok": True})
         flash(f"Logo voor '{club}' opgeslagen.", "success")
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        return redirect(url_for("kiosk_diashow"))
 
     @app.route("/kiosk/scherm/standen/poule-nieuw", methods=["POST"])
     def kiosk_stand_poule_nieuw():
@@ -254,7 +254,7 @@ def register_routes(app):
             if is_ajax_verzoek():
                 return jsonify({"ok": False, "fout": "Vul een titel in."}), 400
             flash("Vul een titel in.", "error")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_diashow"))
         sleutel = _unieke_poule_sleutel(db, titel)
         volgende = db.execute(
             "SELECT COALESCE(MAX(volgorde), -1) + 1 AS volgende FROM kiosk_stand_poules"
@@ -267,7 +267,7 @@ def register_routes(app):
         if is_ajax_verzoek():
             return jsonify({"ok": True})
         flash(f"Poule '{titel}' toegevoegd.", "success")
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        return redirect(url_for("kiosk_diashow"))
 
     @app.route("/kiosk/scherm/standen/poule/<poule>/verwijderen", methods=["POST"])
     def kiosk_stand_poule_verwijderen(poule):
@@ -278,7 +278,7 @@ def register_routes(app):
         if is_ajax_verzoek():
             return jsonify({"ok": True})
         flash("Poule verwijderd.", "success")
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        return redirect(url_for("kiosk_diashow"))
 
     @app.route("/kiosk/scherm/motm/team-nieuw", methods=["POST"])
     def kiosk_motm_team_nieuw():
@@ -288,7 +288,7 @@ def register_routes(app):
             if is_ajax_verzoek():
                 return jsonify({"ok": False, "fout": "Vul een teamnaam in."}), 400
             flash("Vul een teamnaam in.", "error")
-            return redirect(url_for("kiosk_sponsoren_leden"))
+            return redirect(url_for("kiosk_diashow"))
         volgende = db.execute(
             "SELECT COALESCE(MAX(volgorde), -1) + 1 AS volgende FROM kiosk_motm"
         ).fetchone()["volgende"]
@@ -297,7 +297,7 @@ def register_routes(app):
         if is_ajax_verzoek():
             return jsonify({"ok": True})
         flash(f"'{team}' toegevoegd.", "success")
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        return redirect(url_for("kiosk_diashow"))
 
     @app.route("/kiosk/scherm/motm/team/<int:team_id>/verwijderen", methods=["POST"])
     def kiosk_motm_team_verwijderen(team_id):
@@ -307,7 +307,7 @@ def register_routes(app):
         if is_ajax_verzoek():
             return jsonify({"ok": True})
         flash("Team verwijderd.", "success")
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        return redirect(url_for("kiosk_diashow"))
 
     @app.route("/kiosk/scherm/motm/volgorde", methods=["POST"])
     def kiosk_motm_volgorde_opslaan():
@@ -383,7 +383,7 @@ def register_routes(app):
         flash("Man of the Match opgeslagen.", "success")
         for tekst in waarschuwingen:
             flash(tekst, "warning")
-        return redirect(url_for("kiosk_sponsoren_leden"))
+        return redirect(url_for("kiosk_diashow"))
 
     @app.route("/kiosk/scherm")
     def kiosk_scherm():

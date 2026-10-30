@@ -207,7 +207,7 @@ def test_een_dia_met_moment_en_effect_opslaan(ingelogde_client, db):
 def test_programma_op_de_kiosk_hub(ingelogde_client, db):
     _dia(db, "Heksenbrouwsel", _map(db), (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M"))
     pagina = ingelogde_client.get("/kiosk").get_data(as_text=True)
-    assert "Momenten" in pagina and "Heksenbrouwsel" in pagina and "Straks" in pagina and "+15 min" in pagina
+    assert "Momenten" in pagina and "Heksenbrouwsel" in pagina and "Straks" in pagina and "een kwartier later" in pagina
 
 
 # ---------- In de app ----------
@@ -315,3 +315,29 @@ def test_elke_dia_groot_tonen_vanuit_de_diashow_in_de_app(app_client, db):  # no
     assert uit["schijnwerper"] is None and "dias" in uit
     # Zonder 'lijst' blijft het antwoord het overzicht van Kantine-tv (zoals de app 2.19.0 het verwacht).
     assert "momenten" in _post(app_client, f"/api/app/kantine-tv/momenten/{dia}/nu", verzoek_id="gs2").get_json()
+
+
+def test_een_dia_aan_en_uit_vanaf_zijn_tegel(ingelogde_client, client, db):
+    """De schakelaar op een tegel bij Dia's (1.79.0) zet de dia aan of uit en gaat terug naar de tegels."""
+    dia = _dia(db, "Griezelshot", _map(db))
+    kop = {"csrf_token": _csrf(ingelogde_client), "terug": "/kiosk/sponsoren-leden#groep-1"}
+    resp = ingelogde_client.post(f"/kiosk/dias/{dia}/aan", data={**kop, "aan": "0"})
+    assert resp.status_code == 302 and resp.headers["Location"].endswith("/kiosk/sponsoren-leden#groep-1")
+    assert db.execute("SELECT actief FROM kiosk_sponsoren WHERE id = ?", (dia,)).fetchone()[0] == 0
+    ingelogde_client.post(f"/kiosk/dias/{dia}/aan", data={**kop, "aan": "1"})
+    assert db.execute("SELECT actief FROM kiosk_sponsoren WHERE id = ?", (dia,)).fetchone()[0] == 1
+    pagina = ingelogde_client.get("/kiosk/sponsoren-leden").get_data(as_text=True)
+    assert 'class="kt-schakelaar aan"' in pagina and "Griezelshot" in pagina and 'href="/kiosk/diashow"' in pagina
+
+
+def test_de_tegel_toont_de_dia_zelf_als_plaatje(ingelogde_client, db):
+    """Op de tegel bij Dia's staat de dia zoals op de tv (1.79.0), verkleind, maar zonder de bewegende effecten."""
+    dia = _dia(db, "Duivelsbloed", _map(db), sjabloon="griezel", effect="duivel", tekst="2 voor € 4")
+    pagina = ingelogde_client.get("/kiosk/sponsoren-leden").get_data(as_text=True)
+    assert f'src="/kiosk/dias/{dia}/miniatuur"' in pagina and 'loading="lazy"' in pagina
+    plaatje = ingelogde_client.get(f"/kiosk/dias/{dia}/miniatuur")
+    tekst = plaatje.get_data(as_text=True)
+    assert plaatje.status_code == 200 and "Duivelsbloed" in tekst and "sjabloon-griezel" in tekst and "€ 4" in tekst
+    assert "kiosk_effecten.css" in tekst and "kiosk_effecten.js" not in tekst
+    assert plaatje.headers["X-Frame-Options"] == "SAMEORIGIN"  # anders blijft de tegel leeg
+    assert ingelogde_client.get("/kiosk/dias/999999/miniatuur").status_code == 404

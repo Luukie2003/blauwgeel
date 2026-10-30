@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block titel %}Sponsoren{% endblock %}
 {% block inhoud %}
+<div class="kt">
+{% include '_kt_kop.html' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie }}">
 <p class="subtitel">
     Sponsoren met hun logo ("Mede mogelijk gemaakt door"). Ze komen tussen alle dia's van het kantine scherm
     door, en om de zoveel tijd over de prijzenlijst heen. Sponsoren met dezelfde groep (bijv. "Zaterdag 1")
     komen samen op &eacute;&eacute;n dia, zoals een teamsponsor.
-    <a href="{{ url_for('kiosk_hub') }}">&larr; Terug naar Kantine Kiosk</a>
 </p>
 
 <style>
@@ -204,4 +205,5 @@
     schaal();
 })();
 </script>
+</div>
 {% endblock %}

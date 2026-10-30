@@ -1,827 +1,189 @@
 {% extends "base.html" %}
-{% block titel %}Dia's{% endblock %}
+{% block titel %}Dia's · Kantine-tv{% endblock %}
 {% block inhoud %}
-<p class="subtitel">
-    Alles voor het kantine scherm (scherm 2) op één plek: dia's (sponsoren, mededelingen),
-    eigen sjablonen, en de Club van 20-ledenlijst die je hieronder in de diashow kunt opnemen.
-    <a href="{{ url_for('kiosk_hub') }}">&larr; Terug naar Kantine Kiosk</a>
-</p>
+{# Dia's (1.79.0): links de mappen (met één klik aan of uit), rechts elke dia als tegel met een plaatje van hoe hij
+   eruitziet, een schakelaar, Nu groot, Voorbeeld en Bewerken. Per map: de mappen die aan staan eerst, dan Algemeen,
+   dan de mappen die uit staan. Filteren en zoeken gebeurt in de browser. #}
+<div class="kt">
+{% include '_kt_kop.html' %}
+{% from '_kt_ikonen.html' import ikoon %}
+{% set terug_dias = url_for('kiosk_sponsoren_leden') %}
+{% set map_status_label = {'aan': ('Aan', 'kt-pil--aan'), 'uit': ('Uit', 'kt-pil--uit'), 'straks': ('Straks', 'kt-pil--blauw'), 'voorbij': ('Voorbij', 'kt-pil--uit')} %}
 
-<style>
-    .kiosk-instellingen-layout { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
-    .kiosk-tabs-kolom { flex: 1 1 420px; min-width: 0; }
-    .kiosk-voorbeeld { flex: 1 1 360px; min-width: 300px; position: sticky; top: 1rem; }
-    .kiosk-voorbeeld-venster-buiten {
-        position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;
-        border-radius: 12px; background: #0f1f4d;
-    }
-    .kiosk-voorbeeld-venster-buiten iframe {
-        position: absolute; top: 0; left: 0; width: 1920px; height: 1080px;
-        border: 0; transform-origin: top left; pointer-events: none;
-    }
-</style>
+{% if not instellingen.toon_sponsoren %}
+<div class="kt-leeg" style="margin-bottom:1rem; border-color:#f3c3be; color:var(--kt-rood)">De dia's staan uit in de diashow: ze komen nu niet op de tv. <a href="{{ url_for('kiosk_diashow') }}">Zet ze aan bij Diashow</a>.</div>
+{% endif %}
 
-<div class="kiosk-instellingen-layout">
-<div class="kiosk-tabs-kolom">
-
-<div class="tab-balk" data-tab-js>
-    <button type="button" class="tab-knop" data-tab-doel="diashow">Diashow instellen</button>
-    <button type="button" class="tab-knop" data-tab-doel="dias-tabel">Dia's</button>
-    <button type="button" class="tab-knop" data-tab-doel="sjablonen">Eigen sjablonen</button>
-    <button type="button" class="tab-knop" data-tab-doel="club-van-20">Club van 20</button>
-</div>
-
-<div data-tab-paneel="diashow">
-<div class="kaart">
-    <p class="tekst-zacht" style="margin-top:-0.4rem">Welke blokken meedraaien en in welke volgorde.</p>
-    <form method="post" action="{{ url_for('kiosk_scherm_instellingen') }}" class="js-ajax-form" id="scherm-instellingen-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-        <fieldset class="groupbox">
-            <legend>Dia's (sponsoren &amp; mededelingen)</legend>
-            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.7rem">
-                <input type="checkbox" name="toon_sponsoren" style="width:auto"
-                       {{ 'checked' if instellingen.toon_sponsoren }}>
-                Dia's tonen
-            </label>
-            <div class="veld">
-                <label for="sponsoren_volgorde">Volgorde</label>
-                <input type="number" id="sponsoren_volgorde" name="sponsoren_volgorde" min="1"
-                       value="{{ instellingen.sponsoren_volgorde }}" style="max-width:8rem">
+<div class="kt-met-zij">
+<aside>
+    <div class="kt-kaart" id="mappen">
+        <div class="kt-kaart-kop" style="margin-bottom:0.6rem"><h2>{{ ikoon('map') }} Mappen</h2></div>
+        {% for groep in dia_groepen if groep.map %}
+        {% set m = groep.map %}
+        <div class="kt-map{{ ' kt-map--uit' if not m.actief else '' }}">
+            <div class="kt-map-kop">
+                <a class="kt-map-naam" href="#groep-{{ m.id }}" style="color:inherit">{{ m.naam }}</a>
+                <form method="post" action="{{ url_for('kiosk_dia_map_wisselen', map_id=m.id) }}" class="kt-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="terug" value="{{ terug_dias }}">
+                    <input type="hidden" name="aan" value="{{ '0' if m.actief else '1' }}">
+                    <button type="submit" class="kt-schakelaar{{ ' aan' if m.actief else '' }}" role="switch" aria-checked="{{ 'true' if m.actief else 'false' }}"
+                            aria-label="Map {{ m.naam }} {{ 'uitzetten' if m.actief else 'aanzetten' }}"></button>
+                </form>
             </div>
-        </fieldset>
-
-        <fieldset class="groupbox">
-            <legend>Club van 20</legend>
-            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.7rem">
-                <input type="checkbox" name="toon_club_van_20" style="width:auto"
-                       {{ 'checked' if instellingen.toon_club_van_20 }}>
-                Club van 20-dia's tonen
-            </label>
-            <div class="veld">
-                <label for="club_van_20_volgorde">Volgorde</label>
-                <input type="number" id="club_van_20_volgorde" name="club_van_20_volgorde" min="1"
-                       value="{{ instellingen.club_van_20_volgorde }}" style="max-width:8rem">
+            <div class="kt-map-sub">
+                {{ groep.dias|length }} dia{{ "'s" if groep.dias|length != 1 else '' }} ·
+                {% if m.vanaf or m.tot %}{{ m.vanaf|datum_nl if m.vanaf else '…' }} → {{ m.tot|datum_nl if m.tot else '…' }}{% else %}altijd{% endif %}
+                <span class="kt-pil {{ map_status_label[groep.status][1] }}" style="margin-left:0.2rem">{{ map_status_label[groep.status][0] }}</span>
             </div>
-            <p class="tekst-zacht" style="margin-top:-0.4rem">
-                Titel, aantal namen per dia, extra dia's (opbrengst, teamstrijd, werving) en wie er op het
-                scherm komt stel je in bij <a href="{{ url_for('club_van_20_instellingen') }}">Club van 20 &rarr; Scherm &amp; werving</a>.
-            </p>
-        </fieldset>
-
-        <fieldset class="groupbox">
-            <legend>Wedstrijden</legend>
-            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.7rem">
-                <input type="checkbox" name="toon_wedstrijden" style="width:auto"
-                       {{ 'checked' if instellingen.toon_wedstrijden }}>
-                Komende thuiswedstrijden tonen
-            </label>
-            <div class="veld">
-                <label for="wedstrijden_volgorde">Volgorde</label>
-                <input type="number" id="wedstrijden_volgorde" name="wedstrijden_volgorde" min="1"
-                       value="{{ instellingen.wedstrijden_volgorde }}" style="max-width:8rem">
-            </div>
-            <div class="veld">
-                <label for="wedstrijden_duur_seconden">Weergaveduur (seconden)</label>
-                <input type="number" id="wedstrijden_duur_seconden" name="wedstrijden_duur_seconden" min="3"
-                       value="{{ instellingen.wedstrijden_duur_seconden }}" style="max-width:8rem">
-                <span class="tekst-zacht">Bij meerdere komende wedstrijden kan het fijn zijn dit wat langer te zetten.</span>
-            </div>
-            <span class="tekst-zacht">
-                Gebruikt de agenda uit <a href="{{ url_for('club_instellingen') }}">Club instellingen</a>. Staat er niets
-                gepland, dan slaat de diashow dit onderdeel vanzelf over. Diezelfde agenda bepaalt ook de
-                <a href="{{ url_for('kiosk_prijzen_instellingen') }}#wedstrijddag-welkom">wedstrijddag-welkomstbanner op het prijzenscherm</a>.
-            </span>
-        </fieldset>
-
-        <fieldset class="groupbox">
-            <legend>Standen</legend>
-            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.7rem">
-                <input type="checkbox" name="toon_standen" style="width:auto"
-                       {{ 'checked' if instellingen.toon_standen }}>
-                Standen tonen
-            </label>
-            <div class="formgrid">
-                <div class="veld">
-                    <label for="standen_volgorde">Volgorde</label>
-                    <input type="number" id="standen_volgorde" name="standen_volgorde" min="1"
-                           value="{{ instellingen.standen_volgorde }}" style="max-width:8rem">
-                </div>
-                <div class="veld">
-                    <label for="standen_duur_seconden">Weergaveduur (seconden)</label>
-                    <input type="number" id="standen_duur_seconden" name="standen_duur_seconden" min="3"
-                           value="{{ instellingen.standen_duur_seconden }}" style="max-width:8rem">
-                </div>
-            </div>
-            <span class="tekst-zacht">
-                Een eigen dia per poule (zelf toe te voegen/verwijderen, en de titel aan te passen bij
-                "Standen bijwerken" hieronder). Geen live koppeling met voetbal.nl -- werk de teams dus
-                zelf 1x per week bij. Een poule zonder teams slaat de diashow vanzelf over.
-            </span>
-        </fieldset>
-
-        <fieldset class="groupbox">
-            <legend>Man of the Match</legend>
-            <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.7rem">
-                <input type="checkbox" name="toon_motm" style="width:auto"
-                       {{ 'checked' if instellingen.toon_motm }}>
-                Man of the Match tonen
-            </label>
-            <div class="veld">
-                <label for="motm_titel">Titel boven de dia</label>
-                <input type="text" id="motm_titel" name="motm_titel"
-                       value="{{ instellingen.motm_titel }}">
-            </div>
-            <div class="formgrid">
-                <div class="veld">
-                    <label for="motm_volgorde">Volgorde</label>
-                    <input type="number" id="motm_volgorde" name="motm_volgorde" min="1"
-                           value="{{ instellingen.motm_volgorde }}" style="max-width:8rem">
-                </div>
-                <div class="veld">
-                    <label for="motm_duur_seconden">Weergaveduur (seconden)</label>
-                    <input type="number" id="motm_duur_seconden" name="motm_duur_seconden" min="3"
-                           value="{{ instellingen.motm_duur_seconden }}" style="max-width:8rem">
-                </div>
-            </div>
-            <span class="tekst-zacht">
-                1 dia met alle teams die afgelopen weekend hebben gespeeld, met uitslag en (indien
-                gekozen) de Man of the Match. Laat je bij een team zowel de uitslag als de naam leeg,
-                dan slaat de dia dat team over -- heeft geen enkel team iets ingevuld, dan slaat de
-                diashow deze dia helemaal over. De teams zelf stel je hieronder in.
-            </span>
-        </fieldset>
-
-        <button type="submit" class="btn btn-geel">Opslaan</button>
-    </form>
-</div>
-
-<div class="kaart" id="standen-teams">
-    <h2 style="margin-top:0">Standen bijwerken</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Sleep de teams in de juiste volgorde (1e plaats bovenaan), pas de naam aan waar nodig en vul
-        W/GL/V bij -- Gespeeld en Punten volgen daar vanzelf uit. Het eigen team staat in het geel. Klik
-        het logo aan om er 1 te uploaden/vervangen (geldt meteen voor elk team van die club, in elke poule).
-    </p>
-    {% for poule in stand_poules %}
-    <div class="stand-poule">
-        <div class="stand-poule-kop">
-            <input type="text" class="stand-poule-titel-veld" value="{{ poule.titel }}" title="Titel van deze poule aanpassen">
-            <form method="post" action="{{ url_for('kiosk_stand_poule_verwijderen', poule=poule.sleutel) }}"
-                  onsubmit="return bevestigEnVerstuur(this, 'Poule \'{{ poule.titel }}\' en alle teams daarin verwijderen?');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="stand-item-knop" title="Poule verwijderen">&times;</button>
-            </form>
-        </div>
-        <div class="stand-lijst" data-poule="{{ poule.sleutel }}">
-            {% for team in stand_teams[poule.sleutel] %}
-            <div class="stand-item{{ ' stand-item--eigen' if team.eigen_team else '' }}" draggable="true" data-id="{{ team.id }}">
-                <div class="stand-item-top">
-                    <form method="post" action="{{ url_for('kiosk_club_logo_opslaan') }}" enctype="multipart/form-data"
-                          class="stand-logo-form" draggable="false">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="club" value="{{ team.club }}">
-                        <label class="stand-logo-label" title="Logo uploaden/vervangen voor '{{ team.club }}'">
-                            {% if club_logos.get(team.club) %}
-                            <img src="{{ url_for('static', filename='club_logos/' ~ club_logos[team.club]) }}" alt="">
-                            {% else %}
-                            <span class="stand-logo-placeholder">+</span>
-                            {% endif %}
-                            <input type="file" name="logo" accept="image/*" onchange="this.form.requestSubmit()" aria-label="Logo van {{ team.naam }} vervangen">
-                        </label>
-                    </form>
-                    <input type="text" class="stand-item-naam-veld" value="{{ team.naam }}" title="Teamnaam aanpassen" draggable="false">
-                    <div class="stand-item-knoppen" draggable="false">
-                        <form method="post" action="{{ url_for('kiosk_stand_team_eigen_wisselen', team_id=team.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="stand-item-knop" title="{{ 'Niet meer het eigen team' if team.eigen_team else 'Dit is het eigen team' }}">&#9733;</button>
-                        </form>
-                        <form method="post" action="{{ url_for('kiosk_stand_team_verwijderen', team_id=team.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="stand-item-knop" title="Verwijderen">&times;</button>
-                        </form>
-                    </div>
-                </div>
-                <div class="stand-item-stats" draggable="false">
-                    <label>W<input type="number" min="0" class="stand-stat-veld" data-veld="w" value="{{ team.gewonnen }}"></label>
-                    <label>GL<input type="number" min="0" class="stand-stat-veld" data-veld="gl" value="{{ team.gelijk }}"></label>
-                    <label>V<input type="number" min="0" class="stand-stat-veld" data-veld="v" value="{{ team.verloren }}"></label>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        <form method="post" action="{{ url_for('kiosk_stand_volgorde_opslaan', poule=poule.sleutel) }}"
-              class="stand-volgorde-form" data-poule="{{ poule.sleutel }}" style="margin-top:0.6rem">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="volgorde" class="stand-volgorde-veld">
-            <input type="hidden" name="statistieken" class="stand-statistieken-veld">
-            <input type="hidden" name="namen" class="stand-namen-veld">
-            <input type="hidden" name="poule_titel" class="stand-poule-titel-veld-verborgen">
-            <button type="submit" class="btn btn-rand btn-klein">Stand opslaan</button>
-        </form>
-        <form method="post" action="{{ url_for('kiosk_stand_team_nieuw') }}" enctype="multipart/form-data"
-              style="margin-top:0.6rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="poule" value="{{ poule.sleutel }}">
-            <input type="text" name="naam" placeholder="Naam club toevoegen..." style="flex:1; min-width:10rem" aria-label="Naam club toevoegen">
-            <input type="file" name="logo" accept="image/*" title="Logo (optioneel)" aria-label="Logo (optioneel)" style="max-width:9rem">
-            <button type="submit" class="btn btn-rand btn-klein">+ Team</button>
-        </form>
-    </div>
-    {% endfor %}
-    <form method="post" action="{{ url_for('kiosk_stand_poule_nieuw') }}"
-          style="margin-top:1rem; display:flex; gap:0.5rem; align-items:center">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="text" name="titel" placeholder="Titel nieuwe poule (bijv. Zaterdag 4)..." style="flex:1; min-width:10rem" aria-label="Titel nieuwe poule">
-        <button type="submit" class="btn btn-rand btn-klein">+ Poule</button>
-    </form>
-</div>
-
-<div class="kaart" id="motm-teams">
-    <h2 style="margin-top:0">Man of the Match bijwerken</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Sleep in de gewenste volgorde, pas de teamnaam aan waar nodig en vul de tegenstander, de
-        uitslag en de naam in bij elk team dat afgelopen weekend heeft gespeeld. Kies ook of jullie
-        gewonnen, gelijkgespeeld of verloren hebben: dan zet de dia de uitslag zelf goed (eigen team links)
-        en maakt het niet uit in welke volgorde je de cijfers invult, bijvoorbeeld "1-2" zoals voetbal.nl
-        het noemt als jullie uit speelden. Zonder resultaat staat de uitslag precies zoals je 'm typt.
-        Meerdere mensen?
-        Scheid de namen met een komma (bijv. "Jan Jansen, Piet Pietersen"). Uitslag én naam leeg
-        laten = dat team heeft niet gespeeld en wordt overgeslagen op de dia. Staat de tegenstander
-        ook al in het clublogo-register (zie "Standen bijwerken" hieronder), dan verschijnt dat logo
-        automatisch mee op de dia.
-    </p>
-    <div class="motm-lijst">
-        {% for team in motm_teams %}
-        <div class="motm-item" draggable="true" data-id="{{ team.id }}">
-            <input type="text" class="motm-item-naam-veld" value="{{ team.team }}" title="Teamnaam aanpassen" draggable="false">
-            <input type="text" class="motm-tegenstander-veld" placeholder="Tegenstander..." value="{{ team.tegenstander or '' }}" draggable="false">
-            <input type="text" class="motm-uitslag-veld" placeholder="Uitslag (bijv. 3-1)..." value="{{ team.uitslag or '' }}" draggable="false">
-            <select class="motm-resultaat-veld" title="Gewonnen of verloren? Dan zet de dia de uitslag zelf goed, ook als je de cijfers in een andere volgorde invult." draggable="false">
-                <option value="">Resultaat...</option>
-                {% for sleutel, label in motm_resultaten.items() %}
-                <option value="{{ sleutel }}" {{ 'selected' if team.resultaat == sleutel }}>{{ label }}</option>
-                {% endfor %}
-            </select>
-            <input type="text" class="motm-speler-veld" placeholder="Naam/namen invullen..." value="{{ team.speler or '' }}" draggable="false">
-            <form method="post" action="{{ url_for('kiosk_motm_team_verwijderen', team_id=team.id) }}" draggable="false">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="stand-item-knop" title="Team verwijderen">&times;</button>
-            </form>
+            <details>
+                <summary>Bewerken</summary>
+                <form method="post" action="{{ url_for('kiosk_dia_map_opslaan') }}" class="kt-map-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="terug" value="{{ terug_dias }}">
+                    <input type="hidden" name="map_id" value="{{ m.id }}">
+                    <input type="hidden" name="actief" value="{{ '1' if m.actief else '0' }}">
+                    <label>Naam <input type="text" name="naam" value="{{ m.naam }}" maxlength="60" required></label>
+                    <label>Vanaf <input type="datetime-local" name="vanaf" value="{{ m.vanaf|replace(' ', 'T') if m.vanaf else '' }}"></label>
+                    <label>Tot <input type="datetime-local" name="tot" value="{{ m.tot|replace(' ', 'T') if m.tot else '' }}"></label>
+                    <button type="submit" class="kt-knop kt-knop--primair kt-knop--klein">Opslaan</button>
+                </form>
+                <form method="post" action="{{ url_for('kiosk_dia_map_verwijderen', map_id=m.id) }}" style="margin-top:0.4rem"
+                      onsubmit="return bevestigEnVerstuur(this, 'Map \'{{ m.naam }}\' verwijderen? De dia\'s erin blijven, bij Algemeen.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="terug" value="{{ terug_dias }}">
+                    <button type="submit" class="kt-knop kt-knop--gevaar kt-knop--klein">Map verwijderen</button>
+                </form>
+            </details>
         </div>
         {% endfor %}
+        <details class="kt-map"{% if not mappen %} open{% endif %}>
+            <summary style="color:var(--kt-blauw); font-weight:700; font-size:0.88rem">+ Nieuwe map</summary>
+            <form method="post" action="{{ url_for('kiosk_dia_map_opslaan') }}" class="kt-map-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="terug" value="{{ terug_dias }}">
+                <label>Naam <input type="text" name="naam" maxlength="60" placeholder="Bijv. Halloween feest" required></label>
+                <label>Vanaf (optioneel) <input type="datetime-local" name="vanaf"></label>
+                <label>Tot (optioneel) <input type="datetime-local" name="tot"></label>
+                <button type="submit" class="kt-knop kt-knop--primair kt-knop--klein">Toevoegen</button>
+            </form>
+        </details>
+        <p class="kt-uitleg">Een map met een begin en einde gaat vanzelf aan en uit.</p>
     </div>
-    <form method="post" action="{{ url_for('kiosk_motm_volgorde_opslaan') }}" class="motm-volgorde-form"
-          style="margin-top:0.6rem">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="volgorde" class="motm-volgorde-veld">
-        <input type="hidden" name="spelers" class="motm-spelers-veld">
-        <input type="hidden" name="uitslagen" class="motm-uitslagen-veld">
-        <input type="hidden" name="resultaten" class="motm-resultaten-veld">
-        <input type="hidden" name="tegenstanders" class="motm-tegenstanders-veld">
-        <input type="hidden" name="teamnamen" class="motm-teamnamen-veld">
-        <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
-    </form>
-    <form method="post" action="{{ url_for('kiosk_motm_team_nieuw') }}"
-          style="margin-top:0.6rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="text" name="team" placeholder="Teamnaam toevoegen (bijv. ZA 1)..." style="flex:1">
-        <button type="submit" class="btn btn-rand btn-klein">+ Team</button>
-    </form>
-</div>
-</div>
+</aside>
 
-<style>
-    .stand-poule + .stand-poule { margin-top: 1.5rem; }
-    .stand-poule-kop { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
-    .stand-poule-kop form { margin: 0; }
-    .stand-poule-titel-veld {
-        flex: 1;
-        font-size: 0.9rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: var(--tekst-zacht, #6b7280);
-        border: 1px solid transparent;
-        background: transparent;
-        padding: 0.15rem 0.3rem;
-        border-radius: 4px;
-    }
-    .stand-poule-titel-veld:hover, .stand-poule-titel-veld:focus { border-color: #d7dae2; background: #fff; }
-    .stand-lijst {
-        min-height: 3rem;
-        border: 2px dashed #d7dae2;
-        border-radius: 8px;
-        padding: 0.5rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-    }
-    .stand-lijst.sleep-over { border-color: #1e3a8a; background: rgba(30, 58, 138, 0.05); }
-    .stand-item {
-        background: #fff;
-        border: 1px solid #d7dae2;
-        border-radius: 6px;
-        padding: 0.4rem 0.6rem;
-        cursor: grab;
-        user-select: none;
-    }
-    .stand-item.wordt-gesleept { opacity: 0.4; }
-    .stand-item--eigen { background: rgba(252, 212, 47, 0.15); border-color: var(--geel-donker); font-weight: 700; }
-    .stand-item-top { display: flex; align-items: center; gap: 0.5rem; }
-    .stand-item-naam-veld {
-        flex: 1;
-        min-width: 0;
-        border: 1px solid transparent;
-        background: transparent;
-        font: inherit;
-        font-weight: inherit;
-        color: inherit;
-        padding: 0.15rem 0.3rem;
-        border-radius: 4px;
-    }
-    .stand-item-naam-veld:hover, .stand-item-naam-veld:focus { border-color: #d7dae2; background: #fff; }
-    .stand-item-knoppen { display: flex; gap: 0.3rem; flex-shrink: 0; }
-    .stand-item-knoppen form, .stand-logo-form { margin: 0; }
-    .stand-item-knop {
-        border: 1px solid #d7dae2;
-        background: #fff;
-        border-radius: 6px;
-        width: 1.8rem;
-        height: 1.8rem;
-        line-height: 1;
-        cursor: pointer;
-    }
-    .stand-item--eigen .stand-item-knop:first-child { color: var(--geel-donker); }
-    .stand-logo-label {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 2.2rem;
-        height: 2.2rem;
-        border-radius: 6px;
-        border: 1px dashed #d7dae2;
-        flex-shrink: 0;
-        cursor: pointer;
-        overflow: hidden;
-    }
-    .stand-logo-label img { width: 100%; height: 100%; object-fit: contain; }
-    .stand-logo-placeholder { color: var(--tekst-zacht, #6b7280); font-weight: 700; }
-    .stand-logo-label input[type="file"] { display: none; }
-    .stand-item-stats { display: flex; gap: 0.8rem; margin-top: 0.4rem; padding-left: 2.7rem; }
-    .stand-item-stats label {
-        display: flex;
-        align-items: center;
-        gap: 0.3rem;
-        font-size: 0.78rem;
-        font-weight: 700;
-        color: var(--tekst-zacht, #6b7280);
-    }
-    .stand-stat-veld { width: 3rem; padding: 0.15rem 0.3rem; }
-
-    .motm-lijst {
-        min-height: 3rem;
-        border: 2px dashed #d7dae2;
-        border-radius: 8px;
-        padding: 0.5rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-    }
-    .motm-lijst.sleep-over { border-color: #1e3a8a; background: rgba(30, 58, 138, 0.05); }
-    .motm-item {
-        background: #fff;
-        border: 1px solid #d7dae2;
-        border-radius: 6px;
-        padding: 0.4rem 0.6rem;
-        cursor: grab;
-        user-select: none;
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0.6rem;
-    }
-    .motm-item.wordt-gesleept { opacity: 0.4; }
-    .motm-item-naam-veld {
-        flex-shrink: 0;
-        width: 8rem;
-        font: inherit;
-        font-weight: 700;
-        border: 1px solid transparent;
-        background: transparent;
-        padding: 0.15rem 0.3rem;
-        border-radius: 4px;
-    }
-    .motm-item-naam-veld:hover, .motm-item-naam-veld:focus { border-color: #d7dae2; background: #fff; }
-    .motm-tegenstander-veld { flex-shrink: 0; width: 9rem; }
-    .motm-uitslag-veld { flex-shrink: 0; width: 6rem; }
-    .motm-resultaat-veld { flex-shrink: 0; width: 8rem; }
-    .motm-speler-veld { flex: 1; min-width: 12rem; }
-    .motm-item form { margin: 0; }
-</style>
-
-<script>
-(function () {
-    // Zelfde vanilla drag-and-drop-opzet als de kolomindeling van het
-    // prijzenscherm hierboven, maar dan 1 losse lijst per poule (geen
-    // slepen tussen ZA 2/ZA 3/O23 heen, dat zou toch nooit de bedoeling
-    // zijn) -- zie kiosk_stand_volgorde_opslaan in routes/kiosk.py.
-    var lijsten = Array.prototype.slice.call(document.querySelectorAll('.stand-lijst'));
-    var gesleeptItem = null;
-
-    lijsten.forEach(function (lijst) {
-        lijst.addEventListener('dragover', function (e) {
-            e.preventDefault();
-            if (!gesleeptItem) return;
-            lijst.classList.add('sleep-over');
-            var voorDit = elementOpPositie(lijst, e.clientY);
-            if (voorDit) {
-                lijst.insertBefore(gesleeptItem, voorDit);
-            } else {
-                lijst.appendChild(gesleeptItem);
-            }
-        });
-        lijst.addEventListener('dragleave', function (e) {
-            if (e.target === lijst) lijst.classList.remove('sleep-over');
-        });
-        lijst.addEventListener('drop', function (e) {
-            e.preventDefault();
-            lijst.classList.remove('sleep-over');
-        });
-    });
-
-    document.querySelectorAll('.stand-item').forEach(function (item) {
-        item.addEventListener('dragstart', function () {
-            gesleeptItem = item;
-            setTimeout(function () { item.classList.add('wordt-gesleept'); }, 0);
-        });
-        item.addEventListener('dragend', function () {
-            item.classList.remove('wordt-gesleept');
-            lijsten.forEach(function (l) { l.classList.remove('sleep-over'); });
-            gesleeptItem = null;
-        });
-    });
-
-    function elementOpPositie(lijst, muisY) {
-        var items = Array.prototype.slice.call(
-            lijst.querySelectorAll('.stand-item:not(.wordt-gesleept)')
-        );
-        for (var i = 0; i < items.length; i++) {
-            var rect = items[i].getBoundingClientRect();
-            if (muisY < rect.top + rect.height / 2) return items[i];
-        }
-        return null;
-    }
-
-    document.querySelectorAll('.stand-volgorde-form').forEach(function (form) {
-        form.addEventListener('submit', function () {
-            var lijst = document.querySelector('.stand-lijst[data-poule="' + form.dataset.poule + '"]');
-            var items = Array.prototype.slice.call(lijst.querySelectorAll('.stand-item'));
-            var volgorde = items.map(function (item) { return item.dataset.id; });
-            var statistieken = {};
-            var namen = {};
-            items.forEach(function (item) {
-                var velden = {};
-                item.querySelectorAll('.stand-stat-veld').forEach(function (input) {
-                    velden[input.dataset.veld] = input.value;
-                });
-                statistieken[item.dataset.id] = velden;
-                namen[item.dataset.id] = item.querySelector('.stand-item-naam-veld').value;
-            });
-            form.querySelector('.stand-volgorde-veld').value = JSON.stringify(volgorde);
-            form.querySelector('.stand-statistieken-veld').value = JSON.stringify(statistieken);
-            form.querySelector('.stand-namen-veld').value = JSON.stringify(namen);
-            var titelVeld = form.closest('.stand-poule').querySelector('.stand-poule-titel-veld');
-            form.querySelector('.stand-poule-titel-veld-verborgen').value = titelVeld.value;
-        });
-    });
-})();
-</script>
-
-<script>
-(function () {
-    // Zelfde vanilla drag-and-drop-opzet als de standen-lijst hierboven, maar
-    // dan 1 platte lijst (geen poules) -- zie kiosk_motm_volgorde_opslaan.
-    var lijst = document.querySelector('.motm-lijst');
-    if (!lijst) return;
-    var gesleeptItem = null;
-
-    lijst.addEventListener('dragover', function (e) {
-        e.preventDefault();
-        if (!gesleeptItem) return;
-        lijst.classList.add('sleep-over');
-        var voorDit = elementOpPositie(e.clientY);
-        if (voorDit) {
-            lijst.insertBefore(gesleeptItem, voorDit);
-        } else {
-            lijst.appendChild(gesleeptItem);
-        }
-    });
-    lijst.addEventListener('dragleave', function (e) {
-        if (e.target === lijst) lijst.classList.remove('sleep-over');
-    });
-    lijst.addEventListener('drop', function (e) {
-        e.preventDefault();
-        lijst.classList.remove('sleep-over');
-    });
-
-    lijst.querySelectorAll('.motm-item').forEach(function (item) {
-        item.addEventListener('dragstart', function () {
-            gesleeptItem = item;
-            setTimeout(function () { item.classList.add('wordt-gesleept'); }, 0);
-        });
-        item.addEventListener('dragend', function () {
-            item.classList.remove('wordt-gesleept');
-            lijst.classList.remove('sleep-over');
-            gesleeptItem = null;
-        });
-    });
-
-    function elementOpPositie(muisY) {
-        var items = Array.prototype.slice.call(lijst.querySelectorAll('.motm-item:not(.wordt-gesleept)'));
-        for (var i = 0; i < items.length; i++) {
-            var rect = items[i].getBoundingClientRect();
-            if (muisY < rect.top + rect.height / 2) return items[i];
-        }
-        return null;
-    }
-
-    var form = document.querySelector('.motm-volgorde-form');
-    form.addEventListener('submit', function () {
-        var items = Array.prototype.slice.call(lijst.querySelectorAll('.motm-item'));
-        var volgorde = items.map(function (item) { return item.dataset.id; });
-        var spelers = {};
-        var uitslagen = {};
-        var resultaten = {};
-        var tegenstanders = {};
-        var teamnamen = {};
-        items.forEach(function (item) {
-            spelers[item.dataset.id] = item.querySelector('.motm-speler-veld').value;
-            uitslagen[item.dataset.id] = item.querySelector('.motm-uitslag-veld').value;
-            resultaten[item.dataset.id] = item.querySelector('.motm-resultaat-veld').value;
-            tegenstanders[item.dataset.id] = item.querySelector('.motm-tegenstander-veld').value;
-            teamnamen[item.dataset.id] = item.querySelector('.motm-item-naam-veld').value;
-        });
-        form.querySelector('.motm-volgorde-veld').value = JSON.stringify(volgorde);
-        form.querySelector('.motm-spelers-veld').value = JSON.stringify(spelers);
-        form.querySelector('.motm-uitslagen-veld').value = JSON.stringify(uitslagen);
-        form.querySelector('.motm-resultaten-veld').value = JSON.stringify(resultaten);
-        form.querySelector('.motm-tegenstanders-veld').value = JSON.stringify(tegenstanders);
-        form.querySelector('.motm-teamnamen-veld').value = JSON.stringify(teamnamen);
-    });
-})();
-</script>
-
-<div data-tab-paneel="dias-tabel" hidden>
-{# Mappen (1.76.0, zie kiosk_momenten.py): een hele map met één klik aan of uit, eventueel met een begin en einde. #}
-{% set terug_dias = url_for('kiosk_sponsoren_leden') ~ '#dias-tabel' %}
-{% set map_status_label = {'aan': ('Aan', 'badge-ok'), 'uit': ('Uit', 'badge-neutraal'), 'straks': ('Straks', 'badge-laag'), 'voorbij': ('Voorbij', 'badge-neutraal')} %}
-<div class="kaart">
-    <div class="actiebalk">
-        <h2 style="margin:0">&#128193; Mappen</h2>
+<section id="dias-tabel" style="min-width:0">
+    <div class="kt-filter" style="margin-bottom:0.4rem">
+        <button type="button" data-filter="alle" class="actief">Alle</button>
+        <button type="button" data-filter="aan">Aan</button>
+        <button type="button" data-filter="uit">Uit</button>
+        <button type="button" data-filter="moment">Met moment</button>
+        <input type="search" id="dia-zoek" class="kt-zoek" placeholder="Zoeken" aria-label="Dia's zoeken">
+        <a href="{{ url_for('kiosk_sponsor_nieuw') }}" class="kt-knop kt-knop--primair" style="margin-left:auto">{{ ikoon('plus') }} Nieuwe dia</a>
     </div>
-    <p class="tekst-zacht" style="margin-top:0">Zet dia's bij elkaar in een map, zoals "Halloween feest". Een map zet je met één klik aan of uit; met een begin en einde gaat hij vanzelf aan en uit. Dia's zonder map staan bij Algemeen.</p>
-    {% if mappen %}
-    <div class="tabel-wrap">
-        <table>
-            <thead><tr><th>Map</th><th>Wanneer</th><th>Dia's</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-                {% for groep in dia_groepen if groep.map %}
-                {% set m = groep.map %}
-                <tr>
-                    <td><strong>{{ m.naam }}</strong></td>
-                    <td>{% if m.vanaf or m.tot %}{{ m.vanaf|datum_nl if m.vanaf else '…' }} &rarr; {{ m.tot|datum_nl if m.tot else '…' }}{% else %}<span class="tekst-zacht">altijd</span>{% endif %}</td>
-                    <td>{{ groep.dias|length }}</td>
-                    <td><span class="badge {{ map_status_label[groep.status][1] }}">{{ map_status_label[groep.status][0] }}</span></td>
-                    <td class="tabel-acties">
-                        <form method="post" action="{{ url_for('kiosk_dia_map_wisselen', map_id=m.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="terug" value="{{ terug_dias }}">
-                            <input type="hidden" name="aan" value="{{ '0' if m.actief else '1' }}">
-                            <button type="submit" class="btn {{ 'btn-rand' if m.actief else 'btn-geel' }} btn-klein">{{ 'Uitzetten' if m.actief else 'Aanzetten' }}</button>
-                        </form>
-                        <details class="map-bewerken">
-                            <summary class="btn btn-rand btn-klein">Bewerken</summary>
-                            <form method="post" action="{{ url_for('kiosk_dia_map_opslaan') }}" class="map-formulier">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="terug" value="{{ terug_dias }}">
-                                <input type="hidden" name="map_id" value="{{ m.id }}">
-                                <input type="hidden" name="actief" value="{{ '1' if m.actief else '0' }}">
-                                <input type="text" name="naam" value="{{ m.naam }}" maxlength="60" aria-label="Naam van de map" required>
-                                <label>Vanaf <input type="datetime-local" name="vanaf" value="{{ m.vanaf|replace(' ', 'T') if m.vanaf else '' }}"></label>
-                                <label>Tot <input type="datetime-local" name="tot" value="{{ m.tot|replace(' ', 'T') if m.tot else '' }}"></label>
-                                <button type="submit" class="btn btn-geel btn-klein">Opslaan</button>
-                            </form>
-                        </details>
-                        <form method="post" action="{{ url_for('kiosk_dia_map_verwijderen', map_id=m.id) }}"
-                              onsubmit="return bevestigEnVerstuur(this, 'Map \'{{ m.naam }}\' verwijderen? De dia\'s erin blijven, bij Algemeen.');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="terug" value="{{ terug_dias }}">
-                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
-    <details{% if not mappen %} open{% endif %} style="margin-top:0.6rem">
-        <summary class="btn btn-rand btn-klein">+ Nieuwe map</summary>
-        <form method="post" action="{{ url_for('kiosk_dia_map_opslaan') }}" class="map-formulier" style="margin-top:0.6rem">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="terug" value="{{ terug_dias }}">
-            <input type="text" name="naam" maxlength="60" placeholder="Bijv. Halloween feest" aria-label="Naam van de nieuwe map" required>
-            <label>Vanaf (optioneel) <input type="datetime-local" name="vanaf"></label>
-            <label>Tot (optioneel) <input type="datetime-local" name="tot"></label>
-            <button type="submit" class="btn btn-geel btn-klein">Toevoegen</button>
-        </form>
-    </details>
-</div>
-<style>
-    .map-formulier { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-    .map-formulier input[type=text] { flex: 1 1 12rem; }
-    .map-formulier label { display: flex; align-items: center; gap: 0.35rem; font-weight: 400; font-size: 0.85rem; }
-    .map-bewerken { display: inline-block; }
-    .map-bewerken[open] { display: block; flex-basis: 100%; margin-top: 0.4rem; }
-    .map-bewerken summary { list-style: none; }
-    .map-bewerken summary::-webkit-details-marker { display: none; }
-    .dia-groep-kop { display: flex; align-items: center; gap: 0.6rem; margin: 1.1rem 0 0.5rem; }
-    .dia-groep-kop h3 { margin: 0; }
-    .dia-moment { white-space: nowrap; }
-</style>
 
-<div class="kaart">
-    <div class="actiebalk">
-        <h2 style="margin:0">Dia's</h2>
-        <a href="{{ url_for('kiosk_sponsor_nieuw') }}" class="btn btn-geel">Nieuwe dia</a>
-    </div>
-    {% if sponsoren %}
     {% for groep in dia_groepen if groep.dias or groep.map %}
-    <div class="dia-groep-kop">
-        <h3>{{ '&#128193;'|safe if groep.map else '' }} {{ groep.naam }}</h3>
-        {% if groep.map %}<span class="badge {{ map_status_label[groep.status][1] }}">{{ map_status_label[groep.status][0] }}</span>{% endif %}
-        <span class="tekst-zacht" style="font-size:0.85rem">{{ groep.dias|length }} dia{{ "'s" if groep.dias|length != 1 else '' }}</span>
-        {% if groep.map %}<a href="{{ url_for('kiosk_sponsor_nieuw', map=groep.map.id) }}" class="btn btn-rand btn-klein">+ Dia in deze map</a>{% endif %}
+    <div class="kt-sectie" id="groep-{{ groep.map.id if groep.map else 'algemeen' }}">
+        <h2>{% if groep.map %}{{ ikoon('map', 'kt-i--zacht') }} {% endif %}{{ groep.naam }}</h2>
+        {% if groep.map %}<span class="kt-pil {{ map_status_label[groep.status][1] }}">{{ map_status_label[groep.status][0] }}</span>{% endif %}
+        <span class="kt-uitleg" style="margin:0">{{ groep.dias|length }} dia{{ "'s" if groep.dias|length != 1 else '' }}</span>
     </div>
-    {% if groep.dias %}
-    <div class="tabel-wrap">
-        <table>
-            <thead>
-                <tr><th></th><th>Titel</th><th>Sjabloon</th><th>Moment</th><th>Duur</th><th>Volgorde</th><th>Status</th><th></th></tr>
-            </thead>
-            <tbody>
-                {% for s in groep.dias %}
-                <tr>
-                    <td>
-                        {% if s.afbeelding %}
-                        <img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + s.afbeelding) }}" alt="" class="product-thumb">
-                        {% endif %}
-                        {% if s.video %}<span class="badge badge-neutraal">Video</span>{% endif %}
-                    </td>
-                    <td>{{ s.titel or '—' }}{% if s.effect %}<div class="tekst-zacht" style="font-size:0.75rem">&#10024; {{ effecten[s.effect][0].split(':')[0] if s.effect in effecten else s.effect }}</div>{% endif %}</td>
-                    <td>{{ sjabloon_labels.get(s.sjabloon, s.sjabloon) }}</td>
-                    <td class="dia-moment">{% if s.moment %}{{ s.moment|datum_nl }}{% if s.schijnwerper_minuten %}<div class="tekst-zacht" style="font-size:0.75rem">&#128294; {{ s.schijnwerper_minuten }} min schijnwerper</div>{% endif %}{% else %}<span class="tekst-zacht">—</span>{% endif %}</td>
-                    <td>{% if s.sjabloon == 'video_volledig' and s.video_hele_duur and s.video_duur %}{{ s.video_duur|round|int }}s (video){% else %}{{ s.weergave_duur_seconden }}s{% endif %}{% if s.herhalingen > 1 %} <span class="tekst-zacht">&times;{{ s.herhalingen }} per ronde</span>{% endif %}</td>
-                    <td>{{ s.volgorde }}</td>
-                    <td>
-                        {% if not s.actief %}
-                        <span class="badge badge-neutraal">Uit</span>
-                        {% elif s.zichtbaar_vanaf and s.zichtbaar_vanaf > vandaag %}
-                        <span class="badge badge-neutraal" title="Staat pas in de diashow vanaf deze dag">Gepland vanaf {{ s.zichtbaar_vanaf[8:10] }}-{{ s.zichtbaar_vanaf[5:7] }}</span>
-                        {% elif s.zichtbaar_tot and s.zichtbaar_tot < vandaag %}
-                        <span class="badge badge-neutraal" title="Staat niet meer in de diashow">Verlopen op {{ s.zichtbaar_tot[8:10] }}-{{ s.zichtbaar_tot[5:7] }}</span>
-                        {% else %}
-                        <span class="badge badge-ok">Actief</span>
-                        {% if s.zichtbaar_tot %}<div class="tekst-zacht" style="font-size:0.75rem">t/m {{ s.zichtbaar_tot[8:10] }}-{{ s.zichtbaar_tot[5:7] }}</div>{% endif %}
-                        {% endif %}
-                    </td>
-                    <td class="tabel-acties">
-                        <a href="{{ url_for('kiosk_sponsor_bewerken', sponsor_id=s.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
-                        <form method="post" action="{{ url_for('kiosk_moment_nu', dia_id=s.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="terug" value="{{ terug_dias }}">
-                            <button type="submit" class="btn btn-rand btn-klein" title="Nu groot op alle tv's (de schijnwerper)">Nu tonen</button>
-                        </form>
-                        <a href="{{ url_for('kiosk_moment_voorbeeld', dia_id=s.id) }}" target="_blank" class="btn btn-rand btn-klein" title="De schijnwerper in je browser, zonder dat de tv's iets merken">Voorbeeld</a>
-                        <form method="post" action="{{ url_for('kiosk_sponsor_verwijderen', sponsor_id=s.id) }}"
-                              onsubmit="return bevestigEnVerstuur(this, 'Dia \'{{ s.titel or 'zonder titel' }}\' verwijderen?');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="kt-tegels">
+        {% for s in groep.dias %}
+        {% set gepland = s.zichtbaar_vanaf and s.zichtbaar_vanaf > vandaag %}
+        {% set verlopen = s.zichtbaar_tot and s.zichtbaar_tot < vandaag %}
+        <div class="kt-tegel{{ ' kt-tegel--uit' if not s.actief or gepland or verlopen else '' }}" data-aan="{{ 1 if s.actief else 0 }}"
+             data-moment="{{ 1 if s.moment else 0 }}" data-zoek="{{ ((s.titel or '') ~ ' ' ~ (s.tekst or '') ~ ' ' ~ (s.balk_tekst or ''))|lower }}">
+            {% if s.sjabloon == 'video_volledig' %}
+            <div class="kt-tegel-beeld" style="background:#0b0b10">
+                <span class="kt-tegel-beeld-titel" style="opacity:0.85">{{ ikoon('video', 'kt-i--groot') }}</span>
+            {% else %}
+            {# De dia zoals op de tv, verkleind (kiosk_dia_miniatuur; het script onderaan past hem in de tegel). #}
+            <div class="kt-tegel-beeld kt-tegel-beeld--dia{{ ' kt-tegel-beeld--griezel' if s.sjabloon == 'griezel' else '' }}">
+                <iframe src="{{ url_for('kiosk_dia_miniatuur', dia_id=s.id) }}" loading="lazy" tabindex="-1" aria-hidden="true" title="{{ s.titel or 'Dia' }}"></iframe>
+            {% endif %}
+            </div>
+            {# Het tijdstip en het effect onder het plaatje, zodat ze de titel op de dia niet bedekken. #}
+            <div class="kt-tegel-tekst">
+                <div class="kt-tegel-kop">
+                    <div class="kt-tegel-titel" title="{{ s.titel or '' }}">{{ s.titel or '(zonder titel)' }}</div>
+                    {% if s.moment %}<span class="kt-pil kt-pil--geel" title="Moment">{{ s.moment[11:16] }}</span>{% endif %}
+                </div>
+                <div class="kt-tegel-sub">
+                    {{ sjabloon_labels.get(s.sjabloon, s.sjabloon).split(' (')[0] }} ·
+                    {% if s.effect %}<span title="Effect">&#10024; {{ effecten[s.effect][0].split(':')[0] if s.effect in effecten else s.effect }}</span> · {% endif %}
+                    {%- if s.sjabloon == 'video_volledig' and s.video_hele_duur and s.video_duur %}{{ s.video_duur|round|int }} s{% else %}{{ s.weergave_duur_seconden }} s{% endif %}
+                    {%- if s.herhalingen > 1 %} · ×{{ s.herhalingen }} per ronde{% endif %}
+                    {%- if gepland %} · gepland vanaf {{ s.zichtbaar_vanaf[8:10] }}-{{ s.zichtbaar_vanaf[5:7] }}{% elif verlopen %} · verlopen op {{ s.zichtbaar_tot[8:10] }}-{{ s.zichtbaar_tot[5:7] }}{% elif s.zichtbaar_tot %} · t/m {{ s.zichtbaar_tot[8:10] }}-{{ s.zichtbaar_tot[5:7] }}{% endif %}
+                    {%- if s.moment %} · {{ s.moment|datum_nl }}{% endif %}
+                </div>
+            </div>
+            <div class="kt-tegel-acties">
+                <form method="post" action="{{ url_for('kiosk_dia_wisselen', dia_id=s.id) }}" class="kt-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="terug" value="{{ terug_dias }}#groep-{{ groep.map.id if groep.map else 'algemeen' }}">
+                    <input type="hidden" name="aan" value="{{ '0' if s.actief else '1' }}">
+                    <button type="submit" class="kt-schakelaar{{ ' aan' if s.actief else '' }}" role="switch" aria-checked="{{ 'true' if s.actief else 'false' }}"
+                            aria-label="{{ s.titel or 'Dia' }} {{ 'uitzetten' if s.actief else 'aanzetten' }}" title="{{ 'Staat aan' if s.actief else 'Staat uit' }}"></button>
+                </form>
+                <form method="post" action="{{ url_for('kiosk_moment_nu', dia_id=s.id) }}" class="kt-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="terug" value="{{ terug_dias }}#groep-{{ groep.map.id if groep.map else 'algemeen' }}">
+                    <button type="submit" class="kt-ikoon" title="Nu groot op alle tv's" aria-label="{{ s.titel or 'Dia' }} nu groot op alle tv's">{{ ikoon('flits') }}</button>
+                </form>
+                <a href="{{ url_for('kiosk_moment_voorbeeld', dia_id=s.id) }}" target="_blank" class="kt-ikoon" title="Voorbeeld" aria-label="Voorbeeld van {{ s.titel or 'de dia' }}">{{ ikoon('oog') }}</a>
+                <a href="{{ url_for('kiosk_sponsor_bewerken', sponsor_id=s.id) }}" class="kt-ikoon" title="Bewerken" aria-label="{{ s.titel or 'Dia' }} bewerken">{{ ikoon('potlood') }}</a>
+                <form method="post" action="{{ url_for('kiosk_sponsor_verwijderen', sponsor_id=s.id) }}" class="kt-inline"
+                      onsubmit="return bevestigEnVerstuur(this, 'Dia \'{{ s.titel or 'zonder titel' }}\' verwijderen?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="kt-ikoon kt-ikoon--gevaar" title="Verwijderen" aria-label="{{ s.titel or 'Dia' }} verwijderen">{{ ikoon('prullenbak') }}</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+        <a href="{{ url_for('kiosk_sponsor_nieuw', map=groep.map.id) if groep.map else url_for('kiosk_sponsor_nieuw') }}" class="kt-tegel kt-tegel--nieuw">
+            {{ ikoon('plus', 'kt-i--middel') }}
+            <span>{{ '+ Dia in deze map' if groep.map else '+ Nieuwe dia' }}</span>
+        </a>
     </div>
-    {% else %}
-    <p class="leeg" style="margin:0">Nog geen dia's in deze map.</p>
-    {% endif %}
     {% endfor %}
-    {% else %}
-    <p class="leeg">Nog geen dia's toegevoegd.</p>
-    {% endif %}
-</div>
-</div>
-
-<div data-tab-paneel="sjablonen" hidden>
-<div class="kaart">
-    <div class="actiebalk">
-        <h2 style="margin:0">Eigen sjablonen</h2>
-        <a href="{{ url_for('kiosk_sjabloon_nieuw') }}" class="btn btn-geel">Nieuw sjabloon</a>
-    </div>
-    {% if sjablonen_custom %}
-    <div class="tabel-wrap">
-        <table>
-            <thead><tr><th>Naam</th><th>Elementen</th><th>In gebruik</th><th></th></tr></thead>
-            <tbody>
-                {% for s in sjablonen_custom %}
-                {% set aantal_gebruikt = gebruik_per_sjabloon.get(s.id, 0) %}
-                <tr>
-                    <td>{{ s.naam }}</td>
-                    <td>{{ aantal_elementen_per_sjabloon.get(s.id, 0) }}</td>
-                    <td>
-                        {% if aantal_gebruikt %}
-                        <span class="badge badge-ok">{{ aantal_gebruikt }} dia{{ "'s" if aantal_gebruikt != 1 }}</span>
-                        {% else %}
-                        <span class="badge badge-neutraal">Ongebruikt</span>
-                        {% endif %}
-                    </td>
-                    <td class="tabel-acties">
-                        <a href="{{ url_for('kiosk_sjabloon_bewerken', sjabloon_id=s.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
-                        <form method="post" action="{{ url_for('kiosk_sjabloon_verwijderen', sjabloon_id=s.id) }}"
-                              onsubmit="return bevestigEnVerstuur(this, '\'{{ s.naam }}\' verwijderen?{{ (' Wordt gebruikt door ' ~ aantal_gebruikt ~ ' dia(s), die vallen dan terug op het standaardsjabloon.') if aantal_gebruikt else '' }}');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p class="leeg">Nog geen eigen sjablonen. Bouw er &eacute;&eacute;n via "Nieuw sjabloon".</p>
-    {% endif %}
-</div>
-</div>
-
-<div data-tab-paneel="club-van-20" hidden>
-<div class="kaart" style="max-width:760px">
-    <h2 style="margin-top:0">Club van 20</h2>
-    <p>
-        De Club van 20 heeft een eigen onderdeel in het menu gekregen, met de ledenadministratie,
-        betalingen per seizoen, projecten en de instellingen voor de dia's.
-    </p>
-    {% if club_van_20 %}
-    <p class="tekst-zacht">
-        Seizoen {{ club_van_20.seizoen }}: {{ club_van_20.betaald }} betaald{% if club_van_20.aantal %},
-        {{ club_van_20.aantal }} nog open{% endif %}.
-    </p>
-    {% endif %}
-    <div class="actiebalk" style="justify-content:flex-start; gap:0.5rem">
-        <a href="{{ url_for('club_van_20_overzicht') }}" class="btn btn-geel">Leden &amp; betalingen</a>
-        <a href="{{ url_for('club_van_20_projecten') }}" class="btn btn-rand">Projecten</a>
-        <a href="{{ url_for('club_van_20_instellingen') }}" class="btn btn-rand">Scherm &amp; werving</a>
-    </div>
-</div>
-</div>
-
-</div>
-
-<div class="kiosk-voorbeeld">
-    <div class="actiebalk" style="margin-bottom:0.6rem">
-        <h2 style="margin:0">Live voorbeeld</h2>
-        <button type="button" class="btn btn-rand btn-klein" id="voorbeeld-verversen">&#8635; Ververs</button>
-    </div>
-    <div class="kiosk-voorbeeld-venster-buiten">
-        <iframe id="scherm-preview" src="{{ url_for('kiosk_scherm') }}" title="Voorbeeld kantine scherm"></iframe>
-    </div>
-    <p class="tekst-zacht" style="margin-bottom:0">Ververst automatisch zodra je de instellingen opslaat.</p>
+    {% if not sponsoren %}<div class="kt-leeg" style="margin-top:1rem">Nog geen dia's. Maak de eerste met "Nieuwe dia".</div>{% endif %}
+</section>
 </div>
 </div>
 
 <script>
 (function () {
-    var iframe = document.getElementById('scherm-preview');
-    var buiten = document.querySelector('.kiosk-voorbeeld-venster-buiten');
-
-    function schaalVoorbeeld() {
-        var schaal = buiten.clientWidth / 1920;
-        iframe.style.transform = 'scale(' + schaal + ')';
+    // Filteren (Alle, Aan, Uit, Met moment) en zoeken, zonder de pagina te herladen.
+    var knoppen = document.querySelectorAll('[data-filter]');
+    var zoek = document.getElementById('dia-zoek');
+    function filter() {
+        var soort = document.querySelector('[data-filter].actief').dataset.filter;
+        var tekst = zoek.value.trim().toLowerCase();
+        document.querySelectorAll('.kt-tegel[data-zoek]').forEach(function (tegel) {
+            var past = soort === 'alle' || (soort === 'aan' && tegel.dataset.aan === '1') ||
+                (soort === 'uit' && tegel.dataset.aan === '0') || (soort === 'moment' && tegel.dataset.moment === '1');
+            tegel.hidden = !(past && (!tekst || tegel.dataset.zoek.indexOf(tekst) >= 0));
+        });
     }
-
-    var form = document.getElementById('scherm-instellingen-form');
-    form.addEventListener('ajax-form:success', function () {
-        iframe.contentWindow.location.reload();
+    knoppen.forEach(function (knop) {
+        knop.addEventListener('click', function () {
+            knoppen.forEach(function (k) { k.classList.toggle('actief', k === knop); });
+            filter();
+        });
     });
-    document.getElementById('voorbeeld-verversen').addEventListener('click', function () {
-        iframe.contentWindow.location.reload();
-    });
+    zoek.addEventListener('input', filter);
 
-    window.addEventListener('resize', schaalVoorbeeld);
-    schaalVoorbeeld();
+    // De plaatjes op de tegels: de dia op 1920 bij 1080, verkleind tot de breedte van zijn tegel (ook na het filteren).
+    function schaal(beeld) { if (beeld.clientWidth) beeld.style.setProperty('--kt-schaal', beeld.clientWidth / 1920); }
+    var beelden = document.querySelectorAll('.kt-tegel-beeld--dia');
+    if ('ResizeObserver' in window) {
+        var waarnemer = new ResizeObserver(function (items) { items.forEach(function (item) { schaal(item.target); }); });
+        beelden.forEach(function (beeld) { waarnemer.observe(beeld); });
+    } else {
+        beelden.forEach(schaal);
+        window.addEventListener('resize', function () { beelden.forEach(schaal); });
+    }
 })();
 </script>
 {% endblock %}

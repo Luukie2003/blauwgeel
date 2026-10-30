@@ -49,10 +49,11 @@
 .slide-sponsor.tekst-groot { --tekstschaal: 1.25; }
 .slide-sponsor.tekst-xl { --tekstschaal: 1.6; }
 
-/* Sponsor: afbeelding vult het scherm, titel als onderschrift */
+/* Sponsor: afbeelding vult het scherm, titel als onderschrift. Past hij niet precies (een staande foto), dan zwarte
+   balken ernaast, zoals bij een video. */
 .slide-sponsor.sjabloon-afbeelding_volledig { padding: 0; }
 .slide-sponsor.sjabloon-afbeelding_volledig .sponsor-afbeelding {
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff;
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000;
 }
 .slide-sponsor.sjabloon-afbeelding_volledig .onderschrift,
 .slide-sponsor.sjabloon-video_volledig .onderschrift {

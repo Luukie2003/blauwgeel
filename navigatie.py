@@ -280,11 +280,33 @@ NAV_ITEMS = [
         "url_endpoint": "keuken_instellingen",
         "label": "Instellingen",
     },
+    # De kantine-tv (1.79.0): dezelfde onderdelen als de tabbladen bovenaan elke pagina (templates/_kt_kop.html).
     {
         "groep": "Kantine-tv",
         "endpoints": ["kiosk_hub"],
         "url_endpoint": "kiosk_hub",
-        "label": "Overzicht",
+        "label": "Nu",
+    },
+    {
+        "groep": "Kantine-tv",
+        "endpoints": [
+            "kiosk_sponsoren_leden",
+            "kiosk_sponsor_nieuw",
+            "kiosk_sponsor_bewerken",
+        ],
+        "url_endpoint": "kiosk_sponsoren_leden",
+        "label": "Dia's",
+    },
+    {
+        "groep": "Kantine-tv",
+        "endpoints": [
+            "kiosk_diashow",
+            "kiosk_scherm_instellingen",
+            "kiosk_sjabloon_nieuw",
+            "kiosk_sjabloon_bewerken",
+        ],
+        "url_endpoint": "kiosk_diashow",
+        "label": "Diashow",
     },
     {
         "groep": "Kantine-tv",
@@ -300,26 +322,19 @@ NAV_ITEMS = [
             "kiosk_bardienst_bewerken",
         ],
         "url_endpoint": "kiosk_prijzen_instellingen",
-        "label": "Prijzenscherm & acties",
-    },
-    {
-        "groep": "Kantine-tv",
-        "endpoints": [
-            "kiosk_scherm_instellingen",
-            "kiosk_sponsoren_leden",
-            "kiosk_sponsor_nieuw",
-            "kiosk_sponsor_bewerken",
-            "kiosk_sjabloon_nieuw",
-            "kiosk_sjabloon_bewerken",
-        ],
-        "url_endpoint": "kiosk_sponsoren_leden",
-        "label": "Dia's",
+        "label": "Prijzenscherm",
     },
     {
         "groep": "Kantine-tv",
         "endpoints": ["kiosk_sponsorlogos", "kiosk_sponsorlogo_bewerken"],
         "url_endpoint": "kiosk_sponsorlogos",
         "label": "Sponsoren",
+    },
+    {
+        "groep": "Kantine-tv",
+        "endpoints": ["kiosk_tvs_beheer"],
+        "url_endpoint": "kiosk_tvs_beheer",
+        "label": "Tv's",
     },
     {
         "groep": "Club van 20",

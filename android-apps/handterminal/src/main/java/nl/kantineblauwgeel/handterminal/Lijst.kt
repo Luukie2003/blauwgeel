@@ -2,12 +2,15 @@ package nl.kantineblauwgeel.handterminal
 
 import android.content.Context
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -48,7 +51,8 @@ object Lijst {
     }
 
     /** Een regel: titel, daaronder een (grijze) uitleg, rechts eventueel een getal of woord, links eventueel een
-     * [icoon] (zoals het vinkje op de bestellijst). Aantikbaar met [klik]. */
+     * [icoon] (zoals het vinkje op de bestellijst). Aantikbaar met [klik]. Met [pil] staat het woord rechts in een
+     * gekleurd labeltje (zoals "Aan" of "straks" bij de kantine-tv, 2.21.0). */
     fun regel(
         kaart: LinearLayout,
         titel: String,
@@ -57,6 +61,7 @@ object Lijst {
         @ColorRes rechtsKleur: Int = R.color.tekst,
         @DrawableRes icoon: Int? = null,
         @ColorRes icoonKleur: Int? = null,
+        pil: Boolean = false,
         klik: (() -> Unit)? = null,
     ): LinearLayout {
         val context = kaart.context
@@ -92,7 +97,12 @@ object Lijst {
             setTextColor(context.getColor(R.color.tekst_zacht))
         })
         regel.addView(links, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        if (rechts != null) regel.addView(TextView(context).apply {
+        if (rechts != null && pil) {
+            regel.addView(pil(context, rechts, context.getColor(rechtsKleur)),
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    marginStart = dp(context, 8)
+                })
+        } else if (rechts != null) regel.addView(TextView(context).apply {
             text = rechts
             textSize = 15f
             setTextColor(context.getColor(rechtsKleur))
@@ -101,6 +111,170 @@ object Lijst {
         })
         kaart.addView(regel)
         return regel
+    }
+
+    /** Een rond labeltje: de tekst in [kleur] op een lichte tint van die kleur (of, met [vol], wit op de kleur). */
+    fun pil(context: Context, tekst: String, kleur: Int, vol: Boolean = false): TextView = TextView(context).apply {
+        text = tekst
+        textSize = 12.5f
+        setTypeface(typeface, Typeface.BOLD)
+        setTextColor(if (vol) context.getColor(R.color.tekst) else kleur)
+        setPadding(dp(context, 10), dp(context, 3), dp(context, 10), dp(context, 3))
+        background = GradientDrawable().apply {
+            cornerRadius = dp(context, 99).toFloat()
+            setColor(if (vol) kleur else (kleur and 0x00FFFFFF) or (0x24 shl 24))
+        }
+    }
+
+    /** Een gele balk bovenaan een scherm (zoals "Nu groot op de tv's: Heksenbrouwsel"), met rechts een knop. */
+    fun balk(ouder: LinearLayout, tekst: String, knop: String, actie: () -> Unit) {
+        val context = ouder.context
+        val rij = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(context, 14), dp(context, 10), dp(context, 8), dp(context, 10))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(context, 14).toFloat()
+                setColor(context.getColor(R.color.geel))
+            }
+        }
+        rij.addView(TextView(context).apply {
+            text = tekst
+            textSize = 14.5f
+            setTextColor(context.getColor(R.color.navy_donker))
+            setTypeface(typeface, Typeface.BOLD)
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        rij.addView(TextView(context).apply {
+            text = knop
+            textSize = 14f
+            setTextColor(context.getColor(R.color.wit))
+            setTypeface(typeface, Typeface.BOLD)
+            setPadding(dp(context, 14), dp(context, 7), dp(context, 14), dp(context, 7))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(context, 99).toFloat()
+                setColor(context.getColor(R.color.rood_balk))
+            }
+            setOnClickListener { actie() }
+        })
+        ouder.addView(rij, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(context, 10)
+            bottomMargin = dp(context, 4)
+        })
+    }
+
+    /** Een rij snelknoppen (icoon en tekst in een rond vlak) die opzij scrolt als ze niet op het scherm passen. */
+    fun snelknoppen(ouder: LinearLayout, knoppen: List<Triple<String, Int, () -> Unit>>) {
+        val context = ouder.context
+        val rij = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+        for ((tekst, icoon, actie) in knoppen) {
+            rij.addView(TextView(context).apply {
+                text = tekst
+                textSize = 13.5f
+                setTextColor(context.getColor(R.color.navy))
+                setTypeface(typeface, Typeface.BOLD)
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                compoundDrawablePadding = dp(context, 6)
+                setCompoundDrawablesRelative(context.getDrawable(icoon)?.mutate()?.apply {
+                    setTint(context.getColor(R.color.navy))
+                    setBounds(0, 0, dp(context, 18), dp(context, 18))
+                }, null, null, null)
+                setPadding(dp(context, 12), dp(context, 8), dp(context, 14), dp(context, 8))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(context, 99).toFloat()
+                    setColor(context.getColor(R.color.kaart))
+                    setStroke(dp(context, 1), context.getColor(R.color.rand_licht))
+                }
+                setOnClickListener { actie() }
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                marginEnd = dp(context, 8)
+            })
+        }
+        ouder.addView(HorizontalScrollView(context).apply {
+            isHorizontalScrollBarEnabled = false
+            setPadding(0, dp(context, 10), 0, dp(context, 2))
+            clipToPadding = false
+            addView(rij)
+        })
+    }
+
+    /** Een tegel voor [tegels]: een vlak met de titel in [kleur] (zoals bij de dia's op de site), een geel [label]
+     * linksboven (bijvoorbeeld 17:00), daaronder de titel, een regel uitleg en of hij aan of uit staat. */
+    class Tegel(val titel: String, val sub: String?, val kleur: Int, val label: String?, val aan: Boolean, val klik: () -> Unit)
+
+    /** Tegels, twee naast elkaar. */
+    fun tegels(ouder: LinearLayout, tegels: List<Tegel>) {
+        val context = ouder.context
+        tegels.chunked(2).forEach { paar ->
+            val rij = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+            paar.forEachIndexed { i, t ->
+                rij.addView(tegel(context, t), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
+                    if (i == 0) marginEnd = dp(context, 4) else marginStart = dp(context, 4)
+                })
+            }
+            if (paar.size == 1) {
+                rij.addView(View(context), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(context, 4) })
+            }
+            ouder.addView(rij, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                bottomMargin = dp(context, 8)
+            })
+        }
+    }
+
+    private fun tegel(context: Context, t: Tegel): View {
+        val tegel = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(R.drawable.kaart)
+            clipToOutline = true
+            isClickable = true
+            foreground = context.getDrawable(R.drawable.regel_klik_kaart)
+            setOnClickListener { t.klik() }
+            contentDescription = t.titel
+        }
+        val vlak = FrameLayout(context).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xFF3A1352.toInt(), 0xFF0B0412.toInt()))
+            alpha = if (t.aan) 1f else 0.45f
+        }
+        vlak.addView(TextView(context).apply {
+            text = t.titel
+            textSize = 15f
+            maxLines = 2
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            gravity = android.view.Gravity.CENTER
+            setTextColor(t.kleur)
+            setTypeface(typeface, Typeface.BOLD)
+            setPadding(dp(context, 8), dp(context, 14), dp(context, 8), dp(context, 8))
+        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        if (t.label != null) vlak.addView(pil(context, t.label, context.getColor(R.color.geel), vol = true),
+            FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
+                leftMargin = dp(context, 6)
+                topMargin = dp(context, 6)
+            })
+        tegel.addView(vlak, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(context, 78)))
+        tegel.addView(TextView(context).apply {
+            text = t.titel
+            textSize = 13.5f
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setTextColor(context.getColor(R.color.tekst))
+            setTypeface(typeface, Typeface.BOLD)
+            setPadding(dp(context, 10), dp(context, 8), dp(context, 10), 0)
+        })
+        val onder = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(context, 10), dp(context, 2), dp(context, 8), dp(context, 9))
+        }
+        onder.addView(TextView(context).apply {
+            text = t.sub ?: ""
+            textSize = 11.5f
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setTextColor(context.getColor(R.color.tekst_zacht))
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        onder.addView(pil(context, context.getString(if (t.aan) R.string.aan else R.string.uit),
+            context.getColor(if (t.aan) R.color.groen_tekst else R.color.tekst_zacht)))
+        tegel.addView(onder)
+        return tegel
     }
 
     /** Witruimte bovenaan een scherm dat niet met een kop begint. */

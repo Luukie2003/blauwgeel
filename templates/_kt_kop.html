@@ -1,0 +1,39 @@
+{# De kop van elke pagina van de kantine-tv (1.79.0): de titel, wat er nu groot op de tv's staat (met Stop), hoeveel
+   tv's er aan staan, en de tabbladen. De pagina zelf staat in <div class="kt">, zodat de moderne stijl
+   (static/kantine_tv_beheer.css) alleen daar geldt. #}
+{% from '_kt_ikonen.html' import ikoon %}
+<link rel="stylesheet" href="{{ url_for('static', filename='kantine_tv_beheer.css') }}?v={{ kt_stijl_versie|default('') }}">
+{% set kt = kt_status() %}
+{% set kt_tabs = [
+    ('kiosk_hub', 'Nu', 'nu', ['kiosk_hub']),
+    ('kiosk_sponsoren_leden', "Dia's", 'dias', ['kiosk_sponsoren_leden', 'kiosk_sponsor_nieuw', 'kiosk_sponsor_bewerken']),
+    ('kiosk_diashow', 'Diashow', 'diashow', ['kiosk_diashow', 'kiosk_scherm_instellingen', 'kiosk_sjabloon_nieuw', 'kiosk_sjabloon_bewerken']),
+    ('kiosk_prijzen_instellingen', 'Prijzenscherm', 'prijs', ['kiosk_prijzen_instellingen', 'kiosk_wedstrijddag_welkom_instellingen',
+        'kiosk_categorie_kolommen_instellingen', 'kiosk_uitgelicht_product_instellingen', 'kiosk_acties', 'kiosk_actie_nieuw',
+        'kiosk_actie_bewerken', 'kiosk_bardienst', 'kiosk_bardienst_bewerken']),
+    ('kiosk_sponsorlogos', 'Sponsoren', 'sponsoren', ['kiosk_sponsorlogos', 'kiosk_sponsorlogo_bewerken']),
+    ('kiosk_tvs_beheer', "Tv's", 'tvs', ['kiosk_tvs_beheer']),
+] %}
+<header class="kt-kop">
+    <div class="kt-kop-rij">
+        <h1>{{ ikoon('tv') }} Kantine-tv</h1>
+        <div class="kt-kop-rechts">
+            {% if kt.schijnwerper %}
+            <span class="kt-pil kt-pil--geel">{{ ikoon('flits') }} Nu groot: {{ kt.schijnwerper.titel or 'een dia' }}</span>
+            <form method="post" action="{{ url_for('kiosk_moment_stop') }}" class="kt-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="terug" value="{{ request.full_path }}">
+                <button type="submit" class="kt-knop kt-knop--klein kt-knop--gevaar" title="Stop de schijnwerper" aria-label="Stop de schijnwerper">{{ ikoon('stop') }} Stop</button>
+            </form>
+            {% endif %}
+            {% if kt.tvs %}
+            <a href="{{ url_for('kiosk_tvs_beheer') }}" class="kt-pil kt-pil--stip {{ 'kt-pil--aan' if kt.tvs_aan == kt.tvs else 'kt-pil--oranje' }}">{{ kt.tvs_aan }} van {{ kt.tvs }} tv's aan</a>
+            {% endif %}
+        </div>
+    </div>
+    <nav class="kt-tabs" aria-label="Kantine-tv">
+        {% for endpoint, label, icoon, endpoints in kt_tabs %}
+        <a href="{{ url_for(endpoint) }}" class="kt-tab{{ ' actief' if request.endpoint in endpoints else '' }}"{% if request.endpoint in endpoints %} aria-current="page"{% endif %}>{{ ikoon(icoon) }}{{ label }}</a>
+        {% endfor %}
+    </nav>
+</header>

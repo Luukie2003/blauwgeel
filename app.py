@@ -380,6 +380,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             "kiosk_welkom_stijl_versie": int((BASE_DIR / "static" / "kiosk_welkom_stijl.css").stat().st_mtime),
             "kiosk_effecten_versie": max(int((BASE_DIR / "static" / naam).stat().st_mtime)
                                          for naam in ("kiosk_effecten.css", "kiosk_effecten.js")),
+            "kt_stijl_versie": int((BASE_DIR / "static" / "kantine_tv_beheer.css").stat().st_mtime),
             "site_banner_tekst": banner_tekst,
             "csrf_token": csrf_token,
             "pda_modus": pda_modus,
@@ -432,12 +433,13 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         # -- geen clickjacking-risico dus, en die uitzondering is nodig
         # zodat de instellingenpagina en de Kiosk-hub 'm in een
         # live-voorbeeld-iframe kunnen tonen. Hetzelfde geldt voor het
-        # voorbeeld van een griezeldia bij het dia-formulier. Overal elders
-        # blijft framen (SAMEORIGIN-uitzondering incluis) uit.
+        # voorbeeld van een griezeldia bij het dia-formulier en het plaatje
+        # van een dia op zijn tegel bij Dia's. Overal elders blijft framen
+        # (SAMEORIGIN-uitzondering incluis) uit.
         response.headers["X-Frame-Options"] = (
             "SAMEORIGIN"
             if request.endpoint in ("kiosk_scherm", "kiosk_prijzen_scherm", "kiosk_tv", "kaartjes_pdf_route",
-                                    "kiosk_griezel_voorbeeld")
+                                    "kiosk_griezel_voorbeeld", "kiosk_dia_miniatuur")
             else "DENY"
         )
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"

@@ -27,13 +27,13 @@ def test_halloween_met_een_klik_aan_en_uit(ingelogde_client, client, db):
     assert client.get("/kiosk/prijzen/versie").get_json()["versie"] != versie_prijzen
     assert client.get("/kiosk/scherm/versie").get_json()["versie"] != versie_dias
     hub = ingelogde_client.get("/kiosk").get_data(as_text=True)
-    assert "staat aan" in hub and ">Uitzetten<" in hub
+    assert 'aria-label="Halloween-thema uitzetten"' in hub
 
     _zet(ingelogde_client, "")
     assert _thema(db) is None
     assert "hw-vleermuis" not in client.get("/kiosk/prijzen").get_data(as_text=True)
     assert client.get("/kiosk/prijzen/versie").get_json()["versie"] == versie_prijzen
-    assert ">Aanzetten<" in ingelogde_client.get("/kiosk").get_data(as_text=True)
+    assert 'aria-label="Halloween-thema aanzetten"' in ingelogde_client.get("/kiosk").get_data(as_text=True)
 
 
 def test_alleen_met_rechten_voor_de_kantine_tv(client, db):

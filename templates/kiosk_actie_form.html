@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block titel %}{{ 'Actie bewerken' if actie else 'Nieuwe actie' }}{% endblock %}
 {% block inhoud %}
+<div class="kt">
+{% include '_kt_kop.html' %}
 <h1>{{ 'Actie bewerken' if actie else 'Nieuwe actie' }}</h1>
 <p class="subtitel"><a href="{{ url_for('kiosk_acties') }}">&larr; Terug naar acties</a></p>
 
@@ -31,5 +33,6 @@
         </label>
         <button type="submit" class="btn btn-geel" style="margin-top:1rem">{{ 'Opslaan' if actie else 'Toevoegen' }}</button>
     </form>
+</div>
 </div>
 {% endblock %}

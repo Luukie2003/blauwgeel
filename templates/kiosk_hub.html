@@ -1,289 +1,138 @@
 {% extends "base.html" %}
-{% block titel %}Kantine Kiosk{% endblock %}
+{% block titel %}Kantine-tv{% endblock %}
 {% block inhoud %}
-<p class="subtitel">
-    De tv's in de kantine. Koppel elke tv één keer met de code die hij laat zien; daarna kies je hier per tv wat
-    hij toont en hoe groot, zie je of hij aan staat en laad je hem op afstand opnieuw. De schermen zelf zijn
-    publieke pagina's (geen account nodig) -- wat erop staat stel je hieronder in.
-</p>
-
-<style>
-    .kiosk-schermen-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:1.1rem; margin-bottom:1.8rem; }
-    .kiosk-mini-voorbeeld-buiten {
-        position:relative; width:100%; aspect-ratio:16/9; overflow:hidden;
-        border-radius:10px; background:#0f1f4d;
-    }
-    .kiosk-mini-voorbeeld-buiten iframe {
-        position:absolute; top:0; left:0; width:1920px; height:1080px;
-        border:0; transform-origin:top left; pointer-events:none;
-    }
-    .kiosk-schermkaart-acties { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.7rem; }
-    .kiosk-qr-blok { margin-top:0.7rem; }
-    .kiosk-qr-blok[hidden] { display:none; }
-    .kiosk-instellen-kolommen { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1.1rem; }
-    .tv-status { display:inline-flex; align-items:center; gap:0.4rem; font-weight:600; }
-    .tv-status::before { content:""; width:0.65rem; height:0.65rem; border-radius:50%; background:#9aa3b5; flex:none; }
-    .tv-status--aan::before { background:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,0.18); }
-    .tv-status--uit { color:#b42318; }
-    .tv-status--uit::before { background:#d92d20; }
-    .tv-details { margin:0.45rem 0 0.7rem; }
-    .tv-velden { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.6rem; margin-top:0.8rem; }
-    .tv-velden label { display:flex; flex-direction:column; gap:0.25rem; font-size:0.85rem; color:var(--tekst-zacht, #5b6478); }
-    .tv-koppel-form .tv-velden { margin-top:0.4rem; }
-    .tv-code-veld { font-size:1.3rem; letter-spacing:0.12em; font-variant-numeric:tabular-nums; }
-    .kiosk-thema { margin-bottom:1.4rem; }
-    .kiosk-thema--aan { border:2px solid #ff8a1f; background:#fff6ec; }
-</style>
-
-{# Het thema van alle schermen (zie THEMAS in routes/kiosk/gedeeld.py): met één klik aan of uit. #}
+{# Nu (1.79.0): wat er op de tv's staat (met een live beeld), de momenten van vanavond met Nu groot en +15 min, en de
+   snelknoppen (thema, wisselscherm, uitverkocht, uitgelicht product, timer). Tv's instellen en koppelen: bij Tv's. #}
+<div class="kt">
+{% include '_kt_kop.html' %}
+{% from '_kt_ikonen.html' import ikoon %}
 {% set thema = kiosk_thema() %}
-<div class="kaart kiosk-thema{{ ' kiosk-thema--aan' if thema == 'halloween' else '' }}" id="thema">
-    <div class="actiebalk" style="margin:0">
-        <div>
-            <h2 style="margin:0">&#127875; Halloween-thema{% if thema == 'halloween' %} <span class="badge badge-ok">staat aan</span>{% endif %}</h2>
-            <p class="tekst-zacht" style="margin:0.3rem 0 0">
-                Vleermuizen, een spin, spinnenwebben, pompoenen, een spookje en mist op alle tv's, met de prijzen in
-                het oranje. Wat er op de schermen staat, blijft gewoon leesbaar. Binnen 10 seconden op de tv.
-            </p>
-        </div>
-        <form method="post" action="{{ url_for('kiosk_thema_zetten') }}" style="margin:0">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="thema" value="{{ '' if thema == 'halloween' else 'halloween' }}">
-            <button type="submit" class="btn {{ 'btn-rand' if thema == 'halloween' else 'btn-geel' }}">{{ 'Uitzetten' if thema == 'halloween' else 'Aanzetten' }}</button>
-        </form>
-    </div>
-</div>
 
-{# Het programma (1.76.0, zie kiosk_momenten.py): dia's met een moment, en bijsturen op de avond. #}
-{% set terug_hub = url_for('kiosk_hub') ~ '#momenten' %}
-{% set moment_status = {'straks': ('Straks', 'badge-neutraal'), 'schijnwerper': ('Nu groot op de tv', 'badge-ok'), 'bezig': ('Nu', 'badge-ok'), 'klaar': ('Geweest', 'badge-neutraal'), 'map_uit': ('Map staat uit', 'badge-laag'), 'dia_uit': ('Dia staat uit', 'badge-laag')} %}
-<div class="kaart" id="momenten" style="margin-bottom:1.4rem">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:0.8rem; flex-wrap:wrap">
-        <div>
-            <h2 style="margin:0">&#128294; Momenten</h2>
-            <p class="tekst-zacht" style="margin:0.3rem 0 0">Een dia met een moment staat de eerste minuten groot op alle tv's (de schijnwerper), ook op het prijzenscherm. Loopt het uit? Schuif een moment op of zet een dia met de hand in de schijnwerper.</p>
-        </div>
-        {% if schijnwerper or programma|selectattr('status', 'equalto', 'schijnwerper')|list %}
-        <form method="post" action="{{ url_for('kiosk_moment_stop') }}" style="margin:0">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="terug" value="{{ terug_hub }}">
-            <button type="submit" class="btn btn-gevaar">Stop de schijnwerper</button>
-        </form>
-        {% endif %}
-    </div>
-    {% if programma %}
-    <div class="tabel-wrap" style="margin-top:0.8rem">
-        <table>
-            <thead><tr><th>Wanneer</th><th>Dia</th><th>Map</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-                {% for m in programma %}
-                <tr>
-                    <td style="white-space:nowrap"><strong>{{ m.van.strftime('%H:%M') }}</strong> <span class="tekst-zacht">{{ m.van.strftime('%d-%m') }}</span></td>
-                    <td>{{ m.dia.titel or '—' }}{% if m.dia.balk_tekst %}<div class="tekst-zacht" style="font-size:0.75rem">{{ m.dia.balk_tekst }}</div>{% endif %}</td>
-                    <td>{{ m.map.naam if m.map else 'Algemeen' }}</td>
-                    <td><span class="badge {{ moment_status[m.status][1] }}">{{ moment_status[m.status][0] }}</span></td>
-                    <td class="tabel-acties">
-                        <form method="post" action="{{ url_for('kiosk_moment_nu', dia_id=m.dia.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="terug" value="{{ terug_hub }}">
-                            <button type="submit" class="btn btn-rand btn-klein">Nu tonen</button>
-                        </form>
-                        {% if m.status in ('straks', 'schijnwerper', 'bezig') %}
-                        <form method="post" action="{{ url_for('kiosk_moment_later', dia_id=m.dia.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="terug" value="{{ terug_hub }}">
-                            <button type="submit" class="btn btn-rand btn-klein" title="Dit moment een kwartier later">+15 min</button>
-                        </form>
-                        {% endif %}
-                        <a href="{{ url_for('kiosk_moment_voorbeeld', dia_id=m.dia.id) }}" target="_blank" class="btn btn-rand btn-klein">Voorbeeld</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p class="leeg" style="margin:0.8rem 0 0">Nog geen dia's met een moment. Geef een dia een moment bij <a href="{{ url_for('kiosk_sponsoren_leden') }}#dias-tabel">Dia's</a>.</p>
-    {% endif %}
-</div>
-
-<h2 id="tvs" style="margin:0 0 0.7rem">Tv's</h2>
-<div class="kiosk-schermen-grid" id="tv-lijst">
+<div class="kt-sectie" style="margin-top:0"><h2>Op de tv's</h2></div>
+{% if tvs %}
+<div class="kt-raster">
     {% for tv in tvs %}
-    <div class="kaart kiosk-schermkaart" data-tv-id="{{ tv.id }}">
-        <div class="actiebalk" style="margin-bottom:0.3rem">
-            <h2 style="margin:0">{{ tv.naam }}</h2>
-            <span class="tv-status {{ 'tv-status--aan' if tv.status.aan else 'tv-status--uit' }}" data-tv-status>{{ tv.status.tekst }}</span>
-        </div>
-        <p class="tekst-zacht tv-details" data-tv-details>
-            {%- if tv.status.toont %}Toont {{ tv.status.toont }}{% endif %}
-            {%- if tv.status.beeld %} · beeld {{ tv.status.beeld }}{% endif %}
-            {%- if tv.status.app %} · {{ tv.status.app }}{% endif %}
-            {%- if tv.status.geladen %} · geladen {{ tv.status.geladen }}{% endif %}
-        </p>
-        <div class="kiosk-mini-voorbeeld-buiten">
-            <iframe class="kiosk-mini-voorbeeld" data-bron="{{ url_for('kiosk_tv_scherm', token=tv.token, voorbeeld=1) }}" title="Live voorbeeld {{ tv.naam }}"></iframe>
-        </div>
-        <form method="post" action="{{ url_for('kiosk_tv_opslaan', tv_id=tv.id) }}" class="js-ajax-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="tv-velden">
-                <label>Naam <input type="text" name="naam" value="{{ tv.naam }}" maxlength="40" required></label>
-                <label>Toont
-                    <select name="scherm">
-                        {% for sleutel, label in schermen.items() %}
-                        <option value="{{ sleutel }}" {{ 'selected' if tv.scherm == sleutel }}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label>Grootte
-                    <select name="zoom">
-                        {% for z in zooms %}
-                        <option value="{{ z }}" {{ 'selected' if tv.zoom == z }}>{{ z }}%{{ ' (standaard)' if z == 100 }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
+    <div class="kt-kaart" data-tv-id="{{ tv.id }}" style="margin:0">
+        <div class="kt-scherm"><iframe class="kiosk-mini-voorbeeld" data-bron="{{ url_for('kiosk_tv_scherm', token=tv.token, voorbeeld=1) }}" title="Live beeld {{ tv.naam }}"></iframe></div>
+        <div class="kt-kaart-kop" style="margin:0.7rem 0 0">
+            <div>
+                <h2>{{ tv.naam }}</h2>
+                <p data-tv-details>{% if tv.status.toont %}Toont {{ tv.status.toont }}{% endif %}</p>
             </div>
-            <div class="kiosk-schermkaart-acties">
-                <button type="submit" class="btn btn-geel btn-klein">Opslaan</button>
-            </div>
-        </form>
-        <div class="kiosk-schermkaart-acties">
-            <form method="post" action="{{ url_for('kiosk_tv_herladen', tv_id=tv.id) }}" class="js-ajax-form">
+            <span class="kt-pil kt-pil--stip {{ 'kt-pil--aan' if tv.status.aan else 'kt-pil--rood' }}" data-tv-status>{{ tv.status.tekst }}</span>
+        </div>
+        <div style="display:flex; gap:0.4rem; margin-top:0.6rem">
+            <form method="post" action="{{ url_for('kiosk_tv_herladen', tv_id=tv.id) }}" class="js-ajax-form kt-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-rand btn-klein">Opnieuw laden</button>
+                <button type="submit" class="kt-knop kt-knop--klein">{{ ikoon('opnieuw') }} Opnieuw laden</button>
             </form>
-            <form method="post" action="{{ url_for('kiosk_tv_verwijderen', tv_id=tv.id) }}"
-                  data-vraag="Tv '{{ tv.naam }}' ontkoppelen? Hij toont daarna weer een koppelcode."
-                  onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag, {ja: 'Ja, ontkoppelen'})">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-rand btn-klein">Ontkoppelen</button>
-            </form>
+            <a href="{{ url_for('kiosk_tvs_beheer') }}" class="kt-knop kt-knop--klein">Instellen</a>
         </div>
     </div>
     {% endfor %}
-
-    <div class="kaart kiosk-schermkaart">
-        <h2 style="margin:0 0 0.4rem">Tv koppelen</h2>
-        <p class="tekst-zacht" style="margin:0 0 0.4rem">
-            Open op de tv <strong>{{ koppel_url }}</strong> (in de tv-app: <em>Gekoppeld scherm</em>). De tv laat dan
-            een code van 6 cijfers en een QR-code zien; vul de code hier in, of scan de QR-code met de handterminal-app.
-        </p>
-        <form method="post" action="{{ url_for('kiosk_tv_koppelen') }}" class="tv-koppel-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="tv-velden">
-                <label>Code op de tv
-                    <input type="text" name="code" inputmode="numeric" autocomplete="off" maxlength="7"
-                           placeholder="123 456" class="tv-code-veld" required
-                           value="{{ request.args.get('code', '')[:7] }}">
-                </label>
-                <label>Naam <input type="text" name="naam" maxlength="40" placeholder="Bijv. Bar" required
-                                   {{ 'autofocus' if request.args.get('code') }}></label>
-                <label>Toont
-                    <select name="scherm">
-                        {% for sleutel, label in schermen.items() %}
-                        <option value="{{ sleutel }}" {{ 'selected' if sleutel == 'dias' }}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-            </div>
-            <div class="kiosk-schermkaart-acties">
-                <button type="submit" class="btn btn-geel btn-klein">Koppelen</button>
-            </div>
-        </form>
-    </div>
 </div>
+{% else %}
+<div class="kt-leeg">Nog geen tv gekoppeld. <a href="{{ url_for('kiosk_tvs_beheer') }}#koppelen">Koppel een tv</a> met de code die hij laat zien.</div>
+{% endif %}
 
-<h2 style="margin:0 0 0.7rem">Schermen</h2>
-<p class="tekst-zacht" style="margin:-0.3rem 0 0.8rem">
-    De vaste adressen van de drie schermen, voor een tv die (nog) niet gekoppeld is of een scherm dat je cast.
-</p>
-<div class="kiosk-schermen-grid">
-    <div class="kaart kiosk-schermkaart">
-        <div class="actiebalk" style="margin-bottom:0.6rem">
-            <h2 style="margin:0">Scherm 1 &mdash; Prijzenlijst</h2>
-            <a href="{{ url_for('kiosk_prijzen_scherm') }}" target="_blank" rel="noopener" class="btn btn-rand btn-klein">Openen &#8599;</a>
+<div class="kt-twee" style="margin-top:1.2rem">
+    {# Het programma (1.76.0, zie kiosk_momenten.py): dia's met een moment, en bijsturen op de avond. #}
+    {% set terug_hub = url_for('kiosk_hub') ~ '#momenten' %}
+    {% set moment_status = {'straks': ('Straks', 'kt-pil--blauw'), 'schijnwerper': ('Nu groot op de tv', 'kt-pil--geel'), 'bezig': ('Nu', 'kt-pil--aan'), 'klaar': ('Geweest', 'kt-pil--uit'), 'map_uit': ('Buiten de map', 'kt-pil--rood'), 'dia_uit': ('Dia staat uit', 'kt-pil--rood')} %}
+    <div class="kt-kaart" id="momenten">
+        <div class="kt-kaart-kop">
+            <div>
+                <h2>{{ ikoon('flits') }} Momenten</h2>
+                <p>De eerste minuten van een moment staat de dia groot op alle tv's. Loopt het uit? Schuif hem op.</p>
+            </div>
+            <a href="{{ url_for('kiosk_sponsoren_leden') }}" class="kt-knop kt-knop--klein">Alle dia's</a>
         </div>
-        <div class="kiosk-mini-voorbeeld-buiten">
-            <iframe class="kiosk-mini-voorbeeld" data-bron="{{ url_for('kiosk_prijzen_scherm') }}" title="Live voorbeeld prijzenlijst"></iframe>
+        {% for m in programma %}
+        <div class="kt-rij{{ ' kt-rij--nu' if m.status in ('bezig', 'schijnwerper') else '' }}">
+            <span class="kt-rij-tijd">{{ m.van.strftime('%H:%M') }}</span>
+            <div class="kt-rij-hoofd">
+                <div class="kt-rij-titel">{{ m.dia.titel or '—' }}</div>
+                <div class="kt-rij-sub">{{ m.van.strftime('%d-%m') }} · {{ m.map.naam if m.map else 'Algemeen' }}{% if m.dia.balk_tekst %} · {{ m.dia.balk_tekst }}{% endif %}</div>
+            </div>
+            <span class="kt-pil {{ moment_status[m.status][1] }}">{{ moment_status[m.status][0] }}</span>
+            <div class="kt-rij-acties">
+                <form method="post" action="{{ url_for('kiosk_moment_nu', dia_id=m.dia.id) }}" class="kt-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="terug" value="{{ terug_hub }}">
+                    <button type="submit" class="kt-ikoon" title="Nu groot op alle tv's" aria-label="{{ m.dia.titel }} nu groot op alle tv's">{{ ikoon('flits') }}</button>
+                </form>
+                {% if m.status in ('straks', 'schijnwerper', 'bezig') %}
+                <form method="post" action="{{ url_for('kiosk_moment_later', dia_id=m.dia.id) }}" class="kt-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="terug" value="{{ terug_hub }}">
+                    <button type="submit" class="kt-ikoon" title="Een kwartier later" aria-label="{{ m.dia.titel }} een kwartier later">{{ ikoon('later') }}</button>
+                </form>
+                {% endif %}
+                <a href="{{ url_for('kiosk_moment_voorbeeld', dia_id=m.dia.id) }}" target="_blank" class="kt-ikoon" title="Voorbeeld" aria-label="Voorbeeld van {{ m.dia.titel }}">{{ ikoon('oog') }}</a>
+            </div>
         </div>
-        <div class="kiosk-schermkaart-acties">
-            <a href="{{ url_for('kiosk_prijzen_instellingen') }}" class="btn btn-geel btn-klein">Producten kiezen</a>
-            <a href="{{ url_for('kiosk_bardienst') }}" class="btn btn-rand btn-klein">Bardienst</a>
-            <button type="button" class="btn btn-rand btn-klein" data-qr-toggle="qr-prijzen">QR-code</button>
-        </div>
-        <div class="kiosk-qr-blok stem-qr" id="qr-prijzen" hidden>
-            <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ prijzen_url }}</p>
-            {{ prijzen_qr_svg|safe }}
-        </div>
+        {% else %}
+        <div class="kt-leeg">Nog geen dia's met een moment. Geef een dia een moment bij <a href="{{ url_for('kiosk_sponsoren_leden') }}">Dia's</a>.</div>
+        {% endfor %}
     </div>
 
-    <div class="kaart kiosk-schermkaart">
-        <div class="actiebalk" style="margin-bottom:0.6rem">
-            <h2 style="margin:0">Scherm 2 &mdash; Dia's</h2>
-            <a href="{{ url_for('kiosk_scherm') }}" target="_blank" rel="noopener" class="btn btn-rand btn-klein">Openen &#8599;</a>
-        </div>
-        <div class="kiosk-mini-voorbeeld-buiten">
-            <iframe class="kiosk-mini-voorbeeld" data-bron="{{ url_for('kiosk_scherm') }}" title="Live voorbeeld kantine scherm"></iframe>
-        </div>
-        <div class="kiosk-schermkaart-acties">
-            <a href="{{ url_for('kiosk_sponsoren_leden') }}" class="btn btn-geel btn-klein">Dia's beheren</a>
-            <button type="button" class="btn btn-rand btn-klein" data-qr-toggle="qr-scherm">QR-code</button>
-        </div>
-        <div class="kiosk-qr-blok stem-qr" id="qr-scherm" hidden>
-            <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ scherm_url }}</p>
-            {{ scherm_qr_svg|safe }}
-        </div>
-    </div>
-
-    <div class="kaart kiosk-schermkaart">
-        <div class="actiebalk" style="margin-bottom:0.6rem">
-            <h2 style="margin:0">Scherm 3 &mdash; Wisselscherm</h2>
-            <a href="{{ url_for('kiosk_tv') }}" target="_blank" rel="noopener" class="btn btn-rand btn-klein">Openen &#8599;</a>
-        </div>
-        <div class="kiosk-mini-voorbeeld-buiten">
-            <iframe class="kiosk-mini-voorbeeld" data-bron="{{ url_for('kiosk_tv') }}" title="Live voorbeeld wisselscherm"></iframe>
-        </div>
-        <p class="tekst-zacht" style="margin:0.6rem 0 0">
-            Voor wie (nog) maar 1 fysiek scherm heeft. Toont nu:
-            <strong id="tv-modus-tekst">{{ "de dia's" if instellingen.actief_tv_scherm == 'dias' else 'de prijzenlijst' }}</strong>
-        </p>
-        <div class="kiosk-schermkaart-acties">
-            <form method="post" action="{{ url_for('kiosk_tv_wisselen') }}" class="js-ajax-form" id="tv-wissel-form">
+    <div class="kt-kaart">
+        <div class="kt-kaart-kop"><h2>Snel</h2></div>
+        <div class="kt-rij" id="thema">
+            <span class="kt-ikoon" aria-hidden="true">{{ ikoon('thema') }}</span>
+            <div class="kt-rij-hoofd">
+                <div class="kt-rij-titel">Halloween-thema</div>
+                <div class="kt-rij-sub">Vleermuizen, pompoenen en mist op alle tv's</div>
+            </div>
+            <form method="post" action="{{ url_for('kiosk_thema_zetten') }}" class="kt-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-geel btn-klein" id="tv-wissel-knop">
-                    Wissel naar {{ 'de prijzenlijst' if instellingen.actief_tv_scherm == 'dias' else "de dia's" }}
-                </button>
+                <input type="hidden" name="thema" value="{{ '' if thema == 'halloween' else 'halloween' }}">
+                <button type="submit" class="kt-schakelaar{{ ' aan' if thema == 'halloween' else '' }}" role="switch"
+                        aria-checked="{{ 'true' if thema == 'halloween' else 'false' }}" aria-label="Halloween-thema {{ 'uitzetten' if thema == 'halloween' else 'aanzetten' }}"></button>
             </form>
-            <button type="button" class="btn btn-rand btn-klein" data-qr-toggle="qr-tv">QR-code</button>
         </div>
-        <div class="kiosk-qr-blok stem-qr" id="qr-tv" hidden>
-            <p class="tekst-zacht" style="word-break:break-all; margin-bottom:0.3rem">{{ tv_url }}</p>
-            {{ tv_qr_svg|safe }}
+        <div class="kt-rij">
+            <span class="kt-ikoon" aria-hidden="true">{{ ikoon('wissel') }}</span>
+            <div class="kt-rij-hoofd">
+                <div class="kt-rij-titel">Wisselscherm</div>
+                <div class="kt-rij-sub">Toont nu <strong id="tv-modus-tekst">{{ "de dia's" if instellingen.actief_tv_scherm == 'dias' else 'de prijzenlijst' }}</strong></div>
+            </div>
+            <form method="post" action="{{ url_for('kiosk_tv_wisselen') }}" class="js-ajax-form kt-inline" id="tv-wissel-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="kt-knop kt-knop--klein">Wisselen</button>
+            </form>
         </div>
+        <a class="kt-rij" href="{{ url_for('kiosk_prijzen_instellingen') }}" style="color:inherit; text-decoration:none">
+            <span class="kt-ikoon" aria-hidden="true">{{ ikoon('prijs') }}</span>
+            <div class="kt-rij-hoofd">
+                <div class="kt-rij-titel">Uitverkocht</div>
+                <div class="kt-rij-sub">{{ uitverkocht }} product{{ 'en' if uitverkocht != 1 else '' }} op het prijzenscherm</div>
+            </div>
+            {% if uitverkocht %}<span class="kt-pil kt-pil--oranje">{{ uitverkocht }}</span>{% endif %}
+        </a>
+        <a class="kt-rij" href="{{ url_for('kiosk_prijzen_instellingen') }}#uitgelicht-product" style="color:inherit; text-decoration:none">
+            <span class="kt-ikoon" aria-hidden="true">{{ ikoon('dias') }}</span>
+            <div class="kt-rij-hoofd">
+                <div class="kt-rij-titel">Uitgelicht product</div>
+                <div class="kt-rij-sub">{{ uitgelicht.naam if uitgelicht else 'Niets gekozen' }}</div>
+            </div>
+        </a>
+        <a class="kt-rij" href="{{ url_for('timer_pagina') }}" style="color:inherit; text-decoration:none">
+            <span class="kt-ikoon" aria-hidden="true">{{ ikoon('timer') }}</span>
+            <div class="kt-rij-hoofd">
+                <div class="kt-rij-titel">Timer op de tv</div>
+                <div class="kt-rij-sub">Bijvoorbeeld de gehaktballen: 15 minuten</div>
+            </div>
+        </a>
+        <a class="kt-rij" href="{{ url_for('kiosk_bardienst') }}" style="color:inherit; text-decoration:none">
+            <span class="kt-ikoon" aria-hidden="true">{{ ikoon('nu') }}</span>
+            <div class="kt-rij-hoofd">
+                <div class="kt-rij-titel">Bardienst</div>
+                <div class="kt-rij-sub">Wie er staat, op het prijzenscherm</div>
+            </div>
+        </a>
     </div>
 </div>
-
-<h2 style="margin:0 0 0.7rem">Instellen</h2>
-<div class="kiosk-instellen-kolommen">
-    <div class="kaart">
-        <h3 style="margin-top:0">Prijzenscherm</h3>
-        <div style="display:flex; gap:0.6rem; flex-wrap:wrap">
-            <a href="{{ url_for('kiosk_prijzen_instellingen') }}" class="btn btn-rand btn-klein">Producten</a>
-            <a href="{{ url_for('kiosk_prijzen_instellingen') }}#wedstrijddag-welkom" class="btn btn-rand btn-klein">Wedstrijddag-welkom</a>
-            <a href="{{ url_for('kiosk_acties') }}" class="btn btn-rand btn-klein">Acties</a>
-            <a href="{{ url_for('kiosk_bardienst') }}" class="btn btn-rand btn-klein">Bardienst</a>
-        </div>
-    </div>
-    <div class="kaart">
-        <h3 style="margin-top:0">Dia's</h3>
-        <div style="display:flex; gap:0.6rem; flex-wrap:wrap">
-            <a href="{{ url_for('kiosk_sponsoren_leden') }}" class="btn btn-rand btn-klein">Diashow instellen</a>
-            <a href="{{ url_for('kiosk_sponsoren_leden') }}#dias-tabel" class="btn btn-rand btn-klein">Sponsoren</a>
-            <a href="{{ url_for('kiosk_sponsoren_leden') }}#sjablonen" class="btn btn-rand btn-klein">Sjablonen</a>
-            <a href="{{ url_for('kiosk_sponsorlogos') }}" class="btn btn-rand btn-klein">Sponsoren</a>
-            <a href="{{ url_for('club_van_20_overzicht') }}" class="btn btn-rand btn-klein">Club van 20</a>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -291,19 +140,9 @@
     var form = document.getElementById('tv-wissel-form');
     if (form) {
         form.addEventListener('ajax-form:success', function (e) {
-            var modus = e.detail.modus;
-            document.getElementById('tv-modus-tekst').textContent = modus === 'dias' ? "de dia's" : 'de prijzenlijst';
-            document.getElementById('tv-wissel-knop').textContent = 'Wissel naar ' + (modus === 'dias' ? 'de prijzenlijst' : "de dia's");
+            document.getElementById('tv-modus-tekst').textContent = e.detail.modus === 'dias' ? "de dia's" : 'de prijzenlijst';
         });
     }
-
-    document.querySelectorAll('[data-qr-toggle]').forEach(function (knop) {
-        knop.addEventListener('click', function () {
-            var blok = document.getElementById(knop.dataset.qrToggle);
-            if (blok) blok.hidden = !blok.hidden;
-        });
-    });
-
     // Of de tv's aan staan: elke halve minuut bijgewerkt, zonder de pagina (en de voorbeelden) te herladen.
     function werkTvsBij() {
         fetch({{ url_for('kiosk_tvs_status')|tojson }}, { cache: 'no-store', credentials: 'same-origin' })
@@ -314,29 +153,16 @@
                     if (!kaart) return;
                     var status = kaart.querySelector('[data-tv-status]');
                     status.textContent = tv.status.tekst;
-                    status.className = 'tv-status ' + (tv.status.aan ? 'tv-status--aan' : 'tv-status--uit');
-                    var delen = [];
-                    if (tv.status.toont) delen.push('Toont ' + tv.status.toont);
-                    if (tv.status.beeld) delen.push('beeld ' + tv.status.beeld);
-                    if (tv.status.app) delen.push(tv.status.app);
-                    if (tv.status.geladen) delen.push('geladen ' + tv.status.geladen);
-                    kaart.querySelector('[data-tv-details]').textContent = delen.join(' · ');
+                    status.className = 'kt-pil kt-pil--stip ' + (tv.status.aan ? 'kt-pil--aan' : 'kt-pil--rood');
+                    kaart.querySelector('[data-tv-details]').textContent = tv.status.toont ? 'Toont ' + tv.status.toont : '';
                 });
             })
             .catch(function () {});
     }
     if (document.querySelector('[data-tv-id]')) setInterval(werkTvsBij, 30000);
-
-    // Live mini-voorbeelden: op 1/10e schaal getekend (net als de live
-    // voorbeeld bij Dia's instellen) en elke 30s ververst, zodat deze hub
-    // ook echt een actueel overzicht blijft zonder dat iemand fysiek bij elk
-    // scherm hoeft te kijken.
-    var voorbeelden = document.querySelectorAll('.kiosk-mini-voorbeeld');
-    voorbeelden.forEach(function (iframe) {
-        function schaal() {
-            var buiten = iframe.parentElement;
-            iframe.style.transform = 'scale(' + (buiten.clientWidth / 1920) + ')';
-        }
+    // Live beeld: een scherm van 1920 bij 1080, verkleind, elke 30 seconden ververst.
+    document.querySelectorAll('.kiosk-mini-voorbeeld').forEach(function (iframe) {
+        function schaal() { iframe.style.transform = 'scale(' + (iframe.parentElement.clientWidth / 1920) + ')'; }
         iframe.src = iframe.dataset.bron;
         window.addEventListener('resize', schaal);
         iframe.addEventListener('load', schaal);

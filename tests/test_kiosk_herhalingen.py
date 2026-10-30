@@ -50,7 +50,7 @@ def test_het_formulier_en_de_lijst_tonen_het_aantal(ingelogde_client, db):
     _nieuw(ingelogde_client, herhalingen="3")
     bewerken = ingelogde_client.get(f"/kiosk/sponsoren-leden/sponsoren/{_dia(db)['id']}/bewerken").data.decode()
     assert re.search(r'name="herhalingen"[^>]*value="3"', bewerken)
-    assert "&times;3 per ronde" in ingelogde_client.get("/kiosk/sponsoren-leden").data.decode()
+    assert "×3 per ronde" in ingelogde_client.get("/kiosk/sponsoren-leden").data.decode()
 
 
 def test_het_scherm_krijgt_het_aantal_mee_alleen_als_het_meer_dan_een_is(ingelogde_client, client, db):

@@ -27,12 +27,30 @@ def register_routes(app):
 
     @app.route("/kiosk")
     def kiosk_hub():
+        """Nu (1.79.0): wat er op de tv's staat, de snelknoppen en de momenten van vanavond. De tv's instellen en
+        koppelen gebeurt bij Tv's (kiosk_tvs_beheer)."""
+        db = get_db()
+        return render_template(
+            "kiosk_hub.html",
+            instellingen=_scherm_instellingen(db),
+            tvs=[{**dict(tv), "status": kiosk_tvs.status(tv)} for tv in kiosk_tvs.alle_tvs(db)],
+            programma=kiosk_momenten.programma(db),
+            uitverkocht=db.execute(
+                "SELECT COUNT(*) FROM producten WHERE actief = 1 AND toon_op_kiosk = 1 AND kiosk_uitverkocht = 1"
+            ).fetchone()[0],
+            uitgelicht=_uitgelicht_product(db),
+        )
+
+    @app.route("/kiosk/tvs")
+    def kiosk_tvs_beheer():
+        """Tv's (1.79.0): per tv kiezen wat hij toont en hoe groot, een tv koppelen, en de vaste adressen van de drie
+        schermen met een live voorbeeld."""
         db = get_db()
         prijzen_url = url_for("kiosk_prijzen_scherm", _external=True)
         scherm_url = url_for("kiosk_scherm", _external=True)
         tv_url = url_for("kiosk_tv", _external=True)
         return render_template(
-            "kiosk_hub.html",
+            "kiosk_tvs_beheer.html",
             prijzen_url=prijzen_url,
             scherm_url=scherm_url,
             tv_url=tv_url,
@@ -45,9 +63,6 @@ def register_routes(app):
             schermen=kiosk_tvs.SCHERMEN,
             zooms=kiosk_tvs.ZOOMS,
             koppel_url=url_for("kiosk_koppelen", _external=True).split("://", 1)[-1],
-            # Het programma met momenten en de schijnwerper (zie kiosk_momenten.py).
-            programma=kiosk_momenten.programma(db),
-            schijnwerper=kiosk_momenten.handmatige_schijnwerper(db),
         )
 
     # ---------- Onderdeel 1: Prijzenscherm ----------
