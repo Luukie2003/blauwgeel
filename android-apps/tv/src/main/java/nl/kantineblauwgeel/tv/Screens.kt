@@ -12,4 +12,10 @@ object Screens {
 
     /** De sleutel waaronder de zoom van het gekoppelde scherm bewaard wordt (zie Prefs). */
     const val GEKOPPELD = "gekoppeld"
+
+    /** Het spel van de club (Shout-out!), achter de geheime toetsen (zie PlayerActivity en SpelActivity). */
+    const val SPEL_URL = "https://coach.epremium.nl/blauwgeel/"
+
+    /** De clubcode die het spel de eerste keer vraagt; de app vult hem zelf in. */
+    const val SPEL_CLUBCODE = "BG"
 }

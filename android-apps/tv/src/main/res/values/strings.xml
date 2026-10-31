@@ -18,6 +18,7 @@
     <string name="zoals_op_de_site">Zoals op de site</string>
     <string name="knoppen_uitleg">Op de tv: knop omlaag de prijzenlijst, knop omhoog de dia\'s, OK deze instellingen. Terug sluit de app.</string>
     <string name="app_versie">Kantine TV %s</string>
+    <string name="spel_terug">Shout-out! Met de knop Terug ga je weer naar de kantine-tv.</string>
     <string name="splash_tekst">De leukste vereniging van sportpark Coendersborg</string>
     <plurals name="opnieuw_over">
         <item quantity="one">Ik probeer het over %d seconde vanzelf opnieuw.</item>

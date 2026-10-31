@@ -8,6 +8,7 @@ import android.net.Network
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
@@ -36,6 +37,9 @@ import nl.kantineblauwgeel.tv.databinding.ActivityPlayerBinding
  * tv op de site (POST /kiosk/t/<token>/scherm), dus je ziet het ook op de site en de handterminal, en het blijft zo na
  * een herstart. OK opent de instellingen (de zoom per scherm, SettingsActivity). Terug sluit de app.
  *
+ * Geheim (1.3): links, links, rechts, rechts, links, rechts opent het spel van de club (SpelActivity); Terug brengt je
+ * hier terug. Links en rechts doen hier verder niets, dus per ongeluk gebeurt dat niet.
+ *
  * De zoom: de pagina vertelt via KantineTv.scherm() wat hij toont en welke zoom de site voor deze tv heeft; heeft de tv
  * voor dat scherm een eigen zoom ingesteld, dan geldt die (Prefs.zoomVoor). */
 class PlayerActivity : AppCompatActivity() {
@@ -51,9 +55,19 @@ class PlayerActivity : AppCompatActivity() {
     private var opnieuwOver = 0
     private var netwerkTerug: ConnectivityManager.NetworkCallback? = null
 
+    /** De laatste toetsen van de afstandsbediening (toets, tijdstip), voor de geheime optie. */
+    private val laatsteToetsen = ArrayDeque<Pair<Int, Long>>()
+
     companion object {
         private const val OPNIEUW_NA_SECONDEN = 15
         private const val GEKOPPELD_PAD = "/kiosk/t/"
+
+        /** De geheime toetsen voor het spel, kort na elkaar (allemaal binnen GEHEIM_BINNEN_MS). */
+        private val GEHEIM = listOf(
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+        )
+        private const val GEHEIM_BINNEN_MS = 5000L
 
         fun intent(context: Context): Intent = Intent(context, PlayerActivity::class.java)
     }
@@ -202,24 +216,26 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        binding.webview.onResume()  // terug uit het spel
         // Terug uit de instellingen: de zoom kan veranderd zijn.
         pasZoomToe()
     }
 
-    private fun verbergSysteembalken() {
-        @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility = (
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            )
+    /** Onthoudt de laatste toetsen; zijn dat de geheime (GEHEIM, binnen GEHEIM_BINNEN_MS), dan opent het spel. */
+    private fun geheimeToets(toets: Int): Boolean {
+        val nu = SystemClock.uptimeMillis()
+        laatsteToetsen.addLast(toets to nu)
+        while (laatsteToetsen.size > GEHEIM.size) laatsteToetsen.removeFirst()
+        if (laatsteToetsen.map { it.first } != GEHEIM || nu - laatsteToetsen.first().second > GEHEIM_BINNEN_MS) return false
+        laatsteToetsen.clear()
+        binding.webview.onPause()  // de kantine-tv even stil, zodat er geen geluid van een video-dia onder het spel zit
+        startActivity(Intent(this, SpelActivity::class.java))
+        return true
     }
 
     /** Knop omlaag: de prijzenlijst; knop omhoog: de dia's (vóór de webweergave, die de pijltjes anders zelf gebruikt). */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && geheimeToets(event.keyCode)) return true
         // OK (de middelste knop): de instellingen, met de zoom per scherm.
         if ((event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER) &&
             binding.foutmelding.visibility != View.VISIBLE
