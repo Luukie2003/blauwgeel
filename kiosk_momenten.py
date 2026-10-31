@@ -280,7 +280,8 @@ def _slots(db, dias):
     """{dia_id: (van, tot)} voor de dia's waarvan de map aan staat (of die bij Algemeen horen; ook een map die niet
     meer bestaat telt als Algemeen), los van de klok: van en tot zijn datetimes, of None als er geen grens is. Het
     tijdslot van een moment loopt tot zijn eigen einde, het volgende moment in dezelfde map, het einde van de map of
-    anders STANDAARD_SLOT_MINUTEN; altijd binnen het begin en einde van de map."""
+    anders STANDAARD_SLOT_MINUTEN; altijd binnen het begin en einde van de map. Alleen het programma (het effect
+    programma) begint al aan het begin van de dag waarop de map begint."""
     alle = {m["id"]: m for m in mappen(db)}
     aan = [d for d in dias if alle.get(d["map_id"]) is None or alle[d["map_id"]]["actief"]]
     per_map = _momenten_per_map(aan)
@@ -293,6 +294,9 @@ def _slots(db, dias):
             einde = _einde(d, start, per_map, tot)
             van = max(van, start) if van else start
             tot = min(tot, einde) if tot else einde
+        elif van and d["effect"] == "programma":
+            # Het programma staat al de hele dag van het feest op de tv (1.80.0): dan weet iedereen wat er komt.
+            van = datetime.combine(van.date(), datetime.min.time())
         if van and tot and tot <= van:
             continue
         uit[d["id"]] = (van, tot)

@@ -2,6 +2,7 @@
 
 import json
 import re
+from datetime import datetime, time, timedelta
 
 from flask import url_for
 
@@ -117,14 +118,60 @@ def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None, venster=None, tijd
     return slide
 
 
-def _bouw_slides(db):
+# 's Avonds (1.80.0): vanaf een vaste tijd (avond_vanaf, bijvoorbeeld '16:00') draaien alleen nog de dia's en de
+# onderdelen die ook 's avonds mogen (avond_club_van_20, ...), tot de volgende ochtend om OCHTEND_UUR.
+OCHTEND_UUR = 6
+AVOND_ONDERDELEN = (
+    ("club_van_20", "Club van 20"),
+    ("wedstrijden", "Komende thuiswedstrijden"),
+    ("standen", "Standen"),
+    ("motm", "Man of the Match"),
+    ("sponsorlogos", "Sponsorlogo's tussendoor"),
+)
+
+
+def avond_tijd(tekst):
+    """'16:00' -> time(16, 0) als dat een geldige avond is (na OCHTEND_UUR), anders None."""
+    try:
+        tijd = datetime.strptime(str(tekst or "").strip(), "%H:%M").time()
+    except ValueError:
+        return None
+    return tijd if tijd > time(OCHTEND_UUR) else None
+
+
+def _overdag(instellingen, nu=None):
+    """(van, tot) in ms: wanneer een onderdeel dat 's avonds niet meedoet, wel in de diashow hoort, van de ochtend tot
+    de avond. Is de avond (of de nacht erna) al begonnen, dan die van de volgende dag: het scherm neemt het onderdeel
+    dan de volgende ochtend vanzelf weer mee. None als er geen avond is ingesteld."""
+    tijd = avond_tijd(instellingen["avond_vanaf"])
+    if tijd is None:
+        return None
+    nu = nu or datetime.now()
+    dag = nu.date() if nu.hour >= OCHTEND_UUR else nu.date() - timedelta(days=1)  # de nacht hoort bij de avond ervoor
+    ochtend, avond = datetime.combine(dag, time(OCHTEND_UUR)), datetime.combine(dag, tijd)
+    if nu >= avond:
+        ochtend, avond = ochtend + timedelta(days=1), avond + timedelta(days=1)
+    return kiosk_momenten.ms(ochtend), kiosk_momenten.ms(avond)
+
+
+def _alleen_overdag(slides, instellingen, sleutel, overdag):
+    """Mag dit onderdeel 's avonds niet mee, dan krijgen zijn slides het venster van overdag (data-van en data-tot)."""
+    if overdag and not instellingen["avond_" + sleutel]:
+        for slide in slides:
+            slide["van"], slide["tot"] = overdag
+    return slides
+
+
+def _bouw_slides(db, nu=None):
     """Bouwt de geordende lijst slides voor het kantine scherm, op basis
     van kiosk_scherm_instellingen: elke slide is een dict met minstens
     'type' en 'duur' (seconden weergavetijd), plus type-specifieke
     velden. Een blok (sponsoren/club van 20/wedstrijden) dat uitstaat of
     toevallig leeg is, levert gewoon geen slides op -- dan draait de
-    diashow vanzelf zonder lege pagina."""
+    diashow vanzelf zonder lege pagina. Een blok dat 's avonds niet
+    meedoet, krijgt het venster van overdag (zie _overdag)."""
     instellingen = _scherm_instellingen(db)
+    overdag = _overdag(instellingen, nu)
     blokken = []
 
     if instellingen["toon_sponsoren"]:
@@ -175,7 +222,8 @@ def _bouw_slides(db):
             ),
         )
         if slides:
-            blokken.append((instellingen["club_van_20_volgorde"], slides))
+            blokken.append((instellingen["club_van_20_volgorde"],
+                            _alleen_overdag(slides, instellingen, "club_van_20", overdag)))
 
     if instellingen["toon_wedstrijden"]:
         komende = bereken_komende_thuiswedstrijden(db)
@@ -183,11 +231,11 @@ def _bouw_slides(db):
             blokken.append(
                 (
                     instellingen["wedstrijden_volgorde"],
-                    [{
+                    _alleen_overdag([{
                         "type": "wedstrijden",
                         "duur": instellingen["wedstrijden_duur_seconden"],
                         "dagen": komende,
-                    }],
+                    }], instellingen, "wedstrijden", overdag),
                 )
             )
 
@@ -214,7 +262,8 @@ def _bouw_slides(db):
                 }
             )
         if stand_slides:
-            blokken.append((instellingen["standen_volgorde"], stand_slides))
+            blokken.append((instellingen["standen_volgorde"],
+                            _alleen_overdag(stand_slides, instellingen, "standen", overdag)))
 
     if instellingen["toon_motm"]:
         # Alleen teams met een ingevulde speler en/of uitslag komen op de
@@ -246,12 +295,12 @@ def _bouw_slides(db):
             blokken.append(
                 (
                     instellingen["motm_volgorde"],
-                    [{
+                    _alleen_overdag([{
                         "type": "motm",
                         "duur": instellingen["motm_duur_seconden"],
                         "titel": instellingen["motm_titel"],
                         "teams": motm_teams,
-                    }],
+                    }], instellingen, "motm", overdag),
                 )
             )
 
@@ -261,7 +310,7 @@ def _bouw_slides(db):
     # de JS in kiosk_scherm.html haalt ze uit de gewone volgorde en toont
     # na elke N dia's de volgende sponsor (zie sponsors_elke_dias).
     if instellingen["sponsors_toon_dias"]:
-        alle.extend(bouw_sponsor_dias(db, instellingen))
+        alle.extend(_alleen_overdag(bouw_sponsor_dias(db, instellingen), instellingen, "sponsorlogos", overdag))
     return alle
 
 

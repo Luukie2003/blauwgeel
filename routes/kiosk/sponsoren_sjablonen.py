@@ -33,7 +33,7 @@ from helpers import (
     video_info,
     zwaarte_melding,
 )
-from routes.kiosk.dia_gegevens import _motm_teams, _stand_poules, _stand_teams
+from routes.kiosk.dia_gegevens import AVOND_ONDERDELEN, OCHTEND_UUR, _motm_teams, _stand_poules, _stand_teams
 from routes.kiosk.gedeeld import _scherm_instellingen
 
 
@@ -308,6 +308,8 @@ def register_routes(app):
             },
             motm_teams=_motm_teams(db),
             motm_resultaten=MOTM_RESULTATEN,
+            avond_onderdelen=AVOND_ONDERDELEN,
+            ochtend_uur=OCHTEND_UUR,
         )
 
     @app.route("/kiosk/sponsoren-leden/sponsoren/nieuw", methods=["GET", "POST"])

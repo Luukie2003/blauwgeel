@@ -62,6 +62,30 @@
         </form>
     </div>
 
+    {# 's Avonds (1.80.0, zie kiosk_scherm_avond): vanaf een vaste tijd alleen nog de dia's en wat hier aan staat, tot
+       de volgende ochtend. #}
+    <div class="kt-kaart" id="avond">
+        <div class="kt-kaart-kop">
+            <div>
+                <h2>{{ ikoon('thema') }} ’s Avonds</h2>
+                <p>Vanaf deze tijd draaien alleen nog de dia's en wat je hieronder aanzet, tot de volgende ochtend om {{ ochtend_uur }}:00. Bijvoorbeeld na de wedstrijden: geen standen meer, wel de Club van 20. Laat de tijd leeg om de hele dag alles te tonen.</p>
+            </div>
+        </div>
+        <form method="post" action="{{ url_for('kiosk_scherm_avond') }}" class="js-ajax-form" id="avond-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="kt-avond-tijd">Vanaf <input type="time" name="avond_vanaf" value="{{ instellingen.avond_vanaf or '' }}"></label>
+            <div class="kt-uitleg" style="margin:0.8rem 0 0.2rem">’s Avonds draait ook mee:</div>
+            {% for sleutel, naam in avond_onderdelen %}
+            <div class="kt-rij">
+                <div class="kt-rij-hoofd kt-rij-titel">{{ naam }}</div>
+                <input type="checkbox" class="kt-schakel" name="avond_{{ sleutel }}" aria-label="{{ naam }} ook ’s avonds"
+                       {{ 'checked' if instellingen['avond_' ~ sleutel] }}>
+            </div>
+            {% endfor %}
+            <button type="submit" class="kt-knop kt-knop--primair" style="margin-top:0.6rem">Opslaan</button>
+        </form>
+    </div>
+
     {% include '_kiosk_standen_motm.html' %}
 
     <div class="kt-kaart" id="sjablonen">
@@ -178,6 +202,7 @@
     });
     form.addEventListener('submit', nummer, true);
     form.addEventListener('ajax-form:success', function () { iframe.contentWindow.location.reload(); });
+    document.getElementById('avond-form').addEventListener('ajax-form:success', function () { iframe.contentWindow.location.reload(); });
     nummer();
 })();
 </script>

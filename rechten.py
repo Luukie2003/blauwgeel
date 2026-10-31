@@ -523,6 +523,7 @@ SECTIE_ENDPOINTS = {
         "kiosk_diashow",
         "kiosk_dia_wisselen",
         "kiosk_dia_miniatuur",
+        "kiosk_scherm_avond",  # 's avonds alleen de dia's en wat je aanvinkt (1.80.0)
         "kiosk_dia_map_opslaan",
         "kiosk_dia_map_wisselen",
         "kiosk_dia_map_verwijderen",

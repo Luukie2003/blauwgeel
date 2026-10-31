@@ -409,6 +409,14 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "schijnwerper_tot", "TEXT"),
     ("kiosk_scherm_instellingen", "schijnwerper_stop_id", "INTEGER"),
     ("kiosk_scherm_instellingen", "schijnwerper_stop_tot", "TEXT"),
+    # 's Avonds (1.80.0), zie _overdag in routes/kiosk/dia_gegevens.py: vanaf deze tijd ('16:00') draaien alleen nog
+    # de dia's en de onderdelen die ook 's avonds mogen. Zonder tijd draait alles de hele dag, zoals voorheen.
+    ("kiosk_scherm_instellingen", "avond_vanaf", "TEXT"),
+    ("kiosk_scherm_instellingen", "avond_club_van_20", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "avond_wedstrijden", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "avond_standen", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "avond_motm", "INTEGER NOT NULL DEFAULT 1"),
+    ("kiosk_scherm_instellingen", "avond_sponsorlogos", "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 

@@ -51,6 +51,16 @@ def _dias(db):
 # ---------- Wanneer een dia in de diashow staat ----------
 
 
+def test_het_programma_staat_al_de_hele_dag_van_het_feest_op_de_tv(db):
+    """Het programma begint aan het begin van de dag van het feest (1.80.0), de andere dia's met de map."""
+    m = _map(db, vanaf="2026-10-31 15:45", tot="2026-11-01 02:00")
+    programma = _dia(db, "Halloween feest", m, sjabloon="griezel", effect="programma", tekst="16:00 Feest start!")
+    shot = _dia(db, "Griezelshot", m, sjabloon="griezel", effect="toverglans")
+    slots = kiosk_momenten._slots(db, _dias(db))
+    assert slots[programma] == (datetime(2026, 10, 31, 0, 0), datetime(2026, 11, 1, 2, 0))
+    assert slots[shot] == (datetime(2026, 10, 31, 15, 45), datetime(2026, 11, 1, 2, 0))
+
+
 def test_een_moment_loopt_tot_het_volgende_moment_in_de_map(db):
     m = _map(db, vanaf=_t(-60), tot=_t(9 * 60))
     heks = _dia(db, "Heksenbrouwsel", m, _t(-30))

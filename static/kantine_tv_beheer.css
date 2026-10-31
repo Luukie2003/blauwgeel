@@ -127,6 +127,7 @@
     border: 1px solid #d0d5dd; border-radius: 9px; padding: 0.45rem 0.65rem; background: #ffffff; font: inherit;
 }
 .kt input:focus, .kt select:focus, .kt textarea:focus { outline: none; border-color: #7a95d6; box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12); }
+.kt-avond-tijd { display: inline-flex; align-items: center; gap: 0.6rem; font-weight: 700; }
 .kt fieldset.groupbox { border: 1px solid var(--kt-rand); border-radius: 12px; padding: 0.9rem 1rem 0.4rem; background: var(--kt-vlak); }
 .kt fieldset.groupbox legend { text-transform: none; letter-spacing: 0; font-size: 0.9rem; color: var(--kt-tekst); padding: 0 0.4rem; }
 .kt .tabel-wrap { border: 1px solid var(--kt-rand); border-radius: 12px; overflow: auto; }

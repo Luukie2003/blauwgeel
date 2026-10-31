@@ -16,10 +16,13 @@ from helpers import (
     sla_club_logo_op,
 )
 from routes.kiosk.dia_gegevens import (
+    AVOND_ONDERDELEN,
+    OCHTEND_UUR,
     _bouw_slides,
     _motm_teams,
     _stand_poule_sleutels,
     _unieke_poule_sleutel,
+    avond_tijd,
 )
 from routes.kiosk.gedeeld import THEMAS, _scherm_instellingen, bewaarde_uitkomst, dias_versie, zet_kiosk_thema
 from routes.kiosk.momenten import schermgegevens
@@ -79,6 +82,38 @@ def register_routes(app):
         # scherm als de dia's zelf (zie kiosk_sponsoren_leden), dus een GET
         # hierheen (bijv. een oude bladwijzer) stuurt gewoon door.
         return redirect(url_for("kiosk_diashow"))
+
+    @app.route("/kiosk/scherm/avond", methods=["POST"])
+    def kiosk_scherm_avond():
+        """'s Avonds (1.80.0): vanaf welke tijd alleen nog de dia's en de aangevinkte onderdelen draaien, tot de volgende
+        ochtend. Leeg: de hele dag alles. Zie _overdag in routes/kiosk/dia_gegevens.py."""
+        db = get_db()
+        vanaf = (request.form.get("avond_vanaf") or "").strip()
+        tijd = avond_tijd(vanaf)
+        if vanaf and tijd is None:
+            fout = f"Kies een tijd na {OCHTEND_UUR} uur 's ochtends, bijvoorbeeld 16:00."
+            if is_ajax_verzoek():
+                return jsonify({"ok": False, "fout": fout})
+            flash(fout, "error")
+            return redirect(url_for("kiosk_diashow") + "#avond")
+        aan = {sleutel: 1 if request.form.get("avond_" + sleutel) else 0 for sleutel, _ in AVOND_ONDERDELEN}
+        # De kolomnamen komen uit AVOND_ONDERDELEN, niet uit het formulier.
+        db.execute(
+            f"""UPDATE kiosk_scherm_instellingen SET avond_vanaf = ?, {", ".join(f"avond_{s} = ?" for s in aan)}
+                WHERE id = 1""",
+            (tijd.strftime("%H:%M") if tijd else None, *aan.values()),
+        )
+        db.commit()
+        if tijd:
+            mee = [naam for sleutel, naam in AVOND_ONDERDELEN if aan[sleutel]]
+            melding = (f"Vanaf {tijd:%H:%M} draaien alleen nog de dia's"
+                       + (f" en {', '.join(mee).lower()}" if mee else "") + ", tot de volgende ochtend.")
+        else:
+            melding = "Geen avond ingesteld: alles draait de hele dag mee."
+        if is_ajax_verzoek():
+            return jsonify({"ok": True, "melding": melding})
+        flash(melding, "success")
+        return redirect(url_for("kiosk_diashow") + "#avond")
 
     @app.route("/kiosk/scherm/standen/team-nieuw", methods=["POST"])
     def kiosk_stand_team_nieuw():
