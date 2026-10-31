@@ -27,6 +27,12 @@
     <div class="mededeling-label">Mededeling</div>
     {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
     {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}
+{% elif slide.sjabloon == 'webpagina' %}
+    {# Een webpagina (1.81.0), zoals de tussenstand van Shout-out!: schermvullend in een afgeschermd frame, via deze site
+       zonder wat op de tv niet hoort (zie kiosk_webpagina.py). De pagina ververst zichzelf; buiten beeld is hij verborgen
+       (zie kiosk_scherm_stijl.css). #}
+    <iframe class="dia-webpagina" src="{{ url_for('kiosk_webpagina_scherm', dia_id=slide.id) }}" title="{{ slide.titel or 'Webpagina' }}"
+            sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
 {% elif slide.sjabloon == 'video_volledig' %}
     {% if slide.video %}
     <video class="sponsor-video" data-bron="{{ url_for('static', filename='kiosk_videos/' + slide.video) }}" data-bytes="{{ slide.video_bytes }}" preload="none" muted loop playsinline{% if slide.video_geluid %} data-geluid="1"{% endif %}></video>

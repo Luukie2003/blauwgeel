@@ -417,6 +417,8 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "avond_standen", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "avond_motm", "INTEGER NOT NULL DEFAULT 1"),
     ("kiosk_scherm_instellingen", "avond_sponsorlogos", "INTEGER NOT NULL DEFAULT 1"),
+    # Een webpagina als dia (1.81.0), zoals de tussenstand van Shout-out!: het adres (zie KIOSK_WEBPAGINA_SITES).
+    ("kiosk_sponsoren", "webpagina_url", "TEXT"),
 ]
 
 

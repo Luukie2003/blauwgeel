@@ -17,7 +17,16 @@ KIOSK_SPONSOR_SJABLONEN = [
     ("mededeling_groot", "Mededeling (met label, geen afbeelding)"),
     ("video_volledig", "Video (schermvullend, met optioneel onderschrift)"),
     ("griezel", "Griezeldia (griezelletters en pompoenen)"),
+    ("webpagina", "Webpagina (zoals de tussenstand van Shout-out!)"),
 ]
+
+# De sites waarvan een dia met het sjabloon webpagina (1.81.0) een pagina mag tonen: de Content-Security-Policy in app.py
+# laat de schermen alleen deze in een frame zetten. Een andere site toevoegen kan hier.
+KIOSK_WEBPAGINA_SITES = ("coach.epremium.nl",)
+
+# Wat de tv van een pagina van zo'n site weglaat (een CSS-selector, zie kiosk_webpagina.py): bij Shout-out! het blok met
+# de QR-code om mee te spelen.
+KIOSK_WEBPAGINA_VERBERGEN = {"coach.epremium.nl": ".panel.qr"}
 
 
 # Hoe vaak een dia hooguit per ronde van de diashow in beeld mag komen.
@@ -50,6 +59,7 @@ KIOSK_SPONSOR_SJABLOON_VOORBEELDEN = {
     ),
     "video_volledig": ("Bijv. 'Sponsorfilm Bakkerij Jansen' (onderschrift, mag leeg)", ""),
     "griezel": ("Bijv. 'Griezelshot'", "Bijv. 'De hele avond' en op de volgende regel '4 dropshot voor € 8'"),
+    "webpagina": ("Bijv. 'Tussenstand Shout-out!' (alleen voor de lijst met dia's)", ""),
 }
 
 

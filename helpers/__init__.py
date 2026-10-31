@@ -52,6 +52,8 @@ from helpers.kiosk_constanten import (
     KIOSK_TIJD_PATROON,
     KIOSK_UITLIJNINGEN,
     KIOSK_UITLIJNING_CSS,
+    KIOSK_WEBPAGINA_SITES,
+    KIOSK_WEBPAGINA_VERBERGEN,
     css_uitlijning,
 )
 from helpers.tijd import (
@@ -175,6 +177,8 @@ __all__ = [
     "KIOSK_TIJD_PATROON",
     "KIOSK_UITLIJNINGEN",
     "KIOSK_UITLIJNING_CSS",
+    "KIOSK_WEBPAGINA_SITES",
+    "KIOSK_WEBPAGINA_VERBERGEN",
     "css_uitlijning",
     "dagdeel_groet",
     "format_datum",

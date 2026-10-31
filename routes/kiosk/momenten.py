@@ -161,7 +161,7 @@ def register_routes(app):
                                                                             args.get("tekening")),
             "weergave_duur_seconden": 10, "herhalingen": 1, "video": None, "video_duur": None, "video_hele_duur": 0,
             "video_geluid": 0, "afbeelding": None, "overgang": "fade", "tekst_grootte": "normaal",
-            "achtergrond_afbeelding": None, "custom_sjabloon_id": None,
+            "achtergrond_afbeelding": None, "custom_sjabloon_id": None, "webpagina_url": None,
         }
         tijden = kiosk_momenten.tijden_per_map(db, db.execute("SELECT * FROM kiosk_sponsoren WHERE actief = 1").fetchall())
         slide = _sponsor_slide(dia, {}, {}, None, tijden)

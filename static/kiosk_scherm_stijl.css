@@ -35,6 +35,12 @@
 }
 .slide.actief { opacity: 1; z-index: 1; }
 
+/* Een webpagina als dia (1.81.0), zoals de tussenstand van Shout-out!: schermvullend, zonder rand. Buiten beeld
+   verborgen (na het uitfaden), zodat de tv een pagina die zelf beweegt niet de hele tijd blijft tekenen. */
+.slide-sponsor.sjabloon-webpagina { padding: 0; background: #1d0b33; }
+.dia-webpagina { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+.slide:not(.actief) .dia-webpagina { visibility: hidden; transition: visibility 0s linear 1s; }
+
 /* Overgangen: fade is de standaard (geen transform nodig); schuiven en
    inzoomen combineren een transform met de opacity hierboven. */
 .slide.overgang-schuiven { transform: translateX(6vw); }

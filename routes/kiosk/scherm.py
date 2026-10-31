@@ -5,6 +5,7 @@ import json
 from flask import flash, jsonify, redirect, render_template, request, url_for
 
 import kiosk_timers
+import kiosk_webpagina
 from club_van_20 import welkom_wachtrij
 from database import get_db
 from helpers import (
@@ -448,6 +449,26 @@ def register_routes(app):
         })
         antwoord.headers["Cache-Control"] = "no-store"
         return antwoord
+
+    def _webpagina(adres):
+        """De webpagina zoals de tv hem krijgt (zie kiosk_webpagina.py); lukt het ophalen niet, dan zoals hij is."""
+        if not kiosk_webpagina.toegestaan(adres):
+            return "Deze dia heeft geen webpagina.", 404
+        pagina = kiosk_webpagina.opgehaald(adres)
+        return redirect(adres) if pagina is None else pagina
+
+    @app.route("/kiosk/webpagina/<int:dia_id>")
+    def kiosk_webpagina_scherm(dia_id):
+        """De webpagina van een dia met het sjabloon webpagina (1.81.0), zoals de tussenstand van Shout-out!."""
+        dia = get_db().execute(
+            "SELECT webpagina_url FROM kiosk_sponsoren WHERE id = ? AND sjabloon = 'webpagina'", (dia_id,)
+        ).fetchone()
+        return _webpagina(dia["webpagina_url"] if dia else None)
+
+    @app.route("/kiosk/webpagina/voorbeeld")
+    def kiosk_webpagina_voorbeeld():
+        """Hetzelfde voor het live voorbeeld bij het dia-formulier, met het adres dat daar nu staat (?adres=)."""
+        return _webpagina(request.args.get("adres"))
 
     @app.route("/kiosk/scherm/versie")
     def kiosk_scherm_versie():

@@ -60,6 +60,9 @@ OPEN_ENDPOINTS = {
     "kiosk_tv_scherm_versie",
     # De tv-app wisselt met de afstandsbediening zelf tussen prijzenlijst en dia's (met zijn eigen token).
     "kiosk_tv_scherm_kiezen",
+    # De webpagina van een dia (1.81.0, zoals de tussenstand van Shout-out!), die de schermen in een frame tonen; alleen
+    # het adres dat bij die dia hoort, zie kiosk_webpagina.py.
+    "kiosk_webpagina_scherm",
     # Publieke Club van 20-pagina: waar de QR-code op de wervingsdia van het
     # kantine scherm naartoe wijst -- bezoekers hebben geen account.
     "club_van_20_publiek",
@@ -104,6 +107,9 @@ TABLET_CODE_UITGEZONDERD = {"tablet_code_instellen", "logout"}
 GEBRUIK_NIET_LOGGEN = {
     "static",
     "status_pagina",
+    # De webpagina in een dia (1.81.0): een onderdeel van het scherm, geen eigen bezoek.
+    "kiosk_webpagina_scherm",
+    "kiosk_webpagina_voorbeeld",
     # Een barcode opzoeken vanuit de app op de handterminal (JSON): geen paginabezoek.
     "api_barcode",
     # Het blok 'Verkoop en verwachting' van de productpagina (apart opgehaald).
@@ -517,6 +523,7 @@ SECTIE_ENDPOINTS = {
         "kiosk_moment_later",
         "kiosk_moment_voorbeeld",
         "kiosk_griezel_voorbeeld",  # het live voorbeeld van een griezeldia bij het dia-formulier (1.77.0)
+        "kiosk_webpagina_voorbeeld",  # en van een webpagina (1.81.0)
         # De nieuwe indeling (1.79.0): Tv's en Diashow als eigen tabblad, en een dia aan of uit vanaf zijn tegel, met een
         # plaatje van de dia zelf.
         "kiosk_tvs_beheer",

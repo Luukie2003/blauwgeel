@@ -7,6 +7,7 @@ from pathlib import Path
 
 from flask import Flask, flash, g, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 
+import kiosk_webpagina
 import mail
 import noodstop
 import uitrollen as uitrollen_module
@@ -18,6 +19,7 @@ from derving import DERVING_REDENEN
 from foutenlog import registreer_fout
 from foutmelding import Melder
 from helpers import (
+    KIOSK_WEBPAGINA_SITES,
     PRODUCT_AFBEELDINGEN_MAP,
     STEM_AFBEELDINGEN_MAP,
     VIDEO_UPLOAD_ENDPOINTS,
@@ -439,7 +441,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         response.headers["X-Frame-Options"] = (
             "SAMEORIGIN"
             if request.endpoint in ("kiosk_scherm", "kiosk_prijzen_scherm", "kiosk_tv", "kaartjes_pdf_route",
-                                    "kiosk_griezel_voorbeeld", "kiosk_dia_miniatuur")
+                                    "kiosk_griezel_voorbeeld", "kiosk_dia_miniatuur", "kiosk_webpagina_scherm",
+                                    "kiosk_webpagina_voorbeeld")
             else "DENY"
         )
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
@@ -450,8 +453,13 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             "img-src 'self' data:; "
             # blob: voor de video-dia's: het scherm haalt een video eerst helemaal binnen en speelt 'm dan uit het
             # geheugen af (zie laadVideo in kiosk_scherm.html); zonder blob: weigert de browser dat.
-            "media-src 'self' blob:"
+            "media-src 'self' blob:; "
+            # Een webpagina als dia (1.81.0), zoals de tussenstand van Shout-out!: alleen van deze sites.
+            "frame-src 'self' " + " ".join(f"https://{site}" for site in KIOSK_WEBPAGINA_SITES)
         )
+        if request.endpoint in ("kiosk_webpagina_scherm", "kiosk_webpagina_voorbeeld"):
+            # De doorgegeven webpagina zelf: afgeschermd, met wat die pagina nodig heeft (zie kiosk_webpagina.py).
+            response.headers["Content-Security-Policy"] = kiosk_webpagina.CSP
         if request.endpoint == "login":
             # Voorkomt dat de browser (of terug-knop/bfcache) een oude
             # inlogpagina met een inmiddels verlopen csrf-token laat zien --

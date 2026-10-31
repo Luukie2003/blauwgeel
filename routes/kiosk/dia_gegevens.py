@@ -44,6 +44,8 @@ def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None, venster=None, tijd
     venster: (van, tot) uit kiosk_momenten.vensters; de diashow toont de dia alleen daartussen (data-van en data-tot,
     in ms). tijden_per_map: de tijdsloten per map, voor een dia met het effect 'programma'."""
     duur = s["weergave_duur_seconden"]
+    if s["sjabloon"] == "webpagina" and not s["webpagina_url"]:
+        return None  # een webpagina zonder (goedgekeurd) adres heeft niets te tonen
     if s["sjabloon"] == "video_volledig":
         if not s["video"]:
             return None  # een videodia zonder video heeft niets te tonen
@@ -63,6 +65,7 @@ def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None, venster=None, tijd
         "overgang": s["overgang"],
         "tekst_grootte": s["tekst_grootte"],
         "achtergrond_afbeelding": s["achtergrond_afbeelding"],
+        "webpagina_url": s["webpagina_url"],
     }
     effect = s["effect"] if s["effect"] in kiosk_momenten.EFFECTEN else None
     opties = kiosk_momenten.effect_opties(s) if effect else {}

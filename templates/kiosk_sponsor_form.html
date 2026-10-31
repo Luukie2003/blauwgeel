@@ -139,6 +139,13 @@
                     Met geluid (laat dit uit als er in de kantine muziek of gepraat is)
                 </label>
             </div>
+            {# Een webpagina als dia (1.81.0), zoals de tussenstand van Shout-out!; zie _webpagina_url. #}
+            <div class="veld" id="webpagina-veld" hidden>
+                <label for="webpagina_url">Adres van de webpagina</label>
+                <input type="url" id="webpagina_url" name="webpagina_url" value="{{ sponsor.webpagina_url if sponsor and sponsor.webpagina_url else '' }}"
+                       placeholder="https://coach.epremium.nl/blauwgeel/stats/">
+                <span class="tekst-zacht">De pagina staat schermvullend op de tv en ververst zichzelf, zoals de tussenstand van Shout-out!. Alleen pagina's van {{ webpagina_sites|join(', ') }} kunnen op het scherm.</span>
+            </div>
             <div class="veld" id="achtergrond-afbeelding-veld" hidden>
                 <label for="achtergrond_afbeelding">Eigen achtergrondfoto (mededeling)</label>
                 {% if sponsor and sponsor.achtergrond_afbeelding %}
@@ -336,6 +343,7 @@
         document.getElementById('tekst-grootte-veld').hidden = sjabloon === 'aangepast';
         document.getElementById('achtergrond-afbeelding-veld').hidden = sjabloon !== 'mededeling_groot';
         document.getElementById('video-veld').hidden = sjabloon !== 'video_volledig';
+        document.getElementById('webpagina-veld').hidden = sjabloon !== 'webpagina';
         var effect = effectVeld.value;
         document.getElementById('label-veld').hidden = sjabloon !== 'griezel';
         document.getElementById('tekening-veld').hidden = sjabloon !== 'griezel';
@@ -420,6 +428,13 @@
             html += '<div class="mededeling-label">Mededeling</div>';
             if (titel) html += '<h2>' + escapeHtml(titel) + '</h2>';
             if (tekst) html += '<p>' + escapeHtml(tekst) + '</p>';
+        } else if (sjabloon === 'webpagina') {
+            // Zoals de tv hem krijgt (kiosk_webpagina_voorbeeld); een adres van een andere site geeft daar niets.
+            var adres = document.getElementById('webpagina_url').value.trim();
+            if (/^https:\/\//.test(adres)) {
+                html += '<iframe class="dia-webpagina" src="{{ url_for('kiosk_webpagina_voorbeeld') }}?adres=' + encodeURIComponent(adres) +
+                    '" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>';
+            }
         } else if (sjabloon === 'video_volledig') {
             if (videoUrl) html += '<video class="sponsor-video" src="' + videoUrl + '" muted loop autoplay playsinline></video>';
             if (titel) html += '<div class="onderschrift">' + escapeHtml(titel) + '</div>';
@@ -481,7 +496,8 @@
     });
     [sjabloonVeld, customSjabloonVeld, titelVeld, tekstVeld, overgangVeld, tekstGrootteVeld, effectVeld,
      document.getElementById('label'), document.getElementById('moment'), document.getElementById('programma_rijen'),
-     document.getElementById('tekening'), document.getElementById('map_id')].forEach(function (veld) {
+     document.getElementById('tekening'), document.getElementById('map_id'),
+     document.getElementById('webpagina_url')].forEach(function (veld) {
         veld.addEventListener('input', allesBijwerken);
         veld.addEventListener('change', allesBijwerken);
     });

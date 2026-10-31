@@ -2,6 +2,7 @@
 
 import json
 from datetime import date, datetime
+from urllib.parse import urlsplit
 
 from flask import flash, redirect, render_template, request, url_for
 
@@ -22,6 +23,7 @@ from helpers import (
     KIOSK_TEKST_GROOTTES,
     KIOSK_TEKST_GROOTTE_SLEUTELS,
     KIOSK_UITLIJNINGEN,
+    KIOSK_WEBPAGINA_SITES,
     MOTM_RESULTATEN,
     now_str,
     sla_afbeelding_op,
@@ -35,6 +37,18 @@ from helpers import (
 )
 from routes.kiosk.dia_gegevens import AVOND_ONDERDELEN, OCHTEND_UUR, _motm_teams, _stand_poules, _stand_teams
 from routes.kiosk.gedeeld import _scherm_instellingen
+
+
+def _webpagina_url(tekst):
+    """Het adres van een dia met een webpagina (1.81.0): alleen https en een site uit KIOSK_WEBPAGINA_SITES, want alleen
+    die mogen de schermen in een frame tonen (zie de Content-Security-Policy in app.py). Geeft (adres, melding)."""
+    adres = (tekst or "").strip()
+    if not adres:
+        return None, "Vul het adres van de webpagina in: zonder adres komt deze dia niet op het scherm."
+    deel = urlsplit(adres)
+    if deel.scheme != "https" or deel.hostname not in KIOSK_WEBPAGINA_SITES:
+        return None, f"Alleen pagina's van {', '.join(KIOSK_WEBPAGINA_SITES)} (met https://) kunnen op het scherm."
+    return adres, None
 
 
 def _sponsor_uit_formulier():
@@ -92,7 +106,12 @@ def _sponsor_uit_formulier():
     if moment_tot and (not moment or moment_tot <= moment):
         moment_tot = None
         datum_melding = "Het einde van het moment lag niet na het begin: dat heb ik leeggelaten."
+    webpagina_url, webpagina_melding = (
+        _webpagina_url(request.form.get("webpagina_url")) if sjabloon == "webpagina" else (None, None)
+    )
     return {
+        "webpagina_url": webpagina_url,
+        "webpagina_melding": webpagina_melding,
         "map_id": map_id,
         "moment": kiosk_momenten.tekst(moment),
         "moment_tot": kiosk_momenten.tekst(moment_tot),
@@ -335,8 +354,8 @@ def register_routes(app):
                     weergave_duur_seconden, volgorde, actief, aangemaakt_op,
                     video, video_duur, video_hele_duur, video_geluid, herhalingen,
                     zichtbaar_vanaf, zichtbaar_tot, map_id, moment, moment_tot, schijnwerper_minuten,
-                    effect, effect_opties, balk_tekst, label)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    effect, effect_opties, balk_tekst, label, webpagina_url)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     gegevens["sjabloon"],
                     gegevens["custom_sjabloon_id"],
@@ -358,12 +377,15 @@ def register_routes(app):
                     gegevens["zichtbaar_vanaf"],
                     gegevens["zichtbaar_tot"],
                     *_moment_waarden(gegevens),
+                    gegevens["webpagina_url"],
                 ),
             )
             db.commit()
             flash("Dia toegevoegd.", "success")
             if gegevens["datum_melding"]:
                 flash(gegevens["datum_melding"], "warning")
+            if gegevens["webpagina_melding"]:
+                flash(gegevens["webpagina_melding"], "warning")
             for tekst in video_meldingen:
                 flash(tekst, "success")
             if video_fout:
@@ -381,6 +403,7 @@ def register_routes(app):
             ffmpeg_beschikbaar=ffmpeg_beschikbaar(),
             sjablonen=KIOSK_SPONSOR_SJABLONEN,
             sjabloon_voorbeelden=KIOSK_SPONSOR_SJABLOON_VOORBEELDEN,
+            webpagina_sites=KIOSK_WEBPAGINA_SITES,
             sjablonen_custom=sjablonen_custom,
             sjablonen_custom_json=sjablonen_custom_json,
             overgangen=KIOSK_OVERGANGEN,
@@ -446,7 +469,7 @@ def register_routes(app):
                        actief = ?, video = ?, video_duur = ?, video_hele_duur = ?,
                        video_geluid = ?, herhalingen = ?, zichtbaar_vanaf = ?, zichtbaar_tot = ?,
                        map_id = ?, moment = ?, moment_tot = ?, schijnwerper_minuten = ?, effect = ?, effect_opties = ?,
-                       balk_tekst = ?, label = ?
+                       balk_tekst = ?, label = ?, webpagina_url = ?
                    WHERE id = ?""",
                 (
                     gegevens["sjabloon"],
@@ -468,6 +491,7 @@ def register_routes(app):
                     gegevens["zichtbaar_vanaf"],
                     gegevens["zichtbaar_tot"],
                     *_moment_waarden(gegevens),
+                    gegevens["webpagina_url"],
                     sponsor_id,
                 ),
             )
@@ -475,6 +499,8 @@ def register_routes(app):
             flash("Dia bijgewerkt.", "success")
             if gegevens["datum_melding"]:
                 flash(gegevens["datum_melding"], "warning")
+            if gegevens["webpagina_melding"]:
+                flash(gegevens["webpagina_melding"], "warning")
             for tekst in video_meldingen:
                 flash(tekst, "success")
             if video_fout:
@@ -490,6 +516,7 @@ def register_routes(app):
             sponsor=sponsor,
             sjablonen=KIOSK_SPONSOR_SJABLONEN,
             sjabloon_voorbeelden=KIOSK_SPONSOR_SJABLOON_VOORBEELDEN,
+            webpagina_sites=KIOSK_WEBPAGINA_SITES,
             sjablonen_custom=sjablonen_custom,
             sjablonen_custom_json=sjablonen_custom_json,
             overgangen=KIOSK_OVERGANGEN,
