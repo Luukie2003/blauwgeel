@@ -549,18 +549,19 @@ NAV_ITEM_ALLEEN_BEHEERDER = {
 }
 
 # Een klein pictogram voor elke groep, zodat je het menu in één oogopslag kunt scannen.
+# Het lijn-icoon per groep in de zijbalk (2.0, zie templates/_iconen.html).
 NAV_GROEP_ICOON = {
-    "Start": "🏠",
-    "Voorraad": "📦",
-    "Bestellen": "🛒",
-    "Producten": "🏷️",
-    "Geld": "💶",
-    "Keuken": "🍳",
-    "Kantine-tv": "📺",
-    "Club van 20": "⭐",
-    "Stemmen": "🗳️",
-    "Rapporten": "📊",
-    "Beheer": "⚙️",
+    "Start": "start",
+    "Voorraad": "voorraad",
+    "Bestellen": "bestellen",
+    "Producten": "producten",
+    "Geld": "geld",
+    "Keuken": "keuken",
+    "Kantine-tv": "kantine-tv",
+    "Club van 20": "club-van-20",
+    "Stemmen": "stemmen",
+    "Rapporten": "rapporten",
+    "Beheer": "beheer",
 }
 
 # De PDA-modus (zie WEERGAVE_TELEFOON_PATROON hieronder) heeft zijn eigen

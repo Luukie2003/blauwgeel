@@ -1,0 +1,243 @@
+/* Kantine Beheer 2.0: de clubstijl over de hele site (zie templates/base.html, na style.css geladen).
+
+   De kleuren en maten van style.css krijgen hier hun 2.0-waarde, en de kop, het menu, de titel, kaarten, tabellen en
+   knoppen hun nieuwe vorm; zo gaat elke pagina mee. Onderdelen voor pagina's die al in 2.0 zijn opgebouwd beginnen met
+   cs- (zie dashboard.html). De vorm komt van de club zelf: donkerblauw met een gele streep zoals het shirt, het wapen,
+   een smalle sportletter voor koppen en getallen. Bewust geen schaduwen, verlopen of emoji. */
+
+@font-face { font-family: "Barlow"; src: url("fonts/barlow-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Barlow"; src: url("fonts/barlow-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Barlow"; src: url("fonts/barlow-600.woff2") format("woff2"); font-weight: 600 700; font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("fonts/barlow-condensed-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("fonts/barlow-condensed-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+:root {
+    --blauw: #1e3a8a;
+    --blauw-donker: #14275e;
+    --accent: #1e3a8a;
+    --geel: #fcd42f;
+    --geel-donker: #e3bb14;
+    --achtergrond: #f6f4ef;
+    --paneel: #f6f4ef;
+    --kaart: #ffffff;
+    --tekst: #1a2033;
+    --tekst-zacht: #5f6575;
+    --rand: #ddd7ca;
+    --rand-licht: #ebe6db;
+    --rood: #b8321f;
+    --rood-bg: #fbeae6;
+    --oranje: #a85b09;
+    --oranje-bg: #fcf1df;
+    --groen: #1f7a45;
+    --groen-bg: #e5f3ea;
+    --grid-header: transparent;
+    --grid-alt: #fbfaf6;
+    --selectie-bg: #fbf3cc;
+    --radius: 6px;
+    --cs-koppen: "Barlow Condensed", "Arial Narrow", sans-serif;
+    --cs-letter: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body { font-family: var(--cs-letter); font-size: 15px; line-height: 1.45; }
+h1, h2 { font-family: var(--cs-koppen); letter-spacing: 0.01em; }
+h1 { font-size: 1.9rem; font-weight: 700; line-height: 1.05; }
+h2 { font-size: 1.35rem; font-weight: 600; line-height: 1.1; }
+a { color: var(--blauw); }
+
+/* ---------- De kop: donkerblauw met een gele streep, het wapen en de naam ---------- */
+.app-titelbalk {
+    background: var(--blauw-donker);
+    color: #ffffff;
+    min-height: 58px;
+    padding: 0 1.2rem;
+    border-bottom: 4px solid var(--geel);
+    font-size: 15px;
+    gap: 1rem;
+}
+.titelbalk-link { gap: 0.65rem; }
+.titelbalk-logo { height: 36px; }
+.titelbalk-merk { font: 700 1.3rem/1 var(--cs-koppen); text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
+.titelbalk-merk small { display: block; font: 500 0.75rem/1.35 var(--cs-letter); letter-spacing: 0.03em; text-transform: none; color: #b9c3e0; }
+.titelbalk-zoek { flex-basis: 320px; }
+.titelbalk-zoek-icoon { position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); width: 17px; height: 17px; color: #b9c3e0; pointer-events: none; z-index: 1; }
+.titelbalk-zoek input[type="search"] {
+    padding: 0.5rem 0.8rem 0.5rem 2.2rem;
+    font-size: 0.95rem;
+    border-radius: var(--radius);
+    border: 1px solid #2f4a8f;
+    background: #20356f;
+    color: #ffffff;
+}
+.titelbalk-zoek input[type="search"]::placeholder { color: #b9c3e0; }
+.titelbalk-zoek input[type="search"]:focus { background: #ffffff; color: var(--tekst); outline: none; }
+.titelbalk-account-trigger { display: inline-flex; align-items: center; gap: 0.5rem; color: #ffffff; font-weight: 600; font-size: 0.95rem; }
+.titelbalk-account-trigger:hover,
+.menu-item.open .titelbalk-account-trigger { color: #ffffff; background: rgba(255, 255, 255, 0.08); border-color: transparent; }
+.titelbalk-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: inline-grid; place-items: center;
+    background: var(--geel); color: var(--blauw-donker);
+    font: 700 1rem/1 var(--cs-koppen);
+}
+.menu-dropdown { border-color: var(--rand); box-shadow: 0 6px 18px rgba(20, 39, 94, 0.12); }
+.menu-dropdown .menu-label { font-style: normal; }
+
+/* ---------- Het menu: lijn-iconen, en een gele streep bij waar je bent ---------- */
+.app-zijbalk { width: 236px; background: var(--kaart); border-right: 1px solid var(--rand); min-height: calc(100vh - 62px); padding: 0.5rem 0 1rem; }
+.zijbalk-kop { display: none; }
+.zijbalk-groep:not(:first-child) { border-top: 0; }
+.zijbalk-groepkop { padding: 0.55rem 1.1rem; font-size: 1rem; font-weight: 600; border-left: 4px solid transparent; }
+.zijbalk-groepkop:hover { background: #f7f4ec; }
+.zijbalk-groep.heeft-actief .zijbalk-groepkop { color: var(--blauw-donker); border-left-color: var(--geel); background: #fdf8e1; }
+.zijbalk-groepnaam { gap: 0.7rem; }
+.zijbalk-icoon { width: 20px; display: inline-flex; }
+.zijbalk-icoon .cs-i { width: 19px; height: 19px; }
+.zijbalk-groep-pijl { font-size: 0.6rem; color: #a59f90; }
+.app-zijbalk ul { padding: 0 0 0.45rem; }
+.app-zijbalk a { padding: 0.34rem 1rem 0.34rem 3.1rem; font-size: 0.93rem; color: var(--tekst-zacht); border-left: 4px solid transparent; }
+.app-zijbalk a:hover { background: #f7f4ec; color: var(--tekst); }
+.app-zijbalk a.actief { background: none; border-left-color: transparent; color: var(--blauw-donker); font-weight: 600; }
+.app-zijbalk .zijbalk-favorieten a { color: var(--tekst); }
+.zijbalk-toggle { background: var(--blauw); }
+
+/* ---------- De pagina: een grote titel in de sportletter, de inhoud direct op het papier ---------- */
+main { padding: 1.6rem 2rem 2.5rem; }
+.venster-titel { background: none; border: 0; border-radius: 0; padding: 0 0 1rem; font: 700 2.2rem/1 var(--cs-koppen); color: var(--tekst); letter-spacing: 0.01em; }
+/* De kantine-tv heeft zijn eigen kop met tabbladen. */
+.venster-titel:has(+ .venster-inhoud .kt) { display: none; }
+.venster-inhoud { background: none; border: 0; padding: 0; }
+.subtitel { font-size: 0.95rem; }
+.kaart { border-color: var(--rand); padding: 1.1rem 1.25rem; }
+fieldset.groupbox { border-color: var(--rand); background: var(--kaart); }
+fieldset.groupbox legend { letter-spacing: 0.06em; }
+input, select, textarea { border-color: #cfc8b8; font-size: 0.95rem; }
+input:focus, select:focus, textarea:focus { outline: 2px solid rgba(30, 58, 138, 0.22); border-color: var(--blauw); }
+
+table { border: 0; font-size: 0.93rem; }
+th, td { border: 0; border-bottom: 1px solid var(--rand-licht); padding: 0.55rem 0.75rem; }
+th { color: var(--tekst-zacht); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.07em; border-bottom-color: var(--rand); }
+tbody tr:hover td { background: #fbf7e6; }
+.badge { border-radius: 4px; }
+
+.btn { background: var(--kaart); color: var(--blauw-donker); border: 1px solid #cdc6b6; font-size: 0.92rem; padding: 0.5rem 1rem; }
+.btn:hover { background: #f7f4ec; }
+.btn:active { background: #efeadf; }
+.btn-geel { background: var(--geel); color: var(--tekst); border-color: var(--geel-donker); }
+.btn-geel:hover { background: #f5c800; }
+.btn-klein { padding: 0.3rem 0.65rem; font-size: 0.82rem; }
+.btn-rand { background: var(--kaart); border-color: #cdc6b6; }
+.flash { font-weight: 500; }
+
+.grote-knop { font: 700 1.35rem/1.1 var(--cs-koppen); letter-spacing: 0.02em; border: 1px solid var(--rand); border-radius: var(--radius); color: var(--blauw-donker); }
+.grote-knop:hover { border-color: var(--geel-donker); }
+footer { font-size: 0.8rem; padding: 1.5rem 1rem 2rem; }
+
+/* De kantine-tv (kantine_tv_beheer.css) in dezelfde clubstijl: kleine hoeken zonder schaduw, de warme kleuren en de
+   titel in de sportletter zoals elke pagina. */
+.kt {
+    --kt-vlak: #faf8f3;
+    --kt-rand: var(--rand);
+    --kt-tekst: var(--tekst);
+    --kt-zacht: var(--tekst-zacht);
+    --kt-blauw-licht: #fbf3cc;
+    --kt-radius: var(--radius);
+    --kt-schaduw: none;
+}
+.kt .kt-kop h1 { font: 700 2.2rem/1 var(--cs-koppen); color: var(--tekst); letter-spacing: 0.01em; }
+.kt .kt-kop h1 svg { width: 1.7rem; height: 1.7rem; color: var(--blauw); }
+
+/* ---------- Onderdelen voor 2.0-pagina's ---------- */
+.cs-i { width: 18px; height: 18px; flex: none; }
+.cs-rood { color: var(--rood); }
+.cs-oranje { color: var(--oranje); }
+.cs-groen { color: var(--groen); }
+.cs-zacht { color: var(--tekst-zacht); font-size: 0.86rem; }
+.cs-getal { font-variant-numeric: tabular-nums; text-align: right; }
+
+/* De titel van de pagina, met de datum en (op een wedstrijddag) de wedstrijd. */
+.cs-titel { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 0.4rem 1rem; margin-bottom: 1.1rem; }
+.cs-titel h1 { margin: 0; font-size: 2.6rem; }
+.cs-titel-datum { color: var(--tekst-zacht); font-weight: 500; padding-bottom: 0.3rem; }
+.cs-wedstrijd {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 0.6rem;
+    background: var(--kaart); border: 1px solid var(--rand); border-radius: var(--radius);
+    padding: 0.4rem 0.75rem 0.4rem 0.45rem; font-weight: 500; color: var(--tekst);
+}
+.cs-wedstrijd:hover { text-decoration: none; border-color: var(--geel-donker); }
+.cs-wedstrijd b { font: 700 1rem/1 var(--cs-koppen); letter-spacing: 0.04em; text-transform: uppercase; background: var(--blauw-donker); color: var(--geel); padding: 0.3rem 0.5rem; border-radius: 4px; }
+
+/* Een melding die niet mag wachten, zoals een mislukte back-up. */
+.cs-melding { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0.8rem; background: var(--kaart); border: 1px solid var(--rand); border-left: 4px solid var(--rood); padding: 0.7rem 1rem; margin-bottom: 1.2rem; }
+.cs-melding .cs-i { color: var(--rood); }
+
+/* Het scorebord: de belangrijkste getallen op een rij. */
+.cs-scorebord { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); background: var(--kaart); border: 1px solid var(--rand); border-radius: var(--radius); margin-bottom: 1.4rem; }
+.cs-scorebord > * { padding: 0.8rem 1.1rem 0.9rem; border-left: 1px solid var(--rand-licht); color: inherit; }
+.cs-scorebord > :first-child { border-left: 0; }
+a.cs-scorebord-vak:hover { background: #fbf8ee; text-decoration: none; }
+.cs-scorebord strong { display: block; font: 700 2.4rem/1 var(--cs-koppen); font-variant-numeric: tabular-nums; }
+.cs-scorebord span { color: var(--tekst-zacht); font-weight: 500; font-size: 0.9rem; }
+
+/* Panelen naast en onder elkaar. */
+.cs-raster { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 1.4rem; align-items: start; margin-bottom: 1.4rem; }
+.cs-paneel { background: var(--kaart); border: 1px solid var(--rand); border-radius: var(--radius); margin-bottom: 1.4rem; min-width: 0; }
+.cs-raster > .cs-paneel { margin-bottom: 0; }
+.cs-paneel-kop { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 0.75rem; padding: 0.85rem 1.1rem 0.75rem; border-bottom: 1px solid var(--rand-licht); }
+.cs-paneel-kop h2 { margin: 0; font-size: 1.45rem; }
+.cs-paneel-kop .cs-rechts { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+.cs-aantal { color: var(--tekst-zacht); font-weight: 600; font-size: 0.85rem; }
+.cs-paneel-tekst { padding: 0.75rem 1.1rem; margin: 0; }
+.cs-paneel .tabel-wrap { border: 0; }
+.cs-paneel table { border: 0; }
+.cs-paneel th:first-child, .cs-paneel td:first-child { padding-left: 1.1rem; }
+.cs-paneel th:last-child, .cs-paneel td:last-child { padding-right: 1.1rem; }
+.cs-paneel tbody tr:last-child td { border-bottom: 0; }
+.cs-paneel tbody tr:nth-child(even) td { background: none; }
+.cs-leeg { padding: 1rem 1.1rem; margin: 0; color: var(--tekst-zacht); }
+
+/* Een takenlijst: per regel een streep (rood is dringend), wat er moet gebeuren en een knop. */
+.cs-taken { list-style: none; margin: 0; padding: 0; }
+.cs-taak { display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; gap: 0.9rem; align-items: center; padding: 0.7rem 1.1rem; border-top: 1px solid var(--rand-licht); }
+.cs-taak:first-child { border-top: 0; }
+.cs-taak-streep { width: 6px; align-self: stretch; min-height: 2.3rem; border-radius: 2px; background: #e0a020; }
+.cs-taak.urgent .cs-taak-streep { background: var(--rood); }
+.cs-taak.eigen .cs-taak-streep { background: #c9c3b4; }
+.cs-taak-link { display: block; min-width: 0; color: inherit; }
+.cs-taak-link:hover { text-decoration: none; }
+.cs-taak-link:hover strong { text-decoration: underline; }
+.cs-taak strong { display: block; font-weight: 600; }
+.cs-taak small { color: var(--tekst-zacht); font-size: 0.88rem; }
+.cs-taak-acties { display: flex; align-items: center; gap: 0.6rem; }
+.cs-taak-pijl { color: var(--blauw); display: inline-flex; }
+.cs-taak-acties form { margin: 0; }
+
+/* Een stand als woord met een gekleurde stip, in plaats van gekleurde vakken. */
+.cs-punt { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; font-size: 0.9rem; white-space: nowrap; }
+.cs-punt::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+
+/* De kaart van de eerstvolgende thuiswedstrijd: een gele streep, rood als er nu besteld moet worden. */
+.cs-thuiswedstrijd { box-shadow: inset 4px 0 0 var(--geel); }
+.cs-thuiswedstrijd.dringend { box-shadow: inset 4px 0 0 var(--rood); }
+.cs-paneel-kop h2 .cs-i { width: 20px; height: 20px; margin-right: 0.45rem; vertical-align: -2px; color: var(--blauw); }
+
+/* Voorraad tegenover het minimum. */
+.cs-balk { display: inline-block; width: 90px; height: 6px; background: #efebe1; border-radius: 3px; overflow: hidden; vertical-align: middle; }
+.cs-balk i { display: block; height: 100%; background: var(--rood); }
+
+@media (max-width: 720px) {
+    .app-titelbalk { padding: 0 0.8rem; gap: 0.6rem; min-height: 54px; }
+    .titelbalk-logo { height: 30px; }
+    .titelbalk-merk { font-size: 1.1rem; }
+    .titelbalk-merk small, .titelbalk-gebruiker { display: none; }
+    main { padding: 1rem 0.9rem 2rem; }
+    .venster-titel { font-size: 1.8rem; padding-bottom: 0.8rem; }
+    .cs-titel h1 { font-size: 2.1rem; }
+    .cs-wedstrijd { margin-left: 0; }
+    .cs-raster { grid-template-columns: 1fr; }
+    .cs-scorebord { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cs-scorebord > :nth-child(odd) { border-left: 0; }
+    .cs-scorebord > :nth-child(n+3) { border-top: 1px solid var(--rand-licht); }
+    .cs-verberg-smal { display: none; }
+    /* Het menu wordt op een telefoon een uitklapbalk boven de pagina (zie style.css): niet de breedte van hierboven. */
+    .app-zijbalk { width: 100%; min-height: auto; padding: 0; border-right: 0; border-bottom: 1px solid var(--rand); }
+}

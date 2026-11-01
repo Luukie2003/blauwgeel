@@ -1,0 +1,26 @@
+{# De lijn-iconen van de site (2.0): overal dezelfde stijl, in de kleur van de tekst eromheen. Gebruik:
+   {% from '_iconen.html' import icoon %} en dan {{ icoon('voorraad') }}. De namen van het menu staan in
+   NAV_GROEP_ICOON (navigatie.py). #}
+{% macro icoon(naam, klasse='') -%}
+<svg class="cs-i {{ klasse }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+{%- if naam == 'start' %}<path d="M3 11 12 4l9 7v9H3z"/><path d="M9 20v-6h6v6"/>
+{%- elif naam == 'voorraad' %}<path d="M3 7 12 3l9 4-9 4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>
+{%- elif naam == 'bestellen' %}<path d="M3 4h2l2 12h11l2-8H6"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/>
+{%- elif naam == 'producten' %}<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>
+{%- elif naam == 'geld' %}<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/>
+{%- elif naam == 'keuken' %}<path d="M5 11h14v3a7 7 0 0 1-14 0z"/><path d="M9 7c0-2 2-2 2-4M13 7c0-2 2-2 2-4"/>
+{%- elif naam == 'kantine-tv' %}<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/>
+{%- elif naam == 'club-van-20' %}<path d="m12 3 2.6 5.5 6 .8-4.4 4.2 1.1 6L12 16.6 6.7 19.5l1.1-6L3.4 9.3l6-.8z"/>
+{%- elif naam == 'stemmen' %}<rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8.5 12 2.5 2.5 4.5-5"/>
+{%- elif naam == 'rapporten' %}<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
+{%- elif naam == 'beheer' %}<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>
+{%- elif naam == 'zoeken' %}<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+{%- elif naam == 'pijl' %}<path d="M5 12h14M13 6l6 6-6 6"/>
+{%- elif naam == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{%- elif naam == 'vink' %}<path d="m5 12.5 4.5 4.5L19 7.5"/>
+{%- elif naam == 'let-op' %}<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.01"/>
+{%- elif naam == 'bal' %}<circle cx="12" cy="12" r="9"/><path d="m12 7 4 3-1.5 4.5h-5L8 10z"/><path d="M12 7V3M16 10l4-1.5M14.5 14.5 17 18M9.5 14.5 7 18M8 10 4 8.5"/>
+{%- else %}<circle cx="12" cy="12" r="2"/>
+{%- endif %}
+</svg>
+{%- endmacro %}

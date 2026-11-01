@@ -28,7 +28,7 @@ from helpers import (
     now_str,
     stuur_tag_notificaties,
 )
-from helpers.tijd import vandaag_amsterdam
+from helpers.tijd import datum_lang, vandaag_amsterdam
 from helpers.wedstrijden import OVERIG_TEAM, agenda_teams, voeg_thuiswedstrijd_toe
 from pdf import periode_verkoop_pdf
 from voorspelling import maak_prognose
@@ -160,6 +160,9 @@ def register_routes(app):
             "SELECT COUNT(*) AS n FROM bestellingen WHERE status = 'besteld'"
         ).fetchone()["n"]
         komende_thuiswedstrijden = bereken_komende_thuiswedstrijden(db)
+        vandaag = vandaag_amsterdam()
+        # De eerstvolgende thuisdag, voor naast de titel (2.0): op een wedstrijddag 'Thuis vandaag'.
+        thuisdag = komende_thuiswedstrijden[0] if komende_thuiswedstrijden else None
         taken = [
             {**t, "url": url_for(t["endpoint"], **t["kwargs"])}
             for t in bouw_taken(
@@ -174,6 +177,9 @@ def register_routes(app):
             recente_mutaties=recente_mutaties,
             open_bestellingen=open_bestellingen,
             komende_thuiswedstrijden=komende_thuiswedstrijden,
+            vandaag_lang=datum_lang(vandaag),
+            thuisdag=thuisdag,
+            thuisdag_vandaag=bool(thuisdag and thuisdag["datum"] == vandaag.isoformat()),
             laatste_telling_status=bereken_laatste_telling_status(db),
             kassa_telling_status=bereken_kassa_telling_status(db),
             bestelling_status=bereken_bestelling_status(db),

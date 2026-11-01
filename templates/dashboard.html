@@ -1,5 +1,21 @@
 {% extends "base.html" %}
+{# Het overzicht in 2.0 (clubstijl.css): de titel met de datum en de eerstvolgende thuisdag, het scorebord, wat er nu
+   moet gebeuren naast de vaste klussen, en daaronder de voorraad, de wedstrijden, de omzet en de boekingen. #}
+{% from '_iconen.html' import icoon %}
 {% block titel %}Overzicht{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Overzicht</h1>
+    <span class="cs-titel-datum">{{ vandaag_lang }}</span>
+    {% if thuisdag %}
+    <a href="{{ url_for('agenda') }}" class="cs-wedstrijd">
+        <b>{% if thuisdag_vandaag %}Thuis vandaag{% else %}{{ thuisdag.dag_kort }} {{ thuisdag.dag_nummer }} {{ thuisdag.maand_kort }} thuis{% endif %}</b>
+        {% set eerste = thuisdag.wedstrijden[0] %}
+        {{ eerste.omschrijving or eerste.team }}{% if thuisdag.wedstrijden|length > 1 %} <span class="cs-zacht">en {{ thuisdag.wedstrijden|length - 1 }} meer</span>{% endif %}
+    </a>
+    {% endif %}
+</div>
+{% endblock %}
 {% block inhoud %}
 {% if eenvoudig and favoriete_nav %}
 {# Eenvoudige weergave: de favorieten als grote knoppen (zie Mijn voorkeuren). #}
@@ -8,40 +24,109 @@
 </div>
 {% endif %}
 {% if backup_status and not backup_status.ok %}
-<div class="kaart" style="border-left:4px solid #c0392b">
-    <strong>Back-up:</strong> {{ backup_status.tekst }}
-    <a href="{{ url_for('backups_lijst') }}">Naar de back-ups</a>
-</div>
+<div class="cs-melding">{{ icoon('let-op') }}<strong>Back-up:</strong> {{ backup_status.tekst }}
+    <a href="{{ url_for('backups_lijst') }}">Naar de back-ups</a></div>
 {% endif %}
-<div class="kaart taken-kaart">
-    <div class="actiebalk" style="margin-bottom:0.6rem">
-        <h2 style="margin:0">Wat moet er nu?</h2>
-        {% if huidige_gebruiker_rol == 'beheerder' %}
-        <a href="{{ url_for('eigen_taken_pagina') }}" class="btn btn-rand btn-klein">+ Taak toevoegen</a>
+
+<div class="cs-scorebord">
+    <a href="{{ url_for('voorraadoverzicht') }}" class="cs-scorebord-vak"><strong>{{ producten|length }}</strong><span>producten</span></a>
+    <a href="{{ url_for('bestellijst') }}" class="cs-scorebord-vak"><strong class="{{ 'cs-rood' if laag else '' }}">{{ laag|length }}</strong><span>onder het minimum</span></a>
+    <a href="{{ url_for('bestellingen_overzicht') }}" class="cs-scorebord-vak"><strong>{{ open_bestellingen }}</strong><span>{{ 'bestelling' if open_bestellingen == 1 else 'bestellingen' }} open</span></a>
+    {% set dagen = laatste_telling_status.dagen_geleden %}
+    <a href="{{ url_for('tellen') }}" class="cs-scorebord-vak">
+        <strong class="{{ '' if laatste_telling_status.ok else 'cs-rood' }}">{{ dagen if dagen is not none else '–' }}</strong>
+        <span>{% if dagen is none %}nog nooit geteld{% elif dagen == 1 %}dag sinds de telling{% else %}dagen sinds de telling{% endif %}</span>
+    </a>
+</div>
+
+<div class="cs-raster">
+    <section class="cs-paneel">
+        <div class="cs-paneel-kop">
+            <h2>Wat moet er nu?</h2>
+            <div class="cs-rechts">
+                {% if taken %}<span class="cs-aantal">{{ taken|length }} {{ 'taak' if taken|length == 1 else 'taken' }}</span>{% endif %}
+                {% if huidige_gebruiker_rol == 'beheerder' %}
+                <a href="{{ url_for('eigen_taken_pagina') }}" class="btn btn-rand btn-klein">+ Taak toevoegen</a>
+                {% endif %}
+            </div>
+        </div>
+        {% if taken %}
+        <ul class="cs-taken">
+            {% for t in taken %}
+            <li class="cs-taak{{ ' urgent' if t.urgent else '' }}{{ ' eigen' if t.taak_id else '' }}">
+                <span class="cs-taak-streep" aria-hidden="true"></span>
+                <a href="{{ t.url }}" class="cs-taak-link"><strong>{{ t.titel }}</strong><small>{{ t.detail }}</small></a>
+                <div class="cs-taak-acties">
+                    {% if t.taak_id %}
+                    <form method="post" action="{{ url_for('eigen_taak_afronden', taak_id=t.taak_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="terug" value="{{ url_for('dashboard') }}">
+                        <button type="submit" class="btn btn-rand btn-klein" title="Deze taak is klaar">&#10003; Klaar</button>
+                    </form>
+                    {% endif %}
+                    <a href="{{ t.url }}" class="cs-taak-pijl" aria-label="{{ t.titel }}">{{ icoon('pijl') }}</a>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="cs-leeg">Alles is bij: er hoeft nu niets te gebeuren.</p>
         {% endif %}
-    </div>
-    {% if taken %}
-    <ul class="taken-lijst">
-        {% for t in taken %}
-        <li class="taak{{ ' taak-urgent' if t.urgent else '' }}{{ ' taak-eigen' if t.taak_id else '' }}">
-            <a href="{{ t.url }}">
-                <strong>{{ t.titel }}</strong>
-                <span class="tekst-zacht">{{ t.detail }}</span>
-                <span class="taak-pijl" aria-hidden="true">&rsaquo;</span>
-            </a>
-            {% if t.taak_id %}
-            <form method="post" action="{{ url_for('eigen_taak_afronden', taak_id=t.taak_id) }}" class="taak-klaar">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="terug" value="{{ url_for('dashboard') }}">
-                <button type="submit" class="btn btn-rand btn-klein" title="Deze taak is klaar">&#10003; Klaar</button>
-            </form>
-            {% endif %}
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p class="taken-leeg">Alles is bij &mdash; er hoeft nu niets te gebeuren. 👍</p>
-    {% endif %}
+    </section>
+
+    <section class="cs-paneel">
+        <div class="cs-paneel-kop"><h2>Vaste klussen</h2></div>
+        <table>
+            <thead><tr><th>Klus</th><th class="cs-verberg-smal">Laatst</th><th class="cs-getal">Stand</th></tr></thead>
+            <tbody>
+                {% set t = laatste_telling_status %}
+                <tr>
+                    <td><a href="{{ url_for('tellen') }}">Telling</a></td>
+                    <td class="cs-verberg-smal">{% if t.laatste %}{{ t.laatste.datum|dag_maand }}<div class="cs-zacht">{{ t.laatste.naam or '' }}</div>{% else %}nooit{% endif %}</td>
+                    <td class="cs-getal"><span class="cs-punt {{ 'cs-groen' if t.ok else 'cs-rood' }}">{{ 'Op tijd' if t.ok else ('Te laat' if t.laatste else 'Nog nooit') }}</span></td>
+                </tr>
+                {% set k = kassa_telling_status %}
+                <tr>
+                    <td>Kassa</td>
+                    <td class="cs-verberg-smal">{% if k.laatste_kassatelling %}{{ k.laatste_kassatelling.datum|dag_maand }}<div class="cs-zacht">{{ k.laatste_kassatelling.naam or '' }}</div>{% else %}nooit{% endif %}</td>
+                    <td class="cs-getal"><span class="cs-punt {{ {'groen': 'cs-groen', 'rood': 'cs-rood', 'oranje': 'cs-oranje'}.get(k.status, 'cs-zacht') }}" title="{{ k.tekst }}">{{ {'groen': 'Geteld', 'rood': 'Te laat', 'oranje': 'Concept'}.get(k.status, 'Nog niet nodig') }}</span></td>
+                </tr>
+                {% set b = bestelling_status %}
+                <tr>
+                    <td><a href="{{ url_for('bestellingen_overzicht') }}">Bestelling</a></td>
+                    <td class="cs-verberg-smal">{% if b.laatste_bestelling %}{{ (b.laatste_bestelling.ontvangen_op or b.laatste_bestelling.aangemaakt_op)|dag_maand }}<div class="cs-zacht">{{ b.laatste_bestelling.besteld_door or '' }}</div>{% else %}&ndash;{% endif %}</td>
+                    <td class="cs-getal"><span class="cs-punt {{ {'groen': 'cs-groen', 'rood': 'cs-rood', 'oranje': 'cs-oranje'}.get(b.status, 'cs-zacht') }}" title="{{ b.tekst }}">{{ {'groen': 'Ingeboekt', 'rood': 'Te laat', 'oranje': 'Nog inboeken'}.get(b.status, '–') }}</span></td>
+                </tr>
+                {% set f = frituurvet_status %}
+                <tr>
+                    <td>Frituurvet<div class="cs-zacht">elke {{ f.interval }} dagen</div></td>
+                    <td class="cs-verberg-smal">{% if f.laatste %}{{ f.laatste.datum|dag_maand }}<div class="cs-zacht">{{ f.laatste.naam or '' }}</div>{% else %}nooit{% endif %}</td>
+                    <td class="cs-getal">
+                        <span class="cs-punt {{ 'cs-groen' if f.ok else 'cs-rood' }}">{{ 'Vervangen' if f.ok else 'Te laat' }}</span>
+                        <form method="post" action="{{ url_for('frituurvet_vervangen') }}" style="margin:0.35rem 0 0"
+                              onsubmit="return bevestigEnVerstuur(this, 'Frituurvet vandaag vervangen?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-rand btn-klein">Vet vervangen</button>
+                        </form>
+                    </td>
+                </tr>
+                {% if club_van_20_status %}
+                {% set c = club_van_20_status %}
+                <tr>
+                    <td><a href="{{ url_for('club_van_20_overzicht') }}">Club van 20</a></td>
+                    <td class="cs-verberg-smal">{{ c.seizoen }}<div class="cs-zacht">{{ c.betaald }} leden</div></td>
+                    <td class="cs-getal">
+                        {% if c.leden %}
+                        <span class="cs-punt cs-oranje" title="{% for lid in c.leden[:3] %}{{ lid.naam }}{% if not loop.last %}, {% endif %}{% endfor %}">{{ c.aantal }} nog niet betaald</span>
+                        {% else %}
+                        <span class="cs-punt cs-groen">Iedereen betaald</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </section>
 </div>
 
 {% if sectie_toegang.voorraad %}
@@ -49,186 +134,61 @@
 <div data-lazy-bron="{{ url_for('dashboard_wedstrijddag') }}"></div>
 {% endif %}
 
-<div class="statgrid">
-    <div class="statuskaart {{ 'statuskaart-goed' if laatste_telling_status.ok else 'statuskaart-slecht' }}">
-        <div class="statuskaart-titel">Telling</div>
-        <div class="statuskaart-body">
-            {% if laatste_telling_status.laatste %}
-            <div class="statuskaart-vak">
-                {{ 'Uitgevoerd' if laatste_telling_status.ok else 'Te laat' }}<br>
-                op {{ laatste_telling_status.laatste.datum|datum_nl }}
-            </div>
-            <p class="statuskaart-opmerking">door {{ laatste_telling_status.laatste.naam or '—' }}</p>
-            {% else %}
-            <div class="statuskaart-vak">Nog nooit geteld</div>
-            {% endif %}
-        </div>
-    </div>
-    {% set kassa_klasse = {'groen': 'statuskaart-goed', 'rood': 'statuskaart-slecht', 'oranje': 'statuskaart-oranje'}.get(kassa_telling_status.status, 'statuskaart-neutraal') %}
-    {% set kassa_label = {'groen': 'Geteld', 'rood': 'Te laat', 'oranje': 'Concept'}.get(kassa_telling_status.status, 'Nog niet nodig') %}
-    <div class="statuskaart {{ kassa_klasse }}">
-        <div class="statuskaart-titel">Kassa</div>
-        <div class="statuskaart-body">
-            {% if kassa_telling_status.laatste_kassatelling %}
-            <div class="statuskaart-vak">
-                {{ kassa_label }}<br>
-                op {{ kassa_telling_status.laatste_kassatelling.datum|datum_nl }}
-            </div>
-            <p class="statuskaart-opmerking">door {{ kassa_telling_status.laatste_kassatelling.naam or '—' }}</p>
-            {% else %}
-            <div class="statuskaart-vak">{{ kassa_label }}</div>
-            {% endif %}
-            <p class="statuskaart-opmerking">{{ kassa_telling_status.tekst }}</p>
-        </div>
-    </div>
-    {% set bestelling_klasse = {'groen': 'statuskaart-goed', 'rood': 'statuskaart-slecht', 'oranje': 'statuskaart-oranje'}.get(bestelling_status.status, 'statuskaart-neutraal') %}
-    {% set bestelling_label = {'groen': 'Ingeboekt', 'rood': 'Te laat', 'oranje': 'Nog inboeken'}.get(bestelling_status.status, '—') %}
-    <div class="statuskaart {{ bestelling_klasse }}">
-        <div class="statuskaart-titel">Bestelling</div>
-        <div class="statuskaart-body">
-            {% if bestelling_status.laatste_bestelling %}
-            <div class="statuskaart-vak">
-                {{ bestelling_label }}<br>
-                op {{ (bestelling_status.laatste_bestelling.ontvangen_op or bestelling_status.laatste_bestelling.aangemaakt_op)|datum_nl }}
-            </div>
-            <p class="statuskaart-opmerking">door {{ bestelling_status.laatste_bestelling.besteld_door or '—' }}</p>
-            {% else %}
-            <div class="statuskaart-vak">{{ bestelling_label }}</div>
-            {% endif %}
-            <p class="statuskaart-opmerking">{{ bestelling_status.tekst }}</p>
-        </div>
-    </div>
-    <div class="statuskaart {{ 'statuskaart-goed' if frituurvet_status.ok else 'statuskaart-slecht' }}">
-        <div class="statuskaart-titel">Frituurvet</div>
-        <div class="statuskaart-body">
-            {% if frituurvet_status.laatste %}
-            <div class="statuskaart-vak">
-                {{ 'Vervangen' if frituurvet_status.ok else 'Te laat' }}<br>
-                op {{ frituurvet_status.laatste.datum|datum_nl }}
-            </div>
-            <p class="statuskaart-opmerking">door {{ frituurvet_status.laatste.naam or '—' }}</p>
-            {% else %}
-            <div class="statuskaart-vak">Nog nooit vervangen</div>
-            {% endif %}
-            <p class="statuskaart-opmerking">Elke {{ frituurvet_status.interval }} dagen</p>
-            <form method="post" action="{{ url_for('frituurvet_vervangen') }}"
-                  onsubmit="return bevestigEnVerstuur(this, 'Frituurvet vandaag vervangen?');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-rand btn-klein">Vet vervangen</button>
-            </form>
-        </div>
-    </div>
-    {% if club_van_20_status %}
-    <div class="statuskaart {{ 'statuskaart-goed' if club_van_20_status.ok else 'statuskaart-oranje' }}">
-        <div class="statuskaart-titel">Club van 20</div>
-        <div class="statuskaart-body">
-            {% if club_van_20_status.leden %}
-            <div class="statuskaart-vak">
-                {{ club_van_20_status.aantal }} nog niet betaald
-            </div>
-            <p class="statuskaart-opmerking">
-                {% for lid in club_van_20_status.leden[:3] %}{{ lid.naam }}{% if not loop.last %}, {% endif %}{% endfor %}
-                {% if club_van_20_status.aantal > 3 %}e.a.{% endif %}
-                &mdash; seizoen {{ club_van_20_status.seizoen }}{% if club_van_20_status.niet_gevraagd %}, {{ club_van_20_status.niet_gevraagd }} nog niet gevraagd{% endif %}
-            </p>
-            {% else %}
-            <div class="statuskaart-vak">Iedereen heeft betaald</div>
-            <p class="statuskaart-opmerking">{{ club_van_20_status.betaald }} leden in {{ club_van_20_status.seizoen }}</p>
-            {% endif %}
-            <a href="{{ url_for('club_van_20_overzicht') }}" class="btn btn-rand btn-klein">Naar Club van 20</a>
-        </div>
-    </div>
-    {% endif %}
-</div>
-
-<div class="statgrid">
-    <div class="stat">
-        <div class="getal">{{ producten|length }}</div>
-        <div class="label">Producten</div>
-    </div>
-    <div class="stat {{ 'waarschuwing' if laag|length > 0 }}">
-        <div class="getal">{{ laag|length }}</div>
-        <div class="label">Onder minimum voorraad</div>
-    </div>
-    <div class="stat">
-        <div class="getal">{{ open_bestellingen }}</div>
-        <div class="label">Openstaande bestellingen</div>
-    </div>
-</div>
-
-{% if komende_thuiswedstrijden %}
-<div class="kaart">
-    <h2>Komende thuiswedstrijden</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Uit de gekoppelde teamagenda's en de weersverwachting. Ververst
-        automatisch elke nacht, puur ter indicatie, geen automatische
-        correctie op de omzetverwachting verderop.
-    </p>
-    <div class="tabel-wrap">
-        <table>
-            <thead>
-                <tr><th>Datum</th><th>Teams thuis</th><th>Weer</th><th></th></tr>
-            </thead>
-            <tbody>
-                {% for dag in komende_thuiswedstrijden %}
-                <tr>
-                    <td>{{ dag.datum_weergave }}</td>
-                    <td>
-                        {% for w in dag.wedstrijden %}
-                        {{ w.omschrijving }}{% if not loop.last %}<br>{% endif %}
-                        {% endfor %}
-                    </td>
-                    <td>
-                        {% if dag.weer %}
-                        {{ dag.weer.label }}, {{ '%.0f'|format(dag.weer.max_temp) }}°C
-                        <span class="tekst-zacht">({{ dag.weer.neerslag_kans }}% neerslag)</span>
-                        {% else %}
-                        <span class="tekst-zacht">nog geen voorspelling</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if dag.wedstrijden|length > 1 %}
-                        <span class="badge badge-laag">{{ dag.wedstrijden|length }}x thuis, kan drukker zijn</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endif %}
-
-<div class="kaart">
-    <div class="actiebalk">
-        <h2 style="margin:0">Producten met te lage voorraad</h2>
-        {% if laag %}<a href="{{ url_for('bestellijst') }}" class="btn btn-geel btn-klein">Naar bestellijst</a>{% endif %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop">
+        <h2>Te weinig voorraad</h2>
+        {% if laag %}<div class="cs-rechts"><span class="cs-aantal">{{ laag|length }} {{ 'product' if laag|length == 1 else 'producten' }}</span>
+            <a href="{{ url_for('bestellijst') }}" class="btn btn-geel btn-klein">Naar de bestellijst</a></div>{% endif %}
     </div>
     {% if laag %}
     <div class="tabel-wrap">
         <table>
             <thead>
-                <tr><th>Product</th><th>Categorie</th><th>Voorraad</th><th>Minimum</th></tr>
+                <tr><th>Product</th><th class="cs-verberg-smal">Categorie</th><th class="cs-getal">Voorraad</th><th class="cs-getal cs-verberg-smal">Minimum</th><th class="cs-verberg-smal"></th></tr>
             </thead>
             <tbody>
                 {% for p in laag %}
                 <tr>
                     <td>{{ p.naam }}</td>
-                    <td>
-                        {{ p.categorie }}
-                        {% if p.subcategorie %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.subcategorie }}</div>{% endif %}
-                    </td>
-                    <td><span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span></td>
-                    <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
+                    <td class="cs-verberg-smal">{{ p.categorie }}{% if p.subcategorie %}<div class="cs-zacht">{{ p.subcategorie }}</div>{% endif %}</td>
+                    <td class="cs-getal cs-rood">{{ p.voorraad }} <span class="cs-zacht">{{ p.eenheid }}</span></td>
+                    <td class="cs-getal cs-verberg-smal">{{ p.min_voorraad }} <span class="cs-zacht">{{ p.eenheid }}</span></td>
+                    <td class="cs-verberg-smal"><span class="cs-balk" title="{{ p.voorraad }} van {{ p.min_voorraad }}"><i style="width: {{ [[(p.voorraad / p.min_voorraad * 100) if p.min_voorraad else 0, 2]|max, 100]|min|round|int }}%"></i></span></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     {% else %}
-    <p class="leeg">Alles zit boven het minimum. Niets te bestellen.</p>
+    <p class="cs-leeg">Alles zit boven het minimum. Niets te bestellen.</p>
     {% endif %}
-</div>
+</section>
+
+{% if komende_thuiswedstrijden %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop">
+        <h2>Komende thuiswedstrijden</h2>
+        <span class="cs-zacht">Uit de teamagenda's en de weersverwachting, elke nacht ververst.</span>
+    </div>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Datum</th><th>Teams thuis</th><th class="cs-verberg-smal">Weer</th></tr></thead>
+            <tbody>
+                {% for dag in komende_thuiswedstrijden %}
+                <tr>
+                    <td style="white-space:nowrap">{{ dag.dag_kort }} {{ dag.dag_nummer }} {{ dag.maand_kort }}{% if dag.wedstrijden|length > 1 %}<div class="cs-zacht">{{ dag.wedstrijden|length }}x thuis, kan drukker zijn</div>{% endif %}</td>
+                    <td>{% for w in dag.wedstrijden %}{{ w.omschrijving }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+                    <td class="cs-verberg-smal">
+                        {% if dag.weer %}{{ dag.weer.label }}, {{ '%.0f'|format(dag.weer.max_temp) }}°C <span class="cs-zacht">({{ dag.weer.neerslag_kans }}% neerslag)</span>
+                        {% else %}<span class="cs-zacht">nog geen voorspelling</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
 
 {% if sectie_toegang.voorraad %}
 <script>
@@ -252,29 +212,27 @@
     <p class="tekst-zacht" data-lazy-status style="margin:0.4rem 0 0">De omzet per week wordt berekend&hellip;</p>
 </div>
 
-<div class="kaart">
-    <h2>Recente boekingen</h2>
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Recente boekingen</h2></div>
     {% if recente_mutaties %}
     <div class="tabel-wrap">
         <table>
-            <thead>
-                <tr><th>Datum</th><th>Product</th><th>Type</th><th>Aantal</th><th>Door</th></tr>
-            </thead>
+            <thead><tr><th>Datum</th><th>Product</th><th>In of uit</th><th class="cs-getal">Aantal</th><th class="cs-verberg-smal">Door</th></tr></thead>
             <tbody>
                 {% for m in recente_mutaties %}
                 <tr>
-                    <td>{{ m.datum|datum_nl }}</td>
+                    <td style="white-space:nowrap">{{ m.datum|dag_maand }} <span class="cs-zacht">{{ m.datum[11:16] }}</span></td>
                     <td>{{ m.product_naam }}</td>
-                    <td><span class="badge badge-{{ m.type }}">{{ 'in' if m.type == 'in' else 'uit' }}</span></td>
-                    <td>{{ m.aantal }} {{ m.eenheid }}</td>
-                    <td>{{ m.naam or '—' }}</td>
+                    <td><span class="cs-punt {{ 'cs-groen' if m.type == 'in' else 'cs-oranje' }}">{{ 'in' if m.type == 'in' else 'uit' }}</span></td>
+                    <td class="cs-getal">{{ m.aantal }} <span class="cs-zacht">{{ m.eenheid }}</span></td>
+                    <td class="cs-verberg-smal">{{ m.naam or '—' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     {% else %}
-    <p class="leeg">Nog geen boekingen.</p>
+    <p class="cs-leeg">Nog geen boekingen.</p>
     {% endif %}
-</div>
+</section>
 {% endblock %}

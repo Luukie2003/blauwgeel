@@ -129,7 +129,7 @@ def test_de_andere_mensen_en_de_deadline_staan_erbij_en_te_laat_is_urgent(ingelo
     _taak(db, "Tellen", soort="preset:voorraad_tellen", ids=[ADMIN, bakker], deadline=gisteren)
     tekst = _dashboard(klant)
     assert "Samen met admin" in tekst and "(te laat)" in tekst
-    assert re.search(r'class="taak taak-urgent taak-eigen"', tekst)
+    assert re.search(r'class="cs-taak urgent eigen"', tekst)
     from helpers.status import bouw_taken
 
     assert bouw_taken(db, "vrijwilliger", "voorraad", bakker)[0]["titel"] == "Tellen"  # dringend: bovenaan

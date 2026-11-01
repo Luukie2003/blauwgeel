@@ -31,6 +31,25 @@ def format_laatst_actief(value, nu=None):
     return dt.strftime("%d-%m-%Y")
 
 
+_WEEKDAGEN = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"]
+_MAANDEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober",
+            "november", "december"]
+_MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
+
+
+def format_dag_maand(value):
+    """'2026-09-18 22:00' of '2026-09-18' -> '18 sep': kort, voor lijsten en tabellen (2.0)."""
+    if not value:
+        return ""
+    dt = datetime.strptime(str(value)[:10], "%Y-%m-%d")
+    return f"{dt.day} {_MAANDEN_KORT[dt.month - 1]}"
+
+
+def datum_lang(dag):
+    """date -> 'zaterdag 31 oktober', voor de kop van een pagina (2.0)."""
+    return f"{_WEEKDAGEN[dag.weekday()]} {dag.day} {_MAANDEN[dag.month - 1]}"
+
+
 def format_datum_kort(value):
     """Zet een kale ISO-datum (YYYY-MM-DD, geen tijdstip) om naar
     dd-mm-jjjj -- voor de looptijd van een Club van 20-lidmaatschap."""

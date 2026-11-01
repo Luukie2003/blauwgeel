@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% from '_iconen.html' import icoon %}
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
@@ -8,27 +9,31 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#1c2b4a">
+    <meta name="theme-color" content="#14275e">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Kantine Beheer">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_versie }}">
+    {# 2.0: de clubstijl over de hele site (letters, kleuren, kop, menu, panelen), na style.css. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='clubstijl.css') }}?v={{ clubstijl_versie }}">
 </head>
 <body{% if noodstop_toestand and session.get("noodstop_toegang") == noodstop_toestand.sinds %} data-noodstop-binnen="1"{% endif %}>
     <div class="app-titelbalk">
-        <a href="{{ url_for('dashboard') }}" class="titelbalk-link">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="titelbalk-logo">
-            <span>BG 1915 - Kantine Beheer{% if actieve_nav %} <em style="margin-left:1.2rem">{{ actieve_nav.label }}</em>{% endif %}</span>
+        <a href="{{ url_for('dashboard') }}" class="titelbalk-link" aria-label="Kantine Blauw-Geel: naar het overzicht">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="" class="titelbalk-logo">
+            <span class="titelbalk-merk">Kantine Blauw-Geel<small>sinds 1915 &middot; Coendersborg</small></span>
         </a>
         {% if huidige_gebruiker %}
         <form class="titelbalk-zoek" id="zoekbalk" action="{{ url_for('zoeken') }}" method="get" role="search">
+            {{ icoon('zoeken', 'titelbalk-zoek-icoon') }}
             <input type="search" name="q" id="zoekbalk-invoer" placeholder="Zoeken&hellip;" autocomplete="off"
                    aria-label="Zoeken (sneltoets: /)" title="Zoeken (sneltoets: /)">
             <div class="zoek-dropdown" id="zoekbalk-resultaten" hidden></div>
         </form>
         <div class="menu-item">
-            <button type="button" class="menu-trigger titelbalk-account-trigger">
-                Welkom, {{ huidige_gebruiker }} <span class="menu-trigger-pijl">&#9662;</span>
+            <button type="button" class="menu-trigger titelbalk-account-trigger" aria-label="Account van {{ huidige_gebruiker }}">
+                <span class="titelbalk-avatar" aria-hidden="true">{{ huidige_gebruiker[:1]|upper }}</span>
+                <span class="titelbalk-gebruiker">{{ huidige_gebruiker }}</span> <span class="menu-trigger-pijl">&#9662;</span>
             </button>
             <div class="menu-dropdown menu-dropdown-rechts">
                 <span class="menu-label">Ingelogd als {{ huidige_gebruiker }} ({{ huidige_gebruiker_rol }})</span>
@@ -89,7 +94,7 @@
             {% set ns.vorige_groep = item.groep %}
             <div class="zijbalk-groep" data-groep="{{ item.groep }}">
                 <button type="button" class="zijbalk-groepkop" aria-expanded="false">
-                    <span class="zijbalk-groepnaam"><span class="zijbalk-icoon" aria-hidden="true">{{ nav_groep_icoon.get(item.groep, '') }}</span>{{ item.groep }}</span>
+                    <span class="zijbalk-groepnaam"><span class="zijbalk-icoon" aria-hidden="true">{{ icoon(nav_groep_icoon.get(item.groep, '')) }}</span>{{ item.groep }}</span>
                     <span class="zijbalk-groep-pijl">&#9662;</span>
                 </button>
                 <ul>
@@ -103,9 +108,12 @@
             </div>
         </nav>
         <main>
+            {# De titel van de pagina; een pagina met een eigen kop (zoals het overzicht) vult dit blok zelf. #}
+            {% block venster_titel %}
             {% if actieve_nav %}
             <div class="venster-titel">{{ actieve_nav.label }}</div>
             {% endif %}
+            {% endblock %}
             <div class="venster-inhoud">
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
@@ -122,7 +130,7 @@
     </div>
     <footer>
         Kantine Beheer &middot; <a href="https://blauwgeel1915.nl" target="_blank" rel="noopener">s.v. Blauw-Geel 1915</a>
-        {% if huidige_gebruiker %} &middot; <a href="{{ url_for('tips_pagina') }}">💡 Tips &amp; functies</a>{% endif %}
+        {% if huidige_gebruiker %} &middot; <a href="{{ url_for('tips_pagina') }}">Tips &amp; functies</a>{% endif %}
         &middot; <a href="{{ url_for('privacyverklaring') }}">Privacy</a>
     </footer>
     {% if sectie_toegang.voorraad and request.endpoint != 'dashboard' %}

@@ -111,7 +111,7 @@
                 </div>
                 <div class="kt-tegel-sub">
                     {{ sjabloon_labels.get(s.sjabloon, s.sjabloon).split(' (')[0] }} ·
-                    {% if s.effect %}<span title="Effect">&#10024; {{ effecten[s.effect][0].split(':')[0] if s.effect in effecten else s.effect }}</span> · {% endif %}
+                    {% if s.effect %}<span title="Effect">{{ effecten[s.effect][0].split(':')[0] if s.effect in effecten else s.effect }}</span> · {% endif %}
                     {%- if s.sjabloon == 'video_volledig' and s.video_hele_duur and s.video_duur %}{{ s.video_duur|round|int }} s{% else %}{{ s.weergave_duur_seconden }} s{% endif %}
                     {%- if s.herhalingen > 1 %} · ×{{ s.herhalingen }} per ronde{% endif %}
                     {%- if gepland %} · gepland vanaf {{ s.zichtbaar_vanaf[8:10] }}-{{ s.zichtbaar_vanaf[5:7] }}{% elif verlopen %} · verlopen op {{ s.zichtbaar_tot[8:10] }}-{{ s.zichtbaar_tot[5:7] }}{% elif s.zichtbaar_tot %} · t/m {{ s.zichtbaar_tot[8:10] }}-{{ s.zichtbaar_tot[5:7] }}{% endif %}
