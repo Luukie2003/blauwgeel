@@ -57,4 +57,6 @@ def register_routes(app):
             producten=producten,
             nu_datetime_local=now_datetime_local(),
             loop_onderbroken=loop_onderbroken(db, len(producten)),
+            # Voor de titel: wanneer en door wie er voor het laatst geteld is.
+            laatste_telling=db.execute("SELECT datum, naam FROM tellingen ORDER BY datum DESC, id DESC LIMIT 1").fetchone(),
         )

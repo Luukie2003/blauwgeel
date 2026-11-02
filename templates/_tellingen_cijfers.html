@@ -1,81 +1,75 @@
-{# De kaarten 'Verwachting & trend' en 'Omzet per week' van het tellingenoverzicht (zie routes/tellen/tellingen.py). #}
-<div class="kaart">
-    <h2>Verwachting &amp; trend</h2>
-    {% if prognose and prognose.beschikbaar %}
-    <div class="statgrid">
-        <div class="stat">
-            <div class="getal">&euro; {{ '%.0f'|format(prognose.totaal.omzet) }}</div>
-            <div class="label">Verwachte omzet komende 7 dagen<br>
-                <span class="tekst-zacht">(waarschijnlijk tussen &euro; {{ '%.0f'|format(prognose.totaal.laag) }} en &euro; {{ '%.0f'|format(prognose.totaal.hoog) }})</span></div>
+{# De panelen 'Verwachting & trend' en 'Omzet per week' van het tellingenoverzicht (zie routes/tellen/tellingen.py), in
+   2.0: de kerncijfers onder elkaar met het getal rechts, en de weken in een tabel. #}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Verwachting &amp; trend</h2></div>
+    {% set met_prognose = prognose and prognose.beschikbaar %}
+    {% if met_prognose or trend %}
+    <dl class="cs-cijfers">
+        {% if met_prognose %}
+        <div>
+            <dt>Verwachte omzet komende 7 dagen<small>waarschijnlijk tussen {{ prognose.totaal.laag|euro }} en {{ prognose.totaal.hoog|euro }}</small></dt>
+            <dd>{{ prognose.totaal.omzet|euro }}</dd>
         </div>
-        <div class="stat {{ 'waarschuwing' if prognose.samenvatting.urgent else '' }}">
-            <div class="getal">{{ prognose.samenvatting.urgent }}</div>
-            <div class="label">Producten die waarschijnlijk opraken</div>
+        <div>
+            <dt><a href="{{ url_for('prognose_pagina') }}">Producten die waarschijnlijk opraken</a><small>bekijk ze in de prognose</small></dt>
+            <dd class="{{ 'cs-rood' if prognose.samenvatting.urgent else '' }}">{{ prognose.samenvatting.urgent }}</dd>
         </div>
-    </div>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Rekent per dag, met de thuiswedstrijden, de trainingsavond en het weer, en werkt ook als er niet
-        elke week op dezelfde dag geteld is. <a href="{{ url_for('prognose_pagina') }}">Bekijk de volledige prognose</a>.
-    </p>
-    {% endif %}
-    {% if trend %}
-    <div class="statgrid">
-        {% if not (prognose and prognose.beschikbaar) %}
-        <div class="stat">
-            <div class="getal">{{ "€ %.2f"|format(trend.verwachting) }}</div>
-            <div class="label">Verwachte omzet komende week (gemiddelde laatste {{ trend.gebaseerd_op_weken }} we{{ 'ken' if trend.gebaseerd_op_weken != 1 else 'ek' }})</div>
+        {% elif trend %}
+        <div>
+            <dt>Verwachte omzet komende week<small>het gemiddelde van de laatste {{ trend.gebaseerd_op_weken }} {{ 'week' if trend.gebaseerd_op_weken == 1 else 'weken' }}</small></dt>
+            <dd>{{ trend.verwachting|euro }}</dd>
         </div>
         {% endif %}
-        <div class="stat {{ 'waarschuwing' if trend.richting == 'dalend' else '' }}">
-            <div class="getal">
-                {% if trend.richting == 'stijgend' %}&#8599;
-                {% elif trend.richting == 'dalend' %}&#8600;
-                {% else %}&#8594;{% endif %}
-                {{ trend.richting|capitalize }}
-            </div>
-            <div class="label">Trend over de afgesloten weken ({{ "%+.2f"|format(trend.richting_per_week) }} €/week)</div>
+        {% if trend %}
+        <div>
+            <dt>Trend over de afgesloten weken<small>{{ "%+.2f"|format(trend.richting_per_week) }} euro per week</small></dt>
+            <dd class="{{ {'stijgend': 'cs-groen', 'dalend': 'cs-rood'}.get(trend.richting, '') }}">{{ trend.richting|capitalize }}</dd>
         </div>
-    </div>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        De trend is gebaseerd op volledig gedekte weken (de lopende week telt nog niet mee). Hoe meer
-        weken met tellingen, hoe betrouwbaarder dit wordt.
+        {% endif %}
+    </dl>
+    <p class="cs-paneel-tekst cs-zacht">
+        {% if met_prognose %}De verwachting rekent per dag, met de thuiswedstrijden, de trainingsavond en het weer, en werkt
+        ook als er niet elke week op dezelfde dag geteld is.{% endif %}
+        {% if trend %}De trend telt alleen weken die helemaal gedekt zijn (de lopende week nog niet); met meer weken wordt
+        hij betrouwbaarder.{% endif %}
     </p>
-    {% else %}
-    {% if not (prognose and prognose.beschikbaar) %}
-    <p class="leeg">Nog te weinig volledig afgesloten weken met tellingen voor een trend (minimaal 2 nodig).</p>
     {% endif %}
+    {% if not trend and not met_prognose %}
+    <p class="cs-leeg">Nog te weinig volledig afgesloten weken met tellingen voor een trend (minimaal 2 nodig).</p>
+    {% elif not trend %}
+    <p class="cs-paneel-tekst cs-zacht">Voor een trend zijn minimaal 2 volledig afgesloten weken met tellingen nodig.</p>
     {% endif %}
-</div>
+</section>
 
-<div class="kaart">
-    <h2>Omzet per week</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        De omzet van elke telling is verdeeld over de dagen die erbij horen (drukke dagen, zoals een thuiswedstrijd,
-        tellen zwaarder), dus het maakt niet uit op welke dagen je telt. Het totaal klopt met de tellingen; hoe de omzet
-        binnen een telling over de dagen valt is een schatting.
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Omzet per week</h2></div>
+    <p class="cs-paneel-tekst cs-zacht">
+        De omzet van elke telling is verdeeld over de dagen die erbij horen; drukke dagen, zoals een thuiswedstrijd, tellen
+        zwaarder. Het maakt dus niet uit op welke dag je telt. Het totaal klopt met de tellingen, de verdeling over de dagen
+        is een schatting.
     </p>
     {% if omzet_per_week %}
     <div class="tabel-wrap">
         <table>
             <thead>
-                <tr><th>Week</th><th>Periode</th><th>Omzet</th><th></th></tr>
+                <tr><th>Week</th><th class="cs-getal">Omzet</th><th></th></tr>
             </thead>
             <tbody>
                 {% for w in omzet_per_week %}
                 <tr>
                     <td>
-                        Week {{ w.week }}, {{ w.jaar }}
+                        <span class="cs-nowrap">Week {{ w.week }}, {{ w.jaar }}</span>
+                        <div class="cs-zacht">{{ w.van|dag_maand }} t/m {{ w.tot|dag_maand }}</div>
                         {% if w.status == 'loopt_nog' %}
-                        <span class="badge badge-neutraal" title="De laatste telling was op {{ w.geteld_tot.strftime('%d-%m %H:%M') }}; wat daarna verkocht is, komt erbij bij de volgende telling.">
+                        <div class="cs-punt cs-grijs" title="De laatste telling was op {{ w.geteld_tot.strftime('%d-%m %H:%M') }}; wat daarna verkocht is, komt erbij bij de volgende telling.">
                             {% if w.jaar == huidige_jaar and w.week == huidige_week %}loopt nog{% else %}geteld t/m {{ w.geteld_tot.strftime('%d-%m') }}{% endif %}
-                        </span>
+                        </div>
                         {% elif w.status == 'begin' %}
-                        <span class="badge badge-neutraal" title="Er was in deze week al een verkoopdag vóór de eerste telling; die is niet gemeten. Was de kantine toen dicht? Zet die dag dan bij Prognose → Verkoopdagen als uitzondering op dicht.">begin meting</span>
+                        <div class="cs-punt cs-grijs" title="Er was in deze week al een verkoopdag vóór de eerste telling; die is niet gemeten. Was de kantine toen dicht? Zet die dag dan bij Prognose → Verkoopdagen als uitzondering op dicht.">begin meting</div>
                         {% endif %}
                     </td>
-                    <td>{{ w.van }} t/m {{ w.tot }}</td>
-                    <td>{{ "€ %.2f"|format(w.omzet) }}</td>
-                    <td>
+                    <td class="cs-getal cs-nowrap">{{ "€ %.2f"|format(w.omzet) }}</td>
+                    <td class="cs-getal">
                         <a href="{{ url_for('verkooprapport_pdf_route', van=w.van, tot=w.tot) }}"
                            class="btn btn-rand btn-klein" target="_blank"
                            title="PDF van de tellingen die in deze week gedaan zijn; dat is niet precies hetzelfde als de weekomzet hier">PDF</a>
@@ -86,6 +80,6 @@
         </table>
     </div>
     {% else %}
-    <p class="leeg">Nog geen verkoop geregistreerd via tellingen.</p>
+    <p class="cs-leeg">Nog geen verkoop geregistreerd via tellingen.</p>
     {% endif %}
-</div>
+</section>

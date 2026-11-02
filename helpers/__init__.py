@@ -59,6 +59,7 @@ from helpers.kiosk_constanten import (
 from helpers.tijd import (
     dagdeel_groet,
     datum_lang,
+    format_dag_lang,
     format_dag_maand,
     format_datum,
     format_datum_kort,
@@ -185,6 +186,7 @@ __all__ = [
     "dagdeel_groet",
     "format_datum",
     "datum_lang",
+    "format_dag_lang",
     "format_dag_maand",
     "format_datum_kort",
     "format_laatst_actief",

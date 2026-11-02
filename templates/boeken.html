@@ -1,23 +1,20 @@
 {% extends basis_template %}
+{# In/uit boeken. Op de computer in 2.0 (clubstijl.css): de keuze in of uit als twee grote vakken, het product en het
+   aantal, en daaronder de laatste boekingen. De handterminal-weergave (base_pda.html) houdt zijn eigen opmaak. #}
+{% from '_iconen.html' import icoon %}
 {% block titel %}In/uit boeken{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>In/uit boeken</h1>
+    <div class="cs-rechts">
+        <span class="cs-titel-tekst">Meerdere producten tegelijk binnen?</span>
+        <a href="{{ url_for('levering_inboeken') }}" class="btn btn-rand">Levering inboeken</a>
+    </div>
+</div>
+{% endblock %}
 {% block inhoud %}
 {% if pda_modus %}
 <p class="subtitel">Kies 'in' of 'uit', het product en het aantal.</p>
-{% else %}
-<p class="subtitel">Levering binnengekomen? Boek 'in'. Verkocht of verbruikt? Boek 'uit'.</p>
-{% endif %}
-
-{% if not pda_modus %}
-<div class="kaart" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap">
-    <div>
-        <strong>Factuur of levering met meerdere producten?</strong>
-        <p class="tekst-zacht" style="margin:0.2rem 0 0">
-            Boek in één keer een hele levering in, los van een eventuele bestellijst.
-        </p>
-    </div>
-    <a href="{{ url_for('levering_inboeken') }}" class="btn btn-rand">Levering inboeken</a>
-</div>
-{% endif %}
 
 <div class="kaart">
     <form method="post" class="boeking-formulier" data-offline-wachtrij="Boeking">
@@ -56,10 +53,8 @@
             </div>
             {% include "_derving_reden.html" %}
         </fieldset>
-        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
-            {% if pda_modus %}
+        <button type="submit" class="btn btn-geel btn-icoon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-            {% endif %}
             Boeken
         </button>
     </form>
@@ -68,7 +63,6 @@
 <div class="kaart">
     <h2>Laatste boekingen</h2>
     {% if recente_mutaties %}
-    {% if pda_modus %}
     <ul class="mutatie-lijst">
         {% for m in recente_mutaties %}
         <li>
@@ -82,47 +76,92 @@
         {% endfor %}
     </ul>
     {% else %}
+    <p class="leeg">Nog geen boekingen.</p>
+    {% endif %}
+</div>
+{% else %}
+<section class="cs-paneel">
+    <form method="post" class="boeking-formulier" data-offline-wachtrij="Boeking">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="cs-inuit" role="radiogroup" aria-label="In of uit boeken">
+            <label><input type="radio" name="type" value="in" checked>{{ icoon('in') }}<span><b>In</b>levering of aanvulling</span></label>
+            <label><input type="radio" name="type" value="uit">{{ icoon('uit') }}<span><b>Uit</b>verkocht of verbruikt</span></label>
+        </div>
+        <div class="cs-velden twee">
+            <div class="veld">
+                <label for="product_id">Product</label>
+                <div class="cs-productkeuze">
+                    <img id="product-voorbeeld" class="product-thumb-preview" alt="" hidden>
+                    <select id="product_id" name="product_id" required>
+                        <option value="" disabled selected>Kies een product</option>
+                        {% for p in producten %}
+                        <option value="{{ p.id }}" data-afbeelding="{{ p.afbeelding|foto_klein }}">{{ p.naam }} ({{ p.voorraad }} {{ p.eenheid }} op voorraad)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="veld">
+                <label for="aantal">Aantal</label>
+                <input type="number" id="aantal" name="aantal" min="1" inputmode="numeric" required>
+            </div>
+            <div class="veld cs-heel">
+                <label for="opmerking">Opmerking <span>(mag leeg)</span></label>
+                <input type="text" id="opmerking" name="opmerking" placeholder="Bijvoorbeeld: kapotte krat, telling gecorrigeerd">
+            </div>
+            {% include "_derving_reden.html" %}
+        </div>
+        <div class="cs-paneel-voet">
+            <button type="submit" class="btn btn-geel">Boeken</button>
+            <span class="cs-zacht">Geboekt door {{ huidige_gebruiker }}</span>
+        </div>
+    </form>
+</section>
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop">
+        <h2>Laatste boekingen</h2>
+        <div class="cs-rechts"><a href="{{ url_for('geschiedenis') }}" class="btn btn-rand btn-klein">Alle boekingen</a></div>
+    </div>
+    {% if recente_mutaties %}
     <div class="tabel-wrap">
         <table>
-            <thead>
-                <tr><th>Datum</th><th>Product</th><th>Type</th><th>Aantal</th><th>Door</th><th>Opmerking</th></tr>
-            </thead>
+            <thead><tr><th>Datum</th><th>Product</th><th>In of uit</th><th class="cs-getal">Aantal</th><th class="cs-verberg-smal">Door</th><th class="cs-verberg-smal">Opmerking</th></tr></thead>
             <tbody>
                 {% for m in recente_mutaties %}
                 <tr>
-                    <td>{{ m.datum|datum_nl }}</td>
-                    <td>{{ m.product_naam }}</td>
-                    <td><span class="badge badge-{{ m.type }}">{{ 'in' if m.type == 'in' else 'uit' }}</span></td>
-                    <td>{{ m.aantal }} {{ m.eenheid }}</td>
-                    <td>{{ m.naam or '—' }}</td>
-                    <td class="tekst-zacht">{% if m.reden %}<span class="badge badge-uit">{{ m.reden|reden_naam }}</span> {% endif %}{{ m.opmerking or '' }}</td>
+                    <td class="cs-nowrap">{{ m.datum|dag_maand }} <span class="cs-zacht">{{ m.datum[11:16] }}</span></td>
+                    <td><a href="{{ url_for('product_detail', product_id=m.product_id) }}" class="cs-stil">{{ m.product_naam }}</a></td>
+                    <td><span class="cs-punt {{ 'cs-groen' if m.type == 'in' else 'cs-oranje' }}">{{ 'in' if m.type == 'in' else 'uit' }}</span></td>
+                    <td class="cs-getal cs-nowrap">{{ m.aantal }}<span class="cs-eenheid">{{ m.eenheid }}</span></td>
+                    <td class="cs-verberg-smal">{{ m.naam or '–' }}</td>
+                    <td class="cs-verberg-smal cs-zacht">{% if m.reden %}<strong>{{ m.reden|reden_naam }}</strong> {% endif %}{{ m.opmerking or '' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    {% endif %}
     {% else %}
-    <p class="leeg">Nog geen boekingen.</p>
+    <p class="cs-leeg">Nog geen boekingen: de eerste staat hier zodra je iets boekt.</p>
     {% endif %}
-</div>
+</section>
+{% endif %}
 
 <script>
-(function () {
-    var select = document.getElementById('product_id');
+// Een foto van het gekozen product naast de keuzelijst. Op document, zodat het ook werkt nadat de inhoud na een
+// boeking is ververst (zie _boeking_formulier_script.html).
+document.addEventListener('change', function (e) {
+    if (e.target.id !== 'product_id') return;
     var voorbeeld = document.getElementById('product-voorbeeld');
-    if (!select || !voorbeeld) return;
-    select.addEventListener('change', function () {
-        var optie = select.options[select.selectedIndex];
-        var afbeelding = optie ? optie.dataset.afbeelding : '';
-        if (afbeelding) {
-            voorbeeld.src = '/static/product_afbeeldingen/' + afbeelding;
-            voorbeeld.hidden = false;
-        } else {
-            voorbeeld.hidden = true;
-        }
-    });
-})();
+    var optie = e.target.options[e.target.selectedIndex];
+    var afbeelding = optie ? optie.dataset.afbeelding : '';
+    if (!voorbeeld) return;
+    if (afbeelding) {
+        voorbeeld.src = '/static/product_afbeeldingen/' + afbeelding;
+        voorbeeld.hidden = false;
+    } else {
+        voorbeeld.hidden = true;
+    }
+});
 </script>
 {% include "_boeking_formulier_script.html" %}
 {% endblock %}

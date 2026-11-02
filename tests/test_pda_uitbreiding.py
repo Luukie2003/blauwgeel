@@ -154,7 +154,7 @@ def test_telling_detail_op_desktop_blijft_de_tabel(ingelogde_client, db):
     pad, _ = _maak_telling(ingelogde_client, db)
     ingelogde_client.get("/weergave/desktop")
     tekst = ingelogde_client.get(pad).data.decode()
-    assert "Voorraad voor telling" in tekst and "pda-kop-menuknop" not in tekst
+    assert "Voor de telling" in tekst and "pda-kop-menuknop" not in tekst
 
 
 # ---------- Bestellijst ----------

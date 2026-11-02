@@ -1,76 +1,101 @@
 {% extends "base.html" %}
+{# Eén telling in 2.0 (clubstijl.css): wat er nu onder het minimum staat (de volgende stap na het tellen), de omzet in een
+   scorebord, en per product wat er geteld en verkocht is, met per regel 'Corrigeren'. #}
 {% import "_telling_correctie.html" as correctie with context %}
+{% from '_iconen.html' import icoon %}
 {% block titel %}Telling #{{ telling.id }}{% endblock %}
+{% block venster_titel %}
+<a href="{{ url_for('tellingen_overzicht') }}" class="cs-terug">{{ icoon('terug') }}Alle tellingen</a>
+<div class="cs-titel">
+    <h1>Telling #{{ telling.id }}</h1>
+    <span class="cs-titel-tekst">{{ telling.datum|dag_lang }} om {{ telling.datum[11:16] }}{% if telling.naam %}, geteld door {{ telling.naam }}{% endif %}</span>
+    <div class="cs-rechts">
+        <a href="{{ url_for('telling_pdf', telling_id=telling.id) }}" class="btn btn-rand">Verkooprapport (PDF)</a>
+        <a href="{{ url_for('tellen') }}" class="btn btn-rand">Nieuwe telling</a>
+    </div>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Telling #{{ telling.id }}</h1>
-<p class="subtitel">
-    {{ telling.datum|datum_nl }}{% if telling.naam %} &mdash; geteld door {{ telling.naam }}{% endif %}
-    &nbsp;&middot;&nbsp; <a href="{{ url_for('tellingen_overzicht') }}">&larr; Alle tellingen</a>
-    &nbsp;&middot;&nbsp; <a href="{{ url_for('tellen') }}">Nieuwe telling</a>
-</p>
+{% if besteladvies %}
+<section class="cs-paneel cs-paneel-let-op">
+    <div class="cs-paneel-kop">
+        <h2>{{ besteladvies|length }} {{ 'product staat' if besteladvies|length == 1 else 'producten staan' }} nu onder het minimum</h2>
+        <div class="cs-rechts"><a href="{{ url_for('bestellijst') }}" class="btn btn-geel">Naar de bestellijst</a></div>
+    </div>
+    <p class="cs-paneel-tekst cs-zacht">Op de bestellijst pas je de aantallen nog aan voordat je hem opslaat en bij de leverancier bestelt.</p>
+    <details class="cs-uitklap">
+        <summary>Welke producten?</summary>
+        <ul class="cs-kolomlijst">
+            {% for p in besteladvies %}
+            <li>{{ p.naam }} <span><span class="cs-tekort">{{ p.voorraad }}</span> <span class="cs-zacht">van {{ p.min_voorraad }} {{ p.eenheid }}</span></span></li>
+            {% endfor %}
+        </ul>
+    </details>
+</section>
+{% endif %}
 
-<div class="actiebalk">
-    <span></span>
-    <a href="{{ url_for('telling_pdf', telling_id=telling.id) }}" class="btn btn-geel">Verkooprapport (PDF)</a>
+{% set met_correctie = regels|selectattr('correctie', 'gt', 0)|list|length %}
+<div class="cs-scorebord">
+    <div><strong>{{ "€ %.2f"|format(totaal_omzet) }}</strong><span>omzet volgens deze telling</span></div>
+    <div><strong>{{ regels|length }}</strong><span>{{ 'product' if regels|length == 1 else 'producten' }} geteld</span></div>
+    <div><strong>{{ met_correctie }}</strong><span>meer geteld dan verwacht (correctie)</span></div>
 </div>
 
-<div class="kaart">
+<section class="cs-paneel">
+    <div class="cs-paneel-kop">
+        <h2>Per product</h2>
+        <span class="cs-zacht">Iets over het hoofd gezien? Met Corrigeren pas je het getelde aantal aan; de omzet gaat mee.</span>
+    </div>
     <div class="tabel-wrap">
         <table>
             <thead>
                 <tr>
                     <th>Product</th>
-                    <th>Voorraad voor telling</th>
-                    <th>Geteld</th>
-                    <th>Verkocht</th>
-                    <th>Correctie</th>
-                    <th>Omzet</th>
-                    <th></th>
+                    <th class="cs-getal cs-verberg-smal">Voor de telling</th>
+                    <th class="cs-getal cs-verberg-smal">Geteld</th>
+                    <th class="cs-getal">Verkocht</th>
+                    <th class="cs-getal cs-verberg-smal">Correctie</th>
+                    <th class="cs-getal">Omzet</th>
+                    <th class="cs-verberg-smal"></th>
                 </tr>
             </thead>
             <tbody>
                 {% for r in regels %}
                 <tr>
-                    <td>{{ r.product_naam }}</td>
-                    <td>{{ r.voorraad_voor }} {{ r.eenheid }}</td>
-                    <td>{{ r.geteld_aantal }} {{ r.eenheid }}</td>
-                    <td>
-                        {% if r.verkocht > 0 %}
-                        <span class="badge badge-uit">{{ r.verkocht }} {{ r.eenheid }}</span>
-                        {% else %}—{% endif %}
-                    </td>
-                    <td>
-                        {% if r.correctie > 0 %}
-                        <span class="badge badge-in">+{{ r.correctie }} {{ r.eenheid }}</span>
-                        {% else %}—{% endif %}
-                    </td>
-                    <td>{{ "€ %.2f"|format(r.verkocht * r.verkoopprijs) }}</td>
-                    <td>
-                        <button type="button" class="btn-tekstlink telling-corrigeren-knop"
-                                data-doel="telling-regel-corrigeren-{{ r.id }}" style="font-size:0.78rem">Corrigeren</button>
+                    <td>{{ r.product_naam }}
+                        <div class="cs-alleen-smal"><button type="button" class="cs-tekstknop telling-corrigeren-knop"
+                                data-doel="telling-regel-corrigeren-{{ r.id }}">Corrigeren</button></div></td>
+                    <td class="cs-getal cs-nowrap cs-verberg-smal">{{ r.voorraad_voor }}<span class="cs-eenheid">{{ r.eenheid }}</span></td>
+                    <td class="cs-getal cs-nowrap cs-verberg-smal">{{ r.geteld_aantal }}<span class="cs-eenheid">{{ r.eenheid }}</span></td>
+                    <td class="cs-getal cs-nowrap">{% if r.verkocht > 0 %}{{ r.verkocht }}<span class="cs-eenheid">{{ r.eenheid }}</span>{% else %}<span class="cs-grijs">–</span><span class="cs-eenheid"></span>{% endif %}</td>
+                    <td class="cs-getal cs-nowrap cs-verberg-smal">{% if r.correctie > 0 %}+{{ r.correctie }}<span class="cs-eenheid">{{ r.eenheid }}</span>{% else %}<span class="cs-grijs">–</span><span class="cs-eenheid"></span>{% endif %}</td>
+                    <td class="cs-getal cs-nowrap">{{ "€ %.2f"|format(r.verkocht * r.verkoopprijs) }}</td>
+                    <td class="cs-getal cs-verberg-smal">
+                        <button type="button" class="cs-tekstknop telling-corrigeren-knop"
+                                data-doel="telling-regel-corrigeren-{{ r.id }}">Corrigeren</button>
                     </td>
                 </tr>
-                <tr id="telling-regel-corrigeren-{{ r.id }}" class="telling-regel-corrigeren-rij" hidden>
+                <tr id="telling-regel-corrigeren-{{ r.id }}" class="telling-regel-corrigeren-rij cs-corrigeer-rij" hidden>
                     <td colspan="7">
                         <form method="post" action="{{ url_for('telling_regel_corrigeren', regel_id=r.id) }}"
                               onsubmit="return bevestigEnVerstuur(this, '{{ correctie.bevestiging(r, later_geteld) }}');"
-                              style="display:flex; gap:0.8rem; align-items:flex-end; flex-wrap:wrap; margin:0.4rem 0">
+                              class="cs-corrigeer">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <div class="veld" style="margin:0">
-                                <label for="geteld-{{ r.id }}">Werkelijk geteld aantal ({{ r.eenheid }})</label>
-                                <input type="number" id="geteld-{{ r.id }}" name="geteld_aantal" min="0"
-                                       value="{{ r.geteld_aantal }}" style="width:8rem" required>
+                            <div class="veld">
+                                <label for="geteld-{{ r.id }}">Werkelijk geteld ({{ r.eenheid }})</label>
+                                <input type="number" id="geteld-{{ r.id }}" name="geteld_aantal" min="0" inputmode="numeric"
+                                       value="{{ r.geteld_aantal }}" class="cs-invoer-getal" required>
                             </div>
-                            <div class="veld" style="margin:0; flex:1; min-width:220px">
-                                <label for="reden-{{ r.id }}">Reden (optioneel)</label>
+                            <div class="veld cs-corrigeer-reden">
+                                <label for="reden-{{ r.id }}">Reden <span>(mag leeg)</span></label>
                                 <input type="text" id="reden-{{ r.id }}" name="correctie_opmerking"
-                                       placeholder="Bijv. krat over het hoofd gezien in de koelkast">
+                                       placeholder="Bijvoorbeeld: krat over het hoofd gezien in de koelkast">
                             </div>
                             {{ correctie.voorraad_vinkje(r, later_geteld) }}
-                            <button type="submit" class="btn btn-rand btn-klein">Opslaan</button>
+                            <button type="submit" class="btn btn-rand">Opslaan</button>
                         </form>
                         {% if r.geteld_aantal_voor_correctie is not none %}
-                        <p class="tekst-zacht" style="font-size:0.78rem; margin:0 0 0.5rem">
+                        <p class="cs-zacht cs-corrigeer-noot">
                             Laatst gecorrigeerd door {{ r.gecorrigeerd_door or 'onbekend' }} op {{ r.gecorrigeerd_op|datum_nl }}
                             (was {{ r.geteld_aantal_voor_correctie }} {{ r.eenheid }} geteld){% if r.correctie_opmerking %}: {{ r.correctie_opmerking }}{% endif %}
                         </p>
@@ -82,32 +107,18 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="5" style="text-align:right"><strong>Totaal omzet</strong></td>
-                    <td colspan="2"><strong>{{ "€ %.2f"|format(totaal_omzet) }}</strong></td>
+                    <th scope="row">Totaal</th>
+                    <td class="cs-verberg-smal"></td>
+                    <td class="cs-verberg-smal"></td>
+                    <td></td>
+                    <td class="cs-verberg-smal"></td>
+                    <td class="cs-getal cs-nowrap"><strong>{{ "€ %.2f"|format(totaal_omzet) }}</strong></td>
+                    <td class="cs-verberg-smal"></td>
                 </tr>
             </tfoot>
         </table>
     </div>
-</div>
-
-{% if besteladvies %}
-<div class="kaart" style="border-color:var(--geel-donker)">
-    <div class="actiebalk" style="margin-bottom:0.6rem">
-        <div>
-            <strong>{{ besteladvies|length }} product(en) staan nu onder het minimum</strong>
-            <p class="tekst-zacht" style="margin:0.2rem 0 0">
-                Op de bestellijst kun je de aantallen nog aanpassen voordat je 'm opslaat en extern bestelt.
-            </p>
-        </div>
-        <a href="{{ url_for('bestellijst') }}" class="btn btn-geel">Naar bestellijst</a>
-    </div>
-    <ul style="margin:0; padding-left:1.2rem">
-        {% for p in besteladvies %}
-        <li>{{ p.naam }} &mdash; <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span> (minimum {{ p.min_voorraad }} {{ p.eenheid }})</li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
+</section>
 
 <script>
 document.addEventListener('click', function (e) {

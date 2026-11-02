@@ -1,15 +1,19 @@
 {% extends basis_template %}
+{# Voorraad tellen. Op de computer in 2.0 (clubstijl.css): de looplijst als strook bovenaan, dan de hele telling in één
+   tabel per categorie, met onderin een balk die blijft staan met hoeveel er al is ingevuld. De handterminal-weergave
+   (base_pda.html) toont alleen de looplijst, in zijn eigen opmaak. #}
+{% from '_iconen.html' import icoon %}
 {% block titel %}Voorraad tellen{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Voorraad tellen</h1>
+    {% if laatste_telling %}<span class="cs-titel-tekst">Laatste telling op {{ laatste_telling.datum|dag_lang }}{% if laatste_telling.naam %}, door {{ laatste_telling.naam }}{% endif %}</span>{% endif %}
+    <div class="cs-rechts"><a href="{{ url_for('tellingen_overzicht') }}" class="btn btn-rand">Eerdere tellingen en omzet</a></div>
+</div>
+{% endblock %}
 {% block inhoud %}
 {% if pda_modus %}
 <p class="subtitel">Tel de bar en het voorraadhok, product voor product.</p>
-{% else %}
-<p class="subtitel">
-    Vul het werkelijk getelde aantal in per product. Het verschil met de geregistreerde
-    voorraad wordt automatisch verwerkt als verkoop (minder geteld) of correctie (meer geteld).
-    Laat een veld leeg om dat product over te slaan.
-</p>
-{% endif %}
 
 {% if loop_onderbroken %}
 <div class="kaart loop-aankondiging" style="border-color:var(--geel-donker)">
@@ -42,88 +46,114 @@
     <div>
         <strong>Onderweg tellen met je telefoon?</strong>
         <p class="tekst-zacht" style="margin:0.2rem 0 0">
-            {% if pda_modus %}
             Eerst de bar, dan het voorraadhok — de app telt ze aan het eind samen op.
-            {% else %}
-            Loop eerst product voor product de bar langs, daarna dezelfde lijst nog een keer
-            voor het voorraadhok — aan het eind telt de app beide plekken bij elkaar op.
-            {% endif %}
         </p>
     </div>
-    <a href="{{ url_for('tellen_lopen_starten') }}" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
-        {% if pda_modus %}
+    <a href="{{ url_for('tellen_lopen_starten') }}" class="btn btn-geel btn-icoon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg>
-        {% endif %}
         Looplijst starten
     </a>
 </div>
 {% endif %}
-
-{% if not pda_modus %}
-<div class="kaart" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap">
-    <div>
-        <strong>Eerdere tellingen en omzet</strong>
-        <p class="tekst-zacht" style="margin:0.2rem 0 0">
-            Bekijk alle tellingen, de omzet per week, en download verkooprapporten per periode.
+{% else %}
+{% if loop_onderbroken %}
+<div class="cs-melding let-op">
+    {{ icoon('let-op') }}
+    <div class="cs-melding-tekst">
+        <strong>Looplijst onderbroken.</strong>
+        <p>
+            {% if loop_onderbroken.in_controle %}
+            Je was klaar met tellen en hoefde alleen nog te controleren en te bevestigen.
+            {% else %}
+            Je was bij product {{ loop_onderbroken.nummer }} van {{ loop_onderbroken.totaal }}
+            ({{ 'bar' if loop_onderbroken.fase == 'bar' else 'voorraadhok' }}).
+            {% endif %}
+            {% if loop_onderbroken.bijgewerkt_op %}Laatst bijgewerkt {{ loop_onderbroken.bijgewerkt_op|datum_nl }}.{% endif %}
+            Wat je al hebt ingevuld is bewaard.
         </p>
     </div>
-    <a href="{{ url_for('tellingen_overzicht') }}" class="btn btn-rand">Naar tellingen &amp; omzet</a>
+    <div class="cs-rechts">
+        <a href="{{ url_for('tellen_lopen_hervatten') }}" class="btn btn-rand">Doorgaan</a>
+        <a href="{{ url_for('tellen_lopen_starten') }}" class="btn btn-rand"
+           onclick="toonBevestiging('Opnieuw beginnen? Wat je tot nu toe hebt ingevuld wordt weggegooid.', function () { window.location = '{{ url_for('tellen_lopen_starten') }}'; }, {ja: 'Ja, opnieuw', nee: 'Nee'}); return false;">Opnieuw beginnen</a>
+        <form method="post" action="{{ url_for('tellen_lopen_afbreken') }}"
+              onsubmit="return bevestigEnVerstuur(this, 'Looplijst afbreken? Wat je hebt ingevuld wordt niet opgeslagen, ook niet wat in de app geteld is.', {ja: 'Ja, afbreken', nee: 'Nee'});">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-gevaar">Afbreken</button>
+        </form>
+    </div>
 </div>
+{% else %}
+<div class="cs-melding info">
+    {{ icoon('telefoon') }}
+    <div class="cs-melding-tekst">
+        <strong>Tellen met je telefoon?</strong>
+        <p>Loop met de looplijst product voor product eerst de bar langs en daarna het voorraadhok; aan het eind telt de app beide plekken bij elkaar op.</p>
+    </div>
+    <div class="cs-rechts"><a href="{{ url_for('tellen_lopen_starten') }}" class="btn btn-rand">Looplijst starten</a></div>
+</div>
+{% endif %}
 
-<div class="kaart">
-    <form method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <fieldset class="groupbox">
-            <legend>Telling</legend>
-            <div class="tabel-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Product</th>
-                            <th>Categorie</th>
-                            <th>Geregistreerde voorraad</th>
-                            <th>Geteld aantal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in producten %}
-                        <tr>
-                            <td>
-                                {% if p.afbeelding %}
-                                <img src="{{ url_for('static', filename='product_afbeeldingen/' + (p.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
-                                {% endif %}
-                            </td>
-                            <td>{{ p.naam }}</td>
-                            <td>{{ p.categorie }}</td>
-                            <td>{{ p.voorraad }} {{ p.eenheid }}</td>
-                            <td>
-                                <input type="number" name="geteld_{{ p.id }}" min="0" style="width:6rem" inputmode="numeric"
-                                       placeholder="overslaan" aria-label="{{ p.naam }}"
-                                       data-turf="1,5,{% if p.besteleenheid_factor and p.besteleenheid_factor > 1 %}{{ p.besteleenheid_factor }}:{{ p|besteleenheid_naam }}{% else %}10{% endif %}"> {{ p.eenheid }}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+<form method="post" data-teller="geteld_">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <section class="cs-paneel">
+        <div class="cs-paneel-kop">
+            <h2>Telling invullen</h2>
+            <span class="cs-zacht">Minder geteld dan in de administratie telt als verkocht, meer als correctie. Een leeg veld slaan we over.</span>
+        </div>
+        <div class="cs-velden">
+            <div class="veld">
+                <label for="datum">Datum en tijd van de telling</label>
+                <input type="datetime-local" id="datum" name="datum" value="{{ nu_datetime_local }}">
             </div>
-        </fieldset>
-        <div class="formgrid">
+            <div class="veld">
+                <label for="opmerking">Opmerking <span>(mag leeg)</span></label>
+                <input type="text" id="opmerking" name="opmerking">
+            </div>
             <div class="veld">
                 <label>Geteld door</label>
                 <p class="veld-waarde">{{ huidige_gebruiker }}</p>
             </div>
-            <div class="veld">
-                <label for="opmerking">Opmerking (optioneel)</label>
-                <input type="text" id="opmerking" name="opmerking">
-            </div>
-            <div class="veld">
-                <label for="datum">Datum/tijd van deze telling</label>
-                <input type="datetime-local" id="datum" name="datum" value="{{ nu_datetime_local }}">
-            </div>
         </div>
+        <div class="tabel-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="cs-verberg-smal cs-foto"></th>
+                        <th>Product</th>
+                        <th class="cs-getal cs-verberg-smal">In de administratie</th>
+                        <th>Geteld</th>
+                    </tr>
+                </thead>
+                {% for categorie, producten_in_categorie in producten|groupby('categorie') %}
+                <tbody>
+                    <tr class="cs-groep-rij"><th colspan="4" scope="rowgroup">{{ categorie }} <span class="cs-aantal">{{ producten_in_categorie|length }}</span></th></tr>
+                    {% for p in producten_in_categorie %}
+                    <tr>
+                        <td class="cs-verberg-smal">
+                            {% if p.afbeelding %}
+                            <img src="{{ url_for('static', filename='product_afbeeldingen/' + (p.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
+                            {% endif %}
+                        </td>
+                        <td>{{ p.naam }}<div class="cs-alleen-smal cs-zacht">{{ p.voorraad }} {{ p.eenheid }} in de administratie</div></td>
+                        <td class="cs-getal cs-nowrap cs-verberg-smal">{{ p.voorraad }}<span class="cs-eenheid">{{ p.eenheid }}</span></td>
+                        <td class="cs-telcel">
+                            <input type="number" name="geteld_{{ p.id }}" min="0" inputmode="numeric" class="cs-invoer-getal"
+                                   placeholder="overslaan" aria-label="{{ p.naam }}"
+                                   data-turf="1,5,{% if p.besteleenheid_factor and p.besteleenheid_factor > 1 %}{{ p.besteleenheid_factor }}:{{ p|besteleenheid_naam }}{% else %}10{% endif %}">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% endfor %}
+            </table>
+        </div>
+    </section>
+    <div class="cs-verzendbalk">
+        <span><strong data-teller-uitkomst>0</strong> van {{ producten|length }}<span class="cs-verberg-smal"> producten</span> ingevuld</span>
+        <span class="cs-verberg-smal">Wat je leeg laat, telt niet mee.</span>
         <button type="submit" class="btn btn-geel">Telling verwerken</button>
-    </form>
-</div>
+    </div>
+</form>
 {% endif %}
 {% endblock %}

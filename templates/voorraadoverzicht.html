@@ -1,267 +1,242 @@
 {% extends "base.html" %}
+{# Het voorraadoverzicht in 2.0 (clubstijl.css): de stand in een scorebord, alle actieve producten per categorie met een
+   zoekveld, de waarde per categorie naast de top 10, de fusten, wat er opvalt en onderaan de volledige lijst met
+   filters. #}
+{% from '_iconen.html' import icoon %}
 {% block titel %}Voorraadoverzicht{% endblock %}
-{% block inhoud %}
-<div class="actiebalk">
-    <p class="subtitel" style="margin:0">Volledige stand van zaken van de kantinevoorraad.</p>
-    <div style="display:flex; gap:0.5rem">
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Voorraadoverzicht</h1>
+    <div class="cs-rechts">
         <a href="{{ url_for('voorraadoverzicht_csv_route') }}" class="btn btn-rand">Excel (CSV)</a>
         <a href="{{ url_for('voorraadoverzicht_pdf_route') }}" class="btn btn-geel">Uitgebreide PDF</a>
     </div>
 </div>
-
-<div class="statgrid">
-    <div class="stat">
-        <div class="getal">{{ "€ %.2f"|format(totale_waarde) }}</div>
-        <div class="label">Totale voorraadwaarde (verkoopprijs)</div>
-    </div>
-    <div class="stat">
-        <div class="getal">{{ aantal_producten }}</div>
-        <div class="label">Producten in {{ aantal_categorieen }} categorieën</div>
-    </div>
-    <div class="stat {{ 'waarschuwing' if onder_minimum|length > 0 }}">
-        <div class="getal">{{ onder_minimum|length }}</div>
-        <div class="label">Onder minimumvoorraad</div>
-    </div>
-    <div class="stat {{ 'waarschuwing' if zonder_voorraad|length > 0 }}">
-        <div class="getal">{{ zonder_voorraad|length }}</div>
-        <div class="label">Producten op 0 voorraad</div>
-    </div>
+{% endblock %}
+{% block inhoud %}
+<div class="cs-scorebord">
+    <div><strong>{{ totale_waarde|euro }}</strong><span>voorraadwaarde tegen verkoopprijs</span></div>
+    <div><strong>{{ aantal_producten }}</strong><span>producten in {{ aantal_categorieen }} categorieën</span></div>
+    <a href="{{ url_for('bestellijst') }}" class="cs-scorebord-vak"><strong class="{{ 'cs-rood' if onder_minimum else '' }}">{{ onder_minimum|length }}</strong><span>onder het minimum</span></a>
+    <div><strong class="{{ 'cs-rood' if zonder_voorraad else '' }}">{{ zonder_voorraad|length }}</strong><span>op 0 voorraad</span></div>
 </div>
 
-<div class="kaart">
-    <div class="actiebalk" style="margin-bottom:0.6rem">
-        <h2 style="margin:0">Alle actieve producten</h2>
-        <a href="{{ url_for('producten_lijst') }}" style="font-size:0.85rem">Beheren op de Producten-pagina &rarr;</a>
+<section class="cs-paneel">
+    <div class="cs-paneel-kop">
+        <h2>Alle actieve producten</h2>
+        {% if actieve_producten %}
+        <div class="cs-rechts">
+            <span id="voorraadoverzicht-aantal" class="cs-aantal"></span>
+            <label class="cs-zoek">{{ icoon('zoeken') }}<input type="search" id="voorraadoverzicht-zoek" placeholder="Zoek op naam of artikelcode" aria-label="Zoek op naam of artikelcode"></label>
+            <a href="{{ url_for('producten_lijst') }}" class="btn btn-rand btn-klein">Producten beheren</a>
+        </div>
+        {% endif %}
     </div>
     {% if actieve_producten %}
-    <div class="filterbalk">
-        <input type="text" id="voorraadoverzicht-zoek" placeholder="Zoek op naam of artikelcode...">
-        <span id="voorraadoverzicht-aantal" class="tekst-zacht"></span>
+    <div class="tabel-wrap" id="voorraadoverzicht-groepen">
+        <table id="voorraadoverzicht-tabel">
+            <thead>
+                <tr><th>Product</th><th class="cs-verberg-smal">Subcategorie</th><th class="cs-getal">Voorraad</th><th class="cs-getal cs-verberg-smal">Minimum</th></tr>
+            </thead>
+            {% for categorie, producten_in_categorie in actieve_producten|groupby('categorie') %}
+            <tbody class="categorie-groep" data-categorie-groep="{{ categorie }}">
+                <tr class="cs-groep-rij">
+                    <th colspan="4" scope="rowgroup"><button type="button" class="cs-groep-knop" aria-expanded="true">{{ categorie }} <span class="cs-aantal">{{ producten_in_categorie|length }}</span></button></th>
+                </tr>
+                {% for p in producten_in_categorie %}
+                <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or ''))|lower }}">
+                    <td>{{ p.naam }}{% if p.artikelcode %}<span class="cs-code">{{ p.artikelcode }}</span>{% endif %}</td>
+                    <td class="cs-verberg-smal">{{ p.subcategorie or '' }}</td>
+                    {% if p.voorraad < p.min_voorraad %}
+                    <td class="cs-getal cs-tekort" title="Onder het minimum van {{ p.min_voorraad }}">{{ p.voorraad }} <span class="cs-eenheid">{{ p.eenheid }}</span></td>
+                    {% else %}
+                    <td class="cs-getal">{{ p.voorraad }} <span class="cs-eenheid">{{ p.eenheid }}</span></td>
+                    {% endif %}
+                    <td class="cs-getal cs-verberg-smal cs-grijs">{{ p.min_voorraad or '–' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% endfor %}
+        </table>
     </div>
-    <div id="voorraadoverzicht-groepen">
-        {% for categorie, producten_in_categorie in actieve_producten|groupby('categorie') %}
-        <details class="categorie-groep" open data-categorie-groep="{{ categorie }}">
-            <summary class="categorie-groep-kop">
-                <span>{{ categorie }}</span>
-                <span class="tekst-zacht categorie-groep-aantal">{{ producten_in_categorie|length }}</span>
-            </summary>
-            <div class="tabel-wrap">
-                <table>
-                    <thead>
-                        <tr><th>Product</th><th>Subcategorie</th><th>Voorraad</th><th>Minimum</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for p in producten_in_categorie %}
-                        <tr data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or ''))|lower }}">
-                            <td>
-                                {{ p.naam }}
-                                {% if p.artikelcode %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.artikelcode }}</div>{% endif %}
-                            </td>
-                            <td>{{ p.subcategorie or '—' }}</td>
-                            <td>
-                                {% if p.voorraad < p.min_voorraad %}
-                                <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
-                                {% else %}
-                                <span class="badge badge-ok">{{ p.voorraad }} {{ p.eenheid }}</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </details>
-        {% endfor %}
-    </div>
-    <p class="leeg" id="voorraadoverzicht-leeg" style="display:none">Geen producten gevonden voor dit filter.</p>
+    <p class="cs-leeg" id="voorraadoverzicht-leeg" hidden>Geen product gevonden met deze naam of artikelcode.</p>
     {% else %}
-    <p class="leeg">Nog geen actieve producten.</p>
+    <p class="cs-leeg">Nog geen actieve producten.</p>
     {% endif %}
-</div>
+</section>
 
 <script>
 (function () {
+    // Zoeken op naam of artikelcode, en een categorie dichtklappen met de knop in de kopregel.
     var zoekVeld = document.getElementById('voorraadoverzicht-zoek');
     if (!zoekVeld) return;
-    var rijen = Array.prototype.slice.call(document.querySelectorAll('#voorraadoverzicht-groepen tbody tr'));
-    var groepen = Array.prototype.slice.call(document.querySelectorAll('#voorraadoverzicht-groepen .categorie-groep'));
+    var tabel = document.getElementById('voorraadoverzicht-tabel');
+    var rijen = Array.prototype.slice.call(tabel.querySelectorAll('tr[data-zoek]'));
+    var groepen = Array.prototype.slice.call(tabel.querySelectorAll('tbody.categorie-groep'));
     var aantalLabel = document.getElementById('voorraadoverzicht-aantal');
     var leegMelding = document.getElementById('voorraadoverzicht-leeg');
 
     function filter() {
         var zoek = zoekVeld.value.trim().toLowerCase();
         var zichtbaar = 0;
+        tabel.classList.toggle('zoekt', zoek !== '');
         rijen.forEach(function (rij) {
             var toon = !zoek || rij.dataset.zoek.indexOf(zoek) !== -1;
-            rij.style.display = toon ? '' : 'none';
+            rij.hidden = !toon;
             if (toon) zichtbaar++;
         });
         groepen.forEach(function (groep) {
-            var heeftZichtbare = Array.prototype.some.call(
-                groep.querySelectorAll('tbody tr'),
-                function (rij) { return rij.style.display !== 'none'; }
-            );
-            groep.style.display = heeftZichtbare ? '' : 'none';
+            groep.hidden = !groep.querySelector('tr[data-zoek]:not([hidden])');
         });
-        aantalLabel.textContent = zichtbaar + ' van ' + rijen.length + ' actieve producten';
-        leegMelding.style.display = zichtbaar === 0 ? '' : 'none';
+        aantalLabel.textContent = zoek ? zichtbaar + ' van ' + rijen.length : rijen.length + ' producten';
+        leegMelding.hidden = zichtbaar !== 0;
     }
 
+    tabel.addEventListener('click', function (e) {
+        var knop = e.target.closest('.cs-groep-knop');
+        if (!knop) return;
+        var dicht = knop.closest('tbody').classList.toggle('dicht');
+        knop.setAttribute('aria-expanded', dicht ? 'false' : 'true');
+    });
     zoekVeld.addEventListener('input', filter);
     filter();
 })();
 </script>
 
-<div class="kaart">
-    <h2>Voorraadwaarde per categorie</h2>
-    {% if categorie_lijst %}
-    <div class="tabel-wrap">
-        <table>
-            <thead>
-                <tr><th>Categorie</th><th>Producten</th><th>Waarde</th><th>Aandeel</th></tr>
-            </thead>
-            <tbody>
-                {% for c in categorie_lijst %}
-                <tr>
-                    <td>{{ c.naam }}</td>
-                    <td>{{ c.aantal }}</td>
-                    <td>{{ "€ %.2f"|format(c.waarde) }}</td>
-                    <td>
-                        <div class="waarde-balk-wrap">
-                            <div class="waarde-balk" style="width: {{ c.percentage }}%"></div>
-                            <span>{{ "%.1f"|format(c.percentage) }}%</span>
-                        </div>
-                    </td>
-                </tr>
-                {% for s in c.subcategorieen %}
-                <tr class="tekst-zacht" style="font-size:0.85rem">
-                    <td style="padding-left:1.6rem">{{ s.naam }}</td>
-                    <td>{{ s.aantal }}</td>
-                    <td>{{ "€ %.2f"|format(s.waarde) }}</td>
-                    <td>{{ "%.1f"|format(s.percentage) }}% van {{ c.naam }}</td>
-                </tr>
-                {% endfor %}
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p class="leeg">Nog geen producten.</p>
-    {% endif %}
-</div>
+<div class="cs-raster">
+    <section class="cs-paneel">
+        <div class="cs-paneel-kop"><h2>Voorraadwaarde per categorie</h2></div>
+        {% if categorie_lijst %}
+        <div class="tabel-wrap">
+            <table>
+                <thead>
+                    <tr><th>Categorie</th><th class="cs-getal cs-verberg-smal">Producten</th><th class="cs-getal">Waarde</th><th>Aandeel</th></tr>
+                </thead>
+                <tbody>
+                    {% set grootste = categorie_lijst|map(attribute='percentage')|max %}
+                    {% for c in categorie_lijst %}
+                    <tr>
+                        <td>{{ c.naam }}</td>
+                        <td class="cs-getal cs-verberg-smal">{{ c.aantal }}</td>
+                        <td class="cs-getal cs-nowrap">{{ "€ %.2f"|format(c.waarde) }}</td>
+                        <td class="cs-nowrap"><span class="cs-balk blauw" title="{{ '%.1f'|format(c.percentage) }}% van de voorraadwaarde"><i style="width: {{ (c.percentage / grootste * 100) if grootste else 0 }}%"></i></span> <span class="cs-zacht">{{ "%.1f"|format(c.percentage) }}%</span></td>
+                    </tr>
+                    {% for s in c.subcategorieen %}
+                    <tr class="cs-subrij">
+                        <td>{{ s.naam }}</td>
+                        <td class="cs-getal cs-verberg-smal">{{ s.aantal }}</td>
+                        <td class="cs-getal cs-nowrap">{{ "€ %.2f"|format(s.waarde) }}</td>
+                        <td>{{ "%.1f"|format(s.percentage) }}% van {{ c.naam }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="cs-leeg">Nog geen producten.</p>
+        {% endif %}
+    </section>
 
-<div class="kaart">
-    <h2>Top 10 producten op voorraadwaarde</h2>
-    {% if top_waarde %}
-    <div class="tabel-wrap">
-        <table>
-            <thead>
-                <tr><th>Product</th><th>Voorraad</th><th>Verkoopprijs</th><th>Waarde</th></tr>
-            </thead>
-            <tbody>
-                {% for p in top_waarde %}
-                <tr>
-                    <td>{{ p.naam }}</td>
-                    <td>{{ p.voorraad }} {{ p.eenheid }}</td>
-                    <td>{{ "€ %.2f"|format(p.verkoopprijs) }}</td>
-                    <td>{{ "€ %.2f"|format(p.voorraad * p.verkoopprijs) }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <p class="leeg">Nog geen producten.</p>
-    {% endif %}
+    <section class="cs-paneel">
+        <div class="cs-paneel-kop"><h2>Top 10 producten op voorraadwaarde</h2></div>
+        {% if top_waarde %}
+        <div class="tabel-wrap">
+            <table>
+                <thead>
+                    <tr><th>Product</th><th class="cs-getal">Voorraad</th><th class="cs-getal cs-verberg-smal">Prijs</th><th class="cs-getal">Waarde</th></tr>
+                </thead>
+                <tbody>
+                    {% for p in top_waarde %}
+                    <tr>
+                        <td>{{ p.naam }}</td>
+                        <td class="cs-getal cs-nowrap">{{ p.voorraad }} <span class="cs-eenheid">{{ p.eenheid }}</span></td>
+                        <td class="cs-getal cs-verberg-smal cs-nowrap">{{ "€ %.2f"|format(p.verkoopprijs) }}</td>
+                        <td class="cs-getal cs-nowrap">{{ "€ %.2f"|format(p.voorraad * p.verkoopprijs) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="cs-leeg">Nog geen producten.</p>
+        {% endif %}
+    </section>
 </div>
 
 {% if fust_producten %}
-<div class="kaart">
-    <h2>Fusten</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Waarschijnlijke verkoop per fust, afgeleid uit de voorraadtellingen.
-        Fusten worden per glas getapt, dus dit is een schatting op basis van
-        glazen per fust &mdash; geen exacte tapregistratie.
-    </p>
+<section class="cs-paneel">
+    <div class="cs-paneel-kop">
+        <h2>Fusten</h2>
+        <span class="cs-zacht">Een schatting uit de tellingen: een fust wordt per glas getapt, dus dit rekent met de glazen per fust.</span>
+    </div>
     <div class="tabel-wrap">
         <table>
             <thead>
-                <tr><th>Product</th><th>Voorraad</th><th>Glazen per fust</th><th>Prijs per glas</th><th></th></tr>
+                <tr><th>Product</th><th class="cs-getal">Voorraad</th><th class="cs-getal cs-verberg-smal">Glazen per fust</th><th class="cs-getal cs-verberg-smal">Prijs per glas</th><th></th></tr>
             </thead>
             <tbody>
                 {% for p in fust_producten %}
                 <tr>
                     <td>{{ p.naam }}</td>
-                    <td>{{ p.voorraad }} {{ p.eenheid }}</td>
-                    <td>{{ p.glazen_per_fust }}</td>
-                    <td>€ {{ '%.2f'|format(p.prijs_per_glas) }}</td>
-                    <td><a href="{{ url_for('product_bewerken', product_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a></td>
+                    <td class="cs-getal cs-nowrap">{{ p.voorraad }} <span class="cs-eenheid">{{ p.eenheid }}</span></td>
+                    <td class="cs-getal cs-verberg-smal">{{ p.glazen_per_fust }}</td>
+                    <td class="cs-getal cs-nowrap cs-verberg-smal">€ {{ '%.2f'|format(p.prijs_per_glas) }}</td>
+                    <td class="cs-getal"><a href="{{ url_for('product_bewerken', product_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-
-    <div class="statgrid" style="margin-top:1rem">
-        <div class="stat">
-            <div class="getal">{{ fust_verkopen.totaal_fusten }}</div>
-            <div class="label">Fusten leeg (laatste {{ fust_verkopen.gebeurtenissen|length }} tellingen)</div>
-        </div>
-        <div class="stat">
-            <div class="getal">{{ fust_verkopen.totaal_glazen }}</div>
-            <div class="label">Waarschijnlijk aantal glazen</div>
-        </div>
-        <div class="stat">
-            <div class="getal">€ {{ '%.2f'|format(fust_verkopen.totaal_bedrag) }}</div>
-            <div class="label">Waarschijnlijke omzet</div>
-        </div>
+    <div class="cs-scorebord in-paneel">
+        <div><strong>{{ fust_verkopen.totaal_fusten }}</strong><span>fusten leeg in de laatste {{ fust_verkopen.gebeurtenissen|length }} tellingen</span></div>
+        <div><strong>{{ fust_verkopen.totaal_glazen }}</strong><span>glazen, waarschijnlijk</span></div>
+        <div><strong>€ {{ '%.2f'|format(fust_verkopen.totaal_bedrag) }}</strong><span>omzet, waarschijnlijk</span></div>
     </div>
-
     {% if fust_verkopen.gebeurtenissen %}
-    <div class="tabel-wrap" style="margin-top:1rem">
+    <div class="tabel-wrap">
         <table>
             <thead>
-                <tr><th>Datum (telling)</th><th>Fust</th><th>Aantal leeg</th><th>Glazen (schatting)</th><th>Bedrag (schatting)</th></tr>
+                <tr><th>Telling</th><th>Fust</th><th class="cs-getal">Leeg</th><th class="cs-getal cs-verberg-smal">Glazen</th><th class="cs-getal">Bedrag</th></tr>
             </thead>
             <tbody>
                 {% for g in fust_verkopen.gebeurtenissen %}
                 <tr>
-                    <td>{{ g.datum|datum_nl }}</td>
+                    <td class="cs-nowrap">{{ g.datum|dag_maand }}<span class="cs-verberg-smal"> {{ g.datum[:4] }}</span></td>
                     <td>{{ g.product_naam }}</td>
-                    <td>{{ g.aantal_fusten }}</td>
-                    <td>{{ g.glazen }}</td>
-                    <td>€ {{ '%.2f'|format(g.bedrag) }}</td>
+                    <td class="cs-getal">{{ g.aantal_fusten }}</td>
+                    <td class="cs-getal cs-verberg-smal">{{ g.glazen }}</td>
+                    <td class="cs-getal cs-nowrap">€ {{ '%.2f'|format(g.bedrag) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     {% else %}
-    <p class="leeg" style="margin-top:1rem">Nog geen fust leeg geteld sinds dit is ingesteld.</p>
+    <p class="cs-leeg">Nog geen fust leeg geteld sinds dit is ingesteld.</p>
     {% endif %}
-</div>
+</section>
 {% endif %}
 
-<div class="kaart">
-    <h2>Opvallende zaken</h2>
-    <div class="opvallend-grid">
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Opvallende zaken</h2></div>
+    {% if inactief_met_voorraad or zonder_prijs or langst_niet_geteld or nooit_geteld %}
+    <div class="cs-signalen">
         {% if inactief_met_voorraad %}
-        <div class="opvallend-kaart opvallend-waarschuwing">
-            <strong>{{ inactief_met_voorraad|length }} inactieve product(en) met nog voorraad</strong>
-            <p class="tekst-zacht">Deze staan niet meer bij tellen/boeken, maar er ligt nog wel voorraad.</p>
+        <div class="cs-signaal urgent">
+            <h3>{{ inactief_met_voorraad|length }} {{ 'inactief product' if inactief_met_voorraad|length == 1 else 'inactieve producten' }} met nog voorraad</h3>
+            <p>Deze staan niet meer bij tellen en boeken, maar er ligt nog wel voorraad.</p>
             <ul>
                 {% for p in inactief_met_voorraad %}
-                <li>{{ p.naam }} — {{ p.voorraad }} {{ p.eenheid }}</li>
+                <li>{{ p.naam }} <span>{{ p.voorraad }} {{ p.eenheid }}</span></li>
                 {% endfor %}
             </ul>
         </div>
         {% endif %}
-
         {% if zonder_prijs %}
-        <div class="opvallend-kaart">
-            <strong>{{ zonder_prijs|length }} product(en) zonder verkoopprijs</strong>
-            <p class="tekst-zacht">Deze tellen voor € 0 mee in de voorraadwaarde en omzetrapporten.</p>
+        <div class="cs-signaal let-op">
+            <h3>{{ zonder_prijs|length }} {{ 'product' if zonder_prijs|length == 1 else 'producten' }} zonder verkoopprijs</h3>
+            <p>Deze tellen voor € 0 mee in de voorraadwaarde en de omzet.</p>
             <ul>
                 {% for p in zonder_prijs %}
                 <li>{{ p.naam }}</li>
@@ -269,22 +244,21 @@
             </ul>
         </div>
         {% endif %}
-
         {% if langst_niet_geteld %}
-        <div class="opvallend-kaart">
-            <strong>Langst niet geteld</strong>
+        <div class="cs-signaal">
+            <h3>Langst niet geteld</h3>
+            <p>Wanneer deze producten voor het laatst geteld zijn.</p>
             <ul>
                 {% for r in langst_niet_geteld %}
-                <li>{{ r.product.naam }} — {{ r.laatste_datum|datum_nl }}</li>
+                <li>{{ r.product.naam }} <span>{{ r.laatste_datum|dag_maand }} {{ r.laatste_datum[:4] }}</span></li>
                 {% endfor %}
             </ul>
         </div>
         {% endif %}
-
         {% if nooit_geteld %}
-        <div class="opvallend-kaart">
-            <strong>{{ nooit_geteld|length }} product(en) nog nooit geteld</strong>
-            <p class="tekst-zacht">De voorraad hiervan staat nog op wat er handmatig is ingevoerd.</p>
+        <div class="cs-signaal">
+            <h3>{{ nooit_geteld|length }} {{ 'product' if nooit_geteld|length == 1 else 'producten' }} nog nooit geteld</h3>
+            <p>De voorraad hiervan staat nog op wat er met de hand is ingevoerd.</p>
             <ul>
                 {% for p in nooit_geteld %}
                 <li>{{ p.naam }}</li>
@@ -292,60 +266,52 @@
             </ul>
         </div>
         {% endif %}
-
-        {% if not inactief_met_voorraad and not zonder_prijs and not langst_niet_geteld and not nooit_geteld %}
-        <p class="leeg">Niets opvallends gevonden — alles ziet er netjes uit.</p>
-        {% endif %}
     </div>
-</div>
+    {% else %}
+    <p class="cs-leeg">Niets opvallends: alles ziet er netjes uit.</p>
+    {% endif %}
+</section>
 
-<div class="kaart">
-    <h2>Volledige productenlijst</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Filter en sorteer door het hele assortiment heen (ook inactieve producten).
-    </p>
+<section class="cs-paneel">
+    <div class="cs-paneel-kop">
+        <h2>Volledige productenlijst</h2>
+        <span class="cs-zacht">Het hele assortiment, ook de inactieve producten.</span>
+        {% if producten %}<div class="cs-rechts"><span id="vpl-aantal" class="cs-aantal"></span></div>{% endif %}
+    </div>
     {% if producten %}
-    <div style="display:flex; gap:2.2rem; flex-wrap:wrap; margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid var(--rand-licht)">
-        <div>
-            <div style="font-weight:700; font-size:0.8rem; margin-bottom:0.4rem">Status</div>
-            <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer; margin-bottom:0.2rem">
-                <input type="checkbox" class="vpl-status" value="actief" style="width:auto" checked> Actief
-            </label>
-            <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer">
-                <input type="checkbox" class="vpl-status" value="inactief" style="width:auto" checked> Inactief
-            </label>
-        </div>
-        <div style="max-width:220px">
-            <div style="font-weight:700; font-size:0.8rem; margin-bottom:0.4rem">
-                Categorie
-                <a href="#" class="vpl-alles" data-groep="vpl-categorie" data-actie="alles" style="font-weight:400; font-size:0.75rem; margin-left:0.4rem">alles</a>
-                <a href="#" class="vpl-alles" data-groep="vpl-categorie" data-actie="geen" style="font-weight:400; font-size:0.75rem; margin-left:0.3rem">geen</a>
+    <div class="cs-filters">
+        <fieldset class="cs-filter">
+            <legend>Status</legend>
+            <div class="cs-vinkjes">
+                <label class="cs-vinkje"><input type="checkbox" class="vpl-status" value="actief" checked> Actief</label>
+                <label class="cs-vinkje"><input type="checkbox" class="vpl-status" value="inactief" checked> Inactief</label>
             </div>
-            {% for c in alle_categorieen_lijst %}
-            <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer; margin-bottom:0.2rem">
-                <input type="checkbox" class="vpl-categorie" value="{{ c }}" style="width:auto" checked> {{ c }}
-            </label>
-            {% endfor %}
-        </div>
-        <div style="max-width:220px">
-            <div style="font-weight:700; font-size:0.8rem; margin-bottom:0.4rem">
-                Subcategorie
-                <a href="#" class="vpl-alles" data-groep="vpl-subcategorie" data-actie="alles" style="font-weight:400; font-size:0.75rem; margin-left:0.4rem">alles</a>
-                <a href="#" class="vpl-alles" data-groep="vpl-subcategorie" data-actie="geen" style="font-weight:400; font-size:0.75rem; margin-left:0.3rem">geen</a>
+        </fieldset>
+        <fieldset class="cs-filter breed">
+            <legend>Categorie
+                <a href="#" class="vpl-alles" data-groep="vpl-categorie" data-actie="alles">alles</a>
+                <a href="#" class="vpl-alles" data-groep="vpl-categorie" data-actie="geen">geen</a></legend>
+            <div class="cs-vinkjes">
+                {% for c in alle_categorieen_lijst %}
+                <label class="cs-vinkje"><input type="checkbox" class="vpl-categorie" value="{{ c }}" checked> {{ c }}</label>
+                {% endfor %}
             </div>
-            {% if heeft_producten_zonder_subcategorie %}
-            <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer; margin-bottom:0.2rem">
-                <input type="checkbox" class="vpl-subcategorie" value="" style="width:auto" checked> Geen subcategorie
-            </label>
-            {% endif %}
-            {% for s in alle_subcategorieen_lijst %}
-            <label style="display:flex; align-items:center; gap:0.3rem; font-weight:400; cursor:pointer; margin-bottom:0.2rem">
-                <input type="checkbox" class="vpl-subcategorie" value="{{ s }}" style="width:auto" checked> {{ s }}
-            </label>
-            {% endfor %}
-        </div>
-        <div>
-            <div style="font-weight:700; font-size:0.8rem; margin-bottom:0.4rem">Sorteren op</div>
+        </fieldset>
+        <fieldset class="cs-filter breed">
+            <legend>Subcategorie
+                <a href="#" class="vpl-alles" data-groep="vpl-subcategorie" data-actie="alles">alles</a>
+                <a href="#" class="vpl-alles" data-groep="vpl-subcategorie" data-actie="geen">geen</a></legend>
+            <div class="cs-vinkjes">
+                {% if heeft_producten_zonder_subcategorie %}
+                <label class="cs-vinkje"><input type="checkbox" class="vpl-subcategorie" value="" checked> Geen subcategorie</label>
+                {% endif %}
+                {% for s in alle_subcategorieen_lijst %}
+                <label class="cs-vinkje"><input type="checkbox" class="vpl-subcategorie" value="{{ s }}" checked> {{ s }}</label>
+                {% endfor %}
+            </div>
+        </fieldset>
+        <div class="cs-filter">
+            <label for="vpl-sorteren">Sorteren op</label>
             <select id="vpl-sorteren">
                 <option value="standaard">Categorie (standaard)</option>
                 <option value="naam-az">Naam (A-Z)</option>
@@ -355,45 +321,36 @@
             </select>
         </div>
     </div>
-
-    <span id="vpl-aantal" class="tekst-zacht" style="display:block; margin-bottom:0.6rem"></span>
     <div class="tabel-wrap">
         <table id="vpl-tabel">
             <thead>
-                <tr><th>Product</th><th>Categorie</th><th>Subcategorie</th><th>Status</th><th>Voorraad</th><th>Minimum</th></tr>
+                <tr><th>Product</th><th class="cs-verberg-smal">Categorie</th><th class="cs-verberg-smal">Subcategorie</th><th>Status</th><th class="cs-getal">Voorraad</th><th class="cs-getal cs-verberg-smal">Minimum</th></tr>
             </thead>
             <tbody>
                 {% for p in producten %}
                 <tr data-volgorde="{{ loop.index }}" data-status="{{ 'actief' if p.actief else 'inactief' }}"
                     data-categorie="{{ p.categorie }}" data-subcategorie="{{ p.subcategorie or '' }}"
                     data-naam="{{ p.naam|lower }}" data-voorraad="{{ p.voorraad }}">
-                    <td>
-                        {{ p.naam }}
-                        {% if p.artikelcode %}<div class="tekst-zacht" style="font-size:0.72rem">{{ p.artikelcode }}</div>{% endif %}
-                    </td>
-                    <td>{{ p.categorie }}</td>
-                    <td>{{ p.subcategorie or '—' }}</td>
-                    <td>
-                        {% if p.actief %}<span class="badge badge-ok">Actief</span>{% else %}<span class="badge badge-neutraal">Inactief</span>{% endif %}
-                    </td>
-                    <td>
-                        {% if p.voorraad < p.min_voorraad %}
-                        <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
-                        {% else %}
-                        <span class="badge badge-ok">{{ p.voorraad }} {{ p.eenheid }}</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ p.min_voorraad }} {{ p.eenheid }}</td>
+                    <td>{{ p.naam }}{% if p.artikelcode %}<span class="cs-code">{{ p.artikelcode }}</span>{% endif %}</td>
+                    <td class="cs-verberg-smal">{{ p.categorie }}</td>
+                    <td class="cs-verberg-smal">{{ p.subcategorie or '' }}</td>
+                    <td>{% if p.actief %}<span class="cs-grijs">Actief</span>{% else %}<span class="cs-punt">Inactief</span>{% endif %}</td>
+                    {% if p.voorraad < p.min_voorraad %}
+                    <td class="cs-getal cs-nowrap cs-tekort" title="Onder het minimum van {{ p.min_voorraad }}">{{ p.voorraad }} <span class="cs-eenheid">{{ p.eenheid }}</span></td>
+                    {% else %}
+                    <td class="cs-getal cs-nowrap">{{ p.voorraad }} <span class="cs-eenheid">{{ p.eenheid }}</span></td>
+                    {% endif %}
+                    <td class="cs-getal cs-verberg-smal cs-grijs">{{ p.min_voorraad or '–' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    <p class="leeg" id="vpl-leeg" style="display:none">Geen producten gevonden voor deze filters.</p>
+    <p class="cs-leeg" id="vpl-leeg" style="display:none">Geen producten gevonden voor deze filters.</p>
     {% else %}
-    <p class="leeg">Nog geen producten.</p>
+    <p class="cs-leeg">Nog geen producten.</p>
     {% endif %}
-</div>
+</section>
 
 <script>
 (function () {

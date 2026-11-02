@@ -43,6 +43,7 @@ from helpers import (
     css_uitlijning,
     dagdeel_groet,
     format_datum,
+    format_dag_lang,
     format_dag_maand,
     format_datum_kort,
     format_laatst_actief,
@@ -124,6 +125,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     app.jinja_env.filters["reden_naam"] = lambda reden: DERVING_REDENEN.get(reden, "")
     app.jinja_env.filters["datum_kort"] = format_datum_kort
     app.jinja_env.filters["dag_maand"] = format_dag_maand
+    app.jinja_env.filters["dag_lang"] = format_dag_lang
     app.jinja_env.filters["laatst_actief"] = format_laatst_actief
     app.jinja_env.filters["inkoop_per_stuk"] = inkoop_per_stuk
     app.jinja_env.filters["foto_klein"] = lambda naam: kleine_afbeelding(naam, "klein")

@@ -1,56 +1,65 @@
 {% extends "base.html" %}
+{# Tellingen in 2.0 (clubstijl.css): links alle tellingen (aanvinken voor één PDF, de datum opent de telling), rechts de
+   verwachting en de omzet per week. Die cijfers komen uit _tellingen_cijfers.html: het voorspelmodel rekent soms enkele
+   seconden, dus de pagina haalt ze na het laden op (zie gedeeld.js, data-lazy-bron). #}
 {% block titel %}Tellingen{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Tellingen</h1>
+    {% if tellingen %}<span class="cs-titel-tekst">{{ tellingen|length }} {{ 'telling' if tellingen|length == 1 else 'tellingen' }}, de laatste op {{ tellingen[0].datum|dag_lang }}</span>{% endif %}
+    <div class="cs-rechts"><a href="{{ url_for('tellen') }}" class="btn btn-geel">Nieuwe telling</a></div>
+</div>
+{% endblock %}
 {% block inhoud %}
-<div class="actiebalk">
-    <p class="subtitel" style="margin:0">Alle tellingen en de omzet per week, met snelle links naar de PDF's.</p>
-    <a href="{{ url_for('tellen') }}" class="btn btn-geel">Nieuwe telling</a>
-</div>
+<div class="cs-raster">
+    <section class="cs-paneel">
+        <form method="get" action="{{ url_for('tellingen_gecombineerd_pdf') }}">
+            <div class="cs-paneel-kop">
+                <h2>Alle tellingen</h2>
+                <span class="cs-zacht">Open een telling om een regel te corrigeren.</span>
+            </div>
+            {% if tellingen %}
+            <div class="tabel-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="tellingen-alles" aria-label="Alle tellingen aanvinken" title="Alles aanvinken"></th>
+                            <th>Datum</th><th class="cs-verberg-smal">Geteld door</th><th class="cs-getal cs-verberg-smal">Producten</th><th class="cs-getal">Omzet</th><th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in tellingen %}
+                        <tr>
+                            <td><input type="checkbox" name="ids" value="{{ t.id }}" class="tellingen-checkbox" aria-label="Telling van {{ t.datum|datum_nl }} aanvinken"></td>
+                            <td class="cs-nowrap"><a href="{{ url_for('telling_detail', telling_id=t.id) }}">{{ t.datum|dag_maand }} {{ t.datum[:4] }}</a> <span class="cs-zacht cs-verberg-smal">{{ t.datum[11:16] }}</span></td>
+                            <td class="cs-verberg-smal">{{ t.naam or '–' }}</td>
+                            <td class="cs-getal cs-verberg-smal">{{ t.aantal_producten }}</td>
+                            <td class="cs-getal cs-nowrap">{{ "€ %.2f"|format(t.omzet) }}</td>
+                            <td class="cs-getal">
+                                <button type="button" class="btn btn-rand btn-klein" onclick="tellingBekijken({{ t.id }}, this)" data-titel="Telling van {{ t.datum|datum_nl }}" data-naam="{{ t.naam or '—' }}" data-pdf="{{ url_for('telling_pdf', telling_id=t.id) }}">Bekijken</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="cs-paneel-voet">
+                <button type="submit" class="btn btn-rand">PDF van de aangevinkte tellingen</button>
+                <span class="cs-zacht">De verkoop van alle aangevinkte tellingen samen in één rapport.</span>
+            </div>
+            {% else %}
+            <p class="cs-leeg">Nog geen tellingen. Begin er een bij Voorraad tellen.</p>
+            {% endif %}
+        </form>
+    </section>
 
-{# De twee kaarten hieronder komen uit _tellingen_cijfers.html: het voorspelmodel rekent soms enkele seconden, dus de
-   pagina haalt ze na het laden op (zie gedeeld.js, data-lazy-bron). #}
-<div id="tellingen-cijfers" data-lazy-bron="{{ url_for('tellingen_cijfers') }}"
-     data-lazy-fout="De verwachting en de omzet per week konden niet worden geladen. Ververs de pagina om het opnieuw te proberen.">
-    <div class="kaart">
-        <h2>Verwachting &amp; trend</h2>
-        <p class="tekst-zacht" data-lazy-status>De verwachting, de trend en de omzet per week worden berekend&hellip;</p>
+    <div id="tellingen-cijfers" class="cs-kolom" data-lazy-bron="{{ url_for('tellingen_cijfers') }}"
+         data-lazy-fout="De verwachting en de omzet per week konden niet worden geladen. Ververs de pagina om het opnieuw te proberen.">
+        <section class="cs-paneel">
+            <div class="cs-paneel-kop"><h2>Verwachting &amp; trend</h2></div>
+            <p class="cs-leeg" data-lazy-status>De verwachting, de trend en de omzet per week worden berekend&hellip;</p>
+        </section>
     </div>
-</div>
-
-<div class="kaart">
-    <h2>Alle tellingen</h2>
-    {% if tellingen %}
-    <form method="get" action="{{ url_for('tellingen_gecombineerd_pdf') }}">
-        <div class="tabel-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" id="tellingen-alles" title="Alles selecteren"></th>
-                        <th>Datum</th><th>Geteld door</th><th>Producten</th><th>Omzet</th><th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in tellingen %}
-                    <tr>
-                        <td><input type="checkbox" name="ids" value="{{ t.id }}" class="tellingen-checkbox"></td>
-                        <td>{{ t.datum|datum_nl }}</td>
-                        <td>{{ t.naam or '—' }}</td>
-                        <td>{{ t.aantal_producten }}</td>
-                        <td>{{ "€ %.2f"|format(t.omzet) }}</td>
-                        <td class="tabel-acties">
-                            <button type="button" class="btn btn-rand btn-klein" onclick="tellingBekijken({{ t.id }}, this)" data-titel="Telling van {{ t.datum|datum_nl }}" data-naam="{{ t.naam or '—' }}" data-pdf="{{ url_for('telling_pdf', telling_id=t.id) }}">Bekijken</button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <div style="margin-top:0.8rem">
-            <button type="submit" class="btn btn-geel">PDF van selectie downloaden</button>
-        </div>
-    </form>
-    {% else %}
-    <p class="leeg">Nog geen tellingen uitgevoerd.</p>
-    {% endif %}
 </div>
 
 {# Eén pop-up voor alle tellingen: de regels haalt tellingBekijken pas op als je er een opent (zie telling_regels). #}

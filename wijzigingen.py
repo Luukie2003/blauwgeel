@@ -6,8 +6,21 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.0.0"
+HUIDIGE_VERSIE = "2.1.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.1.0",
+        "datum": "2 november 2026",
+        "punten": [
+            "Het onderdeel Voorraad in de clubstijl: Voorraadoverzicht, In/uit boeken, Levering inboeken, Mutatieoverzicht, Voorraad tellen, Tellingen en Kaartjes printen hebben een grote titel met de knoppen ernaast, rustige panelen, en tabellen met de getallen netjes onder elkaar. Ook op een telefoon.",
+            "Voorraadoverzicht: een scorebord met de voorraadwaarde, het aantal producten, wat onder het minimum zit en wat op 0 staat. Een voorraad onder het minimum staat in het rood. Zoeken op naam of artikelcode staat in de kop van de lijst, en een categorie klap je dicht door op de naam te klikken.",
+            "In/uit boeken: kies In of Uit met de twee grote vakken bovenaan. Na een boeking komt bij Uit de vraag naar breuk of bederf weer gewoon tevoorschijn.",
+            "Voorraad tellen en Levering inboeken: de producten per categorie, en onderin een balk die blijft staan met hoeveel producten je al hebt ingevuld en de knop om op te slaan.",
+            "Mutatieoverzicht: de boekingen per dag, met de productnaam als link naar het product.",
+            "Tellingen: alle tellingen naast de verwachting en de omzet per week. Klik op de datum van een telling om hem te openen en een regel te corrigeren.",
+            "Knoppen die iets afbreken of weggooien zijn weer rood.",
+        ],
+    },
     {
         "versie": "2.0.0",
         "datum": "1 november 2026",
@@ -1363,7 +1376,7 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "1.72.0",
+    {"naam": "Voorraad & tellen", "versie": "1.17.0", "sinds": "0.1.0", "laatst": "2.1.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.20.1", "sinds": "0.4.0", "laatst": "1.75.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},

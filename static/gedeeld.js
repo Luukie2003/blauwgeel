@@ -647,6 +647,25 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
+// Een lang invulformulier (tellen, een levering inboeken) houdt in de balk onderin bij hoeveel er al is ingevuld:
+// <form data-teller="geteld_"> telt de velden waarvan de naam zo begint en zet het getal in [data-teller-uitkomst].
+// Het turven hierboven stuurt een input-gebeurtenis, dus dat telt ook mee.
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("form[data-teller]").forEach(function (form) {
+        var uitkomst = form.querySelector("[data-teller-uitkomst]");
+        if (!uitkomst) return;
+        var velden = Array.prototype.filter.call(form.elements, function (veld) {
+            return veld.name && veld.name.indexOf(form.dataset.teller) === 0;
+        });
+        function tellen() {
+            uitkomst.textContent = velden.filter(function (veld) { return veld.value.trim() !== ""; }).length;
+        }
+        form.addEventListener("input", tellen);
+        form.addEventListener("change", tellen);
+        tellen();
+    });
+});
+
 
 // ---------- Barcodes scannen (keuken tellen en inboeken) ----------
 // Dezelfde vaste vorm als barcodes.normaliseer op de server: alleen cijfers, een UPC-A van 12 cijfers met een 0 ervoor,

@@ -88,10 +88,10 @@ def test_volledige_lijst_rij_heeft_juiste_data_attributen(ingelogde_client, db):
     assert 'data-naam="data attributen check"' in rij
 
 
-def test_lage_voorraad_krijgt_waarschuwingsbadge(ingelogde_client, db):
+def test_lage_voorraad_valt_op(ingelogde_client, db):
     _maak_product(db, "Bijna op", categorie="Fris", voorraad=1, min_voorraad=5)
     resp = ingelogde_client.get("/voorraadoverzicht")
     body = resp.data.decode()
     idx = body.index("Bijna op")
     omgeving = body[idx:idx + 400]
-    assert "badge-laag" in omgeving
+    assert "cs-tekort" in omgeving  # de voorraad in het rood (2.1, clubstijl.css)

@@ -126,6 +126,8 @@ tbody tr:hover td { background: #fbf7e6; }
 .btn-geel:hover { background: #f5c800; }
 .btn-klein { padding: 0.3rem 0.65rem; font-size: 0.82rem; }
 .btn-rand { background: var(--kaart); border-color: #cdc6b6; }
+.btn-gevaar { color: var(--rood); border-color: #dcb1a8; }  /* anders maakt .btn hierboven hem blauw */
+.btn-gevaar:hover { background: var(--rood-bg); }
 .flash { font-weight: 500; }
 
 .grote-knop { font: 700 1.35rem/1.1 var(--cs-koppen); letter-spacing: 0.02em; border: 1px solid var(--rand); border-radius: var(--radius); color: var(--blauw-donker); }
@@ -154,10 +156,17 @@ footer { font-size: 0.8rem; padding: 1.5rem 1rem 2rem; }
 .cs-zacht { color: var(--tekst-zacht); font-size: 0.86rem; }
 .cs-getal { font-variant-numeric: tabular-nums; text-align: right; }
 
-/* De titel van de pagina, met de datum en (op een wedstrijddag) de wedstrijd. */
+/* De titel van de pagina, met de datum of een korte uitleg, (op een wedstrijddag) de wedstrijd en rechts de knoppen.
+   Een terug-link staat erboven. */
 .cs-titel { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 0.4rem 1rem; margin-bottom: 1.1rem; }
 .cs-titel h1 { margin: 0; font-size: 2.6rem; }
-.cs-titel-datum { color: var(--tekst-zacht); font-weight: 500; padding-bottom: 0.3rem; }
+.cs-titel-datum, .cs-titel-tekst { color: var(--tekst-zacht); font-weight: 500; padding-bottom: 0.3rem; }
+.cs-titel > .cs-rechts { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 0.75rem; padding-bottom: 0.1rem; }
+.cs-titel > .cs-rechts .cs-titel-tekst { padding-bottom: 0; }
+.cs-terug { display: inline-flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem; color: var(--tekst-zacht); font-weight: 600; font-size: 0.9rem; }
+.cs-terug:hover { color: var(--blauw); text-decoration: none; }
+.cs-terug .cs-i { width: 16px; height: 16px; }
+.btn .cs-i { width: 17px; height: 17px; margin: -2px 0.4rem 0 0; vertical-align: middle; }
 .cs-wedstrijd {
     margin-left: auto; display: inline-flex; align-items: center; gap: 0.6rem;
     background: var(--kaart); border: 1px solid var(--rand); border-radius: var(--radius);
@@ -166,22 +175,34 @@ footer { font-size: 0.8rem; padding: 1.5rem 1rem 2rem; }
 .cs-wedstrijd:hover { text-decoration: none; border-color: var(--geel-donker); }
 .cs-wedstrijd b { font: 700 1rem/1 var(--cs-koppen); letter-spacing: 0.04em; text-transform: uppercase; background: var(--blauw-donker); color: var(--geel); padding: 0.3rem 0.5rem; border-radius: 4px; }
 
-/* Een melding die niet mag wachten, zoals een mislukte back-up. */
+/* Een melding die niet mag wachten, zoals een mislukte back-up. Geel (let-op) als er iets op je wacht, blauw (info) als
+   tip; knoppen staan rechts. */
 .cs-melding { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0.8rem; background: var(--kaart); border: 1px solid var(--rand); border-left: 4px solid var(--rood); padding: 0.7rem 1rem; margin-bottom: 1.2rem; }
 .cs-melding .cs-i { color: var(--rood); }
+.cs-melding.let-op { border-left-color: var(--geel); }
+.cs-melding.let-op > .cs-i { color: var(--oranje); }
+.cs-melding.info { border-left-color: var(--blauw); }
+.cs-melding.info > .cs-i { color: var(--blauw); }
+.cs-melding-tekst { flex: 1 1 300px; min-width: 0; }
+.cs-melding-tekst p { margin: 0.1rem 0 0; color: var(--tekst-zacht); }
+.cs-melding > .cs-rechts { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+.cs-melding form { margin: 0; }
 
 /* Het scorebord: de belangrijkste getallen op een rij. */
 .cs-scorebord { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); background: var(--kaart); border: 1px solid var(--rand); border-radius: var(--radius); margin-bottom: 1.4rem; }
 .cs-scorebord > * { padding: 0.8rem 1.1rem 0.9rem; border-left: 1px solid var(--rand-licht); color: inherit; }
 .cs-scorebord > :first-child { border-left: 0; }
 a.cs-scorebord-vak:hover { background: #fbf8ee; text-decoration: none; }
-.cs-scorebord strong { display: block; font: 700 2.4rem/1 var(--cs-koppen); font-variant-numeric: tabular-nums; }
+.cs-scorebord strong { display: block; font: 700 2.4rem/1 var(--cs-koppen); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cs-scorebord span { color: var(--tekst-zacht); font-weight: 500; font-size: 0.9rem; }
+.cs-scorebord.in-paneel { margin: 0; border: 0; border-top: 1px solid var(--rand); border-radius: 0; }
+.cs-scorebord.in-paneel strong { font-size: 2rem; }
 
 /* Panelen naast en onder elkaar. */
 .cs-raster { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 1.4rem; align-items: start; margin-bottom: 1.4rem; }
 .cs-paneel { background: var(--kaart); border: 1px solid var(--rand); border-radius: var(--radius); margin-bottom: 1.4rem; min-width: 0; }
 .cs-raster > .cs-paneel { margin-bottom: 0; }
+.cs-raster.gelijk { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .cs-paneel-kop { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 0.75rem; padding: 0.85rem 1.1rem 0.75rem; border-bottom: 1px solid var(--rand-licht); }
 .cs-paneel-kop h2 { margin: 0; font-size: 1.45rem; }
 .cs-paneel-kop .cs-rechts { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
@@ -200,8 +221,8 @@ a.cs-scorebord-vak:hover { background: #fbf8ee; text-decoration: none; }
 .cs-taak { display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; gap: 0.9rem; align-items: center; padding: 0.7rem 1.1rem; border-top: 1px solid var(--rand-licht); }
 .cs-taak:first-child { border-top: 0; }
 .cs-taak-streep { width: 6px; align-self: stretch; min-height: 2.3rem; border-radius: 2px; background: #e0a020; }
-.cs-taak.urgent .cs-taak-streep { background: var(--rood); }
 .cs-taak.eigen .cs-taak-streep { background: #c9c3b4; }
+.cs-taak.urgent .cs-taak-streep { background: var(--rood); }  /* ook een eigen taak die te laat is */
 .cs-taak-link { display: block; min-width: 0; color: inherit; }
 .cs-taak-link:hover { text-decoration: none; }
 .cs-taak-link:hover strong { text-decoration: underline; }
@@ -220,9 +241,194 @@ a.cs-scorebord-vak:hover { background: #fbf8ee; text-decoration: none; }
 .cs-thuiswedstrijd.dringend { box-shadow: inset 4px 0 0 var(--rood); }
 .cs-paneel-kop h2 .cs-i { width: 20px; height: 20px; margin-right: 0.45rem; vertical-align: -2px; color: var(--blauw); }
 
-/* Voorraad tegenover het minimum. */
+/* Voorraad tegenover het minimum; blauw voor een aandeel, zoals de waarde per categorie. */
 .cs-balk { display: inline-block; width: 90px; height: 6px; background: #efebe1; border-radius: 3px; overflow: hidden; vertical-align: middle; }
 .cs-balk i { display: block; height: 100%; background: var(--rood); }
+.cs-balk.blauw i { background: var(--blauw); }
+
+/* ---------- Onderdelen voor het onderdeel Voorraad (2.1), ook voor andere 2.0-pagina's ---------- */
+
+.cs-grijs { color: var(--tekst-zacht); }
+.cs-nowrap { white-space: nowrap; }
+.cs-tekort { color: var(--rood); font-weight: 600; }  /* een voorraad onder het minimum */
+/* De eenheid achter een getal in een kolom: even breed, zodat de getallen onder elkaar blijven staan. */
+.cs-eenheid { display: inline-block; min-width: 3.3rem; margin-left: 0.3rem; color: var(--tekst-zacht); font-size: 0.86rem; font-weight: 400; text-align: left; }
+.cs-code { margin-left: 0.45rem; color: var(--tekst-zacht); font-size: 0.8rem; letter-spacing: 0.02em; }  /* een artikelcode achter de naam */
+.cs-alleen-smal { display: none; }  /* alleen op een telefoon, zie onderaan */
+.cs-stil { color: inherit; }  /* een link in een tabel die pas bij aanwijzen blauw wordt */
+.cs-stil:hover { color: var(--blauw); }
+.cs-tekstknop { padding: 0; border: 0; background: none; color: var(--blauw); font: 600 0.88rem var(--cs-letter); text-decoration: none; cursor: pointer; }
+.cs-tekstknop:hover { text-decoration: underline; }
+.cs-paneel h3 { margin: 0 0 0.15rem; font: 600 1.15rem/1.15 var(--cs-koppen); letter-spacing: 0.01em; }
+
+/* Een zoekveld in de kop van een paneel, met het vergrootglas erin. */
+.cs-zoek { position: relative; display: block; width: 16rem; max-width: 100%; }
+.cs-zoek .cs-i { position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--tekst-zacht); pointer-events: none; }
+.cs-zoek input { width: 100%; padding-left: 2rem; }
+/* Een filter met een keuzelijst in de kop van een paneel (zoals het product bij het mutatieoverzicht). */
+.cs-filterregel { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0.7rem; margin: 0; min-width: 0; }
+.cs-filterregel label { font-weight: 600; }
+.cs-filterregel select { width: 17rem; max-width: 100%; }
+
+/* Een getal invullen in een tabel (tellen, een levering): smal en rechts uitgelijnd. */
+.cs-invoer-getal { width: 6.4rem; text-align: right; font-variant-numeric: tabular-nums; }
+/* De cel met het invulveld (en de turfknoppen): op een telefoon komen de knoppen onder het veld. */
+.cs-telcel { white-space: nowrap; }
+
+/* De velden van een formulier in een paneel: naast elkaar, op een telefoon onder elkaar. Met 'twee' een breed veld met
+   een smal veld ernaast (product en aantal). */
+.cs-velden { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0 1rem; padding: 0.95rem 1.1rem 0.15rem; }
+.cs-velden.twee { grid-template-columns: minmax(0, 1fr) minmax(7rem, 10rem); }
+.cs-velden .veld label, .cs-sectie .veld label, .cs-veldkop { font-size: 0.86rem; font-weight: 600; color: var(--tekst); }
+.cs-velden .veld label span { font-weight: 400; color: var(--tekst-zacht); }
+.cs-velden .veld-waarde { background: none; border-color: transparent; padding-left: 0; font-size: 0.95rem; }
+.cs-velden > .cs-heel, .cs-velden > .derving-reden { grid-column: 1 / -1; }
+.cs-velden + .tabel-wrap { border-top: 1px solid var(--rand-licht); }
+
+/* De voet van een paneel, met de knoppen van het formulier. */
+.cs-paneel-voet { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem 1rem; margin: 0; padding: 0.8rem 1.1rem; border-top: 1px solid var(--rand-licht); }
+.cs-paneel-voet > .cs-rechts { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+
+/* In of uit boeken: twee grote vakken zoals op het scorebord; het gekozen vak in het donkerblauw met gele letters, zoals
+   'thuis' bij de wedstrijd. De keuzerondjes zelf zijn onzichtbaar, maar werken met het toetsenbord. */
+.cs-inuit { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--rand-licht); }
+.cs-inuit label { position: relative; display: flex; align-items: center; gap: 0.85rem; padding: 0.95rem 1.1rem; color: var(--tekst-zacht); font-weight: 500; line-height: 1.25; cursor: pointer; }
+.cs-inuit label:first-child { border-top-left-radius: calc(var(--radius) - 1px); }
+.cs-inuit label:last-child { border-top-right-radius: calc(var(--radius) - 1px); }
+.cs-inuit label + label { border-left: 1px solid var(--rand-licht); }
+.cs-inuit label:hover { background: #fbf8ee; }
+.cs-inuit input { position: absolute; opacity: 0; pointer-events: none; }
+.cs-inuit .cs-i { width: 30px; height: 30px; color: var(--blauw); }
+.cs-inuit b { display: block; font: 700 2rem/1 var(--cs-koppen); letter-spacing: 0.04em; text-transform: uppercase; color: var(--blauw-donker); }
+.cs-inuit label:has(input:checked) { background: var(--blauw-donker); color: #c4cde6; }
+.cs-inuit label:has(input:checked) b, .cs-inuit label:has(input:checked) .cs-i { color: var(--geel); }
+.cs-inuit label:has(input:focus-visible) { outline: 3px solid var(--geel); outline-offset: -3px; }
+.cs-productkeuze { display: flex; align-items: center; gap: 0.6rem; }
+.cs-productkeuze select { flex: 1; }
+
+/* Een tabel in groepen, zoals de producten per categorie: een kopregel per groep. Met een cs-groep-knop klap je een
+   groep dicht; tijdens het zoeken (.zoekt op de tabel) staat alles open. */
+tr.cs-groep-rij th { padding: 0.85rem 1.1rem 0.4rem; background: var(--kaart); color: var(--blauw-donker); font: 600 1.2rem/1.1 var(--cs-koppen); letter-spacing: 0.01em; text-transform: none; text-align: left; border-bottom: 1px solid var(--rand); }
+tr.cs-groep-rij .cs-aantal { margin-left: 0.35rem; font-family: var(--cs-letter); }
+.cs-groep-knop { display: inline-flex; align-items: baseline; gap: 0.45rem; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; }
+.cs-groep-knop::before { content: "\25BE"; font-size: 0.75rem; color: var(--tekst-zacht); transition: transform 0.15s; }
+tbody.dicht .cs-groep-knop::before { transform: rotate(-90deg); }
+table:not(.zoekt) > tbody.dicht > tr:not(.cs-groep-rij) { display: none; }
+.cs-subrij td { color: var(--tekst-zacht); font-size: 0.88rem; }
+.cs-subrij td:first-child { padding-left: 2rem; }
+.cs-paneel .product-thumb { width: 1.9rem; height: 1.9rem; }
+.cs-foto { width: 1%; }  /* de kolom met het fotootje zo smal als het fotootje */
+
+/* Een regel die aandacht vraagt (een correctie, een telling ver van de verwachting): een rode streep ervoor, geen rood vlak. */
+.cs-paneel tbody tr.rij-waarschuwing:not(:hover) td { background: none; }
+.cs-paneel tbody tr.rij-waarschuwing td:first-child { box-shadow: inset 4px 0 0 var(--rood); }
+.cs-waarschuwing { margin-top: 0.2rem; color: var(--rood); font-size: 0.86rem; font-weight: 600; }
+
+/* Onder een lang invulformulier (tellen, een levering): een balk die onderin blijft staan, met hoeveel er al is
+   ingevuld en de knop. De gele streep zoals onder de kop. Het tellen zelf staat in gedeeld.js (data-teller). */
+.cs-verzendbalk { position: sticky; bottom: 0; z-index: 20; display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 1rem; margin: 0 0 1.4rem; padding: 0.6rem 0.75rem 0.6rem 1.1rem; background: var(--blauw-donker); color: #c4cde6; border-top: 4px solid var(--geel); border-radius: 0 0 var(--radius) var(--radius); }
+.cs-verzendbalk strong { font: 700 1.75rem/1 var(--cs-koppen); color: #ffffff; font-variant-numeric: tabular-nums; margin-right: 0.15rem; }
+.cs-verzendbalk .btn { margin-left: auto; }
+.cs-paneel:has(+ .cs-verzendbalk) { margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+
+/* Wat er opvalt, naast elkaar: per onderwerp een streep (rood: hier moet je iets mee, oranje: let op, grijs: ter info). */
+.cs-signalen { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.2rem 1.8rem; padding: 1rem 1.1rem 1.1rem; }
+.cs-signaal { min-width: 0; border-left: 4px solid #c9c3b4; padding-left: 0.85rem; }
+.cs-signaal.urgent { border-left-color: var(--rood); }
+.cs-signaal.let-op { border-left-color: #e0a020; }
+.cs-signaal p { margin: 0 0 0.45rem; color: var(--tekst-zacht); font-size: 0.9rem; }
+.cs-signaal ul { list-style: none; margin: 0; padding: 0; }
+.cs-signaal li { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.25rem 0; border-top: 1px solid var(--rand-licht); font-size: 0.92rem; }
+.cs-signaal li span { color: var(--tekst-zacht); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Filters met vinkjes (zoals bij de volledige productenlijst): per groep een kopje, de keuzes naast elkaar. */
+.cs-filters { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1rem 2.2rem; padding: 0.9rem 1.1rem 1rem; border-bottom: 1px solid var(--rand-licht); }
+.cs-filter { min-width: 0; max-width: 100%; margin: 0; padding: 0; border: 0; }
+.cs-filter.breed { flex: 1 1 300px; }
+.cs-filter > legend, .cs-filter > label { display: block; padding: 0; margin-bottom: 0.4rem; font-size: 0.86rem; font-weight: 600; color: var(--tekst); }
+.cs-filter > legend a { margin-left: 0.55rem; font-weight: 500; font-size: 0.82rem; }
+.cs-vinkjes { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.cs-vinkje { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.22rem 0.6rem 0.22rem 0.45rem; border: 1px solid #cfc8b8; border-radius: 4px; background: var(--kaart); font-size: 0.88rem; font-weight: 500; cursor: pointer; }
+.cs-vinkje:has(input:not(:checked)) { border-color: var(--rand-licht); background: none; color: var(--tekst-zacht); }
+.cs-vinkje input, .cs-keuze input, .cs-vink input { width: auto; margin: 0; accent-color: var(--blauw-donker); }
+/* Een los vinkje bij een instelling, zonder rand. */
+.cs-vink { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 500; cursor: pointer; }
+
+/* Een keuze uit een paar mogelijkheden met uitleg (zoals het ontwerp van de kaartjes): de gekozen krijgt de gele streep,
+   net als in het menu. */
+.cs-keuzes { border: 1px solid var(--rand); border-radius: var(--radius); overflow: hidden; }
+.cs-keuze { display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.65rem 0.9rem 0.65rem 0.75rem; border-left: 4px solid transparent; font-weight: 400; cursor: pointer; }
+.cs-keuze + .cs-keuze { border-top: 1px solid var(--rand-licht); }
+.cs-keuze:hover { background: #fbf8ee; }
+.cs-keuze:has(input:checked) { border-left-color: var(--geel); background: #fdf8e1; }
+.cs-keuze input { margin-top: 0.2rem; }
+.cs-keuze strong { font-weight: 600; }
+.cs-keuze small { display: block; color: var(--tekst-zacht); font-size: 0.86rem; }
+.cs-keuze .cs-maat { margin-left: 0.4rem; color: var(--tekst-zacht); font-size: 0.86rem; white-space: nowrap; }
+
+/* Een deel van een formulier in een paneel, met een kopje (Ontwerp, Hardlopers, Afdrukken). */
+.cs-sectie { min-width: 0; margin: 0; padding: 0.95rem 1.1rem 1.05rem; border: 0; border-top: 1px solid var(--rand-licht); }
+.cs-sectie:first-child { border-top: 0; }
+.cs-sectie > legend { float: left; width: 100%; padding: 0; margin-bottom: 0.65rem; font: 600 1.3rem/1.1 var(--cs-koppen); letter-spacing: 0.01em; color: var(--tekst); }
+.cs-sectie > legend + * { clear: both; }
+.cs-sectie .veld:last-child { margin-bottom: 0; }
+.cs-suggesties { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.45rem; }
+.cs-suggesties .btn span { margin-left: 0.3rem; color: var(--tekst-zacht); font-weight: 500; font-variant-numeric: tabular-nums; }
+.cs-voorbeeld { display: block; width: 100%; height: 640px; border: 0; background: #ffffff; }
+.cs-afdrukken { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 0.8rem 1.6rem; }
+.cs-afdrukken .veld { margin: 0; }
+.cs-afdrukken .cs-vink { padding-bottom: 0.5rem; }
+.cs-noot { margin: 0.6rem 0 0; color: var(--tekst-zacht); font-size: 0.86rem; }
+
+/* Een paar kerncijfers onder elkaar, het getal rechts in de sportletter (zoals de verwachting bij Tellingen). */
+.cs-cijfers { margin: 0; }
+.cs-cijfers > div { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: 0.7rem 1.1rem; border-top: 1px solid var(--rand-licht); }
+.cs-cijfers > div:first-child { border-top: 0; }
+.cs-cijfers dt { min-width: 0; font-weight: 500; }
+.cs-cijfers dt small { display: block; color: var(--tekst-zacht); font-size: 0.86rem; font-weight: 400; }
+.cs-cijfers dd { margin: 0; font: 700 1.75rem/1 var(--cs-koppen); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cs-cijfers a { color: inherit; }
+.cs-paneel > .tabel-wrap + .cs-cijfers, .cs-paneel > .cs-cijfers + .tabel-wrap, .cs-paneel > .cs-cijfers + .cs-leeg,
+.cs-scorebord.in-paneel + .tabel-wrap, .cs-scorebord.in-paneel + .cs-leeg { border-top: 1px solid var(--rand); }
+
+/* Een kolom met panelen onder elkaar in een cs-raster; een paneel dat op je wacht (let-op) krijgt een gele streep. */
+.cs-kolom { min-width: 0; }
+.cs-kolom > .cs-paneel:last-child { margin-bottom: 0; }
+.cs-paneel-let-op { box-shadow: inset 4px 0 0 var(--geel); }
+
+/* Een totaalregel onder een tabel. */
+.cs-paneel tfoot th, .cs-paneel tfoot td { border-top: 1px solid var(--rand); border-bottom: 0; }
+.cs-paneel tfoot th { color: var(--tekst); font-size: 0.93rem; letter-spacing: 0; text-transform: none; text-align: left; }
+
+/* Een regel van een tabel corrigeren, in een regel die openklapt (zoals bij een telling). */
+.cs-corrigeer-rij td { background: #faf8f3; }
+.cs-corrigeer { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 0.6rem 1rem; margin: 0.35rem 0 0.5rem; }
+.cs-corrigeer .veld { margin: 0; }
+.cs-corrigeer .veld label span { font-weight: 400; }
+.cs-corrigeer-reden { flex: 1 1 240px; }
+.cs-corrigeer-noot { margin: 0 0 0.4rem; font-size: 0.84rem; }
+.cs-modal-tabel { max-height: 50vh; overflow-y: auto; }
+
+/* Een lijst van korte regels in kolommen, zoals de producten onder het minimum na een telling. */
+.cs-kolomlijst { columns: 3 230px; column-gap: 1.8rem; list-style: none; margin: 0; padding: 0.25rem 1.1rem 0.9rem; }
+.cs-kolomlijst li { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.25rem 0; border-bottom: 1px solid var(--rand-licht); font-size: 0.92rem; break-inside: avoid; }
+.cs-kolomlijst li span { white-space: nowrap; font-variant-numeric: tabular-nums; }
+details.cs-uitklap > summary { padding: 0 1.1rem 0.8rem; color: var(--blauw); font-weight: 600; cursor: pointer; }
+
+/* De looplijst (tellen_lopen.html) in de clubstijl. De handterminal-weergave laadt dit bestand niet en houdt zijn eigen vorm. */
+.loop-kaart { max-width: 520px; padding: 1.3rem 1.3rem 1.1rem; }
+.loop-voortgang { height: 5px; background: #efebe1; }
+.loop-voortgang-balk { background: var(--geel); }
+.loop-fase-badge { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0; border: 0; background: none; font-size: 0.92rem; font-weight: 600; }
+.loop-fase-badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.loop-categorie { font-size: 0.92rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.loop-product { font: 700 2.4rem/1.02 var(--cs-koppen); letter-spacing: 0.01em; margin: 0.25rem 0 0.7rem; }
+.loop-invoer { font: 700 2.8rem/1 var(--cs-koppen); font-variant-numeric: tabular-nums; border-width: 2px; }
+.loop-snelknop { font: 700 1.35rem/1 var(--cs-koppen); }
+.loop-btn-groot { font: 700 1.3rem/1 var(--cs-koppen); letter-spacing: 0.02em; }
+.loop-verwacht { background: #faf8f3; border: 1px solid var(--rand-licht); }
+.loop-pauze .btn-tekstlink { color: var(--blauw); font-size: 0.92rem; font-weight: 600; text-decoration: none; }
+.loop-pauze .btn-tekstlink:hover { text-decoration: underline; }
 
 @media (max-width: 720px) {
     .app-titelbalk { padding: 0 0.8rem; gap: 0.6rem; min-height: 54px; }
@@ -233,11 +439,34 @@ a.cs-scorebord-vak:hover { background: #fbf8ee; text-decoration: none; }
     .venster-titel { font-size: 1.8rem; padding-bottom: 0.8rem; }
     .cs-titel h1 { font-size: 2.1rem; }
     .cs-wedstrijd { margin-left: 0; }
-    .cs-raster { grid-template-columns: 1fr; }
+    .cs-raster, .cs-raster.gelijk { grid-template-columns: 1fr; }
     .cs-scorebord { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .cs-scorebord > :nth-child(odd) { border-left: 0; }
     .cs-scorebord > :nth-child(n+3) { border-top: 1px solid var(--rand-licht); }
+    .cs-scorebord strong { font-size: 2rem; }
+    /* Drie vakken: het eerste over de hele breedte, de andere twee eronder. */
+    .cs-scorebord > :first-child:nth-last-child(3) { grid-column: 1 / -1; }
+    .cs-scorebord > :first-child:nth-last-child(3) + * { border-left: 0; border-top: 1px solid var(--rand-licht); }
+    .cs-scorebord > :first-child:nth-last-child(3) + * + * { border-left: 1px solid var(--rand-licht); }
     .cs-verberg-smal { display: none; }
+    .cs-alleen-smal { display: block; }
+    .cs-paneel th:first-child, .cs-paneel td:first-child { padding-left: 0.9rem; }
+    .cs-paneel th:last-child, .cs-paneel td:last-child { padding-right: 0.9rem; }
+    .cs-code { display: none; }
+    .cs-balk { width: 56px; }
+    .cs-titel > .cs-rechts { margin-left: 0; }
+    .cs-zoek { flex-basis: 100%; }
+    .cs-velden, .cs-velden.twee { grid-template-columns: minmax(0, 1fr); }
+    .cs-telcel { white-space: normal; }
+    .cs-telcel .turf-knoppen { display: flex; margin: 0.35rem 0 0; }
+    .cs-telcel .turf-knop { min-width: 2.1rem; padding: 0.3rem 0.4rem; }
+    .cs-verzendbalk { padding-left: 0.9rem; }
+    .cs-inuit label { gap: 0.6rem; padding: 0.8rem 0.9rem; }
+    .cs-inuit .cs-i { width: 24px; height: 24px; }
+    .cs-inuit b { font-size: 1.65rem; }
+    .cs-filters { gap: 0.9rem 1.4rem; }
+    .cs-voorbeeld { height: 480px; }
+    .loop-product { font-size: 2.1rem; }
     /* Het menu wordt op een telefoon een uitklapbalk boven de pagina (zie style.css): niet de breedte van hierboven. */
     .app-zijbalk { width: 100%; min-height: auto; padding: 0; border-right: 0; border-bottom: 1px solid var(--rand); }
 }

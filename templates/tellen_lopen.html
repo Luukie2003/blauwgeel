@@ -1,5 +1,9 @@
 {% extends basis_template %}
 {% block titel %}Looplijst tellen{% endblock %}
+{# Op de computer in 2.0: de opmaak van de looplijst staat in clubstijl.css (de handterminal-weergave laadt dat niet). #}
+{% block venster_titel %}
+<div class="cs-titel"><h1>Voorraad tellen</h1></div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Product {{ index + 1 }} van {{ totaal }}

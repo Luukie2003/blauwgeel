@@ -8,14 +8,21 @@
 </div>
 <script>
 (function () {
-    var formulier = document.currentScript.closest('form');
-    var veld = formulier.querySelector('.derving-reden');
-    function bijwerken() {
+    // Luistert op document en niet per formulier: na een boeking ververst _boeking_formulier_script.html de inhoud,
+    // en dan draait dit script niet opnieuw. De keuze in of uit moet het veld daarna nog steeds tonen of verbergen.
+    function bijwerken(formulier) {
+        var veld = formulier && formulier.querySelector('.derving-reden');
+        if (!veld) return;
         var uit = formulier.querySelector('input[name=type][value=uit]');
         veld.hidden = !(uit && uit.checked);
         if (veld.hidden) veld.querySelector('select').value = '';
     }
-    formulier.querySelectorAll('input[name=type]').forEach(function (r) { r.addEventListener('change', bijwerken); });
-    bijwerken();
+    if (!window.dervingRedenBewaakt) {
+        window.dervingRedenBewaakt = true;
+        document.addEventListener('change', function (e) {
+            if (e.target.name === 'type') bijwerken(e.target.form);
+        });
+    }
+    bijwerken(document.currentScript.closest('form'));
 })();
 </script>

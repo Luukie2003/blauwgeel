@@ -1,21 +1,22 @@
+{# De regels van één telling in de pop-up 'Bekijken' van het tellingenoverzicht (zie telling_regels). #}
 {% if regels %}
-<div class="tabel-wrap" style="max-height:50vh; overflow-y:auto">
+<div class="tabel-wrap cs-modal-tabel">
     <table>
         <thead>
-            <tr><th>Product</th><th>Geteld</th><th>Verkocht</th><th>Omzet</th></tr>
+            <tr><th>Product</th><th class="cs-getal">Geteld</th><th class="cs-getal">Verkocht</th><th class="cs-getal">Omzet</th></tr>
         </thead>
         <tbody>
             {% for r in regels %}
             <tr>
                 <td>{{ r.product_naam }}</td>
-                <td>{{ r.geteld_aantal }} {{ r.eenheid }}</td>
-                <td>{{ r.verkocht }} {{ r.eenheid }}</td>
-                <td>€ {{ '%.2f'|format(r.verkocht * r.verkoopprijs) }}</td>
+                <td class="cs-getal cs-nowrap">{{ r.geteld_aantal }}<span class="cs-eenheid">{{ r.eenheid }}</span></td>
+                <td class="cs-getal cs-nowrap">{{ r.verkocht }}<span class="cs-eenheid">{{ r.eenheid }}</span></td>
+                <td class="cs-getal cs-nowrap">€ {{ '%.2f'|format(r.verkocht * r.verkoopprijs) }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 {% else %}
-<p class="leeg">Geen producten in deze telling.</p>
+<p class="cs-leeg">Geen producten in deze telling.</p>
 {% endif %}

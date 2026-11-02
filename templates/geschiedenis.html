@@ -1,6 +1,15 @@
 {% extends basis_template %}
+{# Alle in- en uitboekingen. Op de computer in 2.0 (clubstijl.css): per dag een kopregel, met het filter op product in de
+   kop van het paneel; een correctie na een telling krijgt een rode streep. De handterminal-weergave houdt zijn lijst. #}
 {% block titel %}Mutatieoverzicht{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Mutatieoverzicht</h1>
+    <span class="cs-titel-tekst">Alle in- en uitboekingen, de nieuwste bovenaan</span>
+</div>
+{% endblock %}
 {% block inhoud %}
+{% if pda_modus %}
 <p class="subtitel">Alle in- en uitboekingen, meest recent eerst.</p>
 
 <div class="kaart">
@@ -15,7 +24,6 @@
     </form>
 
     {% if mutaties %}
-    {% if pda_modus %}
     <ul class="mutatie-lijst">
         {% for m in mutaties %}
         <li class="{{ 'mutatie-lijst-waarschuwing' if m.opmerking and m.opmerking.startswith('Correctie') }}">
@@ -29,28 +37,53 @@
         {% endfor %}
     </ul>
     {% else %}
-    <div class="tabel-wrap">
-        <table>
-            <thead>
-                <tr><th>Datum</th><th>Product</th><th>Type</th><th>Aantal</th><th>Door</th><th>Opmerking</th></tr>
-            </thead>
-            <tbody>
-                {% for m in mutaties %}
-                <tr class="{{ 'rij-waarschuwing' if m.opmerking and m.opmerking.startswith('Correctie') }}">
-                    <td>{{ m.datum|datum_nl }}</td>
-                    <td>{{ m.product_naam }}</td>
-                    <td><span class="badge badge-{{ m.type }}">{{ 'in' if m.type == 'in' else 'uit' }}</span></td>
-                    <td>{{ m.aantal }} {{ m.eenheid }}</td>
-                    <td>{{ m.naam or '—' }}</td>
-                    <td class="tekst-zacht">{% if m.reden %}<span class="badge badge-uit">{{ m.reden|reden_naam }}</span> {% endif %}{{ m.opmerking or '' }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
-    {% else %}
     <p class="leeg">Geen boekingen gevonden.</p>
     {% endif %}
 </div>
+{% else %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop">
+        <form method="get" class="cs-filterregel">
+            <label for="product_id">Product</label>
+            <select id="product_id" name="product_id" onchange="this.form.submit()">
+                <option value="">Alle producten</option>
+                {% for p in producten %}
+                <option value="{{ p.id }}" {{ 'selected' if gekozen_product_id == p.id }}>{{ p.naam }}</option>
+                {% endfor %}
+            </select>
+            <noscript><button type="submit" class="btn btn-rand btn-klein">Tonen</button></noscript>
+        </form>
+        {% if mutaties %}
+        <div class="cs-rechts"><span class="cs-aantal">{% if mutaties|length >= 300 %}de laatste 300 boekingen{% else %}{{ mutaties|length }} {{ 'boeking' if mutaties|length == 1 else 'boekingen' }}{% endif %}</span></div>
+        {% endif %}
+    </div>
+    {% if mutaties %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Tijd</th><th>Product</th><th>In of uit</th><th class="cs-getal">Aantal</th><th class="cs-verberg-smal">Door</th><th class="cs-verberg-smal">Opmerking</th></tr></thead>
+            {% set dag = namespace(huidig=None) %}
+            {% for m in mutaties %}
+            {% if m.datum[:10] != dag.huidig %}
+            {% if not loop.first %}</tbody>{% endif %}
+            {% set dag.huidig = m.datum[:10] %}
+            <tbody>
+                <tr class="cs-groep-rij"><th colspan="6" scope="rowgroup">{{ m.datum|dag_lang }}</th></tr>
+            {% endif %}
+                <tr class="{{ 'rij-waarschuwing' if m.opmerking and m.opmerking.startswith('Correctie') }}">
+                    <td class="cs-zacht">{{ m.datum[11:16] }}</td>
+                    <td><a href="{{ url_for('product_detail', product_id=m.product_id) }}" class="cs-stil">{{ m.product_naam }}</a></td>
+                    <td><span class="cs-punt {{ 'cs-groen' if m.type == 'in' else 'cs-oranje' }}">{{ 'in' if m.type == 'in' else 'uit' }}</span></td>
+                    <td class="cs-getal cs-nowrap">{{ m.aantal }}<span class="cs-eenheid">{{ m.eenheid }}</span></td>
+                    <td class="cs-verberg-smal">{{ m.naam or '–' }}</td>
+                    <td class="cs-verberg-smal cs-zacht">{% if m.reden %}<strong>{{ m.reden|reden_naam }}</strong> {% endif %}{{ m.opmerking or '' }}</td>
+                </tr>
+            {% if loop.last %}</tbody>{% endif %}
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
+    <p class="cs-leeg">{% if gekozen_product_id %}Van dit product is nog niets in- of uitgeboekt.{% else %}Nog geen boekingen.{% endif %}</p>
+    {% endif %}
+</section>
+{% endif %}
 {% endblock %}

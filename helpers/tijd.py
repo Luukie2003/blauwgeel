@@ -50,6 +50,16 @@ def datum_lang(dag):
     return f"{_WEEKDAGEN[dag.weekday()]} {dag.day} {_MAANDEN[dag.month - 1]}"
 
 
+def format_dag_lang(value, vandaag=None):
+    """'2026-10-27 18:37' -> 'dinsdag 27 oktober', met het jaar erachter als het niet dit jaar is: voor een kopregel per
+    dag in een lijst, zoals het mutatieoverzicht (2.0)."""
+    if not value:
+        return ""
+    dag = datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
+    vandaag = vandaag or datetime.now().date()
+    return datum_lang(dag) if dag.year == vandaag.year else f"{datum_lang(dag)} {dag.year}"
+
+
 def format_datum_kort(value):
     """Zet een kale ISO-datum (YYYY-MM-DD, geen tijdstip) om naar
     dd-mm-jjjj -- voor de looptijd van een Club van 20-lidmaatschap."""
