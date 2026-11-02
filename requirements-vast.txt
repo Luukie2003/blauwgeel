@@ -4,12 +4,12 @@ blinker==1.9.0
 click==8.5.0
 defusedxml==0.7.1
 Flask==3.1.3
-fonttools==4.67.0
-fpdf2==2.8.9
+fonttools==4.68.0
+fpdf2==2.9.0
 itsdangerous==2.2.0
 Jinja2==3.1.6
 MarkupSafe==3.0.4
-pillow==12.3.0
+pillow==13.0.0
 pypng==0.20220715.0
 qrcode==8.2
 Werkzeug==3.1.9
