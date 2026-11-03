@@ -155,7 +155,7 @@
             android:background="@drawable/regel_klik_kaart"
             android:gravity="center"
             android:text="@string/artikel_verwijderen"
-            android:textColor="@color/rood_balk"
+            android:textColor="@color/rood"
             android:textSize="15sp"
             android:textStyle="bold"
             android:visibility="gone" />

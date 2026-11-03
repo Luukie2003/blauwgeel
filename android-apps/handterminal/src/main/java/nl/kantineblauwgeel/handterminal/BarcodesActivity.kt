@@ -11,6 +11,7 @@ import android.text.TextWatcher
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.LinearLayout
+import androidx.appcompat.widget.AppCompatEditText
 import kotlinx.coroutines.Job
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
@@ -30,12 +31,12 @@ class BarcodesActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.barcodes))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
         b.onderKnop.visibility = android.view.View.VISIBLE
         b.onderKnop.setText(R.string.koppelronde_starten)
         b.onderKnop.setOnClickListener { KoppelrondeActivity.open(this) }
-        zoekveld = EditText(this).apply {
+        zoekveld = AppCompatEditText(this).apply {
             hint = getString(R.string.zoek_barcode_hint)
             inputType = InputType.TYPE_CLASS_TEXT
             imeOptions = EditorInfo.IME_ACTION_SEARCH

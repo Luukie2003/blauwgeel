@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Het startscherm, zoals het overzicht op de site: de groet met de datum, zoeken of scannen, de vier dingen van het
+     dagelijkse werk samen op één bord, wat er nu moet (met een rode of gele streep) en daaronder de andere schermen per
+     onderwerp. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/achtergrond"
+    android:background="@color/papier"
     android:orientation="vertical">
 
     <include
@@ -24,66 +27,98 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingStart="8dp"
-                android:paddingTop="10dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="14dp">
+                android:paddingStart="14dp"
+                android:paddingTop="14dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="16dp">
+
+                <TextView
+                    android:id="@+id/startGroet"
+                    style="@style/Titel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:includeFontPadding="false"
+                    android:text="@string/hallo" />
+
+                <TextView
+                    android:id="@+id/startDatum"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="@font/barlow_medium"
+                    android:textColor="@color/tekst_zacht"
+                    android:textSize="14sp" />
 
                 <TextView
                     android:id="@+id/updateMelding"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="4dp"
-                    android:layout_marginBottom="8dp"
-                    android:background="@drawable/badge_geel"
-                    android:padding="10dp"
-                    android:textColor="@color/navy"
-                    android:textSize="13sp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/melding_let_op"
+                    android:paddingStart="16dp"
+                    android:paddingTop="10dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="10dp"
+                    android:textColor="@color/tekst"
+                    android:textSize="14sp"
                     android:visibility="gone" />
 
                 <LinearLayout
                     android:id="@+id/zoekKnop"
                     android:layout_width="match_parent"
                     android:layout_height="46dp"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="4dp"
+                    android:layout_marginTop="12dp"
                     android:background="@drawable/zoekveld"
                     android:clickable="true"
                     android:focusable="true"
-                    android:foreground="?android:attr/selectableItemBackground"
+                    android:foreground="@drawable/regel_klik_kaart"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp">
 
                     <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
+                        android:layout_width="19dp"
+                        android:layout_height="19dp"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_zoeken"
                         app:tint="@color/tekst_zacht" />
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:singleLine="true"
                         android:text="@string/zoek_of_scan"
                         android:textColor="@color/tekst_zacht"
                         android:textSize="15sp" />
+
+                    <ImageView
+                        android:layout_width="23dp"
+                        android:layout_height="23dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_scan"
+                        app:tint="@color/blauw" />
                 </LinearLayout>
 
+                <!-- Het bord: de vier knoppen samen in één paneel, met lichte lijnen ertussen. -->
                 <LinearLayout
                     android:id="@+id/tegels"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:orientation="vertical">
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/kaart"
+                    android:divider="@drawable/scheiding"
+                    android:orientation="vertical"
+                    android:showDividers="middle">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:divider="@drawable/scheiding_staand"
+                        android:orientation="horizontal"
+                        android:showDividers="middle">
 
                         <include android:id="@+id/tegelFactuur" layout="@layout/tegel" />
                         <include android:id="@+id/tegelTellen" layout="@layout/tegel" />
@@ -92,34 +127,50 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:divider="@drawable/scheiding_staand"
+                        android:orientation="horizontal"
+                        android:showDividers="middle">
 
                         <include android:id="@+id/tegelBoeken" layout="@layout/tegel" />
                         <include android:id="@+id/tegelVoorraad" layout="@layout/tegel" />
                     </LinearLayout>
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/letOpKop"
-                    style="@style/Kop"
-                    android:layout_marginStart="4dp"
-                    android:text="@string/let_op"
-                    android:visibility="gone" />
-
+                <!-- Wat moet er nu? (ook de taken die een beheerder voor je klaarzette), zoals op het overzicht van de site. -->
                 <LinearLayout
-                    android:id="@+id/letOpLijst"
+                    android:id="@+id/letOpPaneel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="4dp"
-                    android:orientation="vertical" />
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/kaart"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout style="@style/PaneelKop">
+
+                        <TextView
+                            android:id="@+id/letOpKop"
+                            style="@style/PaneelKop.Tekst"
+                            android:text="@string/wat_moet_er_nu" />
+
+                        <TextView
+                            android:id="@+id/letOpAantal"
+                            style="@style/PaneelKop.Rechts" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/letOpLijst"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:divider="@drawable/scheiding"
+                        android:orientation="vertical"
+                        android:showDividers="middle" />
+                </LinearLayout>
 
                 <LinearLayout
                     android:id="@+id/meerLijst"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="1dp"
-                    android:layout_marginEnd="1dp"
                     android:orientation="vertical" />
 
                 <TextView

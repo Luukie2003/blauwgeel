@@ -21,7 +21,7 @@ class PrognoseActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.prognose))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
         laad()
     }
@@ -116,7 +116,7 @@ class PrognoseActivity : BasisActivity() {
                     if (p.optBoolean("al_op_bestellijst")) getString(R.string.op_bestellijst_kort) else null,
                 ).joinToString(" · "),
                 "${(p.optDouble("kans_tekort") * 100).roundToInt()}%",
-                if (p.optString("status") == "urgent") R.color.rood_balk else R.color.oranje_balk,
+                if (p.optString("status") == "urgent") R.color.rood else R.color.oranje,
             ) { ProductActivity.open(this, p.getInt("id")) }
         }
     }

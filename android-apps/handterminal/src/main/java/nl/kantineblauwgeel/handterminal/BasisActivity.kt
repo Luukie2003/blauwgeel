@@ -32,7 +32,7 @@ import nl.kantineblauwgeel.handterminal.databinding.BalkBinding
 import org.json.JSONObject
 
 /** Wat elk scherm van de app gemeen heeft:
- * - de kopbalk (titel, wie er is ingelogd, de verbindingsstip en het menu);
+ * - de kopbalk (titel, de verbindingsstip en het menu; op het startscherm wie er is ingelogd);
  * - de scanner: een scan komt binnen in [bijScan]; standaard opent die het product (of het koppelen van een
  *   onbekende barcode), een scherm kan dat zelf anders doen;
  * - automatisch uitloggen na een tijd niets doen (iedereen gebruikt dezelfde handterminal met een eigen code);
@@ -161,14 +161,34 @@ abstract class BasisActivity : AppCompatActivity() {
 
     // ---------------------------------------------------------------- de kopbalk
 
-    protected fun richtBalkIn(balk: BalkBinding, titel: String, sub: String? = Sessie.naam, terug: Boolean = true) {
+    /** De kopbalk van een werkscherm: terug, de titel en eventueel een regel eronder ([sub]). */
+    protected fun richtBalkIn(balk: BalkBinding, titel: String, sub: String? = null, terug: Boolean = true) {
         this.balk = balk
         balk.balkTitel.text = titel
         balk.balkTerug.isVisible = terug
-        balk.balkLogo.isVisible = !terug
         balk.balkTerug.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
         balk.balkMenu.setOnClickListener { toonMenu(it) }
         zetBalkSub(sub)
+    }
+
+    /** De kopbalk van het startscherm, zoals de kop van de site: het wapen met KANTINE BLAUW-GEEL en Handterminal, en
+     * rechts de eerste letter van wie er is ingelogd (die opent het menu). */
+    protected fun richtStartBalkIn(balk: BalkBinding) {
+        richtBalkIn(balk, getString(R.string.merk), sub = getString(R.string.merk_sub), terug = false)
+        balk.balkLogo.isVisible = true
+        balk.balkTitel.textSize = 19f
+        balk.balkTitel.isAllCaps = true
+        balk.balkTitel.letterSpacing = 0.03f
+        balk.balkMenu.isVisible = false
+        balk.balkAvatar.isVisible = true
+        balk.balkAvatar.setOnClickListener { toonMenu(it) }
+        zetAvatar(Sessie.naam)
+    }
+
+    protected fun zetAvatar(naam: String?) {
+        val b = balk ?: return
+        b.balkAvatar.text = naam?.trim()?.firstOrNull()?.uppercase() ?: ""
+        b.balkAvatar.contentDescription = getString(R.string.menu_openen) + (naam?.let { " ($it)" } ?: "")
     }
 
     protected fun zetBalkTitel(titel: String) {
@@ -180,13 +200,26 @@ abstract class BasisActivity : AppCompatActivity() {
         werkBalkBij()
     }
 
+    /** Rechts in de kopbalk: waar je bent ("12 van 87"), of niets ([nu] null). */
+    protected fun zetBalkTeller(nu: Int?, totaal: Int = 0) {
+        val b = balk ?: return
+        b.balkTeller.isVisible = nu != null
+        if (nu == null) return
+        val tekst = android.text.SpannableStringBuilder("$nu ")
+        val begin = tekst.length
+        tekst.append(getString(R.string.van_totaal, totaal))
+        tekst.setSpan(android.text.style.ForegroundColorSpan(getColor(R.color.tekst_zacht_op_blauw)), begin, tekst.length,
+            android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        b.balkTeller.text = tekst
+    }
+
     private fun werkBalkBij() {
         val b = balk ?: return
         val tekst = if (!verbonden) getString(R.string.balk_offline) else balkSub
         b.balkSub.text = tekst
         b.balkSub.isVisible = !tekst.isNullOrEmpty()
-        b.balkSub.setTextColor(ContextCompat.getColor(this, if (verbonden) R.color.tekst_zacht_op_navy else R.color.oranje))
-        kleurStip(b.balkStip, if (verbonden) R.color.groen else R.color.rood)
+        b.balkSub.setTextColor(ContextCompat.getColor(this, if (verbonden) R.color.tekst_zacht_op_blauw else R.color.stip_oranje))
+        kleurStip(b.balkStip, if (verbonden) R.color.stip_groen else R.color.stip_rood)
     }
 
     fun kleurStip(stip: View, @ColorRes kleur: Int) {
@@ -392,12 +425,12 @@ abstract class BasisActivity : AppCompatActivity() {
         }
     }
 
-    /** Een titel voor een venster die niet wordt afgekapt (de standaardtitel past maar twee regels). */
-    fun dialoogTitel(tekst: String) = android.widget.TextView(this).apply {
+    /** Een titel voor een venster die niet wordt afgekapt (de standaardtitel past maar twee regels), in de sportletter. */
+    fun dialoogTitel(tekst: String) = androidx.appcompat.widget.AppCompatTextView(this).apply {
         text = tekst
-        textSize = 18f
+        textSize = 22f
         setTextColor(getColor(R.color.tekst))
-        setTypeface(typeface, android.graphics.Typeface.BOLD)
+        setTypeface(Letters.koppen(context), android.graphics.Typeface.BOLD)
         setPadding(dp(context, 24), dp(context, 20), dp(context, 24), dp(context, 4))
     }
 

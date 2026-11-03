@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- De smalle sportletter van de site voor koppen en getallen (Barlow Condensed). Gewoon is half-vet (600, zoals h2
+     op de site), vet is vet (700, zoals h1). -->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <font
+        android:font="@font/barlow_condensed_halfvet"
+        android:fontStyle="normal"
+        android:fontWeight="400"
+        app:font="@font/barlow_condensed_halfvet"
+        app:fontStyle="normal"
+        app:fontWeight="400" />
+    <font
+        android:font="@font/barlow_condensed_vet"
+        android:fontStyle="normal"
+        android:fontWeight="700"
+        app:font="@font/barlow_condensed_vet"
+        app:fontStyle="normal"
+        app:fontWeight="700" />
+</font-family>

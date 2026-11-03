@@ -11,6 +11,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import androidx.appcompat.widget.AppCompatTextView
 import kotlinx.coroutines.launch
 import nl.kantineblauwgeel.handterminal.databinding.ActivityTellenBinding
 import org.json.JSONObject
@@ -132,10 +133,13 @@ class TellenActivity : BasisActivity() {
         b.telLaag.isVisible = nieuw == Laag.TELLEN
         b.controleLaag.isVisible = nieuw == Laag.CONTROLE
         b.klaarLaag.isVisible = nieuw == Laag.KLAAR
+        // Bij het tellen is de gele streep onder de kop de voortgang.
         b.voortgang.isVisible = nieuw == Laag.TELLEN
+        b.balk.balkStreep.isVisible = nieuw != Laag.TELLEN
+        if (nieuw != Laag.TELLEN) zetBalkTeller(null)
         when (nieuw) {
             Laag.CONTROLE -> zetBalkTitel(getString(R.string.titel_controleren))
-            Laag.KLAAR -> { zetBalkTitel(getString(R.string.titel_tellen)); zetBalkSub(Sessie.naam) }
+            Laag.KLAAR -> { zetBalkTitel(getString(R.string.titel_tellen)); zetBalkSub(null) }
             else -> {}
         }
     }
@@ -206,7 +210,7 @@ class TellenActivity : BasisActivity() {
     private fun zetFotosKlaar() {
         Fotos.zetOpToestel(this, producten.map { it.foto }) { klaar, totaal ->
             if (isFinishing || isDestroyed) return@zetOpToestel
-            zetBalkSub(if (klaar < totaal) getString(R.string.fotos_klaarzetten, klaar, totaal) else Sessie.naam)
+            zetBalkSub(if (klaar < totaal) getString(R.string.fotos_klaarzetten, klaar, totaal) else null)
         }
     }
 
@@ -258,14 +262,13 @@ class TellenActivity : BasisActivity() {
     private fun toonProduct() {
         val p = producten[index]
         val bar = fase == "bar"
-        zetBalkTitel(getString(R.string.titel_looplijst))
-        zetBalkSub(getString(R.string.product_n_van_m, index + 1, producten.size))
+        zetBalkTitel(getString(R.string.titel_tellen))
+        zetBalkTeller(index + 1, producten.size)
         val stap = (if (bar) 0 else producten.size) + index
         b.voortgang.progress = (stap * 1000) / (producten.size * 2)
-        b.faseLabel.setText(if (bar) R.string.bar_tellen else R.string.hok_tellen)
-        b.faseLabel.setBackgroundResource(if (bar) R.drawable.fase_bar else R.drawable.fase_hok)
-        b.faseLabel.setTextColor(getColor(if (bar) R.color.groen_tekst else R.color.oranje_balk))
+        Lijst.zetStand(b.faseLabel, getString(if (bar) R.string.bar_tellen else R.string.hok_tellen), getColor(if (bar) R.color.groen else R.color.oranje))
         b.telBarGeteld.text = if (bar) "" else getString(R.string.bar_geteld, this.bar[p.id.toString()]?.ifEmpty { null } ?: "—", p.eenheid)
+        b.telBarGeteld.isVisible = !bar
         Fotos.toon(b.telFoto, p.foto)
         b.telCategorie.text = p.categorie
         b.telNaam.text = p.naam
@@ -301,7 +304,7 @@ class TellenActivity : BasisActivity() {
 
     private fun toonWaarde() {
         b.telWaarde.text = waarde.ifEmpty { "–" }
-        b.telWaarde.setTextColor(getColor(if (waarde.isEmpty()) R.color.rand_licht else R.color.tekst))
+        b.telWaarde.setTextColor(getColor(if (waarde.isEmpty()) R.color.rand else R.color.tekst))
     }
 
     private fun pasAan(stap: Int) {
@@ -509,20 +512,21 @@ class TellenActivity : BasisActivity() {
         val eenheid = r.optString("eenheid")
         val regel = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(dp(context, 12), dp(context, 8), dp(context, 12), dp(context, 8))
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(context, 14), dp(context, 9), dp(context, 14), dp(context, 9))
             setBackgroundResource(R.drawable.regel_klik)
             isClickable = true
         }
         val links = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        links.addView(TextView(this).apply {
+        links.addView(AppCompatTextView(this).apply {
             text = r.optString("naam")
             textSize = 15f
             setTextColor(getColor(R.color.tekst))
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            typeface = Letters.medium(context)
         })
         val details = mutableListOf(getString(R.string.bar_plus_hok, r.optString("bar"), r.optString("hok")))
         details += getString(R.string.was_voorraad, r.optInt("voorraad"))
-        links.addView(TextView(this).apply {
+        links.addView(AppCompatTextView(this).apply {
             text = details.joinToString(" · ")
             textSize = 12f
             setTextColor(getColor(R.color.tekst_zacht))
@@ -533,17 +537,18 @@ class TellenActivity : BasisActivity() {
             r.optString("model_afwijking") == "meer" -> getString(R.string.afwijking_meer)
             else -> null
         }
-        if (waarschuwing != null) links.addView(TextView(this).apply {
-            text = "⚠ $waarschuwing"
-            textSize = 12f
-            setTextColor(getColor(R.color.oranje_balk))
+        if (waarschuwing != null) links.addView(Lijst.stand(this, waarschuwing, getColor(R.color.oranje)).apply {
+            textSize = 12.5f
+            isSingleLine = false
+            setPadding(0, dp(context, 2), 0, 0)
         })
         regel.addView(links, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        val totaal = TextView(this).apply {
+        val totaal = AppCompatTextView(this).apply {
             text = getString(R.string.aantal_eenheid, controleWaarden[id] ?: 0, eenheid)
-            textSize = 17f
+            textSize = 19f
             setTextColor(getColor(R.color.tekst))
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTypeface(Letters.koppen(context), android.graphics.Typeface.BOLD)
+            setPadding(dp(context, 10), 0, 0, 0)
         }
         regel.addView(totaal)
         regel.setOnClickListener {

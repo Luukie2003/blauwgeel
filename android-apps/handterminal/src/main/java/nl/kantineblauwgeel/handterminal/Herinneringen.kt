@@ -125,7 +125,7 @@ object Herinneringen {
         )
         val melding = NotificationCompat.Builder(context, KANAAL)
             .setSmallIcon(R.drawable.ic_bestellijst)
-            .setColor(ContextCompat.getColor(context, R.color.navy))
+            .setColor(ContextCompat.getColor(context, R.color.blauw_donker))
             .setContentTitle(titel)
             .setContentText(tekst)
             .setStyle(NotificationCompat.BigTextStyle().bigText(tekst))

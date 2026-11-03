@@ -14,6 +14,9 @@ import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.AppCompatEditText
+import androidx.appcompat.widget.AppCompatRadioButton
+import androidx.appcompat.widget.AppCompatTextView
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
@@ -32,7 +35,7 @@ class KantineTvActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.kantine_tv))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
         teKoppelen = intent.getStringExtra(EXTRA_KOPPELCODE)
     }
@@ -82,9 +85,9 @@ class KantineTvActivity : BasisActivity() {
         val inhoud = b.inhoud
         inhoud.removeAllViews()
 
-        // Staat er nu iets groot op de tv's, dan bovenaan in het geel, met Stop (2.21.0).
+        // Staat er nu iets groot op de tv's, dan bovenaan als melding, met Stop (2.21.0).
         if (d.optBoolean("schijnwerper")) {
-            Lijst.balk(inhoud, getString(R.string.schijnwerper_nu, d.tekstOfNull("schijnwerper_titel") ?: getString(R.string.een_dia)),
+            Lijst.melding(inhoud, getString(R.string.nu_groot_op_tv), d.tekstOfNull("schijnwerper_titel") ?: getString(R.string.een_dia),
                 getString(R.string.stop_knop)) { stuur("/api/app/kantine-tv/schijnwerper/stop") }
         }
         // Snelknoppen voor wat je achter de bar het vaakst nodig hebt.
@@ -120,13 +123,13 @@ class KantineTvActivity : BasisActivity() {
                     status.tekstOfNull("app"),
                 ).joinToString(" · ")
                 Lijst.regel(kaart, tv.optString("naam"), detail, getString(if (aan) R.string.aan else R.string.uit),
-                    if (aan) R.color.groen_tekst else R.color.rood_balk, pil = true) { tvMenu(tv, schermen) }
+                    if (aan) R.color.groen else R.color.rood, pil = true) { tvMenu(tv, schermen) }
             }
         }
         val wisselDias = d.optString("wissel") == "dias"
         Lijst.regel(Lijst.kaart(inhoud), getString(R.string.wisselscherm),
             getString(if (wisselDias) R.string.wissel_toont_dias else R.string.wissel_toont_prijzen),
-            getString(R.string.wisselen), R.color.navy) {
+            getString(R.string.wisselen), R.color.blauw_donker) {
             stuur("/api/app/kantine-tv/wissel", JSONObject().put("toont", if (wisselDias) "prijzen" else "dias"))
         }
 
@@ -135,7 +138,7 @@ class KantineTvActivity : BasisActivity() {
         Lijst.regel(Lijst.kaart(inhoud), getString(R.string.halloween_thema),
             getString(if (halloween) R.string.halloween_aan_uitleg else R.string.halloween_uit_uitleg),
             getString(if (halloween) R.string.aan else R.string.uit),
-            if (halloween) R.color.oranje_balk else R.color.tekst_zacht, pil = true) {
+            if (halloween) R.color.oranje else R.color.grijs, pil = true) {
             stuur("/api/app/kantine-tv/thema", JSONObject().put("thema", if (halloween) JSONObject.NULL else "halloween"))
         }
 
@@ -147,12 +150,12 @@ class KantineTvActivity : BasisActivity() {
             for (m in momenten) {
                 val status = m.optString("status")
                 val (wat, kleur) = when (status) {
-                    "schijnwerper" -> getString(R.string.moment_schijnwerper) to R.color.oranje_balk
-                    "bezig" -> getString(R.string.moment_bezig) to R.color.groen_tekst
+                    "schijnwerper" -> getString(R.string.moment_schijnwerper) to R.color.oranje
+                    "bezig" -> getString(R.string.moment_bezig) to R.color.groen
                     "klaar" -> getString(R.string.moment_klaar) to R.color.tekst_zacht
-                    "map_uit" -> getString(R.string.moment_map_uit) to R.color.rood_balk
-                    "dia_uit" -> getString(R.string.moment_dia_uit) to R.color.rood_balk
-                    else -> getString(R.string.moment_straks) to R.color.navy
+                    "map_uit" -> getString(R.string.moment_map_uit) to R.color.rood
+                    "dia_uit" -> getString(R.string.moment_dia_uit) to R.color.rood
+                    else -> getString(R.string.moment_straks) to R.color.blauw_donker
                 }
                 Lijst.regel(kaart, m.optString("tijd") + "  " + (m.tekstOfNull("titel") ?: ""),
                     listOfNotNull(m.tekstOfNull("map"), m.tekstOfNull("balk")).joinToString(" · ").ifEmpty { null }, wat, kleur, pil = true) {
@@ -169,11 +172,12 @@ class KantineTvActivity : BasisActivity() {
         if (inst.toegang("voorraad")) {  // uitverkocht zetten mag met voorraadrechten (zie rechten.py)
             val uitverkocht = d.optInt("uitverkocht")
             Lijst.regel(prijzen, getString(R.string.uitverkocht_titel), getString(R.string.uitverkocht_kort_uitleg),
-                if (uitverkocht > 0) uitverkocht.toString() else null, R.color.rood_balk, pil = true) { UitverkochtActivity.open(this) }
+                if (uitverkocht > 0) resources.getQuantityString(R.plurals.n_uitverkocht, uitverkocht, uitverkocht) else null, R.color.rood,
+                pil = true) { UitverkochtActivity.open(this) }
         }
         val timers = d.optInt("timers")
         Lijst.regel(prijzen, getString(R.string.timer_titel), getString(R.string.timer_kort_uitleg),
-            if (timers > 0) timers.toString() else null, R.color.navy, pil = true) { TimerActivity.open(this) }
+            if (timers > 0) resources.getQuantityString(R.plurals.stand_timers, timers, timers) else null, R.color.blauw, pil = true) { TimerActivity.open(this) }
 
         // Specials
         Lijst.kop(inhoud, getString(R.string.specials))
@@ -181,13 +185,13 @@ class KantineTvActivity : BasisActivity() {
         val uitgelicht = d.optJSONObject("uitgelicht")
         Lijst.regel(specials, uitgelicht?.optString("titel") ?: d.optString("uitgelicht_titel"),
             uitgelicht?.optString("naam") ?: getString(R.string.niets_uitgelicht),
-            getString(R.string.wijzigen), R.color.navy) { uitgelichtMenu(uitgelicht, d.optString("uitgelicht_titel")) }
+            getString(R.string.wijzigen), R.color.blauw_donker) { uitgelichtMenu(uitgelicht, d.optString("uitgelicht_titel")) }
         val acties = d.optJSONArray("acties")?.objecten().orEmpty()
         if (acties.isEmpty()) Lijst.tekst(specials, getString(R.string.geen_acties), grootte = 12f)
         for (a in acties) {
             val actief = a.optBoolean("actief")
             Lijst.regel(specials, getString(R.string.actie_naam, a.optString("product")), a.tekstOfNull("tekst"),
-                getString(if (actief) R.string.aan else R.string.uit), if (actief) R.color.groen_tekst else R.color.tekst_zacht, pil = true) {
+                getString(if (actief) R.string.aan else R.string.uit), if (actief) R.color.groen else R.color.grijs, pil = true) {
                 stuur("/api/app/kantine-tv/acties/${a.getInt("id")}", JSONObject().put("actief", !actief))
             }
         }
@@ -205,7 +209,7 @@ class KantineTvActivity : BasisActivity() {
                 val tijd = "${bd.optString("start_tijd")} – ${bd.optString("eind_tijd")}"
                 Lijst.regel(bardienst, bd.optString("namen"),
                     if (bd.optBoolean("bezig")) getString(R.string.nu_bezig, tijd) else tijd,
-                    if (bd.optBoolean("bezig")) getString(R.string.nu) else null, R.color.groen_tekst, pil = true) { bardienstVenster(bd, vandaag) }
+                    if (bd.optBoolean("bezig")) getString(R.string.nu) else null, R.color.groen, pil = true) { bardienstVenster(bd, vandaag) }
             }
         }
         if (diensten.isEmpty()) Lijst.tekst(bardienst, getString(R.string.geen_bardienst), grootte = 12f)
@@ -253,22 +257,22 @@ class KantineTvActivity : BasisActivity() {
 
     /** Een nieuwe tv koppelen: de code (uit de QR-code, of zelf intikken), een naam en wat hij toont. */
     private fun koppelVenster(code: String?) {
-        val codeVeld = EditText(this).apply {
+        val codeVeld = AppCompatEditText(this).apply {
             hint = getString(R.string.koppelcode_hint)
             inputType = InputType.TYPE_CLASS_NUMBER
             setText(code ?: "")
         }
-        val naam = EditText(this).apply {
+        val naam = AppCompatEditText(this).apply {
             hint = getString(R.string.tv_naam_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
         }
         val schermen = data?.optJSONArray("schermen")?.objecten().orEmpty()
         val keuze = RadioGroup(this).apply {
-            schermen.forEachIndexed { i, s -> addView(RadioButton(context).apply { id = i + 1; text = s.optString("naam") }) }
+            schermen.forEachIndexed { i, s -> addView(AppCompatRadioButton(context).apply { id = i + 1; text = s.optString("naam") }) }
             // Standaard de dia's: met de afstandsbediening wissel je op de tv zelf naar de prijzenlijst.
             check((schermen.indexOfFirst { it.optString("sleutel") == "dias" }.takeIf { it >= 0 } ?: 0) + 1)
         }
-        fun label(tekst: Int) = TextView(this).apply {
+        fun label(tekst: Int) = AppCompatTextView(this).apply {
             setText(tekst)
             textSize = 12f
             setTextColor(getColor(R.color.tekst_zacht))
@@ -326,10 +330,10 @@ class KantineTvActivity : BasisActivity() {
     }
 
     private fun titelVenster(titel: String, uitgelicht: JSONObject?) {
-        val veld = EditText(this).apply {
+        val veld = AppCompatEditText(this).apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             setText(titel)
-            setSelection(text.length)
+            setSelection(titel.length)
         }
         val vorm = LinearLayout(this).apply {
             setPadding(dp(context, 20), dp(context, 6), dp(context, 20), 0)
@@ -354,7 +358,7 @@ class KantineTvActivity : BasisActivity() {
         bezig {
             val producten = Api.getJson(this, "/api/app/kantine-tv/producten").optJSONArray("producten")?.objecten().orEmpty()
                 .sortedByDescending { it.optBoolean("op_prijzenscherm") }
-            val zoek = EditText(this).apply {
+            val zoek = AppCompatEditText(this).apply {
                 hint = getString(R.string.zoek_product)
                 inputType = InputType.TYPE_CLASS_TEXT
             }
@@ -393,7 +397,7 @@ class KantineTvActivity : BasisActivity() {
 
     /** Een bardienst toevoegen ([bd] null) of aanpassen, bijvoorbeeld een wissel ter plekke. */
     private fun bardienstVenster(bd: JSONObject?, vandaag: String) {
-        fun veld(hint: Int, waarde: String?, soort: Int) = EditText(this).apply {
+        fun veld(hint: Int, waarde: String?, soort: Int) = AppCompatEditText(this).apply {
             this.hint = getString(hint)
             inputType = soort
             setText(waarde ?: "")
@@ -404,11 +408,11 @@ class KantineTvActivity : BasisActivity() {
         val eind = veld(R.string.tot_tijd, bd?.optString("eind_tijd"), tijdSoort)
         val dag = RadioGroup(this).apply {
             orientation = RadioGroup.HORIZONTAL
-            addView(RadioButton(context).apply { id = 1; setText(R.string.dag_vandaag) })
-            addView(RadioButton(context).apply { id = 2; setText(R.string.dag_morgen) })
+            addView(AppCompatRadioButton(context).apply { id = 1; setText(R.string.dag_vandaag) })
+            addView(AppCompatRadioButton(context).apply { id = 2; setText(R.string.dag_morgen) })
             check(1)
         }
-        fun label(tekst: Int) = TextView(this).apply {
+        fun label(tekst: Int) = AppCompatTextView(this).apply {
             setText(tekst)
             textSize = 12f
             setTextColor(getColor(R.color.tekst_zacht))
@@ -417,7 +421,7 @@ class KantineTvActivity : BasisActivity() {
         val tijden = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             addView(start, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            addView(TextView(context).apply { text = " – " })
+            addView(AppCompatTextView(context).apply { text = " – " })
             addView(eind, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         }
         val vorm = LinearLayout(this).apply {

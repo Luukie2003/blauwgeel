@@ -19,7 +19,7 @@ class KeukenTellingActivity : BasisActivity() {
         setContentView(b.root)
         tellingId = intent.getIntExtra(EXTRA_ID, 0)
         richtBalkIn(b.balk, getString(R.string.keukentelling))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
         laad()
     }
@@ -46,7 +46,7 @@ class KeukenTellingActivity : BasisActivity() {
         val samen = Lijst.kaart(inhoud)
         Lijst.regel(samen, resources.getQuantityString(R.plurals.n_producten, regels.size, regels.size),
             if (begin) getString(R.string.keuken_begintelling_uitleg) else getString(R.string.keuken_verkocht_totaal, regels.sumOf { it.optInt("verkocht") }),
-            if (begin) null else Lijst.euro(t.optDouble("omzet")), R.color.groen_tekst)
+            if (begin) null else Lijst.euro(t.optDouble("omzet")), R.color.groen)
         t.tekstOfNull("opmerking")?.let { Lijst.tekst(samen, it) }
 
         Lijst.kop(inhoud, getString(R.string.per_product))

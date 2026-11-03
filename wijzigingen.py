@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.2.0"
+HUIDIGE_VERSIE = "2.3.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.3.0",
+        "datum": "3 november 2026",
+        "punten": [
+            "Handterminal-app 3.0.0: de app op de Zebra in de clubstijl van de site. Dezelfde donkerblauwe kop met de gele streep, de letters van de site met de smalle sportletter voor titels en getallen, witte panelen op papier en lijn-iconen. Alles werkt nog precies zoals eerst; alleen de vorm is nieuw.",
+            "Handterminal-app 3.0.0: het startscherm lijkt op het overzicht van de site: het wapen in de kop, de groet met de datum, de vier knoppen samen op één bord met hun stand eronder (zoals '21 onder het minimum'), en 'Wat moet er nu?' met een rode of gele streep per taak. Het menu zit achter je eerste letter rechtsboven.",
+            "Handterminal-app 3.0.0: een stand is overal een woord met een gekleurde stip (Aan, Uit, Laag, Onder het minimum) in plaats van een gekleurd labeltje, en elk scherm heeft één gele knop die zegt wat er gebeurt ('24 blik erin boeken', 'Volgende'). Na een scan staan de voorraad en het minimum naast elkaar en zijn Erin en Eruit twee grote vakken; bij het tellen loopt de gele streep onder de kop vol terwijl je telt.",
+        ],
+    },
     {
         "versie": "2.2.0",
         "datum": "3 november 2026",
@@ -1408,7 +1417,7 @@ MODULES = [
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
-    {"naam": "Handterminal-app", "versie": "0.25.0", "sinds": "1.53.0", "laatst": "1.79.0",
+    {"naam": "Handterminal-app", "versie": "0.26.0", "sinds": "1.53.0", "laatst": "2.3.0",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (nalopen met vinkjes, klaarzetten met het besteloverzicht, verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken (inboeken per verpakking, blind tellen, weggooien), Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst, momenten met de schijnwerper, mappen en dia's aan of uit, en het Halloween-thema), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.11.0", "sinds": "0.1.0", "laatst": "2.2.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},

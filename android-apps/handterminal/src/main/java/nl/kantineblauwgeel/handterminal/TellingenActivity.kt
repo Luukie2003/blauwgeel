@@ -21,7 +21,7 @@ class TellingenActivity : BasisActivity() {
         setContentView(b.root)
         tellingId = intent.getIntExtra(EXTRA_ID, 0)
         richtBalkIn(b.balk, if (tellingId > 0) getString(R.string.telling_nr, tellingId) else getString(R.string.tellingen))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
     }
 
@@ -78,7 +78,7 @@ class TellingenActivity : BasisActivity() {
                     correctie > 0 -> "+$correctie"
                     else -> "0"
                 },
-                if (correctie > 0) R.color.oranje_balk else R.color.tekst,
+                if (correctie > 0) R.color.oranje else R.color.tekst,
             ) { kiesActie(r) }
         }
         Lijst.tekst(Lijst.kaart(b.inhoud, R.drawable.melding_info), getString(R.string.tik_om_te_corrigeren), kleur = R.color.tekst)

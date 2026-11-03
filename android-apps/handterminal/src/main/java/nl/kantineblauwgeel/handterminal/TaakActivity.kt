@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.widget.CheckBox
 import android.widget.LinearLayout
 import androidx.core.view.isVisible
+import androidx.appcompat.widget.AppCompatCheckBox
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
@@ -24,7 +25,7 @@ class TaakActivity : BasisActivity() {
         setContentView(b.root)
         taakId = intent.getIntExtra(EXTRA_ID, 0)
         richtBalkIn(b.balk, getString(R.string.taak))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
         b.onderKnop.isVisible = true
         b.onderKnop.setText(R.string.taak_afronden)
@@ -65,7 +66,7 @@ class TaakActivity : BasisActivity() {
         t.tekstOfNull("omschrijving")?.let { Lijst.tekst(kaart, it, grootte = 14f, kleur = R.color.tekst) }
         t.tekstOfNull("deadline")?.let {
             Lijst.info(kaart, getString(R.string.uiterlijk), Lijst.datum("$it 00:00", metTijd = false),
-                if (t.optBoolean("te_laat")) getString(R.string.te_laat) else null, if (t.optBoolean("te_laat")) R.color.rood_balk else R.color.tekst)
+                if (t.optBoolean("te_laat")) getString(R.string.te_laat) else null, if (t.optBoolean("te_laat")) R.color.rood else R.color.tekst)
         }
         t.tekstOfNull("door")?.let { Lijst.info(kaart, getString(R.string.klaargezet_door), it) }
         val anderen = t.optJSONArray("anderen")?.objecten().orEmpty()
@@ -80,7 +81,7 @@ class TaakActivity : BasisActivity() {
             Lijst.kop(inhoud, getString(R.string.stappen_n, stappen.count { it.optBoolean("af") }, stappen.size))
             val lijst = Lijst.kaart(inhoud).apply { setPadding(dp(this@TaakActivity, 8), dp(this@TaakActivity, 4), dp(this@TaakActivity, 8), dp(this@TaakActivity, 4)) }
             stappen.forEachIndexed { i, s ->
-                lijst.addView(CheckBox(this).apply {
+                lijst.addView(AppCompatCheckBox(this).apply {
                     text = s.optString("tekst")
                     textSize = 15f
                     isChecked = s.optBoolean("af")

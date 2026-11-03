@@ -36,12 +36,11 @@ class ProductAdapter(private val context: Context, private val bijKlik: (Catalog
         Fotos.toon(v.productFoto, p.foto)
         v.productNaam.text = p.naam
         v.productSub.text = listOf(p.categorie, p.subcategorie, p.merk).filter { it.isNotEmpty() }.distinct().joinToString(" · ")
-        v.productVoorraad.text = p.voorraadTekst()
-        v.productVoorraad.setTextColor(context.getColor(if (p.laag || p.voorraad < 0) R.color.rood_balk else R.color.tekst))
+        v.productVoorraad.text = Lijst.getalMetEenheid(context, p.voorraad.toString(), p.eenheid, 13, Letters.koppen(context))
+        v.productVoorraad.setTextColor(context.getColor(if (p.laag || p.voorraad < 0) R.color.rood else R.color.tekst))
         v.productLabel.isVisible = p.laag || !p.actief
-        v.productLabel.text = context.getString(if (!p.actief) R.string.inactief else R.string.laag)
-        v.productLabel.setBackgroundResource(if (!p.actief) R.drawable.badge_grijs else R.drawable.badge_rood)
-        v.productLabel.setTextColor(context.getColor(if (!p.actief) R.color.tekst_zacht else R.color.wit))
+        Lijst.zetStand(v.productLabel, context.getString(if (!p.actief) R.string.stand_inactief else R.string.stand_laag),
+            context.getColor(if (!p.actief) R.color.grijs else R.color.rood))
         v.root.alpha = if (p.actief) 1f else 0.6f
         v.root.setOnClickListener { bijKlik(p) }
     }

@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- De gele hoofdknop: één per scherm, zegt wat er gebeurt ("24 blik erin boeken"). -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
-        <shape><corners android:radius="8dp" /><solid android:color="@color/geel_donker" /></shape>
+        <shape><corners android:radius="6dp" /><solid android:color="@color/geel_donker" /><stroke android:width="1dp" android:color="@color/geel_donker" /></shape>
     </item>
     <item>
-        <shape><corners android:radius="8dp" /><solid android:color="@color/geel" /></shape>
+        <shape><corners android:radius="6dp" /><solid android:color="@color/geel" /><stroke android:width="1dp" android:color="@color/geel_donker" /></shape>
     </item>
 </selector>

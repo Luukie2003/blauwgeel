@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/achtergrond_inlog"
+    android:background="@color/blauw_donker"
     android:fillViewport="true">
 
     <LinearLayout
@@ -29,7 +29,7 @@
                 android:layout_weight="1"
                 android:text="@string/kantinesysteem"
                 android:textAllCaps="true"
-                android:textColor="@color/tekst_zacht_op_navy"
+                android:textColor="@color/tekst_zacht_op_blauw"
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
@@ -65,7 +65,7 @@
                 android:layout_gravity="center"
                 android:contentDescription="@string/vergrendeld"
                 android:src="@drawable/ic_slot"
-                app:tint="@color/navy" />
+                app:tint="@color/blauw_donker" />
         </FrameLayout>
 
         <TextView
@@ -85,20 +85,20 @@
             android:gravity="center"
             android:lineSpacingExtra="2dp"
             android:text="@string/vergrendeld_uitleg"
-            android:textColor="@color/tekst_op_navy"
+            android:textColor="@color/wit"
             android:textSize="15sp" />
 
         <TextView
-            style="@style/KenmerkOpNavy"
+            style="@style/KenmerkOpBlauw"
             android:layout_marginTop="18dp"
             android:text="@string/vergrendeld_veilig" />
 
         <TextView
-            style="@style/KenmerkOpNavy"
+            style="@style/KenmerkOpBlauw"
             android:text="@string/vergrendeld_bar_open" />
 
         <TextView
-            style="@style/KenmerkOpNavy"
+            style="@style/KenmerkOpBlauw"
             android:text="@string/vergrendeld_toestel" />
 
         <Space
@@ -120,7 +120,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:textColor="@color/tekst_zacht_op_navy"
+            android:textColor="@color/tekst_zacht_op_blauw"
             android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>

@@ -1,25 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Een regel onder 'Let op': een gekleurde rand links (rood, oranje), titel, uitleg en een pijltje. -->
+<!-- Een regel onder "Wat moet er nu?": links een streep (rood als het dringend is, geel als het straks moet, blauw voor
+     iets wat loopt), de titel, de uitleg en een pijl. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="6dp"
-    android:background="@drawable/rand_links_rood"
+    android:background="@drawable/regel_klik_kaart"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?android:attr/selectableItemBackground"
     android:gravity="center_vertical"
-    android:minHeight="50dp"
+    android:minHeight="54dp"
     android:orientation="horizontal"
-    android:paddingStart="14dp"
-    android:paddingTop="6dp"
-    android:paddingEnd="8dp"
-    android:paddingBottom="6dp">
+    android:paddingStart="12dp"
+    android:paddingTop="9dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="9dp">
+
+    <View
+        android:id="@+id/letOpStreep"
+        android:layout_width="5dp"
+        android:layout_height="match_parent"
+        android:minHeight="36dp" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="11dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -28,7 +34,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="@color/tekst"
-            android:textSize="14sp"
+            android:textSize="15sp"
             android:textStyle="bold" />
 
         <TextView
@@ -38,14 +44,15 @@
             android:ellipsize="end"
             android:maxLines="2"
             android:textColor="@color/tekst_zacht"
-            android:textSize="12sp" />
+            android:textSize="13sp" />
     </LinearLayout>
 
     <ImageView
         android:id="@+id/letOpPijl"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_marginStart="11dp"
         android:contentDescription="@null"
         android:src="@drawable/ic_verder"
-        app:tint="@color/tekst_zacht" />
+        app:tint="@color/blauw" />
 </LinearLayout>

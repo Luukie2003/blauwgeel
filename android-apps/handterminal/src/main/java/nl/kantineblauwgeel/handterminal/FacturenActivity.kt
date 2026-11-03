@@ -43,7 +43,7 @@ class FacturenActivity : BasisActivity() {
             b.klaarLijst.removeAllViews()
             for (best in klaar) {
                 val regel = ItemLetopBinding.inflate(LayoutInflater.from(this), b.klaarLijst, false)
-                regel.root.setBackgroundResource(R.drawable.rand_links_navy)
+                regel.root.setBackgroundResource(R.drawable.rand_links_blauw)
                 regel.letOpTitel.text = (best.tekstOfNull("referentie")?.let { getString(R.string.bestelling_ref, best.getInt("id"), it) }
                     ?: getString(R.string.bestelling_nr, best.getInt("id"))) + (best.tekstOfNull("leverancier")?.let { " · $it" } ?: "")
                 regel.letOpDetail.text = best.optString("samenvatting")

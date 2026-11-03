@@ -5,6 +5,8 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.AppCompatEditText
+import androidx.appcompat.widget.AppCompatTextView
 import org.json.JSONObject
 
 /** De vragen van de keuken bij het scannen en inboeken (ook voor wie alleen keukenrechten heeft):
@@ -90,7 +92,7 @@ object KeukenKoppelen {
             activity.getString(R.string.keuken_verpakking_soort) to soort,
             activity.getString(R.string.keuken_hoeveel_erin_kort) to aantal,
         ))
-        inhoud.addView(TextView(activity).apply {
+        inhoud.addView(AppCompatTextView(activity).apply {
             text = activity.getString(R.string.keuken_verpakking_uitleg, product.second)
             textSize = 12f
             setTextColor(activity.getColor(R.color.tekst_zacht))
@@ -118,7 +120,7 @@ object KeukenKoppelen {
         }
     }
 
-    private fun veld(activity: BasisActivity, hint: String, soort: Int) = EditText(activity).apply {
+    private fun veld(activity: BasisActivity, hint: String, soort: Int) = AppCompatEditText(activity).apply {
         this.hint = hint
         inputType = soort
         setSingleLine()
@@ -130,7 +132,7 @@ object KeukenKoppelen {
             orientation = LinearLayout.VERTICAL
             setPadding((22 * dp).toInt(), (4 * dp).toInt(), (22 * dp).toInt(), 0)
             for ((label, veld) in velden) {
-                addView(TextView(activity).apply {
+                addView(AppCompatTextView(activity).apply {
                     text = label
                     textSize = 12f
                     setTextColor(activity.getColor(R.color.tekst_zacht))

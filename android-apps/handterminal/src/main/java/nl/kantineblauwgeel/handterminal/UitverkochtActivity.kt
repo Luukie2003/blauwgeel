@@ -21,7 +21,7 @@ class UitverkochtActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.uitverkocht_titel))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
     }
 
@@ -63,7 +63,7 @@ class UitverkochtActivity : BasisActivity() {
             kaart, p.optString("naam"),
             if (uit) getString(R.string.tik_weer_te_koop) else null,
             getString(if (uit) R.string.uitverkocht_kort else R.string.te_koop),
-            if (uit) R.color.rood_balk else R.color.groen_tekst,
+            if (uit) R.color.rood else R.color.groen,
         ) { zet(p.getInt("id"), !uit) }
         if (uit) ((regel.getChildAt(0) as LinearLayout).getChildAt(0) as TextView).paintFlags = Paint.STRIKE_THRU_TEXT_FLAG
     }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- De lichte lijn tussen twee vakken naast elkaar (het scorebord, het bord op het startscherm). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <size android:width="1dp" />
+    <solid android:color="@color/rand_licht" />
+</shape>

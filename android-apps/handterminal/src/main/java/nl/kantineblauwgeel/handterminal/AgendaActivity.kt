@@ -19,7 +19,7 @@ class AgendaActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.agenda))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
     }
 
@@ -66,24 +66,25 @@ class AgendaActivity : BasisActivity() {
             d.optString("weekdag").replaceFirstChar { it.uppercase() } + " " + d.optString("datum_tekst") + wanneer,
             null,
             getString(if (open) R.string.open else R.string.dicht),
-            if (open) R.color.groen_tekst else R.color.tekst_zacht,
+            if (open) R.color.groen else R.color.grijs,
+            pil = true,
         )
         val regels = mutableListOf<String>()
         d.optJSONObject("weer")?.let { w ->
             regels += listOfNotNull(
-                "${w.optString("icoon")} ${w.optString("label")}",
+                w.optString("label"),
                 w.takeIf { !it.isNull("max_temp") }?.let { "${it.optDouble("max_temp").toInt()}°" },
                 w.takeIf { !it.isNull("neerslag_kans") }?.let { getString(R.string.kans_regen, it.optInt("neerslag_kans")) },
             ).joinToString(" · ")
         }
         if (d.optBoolean("dicht_op_vaste_dag")) regels += getString(R.string.dicht_op_vaste_dag)
-        d.tekstOfNull("uitzondering_tekst")?.let { regels += "📌 $it" }
+        d.tekstOfNull("uitzondering_tekst")?.let { regels += it }
         d.optJSONArray("wedstrijden")?.objecten()?.forEach { w ->
-            regels += "⚽ " + listOfNotNull(w.tekstOfNull("tijd"), w.tekstOfNull("omschrijving") ?: w.tekstOfNull("team")).joinToString("  ") +
-                if (w.optBoolean("afgelast")) " (" + getString(R.string.afgelast) + ")" else ""
+            regels += getString(R.string.agenda_wedstrijd, listOfNotNull(w.tekstOfNull("tijd"), w.tekstOfNull("omschrijving") ?: w.tekstOfNull("team")).joinToString("  ") +
+                if (w.optBoolean("afgelast")) " (" + getString(R.string.afgelast) + ")" else "")
         }
         d.optJSONArray("evenementen")?.objecten()?.forEach { e ->
-            regels += "★ " + e.optString("naam") + (e.tekstOfNull("groep")?.let { " ($it)" } ?: "")
+            regels += getString(R.string.agenda_activiteit, e.optString("naam") + (e.tekstOfNull("groep")?.let { " ($it)" } ?: ""))
         }
         d.optJSONArray("bardiensten")?.objecten()?.forEach { bd ->
             regels += getString(R.string.bardienst_regel, bd.optString("van"), bd.optString("tot"), bd.optString("namen"))

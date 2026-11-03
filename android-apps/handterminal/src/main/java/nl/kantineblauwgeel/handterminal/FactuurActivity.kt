@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import androidx.appcompat.widget.AppCompatTextView
 import kotlinx.coroutines.launch
 import nl.kantineblauwgeel.handterminal.databinding.ActivityFactuurBinding
 import org.json.JSONObject
@@ -86,7 +87,7 @@ class FactuurActivity : BasisActivity() {
     private fun toon(r: JSONObject) {
         ronde = r
         zetBalkTitel(naam(this, r))
-        zetBalkSub(r.tekstOfNull("factuurnummer")?.let { getString(R.string.factuur_nr, it) } ?: Sessie.naam)
+        zetBalkSub(r.tekstOfNull("factuurnummer")?.let { getString(R.string.factuur_nr, it) })
         b.totaal.text = euro(r.optDouble("totaal"))
         b.scans.text = resources.getQuantityString(R.plurals.n_scans, r.optInt("scans"), r.optInt("scans"))
         if (r.isNull("factuurbedrag")) {
@@ -98,7 +99,7 @@ class FactuurActivity : BasisActivity() {
             b.bedrag.textSize = 22f
             val verschil = r.optDouble("verschil")
             b.verschil.text = if (Math.abs(verschil) < 0.005) getString(R.string.klopt) else getString(R.string.verschil, euro(verschil))
-            b.verschil.setTextColor(getColor(if (Math.abs(verschil) < 0.005) R.color.groen else R.color.oranje_balk))
+            b.verschil.setTextColor(getColor(if (Math.abs(verschil) < 0.005) R.color.groen else R.color.oranje))
         }
 
         toonBesteld(r.optJSONArray("besteld")?.objecten().orEmpty())
@@ -133,8 +134,8 @@ class FactuurActivity : BasisActivity() {
             val hoeveel = "${x.optInt("besteld_eenheden")} ${x.optString("besteleenheid")}" +
                 if (x.optInt("per_besteleenheid", 1) > 1) " (${x.optInt("besteld")} ${x.optString("eenheid")})" else ""
             val (rechts, kleur) = when (x.optString("status")) {
-                "binnen" -> "✓" to R.color.groen_tekst
-                "deels" -> "−$rest" to R.color.oranje_balk
+                "binnen" -> "✓" to R.color.groen
+                "deels" -> "−$rest" to R.color.oranje
                 else -> getString(R.string.nog_niet_binnen) to R.color.tekst_zacht
             }
             Lijst.regel(b.besteld, x.optString("naam"), getString(R.string.besteld_detail, hoeveel, x.optInt("gescand"), x.optString("eenheid")),
@@ -164,7 +165,7 @@ class FactuurActivity : BasisActivity() {
             .show()
     }
 
-    private fun tekst(waarde: String, zacht: Boolean = false) = TextView(this).apply {
+    private fun tekst(waarde: String, zacht: Boolean = false) = AppCompatTextView(this).apply {
         text = waarde
         textSize = 13f
         setTextColor(getColor(if (zacht) R.color.tekst_zacht else R.color.tekst))
@@ -178,12 +179,12 @@ class FactuurActivity : BasisActivity() {
             gravity = android.view.Gravity.CENTER_VERTICAL
         }
         val links = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        links.addView(TextView(this).apply {
+        links.addView(AppCompatTextView(this).apply {
             text = g.optString("omschrijving")
             textSize = 13f
             setTextColor(getColor(R.color.tekst))
         })
-        links.addView(TextView(this).apply {
+        links.addView(AppCompatTextView(this).apply {
             text = "${g.optString("product")} · +${g.optInt("eenheden")} ${g.optString("eenheid")}"
             textSize = 12f
             setTextColor(getColor(R.color.tekst_zacht))
@@ -191,7 +192,7 @@ class FactuurActivity : BasisActivity() {
         regel.addView(links, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         val aantal = g.optInt("aantal")
         regel.addView(knop(R.drawable.ic_min) { zetAantal(g.getInt("id"), aantal - 1) })
-        regel.addView(TextView(this).apply {
+        regel.addView(AppCompatTextView(this).apply {
             text = "×$aantal"
             textSize = 16f
             setTypeface(typeface, android.graphics.Typeface.BOLD)

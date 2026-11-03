@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Het inlogscherm: clublogo, zes stippen en een groot cijferpad. Ontworpen voor het kleine, staande scherm
-     van de TC51 (5 inch); de lege ruimtes rekken mee, zodat het ook op een groter scherm in balans blijft. -->
+<!-- Het inlogscherm: bovenaan de kop van de site (het wapen en KANTINE BLAUW-GEEL op donkerblauw, met de gele streep),
+     daaronder zes vakjes voor de code en een groot cijferpad in de sportletter. Ontworpen voor het kleine, staande
+     scherm van de TC51 (5 inch); de lege ruimtes rekken mee, zodat het ook op een groter scherm in balans blijft. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/achtergrond_inlog"
+    android:background="@color/papier"
     android:clickable="true"
     android:fillViewport="true"
     android:focusable="true">
@@ -14,82 +15,93 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center_horizontal"
-        android:orientation="vertical"
-        android:paddingStart="20dp"
-        android:paddingTop="12dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="10dp">
+        android:orientation="vertical">
 
-        <Space
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="0.7" />
-
-        <FrameLayout
-            android:id="@+id/inlogLogo"
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:background="@drawable/logo_kring"
-            android:clickable="true"
-            android:focusable="true">
+            android:layout_height="wrap_content"
+            android:background="@color/blauw_donker"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="16dp">
 
             <ImageView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:id="@+id/inlogLogo"
+                android:layout_width="wrap_content"
+                android:layout_height="60dp"
+                android:adjustViewBounds="true"
+                android:clickable="true"
                 android:contentDescription="@string/club"
-                android:padding="9dp"
+                android:focusable="true"
                 android:src="@drawable/clublogo" />
-        </FrameLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text="@string/app_naam"
-            android:textColor="@color/wit"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:fontFamily="@font/barlow_condensed"
+                android:includeFontPadding="false"
+                android:letterSpacing="0.03"
+                android:text="@string/merk"
+                android:textAllCaps="true"
+                android:textColor="@color/wit"
+                android:textSize="31sp"
+                android:textStyle="bold" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/club"
-            android:textColor="@color/tekst_zacht_op_navy"
-            android:textSize="13sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:fontFamily="@font/barlow_medium"
+                android:text="@string/merk_sub"
+                android:textColor="@color/tekst_zacht_op_blauw"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:background="@color/geel" />
 
         <Space
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="0.6" />
+            android:layout_weight="0.4"
+            android:minHeight="14dp" />
 
         <TextView
             android:id="@+id/inlogInstructie"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/code_instructie"
-            android:textColor="@color/tekst_op_navy"
-            android:textSize="15sp" />
+            android:textColor="@color/tekst"
+            android:textSize="15sp"
+            android:textStyle="bold" />
 
         <LinearLayout
             android:id="@+id/stippen"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="10dp"
             android:orientation="horizontal">
 
-            <View style="@style/CodeStip" />
-            <View style="@style/CodeStip" />
-            <View style="@style/CodeStip" />
-            <View style="@style/CodeStip" />
-            <View style="@style/CodeStip" />
-            <View style="@style/CodeStip" />
+            <View style="@style/CodeVak" />
+            <View style="@style/CodeVak" />
+            <View style="@style/CodeVak" />
+            <View style="@style/CodeVak" />
+            <View style="@style/CodeVak" />
+            <View style="@style/CodeVak" />
         </LinearLayout>
 
         <!-- Vaste hoogte, zodat het cijferpad niet verspringt als er een melding komt. -->
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="8dp">
+            android:layout_height="44dp"
+            android:layout_marginStart="22dp"
+            android:layout_marginEnd="22dp">
 
             <TextView
                 android:id="@+id/inlogMelding"
@@ -97,29 +109,32 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:background="@drawable/melding_fout"
-                android:gravity="center"
-                android:maxLines="3"
-                android:paddingStart="12dp"
-                android:paddingTop="6dp"
-                android:paddingEnd="12dp"
-                android:paddingBottom="6dp"
-                android:textColor="@color/wit"
+                android:ellipsize="end"
+                android:gravity="center_vertical"
+                android:maxLines="2"
+                android:paddingStart="14dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="4dp"
+                android:textColor="@color/tekst"
                 android:textSize="13sp"
                 android:visibility="invisible" />
 
             <ProgressBar
                 android:id="@+id/inlogBezig"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:layout_gravity="center"
-                android:indeterminateTint="@color/geel"
+                android:indeterminateTint="@color/blauw"
                 android:visibility="gone" />
         </FrameLayout>
 
         <LinearLayout
             android:id="@+id/toetsen"
-            android:layout_width="288dp"
-            android:layout_height="244dp"
+            android:layout_width="match_parent"
+            android:layout_height="228dp"
+            android:layout_marginStart="18dp"
+            android:layout_marginEnd="18dp"
             android:orientation="vertical">
 
             <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
@@ -146,55 +161,40 @@
                     android:contentDescription="@string/toets_terug"
                     android:scaleType="center"
                     android:src="@drawable/ic_terug_wissen"
-                    app:tint="@color/tekst_op_navy" />
+                    app:tint="@color/blauw" />
             </LinearLayout>
         </LinearLayout>
 
         <Space
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="0.7" />
-
-        <TextView
-            android:id="@+id/webviewWaarschuwing"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="6dp"
-            android:background="@drawable/menu_knop"
-            android:gravity="center"
-            android:textColor="@color/geel"
-            android:textSize="11sp"
-            android:visibility="gone" />
+            android:layout_weight="0.6"
+            android:minHeight="10dp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <View
-                android:id="@+id/inlogVerbindingStip"
-                android:layout_width="8dp"
-                android:layout_height="8dp"
-                android:background="@drawable/status_stip" />
+            android:orientation="horizontal"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="12dp">
 
             <TextView
                 android:id="@+id/inlogVerbinding"
+                style="@style/Stand"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:singleLine="true"
-                android:textColor="@color/tekst_zacht_op_navy"
-                android:textSize="12sp" />
+                android:fontFamily="@font/barlow_medium"
+                android:textStyle="normal" />
 
             <TextView
                 android:id="@+id/inlogVersie"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
-                android:textColor="@color/tekst_zacht_op_navy"
-                android:textSize="12sp" />
+                android:textColor="@color/tekst_zacht"
+                android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

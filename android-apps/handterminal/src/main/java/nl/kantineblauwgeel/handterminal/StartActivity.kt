@@ -3,11 +3,13 @@ package nl.kantineblauwgeel.handterminal
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.widget.LinearLayout
 import androidx.activity.OnBackPressedCallback
+import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
@@ -17,11 +19,16 @@ import nl.kantineblauwgeel.handterminal.databinding.ItemOnderdeelBinding
 import nl.kantineblauwgeel.handterminal.databinding.TegelBinding
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-/** Het startscherm: zoeken of scannen, de vier dingen van het dagelijkse werk (Factuur inboeken, Tellen, Boeken,
- * Voorraad), wat aandacht nodig heeft (ook de taken die een beheerder voor je klaarzette) en daaronder alle andere
- * schermen per onderwerp (Voorraad en bestellen, Kantine en keuken, Geld, Club), voor zover je er rechten voor hebt. Alles in de app zelf; de kantine-tv in KantineTvActivity. Toont meteen het vorige antwoord van de site (bewaard op het toestel) en ververst op de
- * achtergrond, ook de productlijst. */
+/** Het startscherm, zoals het overzicht op de site: de groet, zoeken of scannen, de vier dingen van het dagelijkse werk
+ * samen op één bord (Factuur inboeken, Tellen, Boeken, Voorraad, elk met zijn stand), wat er nu moet (ook de taken die
+ * een beheerder voor je klaarzette) en daaronder alle andere schermen per onderwerp (Voorraad en bestellen, Kantine en
+ * keuken, Geld, Club), voor zover je er rechten voor hebt. Alles in de app zelf; de kantine-tv in KantineTvActivity.
+ * Toont meteen het vorige antwoord van de site (bewaard op het toestel) en ververst op de achtergrond, ook de
+ * productlijst. */
 class StartActivity : BasisActivity() {
 
     private lateinit var b: ActivityStartBinding
@@ -31,14 +38,19 @@ class StartActivity : BasisActivity() {
         super.onCreate(savedInstanceState)
         b = ActivityStartBinding.inflate(layoutInflater)
         setContentView(b.root)
-        richtBalkIn(b.balk, getString(R.string.app_naam), sub = Sessie.naam, terug = false)
+        richtStartBalkIn(b.balk)
+        // Een ingedrukt vak of een regel blijft binnen de hoeken van het paneel.
+        b.tegels.clipToOutline = true
+        b.letOpPaneel.clipToOutline = true
+        b.startGroet.text = getString(R.string.hallo) + (Sessie.naam?.let { ", $it" } ?: "")
+        b.startDatum.text = SimpleDateFormat("EEEE d MMMM", Locale("nl", "NL")).format(Date())
 
         b.zoekKnop.setOnClickListener { ProductenActivity.open(this, ProductenActivity.Modus.ZOEKEN) }
         tegel(b.tegelFactuur, R.drawable.ic_factuur, R.string.tegel_factuur) { startActivity(Intent(this, FacturenActivity::class.java)) }
         tegel(b.tegelTellen, R.drawable.ic_tellen, R.string.tegel_tellen) { startActivity(Intent(this, TellenActivity::class.java)) }
         tegel(b.tegelBoeken, R.drawable.ic_boeken, R.string.tegel_boeken) { ProductenActivity.open(this, ProductenActivity.Modus.BOEKEN) }
         tegel(b.tegelVoorraad, R.drawable.ic_voorraad, R.string.tegel_voorraad) { ProductenActivity.open(this, ProductenActivity.Modus.VOORRAAD) }
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -102,12 +114,9 @@ class StartActivity : BasisActivity() {
         tegel.root.setOnClickListener { actie() }
     }
 
-    private fun zetTegel(tegel: TegelBinding, sub: String, teller: Int?, rood: Boolean = true) {
-        tegel.tegelSub.text = sub
-        tegel.tegelTeller.isVisible = teller != null && teller > 0
-        tegel.tegelTeller.text = teller?.toString()
-        tegel.tegelTeller.setBackgroundResource(if (rood) R.drawable.badge_rood else R.drawable.badge_geel)
-        tegel.tegelTeller.setTextColor(getColor(if (rood) R.color.wit else R.color.navy))
+    /** De regel onder de naam van een vak: gewoon zacht, of met [kleur] een stand (een woord met een gekleurde stip). */
+    private fun zetTegel(tegel: TegelBinding, sub: String, @ColorRes kleur: Int? = null) {
+        if (kleur == null) Lijst.zetZacht(tegel.tegelSub, sub) else Lijst.zetStand(tegel.tegelSub, sub, getColor(kleur))
     }
 
     /** Het voorspelmodel op de site alvast laten rekenen (/voorspelling/opwarmen): na een nieuwe telling rekent het dan
@@ -142,38 +151,40 @@ class StartActivity : BasisActivity() {
 
     private fun toon(start: JSONObject) {
         val naam = start.tekstOfNull("naam") ?: Sessie.naam ?: ""
-        zetBalkTitel("${start.optString("groet", getString(R.string.hallo))}, $naam")
-        zetBalkSub(null)
+        b.startGroet.text = "${start.optString("groet", getString(R.string.hallo))}, $naam"
+        zetAvatar(naam)
 
         val voorraad = start.optJSONObject("toegang")?.optBoolean("voorraad") ?: true
         b.zoekKnop.isVisible = voorraad
         b.tegels.isVisible = voorraad
         val laag = start.optInt("laag")
         val facturen = start.optInt("open_facturen")
-        zetTegel(b.tegelFactuur, if (facturen > 0) getString(R.string.n_bezig, facturen) else getString(R.string.dozen_scannen), facturen, rood = false)
-        zetTegel(b.tegelBoeken, getString(R.string.erin_of_eruit), null)
-        zetTegel(b.tegelVoorraad, if (laag > 0) getString(R.string.n_onder_minimum, laag) else getString(R.string.alles_op_orde), laag)
+        if (facturen > 0) zetTegel(b.tegelFactuur, getString(R.string.n_bezig, facturen), R.color.oranje)
+        else zetTegel(b.tegelFactuur, getString(R.string.dozen_scannen))
+        zetTegel(b.tegelBoeken, getString(R.string.erin_of_eruit))
+        if (laag > 0) zetTegel(b.tegelVoorraad, getString(R.string.n_onder_minimum, laag), R.color.rood)
+        else zetTegel(b.tegelVoorraad, getString(R.string.alles_op_orde), R.color.groen)
         val looplijst = start.optJSONObject("looplijst")
         val telling = start.optJSONObject("telling")
-        zetTegel(
-            b.tegelTellen,
-            when {
-                looplijst?.optBoolean("in_controle") == true -> getString(R.string.verder_controleren)
-                looplijst != null -> getString(
+        when {
+            looplijst?.optBoolean("in_controle") == true -> zetTegel(b.tegelTellen, getString(R.string.verder_controleren), R.color.oranje)
+            looplijst != null -> zetTegel(
+                b.tegelTellen,
+                getString(
                     R.string.verder_bij,
                     getString(if (looplijst.optString("fase") == "hok") R.string.fase_hok_kort else R.string.fase_bar_kort),
                     looplijst.optInt("nummer"), looplijst.optInt("totaal"),
-                )
-                telling?.has("dagen_geleden") == true && !telling.isNull("dagen_geleden") ->
-                    dagenGeleden(telling.optInt("dagen_geleden"))
-                else -> getString(R.string.telling_lopen)
-            },
-            if (looplijst != null) 1 else null,
-            rood = false,
-        )
-        if (looplijst != null) b.tegelTellen.tegelTeller.text = "•"
+                ),
+                R.color.oranje,
+            )
+            // Te lang geleden (zoals "Te laat" op het overzicht van de site): rood.
+            telling?.has("dagen_geleden") == true && !telling.isNull("dagen_geleden") -> zetTegel(
+                b.tegelTellen, dagenGeleden(telling.optInt("dagen_geleden")), if (telling.optBoolean("ok", true)) R.color.groen else R.color.rood,
+            )
+            else -> zetTegel(b.tegelTellen, getString(R.string.telling_lopen))
+        }
 
-        // Let op
+        // Wat moet er nu?
         b.letOpLijst.removeAllViews()
         val toegang = start.optJSONObject("toegang")
         fun heeft(sectie: String) = toegang?.optBoolean(sectie) ?: false
@@ -191,7 +202,7 @@ class StartActivity : BasisActivity() {
                 getString(R.string.letop_bestellen_detail,
                     if (aantal > 0) resources.getQuantityString(R.plurals.n_producten_klaar, aantal, aantal) else getString(R.string.letop_bestellen_niets),
                     m.optString("levering_tekst")),
-                R.drawable.rand_links_oranje,
+                R.color.amber,
             ) { BestellijstActivity.open(this) }
         }
         // De timers op de tv's (bijvoorbeeld de gehaktballen): wat er loopt, of wat klaar is.
@@ -201,12 +212,12 @@ class StartActivity : BasisActivity() {
                 if (klaar) getString(R.string.letop_timer_klaar, t.optString("naam"))
                 else getString(R.string.letop_timer_loopt, t.optString("naam"), t.optString("klaar_om")),
                 getString(R.string.letop_timer_detail),
-                if (klaar) R.drawable.rand_links_oranje else R.drawable.rand_links_navy,
+                if (klaar) R.color.amber else R.color.blauw,
             ) { TimerActivity.open(this) }
         }
         // Taken die een beheerder voor jou klaarzette: een eigen scherm met de stappen en afronden.
         start.optJSONArray("taken")?.objecten()?.forEach { t ->
-            val rand = if (t.optBoolean("urgent")) R.drawable.rand_links_rood else R.drawable.rand_links_oranje
+            val rand = if (t.optBoolean("urgent")) R.color.rood else R.color.amber
             if (t.has("id")) letOp(t.optString("titel"), t.optString("detail"), rand) { TaakActivity.open(this, t.getInt("id")) }
             else letOp(t.optString("titel"), t.optString("detail"), rand, null)
         }
@@ -215,54 +226,58 @@ class StartActivity : BasisActivity() {
             val concepten = kassa.optInt("concepten")
             if (concepten > 0) {
                 letOp(resources.getQuantityString(R.plurals.kassatellingen_goedkeuren, concepten, concepten), getString(R.string.controleer_en_keur_goed),
-                    R.drawable.rand_links_oranje) { GeldActivity.open(this, GeldActivity.KASSA) }
+                    R.color.amber) { GeldActivity.open(this, GeldActivity.KASSA) }
             } else if (kassa.optString("status") == "rood") {
-                letOp(getString(R.string.kassa_tellen), kassa.optString("tekst"), R.drawable.rand_links_rood) { GeldActivity.open(this, GeldActivity.KASSA) }
+                letOp(getString(R.string.kassa_tellen), kassa.optString("tekst"), R.color.rood) { GeldActivity.open(this, GeldActivity.KASSA) }
             }
         }
         val kluis = start.optInt("kluis_concepten")
         if (beheerder && kluis > 0) {
             letOp(resources.getQuantityString(R.plurals.kluistellingen_goedkeuren, kluis, kluis), getString(R.string.controleer_en_keur_goed),
-                R.drawable.rand_links_oranje) { GeldActivity.open(this, GeldActivity.KLUIS) }
+                R.color.amber) { GeldActivity.open(this, GeldActivity.KLUIS) }
         }
         start.optJSONObject("frituurvet")?.takeIf { !it.optBoolean("ok") }?.let { vet ->
             letOp(getString(R.string.frituurvet_vervangen), if (vet.isNull("dagen_geleden")) getString(R.string.frituurvet_nooit)
-                else getString(R.string.frituurvet_dagen, vet.optInt("dagen_geleden")), R.drawable.rand_links_rood) { KeukenActivity.open(this) }
+                else getString(R.string.frituurvet_dagen, vet.optInt("dagen_geleden")), R.color.rood) { KeukenActivity.open(this) }
         }
         val aanmeldingen = start.optInt("aanmeldingen_open")
         if (aanmeldingen > 0) {
             letOp(resources.getQuantityString(R.plurals.aanmeldingen_open, aanmeldingen, aanmeldingen), getString(R.string.controleer_betaling),
-                R.drawable.rand_links_oranje) { AanmeldingenActivity.open(this) }
+                R.color.amber) { AanmeldingenActivity.open(this) }
         }
         if (voorraad && laag > 0) {
-            letOp(resources.getQuantityString(R.plurals.onder_minimum, laag, laag), getString(R.string.bekijk_welke), R.drawable.rand_links_rood) {
+            letOp(resources.getQuantityString(R.plurals.onder_minimum, laag, laag), getString(R.string.bekijk_welke), R.color.rood) {
                 ProductenActivity.open(this, ProductenActivity.Modus.VOORRAAD, alleenLaag = true)
             }
         }
         val bestellingen = start.optInt("open_bestellingen")
         if (voorraad && bestellingen > 0) {
-            letOp(resources.getQuantityString(R.plurals.bestellingen_inboeken, bestellingen, bestellingen), getString(R.string.scan_de_levering), R.drawable.rand_links_oranje) {
+            letOp(resources.getQuantityString(R.plurals.bestellingen_inboeken, bestellingen, bestellingen), getString(R.string.scan_de_levering), R.color.amber) {
                 startActivity(Intent(this, FacturenActivity::class.java))
             }
         }
         val uitverkocht = start.optJSONArray("uitverkocht_op_tv")?.let { l -> (0 until l.length()).map { l.optString(it) } }.orEmpty()
         if (voorraad && uitverkocht.isNotEmpty()) {
             letOp(resources.getQuantityString(R.plurals.letop_uitverkocht, uitverkocht.size, uitverkocht.size),
-                uitverkocht.joinToString(", "), R.drawable.rand_links_oranje) { UitverkochtActivity.open(this) }
+                uitverkocht.joinToString(", "), R.color.amber) { UitverkochtActivity.open(this) }
         }
         val urgent = start.optInt("mededelingen_urgent")
         if (urgent > 0) {
-            letOp(getString(R.string.prikbord_urgent, urgent), getString(R.string.n_open, start.optInt("mededelingen_open")), R.drawable.rand_links_rood) {
+            letOp(getString(R.string.prikbord_urgent, urgent), getString(R.string.n_open, start.optInt("mededelingen_open")), R.color.rood) {
                 PrikbordActivity.open(this)
             }
         }
-        b.letOpKop.isVisible = b.letOpLijst.childCount > 0
+        val taken = b.letOpLijst.childCount
+        b.letOpPaneel.isVisible = taken > 0
+        b.letOpAantal.text = resources.getQuantityString(R.plurals.n_taken, taken, taken)
 
-        // De andere schermen van de app, per onderwerp: een tegel per onderwerp, die een blad met de onderdelen opent
+        // De andere schermen van de app, per onderwerp: een vak per onderwerp, dat een blad met de onderdelen opent
         // (zie openOnderwerp). Alleen wat bij je rechten hoort.
+        fun aantal(id: Int, n: Int) = if (n > 0) resources.getQuantityString(id, n, n) else null
         val voorraadMeer = mutableListOf<Meer>()
         if (voorraad) {
-            voorraadMeer += Meer(getString(R.string.bestellijst), getString(R.string.uitleg_bestellijst), R.drawable.ic_bestellijst, bestellingen) { BestellijstActivity.open(this) }
+            voorraadMeer += Meer(getString(R.string.bestellijst), getString(R.string.uitleg_bestellijst), R.drawable.ic_bestellijst,
+                aantal(R.plurals.stand_in_te_boeken, bestellingen)) { BestellijstActivity.open(this) }
             voorraadMeer += Meer(getString(R.string.boodschappen), getString(R.string.uitleg_boodschappen), R.drawable.ic_boodschappen) { BoodschappenActivity.open(this) }
             voorraadMeer += Meer(getString(R.string.prognose), getString(R.string.uitleg_prognose), R.drawable.ic_prognose) { PrognoseActivity.open(this) }
             voorraadMeer += Meer(getString(R.string.tellingen), getString(R.string.uitleg_tellingen), R.drawable.ic_tellingen) { TellingenActivity.open(this) }
@@ -273,25 +288,32 @@ class StartActivity : BasisActivity() {
         if (heeft("keuken")) {
             val vetNodig = start.optJSONObject("frituurvet")?.optBoolean("ok") == false
             kantineMeer += Meer(getString(R.string.keuken), getString(if (vetNodig) R.string.uitleg_keuken_vet else R.string.uitleg_keuken),
-                R.drawable.ic_keuken, if (vetNodig) 1 else 0, vetNodig, label = "!") { KeukenActivity.open(this) }
+                R.drawable.ic_keuken, if (vetNodig) getString(R.string.stand_frituurvet) else null, rood = true) { KeukenActivity.open(this) }
         }
         // Met de rechten voor de kantine-tv het hele tv-scherm (met uitverkocht en de timer); anders alleen uitverkocht.
         if (heeft("kantine_tv")) {
-            kantineMeer += Meer(getString(R.string.kantine_tv), getString(R.string.uitleg_kantine_tv), R.drawable.ic_kiosk, uitverkocht.size) { KantineTvActivity.open(this) }
+            kantineMeer += Meer(getString(R.string.kantine_tv), getString(R.string.uitleg_kantine_tv), R.drawable.ic_kiosk,
+                aantal(R.plurals.n_uitverkocht, uitverkocht.size)) { KantineTvActivity.open(this) }
         } else if (voorraad) {
-            kantineMeer += Meer(getString(R.string.op_de_tv), getString(R.string.uitleg_op_de_tv), R.drawable.ic_kiosk, uitverkocht.size) { UitverkochtActivity.open(this) }
+            kantineMeer += Meer(getString(R.string.op_de_tv), getString(R.string.uitleg_op_de_tv), R.drawable.ic_kiosk,
+                aantal(R.plurals.n_uitverkocht, uitverkocht.size)) { UitverkochtActivity.open(this) }
         }
         val timers = start.optJSONArray("timers")?.length() ?: 0
-        kantineMeer += Meer(getString(R.string.timer), getString(R.string.uitleg_timer), R.drawable.ic_timer, timers) { TimerActivity.open(this) }
+        kantineMeer += Meer(getString(R.string.timer), getString(R.string.uitleg_timer), R.drawable.ic_timer,
+            aantal(R.plurals.stand_timers, timers)) { TimerActivity.open(this) }
         val geldMeer = mutableListOf<Meer>()
         if (heeft("kassa")) {
-            geldMeer += Meer(getString(R.string.kassa), getString(R.string.uitleg_kassa), R.drawable.ic_kassa, kassa?.optInt("concepten") ?: 0) { GeldActivity.open(this, GeldActivity.KASSA) }
+            geldMeer += Meer(getString(R.string.kassa), getString(R.string.uitleg_kassa), R.drawable.ic_kassa,
+                aantal(R.plurals.stand_te_keuren, kassa?.optInt("concepten") ?: 0)) { GeldActivity.open(this, GeldActivity.KASSA) }
         }
-        if (beheerder) geldMeer += Meer(getString(R.string.kluis), getString(R.string.uitleg_kluis), R.drawable.ic_kluis, kluis) { GeldActivity.open(this, GeldActivity.KLUIS) }
+        if (beheerder) geldMeer += Meer(getString(R.string.kluis), getString(R.string.uitleg_kluis), R.drawable.ic_kluis,
+            aantal(R.plurals.stand_te_keuren, kluis)) { GeldActivity.open(this, GeldActivity.KLUIS) }
         val clubMeer = mutableListOf<Meer>()
-        clubMeer += Meer(getString(R.string.prikbord), getString(R.string.uitleg_prikbord), R.drawable.ic_prikbord, start.optInt("mededelingen_open"), urgent > 0) { PrikbordActivity.open(this) }
+        clubMeer += Meer(getString(R.string.prikbord), getString(R.string.uitleg_prikbord), R.drawable.ic_prikbord,
+            aantal(R.plurals.stand_open, start.optInt("mededelingen_open")), urgent > 0) { PrikbordActivity.open(this) }
         clubMeer += Meer(getString(R.string.agenda), getString(R.string.uitleg_agenda), R.drawable.ic_agenda) { AgendaActivity.open(this) }
-        if (heeft("club_van_20")) clubMeer += Meer(getString(R.string.club_van_20), getString(R.string.uitleg_club_van_20), R.drawable.ic_aanmeldingen, aanmeldingen) { AanmeldingenActivity.open(this) }
+        if (heeft("club_van_20")) clubMeer += Meer(getString(R.string.club_van_20), getString(R.string.uitleg_club_van_20), R.drawable.ic_aanmeldingen,
+            aantal(R.plurals.stand_open, aanmeldingen)) { AanmeldingenActivity.open(this) }
         toonOnderwerpen(listOf(
             Onderwerp(getString(R.string.groep_voorraad), R.drawable.ic_voorraad, voorraadMeer),
             Onderwerp(getString(R.string.groep_kantine), R.drawable.ic_keuken, kantineMeer),
@@ -308,82 +330,95 @@ class StartActivity : BasisActivity() {
         b.updateMelding.text = getString(R.string.update_beschikbaar, nieuwste)
     }
 
-    /** Een schermpje van de app onder een onderwerp. [teller]: een getal op de kaart (rood als [rood]), of [label]. */
+    /** Een schermpje van de app onder een onderwerp, met eventueel een [stand] ("4 in te boeken", rood als [rood]). */
     private class Meer(
         val naam: String,
         val uitleg: String,
         @DrawableRes val icoon: Int,
-        val teller: Int = 0,
+        val stand: String? = null,
         val rood: Boolean = false,
-        val label: String? = null,
         val actie: () -> Unit,
-    )
-
-    private class Onderwerp(val naam: String, @DrawableRes val icoon: Int, val onderdelen: List<Meer>) {
-        val teller get() = onderdelen.sumOf { it.teller }
-        val rood get() = onderdelen.any { it.rood && it.teller > 0 }
+    ) {
+        @get:ColorRes val kleur get() = if (rood) R.color.rood else R.color.oranje
     }
 
-    /** De onderwerpen als tegels, twee naast elkaar: met de onderdelen eronder in het klein, en het totaal van de
-     * tellers (rood als er iets dringends bij zit). */
+    private class Onderwerp(val naam: String, @DrawableRes val icoon: Int, val onderdelen: List<Meer>) {
+        /** Wat er het eerst aandacht vraagt (iets dringends gaat voor). */
+        val belangrijkste get() = onderdelen.filter { it.stand != null }.minByOrNull { if (it.rood) 0 else 1 }
+    }
+
+    /** Een bord (een paneel met vakken, twee naast elkaar en een oneven laatste over de hele breedte), zoals bovenaan het
+     * startscherm. */
+    private fun bord(ouder: LinearLayout): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setBackgroundResource(R.drawable.kaart)
+        dividerDrawable = getDrawable(R.drawable.scheiding)
+        showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
+        clipToOutline = true
+        ouder.addView(this)
+    }
+
+    private fun bordRij(bord: LinearLayout): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        dividerDrawable = getDrawable(R.drawable.scheiding_staand)
+        showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
+        bord.addView(this)
+    }
+
+    /** De onderwerpen als vakken op een bord, met de onderdelen eronder in het klein; vraagt een onderdeel aandacht, dan
+     * staat daar zijn stand (zoals "4 in te boeken" bij Voorraad en bestellen). */
     private fun toonOnderwerpen(onderwerpen: List<Onderwerp>) {
         b.meerLijst.removeAllViews()
         val zichtbaar = onderwerpen.filter { it.onderdelen.isNotEmpty() }
         if (zichtbaar.isEmpty()) return
         Lijst.kop(b.meerLijst, getString(R.string.meer))
+        val bord = bord(b.meerLijst)
         zichtbaar.chunked(2).forEach { paar ->
-            val rij = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            val rij = bordRij(bord)
             paar.forEach { o ->
                 val t = TegelBinding.inflate(LayoutInflater.from(this), rij, false)
                 t.tegelIcoon.setImageResource(o.icoon)
                 t.tegelNaam.text = o.naam
                 t.root.setOnClickListener { openOnderwerp(o) }
-                zetTegel(t, o.onderdelen.joinToString(", ") { it.naam }, o.teller, rood = o.rood)
+                val m = o.belangrijkste
+                if (m != null) zetTegel(t, m.stand ?: "", m.kleur) else zetTegel(t, o.onderdelen.joinToString(", ") { it.naam })
                 rij.addView(t.root)
             }
-            // Een lege plek even breed als een tegel (die heeft 4dp marge rondom), zodat de laatste rij niet breder wordt.
-            if (paar.size == 1) {
-                rij.addView(android.view.View(this), LinearLayout.LayoutParams(0, 1, 1f).apply { setMargins(dp(this@StartActivity, 4), 0, dp(this@StartActivity, 4), 0) })
-            }
-            b.meerLijst.addView(rij)
         }
     }
 
-    /** Een onderwerp openen: een blad dat van onderen omhoog schuift (zie [Blad]), met de onderdelen als kaarten.
+    /** Een onderwerp openen: een blad dat van onderen omhoog schuift (zie [Blad]), met de onderdelen op een bord.
      * Heeft het maar één onderdeel (bijvoorbeeld alleen de kassa), dan meteen dat scherm. */
     private fun openOnderwerp(o: Onderwerp) {
         if (o.onderdelen.size == 1) return o.onderdelen[0].actie()
         Blad.toon(this, o.naam, resources.getQuantityString(R.plurals.n_onderdelen, o.onderdelen.size, o.onderdelen.size), o.icoon) { inhoud, blad ->
+            val bord = bord(inhoud)
             o.onderdelen.chunked(2).forEach { paar ->
-                val rij = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+                val rij = bordRij(bord)
                 paar.forEach { m ->
-                    val kaart = ItemOnderdeelBinding.inflate(layoutInflater, rij, false)
-                    kaart.onderdeelIcoon.setImageResource(m.icoon)
-                    kaart.onderdeelNaam.text = m.naam
-                    kaart.onderdeelUitleg.text = m.uitleg
-                    kaart.onderdeelTeller.isVisible = m.teller > 0
-                    kaart.onderdeelTeller.text = m.label ?: m.teller.toString()
-                    if (m.rood) {
-                        kaart.onderdeelTeller.setBackgroundResource(R.drawable.badge_rood)
-                        kaart.onderdeelTeller.setTextColor(getColor(R.color.wit))
-                    }
-                    kaart.root.setOnClickListener {
+                    val vak = ItemOnderdeelBinding.inflate(layoutInflater, rij, false)
+                    vak.onderdeelIcoon.setImageResource(m.icoon)
+                    vak.onderdeelNaam.text = m.naam
+                    vak.onderdeelUitleg.text = m.uitleg
+                    vak.onderdeelTeller.isVisible = m.stand != null
+                    m.stand?.let { Lijst.zetStand(vak.onderdeelTeller, it, getColor(m.kleur)) }
+                    vak.root.setOnClickListener {
                         blad.sluit()
                         m.actie()
                     }
-                    rij.addView(kaart.root)
+                    rij.addView(vak.root)
                 }
-                if (paar.size == 1) {
-                    rij.addView(android.view.View(this), LinearLayout.LayoutParams(0, 1, 1f).apply { setMargins(dp(this@StartActivity, 5), 0, dp(this@StartActivity, 5), 0) })
-                }
-                inhoud.addView(rij)
             }
         }
     }
 
-    private fun letOp(titel: String, detail: String, @DrawableRes rand: Int, actie: (() -> Unit)?) {
+    /** Een regel onder "Wat moet er nu?", met links een streep in [streep] (rood: dringend, geel: straks, blauw: loopt). */
+    private fun letOp(titel: String, detail: String, @ColorRes streep: Int, actie: (() -> Unit)?) {
         val regel = ItemLetopBinding.inflate(LayoutInflater.from(this), b.letOpLijst, false)
-        regel.root.setBackgroundResource(rand)
+        regel.letOpStreep.background = GradientDrawable().apply {
+            cornerRadius = dp(this@StartActivity, 2).toFloat()
+            setColor(getColor(streep))
+        }
         regel.letOpTitel.text = titel
         regel.letOpDetail.text = detail
         regel.letOpDetail.isVisible = detail.isNotEmpty()

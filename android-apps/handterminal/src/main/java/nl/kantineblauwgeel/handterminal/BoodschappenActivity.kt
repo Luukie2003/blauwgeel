@@ -10,6 +10,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
+import androidx.appcompat.widget.AppCompatEditText
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
@@ -24,7 +25,7 @@ class BoodschappenActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.boodschappen))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
         b.onderKnop.isVisible = true
         b.onderKnop.setText(R.string.boodschap_toevoegen)
@@ -70,7 +71,7 @@ class BoodschappenActivity : BasisActivity() {
     private fun item(kaart: LinearLayout, i: JSONObject, af: Boolean) {
         val detail = if (af) listOfNotNull(i.tekstOfNull("afgevinkt_door"), Lijst.datum(i.tekstOfNull("afgevinkt_op"))).joinToString(" · ")
         else listOfNotNull(i.tekstOfNull("door"), Lijst.datum(i.tekstOfNull("op"))).joinToString(" · ")
-        val regel = Lijst.regel(kaart, i.optString("tekst"), detail, if (af) "✓" else "○", if (af) R.color.groen_tekst else R.color.tekst_zacht) {
+        val regel = Lijst.regel(kaart, i.optString("tekst"), detail, if (af) "✓" else "○", if (af) R.color.groen else R.color.tekst_zacht) {
             post("/api/app/boodschappen/${i.getInt("id")}/afvinken", JSONObject().put("af", !af))
         }
         if (af) {
@@ -95,7 +96,7 @@ class BoodschappenActivity : BasisActivity() {
     }
 
     private fun toevoegen() {
-        val veld = EditText(this).apply {
+        val veld = AppCompatEditText(this).apply {
             hint = getString(R.string.boodschap_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
         }

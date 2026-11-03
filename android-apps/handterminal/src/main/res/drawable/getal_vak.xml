@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Het vak met het aantal (boeken, tellen): wit met een blauwe rand van 2dp, zodat je ziet waar het getal staat. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <shape><corners android:radius="6dp" /><solid android:color="@color/ingedrukt" /><stroke android:width="2dp" android:color="@color/blauw" /></shape>
+    </item>
+    <item>
+        <shape><corners android:radius="6dp" /><solid android:color="@color/kaart" /><stroke android:width="2dp" android:color="@color/blauw" /></shape>
+    </item>
+</selector>

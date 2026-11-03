@@ -1,15 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Wis en terug naast de 0: geen vlak, alleen lichtgeel onder je vinger. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
-        <shape android:shape="rectangle">
-            <corners android:radius="18dp" />
-            <solid android:color="@color/geel" />
-        </shape>
+        <shape><corners android:radius="6dp" /><solid android:color="@color/ingedrukt" /></shape>
     </item>
     <item>
-        <shape android:shape="rectangle">
-            <corners android:radius="18dp" />
-            <solid android:color="@android:color/transparent" />
-        </shape>
+        <shape><corners android:radius="6dp" /><solid android:color="@android:color/transparent" /></shape>
     </item>
 </selector>

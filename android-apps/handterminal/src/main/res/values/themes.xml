@@ -1,19 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Bewust een vaste lichte stijl, niet DayNight: de app volgt de huisstijl van de site. Het inlogscherm is navy,
-         de werkschermen lichtgrijs met witte kaarten, net als de handterminal-weergave van de site. -->
+    <!-- Bewust een vaste lichte stijl, niet DayNight: de app volgt de clubstijl van de site (Kantine Beheer 2.0).
+         Donkerblauw met een gele streep bovenaan, witte panelen op papier, Barlow als letter en de smalle Barlow
+         Condensed voor koppen en getallen. Geen schaduwen en geen verlopen. De letter staat in het thema, zodat elke
+         tekst hem krijgt (ook in vensters en het menu; op Android 6 en 7 via AppCompat). Alleen android:fontFamily:
+         het AppCompat-attribuut fontFamily zou op Android 6 en 7 voorgaan op de smalle letter van een kop. -->
     <style name="Thema.Handterminal" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="colorPrimary">@color/navy</item>
-        <item name="colorPrimaryDark">@color/navy</item>
-        <item name="colorAccent">@color/geel_donker</item>
-        <item name="android:statusBarColor">@color/navy</item>
-        <item name="android:navigationBarColor">@color/navy</item>
-        <item name="android:windowBackground">@color/navy</item>
+        <item name="colorPrimary">@color/blauw_donker</item>
+        <item name="colorPrimaryDark">@color/blauw_donker</item>
+        <item name="colorAccent">@color/blauw</item>
+        <item name="android:statusBarColor">@color/blauw_donker</item>
+        <item name="android:navigationBarColor">@color/blauw_donker</item>
+        <item name="android:windowBackground">@color/papier</item>
+        <item name="android:textColorPrimary">@color/tekst</item>
+        <item name="android:textColorSecondary">@color/tekst_zacht</item>
+        <item name="android:fontFamily">@font/barlow</item>
+        <item name="alertDialogTheme">@style/Venster</item>
+        <item name="android:popupMenuStyle">@style/Menu</item>
     </style>
 
-    <style name="Thema.Handterminal.Licht">
-        <item name="android:windowBackground">@color/achtergrond</item>
+    <style name="Thema.Handterminal.Licht" />
+
+    <!-- Een venster (vraag, keuze): wit, hoeken van 6dp, de titel in de sportletter en blauwe knoppen. -->
+    <style name="Venster" parent="ThemeOverlay.AppCompat.Dialog.Alert">
+        <item name="colorAccent">@color/blauw</item>
+        <item name="android:windowBackground">@drawable/dialoog</item>
+        <item name="android:windowElevation">0dp</item>
+        <item name="android:windowTitleStyle">@style/Venster.Titel</item>
         <item name="android:textColorPrimary">@color/tekst</item>
+        <item name="android:fontFamily">@font/barlow</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Venster.Knop</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Venster.Knop</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Venster.Knop</item>
+    </style>
+
+    <style name="Venster.Titel">
+        <item name="android:textAppearance">@style/Venster.Titel.Tekst</item>
+    </style>
+
+    <style name="Venster.Titel.Tekst" parent="TextAppearance.AppCompat.Title">
+        <item name="android:fontFamily">@font/barlow_condensed</item>
+        <item name="fontFamily">@font/barlow_condensed</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textColor">@color/tekst</item>
+    </style>
+
+    <style name="Venster.Knop" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
+        <item name="android:textColor">@color/blauw</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <!-- Het menu (⋮): wit met een rand, zonder schaduw. -->
+    <style name="Menu" parent="@android:style/Widget.Material.Light.PopupMenu">
+        <item name="android:popupBackground">@drawable/menu_achtergrond</item>
+        <item name="android:popupElevation">0dp</item>
     </style>
 
     <!-- Een blad dat van onderen omhoog schuift, over het scherm heen (zie StartActivity.openOnderwerp). -->
@@ -21,9 +64,11 @@
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowNoTitle">true</item>
         <item name="windowNoTitle">true</item>
+        <item name="android:windowElevation">0dp</item>
         <item name="android:backgroundDimEnabled">true</item>
         <item name="android:backgroundDimAmount">0.55</item>
         <item name="android:windowAnimationStyle">@style/Blad.Animatie</item>
+        <item name="android:fontFamily">@font/barlow</item>
     </style>
 
     <style name="Blad.Animatie" parent="">
@@ -32,10 +77,96 @@
     </style>
 
     <style name="Thema.Handterminal.Instellingen" parent="Theme.AppCompat.Light.DarkActionBar">
-        <item name="colorPrimary">@color/navy</item>
-        <item name="colorPrimaryDark">@color/navy</item>
-        <item name="colorAccent">@color/geel_donker</item>
-        <item name="android:windowBackground">@color/achtergrond</item>
+        <item name="colorPrimary">@color/blauw_donker</item>
+        <item name="colorPrimaryDark">@color/blauw_donker</item>
+        <item name="colorAccent">@color/blauw</item>
+        <item name="android:statusBarColor">@color/blauw_donker</item>
+        <item name="android:navigationBarColor">@color/blauw_donker</item>
+        <item name="android:windowBackground">@color/papier</item>
+        <item name="android:textColorPrimary">@color/tekst</item>
+        <item name="android:fontFamily">@font/barlow</item>
+        <item name="alertDialogTheme">@style/Venster</item>
+        <item name="actionBarStyle">@style/Kopbalk</item>
+    </style>
+
+    <!-- De kopbalk van de instellingen (een ActionBar): dezelfde als die van de andere schermen (layout/balk.xml). -->
+    <style name="Kopbalk" parent="Widget.AppCompat.Light.ActionBar.Solid.Inverse">
+        <item name="background">@drawable/balk_achtergrond</item>
+        <item name="elevation">0dp</item>
+        <item name="titleTextStyle">@style/Kopbalk.Titel</item>
+    </style>
+
+    <style name="Kopbalk.Titel" parent="TextAppearance.AppCompat.Widget.ActionBar.Title.Inverse">
+        <item name="android:fontFamily">@font/barlow_condensed</item>
+        <item name="fontFamily">@font/barlow_condensed</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:textColor">@color/wit</item>
+    </style>
+
+    <!-- ===== Tekst ===== -->
+
+    <!-- De titel bovenaan een scherm ("Goedenavond, admin", de naam van een product): de sportletter, vet. -->
+    <style name="Titel">
+        <item name="android:fontFamily">@font/barlow_condensed</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">27sp</item>
+        <item name="android:textColor">@color/tekst</item>
+    </style>
+
+    <!-- De kop van een paneel ("Erin of eruit", "Wat moet er nu?"), met een lichte lijn eronder. -->
+    <style name="PaneelKop">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/kop_lijn</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingBottom">9dp</item>
+    </style>
+
+    <style name="PaneelKop.Tekst">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:fontFamily">@font/barlow_condensed</item>
+        <item name="android:textSize">21sp</item>
+        <item name="android:textColor">@color/tekst</item>
+        <item name="android:background">@null</item>
+        <item name="android:padding">0dp</item>
+    </style>
+
+    <!-- Rechts in de kop van een paneel: klein en zacht ("4 taken", "Gescand: 1 tray"). -->
+    <style name="PaneelKop.Rechts">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:fontFamily">@font/barlow_medium</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/tekst_zacht</item>
+        <item name="android:background">@null</item>
+        <item name="android:padding">0dp</item>
+    </style>
+
+    <!-- Een stand als woord met een gekleurde stip ("• Aan", "• Onder het minimum"); de kleur zet Lijst.stand. -->
+    <style name="Stand">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:drawablePadding">6dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Een getal in de smalle letter, met de eenheid erachter klein (zie Lijst.getalMetEenheid). -->
+    <style name="Getal">
+        <item name="android:fontFamily">@font/barlow_condensed</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/tekst</item>
     </style>
 
     <!-- ===== Inlogscherm ===== -->
@@ -44,28 +175,32 @@
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">match_parent</item>
         <item name="android:layout_weight">1</item>
-        <item name="android:layout_margin">5dp</item>
+        <item name="android:layout_margin">4dp</item>
         <item name="android:background">@drawable/toets</item>
         <item name="android:gravity">center</item>
         <item name="android:textColor">@color/toets_tekst</item>
-        <item name="android:textSize">28sp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">29sp</item>
+        <item name="android:fontFamily">@font/barlow_condensed</item>
+        <item name="android:textStyle">bold</item>
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
         <item name="android:soundEffectsEnabled">true</item>
     </style>
 
     <style name="Cijfertoets.Klein">
-        <item name="android:textSize">18sp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">@font/barlow</item>
+        <item name="android:textColor">@color/blauw</item>
         <item name="android:background">@drawable/toets_rustig</item>
     </style>
 
-    <style name="CodeStip">
-        <item name="android:layout_width">16dp</item>
-        <item name="android:layout_height">16dp</item>
-        <item name="android:layout_marginStart">7dp</item>
-        <item name="android:layout_marginEnd">7dp</item>
-        <item name="android:background">@drawable/stip_leeg</item>
+    <!-- Een vakje van de inlogcode (zie InlogActivity.werkVakjesBij). -->
+    <style name="CodeVak">
+        <item name="android:layout_width">38dp</item>
+        <item name="android:layout_height">46dp</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:layout_marginEnd">4dp</item>
+        <item name="android:background">@drawable/code_leeg</item>
     </style>
 
     <!-- Het label boven een veld in een dialoog (dialog_nieuw_product.xml). -->
@@ -73,22 +208,27 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">8dp</item>
-        <item name="android:textColor">@color/tekst_zacht</item>
-        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/tekst</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
     </style>
 
     <!-- Een kenmerk op het vergrendel-scherm (activity_vergrendeld.xml). -->
-    <style name="KenmerkOpNavy">
+    <style name="KenmerkOpBlauw">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">8dp</item>
-        <item name="android:background">@drawable/kenmerk_op_navy</item>
+        <item name="android:background">@drawable/kenmerk_op_blauw</item>
         <item name="android:paddingStart">14dp</item>
         <item name="android:paddingEnd">14dp</item>
         <item name="android:paddingTop">7dp</item>
         <item name="android:paddingBottom">7dp</item>
-        <item name="android:textColor">@color/tekst_op_navy</item>
+        <item name="android:textColor">@color/wit</item>
         <item name="android:textSize">13sp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="drawableStartCompat">@drawable/stip</item>
+        <item name="drawableTint">@color/geel</item>
+        <item name="android:drawablePadding">8dp</item>
     </style>
 
     <!-- ===== Werkschermen ===== -->
@@ -97,6 +237,7 @@
         <item name="android:layout_height">48dp</item>
         <item name="android:gravity">center</item>
         <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:stateListAnimator">@null</item>
         <item name="android:paddingStart">14dp</item>
@@ -105,48 +246,76 @@
         <item name="android:minHeight">0dp</item>
     </style>
 
+    <!-- De gele hoofdknop: één per scherm. -->
     <style name="Knop.Geel">
         <item name="android:background">@drawable/knop_geel</item>
-        <item name="android:textColor">@color/navy</item>
-        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/tekst</item>
+        <item name="android:textSize">17sp</item>
     </style>
 
     <style name="Knop.Rand">
         <item name="android:background">@drawable/knop_rand</item>
-        <item name="android:textColor">@color/tekst</item>
+        <item name="android:textColor">@color/blauw_donker</item>
+        <item name="android:textSize">15sp</item>
     </style>
 
+    <!-- Een kopje tussen de panelen in: de sportletter. -->
     <style name="Kop">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">14dp</item>
         <item name="android:layout_marginBottom">6dp</item>
-        <item name="android:textColor">@color/tekst_zacht</item>
-        <item name="android:textSize">12sp</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="android:letterSpacing">0.06</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/tekst</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:fontFamily">@font/barlow_condensed</item>
     </style>
 
+    <!-- Een toets van het cijferpad (tellen, een aantal of bedrag invullen). -->
     <style name="Toets">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">match_parent</item>
         <item name="android:layout_weight">1</item>
         <item name="android:layout_margin">3dp</item>
-        <item name="android:background">@drawable/toets_licht</item>
+        <item name="android:background">@drawable/toets</item>
         <item name="android:gravity">center</item>
-        <item name="android:textColor">@color/tekst</item>
-        <item name="android:textSize">24sp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/toets_tekst</item>
+        <item name="android:textSize">25sp</item>
+        <item name="android:fontFamily">@font/barlow_condensed</item>
+        <item name="android:textStyle">bold</item>
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
     </style>
 
-    <style name="Toets.Navy">
-        <item name="android:background">@drawable/toets_navy</item>
-        <item name="android:textColor">@color/toets_navy_tekst</item>
+    <!-- Wis naast de 0: geen vlak, blauwe letters. -->
+    <style name="Toets.Tekst">
+        <item name="android:background">@drawable/toets_rustig</item>
+        <item name="android:textColor">@color/blauw</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">@font/barlow</item>
+    </style>
+
+    <!-- Een snelknop boven het cijferpad (0, −1, +1, +2, +1 tray). -->
+    <style name="Toets.Snel">
+        <item name="android:background">@drawable/knop_rand</item>
+        <item name="android:textColor">@color/blauw_donker</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">@font/barlow</item>
+    </style>
+
+    <!-- De hoofdknop onder het cijferpad (Volgende →). -->
+    <style name="Toets.Geel">
+        <item name="android:background">@drawable/knop_geel</item>
+        <item name="android:textColor">@color/tekst</item>
         <item name="android:textSize">17sp</item>
-        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/barlow</item>
+    </style>
+
+    <!-- Naast de hoofdknop (← Vorige). -->
+    <style name="Toets.Rand">
+        <item name="android:background">@drawable/knop_rand</item>
+        <item name="android:textColor">@color/blauw_donker</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">@font/barlow</item>
     </style>
 
     <style name="Keuze">
@@ -155,23 +324,17 @@
         <item name="android:layout_marginEnd">6dp</item>
         <item name="android:background">@drawable/keuze</item>
         <item name="android:gravity">center</item>
-        <item name="android:paddingStart">14dp</item>
-        <item name="android:paddingEnd">14dp</item>
+        <item name="android:paddingStart">11dp</item>
+        <item name="android:paddingEnd">11dp</item>
         <item name="android:textColor">@color/keuze_tekst</item>
         <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:singleLine">true</item>
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
     </style>
 
-    <style name="InstellingKop">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">wrap_content</item>
+    <style name="InstellingKop" parent="Kop">
         <item name="android:layout_marginTop">18dp</item>
-        <item name="android:layout_marginBottom">6dp</item>
-        <item name="android:textColor">@color/tekst_zacht</item>
-        <item name="android:textSize">12sp</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="android:letterSpacing">0.06</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
     </style>
 </resources>

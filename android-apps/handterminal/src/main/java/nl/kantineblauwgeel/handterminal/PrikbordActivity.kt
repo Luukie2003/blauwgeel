@@ -10,6 +10,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
+import androidx.appcompat.widget.AppCompatCheckBox
+import androidx.appcompat.widget.AppCompatEditText
+import androidx.appcompat.widget.AppCompatTextView
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
@@ -24,7 +27,7 @@ class PrikbordActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.prikbord))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
         b.onderKnop.isVisible = true
         b.onderKnop.setText(R.string.nieuwe_mededeling)
@@ -75,7 +78,7 @@ class PrikbordActivity : BasisActivity() {
         val kaart = Lijst.kaart(inhoud, if (m.optBoolean("urgent") && !afgehandeld) R.drawable.rand_links_rood else R.drawable.kaart)
         kaart.setPadding(dp(this, 14), dp(this, 10), dp(this, 12), dp(this, 6))
         kaart.alpha = if (afgehandeld) 0.6f else 1f
-        if (m.optBoolean("urgent") && !afgehandeld) kaart.addView(tekst(getString(R.string.urgent), 11f, R.color.rood_balk, vet = true))
+        if (m.optBoolean("urgent") && !afgehandeld) kaart.addView(tekst(getString(R.string.urgent), 11f, R.color.rood, vet = true))
         kaart.addView(tekst(m.optString("tekst"), 15f, R.color.tekst))
         val wie = listOfNotNull(m.tekstOfNull("naam"), Lijst.datum(m.tekstOfNull("datum"))).joinToString(" · ")
         kaart.addView(tekst(if (afgehandeld) "$wie · " + getString(R.string.afgehandeld_door, m.tekstOfNull("afgehandeld_door") ?: "?") else wie, 12f, R.color.tekst_zacht))
@@ -103,7 +106,7 @@ class PrikbordActivity : BasisActivity() {
         kaart.addView(knoppen)
     }
 
-    private fun tekst(waarde: String, grootte: Float, kleur: Int, vet: Boolean = false) = TextView(this).apply {
+    private fun tekst(waarde: String, grootte: Float, kleur: Int, vet: Boolean = false) = AppCompatTextView(this).apply {
         text = waarde
         textSize = grootte
         setTextColor(getColor(kleur))
@@ -111,10 +114,10 @@ class PrikbordActivity : BasisActivity() {
         setPadding(0, dp(context, 2), 0, dp(context, 2))
     }
 
-    private fun knop(tekst: String, actie: () -> Unit) = TextView(this).apply {
+    private fun knop(tekst: String, actie: () -> Unit) = AppCompatTextView(this).apply {
         text = tekst
         textSize = 14f
-        setTextColor(getColor(R.color.navy))
+        setTextColor(getColor(R.color.blauw_donker))
         setTypeface(typeface, android.graphics.Typeface.BOLD)
         setBackgroundResource(R.drawable.regel_klik_kaart)
         setPadding(dp(context, 4), dp(context, 10), dp(context, 18), dp(context, 8))
@@ -123,13 +126,13 @@ class PrikbordActivity : BasisActivity() {
 
     /** Een tekst schrijven (nieuwe mededeling of reactie). Met @naam tag je iemand, net als op de site. */
     private fun schrijf(titel: String, metUrgent: Boolean = false, klaar: (String, Boolean) -> Unit) {
-        val veld = EditText(this).apply {
+        val veld = AppCompatEditText(this).apply {
             hint = getString(R.string.mededeling_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             minLines = 3
             maxLines = 6
         }
-        val urgent = CheckBox(this).apply {
+        val urgent = AppCompatCheckBox(this).apply {
             text = getString(R.string.urgent_vraag)
             isVisible = metUrgent
         }

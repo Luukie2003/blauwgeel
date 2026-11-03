@@ -9,6 +9,8 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
+import androidx.appcompat.widget.AppCompatCheckBox
+import androidx.appcompat.widget.AppCompatEditText
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
@@ -24,7 +26,7 @@ class AanmeldingenActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.aanmeldingen))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
     }
 
@@ -71,7 +73,7 @@ class AanmeldingenActivity : BasisActivity() {
                 val goed = a.optString("status") == "goedgekeurd"
                 Lijst.regel(kaart, a.optString("bordje"),
                     listOfNotNull(a.tekstOfNull("naam"), Lijst.datum(a.tekstOfNull("op")), a.tekstOfNull("door")).joinToString(" · "),
-                    a.optString("status"), if (goed) R.color.groen_tekst else R.color.tekst_zacht)
+                    a.optString("status"), if (goed) R.color.groen else R.color.tekst_zacht)
             }
         }
     }
@@ -92,8 +94,8 @@ class AanmeldingenActivity : BasisActivity() {
     }
 
     private fun goedkeuren(a: JSONObject) {
-        val gecontroleerd = CheckBox(this).apply { text = getString(R.string.betaling_gecontroleerd) }
-        val bordje = CheckBox(this).apply {
+        val gecontroleerd = AppCompatCheckBox(this).apply { text = getString(R.string.betaling_gecontroleerd) }
+        val bordje = AppCompatCheckBox(this).apply {
             text = getString(R.string.bordje_aanpassen, a.optString("bordje"))
             isVisible = a.optBoolean("bordje_anders")
         }
@@ -126,7 +128,7 @@ class AanmeldingenActivity : BasisActivity() {
     }
 
     private fun afwijzen(a: JSONObject) {
-        val veld = EditText(this).apply {
+        val veld = AppCompatEditText(this).apply {
             hint = getString(R.string.afwijs_reden_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
         }

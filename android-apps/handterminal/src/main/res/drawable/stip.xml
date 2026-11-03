@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- De stip voor een stand ("• Aan", "• 21 onder het minimum"): krijgt de kleur van de tekst (Lijst.stand). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <size android:width="8dp" android:height="8dp" />
+    <solid android:color="@color/wit" />
+</shape>

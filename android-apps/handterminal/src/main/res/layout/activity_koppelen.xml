@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/achtergrond"
+    android:background="@color/papier"
     android:orientation="vertical">
 
     <include
@@ -21,11 +21,14 @@
             android:id="@+id/codeTekst"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/badge_geel"
+            android:background="@drawable/melding_let_op"
             android:fontFamily="monospace"
             android:gravity="center"
-            android:padding="8dp"
-            android:textColor="@color/navy"
+            android:paddingStart="12dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="10dp"
+            android:textColor="@color/tekst"
             android:textSize="18sp"
             android:textStyle="bold" />
 

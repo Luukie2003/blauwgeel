@@ -5,7 +5,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/achtergrond"
+    android:background="@color/papier"
     android:orientation="vertical">
 
     <include
@@ -28,10 +28,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:background="@drawable/badge_geel"
-                android:padding="10dp"
+                android:background="@drawable/melding_let_op"
+                android:paddingStart="16dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="10dp"
                 android:text="@string/scan_dozen"
-                android:textColor="@color/navy"
+                android:textColor="@color/tekst"
                 android:textSize="14sp" />
 
             <LinearLayout
@@ -92,7 +95,7 @@
                         android:id="@+id/bedrag"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/navy"
+                        android:textColor="@color/blauw_donker"
                         android:textSize="22sp"
                         android:textStyle="bold" />
 
@@ -175,6 +178,6 @@
         android:layout_width="match_parent"
         android:layout_margin="8dp"
         app:drawableStartCompat="@drawable/ic_vink"
-        app:drawableTint="@color/navy"
+        app:drawableTint="@color/blauw_donker"
         android:text="@string/afronden_en_inboeken" />
 </LinearLayout>

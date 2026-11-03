@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Bij het tellen is de gele streep onder de kopbalk de voortgang: hij loopt vol terwijl je telt. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@android:id/background">
-        <shape><solid android:color="@android:color/transparent" /></shape>
+        <shape><solid android:color="@color/voortgang_achter" /></shape>
     </item>
     <item android:id="@android:id/progress">
         <clip><shape><solid android:color="@color/geel" /></shape></clip>

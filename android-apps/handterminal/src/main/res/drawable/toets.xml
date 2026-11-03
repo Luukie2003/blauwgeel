@@ -1,17 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Een cijfertoets: rustig glas op navy, geel als je hem indrukt (zoals de knoppen op de site). -->
+<!-- Een cijfertoets: wit met een rand, geel als je hem indrukt. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
-        <shape android:shape="rectangle">
-            <corners android:radius="18dp" />
-            <solid android:color="@color/geel" />
-        </shape>
+        <shape><corners android:radius="6dp" /><solid android:color="@color/geel" /><stroke android:width="1dp" android:color="@color/geel_donker" /></shape>
     </item>
     <item>
-        <shape android:shape="rectangle">
-            <corners android:radius="18dp" />
-            <solid android:color="@color/knop_op_navy" />
-            <stroke android:width="1dp" android:color="@color/knop_op_navy_rand" />
-        </shape>
+        <shape><corners android:radius="6dp" /><solid android:color="@color/kaart" /><stroke android:width="1dp" android:color="@color/rand" /></shape>
     </item>
 </selector>

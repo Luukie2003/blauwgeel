@@ -10,6 +10,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.AppCompatTextView
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
@@ -37,7 +38,7 @@ class KoppelrondeActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.koppelronde))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
         laad()
     }
@@ -80,8 +81,8 @@ class KoppelrondeActivity : BasisActivity() {
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(this, 10)))
 
         laatste?.let { (code, naam) ->
-            val kaart = Lijst.kaart(inhoud, R.drawable.rand_links_navy)
-            Lijst.regel(kaart, getString(R.string.gekoppeld_aan, naam), code, getString(R.string.ongedaan), R.color.navy) { ongedaan(code) }
+            val kaart = Lijst.kaart(inhoud, R.drawable.rand_links_blauw)
+            Lijst.regel(kaart, getString(R.string.gekoppeld_aan, naam), code, getString(R.string.ongedaan), R.color.blauw_donker) { ongedaan(code) }
         }
 
         val p = teDoen.getOrNull(plek)
@@ -97,30 +98,30 @@ class KoppelrondeActivity : BasisActivity() {
             }
             kaart.addView(foto, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(this, 150)))
             Fotos.toon(foto, p.tekstOfNull("foto_groot"))
-            kaart.addView(TextView(this).apply {
+            kaart.addView(AppCompatTextView(this).apply {
                 text = p.optString("naam")
-                textSize = 24f
+                textSize = 26f
                 gravity = Gravity.CENTER
                 setTextColor(getColor(R.color.tekst))
-                typeface = Typeface.DEFAULT_BOLD
+                setTypeface(Letters.koppen(context), Typeface.BOLD)
                 setPadding(dp(context, 12), dp(context, 8), dp(context, 12), 0)
             })
-            kaart.addView(TextView(this).apply {
+            kaart.addView(AppCompatTextView(this).apply {
                 text = p.optString("categorie")
                 textSize = 13f
                 gravity = Gravity.CENTER
                 setTextColor(getColor(R.color.tekst_zacht))
             })
-            kaart.addView(TextView(this).apply {
+            kaart.addView(AppCompatTextView(this).apply {
                 text = getString(R.string.scan_een_los, p.optString("eenheid"))
                 textSize = 15f
                 gravity = Gravity.CENTER
-                setTextColor(getColor(R.color.navy))
-                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(getColor(R.color.blauw_donker))
+                setTypeface(Letters.tekst(context), Typeface.BOLD)
                 setPadding(dp(context, 12), dp(context, 10), dp(context, 12), dp(context, 10))
             })
             Lijst.regel(kaart, getString(R.string.per_scan), getString(R.string.per_scan_uitleg),
-                "$perScan ${p.optString("eenheid")}", R.color.navy) { vraagPerScan(p) }
+                "$perScan ${p.optString("eenheid")}", R.color.blauw_donker) { vraagPerScan(p) }
             Lijst.knop(kaart, getString(R.string.barcode_intikken)) {
                 Cijferpad.vraag(this, getString(R.string.barcode_intikken), max = 14) { code -> if (code.isNotEmpty()) bijScan(code) }
             }
@@ -140,7 +141,7 @@ class KoppelrondeActivity : BasisActivity() {
             Lijst.kop(inhoud, getString(R.string.zonder_barcode_n, geenBarcode.size))
             val lijst = Lijst.kaart(inhoud)
             for (g in geenBarcode) {
-                Lijst.regel(lijst, g.optString("naam"), g.optString("categorie"), getString(R.string.terugzetten), R.color.navy) {
+                Lijst.regel(lijst, g.optString("naam"), g.optString("categorie"), getString(R.string.terugzetten), R.color.blauw_donker) {
                     zetGeenBarcode(g, false)
                 }
             }

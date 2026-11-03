@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.AppCompatTextView
 import nl.kantineblauwgeel.handterminal.databinding.CijferpadBinding
 
 /** Het cijferpad (layout/cijferpad.xml): een getal intikken zonder het toetsenbord van Android.
@@ -29,7 +30,14 @@ object Cijferpad {
                 }
             }
         }
-        pad.padLinks.text = if (decimaal) "," else "C"
+        // Bij bedragen is de toets links onder een komma (een gewone cijfertoets), anders Wis (alleen blauwe letters).
+        if (decimaal) {
+            pad.padLinks.text = ","
+            pad.padLinks.setBackgroundResource(R.drawable.toets)
+            pad.padLinks.setTextColor(pad.root.context.getColorStateList(R.color.toets_tekst))
+            pad.padLinks.textSize = 25f
+            pad.padLinks.setTypeface(Letters.koppen(pad.root.context), android.graphics.Typeface.BOLD)
+        }
         pad.padLinks.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             val nu = waarde()
@@ -58,15 +66,18 @@ object Cijferpad {
         val inflater = LayoutInflater.from(activity)
         val pad = CijferpadBinding.inflate(inflater)
         val dp = activity.resources.displayMetrics.density
-        val scherm = TextView(activity).apply {
-            textSize = 34f
+        val scherm = AppCompatTextView(activity).apply {
+            textSize = 36f
             gravity = Gravity.CENTER
+            setTypeface(Letters.koppen(activity), android.graphics.Typeface.BOLD)
             setTextColor(activity.getColor(R.color.tekst))
             setPadding(0, (4 * dp).toInt(), 0, (8 * dp).toInt())
         }
         var waarde = begin
+        // Het getal in de smalle letter, de eenheid erachter klein (zoals "24 blik" bij boeken).
         fun toon() {
-            scherm.text = if (waarde.isEmpty()) "–" else listOf(voor, waarde, eenheid).filter { it.isNotEmpty() }.joinToString(" ")
+            scherm.text = if (waarde.isEmpty()) "–" else Lijst.getalMetEenheid(activity, listOf(voor, waarde).filter { it.isNotEmpty() }.joinToString(" "),
+                eenheid, 17, android.graphics.Typeface.create(Letters.tekst(activity), android.graphics.Typeface.BOLD))
         }
         toon()
         koppel(pad, decimaal, max = max, waarde = { waarde }) {

@@ -13,6 +13,8 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
+import androidx.appcompat.widget.AppCompatButton
+import androidx.appcompat.widget.AppCompatTextView
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
@@ -59,7 +61,7 @@ class BestellijstActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.bestellijst))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
         b.onderKnop.isVisible = true
         b.onderKnop.setOnClickListener { klaarzetten() }
@@ -187,7 +189,7 @@ class BestellijstActivity : BasisActivity() {
             val kaart = Lijst.kaart(inhoud)
             for (p in gemeld) {
                 Lijst.regel(kaart, p.optString("naam"), getString(R.string.gemeld_detail, Lijst.datum(p.tekstOfNull("laatste_melding"))),
-                    getString(R.string.n_keer, p.optInt("keer")), R.color.oranje_balk) {
+                    getString(R.string.n_keer, p.optInt("keer")), R.color.oranje) {
                     AlertDialog.Builder(this)
                         .setTitle(p.optString("naam"))
                         .setMessage(R.string.melding_afhandelen_vraag)
@@ -249,7 +251,7 @@ class BestellijstActivity : BasisActivity() {
         Lijst.regel(
             kaart, p.optString("naam"), detail, rechts,
             when {
-                r.gecontroleerd -> R.color.navy
+                r.gecontroleerd -> R.color.blauw_donker
                 r.aantal > 0 -> R.color.tekst
                 else -> R.color.tekst_zacht
             },
@@ -291,7 +293,7 @@ class BestellijstActivity : BasisActivity() {
                 if (p.has("verwacht") && p.has("dagen")) getString(R.string.prognose_in_dagen, p.optInt("verwacht"), eenheid, p.optInt("dagen")) else null,
                 if (p.has("advies")) getString(R.string.advies_n, p.optInt("advies"), colli) else null,
             ).joinToString(" · ")
-            if (uitleg.isNotEmpty()) inhoud.addView(TextView(this).apply {
+            if (uitleg.isNotEmpty()) inhoud.addView(AppCompatTextView(this).apply {
                 text = uitleg
                 textSize = 13f
                 gravity = Gravity.CENTER
@@ -305,13 +307,13 @@ class BestellijstActivity : BasisActivity() {
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(this@BestellijstActivity, 8), 0, dp(this@BestellijstActivity, 8), 0)
             }
-            val getal = TextView(this).apply {
+            val getal = AppCompatTextView(this).apply {
                 textSize = 26f
                 gravity = Gravity.CENTER
-                setTextColor(getColor(R.color.navy))
+                setTextColor(getColor(R.color.blauw_donker))
                 setTypeface(typeface, Typeface.BOLD)
             }
-            val stuks = TextView(this).apply {
+            val stuks = AppCompatTextView(this).apply {
                 textSize = 12f
                 gravity = Gravity.CENTER
                 setTextColor(getColor(R.color.tekst_zacht))
@@ -327,7 +329,7 @@ class BestellijstActivity : BasisActivity() {
             }
             fun knop(k: ImageButton, icoon: Int, beschrijving: String, stap: Int) = k.apply {
                 setImageResource(icoon)
-                setColorFilter(getColor(R.color.navy))
+                setColorFilter(getColor(R.color.blauw_donker))
                 contentDescription = beschrijving
                 setBackgroundResource(R.drawable.toets_licht)
                 setOnClickListener {
@@ -361,13 +363,13 @@ class BestellijstActivity : BasisActivity() {
                 zet(n + 1)
             }
 
-            val bevestig = Button(this).apply {
+            val bevestig = AppCompatButton(this).apply {
                 text = getString(R.string.bevestigen)
                 textSize = 17f
                 isAllCaps = false
                 stateListAnimator = null
                 setTypeface(typeface, Typeface.BOLD)
-                setTextColor(getColor(R.color.navy))
+                setTextColor(getColor(R.color.blauw_donker))
                 setBackgroundResource(R.drawable.knop_geel)
                 setOnClickListener { bewaar(r.id, n, blad, this) }
             }
@@ -382,12 +384,12 @@ class BestellijstActivity : BasisActivity() {
                 orientation = LinearLayout.HORIZONTAL
                 setPadding(0, dp(this@BestellijstActivity, 8), 0, 0)
             }
-            fun link(tekst: String, actie: () -> Unit) = onder.addView(TextView(this).apply {
+            fun link(tekst: String, actie: () -> Unit) = onder.addView(AppCompatTextView(this).apply {
                 text = tekst
                 textSize = 13.5f
                 gravity = Gravity.CENTER
                 minHeight = dp(this@BestellijstActivity, 44)
-                setTextColor(getColor(R.color.navy))
+                setTextColor(getColor(R.color.blauw_donker))
                 setTypeface(typeface, Typeface.BOLD)
                 setBackgroundResource(R.drawable.regel_klik)
                 setOnClickListener { actie() }

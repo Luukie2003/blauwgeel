@@ -6,14 +6,14 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#00000000"
-        android:pathData="M7.0,4.0h10.0a2.0,2.0 0 0 1 2.0,2.0v13.0a2.0,2.0 0 0 1 -2.0,2.0h-10.0a2.0,2.0 0 0 1 -2.0,-2.0v-13.0a2.0,2.0 0 0 1 2.0,-2.0z"
+        android:pathData="M7,4h10a2,2 0 0 1 2,2v13a2,2 0 0 1 -2,2h-10a2,2 0 0 1 -2,-2v-13a2,2 0 0 1 2,-2z"
         android:strokeWidth="1.8"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"
+        android:pathData="M9 3h6v3H9z"
         android:strokeWidth="1.8"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"

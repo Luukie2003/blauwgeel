@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- De kopbalk van elk werkscherm: terug (of het clublogo op het startscherm), de titel met eronder wie er is ingelogd
-     of hoe de verbinding is, een stip voor de verbinding (groen, oranje, rood) en het menu. Navy met een gele streep
-     eronder, zoals de kop van de site. -->
+<!-- De kopbalk van elk werkscherm, zoals de kop van de site: donkerblauw met een gele streep van 4dp eronder. Links
+     terug (of op het startscherm het wapen met de naam), de titel in de sportletter met eronder eventueel een regel
+     (zoals "Geen verbinding"), rechts een teller (bij het tellen), de stip voor de verbinding en het menu (op het
+     startscherm: de eerste letter van wie er is ingelogd). Bij het tellen is de gele streep de voortgang. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -11,26 +12,27 @@
     <LinearLayout
         android:id="@+id/balk"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:background="@color/navy"
+        android:layout_height="60dp"
+        android:background="@color/blauw_donker"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingEnd="2dp">
+        android:paddingEnd="4dp">
 
         <ImageButton
             android:id="@+id/balkTerug"
-            android:layout_width="44dp"
-            android:layout_height="50dp"
+            android:layout_width="48dp"
+            android:layout_height="60dp"
             android:background="@drawable/menu_knop"
             android:contentDescription="@string/terug"
             android:src="@drawable/ic_terug"
-            app:tint="@color/tekst_op_navy" />
+            app:tint="@color/wit" />
 
         <ImageView
             android:id="@+id/balkLogo"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
-            android:layout_marginStart="10dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
             android:contentDescription="@string/club"
             android:src="@drawable/clublogo"
             android:visibility="gone" />
@@ -38,7 +40,7 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
+            android:layout_marginStart="2dp"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -47,42 +49,77 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
+                android:fontFamily="@font/barlow_condensed"
+                android:includeFontPadding="false"
                 android:singleLine="true"
                 android:textColor="@color/wit"
-                android:textSize="17sp"
+                android:textSize="24sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/balkSub"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
                 android:ellipsize="end"
+                android:fontFamily="@font/barlow_medium"
+                android:includeFontPadding="false"
                 android:singleLine="true"
-                android:textColor="@color/tekst_zacht_op_navy"
+                android:textColor="@color/tekst_zacht_op_blauw"
                 android:textSize="12sp"
                 android:visibility="gone" />
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/balkTeller"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="@font/barlow_condensed"
+            android:singleLine="true"
+            android:textColor="@color/wit"
+            android:textSize="18sp"
+            android:visibility="gone" />
 
         <View
             android:id="@+id/balkStip"
             android:layout_width="9dp"
             android:layout_height="9dp"
-            android:layout_marginStart="6dp"
+            android:layout_marginStart="10dp"
             android:layout_marginEnd="4dp"
             android:background="@drawable/status_stip" />
+
+        <TextView
+            android:id="@+id/balkAvatar"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/avatar"
+            android:clickable="true"
+            android:contentDescription="@string/menu_openen"
+            android:focusable="true"
+            android:fontFamily="@font/barlow_condensed"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:textColor="@color/blauw_donker"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
 
         <ImageButton
             android:id="@+id/balkMenu"
             android:layout_width="40dp"
-            android:layout_height="50dp"
+            android:layout_height="60dp"
             android:background="@drawable/menu_knop"
             android:contentDescription="@string/menu_openen"
             android:src="@drawable/ic_menu"
-            app:tint="@color/tekst_op_navy" />
+            app:tint="@color/wit" />
     </LinearLayout>
 
     <View
+        android:id="@+id/balkStreep"
         android:layout_width="match_parent"
-        android:layout_height="3dp"
+        android:layout_height="4dp"
         android:background="@color/geel" />
 </LinearLayout>

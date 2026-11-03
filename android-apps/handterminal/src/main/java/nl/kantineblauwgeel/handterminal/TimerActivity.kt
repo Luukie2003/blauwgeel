@@ -14,6 +14,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
+import androidx.appcompat.widget.AppCompatEditText
+import androidx.appcompat.widget.AppCompatTextView
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
@@ -48,7 +50,7 @@ class TimerActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.timer_titel))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
         b.onderKnop.isVisible = true
         b.onderKnop.setText(R.string.andere_timer)
@@ -91,29 +93,29 @@ class TimerActivity : BasisActivity() {
         if (timers.isEmpty()) Lijst.leeg(inhoud, getString(R.string.geen_timer))
         val nu = SystemClock.elapsedRealtime()
         for (t in timers) {
-            val kaart = Lijst.kaart(inhoud, R.drawable.rand_links_navy)
+            val kaart = Lijst.kaart(inhoud, R.drawable.rand_links_blauw)
             val boven = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(context, 12), dp(context, 8), dp(context, 12), 0)
             }
             val tekst = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            tekst.addView(TextView(this).apply {
+            tekst.addView(AppCompatTextView(this).apply {
                 text = t.optString("naam")
                 textSize = 16f
                 setTextColor(getColor(R.color.tekst))
                 setTypeface(typeface, Typeface.BOLD)
             })
-            tekst.addView(TextView(this).apply {
+            tekst.addView(AppCompatTextView(this).apply {
                 text = getString(R.string.klaar_om, t.optString("klaar_om")) + (t.tekstOfNull("gestart_door")?.let { " · $it" } ?: "")
                 textSize = 12f
                 setTextColor(getColor(R.color.tekst_zacht))
             })
             boven.addView(tekst, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            val tijd = TextView(this).apply {
-                textSize = 30f
-                setTextColor(getColor(R.color.navy))
-                typeface = Typeface.DEFAULT_BOLD
+            val tijd = AppCompatTextView(this).apply {
+                textSize = 34f
+                setTextColor(getColor(R.color.blauw_donker))
+                setTypeface(Letters.koppen(context), Typeface.BOLD)
                 fontFeatureSettings = "tnum"  // cijfers even breed: de tijd springt niet heen en weer
             }
             boven.addView(tijd)
@@ -133,7 +135,7 @@ class TimerActivity : BasisActivity() {
         for (v in voorstellen) {
             val naam = v.optString("naam")
             val minuten = v.optInt("minuten")
-            val regel = Lijst.regel(kaart, naam, getString(R.string.lang_indrukken_andere_tijd), getString(R.string.n_min, minuten), R.color.navy) {
+            val regel = Lijst.regel(kaart, naam, getString(R.string.lang_indrukken_andere_tijd), getString(R.string.n_min, minuten), R.color.blauw_donker) {
                 start(naam, minuten)
             }
             regel.setOnLongClickListener {
@@ -144,11 +146,11 @@ class TimerActivity : BasisActivity() {
         Lijst.tekst(inhoud, getString(R.string.timer_uitleg), grootte = 11.5f)
     }
 
-    private fun knop(tekst: String, actie: () -> Unit) = TextView(this).apply {
+    private fun knop(tekst: String, actie: () -> Unit) = AppCompatTextView(this).apply {
         text = tekst
         textSize = 15f
         gravity = Gravity.CENTER
-        setTextColor(getColor(R.color.navy))
+        setTextColor(getColor(R.color.blauw_donker))
         setTypeface(typeface, Typeface.BOLD)
         minHeight = dp(context, 46)
         setBackgroundResource(R.drawable.regel_klik_kaart)
@@ -160,7 +162,7 @@ class TimerActivity : BasisActivity() {
         for (l in lopend) {
             val rest = maxOf(0L, (l.klaarOp - nu + 999) / 1000)
             l.tijd.text = if (rest == 0L) getString(R.string.klaar) else tijdTekst(rest)
-            l.kaart.setBackgroundResource(if (rest == 0L) R.drawable.rand_links_oranje else R.drawable.rand_links_navy)
+            l.kaart.setBackgroundResource(if (rest == 0L) R.drawable.rand_links_oranje else R.drawable.rand_links_blauw)
         }
     }
 
@@ -208,12 +210,12 @@ class TimerActivity : BasisActivity() {
 
     /** Een timer met een eigen naam of een andere tijd. */
     private fun andereTimer(naam: String?, minuten: Int?) {
-        val naamVeld = EditText(this).apply {
+        val naamVeld = AppCompatEditText(this).apply {
             hint = getString(R.string.timer_naam_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             setText(naam ?: "")
         }
-        val minutenVeld = EditText(this).apply {
+        val minutenVeld = AppCompatEditText(this).apply {
             hint = getString(R.string.minuten_hint)
             inputType = InputType.TYPE_CLASS_NUMBER
             setText((minuten ?: 15).toString())
@@ -221,9 +223,9 @@ class TimerActivity : BasisActivity() {
         val vorm = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(context, 20), dp(context, 6), dp(context, 20), 0)
-            addView(TextView(context).apply { setText(R.string.waarvoor); textSize = 12f; setTextColor(getColor(R.color.tekst_zacht)) })
+            addView(AppCompatTextView(context).apply { setText(R.string.waarvoor); textSize = 12f; setTextColor(getColor(R.color.tekst_zacht)) })
             addView(naamVeld)
-            addView(TextView(context).apply {
+            addView(AppCompatTextView(context).apply {
                 setText(R.string.hoeveel_minuten); textSize = 12f; setTextColor(getColor(R.color.tekst_zacht)); setPadding(0, dp(context, 8), 0, 0)
             })
             addView(minutenVeld)

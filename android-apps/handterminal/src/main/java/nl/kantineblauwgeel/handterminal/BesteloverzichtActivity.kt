@@ -25,7 +25,7 @@ class BesteloverzichtActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.besteloverzicht))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
         b.onderKnop.isVisible = nieuw
         b.onderKnop.text = getString(R.string.besteloverzicht_klaar)
@@ -69,7 +69,7 @@ class BesteloverzichtActivity : BasisActivity() {
                         if (r.optInt("factor", 1) > 1) getString(R.string.n_eenheid, r.optInt("stuks"), r.optString("eenheid")) else null,
                     ).joinToString(" · "),
                     getString(R.string.n_eenheid, r.optInt("eenheden"), r.optString("besteleenheid")),
-                    R.color.navy,
+                    R.color.blauw_donker,
                 )
             }
             val tekst = best.optString("tekst")

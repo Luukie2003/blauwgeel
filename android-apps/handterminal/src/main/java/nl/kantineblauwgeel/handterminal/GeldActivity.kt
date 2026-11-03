@@ -8,6 +8,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
+import androidx.appcompat.widget.AppCompatEditText
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
@@ -26,7 +27,7 @@ class GeldActivity : BasisActivity() {
         setContentView(b.root)
         soort = intent.getStringExtra(EXTRA_SOORT) ?: KASSA
         richtBalkIn(b.balk, getString(if (isKassa) R.string.kassa else R.string.kluis))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
         b.onderKnop.isVisible = true
         b.onderKnop.setText(if (isKassa) R.string.kassa_tellen else R.string.kluis_tellen)
@@ -132,7 +133,7 @@ class GeldActivity : BasisActivity() {
     }
 
     private fun goedkeuren(t: JSONObject) {
-        val veld = EditText(this).apply {
+        val veld = AppCompatEditText(this).apply {
             hint = getString(R.string.opmerking_optioneel)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
         }

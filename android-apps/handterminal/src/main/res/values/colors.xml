@@ -1,26 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dezelfde kleuren als de handterminal-weergave van de site (.pda-kop en de variabelen in static/style.css),
-         zodat de balk van de app en de kop van de site één geheel vormen. -->
-    <color name="navy">#1C2B4A</color>
-    <color name="navy_donker">#0F1A30</color>
-    <color name="navy_licht">#2A3D63</color>
+    <!-- De clubstijl van de site (:root in static/clubstijl.css): donkerblauw met een gele streep zoals het shirt, wit
+         op papier, en rood, oranje en groen alleen voor een stand. -->
+    <color name="blauw_donker">#14275E</color>
+    <color name="blauw">#1E3A8A</color>
     <color name="geel">#FCD42F</color>
-    <color name="geel_donker">#E0BA17</color>
-    <color name="wit">#FFFFFF</color>
-    <color name="tekst_op_navy">#F0F2F6</color>
-    <color name="tekst_zacht_op_navy">#A9B3CC</color>
-    <color name="achtergrond">#ECECEC</color>
+    <color name="geel_donker">#E3BB14</color>
+    <color name="papier">#F6F4EF</color>
     <color name="kaart">#FFFFFF</color>
-    <color name="tekst">#1C2333</color>
-    <color name="tekst_zacht">#5B6270</color>
-    <color name="rand_licht">#D6D6D6</color>
-    <color name="groen">#3FB950</color>
-    <color name="groen_tekst">#146C34</color>
-    <color name="oranje">#F0A020</color>
-    <color name="rood">#E5484D</color>
-    <color name="rood_balk">#A91C1C</color>
-    <color name="oranje_balk">#A6590A</color>
-    <color name="knop_op_navy">#1AFFFFFF</color>
-    <color name="knop_op_navy_rand">#33FFFFFF</color>
+    <color name="wit">#FFFFFF</color>
+    <color name="tekst">#1A2033</color>
+    <color name="tekst_zacht">#5F6575</color>
+    <color name="rand">#DDD7CA</color>
+    <color name="rand_licht">#EBE6DB</color>
+    <color name="rood">#B8321F</color>
+    <color name="oranje">#A85B09</color>
+    <color name="groen">#1F7A45</color>
+    <!-- Uit het voorbeeld (zebra-clubstijl.html): de rand van knoppen en velden, de streep bij "Wat moet er nu?" die
+         niet urgent is, grijs voor "Uit", en lichtgeel onder je vinger (de selectiekleur van de site). -->
+    <color name="knoprand">#CDC6B6</color>
+    <color name="veldrand">#CFC8B8</color>
+    <color name="amber">#E0A020</color>
+    <color name="grijs">#8A8F9C</color>
+    <color name="ingedrukt">#FBF3CC</color>
+    <color name="rood_rand">#DCB1A8</color>
+    <!-- Op het donkerblauw van de kopbalk: zachte tekst, de verbindingsstip (lichter, anders zie je hem niet) en de
+         achterkant van de voortgang bij het tellen. -->
+    <color name="tekst_zacht_op_blauw">#B9C3E0</color>
+    <color name="stip_groen">#4CC77A</color>
+    <color name="stip_oranje">#F0A020</color>
+    <color name="stip_rood">#F0645A</color>
+    <color name="voortgang_achter">#34498C</color>
+    <color name="knop_op_blauw">#1AFFFFFF</color>
+    <color name="knop_op_blauw_rand">#33FFFFFF</color>
 </resources>

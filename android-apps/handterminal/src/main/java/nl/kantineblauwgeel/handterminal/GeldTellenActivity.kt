@@ -14,6 +14,8 @@ import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
+import androidx.appcompat.widget.AppCompatEditText
+import androidx.appcompat.widget.AppCompatTextView
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
@@ -125,14 +127,14 @@ class GeldTellenActivity : BasisActivity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(context, 12), dp(context, 5), dp(context, 12), dp(context, 5))
         }
-        regel.addView(TextView(this).apply {
+        regel.addView(AppCompatTextView(this).apply {
             text = c.optString("naam")
             textSize = 16f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(getColor(R.color.tekst))
         }, LinearLayout.LayoutParams(dp(this, 70), LinearLayout.LayoutParams.WRAP_CONTENT))
         regel.addView(stapKnop(R.drawable.ic_min, R.string.minder) { zet(veld, (aantallen[veld] ?: 0) - 1) })
-        val aantal = TextView(this).apply {
+        val aantal = AppCompatTextView(this).apply {
             textSize = 22f
             gravity = Gravity.CENTER
             setTypeface(typeface, Typeface.BOLD)
@@ -146,7 +148,7 @@ class GeldTellenActivity : BasisActivity() {
         aantalViews[veld] = aantal
         regel.addView(aantal, LinearLayout.LayoutParams(0, dp(this, 44), 1f))
         regel.addView(stapKnop(R.drawable.ic_plus, R.string.meer_aantal) { zet(veld, (aantallen[veld] ?: 0) + 1) })
-        val bedrag = TextView(this).apply {
+        val bedrag = AppCompatTextView(this).apply {
             textSize = 13f
             gravity = Gravity.END
             setTextColor(getColor(R.color.tekst_zacht))
@@ -170,7 +172,7 @@ class GeldTellenActivity : BasisActivity() {
     }
 
     private fun invulRegel(kaart: LinearLayout, label: String, actie: () -> Unit): TextView {
-        val regel = Lijst.regel(kaart, label, null, "–", R.color.navy, klik = actie)
+        val regel = Lijst.regel(kaart, label, null, "–", R.color.blauw_donker, klik = actie)
         return regel.getChildAt(regel.childCount - 1) as TextView
     }
 
@@ -179,12 +181,12 @@ class GeldTellenActivity : BasisActivity() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(context, 12), dp(context, 5), dp(context, 12), dp(context, 5))
         }
-        regel.addView(TextView(this).apply {
+        regel.addView(AppCompatTextView(this).apply {
             text = label
             textSize = 14f
             setTextColor(getColor(R.color.tekst_zacht))
         }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        val waarde = TextView(this).apply {
+        val waarde = AppCompatTextView(this).apply {
             textSize = 17f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(getColor(R.color.tekst))
@@ -231,7 +233,7 @@ class GeldTellenActivity : BasisActivity() {
     private fun bedrag(tekst: String) = (tekst.replace(',', '.').toDoubleOrNull() ?: 0.0).coerceIn(0.0, 99_999.0)
 
     private fun vraagOpmerking() {
-        val veld = EditText(this).apply {
+        val veld = AppCompatEditText(this).apply {
             setText(opmerking)
             hint = getString(R.string.opmerking_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE

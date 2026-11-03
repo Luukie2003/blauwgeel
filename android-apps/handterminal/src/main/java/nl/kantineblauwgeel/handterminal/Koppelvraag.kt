@@ -5,6 +5,8 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.AppCompatEditText
+import androidx.appcompat.widget.AppCompatTextView
 import org.json.JSONObject
 
 /** De vraag bij het koppelen van een onbekende barcode aan een product: wat heb je gescand?
@@ -52,23 +54,23 @@ object Koppelvraag {
     /** Een verpakking met meer stuks: naam, hoeveel erin en (mag leeg) de inkoopprijs. */
     private fun vraagVerpakking(activity: BasisActivity, code: String, p: Catalogus.Product, klaar: (Catalogus.Product) -> Unit) {
         val dp = activity.resources.displayMetrics.density
-        fun label(tekst: String) = TextView(activity).apply {
+        fun label(tekst: String) = AppCompatTextView(activity).apply {
             text = tekst
             textSize = 12f
             setTextColor(activity.getColor(R.color.tekst_zacht))
             setPadding(0, (8 * dp).toInt(), 0, 0)
         }
-        val naam = EditText(activity).apply {
+        val naam = AppCompatEditText(activity).apply {
             hint = activity.getString(R.string.koppel_naam_hint, p.naam)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             setSingleLine()
         }
-        val aantal = EditText(activity).apply {
+        val aantal = AppCompatEditText(activity).apply {
             hint = activity.getString(R.string.koppel_aantal_hint)
             inputType = InputType.TYPE_CLASS_NUMBER
             setSingleLine()
         }
-        val prijs = EditText(activity).apply {
+        val prijs = AppCompatEditText(activity).apply {
             hint = activity.getString(R.string.mag_leeg)
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
             setSingleLine()

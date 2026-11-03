@@ -21,7 +21,7 @@ class DiasActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.diashow))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
     }
 
@@ -82,20 +82,19 @@ class DiasActivity : BasisActivity() {
         val inhoud = b.inhoud
         inhoud.removeAllViews()
 
-        // Staat er nu iets groot op de tv's, dan bovenaan in het geel, met Stop (2.21.0).
+        // Staat er nu iets groot op de tv's, dan bovenaan als melding, met Stop (2.21.0).
         data.optJSONObject("schijnwerper")?.let { s ->
-            Lijst.balk(inhoud, getString(R.string.schijnwerper_nu, s.tekstOfNull("titel") ?: getString(R.string.een_dia)),
+            Lijst.melding(inhoud, getString(R.string.nu_groot_op_tv), s.tekstOfNull("titel") ?: getString(R.string.een_dia),
                 getString(R.string.stop_knop)) { schijnwerper("/api/app/kantine-tv/schijnwerper/stop") }
         }
 
-        Lijst.kop(inhoud, getString(R.string.onderdelen))
-        val blokken = Lijst.kaart(inhoud)
+        val blokken = Lijst.paneel(inhoud, getString(R.string.onderdelen), getString(R.string.tik_aan_of_uit))
         val sponsorenAan = data.optJSONArray("blokken")?.objecten().orEmpty().firstOrNull { it.optString("sleutel") == "toon_sponsoren" }
             ?.optBoolean("aan") ?: true
         for (blok in data.optJSONArray("blokken")?.objecten().orEmpty()) {
             val aan = blok.optBoolean("aan")
             Lijst.regel(blokken, blok.optString("naam"), null, getString(if (aan) R.string.aan else R.string.uit),
-                if (aan) R.color.groen_tekst else R.color.tekst_zacht, pil = true) {
+                if (aan) R.color.groen else R.color.grijs, pil = true) {
                 zet("/api/app/kantine-tv/dia-blokken/${blok.optString("sleutel")}", JSONObject().put("aan", !aan))
             }
         }
@@ -114,7 +113,7 @@ class DiasActivity : BasisActivity() {
                 }
                 Lijst.regel(kaart, m.optString("naam"),
                     listOfNotNull(resources.getQuantityString(R.plurals.n_dias, m.optInt("dias"), m.optInt("dias")), wanneer).joinToString(" · "),
-                    getString(if (aan) R.string.aan else R.string.uit), if (aan) R.color.groen_tekst else R.color.tekst_zacht, pil = true) {
+                    getString(if (aan) R.string.aan else R.string.uit), if (aan) R.color.groen else R.color.grijs, pil = true) {
                     zet("/api/app/kantine-tv/mappen/${m.getInt("id")}", JSONObject().put("aan", !aan))
                 }
             }
@@ -125,7 +124,7 @@ class DiasActivity : BasisActivity() {
             Lijst.kop(inhoud, getString(R.string.dias))
             return Lijst.leeg(inhoud, getString(R.string.geen_dias))
         }
-        if (!sponsorenAan) Lijst.tekst(inhoud, getString(R.string.dias_blok_uit), grootte = 12f, kleur = R.color.oranje_balk)
+        if (!sponsorenAan) Lijst.tekst(inhoud, getString(R.string.dias_blok_uit), grootte = 12f, kleur = R.color.oranje)
         // Per map: de mappen die aan staan eerst (zoals het feest van vandaag), dan Algemeen, dan de mappen die uit staan.
         val mapPerId = mappen.associateBy { it.getInt("id") }
         val perMap: Map<Int?, List<JSONObject>> = dias.groupBy { if (it.isNull("map_id")) null else it.getInt("map_id") }

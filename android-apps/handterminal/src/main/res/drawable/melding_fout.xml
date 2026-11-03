@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <corners android:radius="10dp" />
-    <solid android:color="#40E5484D" />
-    <stroke android:width="1dp" android:color="#99E5484D" />
-</shape>
+<!-- Een fout (verkeerde code): wit met links een rode streep. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape><corners android:radius="6dp" /><solid android:color="@color/rood" /></shape></item>
+    <item android:left="4dp"><shape><corners android:topRightRadius="6dp" android:bottomRightRadius="6dp" /><solid android:color="@color/rand" /></shape></item>
+    <item android:bottom="1dp" android:left="4dp" android:right="1dp" android:top="1dp"><shape><corners android:topRightRadius="5dp" android:bottomRightRadius="5dp" /><solid android:color="@color/kaart" /></shape></item>
+</layer-list>

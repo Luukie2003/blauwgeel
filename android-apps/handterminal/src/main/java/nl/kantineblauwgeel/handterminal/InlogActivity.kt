@@ -53,7 +53,7 @@ class InlogActivity : BasisActivity() {
             startActivity(Intent(this, InstellingenActivity::class.java))
             true
         }
-        b.inlogVersie.text = "v" + BuildConfig.VERSION_NAME
+        b.inlogVersie.text = getString(R.string.versie_n, BuildConfig.VERSION_NAME)
         werkStippenBij()
         intent.getStringExtra(EXTRA_MELDING)?.let { toonMelding(it, fout = false) }
         controleerWebsite()
@@ -111,13 +111,16 @@ class InlogActivity : BasisActivity() {
         werkStippenBij()
     }
 
+    /** De zes vakjes: een stip voor elk ingetikt cijfer, een blauwe rand om het vakje dat aan de beurt is, en even
+     * allemaal rood als de code niet klopte. */
     private fun werkStippenBij(fout: Boolean = false) {
         for (i in 0 until b.stippen.childCount) {
             b.stippen.getChildAt(i).setBackgroundResource(
                 when {
-                    fout -> R.drawable.stip_fout
-                    i < code.length -> R.drawable.stip_vol
-                    else -> R.drawable.stip_leeg
+                    fout -> R.drawable.code_fout
+                    i < code.length -> R.drawable.code_vol
+                    i == code.length -> R.drawable.code_nu
+                    else -> R.drawable.code_leeg
                 },
             )
         }
@@ -215,19 +218,17 @@ class InlogActivity : BasisActivity() {
             Verbinding.Soort.GEEN -> getString(R.string.geen_netwerk)
         }
         val site = websiteBereikbaar
-        b.inlogVerbinding.text = when {
+        val tekst = when {
             !t.verbonden || site == null -> netwerk
             site -> getString(R.string.inlog_site_ok, netwerk)
             else -> getString(R.string.inlog_site_fout, netwerk)
         }
-        kleurStip(
-            b.inlogVerbindingStip,
-            when {
-                !t.verbonden -> R.color.rood
-                site == false || (t.signaal ?: 3) <= 0 -> R.color.oranje
-                else -> R.color.groen
-            },
-        )
+        val kleur = when {
+            !t.verbonden -> R.color.rood
+            site == false || (t.signaal ?: 3) <= 0 -> R.color.oranje
+            else -> R.color.groen
+        }
+        Lijst.zetStand(b.inlogVerbinding, tekst, getColor(kleur), vet = false)
     }
 
     companion object {

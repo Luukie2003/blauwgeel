@@ -24,7 +24,7 @@ class KeukenActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.keuken))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
     }
 
@@ -64,7 +64,7 @@ class KeukenActivity : BasisActivity() {
                 0 -> getString(R.string.vandaag)
                 else -> resources.getQuantityString(R.plurals.n_dagen, dagen, dagen)
             },
-            if (vet.optBoolean("ok")) R.color.groen_tekst else R.color.rood_balk,
+            if (vet.optBoolean("ok")) R.color.groen else R.color.rood,
         )
         Lijst.knop(vetKaart, getString(R.string.frituurvet_vervangen)) { vetVervangen() }
 
@@ -90,7 +90,7 @@ class KeukenActivity : BasisActivity() {
                         if (p.optBoolean("op_boodschappenlijst")) getString(R.string.op_boodschappenlijst_kort) else null,
                     ).joinToString(" · "),
                     "${p.optInt("voorraad")} ${p.optString("eenheid")}",
-                    if (laag) R.color.rood_balk else R.color.tekst,
+                    if (laag) R.color.rood else R.color.tekst,
                 ) { productKeuze(p) }
             }
         }
@@ -126,17 +126,17 @@ class KeukenActivity : BasisActivity() {
                 }))
             val acties = Lijst.kaart(inhoud)
             Lijst.regel(acties, getString(R.string.weggooien_derving), getString(R.string.weggooien_derving_uitleg),
-                icoon = R.drawable.ic_eruit, icoonKleur = R.color.rood_balk) { blad.sluit(); derving(p) }
+                icoon = R.drawable.ic_eruit, icoonKleur = R.color.rood) { blad.sluit(); derving(p) }
             Lijst.regel(acties, getString(R.string.erbij_of_eraf), getString(R.string.erbij_of_eraf_uitleg),
-                icoon = R.drawable.ic_boeken, icoonKleur = R.color.navy) { blad.sluit(); correctie(p) }
+                icoon = R.drawable.ic_boeken, icoonKleur = R.color.blauw_donker) { blad.sluit(); correctie(p) }
             if (p.optBoolean("op_boodschappenlijst")) {
-                Lijst.regel(acties, getString(R.string.staat_op_boodschappenlijst), icoon = R.drawable.ic_vink, icoonKleur = R.color.groen_tekst)
+                Lijst.regel(acties, getString(R.string.staat_op_boodschappenlijst), icoon = R.drawable.ic_vink, icoonKleur = R.color.groen)
             } else {
                 Lijst.regel(acties, getString(R.string.op_boodschappenlijst_zetten), icoon = R.drawable.ic_boodschappen,
-                    icoonKleur = R.color.navy) { blad.sluit(); opBoodschappenlijst(p) }
+                    icoonKleur = R.color.blauw_donker) { blad.sluit(); opBoodschappenlijst(p) }
             }
             if (inst.toegang("voorraad")) Lijst.regel(acties, getString(R.string.productinformatie), icoon = R.drawable.ic_voorraad,
-                icoonKleur = R.color.navy) { blad.sluit(); ProductActivity.open(this, p.getInt("id")) }
+                icoonKleur = R.color.blauw_donker) { blad.sluit(); ProductActivity.open(this, p.getInt("id")) }
         }
     }
 

@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/achtergrond"
+    android:background="@color/papier"
     android:orientation="vertical">
 
     <include
@@ -27,7 +27,7 @@
                 style="@style/Knop.Geel"
                 android:layout_width="match_parent"
                 app:drawableStartCompat="@drawable/ic_plus"
-                app:drawableTint="@color/navy"
+                app:drawableTint="@color/blauw_donker"
                 android:text="@string/nieuwe_factuur" />
 
             <TextView

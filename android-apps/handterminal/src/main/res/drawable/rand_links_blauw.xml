@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Een paneel met links een gekleurde streep van 4dp (zoals .cs-melding op de site), voor iets wat aandacht vraagt. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape><corners android:radius="6dp" /><solid android:color="@color/blauw" /></shape></item>
+    <item android:left="4dp"><shape><corners android:topRightRadius="6dp" android:bottomRightRadius="6dp" /><solid android:color="@color/rand" /></shape></item>
+    <item android:bottom="1dp" android:left="4dp" android:right="1dp" android:top="1dp"><shape><corners android:topRightRadius="5dp" android:bottomRightRadius="5dp" /><solid android:color="@color/kaart" /></shape></item>
+</layer-list>

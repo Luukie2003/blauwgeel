@@ -60,7 +60,7 @@ class ProductenActivity : BasisActivity() {
                 Modus.BOEKEN -> R.string.titel_boeken
                 Modus.KIEZEN -> R.string.product_toevoegen
             }),
-            sub = if (modus == Modus.BOEKEN || modus == Modus.KIEZEN) getString(R.string.kies_of_scan) else Sessie.naam,
+            sub = if (modus == Modus.BOEKEN || modus == Modus.KIEZEN) getString(R.string.kies_of_scan) else null,
         )
 
         adapter.koppel(b.lijst)

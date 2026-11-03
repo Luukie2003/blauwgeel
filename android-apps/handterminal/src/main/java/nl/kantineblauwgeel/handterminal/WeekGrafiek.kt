@@ -22,10 +22,10 @@ class WeekGrafiek(context: Context) : View(context) {
         }
 
     private val dichtheid = resources.displayMetrics.density
-    private val staaf = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.navy) }
-    private val staafLicht = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.navy); alpha = 70 }
+    private val staaf = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.blauw_donker) }
+    private val staafLicht = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.blauw_donker); alpha = 70 }
     private val stippel = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = context.getColor(R.color.navy)
+        color = context.getColor(R.color.blauw_donker)
         style = Paint.Style.STROKE
         strokeWidth = 1.2f * dichtheid
         pathEffect = DashPathEffect(floatArrayOf(3 * dichtheid, 2 * dichtheid), 0f)

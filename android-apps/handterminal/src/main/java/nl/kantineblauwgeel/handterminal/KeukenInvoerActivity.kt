@@ -8,6 +8,7 @@ import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
+import androidx.appcompat.widget.AppCompatTextView
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONArray
 import org.json.JSONObject
@@ -142,8 +143,8 @@ class KeukenInvoerActivity : BasisActivity() {
         scans.withIndex().reversed().forEach { (i, s) ->
             val p = product(s.productId)
             val regel = Lijst.regel(gescand, p?.optString("naam") ?: "?", s.omschrijving,
-                "+${s.aantal} ${p?.optString("eenheid") ?: ""}", R.color.groen_tekst)
-            regel.addView(TextView(this).apply {
+                "+${s.aantal} ${p?.optString("eenheid") ?: ""}", R.color.groen)
+            regel.addView(AppCompatTextView(this).apply {
                 text = "✕"
                 textSize = 18f
                 setTextColor(getColor(R.color.tekst_zacht))
@@ -175,7 +176,7 @@ class KeukenInvoerActivity : BasisActivity() {
                 else lijst.joinToString(" · ") { v ->
                     (gekozen[v.optString("sleutel")]?.let { "$it× " } ?: "") + getString(R.string.verpakking_van, v.optString("naam"), v.optInt("aantal"))
                 },
-                if (stuks > 0) "+$stuks ${p.optString("eenheid")}" else "–", if (stuks > 0) R.color.groen_tekst else R.color.navy) { kies(p) }
+                if (stuks > 0) "+$stuks ${p.optString("eenheid")}" else "–", if (stuks > 0) R.color.groen else R.color.blauw_donker) { kies(p) }
         }
         werkKnopBij()
     }

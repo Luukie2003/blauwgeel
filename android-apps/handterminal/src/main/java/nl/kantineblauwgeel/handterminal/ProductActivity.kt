@@ -13,6 +13,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
+import androidx.appcompat.widget.AppCompatEditText
+import androidx.appcompat.widget.AppCompatTextView
 import nl.kantineblauwgeel.handterminal.databinding.ActivityProductBinding
 import nl.kantineblauwgeel.handterminal.databinding.DialogNieuwArtikelBinding
 import org.json.JSONObject
@@ -57,7 +59,9 @@ class ProductActivity : BasisActivity() {
         alleenInfo = intent.getBooleanExtra(EXTRA_INFO, false)
         if (alleenInfo) zetBoekenOnderaan()
         product = Catalogus.opId(productId)
-        richtBalkIn(b.balk, product?.naam ?: getString(R.string.product), sub = product?.let(::balkSub))
+        richtBalkIn(b.balk, getString(R.string.product))
+        b.standPaneel.clipToOutline = true
+        b.boekBlok.clipToOutline = true
 
         b.erinKnop.setOnClickListener { kiesRichting("in") }
         b.eruitKnop.setOnClickListener { kiesRichting("uit") }
@@ -78,15 +82,12 @@ class ProductActivity : BasisActivity() {
         werkBoekKnopBij()
     }
 
-    /** Boeken (met een kopje erboven) naar het eind van de pagina, onder de laatste tellingen. */
+    /** Boeken (het paneel met zijn kop) naar het eind van de pagina, onder de laatste tellingen. */
     private fun zetBoekenOnderaan() {
         val pagina = b.boekBlok.parent as LinearLayout
-        pagina.removeView(b.boekKop)
         pagina.removeView(b.boekBlok)
-        pagina.addView(b.boekKop)
         pagina.addView(b.boekBlok)
-        b.boekKop.isVisible = true
-        (b.boekBlok.layoutParams as LinearLayout.LayoutParams).apply { topMargin = 0; bottomMargin = dp(this@ProductActivity, 10) }
+        (b.boekBlok.layoutParams as LinearLayout.LayoutParams).apply { topMargin = dp(this@ProductActivity, 4); bottomMargin = dp(this@ProductActivity, 10) }
     }
 
     override fun onResume() {
@@ -102,34 +103,47 @@ class ProductActivity : BasisActivity() {
 
     private fun toonProduct() {
         val p = product ?: return
-        zetBalkTitel(p.naam)
-        zetBalkSub(balkSub(p))
+        b.productNaam.text = p.naam
         Fotos.toon(b.productFoto, p.foto)
-        b.voorraad.text = p.voorraadTekst()
-        b.voorraad.setTextColor(getColor(if (p.laag || p.voorraad < 0) R.color.rood_balk else R.color.tekst))
-        b.laagLabel.isVisible = p.laag || !p.actief
-        b.laagLabel.text = getString(if (!p.actief) R.string.inactief else R.string.laag)
-        b.laagLabel.setBackgroundResource(if (!p.actief) R.drawable.badge_grijs else R.drawable.badge_rood)
-        if (b.voorraadSub.text.isNullOrEmpty()) b.voorraadSub.text = getString(R.string.minimum, p.minVoorraad)
+        // De stand onder de naam: onder het minimum (rood) of inactief (grijs); anders waar hij bij hoort.
+        when {
+            !p.actief -> Lijst.zetStand(b.laagLabel, getString(R.string.stand_inactief), getColor(R.color.grijs))
+            p.laag -> Lijst.zetStand(b.laagLabel, getString(R.string.stand_onder_minimum), getColor(R.color.rood))
+            else -> Lijst.zetZacht(b.laagLabel, balkSub(p))
+        }
+        b.laagLabel.isVisible = b.laagLabel.text.isNotEmpty()
+        val eenheid = Letters.koppen(this)
+        b.voorraad.text = Lijst.getalMetEenheid(this, p.voorraad.toString(), p.eenheid, 17, eenheid)
+        b.voorraad.setTextColor(getColor(if (p.laag || p.voorraad < 0) R.color.rood else R.color.tekst))
+        b.minimum.text = Lijst.getalMetEenheid(this, p.minVoorraad.toString(), p.eenheid, 17, eenheid)
         bouwSnelKnoppen(p)
         toonBarcodes(p)
-        b.aantal.text = getString(R.string.aantal_eenheid, aantal, p.eenheid)
+        toonAantal()
     }
 
+    /** Het aantal om te boeken in de smalle letter, met de eenheid erachter ("24 blik"). */
+    private fun toonAantal() {
+        b.aantal.text = Lijst.getalMetEenheid(this, aantal.toString(), product?.eenheid, 16,
+            android.graphics.Typeface.create(Letters.tekst(this), android.graphics.Typeface.BOLD))
+    }
+
+    /** De snelknoppen onder het aantal: +5, +10 en (breed) een hele besteleenheid, zoals "+1 tray (24)". */
     private fun bouwSnelKnoppen(p: Catalogus.Product) {
         b.snelKnoppen.removeAllViews()
         val stappen = mutableListOf<Pair<String, () -> Unit>>()
+        for (n in listOf(5, 10)) stappen += "+$n" to { zetAantal(if (aantalAangepast) aantal + n else n) }
         if (p.besteleenheid != null && p.perBesteleenheid > 1) {
             stappen += getString(R.string.een_besteleenheid, p.besteleenheid, p.perBesteleenheid) to {
                 zetAantal(if (aantalAangepast) aantal + p.perBesteleenheid else p.perBesteleenheid)
             }
         }
-        for (n in listOf(5, 10)) stappen += "+$n" to { zetAantal(if (aantalAangepast) aantal + n else n) }
-        for ((tekst, actie) in stappen) {
+        stappen.forEachIndexed { i, (tekst, actie) ->
             val chip = LayoutInflater.from(this).inflate(R.layout.keuze, b.snelKnoppen, false) as TextView
             chip.text = tekst
             chip.setOnClickListener { actie() }
-            b.snelKnoppen.addView(chip)
+            val breed = i == stappen.lastIndex && i >= 2
+            b.snelKnoppen.addView(chip, LinearLayout.LayoutParams(if (breed) 0 else LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT, if (breed) 1f else 0f).apply { if (!breed) marginEnd = dp(this@ProductActivity, 6) })
         }
     }
 
@@ -164,7 +178,7 @@ class ProductActivity : BasisActivity() {
         }
     }
 
-    private fun regel(tekst: String, zacht: Boolean = false) = TextView(this).apply {
+    private fun regel(tekst: String, zacht: Boolean = false) = AppCompatTextView(this).apply {
         text = tekst
         textSize = 13f
         setTextColor(getColor(if (zacht) R.color.tekst_zacht else R.color.tekst))
@@ -178,12 +192,11 @@ class ProductActivity : BasisActivity() {
             Catalogus.werkBij(this, nieuw)
             product = nieuw
             info = detail.optJSONObject("info")
-            val telling = detail.optJSONObject("laatste_telling")
             val inEenheden = info?.takeIf { !it.isNull("in_besteleenheden") && nieuw.voorraad > 0 }?.optDouble("in_besteleenheden")
+            // Onder het getal: in besteleenheden ("op voorraad · 0,8 tray"); wanneer het geteld is staat bij In het kort.
             b.voorraadSub.text = listOfNotNull(
-                getString(R.string.minimum, nieuw.minVoorraad),
-                inEenheden?.let { "= ${Lijst.getal(it)} ${info?.optString("besteleenheid_naam")}" },
-                telling?.let { getString(R.string.geteld_op, datum(it.optString("datum")), it.optInt("geteld_aantal")) },
+                getString(R.string.op_voorraad),
+                inEenheden?.let { "${Lijst.getal(it)} ${info?.optString("besteleenheid_naam")}" },
             ).joinToString(" · ")
             toonProduct()
             info?.let(::toonInfo)
@@ -192,16 +205,38 @@ class ProductActivity : BasisActivity() {
         }
     }
 
+    /** De laatste boekingen, zoals in het voorbeeld: links Erin of Eruit (met de reden) en wanneer en door wie, rechts
+     * het aantal in de smalle letter. */
     private fun toonMutaties(mutaties: List<JSONObject>) {
         b.mutaties.removeAllViews()
-        if (mutaties.isEmpty()) b.mutaties.addView(regel(getString(R.string.nog_geen_boekingen), zacht = true))
+        val ruimte = dp(this, 12)
+        if (mutaties.isEmpty()) b.mutaties.addView(regel(getString(R.string.nog_geen_boekingen), zacht = true).apply { setPadding(ruimte, ruimte, ruimte, ruimte) })
         val eenheid = product?.eenheid ?: ""
         for (m in mutaties.take(6)) {
-            val teken = if (m.optString("type") == "in") "+" else "−"
+            val erin = m.optString("type") == "in"
             val wat = m.tekstOfNull("reden") ?: m.tekstOfNull("opmerking")
-            val tekst = "$teken${m.optInt("aantal")} $eenheid  ·  ${datum(m.optString("datum"), metTijd = true)}" +
-                (m.tekstOfNull("naam")?.let { "  ·  $it" } ?: "") + (wat?.let { "\n$it" } ?: "")
-            b.mutaties.addView(regel(tekst))
+            val rij = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(ruimte, dp(this@ProductActivity, 9), ruimte, dp(this@ProductActivity, 9))
+            }
+            val links = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            links.addView(regel(getString(if (erin) R.string.erin else R.string.eruit) + (wat?.let { " · $it" } ?: "")).apply {
+                textSize = 14f
+                setPadding(0, 0, 0, 0)
+            })
+            links.addView(regel(datum(m.optString("datum"), metTijd = true) + (m.tekstOfNull("naam")?.let { ", $it" } ?: ""), zacht = true).apply {
+                setPadding(0, dp(context, 1), 0, 0)
+            })
+            rij.addView(links, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            rij.addView(AppCompatTextView(this).apply {
+                text = Lijst.getalMetEenheid(context, (if (erin) "+" else "−") + m.optInt("aantal"), eenheid, 13, Letters.koppen(context))
+                textSize = 19f
+                setTypeface(Letters.koppen(context), android.graphics.Typeface.BOLD)
+                setTextColor(getColor(R.color.tekst))
+                setPadding(dp(context, 10), 0, 0, 0)
+            })
+            b.mutaties.addView(rij)
         }
         // Derving: wat er de laatste 90 dagen met een reden is afgeboekt (breuk, over de datum, ...).
         val derving = info?.optJSONObject("derving")
@@ -211,7 +246,7 @@ class ProductActivity : BasisActivity() {
                 getString(R.string.derving_regel, derving.optInt("dagen"), derving.optInt("aantal"), eenheid, derving.optInt("keer")) +
                     (waarde?.let { getString(R.string.derving_waarde, Lijst.euro(it)) } ?: ""),
                 zacht = true,
-            ))
+            ).apply { setPadding(ruimte, dp(context, 9), ruimte, dp(context, 10)) })
         }
     }
 
@@ -294,7 +329,7 @@ class ProductActivity : BasisActivity() {
 
         // Prijzen
         Lijst.kop(boven, getString(R.string.prijzen))
-        val prijzen = Lijst.kaart(boven).apply { setPadding(0, dp(this@ProductActivity, 4), 0, dp(this@ProductActivity, 4)) }
+        val prijzen = Lijst.kaart(boven).apply { setPadding(0, 0, 0, dp(this@ProductActivity, 4)) }
         if (!i.isNull("glazen_per_fust")) {
             Lijst.info(prijzen, getString(R.string.per_glas), Lijst.euro(i.optDouble("prijs_per_glas")),
                 getString(R.string.glazen_per_fust_is, i.optInt("glazen_per_fust"), Lijst.euro(i.optDouble("verkoop_stuk"))))
@@ -335,7 +370,7 @@ class ProductActivity : BasisActivity() {
 
         // Inkoop en bestellen
         Lijst.kop(boven, getString(R.string.inkoop_en_bestellen))
-        val inkoop = Lijst.kaart(boven).apply { setPadding(0, dp(this@ProductActivity, 4), 0, 0) }
+        val inkoop = Lijst.kaart(boven)
         Lijst.info(inkoop, getString(R.string.leverancier_label), i.tekstOfNull("leverancier") ?: getString(R.string.niet_ingevuld),
             i.tekstOfNull("besteldagen")?.let { getString(R.string.bestellen_op, it) })
         val factor = i.optInt("factor", 1)
@@ -394,13 +429,13 @@ class ProductActivity : BasisActivity() {
             setPadding(dp(22), dp(8), dp(22), 0)
         }
         fun veld(label: String, waarde: String, getal: Boolean, decimaal: Boolean = false): android.widget.EditText {
-            vak.addView(TextView(this).apply {
+            vak.addView(AppCompatTextView(this).apply {
                 text = label
                 textSize = 13f
                 setTextColor(getColor(R.color.tekst_zacht))
                 setPadding(0, dp(8), 0, 0)
             })
-            return android.widget.EditText(this).apply {
+            return AppCompatEditText(this).apply {
                 setText(waarde)
                 inputType = when {
                     decimaal -> android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
@@ -574,7 +609,7 @@ class ProductActivity : BasisActivity() {
         }
         fun knop(icoon: Int, beschrijving: String, aan: Boolean, nieuw: Int) = ImageButton(this).apply {
             setImageResource(icoon)
-            setColorFilter(getColor(R.color.navy))
+            setColorFilter(getColor(R.color.blauw_donker))
             contentDescription = beschrijving
             setBackgroundResource(R.drawable.toets_licht)
             isEnabled = aan
@@ -593,14 +628,14 @@ class ProductActivity : BasisActivity() {
             setPadding(0, dp(this@ProductActivity, 4), 0, dp(this@ProductActivity, 4))
             setOnClickListener { vraagAantal(best) }
         }
-        midden.addView(TextView(this).apply {
+        midden.addView(AppCompatTextView(this).apply {
             text = if (n > 0) "$n $colli" else getString(R.string.niet_bestellen)
-            textSize = 24f
+            textSize = 26f
             gravity = Gravity.CENTER
-            setTextColor(getColor(if (gekozen || aantalNieuw != null) R.color.navy else R.color.tekst))
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(getColor(if (gekozen || aantalNieuw != null) R.color.blauw else R.color.tekst))
+            setTypeface(Letters.koppen(context), android.graphics.Typeface.BOLD)
         })
-        midden.addView(TextView(this).apply {
+        midden.addView(AppCompatTextView(this).apply {
             text = listOfNotNull(
                 if (n > 0 && factor > 1) "${n * factor} $eenheid" else null,
                 getString(if (gekozen || aantalNieuw != null) R.string.zelf_gekozen else R.string.volgens_advies),
@@ -759,7 +794,7 @@ class ProductActivity : BasisActivity() {
         aantal = nieuw.coerceIn(1, 99_999)
         aantalAangepast = true
         verzoekId = null
-        b.aantal.text = getString(R.string.aantal_eenheid, aantal, product?.eenheid ?: "")
+        toonAantal()
         werkBoekKnopBij()
     }
 

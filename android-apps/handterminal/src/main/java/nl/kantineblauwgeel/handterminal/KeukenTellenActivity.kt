@@ -133,10 +133,13 @@ class KeukenTellenActivity : BasisActivity() {
         b.telLaag.isVisible = nieuw == Laag.TELLEN
         b.controleLaag.isVisible = nieuw == Laag.CONTROLE
         b.klaarLaag.isVisible = nieuw == Laag.KLAAR
+        // Bij het tellen is de gele streep onder de kop de voortgang.
         b.voortgang.isVisible = nieuw == Laag.TELLEN
+        b.balk.balkStreep.isVisible = nieuw != Laag.TELLEN
+        if (nieuw != Laag.TELLEN) zetBalkTeller(null)
         when (nieuw) {
             Laag.CONTROLE -> zetBalkTitel(getString(R.string.titel_controleren))
-            Laag.KLAAR -> { zetBalkTitel(getString(R.string.keukentelling)); zetBalkSub(Sessie.naam) }
+            Laag.KLAAR -> { zetBalkTitel(getString(R.string.keukentelling)); zetBalkSub(null) }
             else -> {}
         }
     }
@@ -308,11 +311,10 @@ class KeukenTellenActivity : BasisActivity() {
     private fun toonProduct() {
         val p = producten[index]
         zetBalkTitel(getString(R.string.keukentelling))
-        zetBalkSub(getString(R.string.keuken_product_n_van_m, index + 1, producten.size, waarden.size))
+        zetBalkTeller(index + 1, producten.size)
+        zetBalkSub(getString(R.string.keuken_n_geteld, waarden.size))
         b.voortgang.progress = (index * 1000) / producten.size
-        b.faseLabel.setText(R.string.keuken)
-        b.faseLabel.setBackgroundResource(R.drawable.fase_bar)
-        b.faseLabel.setTextColor(getColor(R.color.groen_tekst))
+        Lijst.zetStand(b.faseLabel, getString(R.string.keuken), getColor(R.color.groen))
         Fotos.toon(b.telFoto, p.foto)
         b.telCategorie.text = p.subcategorie
         b.telNaam.text = p.naam
@@ -339,7 +341,7 @@ class KeukenTellenActivity : BasisActivity() {
         b.telVerwacht.isVisible = true
         if (lijst.isNotEmpty()) {
             b.telVerwacht.text = getString(R.string.keuken_gescand_regel, lijst.joinToString(" · ") { "+${it.aantal}" })
-            b.telVerwacht.setTextColor(getColor(R.color.navy))
+            b.telVerwacht.setTextColor(getColor(R.color.blauw_donker))
             b.telVerwacht.setOnClickListener { kiesScanWeg() }
         } else {
             b.telVerwacht.text = if (p.dozen.isEmpty()) getString(R.string.keuken_geen_dozen)
@@ -375,7 +377,7 @@ class KeukenTellenActivity : BasisActivity() {
 
     private fun toonWaarde() {
         b.telWaarde.text = waarde.ifEmpty { "–" }
-        b.telWaarde.setTextColor(getColor(if (waarde.isEmpty()) R.color.rand_licht else R.color.tekst))
+        b.telWaarde.setTextColor(getColor(if (waarde.isEmpty()) R.color.rand else R.color.tekst))
     }
 
     /** De verpakkingen voor de snelknop, zonder wat +1 en +2 al doen. */
@@ -506,7 +508,7 @@ class KeukenTellenActivity : BasisActivity() {
         lijst.addView(soort)
         Lijst.regel(soort, getString(if (begintelling) R.string.keuken_begintelling else R.string.keuken_gewone_telling),
             getString(if (begintelling) R.string.keuken_begintelling_uitleg else R.string.keuken_gewone_uitleg),
-            getString(R.string.wisselen), R.color.navy) {
+            getString(R.string.wisselen), R.color.blauw_donker) {
             begintelling = !begintelling
             opslaanId = null
             bewaar()
@@ -514,7 +516,7 @@ class KeukenTellenActivity : BasisActivity() {
         }
         Lijst.regel(soort, getString(R.string.keuken_controle_totaal, geteld.size, producten.size),
             if (begintelling) getString(R.string.keuken_geen_verkoop) else getString(R.string.keuken_verkocht_totaal, verkochtTotaal),
-            if (begintelling) null else Lijst.euro(omzet), R.color.groen_tekst)
+            if (begintelling) null else Lijst.euro(omzet), R.color.groen)
         lijst.addView(View(this).apply { setBackgroundResource(R.drawable.scheiding) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(this, 6)))
 
@@ -533,7 +535,7 @@ class KeukenTellenActivity : BasisActivity() {
                     else -> getString(R.string.keuken_meer, verschil)
                 }
                 Triple(getString(R.string.was_voorraad, p.voorraad) + " · " + wat, getString(R.string.aantal_eenheid, n, p.eenheid),
-                    if (verschil < 0 && !begintelling) R.color.oranje_balk else R.color.tekst)
+                    if (verschil < 0 && !begintelling) R.color.oranje else R.color.tekst)
             }
             Lijst.regel(regels, p.naam, detail, rechts, kleur) {
                 Cijferpad.vraag(this, p.naam, waarden[p.id] ?: "", eenheid = p.eenheid) { nieuw ->

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Erin of Eruit: het gekozen vak heeft gele letters op donkerblauw. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true" android:color="@color/geel" />
+    <item android:color="@color/blauw_donker" />
+</selector>

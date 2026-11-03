@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- De kop van een paneel ("Wat moet er nu?", "Onderdelen"): een lichte lijn eronder. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:gravity="bottom" android:height="1dp">
+        <shape><solid android:color="@color/rand_licht" /></shape>
+    </item>
+</layer-list>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- De letter van de site (Barlow, static/fonts, omgezet van woff2 naar ttf). Vet is half-vet (600), net als op de site:
+     daar staat 600 ook voor 700. De app-attributen zijn voor Android 6 en 7 (AppCompat). -->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <font
+        android:font="@font/barlow_normaal"
+        android:fontStyle="normal"
+        android:fontWeight="400"
+        app:font="@font/barlow_normaal"
+        app:fontStyle="normal"
+        app:fontWeight="400" />
+    <font
+        android:font="@font/barlow_halfvet"
+        android:fontStyle="normal"
+        android:fontWeight="700"
+        app:font="@font/barlow_halfvet"
+        app:fontStyle="normal"
+        app:fontWeight="700" />
+</font-family>

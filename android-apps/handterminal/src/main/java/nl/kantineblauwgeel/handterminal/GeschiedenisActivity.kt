@@ -16,7 +16,7 @@ class GeschiedenisActivity : BasisActivity() {
         b = ActivityLijstBinding.inflate(layoutInflater)
         setContentView(b.root)
         richtBalkIn(b.balk, getString(R.string.geschiedenis))
-        b.verversen.setColorSchemeResources(R.color.navy)
+        b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
     }
 
@@ -48,7 +48,7 @@ class GeschiedenisActivity : BasisActivity() {
                 m.optString("product"),
                 listOfNotNull(Lijst.datum(m.tekstOfNull("datum")), m.tekstOfNull("naam"), m.tekstOfNull("reden") ?: m.tekstOfNull("opmerking")).joinToString(" · "),
                 (if (erin) "+" else "−") + m.optInt("aantal") + " " + m.optString("eenheid"),
-                if (erin) R.color.groen_tekst else R.color.tekst,
+                if (erin) R.color.groen else R.color.tekst,
             ) { ProductActivity.open(this, m.getInt("product_id")) }
         }
     }
