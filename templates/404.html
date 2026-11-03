@@ -1,6 +1,8 @@
 {% extends basis_template|default("base.html") %}
 {% block titel %}Pagina niet gevonden{% endblock %}
+{% block venster_titel %}<div class="cs-titel"><h1>Pagina niet gevonden</h1></div>{% endblock %}
 {% block inhoud %}
+{% if pda_modus %}
 <div class="kaart" style="max-width:480px; text-align:center">
     <h1 style="font-size:2.2rem; margin-bottom:0.3rem">404</h1>
     <h2>Pagina niet gevonden</h2>
@@ -9,4 +11,11 @@
     </p>
     <a href="{{ url_for('dashboard') }}" class="btn btn-geel">&larr; Terug naar het overzicht</a>
 </div>
+{% else %}
+<section class="cs-paneel cs-smal-paneel">
+    <p class="cs-paneel-tekst">Deze pagina bestaat niet (meer), of de link klopt niet helemaal. Kom je hier via een
+        bladwijzer, zoek de pagina dan op in het menu.</p>
+    <div class="cs-paneel-voet"><a href="{{ url_for('dashboard') }}" class="btn btn-geel">Naar het overzicht</a></div>
+</section>
+{% endif %}
 {% endblock %}

@@ -6,8 +6,20 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.1.0"
+HUIDIGE_VERSIE = "2.2.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.2.0",
+        "datum": "3 november 2026",
+        "punten": [
+            "Inloggen in de clubstijl: links het wapen op donkerblauw met de gele streep, rechts het formulier, en op een telefoon het wapen erboven. Wachtwoord vergeten, een nieuw wachtwoord kiezen en je tablet-code instellen zien er hetzelfde uit.",
+            "Ook de pagina's die nog niet opnieuw zijn ingedeeld gaan mee: de kerncijfers staan samen op één scorebord, een stand is een woord met een gekleurde stip (zoals op het overzicht), groepen velden hebben een duidelijk kopje en meldingen een gekleurde streep. Heeft een pagina een eigen titel, dan staat er geen tweede meer boven.",
+            "Mijn voorkeuren: de mail en de weergave sla je samen op met één knop, en je favorieten vink je aan per onderdeel van het menu. Wachtwoord wijzigen staat in hetzelfde nieuwe paneel.",
+            "Tablet-code: heb je al een code, dan kun je terug naar het overzicht zonder iets te veranderen. De uitleg noemt nu ook de handterminal.",
+            "De pagina's bij geen verbinding, tijdens een noodstop en bij een pagina die niet bestaat staan in dezelfde stijl.",
+            "Knoppen gebruiken overal de letter van de site.",
+        ],
+    },
     {
         "versie": "2.1.0",
         "datum": "2 november 2026",
@@ -1398,7 +1410,7 @@ MODULES = [
      "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
     {"naam": "Handterminal-app", "versie": "0.25.0", "sinds": "1.53.0", "laatst": "1.79.0",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (nalopen met vinkjes, klaarzetten met het besteloverzicht, verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken (inboeken per verpakking, blind tellen, weggooien), Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst, momenten met de schijnwerper, mappen en dia's aan of uit, en het Halloween-thema), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
-    {"naam": "Accounts & rechten", "versie": "1.10.5", "sinds": "0.1.0", "laatst": "1.65.1",
+    {"naam": "Accounts & rechten", "versie": "1.11.0", "sinds": "0.1.0", "laatst": "2.2.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
@@ -1406,6 +1418,6 @@ MODULES = [
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
-    {"naam": "Techniek & beveiliging", "versie": "1.9.2", "sinds": "1.1.0", "laatst": "1.64.0",
+    {"naam": "Techniek & beveiliging", "versie": "1.9.3", "sinds": "1.1.0", "laatst": "2.2.0",
      "inhoud": "Geautomatiseerde tests, beveiligingsheaders, de noodstop, bereikbaarheidscontrole, snelheid"},
 ]

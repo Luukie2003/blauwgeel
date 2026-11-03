@@ -1,70 +1,79 @@
 {% extends "base.html" %}
+{# Mijn voorkeuren (2.2): de mail en de weergave in één formulier met één knop (met_weergave, zie account_voorkeuren),
+   de favorieten per groep van het menu. Uitloggen op andere toestellen staat er los onder. #}
 {% block titel %}Mijn voorkeuren{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Mijn voorkeuren</h1>
+    <span class="cs-titel-tekst">Ingelogd als {{ huidige_gebruiker }}</span>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Mijn voorkeuren</h1>
-<p class="subtitel">Ingelogd als {{ huidige_gebruiker }}.</p>
-
-<div class="kaart" style="max-width:480px">
-    {% if not gebruiker.email %}
-    <p class="tekst-zacht">
-        Er is nog geen e-mailadres bij jouw account bekend. Vraag een beheerder om dit
-        in te stellen op de Accounts-pagina. Zonder e-mailadres ontvang je geen mail,
-        ook niet als je hieronder iets aanvinkt.
-    </p>
-    {% endif %}
-    <form method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-bottom:0.75rem">
-            <input type="checkbox" name="mail_factuur" style="width:auto"
-                   {{ 'checked' if gebruiker.mail_factuur }}>
-            Mail ontvangen bij het inboeken van een levering/factuur
-        </label>
-        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer">
-            <input type="checkbox" name="mail_week_overzicht" style="width:auto"
-                   {{ 'checked' if gebruiker.mail_week_overzicht }}>
-            Wekelijks overzicht ontvangen (elke maandagochtend)
-        </label>
-        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer; margin-top:0.75rem">
-            <input type="checkbox" name="mail_club_aanmelding" style="width:auto"
-                   {{ 'checked' if gebruiker.mail_club_aanmelding }}>
-            Mail ontvangen bij een nieuwe Club van 20-aanmelding
-        </label>
-        <button type="submit" class="btn btn-geel" style="margin-top:1rem">Opslaan</button>
-    </form>
-</div>
-
-<div class="kaart" style="max-width:640px">
-    <h2 style="margin-top:0">Weergave</h2>
-    <form method="post" action="{{ url_for('account_weergave') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400; cursor:pointer">
-            <input type="checkbox" name="eenvoudig" style="width:auto" {{ 'checked' if gebruiker.eenvoudig }}>
-            Eenvoudige weergave: in het menu alleen mijn favorieten (de rest onder &ldquo;Alle onderdelen&rdquo;) en grote knoppen op het overzicht
-        </label>
-        <p class="tekst-zacht" style="margin:0.8rem 0 0.4rem">Mijn favorieten:</p>
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(12rem, 1fr)); gap:0.3rem 1rem">
-            {% for item in nav_items %}
-            <label style="display:flex; align-items:center; gap:0.4rem; font-weight:400; cursor:pointer">
-                <input type="checkbox" name="favoriet" value="{{ item.url_endpoint }}" style="width:auto"
-                       {{ 'checked' if item.url_endpoint in gekozen_favorieten }}>
-                {{ item.label }} <span class="tekst-zacht" style="font-size:0.75rem">({{ item.groep }})</span>
+<form method="post" class="cs-smal-paneel">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="met_weergave" value="1">
+    <section class="cs-paneel">
+        <div class="cs-paneel-kop"><h2>E-mail</h2></div>
+        {% if not gebruiker.email %}
+        <p class="cs-paneel-tekst cs-zacht">
+            Er is nog geen e-mailadres bij jouw account bekend. Vraag een beheerder om dit in te stellen op de
+            Accounts-pagina. Zonder e-mailadres ontvang je geen mail, ook niet als je hieronder iets aanvinkt.
+        </p>
+        {% endif %}
+        <div class="cs-keuzes cs-in-paneel">
+            <label class="cs-keuze">
+                <input type="checkbox" name="mail_factuur" {{ 'checked' if gebruiker.mail_factuur }}>
+                <span>Mail ontvangen bij het inboeken van een levering/factuur</span>
             </label>
-            {% endfor %}
+            <label class="cs-keuze">
+                <input type="checkbox" name="mail_week_overzicht" {{ 'checked' if gebruiker.mail_week_overzicht }}>
+                <span>Wekelijks overzicht ontvangen<small>Elke maandagochtend</small></span>
+            </label>
+            <label class="cs-keuze">
+                <input type="checkbox" name="mail_club_aanmelding" {{ 'checked' if gebruiker.mail_club_aanmelding }}>
+                <span>Mail ontvangen bij een nieuwe Club van 20-aanmelding</span>
+            </label>
         </div>
-        <button type="submit" class="btn btn-geel" style="margin-top:1rem">Opslaan</button>
-    </form>
-</div>
+    </section>
 
-<div class="kaart" style="max-width:480px">
-    <h2 style="margin-top:0">Beveiliging</h2>
-    <p class="tekst-zacht" style="margin-top:0">
-        Ben je ingelogd gebleven op een toestel dat je niet meer gebruikt, of ben je een telefoon kwijt?
-        Log dan overal uit: alleen dit toestel blijft ingelogd. Een nieuw wachtwoord doet dit ook vanzelf.
+    <section class="cs-paneel">
+        <div class="cs-paneel-kop"><h2>Weergave</h2></div>
+        <div class="cs-keuzes cs-in-paneel">
+            <label class="cs-keuze">
+                <input type="checkbox" name="eenvoudig" {{ 'checked' if gebruiker.eenvoudig }}>
+                <span>Eenvoudige weergave<small>In het menu alleen je favorieten (de rest onder &ldquo;Alle onderdelen&rdquo;), en grote knoppen op het overzicht.</small></span>
+            </label>
+        </div>
+        <div class="cs-favorieten">
+            <p class="cs-veldkop">Mijn favorieten</p>
+            <dl>
+                {% set ns = namespace(groep=None) %}
+                {% for item in nav_items %}
+                {% if item.groep != ns.groep %}
+                {% if ns.groep is not none %}</dd>{% endif %}
+                {% set ns.groep = item.groep %}
+                <dt>{{ item.groep }}</dt>
+                <dd class="cs-vinkjes">
+                {% endif %}
+                    <label class="cs-vinkje"><input type="checkbox" name="favoriet" value="{{ item.url_endpoint }}" {{ 'checked' if item.url_endpoint in gekozen_favorieten }}> {{ item.label }}</label>
+                {% if loop.last %}</dd>{% endif %}
+                {% endfor %}
+            </dl>
+        </div>
+    </section>
+    <p class="cs-knoppen"><button type="submit" class="btn btn-geel">Voorkeuren opslaan</button></p>
+</form>
+
+<section class="cs-paneel cs-smal-paneel">
+    <div class="cs-paneel-kop"><h2>Beveiliging</h2></div>
+    <p class="cs-paneel-tekst cs-zacht">
+        Ben je ingelogd gebleven op een toestel dat je niet meer gebruikt, of ben je een telefoon kwijt? Log dan overal
+        uit: alleen dit toestel blijft ingelogd. Een nieuw wachtwoord doet dit ook vanzelf.
     </p>
-    <form method="post" action="{{ url_for('account_andere_toestellen_uitloggen') }}"
+    <form method="post" action="{{ url_for('account_andere_toestellen_uitloggen') }}" class="cs-paneel-voet"
           onsubmit="return bevestigEnVerstuur(this, 'Uitloggen op alle andere toestellen?');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-rand">Uitloggen op alle andere toestellen</button>
     </form>
-</div>
+</section>
 {% endblock %}

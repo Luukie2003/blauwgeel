@@ -1,25 +1,30 @@
 {% extends "base.html" %}
 {% block titel %}Wachtwoord wijzigen{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Wachtwoord wijzigen</h1>
+    <span class="cs-titel-tekst">Ingelogd als {{ huidige_gebruiker }}</span>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Wachtwoord wijzigen</h1>
-<p class="subtitel">Ingelogd als {{ huidige_gebruiker }}.</p>
-
-<div class="kaart" style="max-width:420px">
+<section class="cs-paneel cs-smal-paneel">
     <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="veld">
-            <label for="huidig_wachtwoord">Huidig wachtwoord</label>
-            <input type="password" id="huidig_wachtwoord" name="huidig_wachtwoord" autocomplete="current-password" required>
+        <div class="cs-velden cs-een-kolom">
+            <div class="veld">
+                <label for="huidig_wachtwoord">Huidig wachtwoord</label>
+                <input type="password" id="huidig_wachtwoord" name="huidig_wachtwoord" autocomplete="current-password" required>
+            </div>
+            <div class="veld">
+                <label for="nieuw_wachtwoord">Nieuw wachtwoord</label>
+                <input type="password" id="nieuw_wachtwoord" name="nieuw_wachtwoord" autocomplete="new-password" required minlength="4">
+            </div>
+            <div class="veld">
+                <label for="nieuw_wachtwoord_herhaald">Nieuw wachtwoord (herhalen)</label>
+                <input type="password" id="nieuw_wachtwoord_herhaald" name="nieuw_wachtwoord_herhaald" autocomplete="new-password" required minlength="4">
+            </div>
         </div>
-        <div class="veld">
-            <label for="nieuw_wachtwoord">Nieuw wachtwoord</label>
-            <input type="password" id="nieuw_wachtwoord" name="nieuw_wachtwoord" autocomplete="new-password" required minlength="4">
-        </div>
-        <div class="veld">
-            <label for="nieuw_wachtwoord_herhaald">Nieuw wachtwoord (herhalen)</label>
-            <input type="password" id="nieuw_wachtwoord_herhaald" name="nieuw_wachtwoord_herhaald" autocomplete="new-password" required minlength="4">
-        </div>
-        <button type="submit" class="btn btn-geel">Wachtwoord wijzigen</button>
+        <div class="cs-paneel-voet"><button type="submit" class="btn btn-geel">Wachtwoord wijzigen</button></div>
     </form>
-</div>
+</section>
 {% endblock %}

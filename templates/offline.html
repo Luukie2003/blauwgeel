@@ -1,26 +1,37 @@
 <!DOCTYPE html>
+{# Wat de service worker (static/sw.js) toont als een pagina niet laadt zonder verbinding. Alles wat hij nodig heeft
+   staat hier zelf of in de cache van de service worker (het logo en de letters), want er is dan geen verbinding. #}
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Geen verbinding · Kantine Beheer</title>
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
-    <meta name="theme-color" content="#1c2b4a">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="theme-color" content="#14275e">
+    <style>
+        @font-face { font-family: "Barlow"; src: url("{{ url_for('static', filename='fonts/barlow-400.woff2') }}") format("woff2"); font-weight: 400; font-display: swap; }
+        @font-face { font-family: "Barlow"; src: url("{{ url_for('static', filename='fonts/barlow-600.woff2') }}") format("woff2"); font-weight: 600 700; font-display: swap; }
+        @font-face { font-family: "Barlow Condensed"; src: url("{{ url_for('static', filename='fonts/barlow-condensed-700.woff2') }}") format("woff2"); font-weight: 700; font-display: swap; }
+        * { box-sizing: border-box; margin: 0; }
+        body { min-height: 100vh; background: #f6f4ef; color: #1a2033; font: 400 16px/1.5 "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif; }
+        .kop { display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1.2rem; background: #14275e; color: #ffffff; border-bottom: 4px solid #fcd42f; }
+        .kop img { height: 38px; width: auto; }
+        .kop span { font: 700 1.35rem/1 "Barlow Condensed", "Arial Narrow", sans-serif; letter-spacing: 0.03em; text-transform: uppercase; }
+        .blok { max-width: 30rem; margin: 12vh auto 0; padding: 0 1rem; }
+        h1 { font: 700 2.6rem/1.05 "Barlow Condensed", "Arial Narrow", sans-serif; letter-spacing: 0.01em; margin-bottom: 0.6rem; }
+        p { color: #5f6575; margin-bottom: 1.3rem; }
+        button { font: 700 1rem/1 "Barlow", system-ui, sans-serif; padding: 0.75rem 1.4rem; border-radius: 6px; border: 1px solid #e3bb14; background: #fcd42f; color: #1a2033; cursor: pointer; }
+    </style>
 </head>
 <body>
-    <div style="max-width:420px; margin:15vh auto 0; padding:0 1rem; text-align:center">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="" style="width:64px; margin-bottom:1rem">
-        <div class="kaart">
-            <h1 style="margin-top:0">Geen verbinding</h1>
-            <p class="tekst-zacht">
-                Deze pagina kon niet geladen worden omdat er geen internetverbinding is.
-                Zodra je weer bereik hebt, werkt de app gewoon verder — eerder ingevulde
-                boekingen of tellingen die nog niet zijn verstuurd, staan niet kwijt op
-                dit toestel.
-            </p>
-            <button type="button" class="btn btn-geel" onclick="window.location.reload()">Opnieuw proberen</button>
-        </div>
+    <div class="kop"><img src="{{ url_for('static', filename='logo.png') }}" alt=""><span>Kantine Blauw-Geel</span></div>
+    <div class="blok">
+        <h1>Geen verbinding</h1>
+        <p>
+            Deze pagina kon niet geladen worden omdat er geen internetverbinding is. Zodra je weer bereik hebt, werkt de
+            app gewoon verder. Boekingen of tellingen die nog niet zijn verstuurd, blijven op dit toestel bewaard.
+        </p>
+        <button type="button" onclick="window.location.reload()">Opnieuw proberen</button>
     </div>
     <script>
     // Ook zonder dat iemand op de knop drukt (een tv of tablet aan de muur): zodra er weer verbinding is, en verder

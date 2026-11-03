@@ -1,71 +1,33 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inloggen · Kantine Beheer</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#1c2b4a">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Kantine Beheer">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_versie }}">
-</head>
-<body class="login-body">
-    <div class="login-wrap">
-        <div class="login-venster">
-            <div class="app-titelbalk">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="titelbalk-logo">
-                <span>Kantine Beheer — Aanmelden</span>
-            </div>
-            <div class="login-logo-groot">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915">
-            </div>
-            <div class="login-inhoud">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        <div class="flashes">
-                            {% for category, message in messages %}
-                                <div class="flash flash-{{ category }}">{{ message }}</div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                {% endwith %}
-                {% if g.noodstop_login %}
-                <div class="flash flash-warning">De site is afgesloten met de noodstop. Alleen een beheerder kan inloggen, met het wachtwoord &eacute;n de noodcode.</div>
-                {% endif %}
-                <form method="post">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="veld">
-                        <label for="naam">Gebruikersnaam</label>
-                        <input type="text" id="naam" name="naam" autocomplete="username" autofocus required>
-                    </div>
-                    <div class="veld">
-                        <label for="wachtwoord">Wachtwoord</label>
-                        <input type="password" id="wachtwoord" name="wachtwoord" autocomplete="current-password" required>
-                    </div>
-                    {% if g.noodstop_login %}
-                    <div class="veld">
-                        <label for="noodcode">Noodcode</label>
-                        <input type="password" id="noodcode" name="noodcode" autocomplete="off" required>
-                    </div>
-                    {% endif %}
-                    <label style="display:flex; gap:0.5rem; align-items:center; font-size:0.88rem; margin:0.2rem 0 0.9rem; cursor:pointer">
-                        <input type="checkbox" name="blijf_ingelogd" value="1" checked style="width:auto; margin:0">
-                        <span>Ingelogd blijven op dit toestel (30 dagen)<br><small style="opacity:0.75">Haal het vinkje weg op een gedeelde computer.</small></span>
-                    </label>
-                    <button type="submit" class="btn btn-geel login-btn">Aanmelden</button>
-                </form>
-                {% if not g.noodstop_login %}{# tijdens een noodstop is die pagina dicht #}
-                <p class="subtitel" style="text-align:center; margin-top:1rem">
-                    <a href="{{ url_for('wachtwoord_vergeten') }}">Wachtwoord vergeten?</a>
-                </p>
-                {% endif %}
-            </div>
-        </div>
+{% extends "base_inlog.html" %}
+{% block titel %}Inloggen{% endblock %}
+{% block kop %}Inloggen{% endblock %}
+{% block inhoud %}
+{% if g.noodstop_login %}
+<div class="flashes"><div class="flash flash-warning">De site is afgesloten met de noodstop. Alleen een beheerder kan inloggen, met het wachtwoord &eacute;n de noodcode.</div></div>
+{% endif %}
+<form method="post" class="cs-ingang-formulier">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="veld">
+        <label for="naam">Gebruikersnaam</label>
+        <input type="text" id="naam" name="naam" autocomplete="username" autofocus required>
     </div>
-</body>
-</html>
+    <div class="veld">
+        <label for="wachtwoord">Wachtwoord</label>
+        <input type="password" id="wachtwoord" name="wachtwoord" autocomplete="current-password" required>
+    </div>
+    {% if g.noodstop_login %}
+    <div class="veld">
+        <label for="noodcode">Noodcode</label>
+        <input type="password" id="noodcode" name="noodcode" autocomplete="off" required>
+    </div>
+    {% endif %}
+    <label class="cs-ingang-onthouden">
+        <input type="checkbox" name="blijf_ingelogd" value="1" checked>
+        <span>Ingelogd blijven op dit toestel (30 dagen)<small>Haal het vinkje weg op een gedeelde computer.</small></span>
+    </label>
+    <button type="submit" class="btn btn-geel">Inloggen</button>
+</form>
+{% if not g.noodstop_login %}{# tijdens een noodstop is die pagina dicht #}
+<p class="cs-ingang-onder"><a href="{{ url_for('wachtwoord_vergeten') }}">Wachtwoord vergeten?</a></p>
+{% endif %}
+{% endblock %}

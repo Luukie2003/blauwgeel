@@ -348,6 +348,9 @@ def register_routes(app):
                     gebruiker_id,
                 ),
             )
+            # Sinds 2.2 staan de mail en de weergave in één formulier met één knop.
+            if request.form.get("met_weergave"):
+                weergave_opslaan(db)
             db.commit()
             flash("Voorkeuren opgeslagen.", "success")
             return redirect(url_for("account_voorkeuren"))
@@ -361,16 +364,20 @@ def register_routes(app):
             gekozen_favorieten={item["url_endpoint"] for item in favoriete_items(nav_voor_sessie(), gebruiker["favorieten"])},
         )
 
-    @app.route("/account/weergave", methods=["POST"])
-    def account_weergave():
-        """Mijn voorkeuren > Weergave: de eenvoudige weergave aan of uit, en welke onderdelen favoriet zijn."""
+    def weergave_opslaan(db):
+        """De eenvoudige weergave aan of uit, en welke onderdelen favoriet zijn (alleen wat deze gebruiker mag zien)."""
         zichtbaar = {item["url_endpoint"] for item in nav_voor_sessie()}
         favorieten = [e for e in request.form.getlist("favoriet") if e in zichtbaar]
-        db = get_db()
         db.execute(
             "UPDATE gebruikers SET eenvoudig = ?, favorieten = ? WHERE id = ?",
             (1 if request.form.get("eenvoudig") else 0, ",".join(favorieten) or None, session["gebruiker_id"]),
         )
+
+    @app.route("/account/weergave", methods=["POST"])
+    def account_weergave():
+        """Mijn voorkeuren > Weergave los opslaan (de pagina zelf gebruikt sinds 2.2 account_voorkeuren met met_weergave)."""
+        db = get_db()
+        weergave_opslaan(db)
         db.commit()
         flash("Weergave opgeslagen.", "success")
         return redirect(url_for("account_voorkeuren"))

@@ -31,7 +31,7 @@ def test_voorgeladen_sjablonen_worden_niet_meer_van_schijf_gelezen(tmp_path, mon
     with app.test_request_context("/"):
         from flask import render_template
 
-        assert "404" in render_template("404.html")
+        assert "Pagina niet gevonden" in render_template("404.html")
 
 
 def test_zonder_voorladen_blijft_het_lui_laden(tmp_path):

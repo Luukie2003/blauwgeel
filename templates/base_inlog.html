@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+{# De pagina's om binnen te komen (2.2): inloggen, wachtwoord vergeten of instellen en de tablet-code. Los van base.html,
+   zonder menu: links het wapen op donkerblauw met de gele streep, rechts het formulier (zie .cs-ingang in clubstijl.css). #}
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titel %}Inloggen{% endblock %} · Kantine Beheer</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#14275e">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Kantine Beheer">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_versie }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='clubstijl.css') }}?v={{ clubstijl_versie }}">
+</head>
+<body class="cs-ingang">
+    <header class="cs-ingang-kop">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="" class="cs-ingang-wapen">
+        <div class="cs-ingang-merk">Kantine Blauw-Geel<small>sinds 1915 &middot; Coendersborg</small></div>
+    </header>
+    <main class="cs-ingang-inhoud">
+        <div class="cs-ingang-vak">
+            {% block boven_titel %}{% endblock %}
+            <h1>{% block kop %}{% endblock %}</h1>
+            {% block uitleg %}{% endblock %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flashes">
+                        {% for category, message in messages %}
+                            <div class="flash flash-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            {% block inhoud %}{% endblock %}
+        </div>
+        <footer class="cs-ingang-voet">
+            Kantine Beheer van s.v. Blauw-Geel 1915 &middot; <a href="{{ url_for('privacyverklaring') }}">Privacy</a>
+        </footer>
+    </main>
+</body>
+</html>

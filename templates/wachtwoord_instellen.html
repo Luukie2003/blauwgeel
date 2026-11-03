@@ -1,56 +1,18 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wachtwoord instellen · Kantine Beheer</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#1c2b4a">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Kantine Beheer">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_versie }}">
-</head>
-<body class="login-body">
-    <div class="login-wrap">
-        <div class="login-venster">
-            <div class="app-titelbalk">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="titelbalk-logo">
-                <span>Kantine Beheer — Wachtwoord instellen</span>
-            </div>
-            <div class="login-logo-groot">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915">
-            </div>
-            <div class="login-inhoud">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        <div class="flashes">
-                            {% for category, message in messages %}
-                                <div class="flash flash-{{ category }}">{{ message }}</div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                {% endwith %}
-                <p class="subtitel" style="margin-top:0">
-                    Kies een wachtwoord voor <strong>{{ gebruiker.naam }}</strong>.
-                </p>
-                <form method="post">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="veld">
-                        <label for="nieuw_wachtwoord">Nieuw wachtwoord</label>
-                        <input type="password" id="nieuw_wachtwoord" name="nieuw_wachtwoord" autocomplete="new-password" autofocus required minlength="4">
-                    </div>
-                    <div class="veld">
-                        <label for="nieuw_wachtwoord_herhaald">Nieuw wachtwoord (herhalen)</label>
-                        <input type="password" id="nieuw_wachtwoord_herhaald" name="nieuw_wachtwoord_herhaald" autocomplete="new-password" required minlength="4">
-                    </div>
-                    <button type="submit" class="btn btn-geel login-btn">Wachtwoord instellen</button>
-                </form>
-            </div>
-        </div>
+{% extends "base_inlog.html" %}
+{% block titel %}Wachtwoord instellen{% endblock %}
+{% block kop %}Wachtwoord instellen{% endblock %}
+{% block uitleg %}<p class="cs-ingang-uitleg">Kies een wachtwoord voor <strong>{{ gebruiker.naam }}</strong>.</p>{% endblock %}
+{% block inhoud %}
+<form method="post" class="cs-ingang-formulier">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="veld">
+        <label for="nieuw_wachtwoord">Nieuw wachtwoord</label>
+        <input type="password" id="nieuw_wachtwoord" name="nieuw_wachtwoord" autocomplete="new-password" autofocus required minlength="4">
     </div>
-</body>
-</html>
+    <div class="veld">
+        <label for="nieuw_wachtwoord_herhaald">Nieuw wachtwoord (herhalen)</label>
+        <input type="password" id="nieuw_wachtwoord_herhaald" name="nieuw_wachtwoord_herhaald" autocomplete="new-password" required minlength="4">
+    </div>
+    <button type="submit" class="btn btn-geel">Wachtwoord opslaan</button>
+</form>
+{% endblock %}

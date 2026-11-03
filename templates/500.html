@@ -1,13 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Er ging iets mis{% endblock %}
+{% block venster_titel %}<div class="cs-titel"><h1>Er ging iets mis</h1></div>{% endblock %}
 {% block inhoud %}
-<div class="kaart" style="max-width:480px; text-align:center">
-    <h1 style="font-size:2.2rem; margin-bottom:0.3rem">500</h1>
-    <h2>Er is een fout opgetreden</h2>
-    <p class="tekst-zacht">
-        Er ging iets mis bij het verwerken van deze pagina. Probeer het nog eens,
-        en neem contact op met de beheerder als het blijft gebeuren.
-    </p>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-geel">&larr; Terug naar het overzicht</a>
-</div>
+<section class="cs-paneel cs-smal-paneel">
+    <p class="cs-paneel-tekst">Er ging iets mis bij het verwerken van deze pagina. Probeer het nog eens, en neem contact
+        op met de beheerder als het blijft gebeuren.</p>
+    <div class="cs-paneel-voet"><a href="{{ url_for('dashboard') }}" class="btn btn-geel">Naar het overzicht</a></div>
+</section>
 {% endblock %}

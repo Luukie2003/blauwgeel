@@ -1,56 +1,21 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wachtwoord vergeten · Kantine Beheer</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#1c2b4a">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Kantine Beheer">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ css_versie }}">
-</head>
-<body class="login-body">
-    <div class="login-wrap">
-        <div class="login-venster">
-            <div class="app-titelbalk">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915" class="titelbalk-logo">
-                <span>Kantine Beheer — Wachtwoord vergeten</span>
-            </div>
-            <div class="login-logo-groot">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="s.v. Blauw-Geel 1915">
-            </div>
-            <div class="login-inhoud">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        <div class="flashes">
-                            {% for category, message in messages %}
-                                <div class="flash flash-{{ category }}">{{ message }}</div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                {% endwith %}
-                <p class="subtitel" style="margin-top:0">
-                    Vul je gebruikersnaam of e-mailadres in. Is er een account met een
-                    bekend e-mailadres, dan sturen we een link om een nieuw wachtwoord te kiezen.
-                </p>
-                <form method="post">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="veld">
-                        <label for="naam_of_email">Gebruikersnaam of e-mailadres</label>
-                        <input type="text" id="naam_of_email" name="naam_of_email" autocomplete="username" autofocus required>
-                    </div>
-                    <button type="submit" class="btn btn-geel login-btn">Verstuur link</button>
-                </form>
-                <p class="subtitel" style="text-align:center; margin-top:1rem">
-                    <a href="{{ url_for('login') }}">&larr; Terug naar inloggen</a>
-                </p>
-            </div>
-        </div>
+{% extends "base_inlog.html" %}
+{% from '_iconen.html' import icoon %}
+{% block titel %}Wachtwoord vergeten{% endblock %}
+{% block boven_titel %}<a href="{{ url_for('login') }}" class="cs-terug">{{ icoon('terug') }}Terug naar inloggen</a>{% endblock %}
+{% block kop %}Wachtwoord vergeten{% endblock %}
+{% block uitleg %}
+<p class="cs-ingang-uitleg">
+    Vul je gebruikersnaam of e-mailadres in. Is er een account met een bekend e-mailadres, dan sturen we een link om een
+    nieuw wachtwoord te kiezen.
+</p>
+{% endblock %}
+{% block inhoud %}
+<form method="post" class="cs-ingang-formulier">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="veld">
+        <label for="naam_of_email">Gebruikersnaam of e-mailadres</label>
+        <input type="text" id="naam_of_email" name="naam_of_email" autocomplete="username" autofocus required>
     </div>
-</body>
-</html>
+    <button type="submit" class="btn btn-geel">Link versturen</button>
+</form>
+{% endblock %}

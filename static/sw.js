@@ -7,10 +7,13 @@
 // hier. Cachet ook geen ingelogde pagina's: die zijn per gebruiker/sessie
 // verschillend en zouden verouderd of verkeerd (andere gebruiker) kunnen
 // worden getoond.
-const CACHE_NAAM = "kantine-schil-v2";  // ophogen als de schil (zoals /offline) verandert
+const CACHE_NAAM = "kantine-schil-v3";  // ophogen als de schil (zoals /offline) verandert
 const SCHIL_BESTANDEN = [
     "/static/style.css",
     "/static/logo.png",
+    "/static/fonts/barlow-400.woff2",
+    "/static/fonts/barlow-600.woff2",
+    "/static/fonts/barlow-condensed-700.woff2",
     "/offline",
 ];
 
