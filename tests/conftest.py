@@ -89,6 +89,9 @@ def app(tmp_path, sjabloon_db):
     # maar de testclient praat over http -- anders verstuurt de browser het
     # sessiecookie nooit terug en blijft elke request "uitgelogd".
     flask_app.config["SESSION_COOKIE_SECURE"] = False
+    # De handterminal-weergave staat in productie tijdelijk uit (zie create_app), maar de code blijft: de tests houden
+    # hem aan, zodat hij blijft werken voor als hij weer aangaat. test_handterminal_weergave_uit test de stand van nu.
+    flask_app.config["HANDTERMINAL_WEERGAVE"] = True
     yield flask_app
 
 

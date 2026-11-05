@@ -39,7 +39,8 @@ Gebouwd met Python (Flask) en SQLite — geen Node.js nodig.
   logo, foto, minimumvoorraad en een QR-code, per product of in bulk. Die
   QR-code is met elke telefooncamera te scannen (ook zonder account) en
   opent een keuzescherm: naar de productpagina, of direct melden voor de
-  bestellijst. De handterminal-weergave heeft ook een ingebouwde scanner.
+  bestellijst. De handterminal-weergave heeft ook een ingebouwde scanner (die
+  weergave staat sinds 2.4.0 tijdelijk uit: zie HANDTERMINAL_WEERGAVE in app.py).
   De bestellijst toont zulke meldingen (en handmatige meldingen vanuit
   Verbruiksvoorwerpen) in een aparte sectie, met een teller en een
   afhandelen-knop.

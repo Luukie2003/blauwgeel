@@ -41,7 +41,7 @@
                 <a href="{{ url_for('account_wachtwoord') }}">Wachtwoord wijzigen</a>
                 <a href="{{ url_for('tablet_code_instellen') }}">Tablet-code wijzigen</a>
                 <a href="{{ url_for('account_voorkeuren') }}">Mijn voorkeuren</a>
-                <a href="{{ url_for('weergave_pda') }}">Naar handterminal-weergave</a>
+                {% if handterminal_weergave_aan %}<a href="{{ url_for('weergave_pda') }}">Naar handterminal-weergave</a>{% endif %}
                 <div class="menu-scheiding"></div>
                 <a href="{{ url_for('help_pagina') }}">Help &middot; Over deze app</a>
                 <div class="menu-scheiding"></div>

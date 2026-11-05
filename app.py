@@ -48,6 +48,7 @@ from helpers import (
     format_datum_kort,
     format_laatst_actief,
     SECTIES,
+    handterminal_weergave_aan,
     heeft_sectie_toegang,
     inkoop_per_stuk,
     is_ajax_verzoek,
@@ -117,6 +118,10 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     # hieronder). Zonder dit stond hier geen Cache-Control-header op, dus
     # werd elk statisch bestand bij elk bezoek opnieuw gevalideerd.
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 31536000  # 365 dagen
+    # De handterminal-weergave van de site (base_pda.html) staat tijdelijk uit: op de Zebra werkt de app
+    # (android-apps/handterminal) en een telefoon krijgt de gewone site in de clubstijl. De code blijft; True zet hem
+    # weer aan (zie handterminal_weergave_aan in helpers/web.py).
+    app.config["HANDTERMINAL_WEERGAVE"] = False
 
     register_db(app)
     init_db(app, admin_wachtwoord=admin_wachtwoord)
@@ -392,8 +397,11 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             "csrf_token": csrf_token,
             "pda_modus": pda_modus,
             "basis_template": "base_pda.html" if pda_modus else "base.html",
-            # In de handterminal-app is de weergave al gekozen (zie android-apps/handterminal).
-            "toon_welkom_popup": session.pop("toon_welkom_popup", False) and not is_handterminal_app(),
+            # In de handterminal-app is de weergave al gekozen (zie android-apps/handterminal), en staat de
+            # handterminal-weergave uit, dan is er niets te kiezen.
+            "toon_welkom_popup": session.pop("toon_welkom_popup", False) and not is_handterminal_app()
+            and handterminal_weergave_aan(),
+            "handterminal_weergave_aan": handterminal_weergave_aan(),
             # De app heeft een eigen kop, zoekbalk en scanner: base_pda.html laat de zijne dan weg.
             "in_app": is_handterminal_app(),
             "noodstop_toestand": g.get("noodstop"),
@@ -473,7 +481,9 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         weergave_al_gezet_door_view = any(
             c.startswith("weergave=") for c in response.headers.getlist("Set-Cookie")
         )
-        if "weergave" not in request.cookies and not weergave_al_gezet_door_view:
+        # Staat de handterminal-weergave uit, dan niets vastzetten: gaat hij weer aan, dan wordt een telefoon nog
+        # gewoon herkend.
+        if handterminal_weergave_aan() and "weergave" not in request.cookies and not weergave_al_gezet_door_view:
             # Allereerste bezoek op dit toestel: de op de User-Agent
             # gebaseerde gok (zie bepaal_weergave_modus()) meteen vastzetten
             # in een cookie, zodat 'ie vanaf nu "onthouden" is -- ook al is

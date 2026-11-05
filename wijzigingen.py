@@ -6,8 +6,16 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.3.0"
+HUIDIGE_VERSIE = "2.4.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.4.0",
+        "datum": "5 november 2026",
+        "punten": [
+            "De handterminal-weergave van de site staat tijdelijk uit: op de Zebra werk je met de app Kantine Handterminal, en op een telefoon zie je de gewone site in de clubstijl, die ook op een klein scherm werkt. Ook een telefoon die eerder de handterminal-weergave koos, krijgt nu de gewone site.",
+            "Zolang de handterminal-weergave uit staat, zijn 'Naar handterminal-weergave' in het menu en de vraag welke weergave je wilt na het inloggen er niet.",
+        ],
+    },
     {
         "versie": "2.3.0",
         "datum": "3 november 2026",
@@ -1415,8 +1423,8 @@ MODULES = [
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
     {"naam": "Rapporten", "versie": "1.14.1", "sinds": "0.1.0", "laatst": "1.70.0",
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
-    {"naam": "Handterminal", "versie": "1.6.2", "sinds": "1.5.0", "laatst": "1.54.0",
-     "inhoud": "De weergave voor de handterminal: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft"},
+    {"naam": "Handterminal", "versie": "1.6.3", "sinds": "1.5.0", "laatst": "2.4.0",
+     "inhoud": "De weergave voor de handterminal op de site: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft (staat sinds 2.4.0 tijdelijk uit; op de Zebra werkt de app)"},
     {"naam": "Handterminal-app", "versie": "0.26.0", "sinds": "1.53.0", "laatst": "2.3.0",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (nalopen met vinkjes, klaarzetten met het besteloverzicht, verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken (inboeken per verpakking, blind tellen, weggooien), Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst, momenten met de schijnwerper, mappen en dia's aan of uit, en het Halloween-thema), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.11.0", "sinds": "0.1.0", "laatst": "2.2.0",

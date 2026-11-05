@@ -7,7 +7,14 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import mail
 import noodstop
 from database import WACHTWOORD_HASH_METHODE, get_db
-from helpers import csrf_token, genereer_wachtwoord_token, now_str, veilig_redirect_pad, vind_gebruiker_bij_token
+from helpers import (
+    csrf_token,
+    genereer_wachtwoord_token,
+    handterminal_weergave_aan,
+    now_str,
+    veilig_redirect_pad,
+    vind_gebruiker_bij_token,
+)
 
 # Brute-force-bescherming op het inlogscherm: na dit aantal mislukte
 # pogingen voor dezelfde gebruikersnaam wordt die naam tijdelijk geblokkeerd,
@@ -187,6 +194,10 @@ def register_routes(app):
 
     @app.route("/weergave/pda")
     def weergave_pda():
+        if not handterminal_weergave_aan():
+            # Tijdelijk uit (zie handterminal_weergave_aan): niets vastzetten, wel zeggen waarom er niets verandert.
+            flash("De handterminal-weergave staat tijdelijk uit. Op de Zebra werk je met de app Kantine Handterminal.", "warning")
+            return redirect(request.referrer or url_for("dashboard"))
         return _zet_weergave_cookie_en_ga_terug("pda")
 
     @app.route("/weergave/desktop")
