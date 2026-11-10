@@ -54,7 +54,8 @@ def register_routes(app):
                        toon_wedstrijden = ?, wedstrijden_volgorde = ?,
                        wedstrijden_duur_seconden = ?,
                        toon_standen = ?, standen_volgorde = ?, standen_duur_seconden = ?,
-                       toon_motm = ?, motm_volgorde = ?, motm_duur_seconden = ?, motm_titel = ?
+                       toon_motm = ?, motm_volgorde = ?, motm_duur_seconden = ?, motm_titel = ?,
+                       toon_seizoen = ?, seizoen_volgorde = ?, seizoen_duur_seconden = ?
                    WHERE id = 1""",
                 (
                     1 if request.form.get("toon_sponsoren") else 0,
@@ -71,6 +72,9 @@ def register_routes(app):
                     _getal("motm_volgorde", 5),
                     max(3, _getal("motm_duur_seconden", 10)),
                     request.form.get("motm_titel", "").strip() or "Man of de match van vorig weekend!",
+                    1 if request.form.get("toon_seizoen") else 0,
+                    _getal("seizoen_volgorde", 6),
+                    max(3, _getal("seizoen_duur_seconden", 15)),
                 ),
             )
             db.commit()

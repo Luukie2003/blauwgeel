@@ -30,6 +30,7 @@ DIA_BLOKKEN = (
     ("toon_wedstrijden", "Komende thuiswedstrijden"),
     ("toon_standen", "Standen"),
     ("toon_motm", "Man of the Match"),
+    ("toon_seizoen", "Seizoen in cijfers"),
 )
 
 MAX_NAMEN = 120

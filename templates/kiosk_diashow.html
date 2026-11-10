@@ -13,7 +13,8 @@
     ('club_van_20', 'Club van 20', 'De leden en de werving. Titel, namen per dia en wie erop komt: bij Club van 20 → Scherm en werving.'),
     ('wedstrijden', 'Wedstrijden', 'De komende thuiswedstrijden uit de agenda (Club instellingen). Niets gepland: dan slaat hij dit over.'),
     ('standen', 'Standen', 'Een dia per poule. Werk de teams wekelijks bij, hieronder.'),
-    ('motm', 'Man of the Match', 'Eén dia met de uitslagen van het weekend en de Man of the Match. De teams vul je hieronder in.')] %}
+    ('motm', 'Man of the Match', 'Eén dia met de uitslagen van het weekend en de Man of the Match. De teams vul je hieronder in.'),
+    ('seizoen', 'Seizoen in cijfers', "Het seizoen tot nu toe in getallen en de toppers van de bar en de keuken, zonder bedragen: twee dia's. Bekijk ze eerst bij Rapporten → Seizoen in cijfers.")] %}
 {% set _ = onderdelen.append({'sleutel': sleutel, 'titel': titel, 'uitleg': uitleg, 'volgorde': instellingen[sleutel ~ '_volgorde'] or 99}) %}
 {% endfor %}
 
@@ -35,7 +36,7 @@
                     <div class="kt-onderdeel-hoofd">
                         <div class="kt-onderdeel-titel">{{ o.titel }}</div>
                         <div class="kt-uitleg">{{ o.uitleg }}</div>
-                        {% if o.sleutel in ('wedstrijden', 'standen', 'motm') %}
+                        {% if o.sleutel in ('wedstrijden', 'standen', 'motm', 'seizoen') %}
                         <div class="kt-onderdeel-velden">
                             {% if o.sleutel == 'motm' %}
                             <label>Titel boven de dia <input type="text" name="motm_titel" value="{{ instellingen.motm_titel }}"></label>

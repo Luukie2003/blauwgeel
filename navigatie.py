@@ -408,6 +408,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Rapporten",
+        "endpoints": ["seizoen_in_cijfers_pagina"],
+        "url_endpoint": "seizoen_in_cijfers_pagina",
+        "label": "Seizoen in cijfers",
+    },
+    {
+        "groep": "Rapporten",
         "endpoints": ["compacte_uitdraai", "compacte_uitdraai_pdf_route"],
         "url_endpoint": "compacte_uitdraai",
         "label": "Compacte uitdraai",

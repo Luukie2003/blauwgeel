@@ -8,6 +8,7 @@ from flask import url_for
 
 import kiosk_momenten
 import qr
+import seizoen_in_cijfers
 from club_van_20 import bouw_slides as club_van_20_slides
 from helpers import (
     video_info,
@@ -129,6 +130,7 @@ AVOND_ONDERDELEN = (
     ("wedstrijden", "Komende thuiswedstrijden"),
     ("standen", "Standen"),
     ("motm", "Man of the Match"),
+    ("seizoen", "Seizoen in cijfers"),
     ("sponsorlogos", "Sponsorlogo's tussendoor"),
 )
 
@@ -306,6 +308,14 @@ def _bouw_slides(db, nu=None):
                     }], instellingen, "motm", overdag),
                 )
             )
+
+    if instellingen["toon_seizoen"]:
+        # Alleen lezen wat er bewaard is: het rekenen gebeurt bij het voorverwarmen en op de pagina (zie
+        # seizoen_in_cijfers.ververs), nooit hier, want het scherm vraagt elke minuut om de dia's.
+        cijfers = seizoen_in_cijfers.lees(db)
+        slides = seizoen_in_cijfers.tv_slides(cijfers, instellingen["seizoen_duur_seconden"]) if cijfers else []
+        if slides:
+            blokken.append((instellingen["seizoen_volgorde"], _alleen_overdag(slides, instellingen, "seizoen", overdag)))
 
     blokken.sort(key=lambda blok: blok[0])
     alle = [slide for _, slides in blokken for slide in slides]

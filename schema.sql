@@ -1030,3 +1030,12 @@ CREATE TABLE IF NOT EXISTS kiosk_timers (
     gestart_door TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_kiosk_timers_klaar ON kiosk_timers(klaar_om);
+
+-- Seizoen in cijfers (seizoen_in_cijfers.py): de getallen van het lopende seizoen, bewaard zodat de pagina en de
+-- Kantine-tv ze alleen hoeven te lezen. Opnieuw berekend na een nieuwe telling of op een nieuwe dag (vingerafdruk).
+CREATE TABLE IF NOT EXISTS seizoen_cijfers (
+    seizoen TEXT PRIMARY KEY,
+    vingerafdruk TEXT NOT NULL,
+    berekend_op TEXT NOT NULL,
+    gegevens TEXT NOT NULL
+);

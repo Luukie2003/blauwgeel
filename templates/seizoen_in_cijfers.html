@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{# Rapporten > Seizoen in cijfers (seizoen_in_cijfers.py): het seizoen tot nu toe in een paar getallen, zonder
+   bedragen, en dezelfde getallen als op de Kantine-tv. #}
+{% block titel %}Seizoen in cijfers{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Seizoen in cijfers</h1>
+    <span class="cs-titel-tekst">Seizoen {{ seizoen }}, tot nu toe</span>
+</div>
+{% endblock %}
+{% block inhoud %}
+{% if not cijfers %}
+<section class="cs-paneel">
+    <p class="cs-leeg">Er is dit seizoen nog niets geteld. Na de eerste telling staan hier de getallen.</p>
+</section>
+{% else %}
+{% if cijfers.cijfers %}
+<div class="cs-scorebord">
+    {% for c in cijfers.cijfers %}
+    <div class="cs-scorebord-vak"><strong>{{ c.tekst }}</strong><span>{{ c.label }}{% if c.sub %}<br>{{ c.sub }}{% endif %}</span></div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if cijfers.drukste_dag %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>De drukste dag</h2></div>
+    <p class="cs-paneel-tekst">
+        <strong>{{ cijfers.drukste_dag.tekst|capitalize }}</strong>{% if cijfers.drukste_dag.wedstrijden %}, met thuis
+        {{ cijfers.drukste_dag.wedstrijden|join(', ') }}{% endif %}.
+    </p>
+</section>
+{% endif %}
+
+<div class="cs-raster">
+    {% if cijfers.top_bar %}
+    <section class="cs-paneel">
+        <div class="cs-paneel-kop"><h2>De toppers van de bar</h2></div>
+        <table>
+            <tbody>
+            {% for p in cijfers.top_bar %}
+            <tr><td class="cs-getal" style="width:2rem">{{ loop.index }}</td><td>{{ p.naam }}</td><td class="cs-getal">{{ p.tekst }} <span class="cs-zacht">{{ p.eenheid }}</span></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+    {% if cijfers.top_keuken %}
+    <section class="cs-paneel">
+        <div class="cs-paneel-kop"><h2>Uit de keuken</h2></div>
+        <table>
+            <tbody>
+            {% for p in cijfers.top_keuken %}
+            <tr><td class="cs-getal" style="width:2rem">{{ loop.index }}</td><td>{{ p.naam }}</td><td class="cs-getal">{{ p.tekst }} <span class="cs-zacht">{{ p.eenheid }}</span></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+</div>
+
+<p class="cs-zacht">
+    Geschat uit de tellingen: wat er tussen twee tellingen verkocht is, is over de verkoopdagen verdeeld. Bijgewerkt
+    {{ cijfers.berekend_op|laatst_actief }}; na een nieuwe telling of de volgende dag rekent hij opnieuw.
+    {% if sectie_toegang.kantine_tv %}Op de Kantine-tv zet je ze aan bij <a href="{{ url_for('kiosk_diashow') }}">Kantine-tv &rarr; Diashow</a>, onderdeel Seizoen in cijfers.{% endif %}
+</p>
+{% endif %}
+{% endblock %}

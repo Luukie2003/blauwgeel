@@ -420,6 +420,12 @@ KOLOM_MIGRATIES = [
     ("kiosk_scherm_instellingen", "avond_sponsorlogos", "INTEGER NOT NULL DEFAULT 1"),
     # Een webpagina als dia (1.81.0), zoals de tussenstand van Shout-out!: het adres (zie KIOSK_WEBPAGINA_SITES).
     ("kiosk_sponsoren", "webpagina_url", "TEXT"),
+    # Seizoen in cijfers op de tv (2.6.0, zie seizoen_in_cijfers.py). Staat eerst uit: bekijk de pagina bij
+    # Rapporten, en zet hem dan aan bij Kantine-tv > Diashow. 's Avonds niet, net als de meeste onderdelen.
+    ("kiosk_scherm_instellingen", "toon_seizoen", "INTEGER NOT NULL DEFAULT 0"),
+    ("kiosk_scherm_instellingen", "seizoen_volgorde", "INTEGER NOT NULL DEFAULT 6"),
+    ("kiosk_scherm_instellingen", "seizoen_duur_seconden", "INTEGER NOT NULL DEFAULT 15"),
+    ("kiosk_scherm_instellingen", "avond_seizoen", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

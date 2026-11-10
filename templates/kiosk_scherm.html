@@ -266,6 +266,41 @@
                     </div>
                     {% endfor %}
                 </div>
+            {% elif slide.type == 'seizoen_cijfers' %}
+                {# Seizoen in cijfers (seizoen_in_cijfers.py): de grote getallen en de drukste dag. #}
+                <h2>Seizoen {{ slide.kort }} in cijfers</h2>
+                <p class="seizoendia-ondertitel">tot nu toe</p>
+                <div class="seizoendia-raster">
+                    {% for c in slide.cijfers %}
+                    <div class="seizoendia-tegel" style="animation-delay: {{ (loop.index0 * 0.1)|round(3) }}s">
+                        <span class="seizoendia-getal">{{ c.tekst }}</span>
+                        <span class="seizoendia-label">{{ c.label }}</span>
+                        {% if c.sub %}<span class="seizoendia-sub">{{ c.sub }}</span>{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if slide.drukste_dag %}
+                <p class="seizoendia-drukste">Drukste dag: <b>{{ slide.drukste_dag.tekst }}</b>{% if slide.drukste_dag.wedstrijden %} &middot; thuis {{ slide.drukste_dag.wedstrijden|join(', ') }}{% endif %}</p>
+                {% endif %}
+            {% elif slide.type == 'seizoen_top' %}
+                <h2>De toppers van seizoen {{ slide.kort }}</h2>
+                <div class="seizoendia-toppers">
+                    <ol class="seizoendia-lijst">
+                        {% for p in slide.top_bar %}
+                        <li style="animation-delay: {{ (loop.index0 * 0.08)|round(3) }}s"><span class="plek">{{ loop.index }}</span><span class="naam">{{ p.naam }}</span><span class="aantal">{{ p.tekst }} <small>{{ p.eenheid }}</small></span></li>
+                        {% endfor %}
+                    </ol>
+                    {% if slide.top_keuken %}
+                    <div class="seizoendia-keuken">
+                        <h3>Uit de keuken</h3>
+                        <ol class="seizoendia-lijst seizoendia-lijst--klein">
+                            {% for p in slide.top_keuken %}
+                            <li style="animation-delay: {{ (0.3 + loop.index0 * 0.08)|round(3) }}s"><span class="plek">{{ loop.index }}</span><span class="naam">{{ p.naam }}</span><span class="aantal">{{ p.tekst }}</span></li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                    {% endif %}
+                </div>
             {% endif %}
         </section>
         {% endfor %}

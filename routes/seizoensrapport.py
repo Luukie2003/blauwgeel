@@ -2,7 +2,8 @@ import re
 
 from flask import Response, flash, redirect, render_template, request, session, url_for
 
-from club_van_20 import MAANDNAMEN, normaliseer_seizoen, seizoen_van_datum, verschuif_seizoen
+import seizoen_in_cijfers
+from club_van_20 import MAANDNAMEN, normaliseer_seizoen, seizoen_kort, seizoen_van_datum, verschuif_seizoen
 from database import get_db
 from helpers import csv_response, now_str, vandaag_amsterdam
 from pdf import seizoensrapport_pdf
@@ -37,6 +38,16 @@ def register_routes(app):
     @app.route("/rapporten/seizoenen")
     def seizoensrapport():
         return render_template("seizoensrapport.html", rapport=bereken_seizoensrapport(get_db()))
+
+    @app.route("/rapporten/seizoen-in-cijfers")
+    def seizoen_in_cijfers_pagina():
+        """Seizoen in cijfers (seizoen_in_cijfers.py), zonder bedragen. Rekent alleen opnieuw na een nieuwe telling of
+        op een nieuwe dag; anders toont hij wat er al bewaard is (en wat de tv ook toont)."""
+        return render_template(
+            "seizoen_in_cijfers.html",
+            cijfers=seizoen_in_cijfers.ververs(get_db()),
+            seizoen=seizoen_kort(seizoen_van_datum(vandaag_amsterdam())),
+        )
 
     @app.route("/rapporten/seizoenen/invullen", methods=["GET", "POST"])
     def seizoensrapport_historie():

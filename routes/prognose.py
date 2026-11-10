@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from flask import flash, redirect, render_template, request, session, url_for
 
 import bestelvoorstel
+import seizoen_in_cijfers
 from database import get_db
 from helpers import bereken_komende_thuiswedstrijden, now_str
 from voorspelling import (
@@ -175,6 +176,9 @@ def register_routes(app):
             db = get_db()
             maak_prognose(db, dagen=7)
             verdeling(db)
+            # Seizoen in cijfers rekent met dezelfde verdeling: na een telling of op een nieuwe dag hier op de
+            # achtergrond bijwerken, zodat de Kantine-tv (die alleen leest) de nieuwe getallen krijgt.
+            seizoen_in_cijfers.ververs(db)
         except Exception as fout:
             print(f"[voorspelling] voorverwarmen mislukt: {fout}")
         return "", 204

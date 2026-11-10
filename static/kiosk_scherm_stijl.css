@@ -684,3 +684,104 @@
     from { box-shadow: 0 0 calc(10 * var(--u)) rgba(255, 70, 90, 0.35); }
     to { box-shadow: 0 0 calc(34 * var(--u)) rgba(255, 90, 110, 0.85); }
 }
+
+/* Seizoen in cijfers (2.6.0, zie seizoen_in_cijfers.py): grote getallen in tegels met de drukste dag eronder, en een
+   dia met de toppers van de bar en de keuken. Rekent in --u (1920x1080), net als de standen. */
+.slide.slide-seizoen_cijfers, .slide.slide-seizoen_top { padding: calc(56 * var(--u)) calc(90 * var(--u)) calc(110 * var(--u)); gap: 0; }
+.slide-seizoen_cijfers h2, .slide-seizoen_top h2 {
+    font-size: calc(68 * var(--u));
+    font-weight: 800;
+    color: var(--geel);
+    margin: 0;
+    text-shadow: 0 0 34px rgba(252, 212, 47, 0.4);
+}
+.seizoendia-ondertitel {
+    margin: calc(4 * var(--u)) 0 calc(34 * var(--u));
+    font-size: calc(26 * var(--u));
+    font-weight: 700;
+    color: var(--tekst-zacht);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+}
+.seizoendia-raster {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(22 * var(--u));
+    width: 100%;
+    max-width: calc(1600 * var(--u));
+}
+.seizoendia-tegel {
+    flex: 0 1 calc(500 * var(--u));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: calc(28 * var(--u)) calc(20 * var(--u)) calc(24 * var(--u));
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: calc(22 * var(--u));
+    opacity: 0;
+}
+.seizoendia-tegel:first-child {
+    background: rgba(252, 212, 47, 0.12);
+    border-color: var(--geel);
+    box-shadow: 0 0 28px rgba(252, 212, 47, 0.22);
+}
+.seizoendia-getal { font-size: calc(100 * var(--u)); font-weight: 800; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.seizoendia-label { margin-top: calc(12 * var(--u)); font-size: calc(30 * var(--u)); font-weight: 700; color: var(--geel); }
+.seizoendia-sub { margin-top: calc(6 * var(--u)); font-size: calc(22 * var(--u)); color: var(--tekst-zacht); }
+.seizoendia-drukste { margin: calc(34 * var(--u)) 0 0; font-size: calc(30 * var(--u)); color: var(--tekst-zacht); }
+.seizoendia-drukste b { color: #fff; }
+.slide-seizoen_cijfers.actief .seizoendia-tegel { animation: seizoen-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes seizoen-in {
+    from { opacity: 0; transform: translateY(calc(26 * var(--u))) scale(0.96); }
+    to { opacity: 1; transform: none; }
+}
+
+.seizoendia-toppers {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: calc(60 * var(--u));
+    width: 100%;
+    max-width: calc(1560 * var(--u));
+    margin-top: calc(40 * var(--u));
+}
+.seizoendia-lijst { list-style: none; margin: 0; padding: 0; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: calc(14 * var(--u)); }
+.seizoendia-lijst li {
+    display: flex;
+    align-items: center;
+    gap: calc(22 * var(--u));
+    padding: calc(16 * var(--u)) calc(26 * var(--u));
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: calc(18 * var(--u));
+    text-align: left;
+    opacity: 0;
+}
+.seizoendia-lijst li:first-child {
+    background: rgba(252, 212, 47, 0.12);
+    border-color: var(--geel);
+    box-shadow: 0 0 28px rgba(252, 212, 47, 0.22);
+}
+.seizoendia-lijst .plek {
+    flex: none;
+    width: calc(58 * var(--u));
+    height: calc(58 * var(--u));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--blauw);
+    border: 2px solid var(--geel);
+    font-size: calc(28 * var(--u));
+    font-weight: 800;
+    color: var(--geel);
+}
+.seizoendia-lijst .naam { flex: 1; min-width: 0; font-size: calc(40 * var(--u)); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seizoendia-lijst .aantal { font-size: calc(42 * var(--u)); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.seizoendia-lijst .aantal small { font-size: calc(22 * var(--u)); font-weight: 600; color: var(--tekst-zacht); }
+.seizoendia-keuken { flex: 0 1 calc(560 * var(--u)); min-width: 0; }
+.seizoendia-keuken h3 { margin: 0 0 calc(14 * var(--u)); font-size: calc(30 * var(--u)); color: var(--geel); text-align: left; }
+.seizoendia-lijst--klein .naam, .seizoendia-lijst--klein .aantal { font-size: calc(32 * var(--u)); }
+.slide-seizoen_top.actief .seizoendia-lijst li { animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }

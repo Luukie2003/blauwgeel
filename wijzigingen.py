@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.5.0"
+HUIDIGE_VERSIE = "2.6.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.6.0",
+        "datum": "10 november 2026",
+        "punten": [
+            "Nieuw: Rapporten > Seizoen in cijfers. Het seizoen tot nu toe in een paar leuke getallen, zonder bedragen: hoeveel er aan de bar over de toonbank ging, hoeveel glazen er getapt zijn, de kroketten uit de keuken, de thuiswedstrijden, de tellingen (en door hoeveel vrijwilligers) en het verse frituurvet. Met de drukste dag en de toppers van de bar en de keuken.",
+            "Op de Kantine-tv: het nieuwe onderdeel Seizoen in cijfers geeft twee dia's met dezelfde getallen. Het staat eerst uit; zet het aan bij Kantine-tv > Diashow. 's Avonds doet het alleen mee als je dat bij 's Avonds aanzet.",
+            "De getallen zijn een schatting uit de tellingen en werken zichzelf bij na een nieuwe telling of de volgende dag.",
+        ],
+    },
     {
         "versie": "2.5.0",
         "datum": "10 november 2026",
@@ -1431,14 +1440,14 @@ MODULES = [
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.7.0", "sinds": "1.6.0", "laatst": "1.75.0",
      "inhoud": "Keukenvoorraad met een eigen, blinde telling (ook als looplijst met dozen scannen, en een begintelling), inboeken per verpakking (per merk, ook door te scannen), weggooien en bijstellen, prijzen, de boodschappenlijst bij een tekort, en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.28.1", "sinds": "1.10.1", "laatst": "2.0.0",
-     "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's, effecten en griezelposters met tekeningen), sponsoren, standen, Man of the Match, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, het Halloween-thema, en de tablet-app Kantine Beheer"},
+    {"naam": "Kantine-tv", "versie": "1.29.0", "sinds": "1.10.1", "laatst": "2.6.0",
+     "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's, effecten en griezelposters met tekeningen), sponsoren, standen, Man of the Match, seizoen in cijfers, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, het Halloween-thema, en de tablet-app Kantine Beheer"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.0", "sinds": "", "laatst": "",
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
-    {"naam": "Rapporten", "versie": "1.14.1", "sinds": "0.1.0", "laatst": "1.70.0",
-     "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, compacte uitdraai, omzettrend"},
+    {"naam": "Rapporten", "versie": "1.15.0", "sinds": "0.1.0", "laatst": "2.6.0",
+     "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, seizoen in cijfers, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.3", "sinds": "1.5.0", "laatst": "2.4.0",
      "inhoud": "De weergave voor de handterminal op de site: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft (staat sinds 2.4.0 tijdelijk uit; op de Zebra werkt de app)"},
     {"naam": "Handterminal-app", "versie": "0.26.0", "sinds": "1.53.0", "laatst": "2.3.0",
