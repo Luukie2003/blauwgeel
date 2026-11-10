@@ -8,9 +8,16 @@ bestelling_gegevens en bestel_tekst) en komt hij als één factuur binnen."""
 
 import bestelvoorstel
 import manco
-from helpers.producten import besteleenheid_factor, besteleenheid_naam, naar_voorraadeenheden
+from helpers.producten import (
+    besteleenheid_factor,
+    besteleenheid_naam,
+    bestel_suggesties,
+    naar_besteleenheden,
+    naar_voorraadeenheden,
+)
 from helpers.tijd import now_str
 from pdf.basis import NAAM_CLUB
+from productkaart import KEUKEN_CATEGORIE
 
 
 def maak_bestellingen(db, besteleenheden_per_product, door=None, door_id=None):
@@ -91,13 +98,15 @@ def bestelling_gegevens(db, bestelling_id):
         leverancier = db.execute("SELECT * FROM leveranciers WHERE id = ?", (bestelling["leverancier_id"],)).fetchone()
     regels = []
     for r in db.execute(
-        """SELECT br.aantal_besteld, p.naam, p.artikelcode, p.eenheid, p.besteleenheid, p.besteleenheid_factor
+        """SELECT br.aantal_besteld, p.id AS product_id, p.naam, p.artikelcode, p.eenheid, p.besteleenheid,
+                  p.besteleenheid_factor
            FROM bestelregels br JOIN producten p ON p.id = br.product_id
            WHERE br.bestelling_id = ? AND br.aantal_besteld > 0 ORDER BY p.categorie, p.naam COLLATE NOCASE""",
         (bestelling_id,),
     ).fetchall():
         factor = besteleenheid_factor(r)
         regels.append({
+            "product_id": r["product_id"],
             "naam": r["naam"],
             "artikelcode": r["artikelcode"],
             "eenheden": -(-r["aantal_besteld"] // factor),
@@ -123,3 +132,107 @@ def bestel_tekst(gegevens):
     ]
     door = gegevens["bestelling"]["besteld_door"]
     return "\n".join([kop + ":", *regels, "", f"Met vriendelijke groet,\n{door}" if door else "Met vriendelijke groet"])
+
+
+def nalooplijst(db):
+    """De bestellijst om na te lopen op de site (Bestellijst > Nalopen), zoals op de handterminal (api_app_bestellijst):
+    per product hoeveel colli er staan en of het al nagelopen (gecontroleerd) is.
+
+    "te_bestellen": wat onder het minimum zit ('laag': het gewone voorstel, de vaste bestelhoeveelheid of tot het minimum,
+    in hele colli), wat bij een vorige bestelling niet geleverd is ('manco') en wat iemand zelf koos of al nagelopen heeft
+    ('gekozen', ook 'niet bestellen'). "overig": de rest van het assortiment, zonder de keuken (die koopt zelf in). Daaruit
+    zet je erbij wat je weet dat op raakt, ook zonder telling. Een gekozen of bevestigd aantal (bestelvoorstel.
+    zet_bestelaantal) gaat voor het voorstel; de prognose verhoogt het voorstel op de pagina zelf (bestellijst_prognose)."""
+    keuzes = bestelvoorstel.bijstellingen(db)
+    leveranciers = {r["id"]: r["naam"] for r in db.execute("SELECT id, naam FROM leveranciers").fetchall()}
+    onderweg = {}
+    for r in db.execute(
+        """SELECT DISTINCT br.product_id, b.id FROM bestelregels br JOIN bestellingen b ON b.id = br.bestelling_id
+           WHERE b.status = 'besteld' ORDER BY b.id"""
+    ).fetchall():
+        onderweg.setdefault(r["product_id"], []).append(r["id"])
+    producten = {
+        p["id"]: p
+        for p in db.execute(
+            "SELECT * FROM producten WHERE categorie != ? ORDER BY categorie COLLATE NOCASE, naam COLLATE NOCASE",
+            (KEUKEN_CATEGORIE,),
+        ).fetchall()
+    }
+
+    def regel(p, soort, standaard, **extra):
+        keuze = keuzes.get(p["id"]) or {}
+        gekozen = bestelvoorstel.gekozen(keuze)
+        factor = besteleenheid_factor(p)
+        return {
+            "id": p["id"], "naam": p["naam"], "categorie": p["categorie"] or "", "eenheid": p["eenheid"],
+            "voorraad": p["voorraad"], "min_voorraad": p["min_voorraad"] or 0, "artikelcode": p["artikelcode"],
+            "afbeelding": p["afbeelding"], "leverancier": leveranciers.get(p["leverancier_id"]),
+            "factor": factor, "colli": besteleenheid_naam(p) if factor > 1 else p["eenheid"],
+            "soort": soort, "standaard": standaard, "aantal": standaard if gekozen is None else gekozen,
+            "vast": gekozen is not None, "gecontroleerd": bool(keuze.get("gecontroleerd")), "door": keuze.get("door"),
+            "onderweg": onderweg.get(p["id"], []), **extra,
+        }
+
+    te_bestellen = []
+    for p in bestel_suggesties(db):
+        tekort = p["bestel_hoeveelheid"] if (p["bestel_hoeveelheid"] or 0) > 0 else p["min_voorraad"] - p["voorraad"]
+        te_bestellen.append(regel(p, "laag", max(1, naar_besteleenheden(tekort, p))))
+    gehad = {r["id"] for r in te_bestellen}
+    for pid, regels in manco.open_manco_per_product(db).items():
+        if pid in gehad or pid not in producten:
+            continue
+        tekort = sum(m["tekort"] for m in regels)
+        te_bestellen.append(regel(producten[pid], "manco", naar_besteleenheden(tekort, producten[pid]),
+                                  tekort=tekort, bestellingen=[m["bestelling_id"] for m in regels]))
+        gehad.add(pid)
+    gekozen = [
+        producten[pid] for pid, b in keuzes.items()
+        if pid in producten and pid not in gehad and ((bestelvoorstel.gekozen(b) or 0) > 0 or b.get("gecontroleerd"))
+    ]
+    for p in sorted(gekozen, key=lambda p: p["naam"].lower()):
+        te_bestellen.append(regel(p, "gekozen", 0))
+        gehad.add(p["id"])
+    overig = [
+        regel(p, "overig", 0) for pid, p in producten.items()
+        if pid not in gehad and p["actief"] and not p["gearchiveerd"]
+    ]
+    return {"te_bestellen": te_bestellen, "overig": overig}
+
+
+def webadres(tekst):
+    """De website van een leverancier als link: 'www.sligro.nl' wordt 'https://www.sligro.nl'. Alleen http(s); iets
+    anders (zoals 'javascript:') geeft None."""
+    tekst = (tekst or "").strip()
+    if not tekst or any(c.isspace() for c in tekst):
+        return None
+    if tekst.lower().startswith(("http://", "https://")):
+        return tekst
+    if ":" in tekst.split("/")[0]:
+        return None
+    return "https://" + tekst
+
+
+def besteloverzicht(db, ids=None):
+    """De klaargezette bestellingen als lijst om bij de leverancier te bestellen, zoals het besteloverzicht op de
+    handterminal: per bestelling de leverancier (klantnummer, webshop, tot wanneer je bestelt) en per product het
+    artikelnummer en het aantal colli, met de tekst om te kopiëren (bestel_tekst). ids: die bestellingen (bijvoorbeeld net
+    klaargezet), in die volgorde; zonder ids alles wat klaargezet en nog niet ingeboekt is, per leverancier op naam."""
+    if not ids:
+        ids = [r["id"] for r in db.execute(
+            """SELECT b.id FROM bestellingen b LEFT JOIN leveranciers l ON l.id = b.leverancier_id
+               WHERE b.status = 'besteld' ORDER BY l.naam IS NULL, l.naam COLLATE NOCASE, b.id"""
+        ).fetchall()]
+    uit = []
+    for bid in dict.fromkeys(ids):
+        gegevens = bestelling_gegevens(db, bid)
+        if gegevens is None:
+            continue
+        lev = gegevens["leverancier"]
+        periode = bestelvoorstel.bestelperiode(lev) if lev is not None and gegevens["bestelling"]["status"] == "besteld" else None
+        uit.append({
+            **gegevens,
+            "tekst": bestel_tekst(gegevens),
+            "website": webadres(lev["website"]) if lev is not None else None,
+            "uiterst": bestelvoorstel.dag_tekst(periode["uiterst"], met_tijd=True) if periode else None,
+        })
+    return uit

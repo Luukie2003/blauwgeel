@@ -91,6 +91,7 @@
             {% if b.status == 'besteld' %}
             <a href="{{ url_for('factuur_voor_bestelling', bestelling_id=b.id) }}" class="btn btn-geel btn-klein">Inboeken (factuur)</a>
             <a href="{{ url_for('bestelling_bewerken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+            <a href="{{ url_for('besteloverzicht_pagina', id=b.id) }}" class="btn btn-rand btn-klein">Besteloverzicht</a>
             <a href="{{ url_for('bestelling_pdf_route', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">PDF voor de leverancier</a>
             {% else %}
             <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Ontvangen aantallen corrigeren</a>
@@ -186,6 +187,7 @@
             {% if b.status == 'besteld' %}
             <a href="{{ url_for('factuur_voor_bestelling', bestelling_id=b.id) }}" class="btn btn-geel btn-klein">Inboeken met de factuur</a>
             <a href="{{ url_for('bestelling_bewerken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+            <a href="{{ url_for('besteloverzicht_pagina', id=b.id) }}" class="btn btn-rand btn-klein">Besteloverzicht</a>
             <a href="{{ url_for('bestelling_pdf_route', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">PDF voor de leverancier</a>
             {% else %}
             <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Ontvangen aantallen corrigeren</a>

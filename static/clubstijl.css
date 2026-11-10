@@ -431,6 +431,49 @@ details.cs-bestelling > summary:hover, details.cs-bestelling[open] > summary { b
 details.cs-bestelling > .tabel-wrap { border-top: 1px solid var(--rand-licht); }
 details.cs-bestelling > .cs-knoppen { margin: 0; padding: 0.75rem 1.1rem 0.95rem; }
 
+/* Bestellijst nalopen (2.8): zoals op de handterminal per product een rondje om af te vinken, wat het is, en het aantal
+   colli met min en plus. Afgevinkt: het rondje donkerblauw met een geel vinkje. */
+.cs-looplijst { list-style: none; margin: 0; padding: 0; }
+.cs-loopregel { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) auto; gap: 0.35rem 0.85rem; align-items: center; padding: 0.6rem 1.1rem; border-top: 1px solid var(--rand-licht); transition: background-color 0.6s; }
+.cs-looplijst > :first-child { border-top: 0; }
+.cs-loopregel[hidden], .cs-loopgroep[hidden] { display: none; }
+.cs-loopgroep { padding: 0.55rem 1.1rem 0.3rem; border-top: 1px solid var(--rand-licht); background: var(--grid-alt); color: var(--tekst-zacht); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; }
+.cs-loopvink { position: relative; width: 2rem; height: 2rem; padding: 0; border: 2px solid #c9c3b4; border-radius: 50%; background: var(--kaart); cursor: pointer; }
+.cs-loopvink:hover { border-color: var(--blauw); }
+.cs-loopregel.gecontroleerd .cs-loopvink { background: var(--blauw-donker); border-color: var(--blauw-donker); }
+.cs-loopregel.gecontroleerd .cs-loopvink::after { content: ""; position: absolute; left: 50%; top: 45%; width: 0.42rem; height: 0.8rem; border: solid var(--geel); border-width: 0 3px 3px 0; transform: translate(-50%, -50%) rotate(45deg); }
+.cs-loopwat { min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+.cs-loopwat strong { font-weight: 600; }
+.cs-loopwat small { color: var(--tekst-zacht); font-size: 0.84rem; }
+.cs-loopwat small:empty { display: none; }
+.cs-loopregel.gecontroleerd .cs-loopdoor { color: var(--blauw); }
+.cs-loopaantal { display: flex; align-items: center; gap: 0.35rem; }
+.cs-loopaantal .btn { width: 2.3rem; height: 2.3rem; padding: 0; font-size: 1.25rem; line-height: 1; }
+.cs-loopaantal .btn:disabled { opacity: 0.35; cursor: default; }
+.cs-loopgetal { width: 3.4rem; padding: 0.3rem 0.2rem; text-align: center; font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+.cs-loopgetal::-webkit-inner-spin-button, .cs-loopgetal::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.cs-loopregel.gecontroleerd .cs-loopgetal { color: var(--blauw-donker); border-color: var(--blauw); }
+.cs-loopcolli { min-width: 5.6rem; display: flex; flex-direction: column; font-size: 0.9rem; line-height: 1.15; }
+.cs-loopcolli small { color: var(--tekst-zacht); font-size: 0.76rem; }
+.cs-loopregel.niet .cs-loopwat strong { color: var(--tekst-zacht); }
+.cs-loopregel.bezig .cs-loopvink { opacity: 0.6; }
+.cs-loopregel.fout { box-shadow: inset 4px 0 0 var(--rood); }
+.cs-loopregel.net-gezet { background: var(--selectie-bg); transition: none; }
+.cs-verzendbalk.leeg .btn { opacity: 0.6; }
+
+/* Het besteloverzicht (2.8): per leverancier wat je in de webshop invult. Wat je afvinkt, wordt grijs. */
+.cs-bestelgegevens { display: flex; flex-wrap: wrap; gap: 0.5rem 2.2rem; margin: 0; padding: 0.75rem 1.1rem; border-bottom: 1px solid var(--rand-licht); }
+.cs-bestelgegevens dt { color: var(--tekst-zacht); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; }
+.cs-bestelgegevens dd { margin: 0; }
+.cs-bestelgegevens .cs-tekstknop, .cs-besteloverzicht td .cs-tekstknop { margin-left: 0.4rem; font-size: 0.8rem; }
+.cs-besteloverzicht th.cs-vinkkolom, .cs-besteloverzicht td.cs-vinkkolom { width: 2.4rem; }
+.cs-besteloverzicht td.cs-vinkkolom input { width: 1.2rem; height: 1.2rem; margin: 0; accent-color: var(--blauw-donker); }
+.cs-artikelnummer { font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.cs-colli-getal { font: 700 1.35rem/1 var(--cs-koppen); color: var(--blauw-donker); font-variant-numeric: tabular-nums; }
+.cs-besteloverzicht tr.ingevuld td { color: var(--tekst-zacht); }
+.cs-besteloverzicht tr.ingevuld strong, .cs-besteloverzicht tr.ingevuld .cs-artikelnummer { text-decoration: line-through; }
+.cs-besteloverzicht tr.ingevuld .cs-colli-getal { color: var(--tekst-zacht); }
+
 /* De looplijst (tellen_lopen.html) in de clubstijl. De handterminal-weergave laadt dit bestand niet en houdt zijn eigen vorm. */
 .loop-kaart { max-width: 520px; padding: 1.3rem 1.3rem 1.1rem; }
 .loop-voortgang { height: 5px; background: #efebe1; }
@@ -577,6 +620,10 @@ main.cs-ingang-inhoud { display: flex; flex-direction: column; align-items: cent
     .cs-telcel .turf-knoppen { display: flex; margin: 0.35rem 0 0; }
     .cs-telcel .turf-knop { min-width: 2.1rem; padding: 0.3rem 0.4rem; }
     .cs-verzendbalk { padding-left: 0.9rem; }
+    /* Bestellijst nalopen: het aantal komt onder de naam. */
+    .cs-loopregel { grid-template-columns: 2.2rem minmax(0, 1fr); padding: 0.6rem 0.9rem; }
+    .cs-loopaantal { grid-column: 2; }
+    .cs-bestelgegevens { gap: 0.5rem 1.4rem; padding: 0.7rem 0.9rem; }
     .cs-inuit label { gap: 0.6rem; padding: 0.8rem 0.9rem; }
     .cs-inuit .cs-i { width: 24px; height: 24px; }
     .cs-inuit b { font-size: 1.65rem; }

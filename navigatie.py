@@ -105,7 +105,8 @@ NAV_ITEMS = [
     },
     {
         "groep": "Bestellen",
-        "endpoints": ["bestellijst", "bestellijst_voorspeld", "bestelling_aanmaken", "bestelling_nieuw", "bestelling_inboeken", "manco_afhandelen"],
+        "endpoints": ["bestellijst", "bestellijst_voorspeld", "bestelling_aanmaken", "bestelling_nieuw", "bestelling_inboeken", "manco_afhandelen",
+                      "bestellijst_nalopen", "besteloverzicht_pagina"],
         "url_endpoint": "bestellijst",
         "label": "Bestellijst",
     },

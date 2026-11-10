@@ -21,7 +21,15 @@ from helpers import (
 )
 from helpers.tijd import vandaag_amsterdam
 import manco
-from bestellen import bestel_tekst, bestelling_gegevens, klaargezet_melding, maak_bestellingen
+from bestellen import (
+    bestel_tekst,
+    bestelling_gegevens,
+    besteloverzicht,
+    klaargezet_melding,
+    maak_bestellingen,
+    nalooplijst,
+)
+from keukenbeheer import KEUKEN_NIET_BESTELLEN
 from leveranciers import GEEN, filter_suggesties, per_leverancier
 from pdf import bestelling_pdf, bestellijst_pdf
 from productkaart import KEUKEN_CATEGORIE
@@ -209,32 +217,96 @@ def register_routes(app):
 
     @app.route("/bestellijst/aanmaken", methods=["POST"])
     def bestelling_aanmaken():
+        """Klaarzetten, vanaf Voorgesteld om te bestellen of Bestellijst nalopen: een bestelling per leverancier (zie
+        bestellen.maak_bestellingen), en dan het besteloverzicht om bij de leverancier te bestellen. Niet uit de keuken:
+        die koopt zelf in."""
         db = get_db()
         product_ids = request.form.getlist("product_id")
         besteld_door = session.get("gebruiker_naam")
         besteld_door_id = session.get("gebruiker_id")
+        keuken = {r["id"] for r in db.execute("SELECT id FROM producten WHERE categorie = ?", (KEUKEN_CATEGORIE,)).fetchall()}
 
         aantallen_per_pid = {}
         for pid in product_ids:
+            if not pid.isdigit() or int(pid) in keuken:
+                continue
             aantal_besteleenheden = request.form.get(f"aantal_{pid}", "0")
             try:
                 aantal_besteleenheden = int(aantal_besteleenheden)
             except ValueError:
                 aantal_besteleenheden = 0
             if aantal_besteleenheden > 0:
-                aantallen_per_pid[int(pid)] = aantal_besteleenheden
+                aantallen_per_pid[int(pid)] = min(aantal_besteleenheden, bestelvoorstel.MAX_EENHEDEN)
 
         bestellingen = maak_bestellingen(db, aantallen_per_pid, besteld_door, besteld_door_id)
         if not bestellingen:
             flash("Geen producten geselecteerd voor de bestelling.", "error")
-            return redirect(url_for("bestellijst"))
+            return redirect(url_for("bestellijst_nalopen" if request.form.get("van") == "nalopen" else "bestellijst"))
         flash(
-            klaargezet_melding(bestellingen) + " Onder Openstaande bestellingen staat per bestelling de lijst voor de "
-            "leverancier (pdf of tekst). Elke bestelling staat ook als concept bij Factuur inboeken: scan de levering daar "
-            "in zodra hij binnenkomt (ook met de handterminal).",
+            klaargezet_melding(bestellingen) + " Bestel nu bij de leverancier met het overzicht hieronder. Elke "
+            "bestelling staat ook als concept bij Factuur inboeken: scan de levering daar in zodra hij binnenkomt (ook "
+            "met de handterminal).",
             "success",
         )
-        return redirect(url_for("bestellijst"))
+        return redirect(url_for("besteloverzicht_pagina", id=[b["id"] for b in bestellingen], nieuw=1))
+
+    @app.route("/bestellijst/nalopen")
+    def bestellijst_nalopen():
+        """De bestellijst nalopen zoals op de handterminal: per product het aantal colli kiezen en afvinken (dat wordt
+        meteen bewaard, ook voor de handterminal, zie bestellijst_controleren), erbij zetten wat je nodig hebt (ook zonder
+        telling), en klaarzetten wat afgevinkt is: een bestelling per leverancier (bestelling_aanmaken). Daarna het
+        besteloverzicht. De prognose komt er na het laden bij (bestellijst_prognose)."""
+        db = get_db()
+        lijst = nalooplijst(db)
+        meldingen = bereken_bestellijst_meldingen(db)
+        alle = lijst["te_bestellen"] + lijst["overig"]
+        return render_template(
+            "bestellijst_nalopen.html",
+            te_bestellen=lijst["te_bestellen"],
+            overig=lijst["overig"],
+            leveranciers=sorted({r["leverancier"] for r in alle if r["leverancier"]}, key=str.lower),
+            zonder_leverancier=any(not r["leverancier"] for r in alle),
+            gemeld={m["product"]["id"]: m["aantal"] for m in meldingen["producten"]},
+            gemelde_teksten=[t["tekst"] for t in meldingen["teksten"]],
+        )
+
+    @app.route("/bestellijst/nalopen/controleren", methods=["POST"])
+    def bestellijst_controleren():
+        """{product_id, eenheden} (JSON): een product op Bestellijst nalopen afgevinkt, net als
+        api_app_bestellijst_controleren op de handterminal: zoveel colli (0 = niet bestellen), gecontroleerd. eenheden
+        null: weer het advies, niet meer afgevinkt. Het zet een stand, dus nog een keer hetzelfde mag gewoon."""
+        db = get_db()
+        data = request.get_json(silent=True) or {}
+        pid = data.get("product_id")
+        product = None
+        if isinstance(pid, int) and not isinstance(pid, bool):
+            product = db.execute("SELECT * FROM producten WHERE id = ?", (pid,)).fetchone()
+        if product is None:
+            return jsonify({"fout": "niet_gevonden", "melding": "Dit product bestaat niet (meer)."}), 404
+        if product["categorie"] == KEUKEN_CATEGORIE:
+            return jsonify({"fout": "keuken", "melding": KEUKEN_NIET_BESTELLEN}), 400
+        ruw = data.get("eenheden")
+        if ruw is not None and (isinstance(ruw, bool) or not isinstance(ruw, int)
+                                or not 0 <= ruw <= bestelvoorstel.MAX_EENHEDEN):
+            return jsonify({"fout": "aantal", "melding": "Geen geldig aantal."}), 400
+        naam = session.get("gebruiker_naam")
+        bestelvoorstel.zet_bestelaantal(db, pid, ruw, naam, session.get("gebruiker_id"), gecontroleerd=ruw is not None)
+        return jsonify({"product_id": pid, "gekozen": ruw, "gecontroleerd": ruw is not None,
+                        "door": naam if ruw is not None else None})
+
+    @app.route("/bestellingen/overzicht")
+    def besteloverzicht_pagina():
+        """Het besteloverzicht, zoals op de handterminal na het klaarzetten: wat je bij de leverancier bestelt (op zijn
+        website, in zijn app of aan de telefoon), per leverancier met het klantnummer en tot wanneer je bestelt, en per
+        product het artikelnummer en het aantal colli. ?id=12&id=13: die bestellingen (na het klaarzetten, met nieuw=1);
+        anders alles wat klaargezet en nog niet ingeboekt is."""
+        ids = request.args.getlist("id", type=int)
+        return render_template(
+            "besteloverzicht.html",
+            bestellingen=besteloverzicht(get_db(), ids),
+            nieuw=request.args.get("nieuw") == "1",
+            gekozen=bool(ids),
+        )
 
     @app.route("/bestellijst/nieuw", methods=["GET", "POST"])
     def bestelling_nieuw():

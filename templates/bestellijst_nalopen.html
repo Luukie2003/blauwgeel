@@ -1,0 +1,446 @@
+{% extends basis_template %}
+{# Bestellijst nalopen (2.8.0): de bestellijst van de handterminal op de site. Per product kies je met min en plus het
+   aantal colli; dat vinkt het af en wordt meteen bewaard (bestellijst_controleren), dus op de handterminal staat het ook
+   zo, en andersom. Klaarzetten neemt alleen wat afgevinkt is: een bestelling per leverancier (bestelling_aanmaken), en dan
+   het besteloverzicht om bij de leverancier te bestellen. Wat er op staat: bestellen.nalooplijst. #}
+{% from '_iconen.html' import icoon %}
+{% block titel %}Bestellijst nalopen{% endblock %}
+{% block venster_titel %}
+<a href="{{ url_for('bestellijst') }}" class="cs-terug">{{ icoon('terug') }} Bestellijst</a>
+<div class="cs-titel">
+    <h1>Bestellijst nalopen</h1>
+    <span class="cs-titel-tekst">Kies per product hoeveel colli en vink het af, zoals op de handterminal.</span>
+    <div class="cs-rechts">
+        <a href="{{ url_for('besteloverzicht_pagina') }}" class="btn btn-rand">Besteloverzicht</a>
+    </div>
+</div>
+{% endblock %}
+{% block inhoud %}
+{% macro regel(r, gemeld) %}
+<li class="cs-loopregel{{ ' gecontroleerd' if r.gecontroleerd else '' }}" data-id="{{ r.id }}" data-soort="{{ r.soort }}"
+    data-aantal="{{ r.aantal }}" data-standaard="{{ r.standaard }}" data-vast="{{ 1 if r.vast else 0 }}"
+    data-gecontroleerd="{{ 1 if r.gecontroleerd else 0 }}" data-door="{{ r.door or '' }}" data-factor="{{ r.factor }}"
+    data-colli="{{ r.colli }}" data-eenheid="{{ r.eenheid }}" data-naam="{{ r.naam }}" data-leverancier="{{ r.leverancier or '' }}"
+    data-zoek="{{ (r.naam ~ ' ' ~ (r.artikelcode or '') ~ ' ' ~ (r.leverancier or '') ~ ' ' ~ r.categorie)|lower }}">
+    <button type="button" class="cs-loopvink" aria-pressed="{{ 'true' if r.gecontroleerd else 'false' }}"><span class="visueel-verborgen">{{ r.naam }} afvinken</span></button>
+    <div class="cs-loopwat">
+        <strong>{{ r.naam }}{% if r.artikelcode %}<span class="cs-code">{{ r.artikelcode }}</span>{% endif %}</strong>
+        <small>
+            {%- if r.soort == 'manco' %}<span class="cs-oranje">{{ r.tekort }} {{ r.eenheid }} niet geleverd bij #{{ r.bestellingen|join(', #') }}</span> &middot; {% endif -%}
+            voorraad <span class="{{ 'cs-tekort' if r.voorraad < r.min_voorraad else '' }}">{{ r.voorraad }}</span> &middot; minimum {{ r.min_voorraad }} {{ r.eenheid }}
+            {%- if r.leverancier %} &middot; {{ r.leverancier }}{% endif -%}
+            {%- if gemeld.get(r.id) %} &middot; <span class="cs-oranje">{{ gemeld[r.id] }}&times; gemeld</span>{% endif -%}
+            <span class="cs-loopadvies"></span>
+        </small>
+        {% if r.onderweg %}<small class="cs-oranje">Staat al op bestelling #{{ r.onderweg|join(', #') }}</small>{% endif %}
+        <small class="cs-loopdoor">{% if r.gecontroleerd %}Afgevinkt{% if r.door %} door {{ r.door }}{% endif %}{% elif r.vast %}Zelf gekozen bij het product{% if r.door %} door {{ r.door }}{% endif %}{% endif %}</small>
+    </div>
+    <div class="cs-loopaantal">
+        <button type="button" class="btn btn-rand cs-loopmin" aria-label="Eén {{ r.colli }} minder {{ r.naam }}">&minus;</button>
+        <input type="number" class="cs-loopgetal" value="{{ r.aantal }}" min="0" max="999" inputmode="numeric" aria-label="Aantal {{ r.colli }} {{ r.naam }}">
+        <button type="button" class="btn btn-rand cs-loopplus" aria-label="Eén {{ r.colli }} meer {{ r.naam }}">+</button>
+        <span class="cs-loopcolli">{{ r.colli }}<small></small></span>
+    </div>
+</li>
+{% endmacro %}
+
+<div class="cs-melding info">
+    {{ icoon('vink') }}
+    <div class="cs-melding-tekst">
+        <strong>Loop de lijst na, ook zonder telling.</strong>
+        <p>Klopt het voorstel, vink het dan af. Wil je meer of minder, kies dan met min en plus; dat vinkt het meteen af.
+            Op 0 bestel je het niet. Wat er niet bij staat, zet je erbij onder Erbij zetten. Alles wordt meteen bewaard en
+            staat zo ook op de handterminal. Klaarzetten neemt alleen wat afgevinkt is.</p>
+    </div>
+</div>
+
+{% if gemelde_teksten %}
+<div class="cs-melding let-op">
+    {{ icoon('let-op') }}
+    <div class="cs-melding-tekst">Ook gemeld (geen product uit het assortiment): {{ gemelde_teksten|join(', ') }}.
+        <a href="{{ url_for('bestellijst') }}">Afhandelen op de bestellijst</a>.</div>
+</div>
+{% endif %}
+
+<section class="cs-paneel" id="te-bestellen">
+    <div class="cs-paneel-kop">
+        <h2>Te bestellen</h2>
+        <span class="cs-aantal">{{ te_bestellen|length }}</span>
+        <span class="cs-zacht" id="prognose-status">{% if te_bestellen %}De prognose wordt berekend&hellip;{% endif %}</span>
+    </div>
+    {% if te_bestellen %}
+    <ul class="cs-looplijst">{% for r in te_bestellen %}{{ regel(r, gemeld) }}{% endfor %}</ul>
+    {% else %}
+    <p class="cs-leeg">Niets onder het minimum. Zet hieronder erbij wat je wilt bestellen.</p>
+    {% endif %}
+</section>
+
+<section class="cs-paneel" id="kan-opraken" hidden>
+    <div class="cs-paneel-kop">
+        <h2>Kan opraken</h2>
+        <span class="cs-zacht">Nog boven het minimum, maar volgens de prognose misschien op voor de levering na deze bestelling.</span>
+    </div>
+    <ul class="cs-looplijst"></ul>
+</section>
+
+<section class="cs-paneel" id="erbij">
+    <div class="cs-paneel-kop">
+        <h2>Erbij zetten</h2>
+        <span class="cs-aantal">{{ overig|length }} producten</span>
+        <div class="cs-rechts">
+            <label class="cs-vink"><input type="checkbox" id="nalopen-alleen-af"> Alleen afgevinkt</label>
+            {% if leveranciers %}
+            <select id="nalopen-leverancier" aria-label="Alleen de producten van een leverancier">
+                <option value="">Alle leveranciers</option>
+                {% for l in leveranciers %}<option value="{{ l }}">{{ l }}</option>{% endfor %}
+                {% if zonder_leverancier %}<option value="-">Zonder leverancier</option>{% endif %}
+            </select>
+            {% endif %}
+            <label class="cs-zoek">{{ icoon('zoeken') }}<input type="search" id="nalopen-zoek" placeholder="Zoek of scan een product"
+                   autocomplete="off" aria-label="Product zoeken of een barcode scannen"></label>
+        </div>
+    </div>
+    <p class="cs-paneel-tekst cs-zacht">Wat je weet dat op raakt: kies met plus hoeveel colli. Zoek op naam, artikelnummer
+        of leverancier; Enter (of een scan met de handscanner) zet er één colli bij.</p>
+    {% if overig %}
+    <ul class="cs-looplijst" id="overig-lijst">
+        {% for categorie, rijen in overig|groupby('categorie') %}
+        <li class="cs-loopgroep" data-groep>{{ categorie or 'Zonder categorie' }}</li>
+        {% for r in rijen %}{{ regel(r, gemeld) }}{% endfor %}
+        {% endfor %}
+    </ul>
+    <p class="cs-leeg" id="overig-leeg" hidden>Geen product gevonden.</p>
+    {% else %}
+    <p class="cs-leeg">Alle producten staan al bij Te bestellen.</p>
+    {% endif %}
+</section>
+
+<form method="post" action="{{ url_for('bestelling_aanmaken') }}" id="klaarzet-formulier" class="cs-verzendbalk">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="van" value="nalopen">
+    <span id="klaarzet-stand"></span>
+    <span id="klaarzet-per-leverancier" class="cs-verberg-smal"></span>
+    <button type="submit" class="btn btn-geel">Klaarzetten</button>
+</form>
+
+<script>
+(function () {
+    var token = {{ csrf_token()|tojson }};
+    var controleUrl = {{ url_for('bestellijst_controleren')|tojson }};
+    var zoekUrl = {{ url_for('bestellijst_zoek')|tojson }};
+    var prognoseUrl = {{ url_for('bestellijst_prognose')|tojson }};
+    var regels = Array.prototype.slice.call(document.querySelectorAll('.cs-loopregel'));
+    var formulier = document.getElementById('klaarzet-formulier');
+    var stand = document.getElementById('klaarzet-stand');
+    var perLeverancier = document.getElementById('klaarzet-per-leverancier');
+    var overigLijst = document.getElementById('overig-lijst');
+    var zoek = document.getElementById('nalopen-zoek');
+    var levKeuze = document.getElementById('nalopen-leverancier');
+    var alleenAf = document.getElementById('nalopen-alleen-af');
+    var onderweg = 0;  // verzoeken die nog niet terug zijn
+
+    function getal(x) { var n = parseInt(x, 10); return isNaN(n) ? 0 : n; }
+    function melding(tekst) { if (window.toonToast) window.toonToast(tekst); }
+    function procent(kans) { return kans > 0.99 ? '> 99%' : Math.round(kans * 100) + '%'; }
+    // Telt mee bij "x van y afgevinkt": wat te bestellen is, en wat je erbij afvinkte (zoals op de handterminal).
+    function telt(s) { return s.soort === 'laag' || s.soort === 'manco' || s.soort === 'gekozen' || s.gecontroleerd; }
+
+    function toon(li) {
+        var s = li._s;
+        li.classList.toggle('gecontroleerd', s.gecontroleerd);
+        li.classList.toggle('niet', s.gecontroleerd && s.n === 0);
+        var vink = li.querySelector('.cs-loopvink');
+        vink.setAttribute('aria-pressed', s.gecontroleerd ? 'true' : 'false');
+        vink.title = s.gecontroleerd ? 'Afgevinkt. Klik om het weer open te zetten (terug naar het voorstel).'
+                                     : 'Afvinken: zo bestellen';
+        var invoer = li.querySelector('.cs-loopgetal');
+        if (document.activeElement !== invoer) invoer.value = String(s.n);
+        li.querySelector('.cs-loopmin').disabled = s.n <= 0;
+        li.querySelector('.cs-loopcolli small').textContent = s.gecontroleerd && s.n === 0 ? 'niet bestellen'
+            : (s.factor > 1 && s.n > 0 ? '= ' + s.n * s.factor + ' ' + s.eenheid : '');
+        li.querySelector('.cs-loopdoor').textContent = s.gecontroleerd ? 'Afgevinkt' + (s.door ? ' door ' + s.door : '')
+            : (s.vast ? li.querySelector('.cs-loopdoor').textContent : '');
+    }
+
+    function werkBalkBij() {
+        var tellen = 0, af = 0, mee = {};
+        regels.forEach(function (li) {
+            var s = li._s;
+            if (telt(s)) { tellen++; if (s.gecontroleerd) af++; }
+            if (s.gecontroleerd && s.n > 0) { var l = s.leverancier || 'zonder leverancier'; mee[l] = (mee[l] || 0) + 1; }
+        });
+        stand.innerHTML = '';
+        var sterk = document.createElement('strong');
+        sterk.textContent = String(af);
+        stand.appendChild(sterk);
+        stand.appendChild(document.createTextNode(' van ' + tellen + ' afgevinkt'));
+        var namen = Object.keys(mee).sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; });
+        perLeverancier.textContent = namen.length ? 'Klaar: ' + namen.map(function (l) {
+            return l + ' ' + mee[l] + (mee[l] === 1 ? ' product' : ' producten');
+        }).join(', ') : '';
+        formulier.classList.toggle('leeg', !namen.length);
+    }
+
+    // Bewaren op de site, net als Bevestigen op de handterminal: een aantal (ook 0) is afgevinkt, null is weer het voorstel.
+    function bewaar(li, eenheden) {
+        var s = li._s;
+        clearTimeout(s.timer);
+        s.timer = null;
+        var volg = s.volg = (s.volg || 0) + 1;
+        onderweg++;
+        li.classList.add('bezig');
+        fetch(controleUrl, {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+            body: JSON.stringify({ product_id: s.id, eenheden: eenheden })
+        }).then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (data) {
+                if (!r.ok || data.product_id === undefined) { var fout = new Error('opslaan'); fout.melding = data.melding; throw fout; }
+                return data;
+            });
+        }).then(function (data) {
+            if (s.volg !== volg) return;  // er is al een nieuwere stand onderweg
+            li.classList.remove('bezig', 'fout');
+            s.door = data.door;
+            toon(li);
+        }).catch(function (e) {
+            if (s.volg !== volg) return;
+            li.classList.remove('bezig');
+            li.classList.add('fout');
+            s.gecontroleerd = false;
+            toon(li);
+            werkBalkBij();
+            melding((e && e.melding) || 'Opslaan lukte niet. Ververs de pagina en probeer het nog eens.');
+        }).then(function () { onderweg--; });
+    }
+    function bewaarStraks(li) {
+        var s = li._s;
+        clearTimeout(s.timer);
+        s.timer = setTimeout(function () { bewaar(li, s.n); }, 350);
+    }
+
+    // Een aantal kiezen (min, plus, typen of een scan) vinkt het af.
+    function zet(li, n) {
+        var s = li._s;
+        s.n = Math.max(0, Math.min(999, n));
+        s.gecontroleerd = true;
+        s.vast = true;
+        li.classList.remove('fout');
+        toon(li);
+        werkBalkBij();
+        bewaarStraks(li);
+    }
+
+    function vinkAan(li) {
+        var s = li._s;
+        if (s.gecontroleerd) {  // weer open: terug naar het voorstel
+            s.gecontroleerd = false;
+            s.vast = false;
+            s.n = s.standaard;
+            toon(li);
+            werkBalkBij();
+            bewaar(li, null);
+            return;
+        }
+        if (s.n === 0 && (s.soort === 'overig' || s.soort === 'gekozen')) {
+            melding('Kies eerst met plus hoeveel ' + s.colli + ' je van ' + s.naam + ' wilt bestellen.');
+            return;
+        }
+        s.gecontroleerd = true;
+        s.vast = true;
+        li.classList.remove('fout');
+        toon(li);
+        werkBalkBij();
+        bewaar(li, s.n);
+    }
+
+    regels.forEach(function (li) {
+        var d = li.dataset;
+        li._s = {
+            id: getal(d.id), soort: d.soort, n: getal(d.aantal), standaard: getal(d.standaard), vast: d.vast === '1',
+            gecontroleerd: d.gecontroleerd === '1', door: d.door || null, factor: getal(d.factor) || 1, colli: d.colli,
+            eenheid: d.eenheid, naam: d.naam, leverancier: d.leverancier || ''
+        };
+        var invoer = li.querySelector('.cs-loopgetal');
+        li.querySelector('.cs-loopvink').addEventListener('click', function () { vinkAan(li); });
+        li.querySelector('.cs-loopmin').addEventListener('click', function () { zet(li, li._s.n - 1); });
+        li.querySelector('.cs-loopplus').addEventListener('click', function () { zet(li, li._s.n + 1); });
+        invoer.addEventListener('change', function () { zet(li, getal(invoer.value)); });
+        invoer.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); invoer.blur(); } });
+        invoer.addEventListener('blur', function () { invoer.value = String(li._s.n); });
+        toon(li);
+    });
+    werkBalkBij();
+
+    // Zoeken en filteren bij Erbij zetten.
+    function filter() {
+        if (!overigLijst) return;
+        var woorden = zoek.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        var lev = levKeuze ? levKeuze.value : '';
+        var zichtbaar = 0, kop = null, kopZichtbaar = false;
+        Array.prototype.forEach.call(overigLijst.children, function (li) {
+            if (li.hasAttribute('data-groep')) {
+                if (kop) kop.hidden = !kopZichtbaar;
+                kop = li;
+                kopZichtbaar = false;
+                return;
+            }
+            var s = li._s;
+            var toonHem = woorden.every(function (w) { return li.dataset.zoek.indexOf(w) !== -1; }) &&
+                (!lev || (lev === '-' ? !s.leverancier : s.leverancier === lev)) &&
+                (!alleenAf.checked || s.gecontroleerd);
+            li.hidden = !toonHem;
+            if (toonHem) { zichtbaar++; kopZichtbaar = true; }
+        });
+        if (kop) kop.hidden = !kopZichtbaar;
+        document.getElementById('overig-leeg').hidden = zichtbaar > 0;
+    }
+    function zichtbareRegels() {
+        return Array.prototype.filter.call(overigLijst ? overigLijst.children : [], function (li) {
+            return !li.hidden && !li.hasAttribute('data-groep');
+        });
+    }
+    // Een scan of Enter: zoals op de handterminal één colli meer (of het voorstel, afgevinkt), en het product in beeld.
+    function gescand(li) {
+        var s = li._s;
+        zet(li, s.gecontroleerd ? s.n + 1 : Math.max(s.n, 1));
+        li.hidden = false;
+        li.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        li.classList.add('net-gezet');
+        setTimeout(function () { li.classList.remove('net-gezet'); }, 1600);
+        melding(s.naam + ': ' + s.n + ' ' + s.colli + '.');
+    }
+    if (zoek) {
+        zoek.addEventListener('input', filter);
+        if (levKeuze) levKeuze.addEventListener('change', filter);
+        alleenAf.addEventListener('change', filter);
+        zoek.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            var q = zoek.value.trim();
+            if (!q) return;
+            var lijst = zichtbareRegels();
+            if (lijst.length === 1 && !/^\d{6,}$/.test(q)) {
+                zoek.value = '';
+                filter();
+                gescand(lijst[0]);
+                return;
+            }
+            fetch(zoekUrl + '?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+                .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+                .then(function (data) {
+                    if (data.producten.length !== 1) {
+                        melding(data.melding || (data.producten.length ? 'Meer producten gevonden: kies er een uit de lijst.' : 'Niets gevonden.'));
+                        return;
+                    }
+                    var p = data.producten[0];
+                    var li = document.querySelector('.cs-loopregel[data-id="' + p.id + '"]');
+                    if (!li) { melding(p.naam + ' staat niet op deze lijst: het hoort bij de keuken of staat niet op actief.'); return; }
+                    zoek.value = '';
+                    filter();
+                    gescand(li);
+                })
+                .catch(function () { melding('Zoeken lukte niet. Probeer het nog eens.'); });
+        });
+    }
+
+    // Klaarzetten: alleen wat afgevinkt is en niet op 0 staat, een bestelling per leverancier. Eerst wachten tot alles
+    // bewaard is, anders komt een late stand na het klaarzetten nog binnen.
+    function alsAllesBewaard(verder, pogingen) {
+        regels.forEach(function (li) { if (li._s.timer) bewaar(li, li._s.n); });
+        if (onderweg <= 0 || (pogingen || 0) > 50) { verder(); return; }
+        setTimeout(function () { alsAllesBewaard(verder, (pogingen || 0) + 1); }, 100);
+    }
+    formulier.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var mee = regels.filter(function (li) { return li._s.gecontroleerd && li._s.n > 0; });
+        if (!mee.length) { melding('Vink eerst af wat je wilt bestellen.'); return; }
+        var open = regels.filter(function (li) { return telt(li._s) && !li._s.gecontroleerd; });
+        var groepen = {};
+        mee.forEach(function (li) { var l = li._s.leverancier; (groepen[l] = groepen[l] || []).push(li._s); });
+        var namen = Object.keys(groepen).sort(function (a, b) {
+            if (!a) return 1;
+            if (!b) return -1;
+            return a.toLowerCase() < b.toLowerCase() ? -1 : 1;
+        });
+        var tekst = (namen.length > 1 ? namen.length + ' bestellingen klaarzetten, een per leverancier?' : 'Bestelling klaarzetten?') +
+            '\n\n' + namen.map(function (l) {
+                return (l || 'Zonder leverancier') + ':\n' + groepen[l].map(function (s) { return s.n + ' ' + s.colli + ' ' + s.naam; }).join('\n');
+            }).join('\n\n');
+        if (open.length) {
+            tekst += '\n\nNog niet afgevinkt, dat gaat niet mee: ' + open.map(function (li) { return li._s.naam; }).join(', ') + '.';
+        }
+        window.toonBevestiging(tekst, function () {
+            alsAllesBewaard(function () {
+                Array.prototype.forEach.call(formulier.querySelectorAll('input[data-regel]'), function (x) { x.remove(); });
+                mee.forEach(function (li) {
+                    [['product_id', li._s.id], ['aantal_' + li._s.id, li._s.n]].forEach(function (veld) {
+                        var x = document.createElement('input');
+                        x.type = 'hidden';
+                        x.name = veld[0];
+                        x.value = String(veld[1]);
+                        x.setAttribute('data-regel', '');
+                        formulier.appendChild(x);
+                    });
+                });
+                formulier.submit();
+            });
+        }, { ja: 'Klaarzetten' });
+    });
+
+    // De prognose (bestellijst_prognose) rekent soms enkele seconden, dus na het laden: het advies bij elk product, een
+    // hoger voorstel als de komende periode meer vraagt, en wat kan opraken.
+    var status = document.getElementById('prognose-status');
+    function zetAdvies(li, p, opraken) {
+        var s = li._s, delen = [];
+        if (opraken && p.kans_tekort) delen.push('kans op tekort ' + procent(p.kans_tekort));
+        if (p.verwacht) delen.push('verwacht ~' + p.verwacht + ' ' + s.eenheid + (p.dagen ? ' in ' + p.dagen + ' dagen' : ''));
+        if (p.advies_eenheden !== undefined) delen.push('advies ' + p.advies_eenheden + ' ' + s.colli);
+        li.querySelector('.cs-loopadvies').textContent = delen.length ? ' · ' + delen.join(' · ') : '';
+    }
+    fetch(prognoseUrl, { credentials: 'same-origin' })
+        .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+        .then(function (data) {
+            if (!data.beschikbaar) {
+                status.textContent = regels.some(function (li) { return li._s.soort === 'laag'; })
+                    ? 'Nog geen prognose: het voorstel gaat uit van het minimum.' : '';
+                return;
+            }
+            var verhoogd = 0, erbij = 0, metAdvies = 0;
+            regels.forEach(function (li) {
+                var s = li._s, p = data.producten[s.id];
+                if (!p) return;
+                metAdvies++;
+                zetAdvies(li, p, false);
+                if (s.soort !== 'laag') return;
+                if (p.advies_eenheden > s.standaard) s.standaard = p.advies_eenheden;
+                if (!s.vast && !s.gecontroleerd && s.standaard > s.n) { s.n = s.standaard; verhoogd++; toon(li); }
+            });
+            var opraken = document.getElementById('kan-opraken');
+            (data.extra || []).forEach(function (p) {
+                var li = overigLijst && overigLijst.querySelector('.cs-loopregel[data-id="' + p.id + '"]');
+                if (!li) return;
+                var s = li._s;
+                s.soort = 'opraken';
+                s.standaard = p.advies_eenheden;
+                if (!s.gecontroleerd) s.n = p.advies_eenheden;
+                zetAdvies(li, p, true);
+                li.hidden = false;
+                opraken.querySelector('ul').appendChild(li);
+                toon(li);
+                erbij++;
+            });
+            if (erbij) { opraken.hidden = false; filter(); }
+            werkBalkBij();
+            var zinnen = [];
+            if (verhoogd) zinnen.push(verhoogd + (verhoogd === 1 ? ' voorstel is' : ' voorstellen zijn') + ' verhoogd: de komende periode vraagt meer dan het minimum.');
+            if (erbij) zinnen.push(erbij + (erbij === 1 ? ' product kan' : ' producten kunnen') + ' opraken; die staan onder Kan opraken.');
+            var laag = regels.some(function (li) { return li._s.soort === 'laag'; });
+            if (zinnen.length) status.textContent = zinnen.join(' ');
+            else if (laag && !metAdvies) status.textContent = 'Nog geen prognose voor deze producten: het voorstel gaat uit van het minimum.';
+            else status.textContent = laag ? 'Volgens de prognose is het voorstel genoeg tot de levering daarna.' : '';
+        })
+        .catch(function () { status.textContent = 'De prognose kon niet worden geladen; het voorstel gaat uit van het minimum.'; });
+})();
+</script>
+{% endblock %}

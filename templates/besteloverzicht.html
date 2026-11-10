@@ -1,0 +1,149 @@
+{% extends basis_template %}
+{# Het besteloverzicht (2.8.0), zoals op de handterminal na het klaarzetten: per leverancier wat je in zijn webshop (of
+   aan de telefoon) bestelt, met het klantnummer, tot wanneer je bestelt, en per product het artikelnummer en het aantal
+   colli. Afvinken wat je hebt ingevuld onthoudt alleen deze browser. Zie bestellen.besteloverzicht. #}
+{% from '_iconen.html' import icoon %}
+{% block titel %}Besteloverzicht{% endblock %}
+{% block venster_titel %}
+<a href="{{ url_for('bestellijst') }}" class="cs-terug">{{ icoon('terug') }} Bestellijst</a>
+<div class="cs-titel">
+    <h1>Besteloverzicht</h1>
+    <span class="cs-titel-tekst">{% if gekozen %}{{ bestellingen|length }} {{ 'bestelling' if bestellingen|length == 1 else 'bestellingen' }}{% else %}Alles wat klaargezet is en nog niet binnen{% endif %}</span>
+    <div class="cs-rechts">
+        {% if gekozen %}<a href="{{ url_for('besteloverzicht_pagina') }}" class="btn btn-rand">Alle klaargezette bestellingen</a>{% endif %}
+        <a href="{{ url_for('bestellijst_nalopen') }}" class="btn btn-rand">Bestellijst nalopen</a>
+    </div>
+</div>
+{% endblock %}
+{% block inhoud %}
+{% if nieuw and bestellingen %}
+<div class="cs-melding info">
+    {{ icoon('vink') }}
+    <div class="cs-melding-tekst">
+        <strong>Nu bij de leverancier bestellen.</strong>
+        <p>Zoek per regel het artikelnummer op in de webshop (met de knop kopieer je het) en vul het aantal colli in, of
+            geef de lijst door aan de telefoon. Vink af wat je hebt ingevuld; dat onthoudt deze browser.</p>
+    </div>
+</div>
+{% endif %}
+
+{% for b in bestellingen %}
+{% set best = b.bestelling %}
+{% set lev = b.leverancier %}
+<section class="cs-paneel cs-besteloverzicht" data-bestelling="{{ best.id }}">
+    <div class="cs-paneel-kop">
+        <h2>{{ lev.naam if lev else 'Zonder leverancier' }}</h2>
+        <span class="cs-aantal">Bestelling #{{ best.id }}{% if best.referentie %} &middot; {{ best.referentie }}{% endif %}</span>
+        {% if best.status == 'ontvangen' %}<span class="cs-punt cs-groen">Ingeboekt</span>{% endif %}
+        <div class="cs-rechts"><span class="cs-zacht" data-ingevuld-stand></span></div>
+    </div>
+    {% if lev and (lev.klantnummer or b.uiterst or b.website or lev.bestelwijze or lev.telefoon) %}
+    <dl class="cs-bestelgegevens">
+        {% if lev.klantnummer %}<div><dt>Klantnummer</dt><dd><strong>{{ lev.klantnummer }}</strong>
+            <button type="button" class="cs-tekstknop" data-kopieer-tekst="{{ lev.klantnummer }}" aria-label="Klantnummer kopiëren">kopiëren</button></dd></div>{% endif %}
+        {% if b.uiterst %}<div><dt>Uiterlijk bestellen</dt><dd>{{ b.uiterst }}</dd></div>{% endif %}
+        {% if b.website %}<div><dt>Webshop</dt><dd><a href="{{ b.website }}" target="_blank" rel="noopener">{{ lev.website }}</a></dd></div>{% endif %}
+        {% if lev.bestelwijze %}<div><dt>Zo bestel je</dt><dd>{{ lev.bestelwijze }}</dd></div>{% endif %}
+        {% if lev.telefoon %}<div><dt>Telefoon</dt><dd><a href="tel:{{ lev.telefoon|replace(' ', '') }}">{{ lev.telefoon }}</a></dd></div>{% endif %}
+    </dl>
+    {% endif %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th class="cs-vinkkolom"><span class="visueel-verborgen">Ingevuld</span></th><th>Artikelnummer</th><th>Product</th><th>Bestellen</th></tr></thead>
+            <tbody>
+                {% for r in b.regels %}
+                <tr data-regel="{{ r.product_id }}">
+                    <td class="cs-vinkkolom"><input type="checkbox" class="cs-ingevuld" aria-label="{{ r.naam }} ingevuld"></td>
+                    <td class="cs-nowrap">{% if r.artikelcode %}<span class="cs-artikelnummer">{{ r.artikelcode }}</span>
+                        <button type="button" class="cs-tekstknop" data-kopieer-tekst="{{ r.artikelcode }}" aria-label="Artikelnummer {{ r.artikelcode }} kopiëren">kopiëren</button>{% else %}<span class="cs-grijs">geen</span>{% endif %}</td>
+                    <td><strong>{{ r.naam }}</strong>{% if r.factor > 1 %}<div class="cs-zacht">{{ r.stuks }} {{ r.eenheid }}</div>{% endif %}</td>
+                    <td class="cs-nowrap"><span class="cs-colli-getal">{{ r.eenheden }}</span> {{ r.besteleenheid }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="cs-paneel-voet">
+        <textarea id="bestel-tekst-{{ best.id }}" class="visueel-verborgen" readonly tabindex="-1" aria-hidden="true">{{ b.tekst }}</textarea>
+        <button type="button" class="btn btn-rand" data-kopieer="bestel-tekst-{{ best.id }}">Tekst kopiëren</button>
+        <a href="{{ url_for('bestelling_pdf_route', bestelling_id=best.id) }}" class="btn btn-rand">PDF</a>
+        {% if best.status == 'besteld' %}
+        <a href="{{ url_for('bestelling_bewerken', bestelling_id=best.id) }}" class="btn btn-rand">Bewerken</a>
+        <div class="cs-rechts">
+            <span class="cs-zacht cs-verberg-smal">Komt de levering binnen?</span>
+            <a href="{{ url_for('factuur_voor_bestelling', bestelling_id=best.id) }}" class="btn btn-geel">Levering inboeken</a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% else %}
+<section class="cs-paneel">
+    <p class="cs-leeg">{% if gekozen %}Deze bestelling bestaat niet meer.{% else %}Er staat geen bestelling klaar.{% endif %}
+        <a href="{{ url_for('bestellijst_nalopen') }}">Loop de bestellijst na</a> en zet klaar wat je wilt bestellen.</p>
+</section>
+{% endfor %}
+
+<script>
+(function () {
+    // Kopiëren: een artikelnummer, het klantnummer of de hele bestelling als tekst.
+    function kopieer(tekst, knop, terug) {
+        var klaar = function () {
+            knop.textContent = 'gekopieerd ✓';
+            setTimeout(function () { knop.textContent = terug; }, 1800);
+        };
+        var oudeManier = function () {
+            var veld = document.createElement('textarea');
+            veld.value = tekst;
+            veld.setAttribute('readonly', '');
+            veld.style.position = 'fixed';
+            veld.style.opacity = '0';
+            document.body.appendChild(veld);
+            veld.select();
+            try { document.execCommand('copy'); } catch (e) { /* dan in elk geval geselecteerd */ }
+            veld.remove();
+            klaar();
+        };
+        if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(tekst).then(klaar, oudeManier);
+        else oudeManier();
+    }
+    document.querySelectorAll('[data-kopieer-tekst]').forEach(function (knop) {
+        var terug = knop.textContent;
+        knop.addEventListener('click', function () { kopieer(knop.dataset.kopieerTekst, knop, terug); });
+    });
+    document.querySelectorAll('[data-kopieer]').forEach(function (knop) {
+        var terug = knop.textContent;
+        knop.addEventListener('click', function () { kopieer(document.getElementById(knop.dataset.kopieer).value, knop, terug); });
+    });
+
+    // Afvinken wat je in de webshop hebt ingevuld: alleen in deze browser (localStorage), per bestelling.
+    function lees(sleutel) {
+        try { return JSON.parse(window.localStorage.getItem(sleutel) || '[]'); } catch (e) { return []; }
+    }
+    function schrijf(sleutel, waarde) {
+        try { window.localStorage.setItem(sleutel, JSON.stringify(waarde)); } catch (e) { /* dan alleen tot je de pagina sluit */ }
+    }
+    document.querySelectorAll('.cs-besteloverzicht').forEach(function (paneel) {
+        var sleutel = 'besteloverzicht-' + paneel.dataset.bestelling;
+        var vakjes = Array.prototype.slice.call(paneel.querySelectorAll('.cs-ingevuld'));
+        var standVeld = paneel.querySelector('[data-ingevuld-stand]');
+        var ingevuld = lees(sleutel);
+        function werkBij() {
+            var n = 0;
+            vakjes.forEach(function (v) {
+                v.closest('tr').classList.toggle('ingevuld', v.checked);
+                if (v.checked) n++;
+            });
+            standVeld.textContent = n ? n + ' van ' + vakjes.length + ' ingevuld' : '';
+        }
+        vakjes.forEach(function (v) {
+            v.checked = ingevuld.indexOf(v.closest('tr').dataset.regel) !== -1;
+            v.addEventListener('change', function () {
+                schrijf(sleutel, vakjes.filter(function (x) { return x.checked; }).map(function (x) { return x.closest('tr').dataset.regel; }));
+                werkBij();
+            });
+        });
+        werkBij();
+    });
+})();
+</script>
+{% endblock %}

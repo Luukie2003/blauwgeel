@@ -7,6 +7,8 @@
     <div class="cs-rechts">
         {% if suggesties %}<a href="{{ url_for('bestellijst_pdf_route') }}" class="btn btn-rand">Bestellijst (PDF)</a>{% endif %}
         <a href="{{ url_for('bestelling_nieuw') }}" class="btn btn-rand">Al besteld? Bestelling klaarzetten</a>
+        {# Zoals op de handterminal: per product de colli kiezen en afvinken, dan het besteloverzicht (2.8.0). #}
+        <a href="{{ url_for('bestellijst_nalopen') }}" class="btn btn-geel">Nalopen en klaarzetten</a>
     </div>
 </div>
 {% endblock %}
@@ -27,7 +29,8 @@
 
 <div class="kaart">
     <h2>Openstaande bestellingen</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">Klaargezet en onderweg. Elke bestelling staat als concept bij Factuur inboeken: komt de levering binnen, scan hem dan in (ook met de handterminal) en je ziet per product wat er besteld is en wat er al binnen is.</p>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Klaargezet en onderweg. Elke bestelling staat als concept bij Factuur inboeken: komt de levering binnen, scan hem dan in (ook met de handterminal) en je ziet per product wat er besteld is en wat er al binnen is.
+        {% if open_bestellingen and not pda_modus %}Wat je bij de leverancier invult, met de artikelnummers, staat in het <a href="{{ url_for('besteloverzicht_pagina') }}">besteloverzicht</a>.{% endif %}</p>
     {% if open_bestellingen %}
     {% for b, regels in open_bestellingen %}
     <div style="border:1px solid var(--rand); border-radius:8px; padding:0.9rem; margin-bottom:0.9rem;">
@@ -46,7 +49,9 @@
                     Bewerken
                 </a>
                 {% if not pda_modus %}
-                {# Voor de leverancier: de lijst als pdf, of als tekst om in een mail of WhatsApp te plakken. #}
+                {# Voor de leverancier: het overzicht met de artikelnummers, de lijst als pdf, of als tekst om in een mail of
+                   WhatsApp te plakken. #}
+                <a href="{{ url_for('besteloverzicht_pagina', id=b.id) }}" class="btn btn-rand btn-klein">Besteloverzicht</a>
                 <a href="{{ url_for('bestelling_pdf_route', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">PDF voor de leverancier</a>
                 <button type="button" class="btn btn-rand btn-klein" data-kopieer="bestel-tekst-{{ b.id }}">Tekst kopiëren</button>
                 <textarea id="bestel-tekst-{{ b.id }}" class="visueel-verborgen" readonly tabindex="-1" aria-hidden="true">{{ bestel_teksten[b.id] }}</textarea>
@@ -126,6 +131,7 @@
 <div class="kaart">
     <h2>Voorgesteld om te bestellen</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Liever product voor product, zoals op de handterminal? <a href="{{ url_for('bestellijst_nalopen') }}">Loop de bestellijst na</a>.
         Wat onder het minimum zit, en wat volgens de prognose waarschijnlijk opraakt vóór de levering ná deze bestelling
         (per leverancier, uit de besteldagen; anders de komende 7 dagen). Thuiswedstrijden, trainingsavonden en het weer
         tellen mee. Vraagt die periode meer dan het minimum, dan staat het aantal al hoger. Wat je bij een product zelf

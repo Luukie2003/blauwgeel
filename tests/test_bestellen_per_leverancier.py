@@ -54,7 +54,11 @@ def test_klaarzetten_maakt_een_bestelling_per_leverancier(ingelogde_client, db):
     ).fetchall()
     assert [(r["naam"], r["regels"]) for r in rijen] == [("Makro", 1), ("Sligro", 2), (None, 1)]
     sligro_bestelling = rijen[1]["id"]
-    assert f"Bestelling #{sligro_bestelling}</strong> bij <strong>Sligro" in pagina and "PDF voor de leverancier" in pagina
+    # Na het klaarzetten het besteloverzicht (2.8.0): per leverancier, met het klantnummer en de artikelnummers.
+    assert resp.request.path == "/bestellingen/overzicht" and "<h2>Sligro</h2>" in pagina
+    assert f"Bestelling #{sligro_bestelling}" in pagina and "123456" in pagina and f"A{cola}" in pagina
+    bestellijst = ingelogde_client.get("/bestellijst").data.decode()
+    assert f"Bestelling #{sligro_bestelling}</strong> bij <strong>Sligro" in bestellijst and "PDF voor de leverancier" in bestellijst
 
     # De tekst om door te sturen, en de pdf.
     tekst = bestel_tekst(bestelling_gegevens(db, sligro_bestelling))

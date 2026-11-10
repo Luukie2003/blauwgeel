@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.7.1"
+HUIDIGE_VERSIE = "2.8.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.8.0",
+        "datum": "11 november 2026",
+        "punten": [
+            "Nieuw: de bestellijst nalopen op de computer, net als op de handterminal (Bestellijst > Nalopen en klaarzetten). Per product kies je met min en plus hoeveel kratten, dozen of trays, en dat vinkt het af; klopt het voorstel, dan tik je alleen op het rondje. Wat je afvinkt, wordt meteen bewaard en staat zo ook op de handterminal, en andersom.",
+            "Geen telling gedaan? Onder Erbij zetten staat het hele assortiment (zonder de keuken), te zoeken op naam, artikelnummer of leverancier, of door een barcode te scannen. Zo zet je erbij wat je weet dat op raakt. Klaarzetten neemt alleen wat afgevinkt is, een bestelling per leverancier, en zet elke bestelling als concept bij Factuur inboeken.",
+            "Na het klaarzetten opent het besteloverzicht: per leverancier je klantnummer, tot wanneer je moet bestellen en een link naar de webshop, en per product het artikelnummer (met één klik te kopiëren) en het aantal colli. Vink af wat je in de webshop hebt ingevuld. Bij elke openstaande bestelling vind je het overzicht terug, ook als je klaarzet bij Voorgesteld om te bestellen.",
+        ],
+    },
     {
         "versie": "2.7.1",
         "datum": "10 november 2026",
@@ -1450,8 +1459,8 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.17.0", "sinds": "0.1.0", "laatst": "2.1.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.21.0", "sinds": "0.4.0", "laatst": "2.7.0",
-     "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
+    {"naam": "Bestellen & prognose", "versie": "1.22.0", "sinds": "0.4.0", "laatst": "2.8.0",
+     "inhoud": "Bestellijst met de prognose erin (ook per leverancier), de bestellijst nalopen met vinkjes (ook op de computer) en het besteloverzicht voor de webshop, leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.16.1", "sinds": "0.1.0", "laatst": "1.72.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
     {"naam": "Geld (kassa & kluis)", "versie": "1.5.0", "sinds": "1.0.0", "laatst": "2.7.0",
