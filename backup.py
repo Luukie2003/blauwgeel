@@ -31,6 +31,7 @@ from pathlib import Path
 import mail
 import onderhoud
 import opslag
+import taakstatus
 
 BASE_DIR = Path(__file__).parent
 BRON = BASE_DIR / "voorraad.db"
@@ -330,7 +331,8 @@ def meet_opslag():
 
 
 def dagelijkse_taak(argv=()):
-    """Wat de PythonAnywhere-taak elke dag doet. Geeft de exitcode terug (0 = goed)."""
+    """Wat de PythonAnywhere-taak elke dag doet. Geeft de exitcode terug (0 = goed). De uitkomst komt ook in de
+    systeemstatus (taakstatus.py)."""
     if "--herstelcontrole" in argv:
         # Los een herstelcontrole draaien op de nieuwste back-up, bijv. na een wijziging.
         bestanden = sorted(BACKUP_MAP.glob("voorraad-????-??-??.db"))
@@ -339,10 +341,21 @@ def dagelijkse_taak(argv=()):
             return 1
         return 0 if voer_herstelcontrole_uit(bestanden[-1])["ok"] else 1
 
+    try:
+        code, melding = _dagelijkse_backup()
+    except Exception as fout:
+        taakstatus.registreer("backup", False, f"Gecrasht: {fout}", db_pad=BRON)
+        raise
+    taakstatus.registreer("backup", code == 0, melding, db_pad=BRON)
+    return code
+
+
+def _dagelijkse_backup():
+    """(exitcode, wat er gebeurde in een zin) van de dagelijkse back-up."""
     pad = maak_backup()
     if pad is None:
         meld_mislukte_backup("voorraad.db is niet gevonden.")
-        return 1
+        return 1, "voorraad.db is niet gevonden"
     ok, melding = controleer_backup(pad)
     if not ok:
         # Een kapotte back-up weggooien: anders telt hij mee als "de back-up
@@ -350,15 +363,17 @@ def dagelijkse_taak(argv=()):
         pad.unlink()
         print(f"Back-up afgekeurd en verwijderd: {melding}")
         meld_mislukte_backup(melding)
-        return 1
+        return 1, f"Back-up afgekeurd: {melding}"
     ruim_oude_backups_op()
-    mail_backup(pad)
-    if herstelcontrole_is_aan_de_beurt():
-        voer_herstelcontrole_uit(pad)
+    gemaild = mail_backup(pad)
+    herstel = voer_herstelcontrole_uit(pad) if herstelcontrole_is_aan_de_beurt() else None
     # Pas opruimen als de back-up van vandaag veilig staat.
     ruim_gegevens_op()
     meet_opslag()
-    return 0
+    delen = [f"{pad.name} gemaakt en gecontroleerd", "kopie gemaild" if gemaild else "kopie mailen mislukt"]
+    if herstel is not None:
+        delen.append("herstelcontrole gelukt" if herstel["ok"] else "herstelcontrole mislukt")
+    return 0, ", ".join(delen)
 
 
 if __name__ == "__main__":

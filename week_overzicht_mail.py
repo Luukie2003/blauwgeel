@@ -13,6 +13,7 @@ from datetime import datetime
 from flask import render_template
 
 import mail
+import taakstatus
 from app import create_app
 from database import get_db
 from helpers import bereken_week_overzicht
@@ -73,12 +74,24 @@ def bouw_mailtekst(overzicht):
     )
 
 
-def main():
-    if datetime.now().weekday() != 0:
+def main(nu=None):
+    """De taak van elke ochtend. De uitkomst komt ook in de systeemstatus (taakstatus.py)."""
+    if (nu or datetime.now()).weekday() != 0:
         print("Geen maandag -- niets te doen.")
+        taakstatus.registreer("weekoverzicht", True, "Geen maandag, niets te doen")
         return
 
     app = create_app()
+    try:
+        gelukt, melding = _verstuur(app)
+    except Exception as fout:
+        taakstatus.registreer("weekoverzicht", False, f"Gecrasht: {fout}", db_pad=app.config["DATABASE"])
+        raise
+    taakstatus.registreer("weekoverzicht", gelukt, melding, db_pad=app.config["DATABASE"])
+
+
+def _verstuur(app):
+    """(gelukt, wat er gebeurde in een zin) van het versturen op maandag."""
     # test_request_context (i.p.v. alleen app_context) omdat render_template
     # via de globale context_processor ook request/session raadpleegt -- dat
     # bestaat normaal alleen tijdens een echt HTTP-verzoek, niet in dit
@@ -100,14 +113,19 @@ def main():
         ]
         if not ontvangers:
             print("Niemand heeft het weekoverzicht per mail aangevinkt -- niets verstuurd.")
-            return
+            return True, "Niemand heeft het weekoverzicht aangevinkt, niets verstuurd"
 
         onderwerp = (
             f"Weekoverzicht {overzicht['week_van']:%d-%m} t/m {overzicht['week_tot']:%d-%m}"
         )
+        mislukt = 0
         for ontvanger in ontvangers:
             gelukt = mail.stuur_mail(onderwerp, tekst, naar=ontvanger, html=html)
             print(f"  {ontvanger}: {'verstuurd' if gelukt else 'mislukt'}")
+            mislukt += not gelukt
+        if mislukt:
+            return False, f"{mislukt} van de {len(ontvangers)} mails niet verstuurd"
+        return True, f"Verstuurd aan {len(ontvangers)} {'persoon' if len(ontvangers) == 1 else 'personen'}"
 
 
 if __name__ == "__main__":

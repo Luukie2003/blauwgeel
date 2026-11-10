@@ -186,7 +186,7 @@ def _vervang_handmatige_wedstrijden(conn, team, wedstrijden):
         )
 
 
-def ververs_wedstrijden(db_pad=None):
+def ververs_wedstrijden(db_pad=None, mislukt=None):
     """Haalt alle ingestelde feeds op en voegt nieuwe wedstrijden toe aan de
     database -- zowel komende als al gespeelde, want gespeelde wedstrijden
     blijven bewust bewaard als geschiedenis in plaats van verwijderd te
@@ -195,7 +195,8 @@ def ververs_wedstrijden(db_pad=None):
     dubbel wordt weggeschreven bij een volgende ververs-ronde. Werkt de
     teamnaam per feed bij zodra die bekend is. Geeft het aantal nieuw
     toegevoegde wedstrijden terug, of None als er geen feeds zijn
-    ingesteld."""
+    ingesteld. Geef je een lijst mee als 'mislukt', dan komt daar per feed
+    die niet lukte {"feed", "team", "fout"} in (voor de systeemstatus)."""
     db_pad = db_pad or DB_PAD
     if not Path(db_pad).exists():
         print("[agenda] Database bestaat nog niet -- niets te doen.")
@@ -203,7 +204,7 @@ def ververs_wedstrijden(db_pad=None):
 
     conn = sqlite3.connect(db_pad)
     conn.row_factory = sqlite3.Row
-    feeds = conn.execute("SELECT id, url FROM agenda_feeds ORDER BY id").fetchall()
+    feeds = conn.execute("SELECT id, url, team FROM agenda_feeds ORDER BY id").fetchall()
     if not feeds:
         conn.close()
         print("[agenda] Geen agenda-links ingesteld -- niets te doen.")
@@ -215,6 +216,8 @@ def ververs_wedstrijden(db_pad=None):
             team, wedstrijden = haal_feed_op(feed["url"])
         except Exception as fout:
             print(f"[agenda] Ophalen mislukt voor feed #{feed['id']}: {fout}")
+            if mislukt is not None:
+                mislukt.append({"feed": feed["id"], "team": feed["team"], "fout": str(fout)})
             continue
         conn.execute("UPDATE agenda_feeds SET team = ? WHERE id = ?", (team, feed["id"]))
         _vervang_handmatige_wedstrijden(conn, team, wedstrijden)
@@ -260,5 +263,26 @@ def ververs_wedstrijden(db_pad=None):
     return aantal
 
 
+def dagelijkse_taak(db_pad=None):
+    """Wat de PythonAnywhere-taak elke dag doet: de agenda's verversen en de uitkomst vastleggen voor de systeemstatus
+    (taakstatus.py), met de teams waarvan de agenda-link niet lukte."""
+    import taakstatus
+
+    mislukt = []
+    try:
+        aantal = ververs_wedstrijden(db_pad, mislukt=mislukt)
+    except Exception as fout:
+        taakstatus.registreer("agenda", False, f"Verversen gecrasht: {fout}", db_pad=db_pad)
+        raise
+    if mislukt:
+        namen = ", ".join(m["team"] or f"link {m['feed']}" for m in mislukt)
+        taakstatus.registreer("agenda", False, f"Niet gelukt voor {namen}: {mislukt[0]['fout']}", db_pad=db_pad)
+    elif aantal is None:
+        taakstatus.registreer("agenda", True, "Geen agenda-links ingesteld, niets te doen", db_pad=db_pad)
+    else:
+        taakstatus.registreer("agenda", True, f"{aantal} nieuwe wedstrijden", db_pad=db_pad)
+    return aantal
+
+
 if __name__ == "__main__":
-    ververs_wedstrijden()
+    dagelijkse_taak()

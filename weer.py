@@ -115,10 +115,11 @@ def haal_voorspelling_op():
     ]
 
 
-def ververs_weer(db_pad=None):
+def ververs_weer(db_pad=None, mislukt=None):
     """Haalt de verwachting op en vervangt de inhoud van de
     weer_voorspelling-tabel. Geeft het aantal weggeschreven dagen terug, of
-    None als het ophalen mislukte."""
+    None als het ophalen mislukte. Geef je een lijst mee als 'mislukt', dan
+    komt de reden daarin (voor de systeemstatus)."""
     db_pad = db_pad or DB_PAD
     if not Path(db_pad).exists():
         print("[weer] Database bestaat nog niet -- niets te doen.")
@@ -127,6 +128,8 @@ def ververs_weer(db_pad=None):
         voorspelling = haal_voorspelling_op()
     except Exception as fout:
         print(f"[weer] Ophalen mislukt: {fout}")
+        if mislukt is not None:
+            mislukt.append(str(fout))
         return None
 
     conn = sqlite3.connect(db_pad)
@@ -157,5 +160,23 @@ def ververs_weer(db_pad=None):
     return len(voorspelling)
 
 
+def dagelijkse_taak(db_pad=None):
+    """Wat de PythonAnywhere-taak elke dag doet: het weer verversen en de uitkomst vastleggen voor de systeemstatus
+    (taakstatus.py)."""
+    import taakstatus
+
+    mislukt = []
+    try:
+        aantal = ververs_weer(db_pad, mislukt=mislukt)
+    except Exception as fout:
+        taakstatus.registreer("weer", False, f"Verversen gecrasht: {fout}", db_pad=db_pad)
+        raise
+    if aantal is not None:
+        taakstatus.registreer("weer", True, f"Verwachting voor {aantal} dagen", db_pad=db_pad)
+    elif mislukt:
+        taakstatus.registreer("weer", False, f"Ophalen mislukt: {mislukt[0]}", db_pad=db_pad)
+    return aantal
+
+
 if __name__ == "__main__":
-    ververs_weer()
+    dagelijkse_taak()

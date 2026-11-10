@@ -462,6 +462,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Beheer",
+        "endpoints": ["systeemstatus"],
+        "url_endpoint": "systeemstatus",
+        "label": "Systeemstatus",
+    },
+    {
+        "groep": "Beheer",
         "endpoints": ["club_instellingen"],
         "url_endpoint": "club_instellingen",
         "label": "Club instellingen",
@@ -547,6 +553,9 @@ NAV_ITEM_ALLEEN_BEHEERDER = {
     "kluis_geschiedenis",
     "kluis_mutatie_nieuw",
 }
+
+# Items alleen voor de systeembeheerder: het account dat eigenaar is (zie noodstop.py). De routes controleren dat zelf.
+NAV_ITEM_ALLEEN_EIGENAAR = {"noodstop_pagina", "systeemstatus"}
 
 # Een klein pictogram voor elke groep, zodat je het menu in één oogopslag kunt scannen.
 # Het lijn-icoon per groep in de zijbalk (2.0, zie templates/_iconen.html).

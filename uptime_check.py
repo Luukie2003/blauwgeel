@@ -8,12 +8,16 @@ Gebruikt alleen de standaardbibliotheek (net als backup.py -- geen
 virtualenv nodig). Onthoudt de laatste status in uptime_status.txt, zodat er
 maar één mail wordt gestuurd bij het begin van een storing en één zodra de
 site weer bereikbaar is, in plaats van elk uur opnieuw dezelfde melding.
+
+Elke controle komt ook in de systeemstatus (taakstatus.py). Omdat deze taak elk
+uur draait, merkt hij daarbij ook op dat een dagelijkse taak is stilgevallen.
 """
 
 import urllib.request
 from pathlib import Path
 
 import mail
+import taakstatus
 
 BASE_DIR = Path(__file__).parent
 STATUS_PAD = BASE_DIR / "uptime_status.txt"
@@ -45,7 +49,8 @@ def ontvanger():
     return mail.systeembeheerder_adres(db_pad=DB_PAD)
 
 
-if __name__ == "__main__":
+def controleer():
+    """Eén controle, zoals de taak die elk uur doet."""
     bereikbaar, foutmelding = site_bereikbaar()
     status = "ok" if bereikbaar else "down"
     vorige = vorige_status()
@@ -68,4 +73,12 @@ if __name__ == "__main__":
             )
 
     sla_status_op(status)
+    # De controle zelf is gelukt, ook als de site plat ligt: daarover gaat de mail hierboven al.
+    taakstatus.registreer(
+        "bereikbaarheid", True, "Site bereikbaar" if bereikbaar else f"Site reageerde niet: {foutmelding}", db_pad=DB_PAD
+    )
     print(f"Status: {status}" + (f" ({foutmelding})" if foutmelding else ""))
+
+
+if __name__ == "__main__":
+    controleer()

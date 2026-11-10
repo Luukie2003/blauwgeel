@@ -6,8 +6,16 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.4.1"
+HUIDIGE_VERSIE = "2.5.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.5.0",
+        "datum": "10 november 2026",
+        "punten": [
+            "Nieuw: Beheer > Systeemstatus, alleen voor de systeembeheerder. Per taak die vanzelf draait (de back-up, de teamagenda's, het weerbericht, het weekoverzicht per mail en de bereikbaarheidscontrole) zie je wanneer hij voor het laatst gelukt is en wat hij de laatste keer meldde, zoals welke agenda-link van welk team niet werkte.",
+            "Gaat een dagelijkse taak twee keer mis of draait hij niet meer, dan staat dat bij 'Wat moet er nu?' en krijgt de systeembeheerder er één mail over. Eén keer mislukken, bijvoorbeeld door een korte storing bij Sportlink, geeft nog geen melding.",
+        ],
+    },
     {
         "versie": "2.4.1",
         "datum": "10 november 2026",
@@ -1443,6 +1451,6 @@ MODULES = [
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
-    {"naam": "Techniek & beveiliging", "versie": "1.9.4", "sinds": "1.1.0", "laatst": "2.4.1",
-     "inhoud": "Geautomatiseerde tests, beveiligingsheaders, de noodstop, bereikbaarheidscontrole, snelheid"},
+    {"naam": "Techniek & beveiliging", "versie": "1.10.0", "sinds": "1.1.0", "laatst": "2.5.0",
+     "inhoud": "Geautomatiseerde tests, beveiligingsheaders, de noodstop, bereikbaarheidscontrole, systeemstatus, snelheid"},
 ]

@@ -67,6 +67,7 @@ from navigatie import (  # noqa: F401
     NAV_GROEP_ICOON,
     NAV_GROEP_SECTIE,
     NAV_ITEM_ALLEEN_BEHEERDER,
+    NAV_ITEM_ALLEEN_EIGENAAR,
     NAV_ITEM_SECTIE,
     NAV_ITEMS,
     PDA_NAV_ITEMS,
@@ -313,7 +314,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         # hieronder -- daarmee kan 1 item uit een verder beheerder-only groep
         # (bijv. "Club instellingen" in de groep "Beheer") toch aan een
         # vrijwilliger met de juiste sectie getoond worden.
-        if item["url_endpoint"] == "noodstop_pagina":
+        if item["url_endpoint"] in NAV_ITEM_ALLEEN_EIGENAAR:
             return bool(session.get("eigenaar"))
         if item["url_endpoint"] in NAV_ITEM_ALLEEN_BEHEERDER:
             return gebruiker_rol == "beheerder"
@@ -634,6 +635,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         seizoensrapport,
         sponsoren,
         stemmen,
+        systeemstatus,
         tellen,
         uitdraai,
         uitrollen,
@@ -679,6 +681,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     seizoensrapport.register_routes(app)
     sponsoren.register_routes(app)
     stemmen.register_routes(app)
+    systeemstatus.register_routes(app)
     tellen.register_routes(app)
     uitdraai.register_routes(app)
     uitrollen.register_routes(app)

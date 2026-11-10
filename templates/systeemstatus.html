@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{# Beheer > Systeemstatus (routes/systeemstatus.py, taakstatus.py): de geplande taken op PythonAnywhere en de andere
+   technische meldingen, alleen voor de systeembeheerder. #}
+{% block titel %}Systeemstatus{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Systeemstatus</h1>
+    <span class="cs-titel-tekst">Alleen voor de systeembeheerder</span>
+</div>
+{% endblock %}
+{% block inhoud %}
+{% set kleur = {'ok': 'cs-groen', 'mislukt': 'cs-oranje', 'probleem': 'cs-rood', 'wacht': 'cs-grijs'} %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Geplande taken</h2></div>
+    <p class="cs-paneel-tekst cs-zacht">
+        De taken die PythonAnywhere zelf draait. Gaat een dagelijkse taak twee keer mis of draait hij niet meer, dan
+        staat dat bij &lsquo;Wat moet er nu?&rsquo; en krijg je er één mail over.
+    </p>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Taak</th><th class="cs-verberg-smal">Laatst gelukt</th><th class="cs-verberg-smal">De laatste keer</th><th class="cs-getal cs-verberg-smal">Stand</th></tr></thead>
+            <tbody>
+            {% for t in taken %}
+            <tr>
+                <td>
+                    <strong>{{ t.naam }}</strong> <span class="cs-zacht">{{ t.hoe_vaak }}</span>
+                    <div class="cs-zacht cs-verberg-smal">{{ t.wat }}</div>
+                    {# Op een telefoon is dit de hele rij: de stand en wat de taak de laatste keer meldde. #}
+                    <div class="cs-alleen-smal">
+                        <span class="cs-punt {{ kleur[t.stand] }}">{{ t.tekst }}</span>
+                        {% if t.laatst_gedraaid %}<div class="cs-zacht">{{ t.laatst_gedraaid|laatst_actief }}{% if t.melding %}: {{ t.melding }}{% endif %}</div>{% endif %}
+                    </div>
+                </td>
+                <td class="cs-verberg-smal">{{ t.laatst_gelukt|laatst_actief if t.laatst_gelukt else 'nog niet' }}</td>
+                <td class="cs-verberg-smal">{% if t.laatst_gedraaid %}{{ t.laatst_gedraaid|laatst_actief }}{% if t.melding %}<div class="cs-zacht">{{ t.melding }}</div>{% endif %}{% else %}nog niet{% endif %}</td>
+                <td class="cs-getal cs-verberg-smal"><span class="cs-punt {{ kleur[t.stand] }}">{{ t.tekst }}</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Ook technisch</h2></div>
+    <div class="tabel-wrap">
+        <table>
+            <tbody>
+            <tr>
+                <td><a href="{{ url_for('backups_lijst') }}">Back-ups</a></td>
+                <td class="cs-getal"><span class="cs-punt {{ 'cs-groen' if backup_status.ok else 'cs-rood' }}">{{ 'In orde' if backup_status.ok else 'Let op' }}</span>{% if not backup_status.ok %}<div class="cs-zacht">{{ backup_status.tekst }}</div>{% endif %}</td>
+            </tr>
+            <tr>
+                <td><a href="{{ url_for('fouten_lijst') }}">Foutmeldingen</a></td>
+                <td class="cs-getal"><span class="cs-punt {{ 'cs-oranje' if open_fouten else 'cs-groen' }}">{% if open_fouten %}{{ open_fouten }} deze week{% else %}Geen deze week{% endif %}</span></td>
+            </tr>
+            <tr>
+                <td><a href="{{ url_for('opslag_pagina') }}">Opslag</a></td>
+                <td class="cs-getal">{% if opslag %}<span class="cs-punt {{ {'ok': 'cs-groen', 'kritiek': 'cs-rood'}.get(opslag.niveau, 'cs-oranje') }}">{{ '%.0f'|format(opslag.percentage) }}% vol</span>{% else %}<span class="cs-punt cs-grijs">Nog niet gemeten</span>{% endif %}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="cs-paneel-tekst">
+        {% if ontvanger %}
+        Technische meldingen per mail gaan alleen naar jou: <strong>{{ ontvanger }}</strong>.
+        {% else %}
+        Je account heeft nog geen e-mailadres, dus de technische meldingen gaan naar het vaste adres bij Beheer &rarr;
+        Instellingen. Zet je eigen adres bij <a href="{{ url_for('accounts_lijst') }}">Accounts beheren</a>.
+        {% endif %}
+    </p>
+</section>
+{% endblock %}

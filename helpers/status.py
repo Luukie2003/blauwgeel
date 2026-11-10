@@ -287,8 +287,29 @@ def bouw_taken(db, rol, secties, gebruiker_id=None, systeembeheerder=False):
             )
 
     if systeembeheerder:
+        import taakstatus
         from foutenlog import recente_open_fouten
         from opslag import groottetekst, laatst_gemeten
+
+        # Een geplande taak (agenda, weer, ...) die twee keer is mislukt of niet meer draait: één kleine tabel lezen.
+        stil = taakstatus.problemen(db)
+        if len(stil) == 1:
+            detail = stil[0]["melding"] or "Kijk bij Systeemstatus wat er misgaat"
+            taken.append(
+                _taak(
+                    f"{stil[0]['naam']}: {stil[0]['tekst'].lower()}",
+                    detail if len(detail) <= 140 else detail[:139] + "…",
+                    "systeemstatus",
+                )
+            )
+        elif stil:
+            taken.append(
+                _taak(
+                    f"{len(stil)} geplande taken met een probleem",
+                    ", ".join(t["naam"] for t in stil),
+                    "systeemstatus",
+                )
+            )
 
         fouten = recente_open_fouten(db)
         if fouten:

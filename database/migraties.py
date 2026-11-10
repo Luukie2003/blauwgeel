@@ -4,6 +4,7 @@ vult die niet aan, dus dat gebeurt hier, zelfhelend, bij elke start."""
 
 from datetime import date, datetime
 
+import taakstatus
 from database.seed import SEED_PRODUCTEN
 from helpers import club_van_team_naam, voeg_maanden_toe
 
@@ -773,6 +774,12 @@ def migreer_genummerd(db):
         raise
 
 
+def _migreer_taakstatus(db):
+    """De systeemstatus (taakstatus.py): de tabel met een rij per geplande taak. De tabel staat bewust daar en niet in
+    schema.sql: de taken zelf (die buiten de app draaien) maken hem ook aan als hij er nog niet is."""
+    taakstatus.zorg_voor_tabel(db)
+
+
 def migreer_alles(db):
     """Past alle migraties toe, in de volgorde waarin ze zijn ontstaan (alle zijn
     zelfhelend: ze doen niets als het al gebeurd is)."""
@@ -789,4 +796,5 @@ def migreer_alles(db):
     _migreer_stand_club_backfill(db)
     _migreer_stand_poules_backfill(db)
     _migreer_welkom_polls_uit_statistiek(db)
+    _migreer_taakstatus(db)
     migreer_genummerd(db)

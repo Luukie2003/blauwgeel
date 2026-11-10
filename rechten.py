@@ -223,6 +223,8 @@ BEHEERDER_ENDPOINTS = {
     "noodstop_dicht",
     "noodstop_open",
     "noodstop_code",
+    # De geplande taken (taakstatus.py): ook alleen de eigenaar, de systeembeheerder; de route controleert dat zelf.
+    "systeemstatus",
     "backup_nu",
     "backup_download",
     "backup_herstellen",
