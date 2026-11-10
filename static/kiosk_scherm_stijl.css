@@ -422,23 +422,27 @@
 
 /* Wedstrijden -- visuele kaarten met een datumbadge i.p.v. een kale
    regel-per-regel lijst, de eerstvolgende wedstrijd extra uitgelicht, en
-   dezelfde binnenkomst-animatie-truc als hierboven bij Club van 20. */
+   dezelfde binnenkomst-animatie-truc als hierboven bij Club van 20. Rekent in
+   --u (1920x1080) net als de standen: met drie wedstrijden op een avond liep de
+   lijst op een tv met een kleine WebView anders uit beeld. Per wedstrijd de
+   aanvangstijd ervoor; met veel wedstrijden wordt alles iets kleiner (--vol). */
+.slide.slide-wedstrijden { padding: calc(48 * var(--u)) calc(80 * var(--u)) calc(90 * var(--u)); gap: 0; }
 .slide-wedstrijden h2 {
-    font-size: 4rem;
+    font-size: calc(64 * var(--u));
     font-weight: 800;
     color: var(--geel);
-    margin: 0 0 2.2rem;
+    margin: 0 0 calc(32 * var(--u));
     text-shadow: 0 0 34px rgba(252, 212, 47, 0.4);
 }
-.wedstrijden-lijst { width: 100%; max-width: 68rem; display: flex; flex-direction: column; gap: 1.1rem; }
+.wedstrijden-lijst { width: 100%; max-width: calc(1180 * var(--u)); display: flex; flex-direction: column; gap: calc(18 * var(--u)); }
 .wedstrijd-dag {
     display: flex;
     align-items: center;
-    gap: 1.8rem;
-    padding: 1.2rem 1.8rem;
+    gap: calc(28 * var(--u));
+    padding: calc(19 * var(--u)) calc(29 * var(--u));
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 20px;
+    border-radius: calc(20 * var(--u));
     text-align: left;
     opacity: 0;
 }
@@ -453,31 +457,37 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 5.4rem;
-    height: 5.4rem;
-    border-radius: 16px;
+    width: calc(86 * var(--u));
+    height: calc(86 * var(--u));
+    border-radius: calc(16 * var(--u));
     background: var(--blauw);
     border: 2px solid var(--geel);
 }
-.wedstrijd-dag .datumbadge .dag-kort { font-size: 0.85rem; font-weight: 700; color: var(--geel); text-transform: uppercase; letter-spacing: 0.04em; }
-.wedstrijd-dag .datumbadge .dag-nummer { font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
-.wedstrijd-dag .datumbadge .maand-kort { font-size: 0.8rem; color: var(--tekst-zacht); text-transform: uppercase; }
+.wedstrijd-dag .datumbadge .dag-kort { font-size: calc(14 * var(--u)); font-weight: 700; color: var(--geel); text-transform: uppercase; letter-spacing: 0.04em; }
+.wedstrijd-dag .datumbadge .dag-nummer { font-size: calc(30 * var(--u)); font-weight: 800; line-height: 1.1; }
+.wedstrijd-dag .datumbadge .maand-kort { font-size: calc(13 * var(--u)); color: var(--tekst-zacht); text-transform: uppercase; }
 .wedstrijd-dag .inhoud { flex: 1; min-width: 0; }
 .wedstrijd-dag .eerstvolgende-label {
     display: inline-block;
     background: var(--geel);
     color: var(--blauw-donker);
     font-weight: 800;
-    font-size: 0.85rem;
+    font-size: calc(14 * var(--u));
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    padding: 0.2rem 0.75rem;
+    padding: calc(3 * var(--u)) calc(12 * var(--u));
     border-radius: 999px;
-    margin-bottom: 0.5rem;
+    margin-bottom: calc(8 * var(--u));
 }
-.wedstrijd-dag .teams { font-size: 1.7rem; font-weight: 700; line-height: 1.4; }
-.wedstrijd-dag .weer { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; color: var(--tekst-zacht); font-size: 1.1rem; }
-.wedstrijd-dag .weer-icoon { font-size: 1.9rem; line-height: 1; }
+.wedstrijd-dag .teams { font-size: calc(28 * var(--u)); font-weight: 700; line-height: 1.4; }
+.wedstrijd-regel { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wedstrijd-tijd { display: inline-block; min-width: calc(96 * var(--u)); color: var(--geel); font-variant-numeric: tabular-nums; }
+.wedstrijd-dag .weer { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: calc(3 * var(--u)); color: var(--tekst-zacht); font-size: calc(18 * var(--u)); }
+.wedstrijd-dag .weer-icoon { font-size: calc(30 * var(--u)); line-height: 1; }
+.wedstrijden-lijst--vol { gap: calc(12 * var(--u)); }
+.wedstrijden-lijst--vol .wedstrijd-dag { padding: calc(12 * var(--u)) calc(26 * var(--u)); }
+.wedstrijden-lijst--vol .datumbadge { width: calc(74 * var(--u)); height: calc(74 * var(--u)); }
+.wedstrijden-lijst--vol .teams { font-size: calc(24 * var(--u)); line-height: 1.3; }
 
 .slide-wedstrijden.actief .wedstrijd-dag {
     animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;

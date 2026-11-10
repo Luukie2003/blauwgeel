@@ -122,6 +122,11 @@ def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None, venster=None, tijd
     return slide
 
 
+# De dia met de komende thuiswedstrijden: hoeveel dagen erop passen, en tot hoeveel wedstrijden in totaal hij ruim
+# blijft; daarboven wordt hij compacter (zie .wedstrijden-lijst--vol in kiosk_scherm_stijl.css).
+WEDSTRIJDEN_DAGEN_OP_DIA = 4
+WEDSTRIJDEN_RUIM_OP_DIA = 7
+
 # 's Avonds (1.80.0): vanaf een vaste tijd (avond_vanaf, bijvoorbeeld '16:00') draaien alleen nog de dia's en de
 # onderdelen die ook 's avonds mogen (avond_club_van_20, ...), tot de volgende ochtend om OCHTEND_UUR.
 OCHTEND_UUR = 6
@@ -231,7 +236,12 @@ def _bouw_slides(db, nu=None):
                             _alleen_overdag(slides, instellingen, "club_van_20", overdag)))
 
     if instellingen["toon_wedstrijden"]:
-        komende = bereken_komende_thuiswedstrijden(db)
+        # Hooguit WEDSTRIJDEN_DAGEN_OP_DIA dagen, en per dag op aanvangstijd (een 7-tegen-7-avond heeft er drie). Met
+        # veel wedstrijden wordt de dia compacter (vol), zodat alles ook op een kleine tv in beeld blijft.
+        komende = [
+            {**dag, "wedstrijden": sorted(dag["wedstrijden"], key=lambda w: (w["tijd"] or "99:99", w["omschrijving"]))}
+            for dag in bereken_komende_thuiswedstrijden(db)[:WEDSTRIJDEN_DAGEN_OP_DIA]
+        ]
         if komende:
             blokken.append(
                 (
@@ -240,6 +250,7 @@ def _bouw_slides(db, nu=None):
                         "type": "wedstrijden",
                         "duur": instellingen["wedstrijden_duur_seconden"],
                         "dagen": komende,
+                        "vol": sum(len(dag["wedstrijden"]) for dag in komende) > WEDSTRIJDEN_RUIM_OP_DIA,
                     }], instellingen, "wedstrijden", overdag),
                 )
             )

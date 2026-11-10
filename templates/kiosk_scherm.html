@@ -192,7 +192,7 @@
                 {% with dia = slide %}{% include "_sponsor_dia.html" %}{% endwith %}
             {% elif slide.type == 'wedstrijden' %}
                 <h2>Komende thuiswedstrijden</h2>
-                <div class="wedstrijden-lijst">
+                <div class="wedstrijden-lijst{{ ' wedstrijden-lijst--vol' if slide.vol else '' }}">
                     {% for dag in slide.dagen %}
                     <div class="wedstrijd-dag{{ ' wedstrijd-dag--eerstvolgende' if loop.first else '' }}"
                          style="animation-delay: {{ (loop.index0 * 0.12)|round(3) }}s">
@@ -204,7 +204,8 @@
                         <div class="inhoud">
                             {% if loop.first %}<span class="eerstvolgende-label">Eerstvolgende</span><br>{% endif %}
                             <span class="teams">
-                                {% for w in dag.wedstrijden %}{{ w.omschrijving }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+                                {% set met_tijd = dag.wedstrijden|selectattr('tijd')|list %}
+                                {% for w in dag.wedstrijden %}<span class="wedstrijd-regel">{% if met_tijd %}<span class="wedstrijd-tijd">{{ w.tijd or '' }}</span>{% endif %}{{ w.omschrijving }}</span>{% endfor %}
                             </span>
                         </div>
                         {% if dag.weer %}

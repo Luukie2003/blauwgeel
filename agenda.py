@@ -29,6 +29,13 @@ TIMEOUT_SECONDEN = 15
 # uitwedstrijd is. Hoofdletterongevoelig vergeleken.
 CLUBNAAM = "blauw geel"
 
+# Ons eigen veld, zoals Sportlink het als LOCATION meegeeft ("Sportpark Coendersborg Kooiweg 4 9722BZ GRONINGEN").
+# Staat er een locatie bij, dan beslist die of het een thuiswedstrijd is, en niet de volgorde van de ploegen: bij een
+# 7-tegen-7-avond op ons veld staat Blauw-Geel in twee van de drie wedstrijden als tweede ploeg ("HSC 18+1-Blauw
+# Geel'15 18+1"). Alleen het adres, niet "Coendersborg": dat sportpark delen we, met Oranje Nassau op Kooiweg 1 en
+# Amicitia VMC op Kooiweg 3, elk met een eigen kantine.
+THUIS_LOCATIE = re.compile(r"\bkooiweg 4\b", re.IGNORECASE)
+
 # Een afgelaste wedstrijd herkennen we aan STATUS:CANCELLED in de feed, of aan een
 # woord als "afgelast" in de omschrijving. Dat woord halen we uit de omschrijving
 # weg, zodat een wedstrijd die later alsnog als afgelast in de feed komt dezelfde
@@ -95,11 +102,16 @@ def _parse_ics(tekst):
         samenvatting, afgelast = _schoon_afgelasting(
             samenvatting, status_geannuleerd=bool(re.search(r"STATUS:\s*CANCELLED", blok, re.IGNORECASE))
         )
+        # Een lange regel mag in iCal over meer regels lopen (een vervolgregel begint met een spatie): voor de locatie
+        # eerst weer aan elkaar, anders valt "Coenders" + "borg" net buiten de vergelijking.
+        locatie_match = re.search(r"^LOCATION[^:]*:(.*)$", re.sub(r"\r?\n[ \t]", "", blok), re.MULTILINE)
+        locatie = locatie_match.group(1).strip().replace("\\,", ",").replace("\\;", ";").lower() if locatie_match else ""
         thuisploeg = samenvatting.split("-", 1)[0]
         wedstrijden.append({
             "datum": datum.isoformat(),
             "omschrijving": samenvatting,
-            "thuis": CLUBNAAM in thuisploeg.lower(),
+            "thuis": bool(THUIS_LOCATIE.search(locatie)) if locatie else CLUBNAAM in thuisploeg.lower(),
+            "locatie_bekend": bool(locatie),
             "tijd": tijd,
             "afgelast": afgelast,
         })
@@ -251,6 +263,20 @@ def ververs_wedstrijden(db_pad=None, mislukt=None):
                         wedstrijd["datum"],
                         wedstrijd["omschrijving"],
                         wedstrijd["tijd"],
+                    ),
+                )
+            if wedstrijd["locatie_bekend"]:
+                # Stond hij er al, dan met de oude regel (de volgorde van de ploegen), of was de plek toen nog niet
+                # bekend: zet thuis of uit goed volgens de plek. Een zelf toegevoegde wedstrijd blijft zoals hij is.
+                conn.execute(
+                    """UPDATE wedstrijden SET thuis = ?
+                       WHERE team = ? AND datum = ? AND omschrijving = ? AND thuis != ? AND handmatig = 0""",
+                    (
+                        int(wedstrijd["thuis"]),
+                        team,
+                        wedstrijd["datum"],
+                        wedstrijd["omschrijving"],
+                        int(wedstrijd["thuis"]),
                     ),
                 )
 

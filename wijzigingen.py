@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.7.0"
+HUIDIGE_VERSIE = "2.7.1"
 WIJZIGINGEN = [
+    {
+        "versie": "2.7.1",
+        "datum": "10 november 2026",
+        "punten": [
+            "Thuiswedstrijden volgens de plek: een wedstrijd op ons eigen veld (Kooiweg 4) telt nu altijd als thuiswedstrijd, ook als Blauw-Geel in de agenda als tweede ploeg staat. Bij een 7-tegen-7-avond, zoals 18+1 op vrijdag 13 november, staan zo alle drie de wedstrijden in de agenda, op de tv en in de prognose, in plaats van één.",
+            "Een wedstrijd bij Oranje Nassau (Kooiweg 1) of Amicitia VMC (Kooiweg 3), op hetzelfde sportpark, blijft een uitwedstrijd: daar is hun kantine open, niet de onze.",
+            "De dia Komende thuiswedstrijden op de Kantine-tv zet bij elke wedstrijd de aanvangstijd, op volgorde, en past nu op elke tv: ook met drie wedstrijden op een avond of een drukke week (hooguit vier dagen, en dan iets kleiner) loopt hij niet meer uit beeld.",
+        ],
+    },
     {
         "versie": "2.7.0",
         "datum": "10 november 2026",
@@ -1449,7 +1458,7 @@ MODULES = [
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.7.0", "sinds": "1.6.0", "laatst": "1.75.0",
      "inhoud": "Keukenvoorraad met een eigen, blinde telling (ook als looplijst met dozen scannen, en een begintelling), inboeken per verpakking (per merk, ook door te scannen), weggooien en bijstellen, prijzen, de boodschappenlijst bij een tekort, en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.29.0", "sinds": "1.10.1", "laatst": "2.6.0",
+    {"naam": "Kantine-tv", "versie": "1.29.1", "sinds": "1.10.1", "laatst": "2.7.1",
      "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's, effecten en griezelposters met tekeningen), sponsoren, standen, Man of the Match, seizoen in cijfers, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, het Halloween-thema, en de tablet-app Kantine Beheer"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
@@ -1465,7 +1474,7 @@ MODULES = [
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.1", "sinds": "0.2.0", "laatst": "2.4.1",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
-    {"naam": "Overzicht & prikbord", "versie": "1.14.1", "sinds": "0.2.0", "laatst": "2.4.1",
+    {"naam": "Overzicht & prikbord", "versie": "1.14.2", "sinds": "0.2.0", "laatst": "2.7.1",
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},

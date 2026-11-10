@@ -165,7 +165,7 @@ def bereken_komende_thuiswedstrijden(db, dagen=14, inclusief_afgelast=False):
     vandaag = vandaag_amsterdam().isoformat()
     grens = (vandaag_amsterdam() + timedelta(days=dagen)).isoformat()
     rijen = db.execute(
-        f"""SELECT id, datum, team, omschrijving, afgelast, handmatig FROM wedstrijden
+        f"""SELECT id, datum, tijd, team, omschrijving, afgelast, handmatig FROM wedstrijden
            WHERE thuis = 1 AND datum >= ? AND datum <= ?
            {"" if inclusief_afgelast else "AND afgelast = 0"}
            ORDER BY datum, team""",
