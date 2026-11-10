@@ -162,7 +162,7 @@ tekenmateriaal, keuzes over vermelding):
   server vanuit de emulator: `./gradlew :tv:assembleDebug -PtvBasisUrl=http://10.0.2.2:5050`
   (alleen de testversie mag dan ook zonder https). De tv-app vraagt Android 7 of
   nieuwer.
-- De tablet-app is een volwaardige webweergave van `https://kantineblauwgeel.nl`
+- De tablet-app is een volwaardige webweergave van `https://www.kantineblauwgeel.nl`
   (aanpasbaar via **Instellingen** in de app, voor bijvoorbeeld een
   test-omgeving). Inloggen gebeurt gewoon via de normale inlogpagina van de
   website; de sessie (cookies) blijft bewaard in de app totdat je op

@@ -443,6 +443,10 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         sommige pagina's nog inline <script>- en onsubmit-attributen
         gebruiken."""
         response.headers["X-Content-Type-Options"] = "nosniff"
+        # De browser onthoudt een jaar dat de site alleen via https bestaat, en probeert dan niet eerst http (bijv.
+        # op open wifi). Over http negeert de browser deze header, dus lokaal ontwikkelen werkt gewoon. Zonder
+        # includeSubDomains: kantineblauwgeel.nl zonder www staat bij STRATO, niet hier.
+        response.headers["Strict-Transport-Security"] = "max-age=31536000"
         # De 3 kiosk-schermen zijn publieke, puur tonende pagina's zonder
         # enige interactieve/klikbare inhoud (geen formulieren, geen links)
         # -- geen clickjacking-risico dus, en die uitzondering is nodig
@@ -552,9 +556,14 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         return render_template("404.html"), 404
 
     def _ontvanger_foutmeldingen():
-        """Het vaste e-mailadres voor systeemmeldingen (Club > Instellingen); anders het standaardadres."""
+        """Alleen de systeembeheerder (mail.systeembeheerder_adres). Heeft die geen e-mailadres, dan het vaste adres
+        voor meldingen (Club > Instellingen), en anders het standaardadres."""
         try:
-            rij = get_db().execute("SELECT notificatie_email FROM instellingen WHERE id = 1").fetchone()
+            db = get_db()
+            adres = mail.systeembeheerder_adres(db)
+            if adres:
+                return adres
+            rij = db.execute("SELECT notificatie_email FROM instellingen WHERE id = 1").fetchone()
             return (rij["notificatie_email"] or None) if rij else None
         except Exception:
             return None  # ook als de database zelf het probleem is

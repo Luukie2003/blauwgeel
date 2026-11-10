@@ -263,6 +263,13 @@ def mail_backup(pad):
     return gelukt
 
 
+def ontvanger_waarschuwing():
+    """Een waarschuwing over de back-ups gaat alleen naar de systeembeheerder (zie mail.systeembeheerder_adres); de
+    dagelijkse kopie zelf blijft naar BACKUP_MAIL_NAAR gaan. Is de database niet te lezen of heeft de systeembeheerder
+    geen e-mailadres, dan toch naar BACKUP_MAIL_NAAR, zodat de waarschuwing niet verdwijnt."""
+    return mail.systeembeheerder_adres(db_pad=BRON) or BACKUP_MAIL_NAAR
+
+
 def meld_mislukte_backup(reden):
     onderwerp = "WAARSCHUWING: back-up van Kantine Beheer mislukt"
     tekst = (
@@ -270,7 +277,7 @@ def meld_mislukte_backup(reden):
         "Kijk op de server of voorraad.db in orde is. De oudere back-ups "
         "zijn niet aangeraakt."
     )
-    mail.stuur_mail(onderwerp, tekst, naar=BACKUP_MAIL_NAAR)
+    mail.stuur_mail(onderwerp, tekst, naar=ontvanger_waarschuwing())
 
 
 def meld_mislukte_herstelcontrole(resultaat):
@@ -280,7 +287,7 @@ def meld_mislukte_herstelcontrole(resultaat):
         "Dat betekent dat je deze back-up misschien niet kunt gebruiken als het nodig is. "
         "Kijk op de Back-ups-pagina of op de server wat er aan de hand is."
     )
-    mail.stuur_mail(onderwerp, tekst, naar=BACKUP_MAIL_NAAR)
+    mail.stuur_mail(onderwerp, tekst, naar=ontvanger_waarschuwing())
 
 
 def voer_herstelcontrole_uit(pad):

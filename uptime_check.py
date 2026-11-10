@@ -17,6 +17,7 @@ import mail
 
 BASE_DIR = Path(__file__).parent
 STATUS_PAD = BASE_DIR / "uptime_status.txt"
+DB_PAD = BASE_DIR / "voorraad.db"
 CONTROLE_URL = "https://www.kantineblauwgeel.nl/login"
 TIMEOUT_SECONDEN = 15
 
@@ -39,6 +40,11 @@ def sla_status_op(status):
     STATUS_PAD.write_text(status)
 
 
+def ontvanger():
+    """Alleen de systeembeheerder (zie mail.systeembeheerder_adres); zonder e-mailadres daar het standaardadres."""
+    return mail.systeembeheerder_adres(db_pad=DB_PAD)
+
+
 if __name__ == "__main__":
     bereikbaar, foutmelding = site_bereikbaar()
     status = "ok" if bereikbaar else "down"
@@ -52,11 +58,13 @@ if __name__ == "__main__":
                 "(elk uur).\n\n"
                 f"Foutmelding: {foutmelding}\n\n"
                 "Dit is een automatische melding, gestuurd bij het begin van de storing.",
+                naar=ontvanger(),
             )
         else:
             mail.stuur_mail(
                 "Kantine Beheer is weer bereikbaar",
                 f"De site {CONTROLE_URL} reageert weer normaal.",
+                naar=ontvanger(),
             )
 
     sla_status_op(status)

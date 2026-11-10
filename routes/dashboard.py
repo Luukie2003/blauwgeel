@@ -166,7 +166,11 @@ def register_routes(app):
         taken = [
             {**t, "url": url_for(t["endpoint"], **t["kwargs"])}
             for t in bouw_taken(
-                db, session.get("gebruiker_rol"), session.get("gebruiker_secties"), session.get("gebruiker_id")
+                db,
+                session.get("gebruiker_rol"),
+                session.get("gebruiker_secties"),
+                session.get("gebruiker_id"),
+                systeembeheerder=bool(session.get("eigenaar")),
             )
         ]
         return render_template(
@@ -184,11 +188,11 @@ def register_routes(app):
             kassa_telling_status=bereken_kassa_telling_status(db),
             bestelling_status=bereken_bestelling_status(db),
             frituurvet_status=bereken_frituurvet_status(db),
-            # Alleen beheerders hebben iets aan (en toegang tot) de back-ups;
-            # de waarschuwing verschijnt alleen als er iets mis is.
+            # Een technische melding: alleen voor de systeembeheerder (het account dat eigenaar is, zie
+            # noodstop.py), en alleen als er iets mis is.
             backup_status=(
                 backup_module.bereken_backup_status()
-                if session.get("gebruiker_rol") == "beheerder"
+                if session.get("eigenaar")
                 else None
             ),
             # Alleen voor wie de Club van 20-sectie heeft (beheerders altijd) --

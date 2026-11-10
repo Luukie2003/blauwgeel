@@ -6,8 +6,16 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.4.0"
+HUIDIGE_VERSIE = "2.4.1"
 WIJZIGINGEN = [
+    {
+        "versie": "2.4.1",
+        "datum": "10 november 2026",
+        "punten": [
+            "Technische meldingen krijgt alleen nog de systeembeheerder: het account dat ook de noodstop bedient. Het gaat om een serverfout, een te oude of mislukte back-up, een volle opslag en een storing van de site. Andere beheerders zien ze niet meer bij 'Wat moet er nu?' en op het overzicht, en krijgen er geen mail meer over.",
+            "De mails over zulke meldingen gaan naar het e-mailadres van de systeembeheerder. Staat daar geen adres, dan gaan ze zoals eerst naar het vaste adres bij Beheer > Instellingen. Meldingen over de kantine, zoals bij het inboeken van een levering, blijven naar dat vaste adres gaan.",
+        ],
+    },
     {
         "versie": "2.4.0",
         "datum": "5 november 2026",
@@ -1429,12 +1437,12 @@ MODULES = [
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (nalopen met vinkjes, klaarzetten met het besteloverzicht, verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken (inboeken per verpakking, blind tellen, weggooien), Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst, momenten met de schijnwerper, mappen en dia's aan of uit, en het Halloween-thema), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.11.0", "sinds": "0.1.0", "laatst": "2.2.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
-    {"naam": "Back-ups & beheer", "versie": "1.10.0", "sinds": "0.2.0", "laatst": "1.45.0",
+    {"naam": "Back-ups & beheer", "versie": "1.10.1", "sinds": "0.2.0", "laatst": "2.4.1",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
-    {"naam": "Overzicht & prikbord", "versie": "1.14.0", "sinds": "0.2.0", "laatst": "2.0.0",
+    {"naam": "Overzicht & prikbord", "versie": "1.14.1", "sinds": "0.2.0", "laatst": "2.4.1",
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
-    {"naam": "Techniek & beveiliging", "versie": "1.9.3", "sinds": "1.1.0", "laatst": "2.2.0",
+    {"naam": "Techniek & beveiliging", "versie": "1.9.4", "sinds": "1.1.0", "laatst": "2.4.1",
      "inhoud": "Geautomatiseerde tests, beveiligingsheaders, de noodstop, bereikbaarheidscontrole, snelheid"},
 ]

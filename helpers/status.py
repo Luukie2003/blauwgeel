@@ -158,10 +158,12 @@ def _eigen_taken(db, gebruiker_id):
     return uitkomst
 
 
-def bouw_taken(db, rol, secties, gebruiker_id=None):
+def bouw_taken(db, rol, secties, gebruiker_id=None, systeembeheerder=False):
     """De lijst "Wat moet er nu?" bovenaan het dashboard: alleen dingen die nu echt aandacht nodig
     hebben, en alleen wat bij de rechten van het account past -- een vrijwilliger met alleen keuken
-    ziet dus alleen het frituurvet en het prikbord. Dringende dingen staan bovenaan.
+    ziet dus alleen het frituurvet en het prikbord. Dringende dingen staan bovenaan. Technische
+    meldingen (serverfouten, een volle opslag) krijgt alleen de systeembeheerder: het account dat
+    eigenaar is (zie noodstop.py), niet elke beheerder.
 
     Elke taak is {"titel", "detail", "endpoint", "kwargs", "urgent"}; de pagina maakt er een link van."""
     heeft = lambda sectie: heeft_sectie_toegang(rol, secties, sectie)
@@ -284,7 +286,7 @@ def bouw_taken(db, rol, secties, gebruiker_id=None):
                 )
             )
 
-    if rol == "beheerder":
+    if systeembeheerder:
         from foutenlog import recente_open_fouten
         from opslag import groottetekst, laatst_gemeten
 

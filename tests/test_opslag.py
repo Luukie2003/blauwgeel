@@ -275,7 +275,7 @@ def test_vanaf_95_procent_is_de_taak_urgent_en_staat_bovenaan(ingelogde_client, 
     from helpers.status import bouw_taken
 
     _vul_tot(app, db, 97)
-    taken = bouw_taken(db, "beheerder", None)
+    taken = bouw_taken(db, "beheerder", None, systeembeheerder=True)
     opslag_taak = next(t for t in taken if t["titel"].startswith("Opslag voor"))
     assert opslag_taak["urgent"] is True
     assert all(t["urgent"] for t in taken[: taken.index(opslag_taak) + 1])  # urgent staat vóór alles wat niet urgent is
@@ -286,6 +286,14 @@ def test_vrijwilligers_krijgen_de_opslagtaak_niet(app, db):
 
     _vul_tot(app, db, 97)
     assert not any(t["titel"].startswith("Opslag voor") for t in bouw_taken(db, "vrijwilliger", "voorraad"))
+
+
+def test_andere_beheerders_krijgen_de_opslagtaak_niet(app, db):
+    """Een technische melding: alleen voor de systeembeheerder (zie test_systeemmeldingen.py)."""
+    from helpers.status import bouw_taken
+
+    _vul_tot(app, db, 97)
+    assert not any(t["titel"].startswith("Opslag voor") for t in bouw_taken(db, "beheerder", None))
 
 
 def test_het_dashboard_meet_zelf_nooit_alle_bestanden(ingelogde_client, app, db, monkeypatch):

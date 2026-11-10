@@ -5,6 +5,7 @@ werken (bijvoorbeeld lokaal tijdens ontwikkelen).
 """
 
 import smtplib
+import sqlite3
 from email.message import EmailMessage
 from pathlib import Path
 
@@ -62,3 +63,24 @@ def stuur_mail(onderwerp, tekst, naar=None, html=None, bijlage_pad=None):
     except Exception as fout:
         print(f"[mail] Versturen mislukt: {fout}")
         return False
+
+
+def systeembeheerder_adres(db=None, db_pad=None):
+    """Het e-mailadres van de systeembeheerder: het account dat eigenaar is (gebruikers.eigenaar, één account; zie
+    noodstop.py). Technische meldingen (serverfouten, back-ups, storingen) gaan alleen daarheen. Geef een open
+    database (db) of het pad ernaar (db_pad, voor de losse scripts). None als dat account geen e-mailadres heeft of de
+    database niet te lezen is: de aanroeper valt dan terug op zijn oude adres, zodat een melding nooit verdwijnt."""
+    try:
+        # Alleen lezen, en nooit per ongeluk een lege database aanmaken als het bestand er niet is.
+        verbinding = db if db is not None else sqlite3.connect(f"{Path(db_pad).resolve().as_uri()}?mode=ro", uri=True)
+        try:
+            rij = verbinding.execute(
+                """SELECT email FROM gebruikers WHERE eigenaar = 1 AND actief = 1 AND COALESCE(email, '') != ''
+                   ORDER BY id LIMIT 1"""
+            ).fetchone()
+        finally:
+            if db is None:
+                verbinding.close()
+        return rij[0] if rij else None
+    except Exception:
+        return None
