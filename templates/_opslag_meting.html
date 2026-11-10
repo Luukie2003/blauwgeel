@@ -86,7 +86,7 @@
     <ul>
         {% for naam, tekst in ongebruikte_videos %}<li>{{ naam }} <span class="tekst-zacht">({{ tekst }})</span></li>{% endfor %}
     </ul>
-    <form method="post" action="{{ url_for('opslag_video_opruimen') }}" onsubmit="return bevestigEnVerstuur(this, 'Alle ongebruikte video\'s verwijderen?');">
+    <form method="post" action="{{ url_for('opslag_video_opruimen') }}" data-vraag="Alle ongebruikte video's verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-gevaar">Ongebruikte video's verwijderen</button>
     </form>

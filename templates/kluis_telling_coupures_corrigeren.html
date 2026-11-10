@@ -11,7 +11,7 @@
 
 <div class="kaart">
     <form method="post" id="kluis-correctie-form"
-          onsubmit="return bevestigEnVerstuur(this, 'Getelde bedrag van kluistelling #{{ telling.id }} corrigeren?');">
+          data-vraag="Getelde bedrag van kluistelling #{{ telling.id }} corrigeren?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <fieldset class="groupbox">
             <legend>Geteld in de kluis</legend>

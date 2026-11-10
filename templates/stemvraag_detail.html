@@ -19,7 +19,7 @@
         <a href="{{ url_for('stemvraag_poster_pdf', stemvraag_id=stemvraag.id) }}" class="btn btn-rand">Poster (A4 PDF)</a>
         {% if stemvraag.actief %}
         <form method="post" action="{{ url_for('stemvraag_sluiten', stemvraag_id=stemvraag.id) }}"
-              onsubmit="return bevestigEnVerstuur(this, 'Stemming sluiten voor nieuwe stemmen?');">
+              data-vraag="Stemming sluiten voor nieuwe stemmen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-rand">Sluiten</button>
         </form>
@@ -30,7 +30,7 @@
         </form>
         {% endif %}
         <form method="post" action="{{ url_for('stemvraag_verwijderen', stemvraag_id=stemvraag.id) }}"
-              onsubmit="return bevestigEnVerstuur(this, 'Deze stemming en alle stemmen verwijderen?');">
+              data-vraag="Deze stemming en alle stemmen verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-gevaar">Verwijderen</button>
         </form>

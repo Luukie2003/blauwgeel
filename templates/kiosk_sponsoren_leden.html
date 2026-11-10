@@ -49,7 +49,7 @@
                     <button type="submit" class="kt-knop kt-knop--primair kt-knop--klein">Opslaan</button>
                 </form>
                 <form method="post" action="{{ url_for('kiosk_dia_map_verwijderen', map_id=m.id) }}" style="margin-top:0.4rem"
-                      onsubmit="return bevestigEnVerstuur(this, 'Map \'{{ m.naam }}\' verwijderen? De dia\'s erin blijven, bij Algemeen.');">
+                      data-vraag="Map '{{ m.naam }}' verwijderen? De dia's erin blijven, bij Algemeen." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="terug" value="{{ terug_dias }}">
                     <button type="submit" class="kt-knop kt-knop--gevaar kt-knop--klein">Map verwijderen</button>
@@ -134,7 +134,7 @@
                 <a href="{{ url_for('kiosk_moment_voorbeeld', dia_id=s.id) }}" target="_blank" class="kt-ikoon" title="Voorbeeld" aria-label="Voorbeeld van {{ s.titel or 'de dia' }}">{{ ikoon('oog') }}</a>
                 <a href="{{ url_for('kiosk_sponsor_bewerken', sponsor_id=s.id) }}" class="kt-ikoon" title="Bewerken" aria-label="{{ s.titel or 'Dia' }} bewerken">{{ ikoon('potlood') }}</a>
                 <form method="post" action="{{ url_for('kiosk_sponsor_verwijderen', sponsor_id=s.id) }}" class="kt-inline"
-                      onsubmit="return bevestigEnVerstuur(this, 'Dia \'{{ s.titel or 'zonder titel' }}\' verwijderen?');">
+                      data-vraag="Dia '{{ s.titel or 'zonder titel' }}' verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="kt-ikoon kt-ikoon--gevaar" title="Verwijderen" aria-label="{{ s.titel or 'Dia' }} verwijderen">{{ ikoon('prullenbak') }}</button>
                 </form>

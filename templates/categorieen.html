@@ -28,7 +28,7 @@
     <div class="actiebalk" style="margin-bottom:0.5rem">
         <h3 style="margin:0">{{ c.naam }} <span class="tekst-zacht">({{ c.aantal_producten }} product{{ 'en' if c.aantal_producten != 1 else '' }})</span></h3>
         <form method="post" action="{{ url_for('categorie_verwijderen', categorie_id=c.id) }}"
-              onsubmit="return bevestigEnVerstuur(this, 'Categorie \'{{ c.naam }}\' verwijderen? Dit verwijdert ook de bijbehorende subcategorieën.');">
+              data-vraag="Categorie '{{ c.naam }}' verwijderen? Dit verwijdert ook de bijbehorende subcategorieën." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-gevaar btn-klein"
                     {{ 'disabled title="Nog in gebruik bij producten"' if c.aantal_producten > 0 else '' }}>
@@ -62,7 +62,7 @@
                     <td>{{ s.aantal_producten }}</td>
                     <td>
                         <form method="post" action="{{ url_for('subcategorie_verwijderen', subcategorie_id=s.id) }}"
-                              onsubmit="return bevestigEnVerstuur(this, 'Subcategorie \'{{ s.naam }}\' verwijderen?');">
+                              data-vraag="Subcategorie '{{ s.naam }}' verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-gevaar btn-klein"
                                     {{ 'disabled title="Nog in gebruik bij producten"' if s.aantal_producten > 0 else '' }}>

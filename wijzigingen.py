@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.6.0"
+HUIDIGE_VERSIE = "2.7.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.7.0",
+        "datum": "10 november 2026",
+        "punten": [
+            "Bestellen en Geld in de clubstijl: elke pagina begint met de titel en de knoppen rechts ernaast, zoals bij Voorraad. Bestellingen, Factuur inboeken, Boodschappenlijst en Leveranciers zijn helemaal opnieuw ingedeeld; een bestelling klap je open om te zien wat er besteld en binnengekomen is.",
+            "Op de pagina's die nog niet opnieuw zijn ingedeeld, heeft elk paneel nu een kop met een lijn eronder, net als op de nieuwe pagina's.",
+            "De vraag 'Weet je het zeker?' bij verwijderen, archiveren en corrigeren werkt nu ook bij een naam met een apostrof erin, zoals Lay's of 't Hart. Daarvoor ging het formulier dan zonder te vragen door. Ook Account blokkeren vraagt het weer.",
+        ],
+    },
     {
         "versie": "2.6.0",
         "datum": "10 november 2026",
@@ -1432,11 +1441,11 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.17.0", "sinds": "0.1.0", "laatst": "2.1.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.20.1", "sinds": "0.4.0", "laatst": "1.75.0",
+    {"naam": "Bestellen & prognose", "versie": "1.21.0", "sinds": "0.4.0", "laatst": "2.7.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.16.1", "sinds": "0.1.0", "laatst": "1.72.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
-    {"naam": "Geld (kassa & kluis)", "versie": "1.4.0", "sinds": "1.0.0", "laatst": "1.45.0",
+    {"naam": "Geld (kassa & kluis)", "versie": "1.5.0", "sinds": "1.0.0", "laatst": "2.7.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.7.0", "sinds": "1.6.0", "laatst": "1.75.0",
      "inhoud": "Keukenvoorraad met een eigen, blinde telling (ook als looplijst met dozen scannen, en een begintelling), inboeken per verpakking (per merk, ook door te scannen), weggooien en bijstellen, prijzen, de boodschappenlijst bij een tekort, en de herinnering voor het frituurvet"},
@@ -1452,7 +1461,7 @@ MODULES = [
      "inhoud": "De weergave voor de handterminal op de site: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft (staat sinds 2.4.0 tijdelijk uit; op de Zebra werkt de app)"},
     {"naam": "Handterminal-app", "versie": "0.26.0", "sinds": "1.53.0", "laatst": "2.3.0",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (nalopen met vinkjes, klaarzetten met het besteloverzicht, verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken (inboeken per verpakking, blind tellen, weggooien), Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst, momenten met de schijnwerper, mappen en dia's aan of uit, en het Halloween-thema), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
-    {"naam": "Accounts & rechten", "versie": "1.11.0", "sinds": "0.1.0", "laatst": "2.2.0",
+    {"naam": "Accounts & rechten", "versie": "1.11.1", "sinds": "0.1.0", "laatst": "2.7.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
     {"naam": "Back-ups & beheer", "versie": "1.10.1", "sinds": "0.2.0", "laatst": "2.4.1",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
@@ -1460,6 +1469,6 @@ MODULES = [
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
-    {"naam": "Techniek & beveiliging", "versie": "1.10.0", "sinds": "1.1.0", "laatst": "2.5.0",
+    {"naam": "Techniek & beveiliging", "versie": "1.10.1", "sinds": "1.1.0", "laatst": "2.7.0",
      "inhoud": "Geautomatiseerde tests, beveiligingsheaders, de noodstop, bereikbaarheidscontrole, systeemstatus, snelheid"},
 ]

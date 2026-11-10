@@ -88,7 +88,7 @@
                     <td class="tabel-acties">
                         <a href="{{ url_for('club_van_20_project_bewerken', project_id=p.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
                         <form method="post" action="{{ url_for('club_van_20_project_verwijderen', project_id=p.id) }}"
-                              onsubmit="return bevestigEnVerstuur(this, 'Project \'{{ p.naam }}\' verwijderen?');">
+                              data-vraag="Project '{{ p.naam }}' verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                         </form>

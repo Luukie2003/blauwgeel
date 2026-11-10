@@ -3,13 +3,24 @@
 {% set open = r.status == 'open' %}
 {% block titel %}{{ 'Factuur ' ~ r.factuurnummer if r.factuurnummer else ('Bestelling #' ~ r.bestelling_id if r.bestelling_id else 'Inboekronde #' ~ r.id) }}{% endblock %}
 {% macro euro(bedrag) %}&euro; {{ '%.2f'|format(bedrag)|replace('.', ',') }}{% endmacro %}
+{% block venster_titel %}
+{% from '_iconen.html' import icoon %}
+<a href="{{ url_for('facturen_overzicht') }}" class="cs-terug">{{ icoon('terug') }} Factuur inboeken</a>
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+    <span class="cs-titel-tekst">{{ r.leverancier_naam or 'Geen leverancier' }}{% if r.bestelling_id %}, bestelling #{{ r.bestelling_id }}{% if r.bestelling_referentie %} ({{ r.bestelling_referentie }}){% endif %}{% endif %}</span>
+    <div class="cs-rechts">{% if r.status == 'afgerond' %}<span class="cs-punt cs-groen">Ingeboekt {{ r.afgerond_op|dag_maand }}</span>{% elif r.status == 'geannuleerd' %}<span class="cs-punt cs-grijs">Geannuleerd</span>{% else %}<span class="cs-punt cs-oranje">Bezig met inboeken</span>{% endif %}</div>
+</div>
+{% endblock %}
 {% block inhoud %}
+{% if pda_modus %}
 <p class="subtitel">
     <a href="{{ url_for('facturen_overzicht') }}">&larr; Factuur inboeken</a>
     &middot; {{ r.leverancier_naam or 'geen leverancier' }}
     {% if r.bestelling_id %}&middot; bestelling #{{ r.bestelling_id }}{% if r.bestelling_referentie %} ({{ r.bestelling_referentie }}){% endif %}{% endif %}
     &middot; {% if r.status == 'afgerond' %}<span class="badge badge-ok">ingeboekt {{ r.afgerond_op|datum_nl }}</span>{% elif r.status == 'geannuleerd' %}<span class="badge badge-neutraal">geannuleerd</span>{% else %}<span class="badge badge-in">bezig</span>{% endif %}
 </p>
+{% endif %}
 
 {% if open %}
 <div class="kaart">
@@ -106,7 +117,7 @@
     </div>
     {% if open and nog|length > 1 %}
     <form method="post" action="{{ url_for('factuur_zoals_besteld', ronde_id=r.id) }}" style="margin:0.6rem 0 0"
-          onsubmit="return bevestigEnVerstuur(this, 'Alles wat nog niet gescand is erbij zetten zoals besteld?');">
+          data-vraag="Alles wat nog niet gescand is erbij zetten zoals besteld?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-rand btn-klein">Alles wat nog mist zoals besteld</button>
     </form>
@@ -272,7 +283,7 @@
         <button type="submit" class="btn btn-geel" {{ 'disabled' if not g_ronde.regels }}>Factuur gecontroleerd</button>
     </form>
     <form method="post" action="{{ url_for('factuur_annuleren', ronde_id=r.id) }}" style="margin:0"
-          onsubmit="return bevestigEnVerstuur(this, 'Deze inboekronde annuleren? Er wordt niets ingeboekt.');">
+          data-vraag="Deze inboekronde annuleren? Er wordt niets ingeboekt." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-rand">Annuleren</button>
     </form>

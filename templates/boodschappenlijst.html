@@ -1,6 +1,15 @@
 {% extends basis_template %}
+{# Boodschappenlijst. Op de computer in 2.0 (clubstijl.css): toevoegen bovenaan, en wat nog gekocht moet worden. De
+   handterminal-weergave (base_pda.html) houdt zijn eigen opmaak. #}
 {% block titel %}Boodschappenlijst{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Boodschappenlijst</h1>
+    <span class="cs-titel-tekst">{% if open_items %}{{ open_items|length }} nog te kopen{% else %}niets te kopen{% endif %}</span>
+</div>
+{% endblock %}
 {% block inhoud %}
+{% if pda_modus %}
 <p class="subtitel">Dingen die ingekocht moeten worden, los van de vaste voorraad (bijv. schoonmaakspullen, kantoorbenodigdheden).</p>
 
 <div class="kaart">
@@ -10,17 +19,33 @@
             <label for="tekst">Wat is er nodig?</label>
             <input type="text" id="tekst" name="tekst" placeholder="Bijv. vuilniszakken, schoonmaakmiddel..." required>
         </div>
-        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
-            {% if pda_modus %}
+        <button type="submit" class="btn btn-geel btn-icoon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-            {% endif %}
             Toevoegen
         </button>
     </form>
 </div>
+{% endif %}
 
-<div class="kaart">
-    <h2>Nog te kopen{% if open_items %} ({{ open_items|length }}){% endif %}</h2>
+{% if not pda_modus %}
+<section class="cs-paneel">
+    <form method="post" action="{{ url_for('boodschappenlijst') }}" class="cs-velden twee">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="veld">
+            <label for="tekst">Wat is er nodig? <span>Los van de vaste voorraad, zoals schoonmaakspullen</span></label>
+            <input type="text" id="tekst" name="tekst" placeholder="Bijvoorbeeld vuilniszakken" required>
+        </div>
+        <div class="veld">
+            <label aria-hidden="true">&nbsp;</label>
+            <button type="submit" class="btn btn-geel">Op de lijst zetten</button>
+        </div>
+    </form>
+</section>
+{% endif %}
+
+<{{ 'div' if pda_modus else 'section' }} class="{{ 'kaart' if pda_modus else 'cs-paneel' }}">
+    {% if pda_modus %}<h2>Nog te kopen{% if open_items %} ({{ open_items|length }}){% endif %}</h2>
+    {% else %}<div class="cs-paneel-kop"><h2>Nog te kopen</h2>{% if open_items %}<span class="cs-aantal">{{ open_items|length }}</span>{% endif %}</div>{% endif %}
     {% if open_items %}
     <ul class="boodschappen-lijst">
         {% for item in open_items %}
@@ -30,24 +55,24 @@
                 <button type="submit" class="boodschappen-vinkknop" aria-label="Afvinken als gekocht"></button>
             </form>
             <span class="boodschappen-tekst">{{ item.tekst }}</span>
-            <span class="tekst-zacht boodschappen-meta">{{ item.aangemaakt_door or 'onbekend' }} &middot; {{ item.aangemaakt_op|datum_nl }}</span>
+            <span class="tekst-zacht boodschappen-meta">{{ item.aangemaakt_door or 'onbekend' }}, {{ item.aangemaakt_op|datum_nl }}</span>
             <form method="post" action="{{ url_for('boodschap_verwijderen', item_id=item.id) }}"
                   data-boodschap="{{ item.tekst }}"
                   onsubmit="return bevestigEnVerstuur(this, '\'' + this.dataset.boodschap + '\' verwijderen van de lijst?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn-tekstlink" style="font-size:0.75rem">Verwijderen</button>
+                <button type="submit" class="btn-tekstlink boodschappen-weg">Verwijderen</button>
             </form>
         </li>
         {% endfor %}
     </ul>
     {% else %}
-    <p class="leeg">Niets op de lijst — goed bezig!</p>
+    <p class="{{ 'leeg' if pda_modus else 'cs-leeg' }}">Niets op de lijst. Wat er nodig is, zet je hierboven erop.</p>
     {% endif %}
-</div>
+</{{ 'div' if pda_modus else 'section' }}>
 
 {% if afgevinkt_items %}
-<div class="kaart">
-    <h2>Recent gekocht</h2>
+<{{ 'div' if pda_modus else 'section' }} class="{{ 'kaart' if pda_modus else 'cs-paneel' }}">
+    {% if pda_modus %}<h2>Recent gekocht</h2>{% else %}<div class="cs-paneel-kop"><h2>Recent gekocht</h2><span class="cs-zacht">Tik op het vinkje om het terug op de lijst te zetten.</span></div>{% endif %}
     <ul class="boodschappen-lijst">
         {% for item in afgevinkt_items %}
         <li class="boodschappen-item boodschappen-item-afgevinkt">
@@ -56,10 +81,10 @@
                 <button type="submit" class="boodschappen-vinkknop boodschappen-vinkknop-actief" aria-label="Terugzetten naar de lijst"></button>
             </form>
             <span class="boodschappen-tekst">{{ item.tekst }}</span>
-            <span class="tekst-zacht boodschappen-meta">{{ item.afgevinkt_door or 'onbekend' }} &middot; {{ item.afgevinkt_op|datum_nl }}</span>
+            <span class="tekst-zacht boodschappen-meta">{{ item.afgevinkt_door or 'onbekend' }}, {{ item.afgevinkt_op|datum_nl }}</span>
         </li>
         {% endfor %}
     </ul>
-</div>
+</{{ 'div' if pda_modus else 'section' }}>
 {% endif %}
 {% endblock %}

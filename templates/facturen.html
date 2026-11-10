@@ -1,13 +1,23 @@
 {% extends basis_template %}
+{# Factuur inboeken. Op de computer in 2.0 (clubstijl.css): de klaargezette bestellingen, wat nog open staat, een nieuwe
+   factuur en wat eerder is ingeboekt. De handterminal-weergave (base_pda.html) houdt zijn eigen opmaak. #}
 {% block titel %}Factuur inboeken{% endblock %}
+{% block venster_titel %}
+{% set klaar = bestellingen|selectattr('ronde_id', 'none')|list %}
+<div class="cs-titel">
+    <h1>Factuur inboeken</h1>
+    {% if klaar %}<span class="cs-titel-tekst">{{ klaar|length }} {{ 'bestelling' if klaar|length == 1 else 'bestellingen' }} klaargezet</span>{% endif %}
+</div>
+{% endblock %}
 {% block inhoud %}
+{% set klaar = bestellingen|selectattr('ronde_id', 'none')|list %}
+{% if pda_modus %}
 <p class="subtitel">
     Scan de dozen, kratten en losse verpakkingen van een levering: de site weet per barcode wat het is en hoeveel erin
     zit, en telt alles op. Klopt het met de factuur, dan rond je af en gaat alles in &eacute;&eacute;n keer in de voorraad.
     Een klaargezette bestelling staat hier als concept: dan zie je per product wat er besteld is en wat er al binnen is.
 </p>
 
-{% set klaar = bestellingen|selectattr('ronde_id', 'none')|list %}
 {% if klaar %}
 <div class="kaart">
     <h2 style="margin-top:0">Klaargezette bestellingen</h2>
@@ -84,5 +94,104 @@
         {% endfor %}
     </ul>
 </div>
+{% endif %}
+{% else %}
+
+{% if klaar %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop">
+        <h2>Klaargezette bestellingen</h2>
+        <span class="cs-zacht">Het concept van de factuur. Komt de levering binnen, tik dan op Inboeken en scan wat er binnenkomt.</span>
+    </div>
+    <div class="tabel-wrap">
+        <table>
+            <tbody>
+                {% for b in klaar %}
+                <tr>
+                    <td><strong>Bestelling #{{ b.id }}{% if b.leverancier %} bij {{ b.leverancier }}{% endif %}</strong>{% if b.referentie %} <span class="cs-zacht">{{ b.referentie }}</span>{% endif %}
+                        <div class="cs-zacht">{{ b.samenvatting }}</div></td>
+                    <td class="cs-verberg-smal cs-zacht">{{ b.producten }} {{ 'product' if b.producten == 1 else 'producten' }}, klaargezet {{ b.aangemaakt_op|dag_maand }}{% if b.besteld_door %} door {{ b.besteld_door }}{% endif %}</td>
+                    <td class="cs-getal"><a href="{{ url_for('factuur_voor_bestelling', bestelling_id=b.id) }}" class="btn btn-geel btn-klein">Inboeken</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if open_rondes %}
+<section class="cs-paneel cs-paneel-let-op">
+    <div class="cs-paneel-kop"><h2>Nog niet afgerond</h2><span class="cs-zacht">Hier is al gescand, maar nog niets ingeboekt.</span></div>
+    <div class="tabel-wrap">
+        <table>
+            <tbody>
+                {% for r in open_rondes %}
+                <tr>
+                    <td><a href="{{ url_for('factuur_ronde', ronde_id=r.id) }}"><strong>{{ 'Factuur ' ~ r.factuurnummer if r.factuurnummer else ('Bestelling #' ~ r.bestelling_id if r.bestelling_id else 'Inboekronde #' ~ r.id) }}</strong></a>
+                        <div class="cs-zacht">{{ r.leverancier_naam or 'Geen leverancier' }}{% if r.bestelling_id %}, bestelling #{{ r.bestelling_id }}{% endif %}</div></td>
+                    <td class="cs-getal cs-nowrap">{{ r.scans }} gescand</td>
+                    <td class="cs-verberg-smal cs-zacht">Begonnen {{ r.gestart_op|dag_maand }}{% if r.gestart_door %} door {{ r.gestart_door }}{% endif %}{% if r.bron == 'app' %}, in de app{% endif %}</td>
+                    <td class="cs-getal"><a href="{{ url_for('factuur_ronde', ronde_id=r.id) }}" class="btn btn-rand btn-klein">Verder</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>{{ 'Andere factuur' if klaar else 'Nieuwe factuur' }}</h2></div>
+    <p class="cs-paneel-tekst cs-zacht">
+        Scan de dozen, kratten en losse verpakkingen van de levering: de site weet per barcode wat het is en hoeveel erin
+        zit, en telt alles op. Klopt het met de factuur, dan rond je af en gaat alles in één keer in de voorraad.
+    </p>
+    <form method="post" action="{{ url_for('factuur_start') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="cs-velden">
+            <div class="veld">
+                <label for="leverancier_id">Leverancier <span>mag leeg</span></label>
+                <select id="leverancier_id" name="leverancier_id">
+                    <option value="">&mdash;</option>
+                    {% for lev in leveranciers %}<option value="{{ lev.id }}">{{ lev.naam }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="veld">
+                <label for="factuurnummer">Factuurnummer <span>mag leeg</span></label>
+                <input type="text" id="factuurnummer" name="factuurnummer" maxlength="60">
+            </div>
+            {% if bestellingen %}
+            <div class="veld">
+                <label for="bestelling_id">Hoort bij bestelling <span>mag leeg</span></label>
+                <select id="bestelling_id" name="bestelling_id">
+                    <option value="">&mdash;</option>
+                    {% for b in bestellingen %}<option value="{{ b.id }}">#{{ b.id }}{% if b.referentie %} ({{ b.referentie }}){% endif %} van {{ b.aangemaakt_op|datum_nl }}</option>{% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+        <div class="cs-paneel-voet"><button type="submit" class="btn btn-geel">Begin met scannen</button></div>
+    </form>
+</section>
+
+{% if recente_rondes %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Eerder ingeboekt</h2></div>
+    <div class="tabel-wrap">
+        <table>
+            <tbody>
+                {% for r in recente_rondes %}
+                <tr>
+                    <td><a href="{{ url_for('factuur_ronde', ronde_id=r.id) }}">{{ 'Factuur ' ~ r.factuurnummer if r.factuurnummer else 'Inboekronde #' ~ r.id }}</a>
+                        <div class="cs-zacht">{{ r.leverancier_naam or 'Geen leverancier' }}</div></td>
+                    <td class="cs-getal">{% if r.status == 'afgerond' %}<span class="cs-punt cs-groen">Ingeboekt {{ r.afgerond_op|dag_maand }}</span>{% if r.afgerond_door %}<div class="cs-zacht">door {{ r.afgerond_door }}</div>{% endif %}{% else %}<span class="cs-punt cs-grijs">Geannuleerd</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
 {% endif %}
 {% endblock %}

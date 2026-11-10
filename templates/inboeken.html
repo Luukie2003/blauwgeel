@@ -1,9 +1,18 @@
 {% extends basis_template %}
 {% set is_bewerken = bestelling.status == 'ontvangen' %}
 {% block titel %}Bestelling {{ 'aanpassen' if is_bewerken else 'inboeken' }}{% endblock %}
+{% block venster_titel %}
+{% from '_iconen.html' import icoon %}
+<a href="{{ url_for('bestellijst') }}" class="cs-terug">{{ icoon('terug') }} Bestellijst</a>
+<div class="cs-titel">
+    <h1>Bestelling #{{ bestelling.id }} {{ 'aanpassen' if is_bewerken else 'inboeken' }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
+{% if pda_modus %}
 <h1>Bestelling #{{ bestelling.id }} {{ 'aanpassen' if is_bewerken else 'inboeken' }}</h1>
 <p class="subtitel"><a href="{{ url_for('bestellijst') }}">&larr; Terug naar bestellijst</a></p>
+{% endif %}
 
 <div class="kaart">
     {% if is_bewerken %}
@@ -143,7 +152,7 @@
             {% if pda_modus %}Bestelling helemaal verwijderen?{% else %}Bestelling volledig verwijderen? Dit maakt ook de voorraadwijziging ervan ongedaan.{% endif %}
         </span>
         <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=bestelling.id) }}"
-              onsubmit="return bevestigEnVerstuur(this, 'Bestelling #{{ bestelling.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan en kan niet ongedaan worden gemaakt.');">
+              data-vraag="Bestelling #{{ bestelling.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan en kan niet ongedaan worden gemaakt." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-gevaar btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
                 {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>{% endif %}

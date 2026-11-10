@@ -1,38 +1,42 @@
 {% extends "base.html" %}
+{# Leveranciers in 2.0 (clubstijl.css): wie levert wat, op welke dag en vóór hoe laat. #}
 {% block titel %}Leveranciers{% endblock %}
-{% block inhoud %}
-<div class="actiebalk">
-    <p class="subtitel" style="margin:0">
-        Bij wie bestel je wat, op welke dag en vóór hoe laat. De bestellijst laat per leverancier zien wat er besteld moet
-        worden, met een pdf per leverancier; op een besteldag staat het op het overzicht.
-    </p>
-    {% if huidige_gebruiker_rol == 'beheerder' %}<a href="{{ url_for('leverancier_nieuw') }}" class="btn btn-geel">+ Nieuwe leverancier</a>{% endif %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Leveranciers</h1>
+    {% if leveranciers %}<span class="cs-titel-tekst">{{ leveranciers|length }} {{ 'leverancier' if leveranciers|length == 1 else 'leveranciers' }}</span>{% endif %}
+    {% if huidige_gebruiker_rol == 'beheerder' %}<div class="cs-rechts"><a href="{{ url_for('leverancier_nieuw') }}" class="btn btn-geel">Nieuwe leverancier</a></div>{% endif %}
 </div>
-
-<div class="kaart">
+{% endblock %}
+{% block inhoud %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop">
+        <h2>Bij wie bestel je wat</h2>
+        <span class="cs-zacht">De bestellijst zet per leverancier klaar wat er besteld moet worden, met een pdf per leverancier; op een besteldag staat het op het overzicht.</span>
+    </div>
     {% if leveranciers %}
     <div class="tabel-wrap">
         <table>
-            <thead><tr><th>Leverancier</th><th>Bestellen</th><th>Levertijd</th><th>Minimum</th><th>Contact</th><th style="text-align:right">Producten</th><th></th></tr></thead>
+            <thead><tr><th>Leverancier</th><th>Bestellen</th><th class="cs-verberg-smal">Levertijd</th><th class="cs-getal cs-verberg-smal">Minimum</th><th class="cs-verberg-smal">Contact</th><th class="cs-getal">Producten</th><th></th></tr></thead>
             <tbody>
                 {% for l in leveranciers %}
                 <tr class="{{ '' if l.actief else 'inactief' }}">
-                    <td><strong>{{ l.naam }}</strong>{% if not l.actief %} <span class="badge badge-neutraal">inactief</span>{% endif %}
-                        {% if l.klantnummer %}<br><span class="tekst-zacht">Klantnummer {{ l.klantnummer }}</span>{% endif %}</td>
-                    <td>{{ l.dagen or '—' }}{% if l.bestelwijze %}<br><span class="tekst-zacht">{{ l.bestelwijze }}</span>{% endif %}</td>
-                    <td>{% if l.levertijd_dagen %}{{ l.levertijd_dagen }} {{ 'dag' if l.levertijd_dagen == 1 else 'dagen' }}{% else %}—{% endif %}</td>
-                    <td>{% if l.minimum_bedrag %}&euro; {{ '%.2f'|format(l.minimum_bedrag)|replace('.', ',') }}{% else %}—{% endif %}</td>
-                    <td>{{ l.contactpersoon or '' }}{% if l.telefoon %}<br>{{ l.telefoon }}{% endif %}{% if l.website %}<br><a href="{{ l.website if '://' in l.website else 'https://' ~ l.website }}" target="_blank" rel="noopener">{{ l.website }}</a>{% endif %}</td>
-                    <td style="text-align:right">{{ l.aantal_producten }}</td>
-                    <td class="tabel-acties">{% if huidige_gebruiker_rol == 'beheerder' %}<a href="{{ url_for('leverancier_bewerken', leverancier_id=l.id) }}" class="btn btn-rand btn-klein">Bewerken</a>{% endif %}</td>
+                    <td><strong>{{ l.naam }}</strong>{% if not l.actief %} <span class="cs-punt cs-grijs">Inactief</span>{% endif %}
+                        {% if l.klantnummer %}<div class="cs-zacht">Klantnummer {{ l.klantnummer }}</div>{% endif %}</td>
+                    <td>{{ l.dagen or '—' }}{% if l.bestelwijze %}<div class="cs-zacht">{{ l.bestelwijze }}</div>{% endif %}</td>
+                    <td class="cs-verberg-smal">{% if l.levertijd_dagen %}{{ l.levertijd_dagen }} {{ 'dag' if l.levertijd_dagen == 1 else 'dagen' }}{% else %}—{% endif %}</td>
+                    <td class="cs-getal cs-nowrap cs-verberg-smal">{% if l.minimum_bedrag %}&euro; {{ '%.2f'|format(l.minimum_bedrag)|replace('.', ',') }}{% else %}—{% endif %}</td>
+                    <td class="cs-verberg-smal">{{ l.contactpersoon or '' }}{% if l.telefoon %}<div>{{ l.telefoon }}</div>{% endif %}{% if l.website %}<div><a href="{{ l.website if '://' in l.website else 'https://' ~ l.website }}" target="_blank" rel="noopener">{{ l.website }}</a></div>{% endif %}</td>
+                    <td class="cs-getal">{{ l.aantal_producten }}</td>
+                    <td class="cs-getal">{% if huidige_gebruiker_rol == 'beheerder' %}<a href="{{ url_for('leverancier_bewerken', leverancier_id=l.id) }}" class="btn btn-rand btn-klein">Bewerken</a>{% endif %}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    {% if zonder_leverancier %}<p class="tekst-zacht" style="margin-bottom:0">{{ zonder_leverancier }} actieve {{ 'product heeft' if zonder_leverancier == 1 else 'producten hebben' }} nog geen leverancier.</p>{% endif %}
+    {% if zonder_leverancier %}<p class="cs-paneel-voet cs-zacht">{{ zonder_leverancier }} actieve {{ 'product heeft' if zonder_leverancier == 1 else 'producten hebben' }} nog geen leverancier.</p>{% endif %}
     {% else %}
-    <p class="leeg">Nog geen leveranciers. {% if huidige_gebruiker_rol == 'beheerder' %}Voeg ze toe met &ldquo;Nieuwe leverancier&rdquo; en vink aan welke producten je daar bestelt.{% endif %}</p>
+    <p class="cs-leeg">Nog geen leveranciers. {% if huidige_gebruiker_rol == 'beheerder' %}Voeg ze toe met &ldquo;Nieuwe leverancier&rdquo; en vink aan welke producten je daar bestelt.{% endif %}</p>
     {% endif %}
-</div>
+</section>
 {% endblock %}

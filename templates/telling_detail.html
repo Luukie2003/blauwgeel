@@ -78,7 +78,7 @@
                 <tr id="telling-regel-corrigeren-{{ r.id }}" class="telling-regel-corrigeren-rij cs-corrigeer-rij" hidden>
                     <td colspan="7">
                         <form method="post" action="{{ url_for('telling_regel_corrigeren', regel_id=r.id) }}"
-                              onsubmit="return bevestigEnVerstuur(this, '{{ correctie.bevestiging(r, later_geteld) }}');"
+                              data-vraag="{{ correctie.bevestiging(r, later_geteld) }}" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);"
                               class="cs-corrigeer">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="veld">

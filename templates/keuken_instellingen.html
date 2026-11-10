@@ -18,7 +18,7 @@
             {% endif %}
             <p class="statuskaart-opmerking">Elke {{ frituurvet_status.interval }} dagen</p>
             <form method="post" action="{{ url_for('frituurvet_vervangen') }}"
-                  onsubmit="return bevestigEnVerstuur(this, 'Frituurvet vandaag vervangen?');">
+                  data-vraag="Frituurvet vandaag vervangen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-rand btn-klein">Vet vervangen</button>
             </form>

@@ -71,7 +71,7 @@
         uit: alleen dit toestel blijft ingelogd. Een nieuw wachtwoord doet dit ook vanzelf.
     </p>
     <form method="post" action="{{ url_for('account_andere_toestellen_uitloggen') }}" class="cs-paneel-voet"
-          onsubmit="return bevestigEnVerstuur(this, 'Uitloggen op alle andere toestellen?');">
+          data-vraag="Uitloggen op alle andere toestellen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-rand">Uitloggen op alle andere toestellen</button>
     </form>

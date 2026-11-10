@@ -77,14 +77,14 @@
                     </button>
                 </form>
                 <form method="post" action="{{ url_for('account_actief_wisselen', gebruiker_id=g.id) }}"
-                      {% if g.actief %}onsubmit="return bevestigEnVerstuur(this, '{{ actief_bevestiging }}');"{% endif %}>
+                      {% if g.actief %}data-vraag="{{ actief_bevestiging }}" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);"{% endif %}>
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-klein {{ 'btn-gevaar' if g.actief else 'btn-rand' }}">
                         {{ 'Blokkeren' if g.actief else 'Deblokkeren' }}
                     </button>
                 </form>
                 <form method="post" action="{{ url_for('account_overal_uitloggen', gebruiker_id=g.id) }}"
-                      onsubmit="return bevestigEnVerstuur(this, 'Account \'{{ g.naam }}\' op alle toestellen uitloggen?');">
+                      data-vraag="Account '{{ g.naam }}' op alle toestellen uitloggen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-rand btn-klein" title="Bijvoorbeeld als iemand een telefoon kwijt is">Overal uitloggen</button>
                 </form>
@@ -95,7 +95,7 @@
                     </button>
                 </form>
                 <form method="post" action="{{ url_for('account_verwijderen', gebruiker_id=g.id) }}"
-                      onsubmit="return bevestigEnVerstuur(this, 'Account \'{{ g.naam }}\' verwijderen?');">
+                      data-vraag="Account '{{ g.naam }}' verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                 </form>

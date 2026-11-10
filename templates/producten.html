@@ -22,7 +22,7 @@
         <button type="button" id="labels-printen-knop" class="btn btn-rand" disabled>Schaplabels printen</button>
         {% if huidige_gebruiker_rol == 'beheerder' %}
         <form method="post" action="{{ url_for('producten_archiveren') }}" id="archiveer-form" style="margin:0"
-              onsubmit="return bevestigEnVerstuur(this, 'De geselecteerde inactieve producten archiveren? Ze staan dan in geen enkele lijst meer; terugzetten kan onder Gearchiveerd.');">
+              data-vraag="De geselecteerde inactieve producten archiveren? Ze staan dan in geen enkele lijst meer; terugzetten kan onder Gearchiveerd." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="ids" id="archiveer-ids">
             <button type="submit" id="archiveer-knop" class="btn btn-rand" disabled>Selectie archiveren</button>
@@ -203,14 +203,14 @@
                                 {# Staat het in een telling of bestelling, dan kan het niet weg (zie producten_met_geschiedenis). #}
                                 {% if p.id not in met_geschiedenis %}
                                 <form method="post" action="{{ url_for('product_verwijderen', product_id=p.id) }}"
-                                      onsubmit="return bevestigEnVerstuur(this, 'Product \'{{ p.naam }}\' verwijderen? Dit verwijdert ook de boekingsgeschiedenis.');">
+                                      data-vraag="Product '{{ p.naam }}' verwijderen? Dit verwijdert ook de boekingsgeschiedenis." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                                 </form>
                                 {% else %}
                                 {# Kan niet weg (staat in tellingen of bestellingen): archiveren haalt het uit alle lijsten. #}
                                 <form method="post" action="{{ url_for('product_archiveren', product_id=p.id) }}"
-                                      onsubmit="return bevestigEnVerstuur(this, 'Product \'{{ p.naam }}\' archiveren? Het staat dan in geen enkele lijst meer{{ ' en wordt inactief' if p.actief else '' }}; de tellingen van toen blijven kloppen. Terugzetten kan onder Gearchiveerd.');">
+                                      data-vraag="Product '{{ p.naam }}' archiveren? Het staat dan in geen enkele lijst meer{{ ' en wordt inactief' if p.actief else '' }}; de tellingen van toen blijven kloppen. Terugzetten kan onder Gearchiveerd." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-rand btn-klein">Archiveren</button>
                                 </form>

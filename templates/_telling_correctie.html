@@ -10,7 +10,7 @@
 {% endmacro %}
 
 {% macro bevestiging(r, later_geteld) -%}
-Telling voor \'{{ r.product_naam }}\' corrigeren? Dit past het verkocht/correctie-cijfer (en de omzet) van deze telling aan{{ ', en met het vinkje aan ook de huidige voorraad' if r.product_id not in later_geteld else '. De huidige voorraad blijft zoals hij is: dit product is daarna opnieuw geteld' }}.
+Telling voor '{{ r.product_naam }}' corrigeren? Dit past het verkocht/correctie-cijfer (en de omzet) van deze telling aan{{ ', en met het vinkje aan ook de huidige voorraad' if r.product_id not in later_geteld else '. De huidige voorraad blijft zoals hij is: dit product is daarna opnieuw geteld' }}.
 {%- endmacro %}
 
 {# Bij een gecorrigeerde regel waar de huidige voorraad niet klopt met de telling en de boekingen daarna (zie
@@ -19,7 +19,7 @@ Telling voor \'{{ r.product_naam }}\' corrigeren? Dit past het verkocht/correcti
 {% if r.id in voorraad_afwijking %}
 {% set huidig, verwacht = voorraad_afwijking[r.id] %}
 <form method="post" action="{{ url_for('telling_regel_voorraad_bijwerken', regel_id=r.id) }}" style="margin:0.3rem 0 0.5rem"
-      onsubmit="return bevestigEnVerstuur(this, 'De voorraad van \'{{ r.product_naam }}\' van {{ huidig }} op {{ verwacht }} {{ r.eenheid }} zetten?');">
+      data-vraag="De voorraad van '{{ r.product_naam }}' van {{ huidig }} op {{ verwacht }} {{ r.eenheid }} zetten?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <span class="tekst-zacht" style="font-size:0.8rem">De huidige voorraad is {{ huidig }} {{ r.eenheid }}; volgens deze telling en de boekingen daarna hoort het {{ verwacht }} te zijn.</span>
     <button type="submit" class="btn btn-rand btn-klein">Voorraad op {{ verwacht }} zetten</button>

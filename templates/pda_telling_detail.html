@@ -48,7 +48,7 @@
     <details class="pda-corrigeren">
         <summary>Corrigeren</summary>
         <form method="post" action="{{ url_for('telling_regel_corrigeren', regel_id=r.id) }}"
-              onsubmit="return bevestigEnVerstuur(this, '{{ correctie.bevestiging(r, later_geteld) }}');">
+              data-vraag="{{ correctie.bevestiging(r, later_geteld) }}" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="veld">
                 <label for="geteld-{{ r.id }}">Werkelijk geteld ({{ r.eenheid }})</label>

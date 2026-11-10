@@ -118,7 +118,7 @@
             {% if lid.eerste_seizoen %}&middot; lid sinds {{ lid.eerste_seizoen }}{% endif %}
         </p>
         <form method="post" action="{{ url_for('club_van_20_lid_archiveren', lid_id=lid.id) }}" style="margin-top:0.8rem"
-              {% if lid.status != 'inactief' %}onsubmit="return bevestigEnVerstuur(this, '\'{{ lid.naam }}\' archiveren? Het naambordje gaat van het scherm; de betaalhistorie blijft bewaard.');"{% endif %}>
+              {% if lid.status != 'inactief' %}data-vraag="'{{ lid.naam }}' archiveren? Het naambordje gaat van het scherm; de betaalhistorie blijft bewaard." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);"{% endif %}>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             {% if lid.status == 'inactief' %}
             <input type="hidden" name="actie" value="terugzetten">
@@ -189,7 +189,7 @@
     </div>
 
     <form method="post" action="{{ url_for('club_van_20_lid_verwijderen', lid_id=lid.id) }}"
-          onsubmit="return bevestigEnVerstuur(this, '\'{{ lid.naam }}\' en alle betalingen definitief verwijderen? Gestopt? Archiveer het lid dan liever, dan blijft de historie bewaard.');">
+          data-vraag="'{{ lid.naam }}' en alle betalingen definitief verwijderen? Gestopt? Archiveer het lid dan liever, dan blijft de historie bewaard." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-gevaar btn-klein">Lid verwijderen</button>
     </form>

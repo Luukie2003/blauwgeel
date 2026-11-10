@@ -1,5 +1,12 @@
 {% extends basis_template %}
 {% block titel %}Prognose{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Prognose</h1>
+    <span class="cs-titel-tekst">De komende {{ dagen }} dagen</span>
+    <div class="cs-rechts"><a href="{{ url_for('bestellijst') }}" class="btn btn-rand">Naar de bestellijst</a></div>
+</div>
+{% endblock %}
 {% block inhoud %}
 {% include "_prognose_tabs.html" %}
 <p class="subtitel">
@@ -14,7 +21,7 @@
     <a href="{{ url_for('prognose_pagina', dagen=h, categorie=categorie or None) }}"
        class="btn {{ 'btn-geel' if h == dagen else 'btn-rand' }}">Komende {{ h }} dagen</a>
     {% endfor %}
-    <a href="{{ url_for('bestellijst') }}" class="btn btn-rand">Naar de bestellijst</a>
+    {% if pda_modus %}<a href="{{ url_for('bestellijst') }}" class="btn btn-rand">Naar de bestellijst</a>{% endif %}
 </div>
 
 {% if thuiswedstrijden %}
@@ -163,7 +170,7 @@
                     <td>
                         {% if u.dagen > 1 %}
                         <form method="post" action="{{ url_for('prognose_uitzondering_periode_verwijderen') }}" style="margin:0"
-                              onsubmit="return bevestigEnVerstuur(this, 'De hele periode ({{ u.dagen }} dagen) verwijderen?');">
+                              data-vraag="De hele periode ({{ u.dagen }} dagen) verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="van" value="{{ u.datum.isoformat() }}">
                             <input type="hidden" name="tot" value="{{ u.tot.isoformat() }}">

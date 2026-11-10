@@ -104,7 +104,7 @@
                     <td class="cs-getal">
                         <span class="cs-punt {{ 'cs-groen' if f.ok else 'cs-rood' }}">{{ 'Vervangen' if f.ok else 'Te laat' }}</span>
                         <form method="post" action="{{ url_for('frituurvet_vervangen') }}" style="margin:0.35rem 0 0"
-                              onsubmit="return bevestigEnVerstuur(this, 'Frituurvet vandaag vervangen?');">
+                              data-vraag="Frituurvet vandaag vervangen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-rand btn-klein">Vet vervangen</button>
                         </form>

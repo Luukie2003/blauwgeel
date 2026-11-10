@@ -12,7 +12,7 @@
         <div class="stand-poule-kop">
             <input type="text" class="stand-poule-titel-veld" value="{{ poule.titel }}" title="Titel van deze poule aanpassen">
             <form method="post" action="{{ url_for('kiosk_stand_poule_verwijderen', poule=poule.sleutel) }}"
-                  onsubmit="return bevestigEnVerstuur(this, 'Poule \'{{ poule.titel }}\' en alle teams daarin verwijderen?');">
+                  data-vraag="Poule '{{ poule.titel }}' en alle teams daarin verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="stand-item-knop" title="Poule verwijderen">&times;</button>
             </form>

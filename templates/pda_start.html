@@ -159,7 +159,7 @@
             <strong>Frituurvet: {{ ('vervangen ' ~ frituurvet_status.dagen_geleden ~ (' dag' if frituurvet_status.dagen_geleden == 1 else ' dagen') ~ ' geleden') if frituurvet_status.laatste else 'nog nooit vervangen' }}</strong>
             <span class="tekst-zacht">Elke {{ frituurvet_status.interval }} dagen</span>
         </span>
-        <form method="post" action="{{ url_for('frituurvet_vervangen') }}" onsubmit="return bevestigEnVerstuur(this, 'Frituurvet vandaag vervangen?');">
+        <form method="post" action="{{ url_for('frituurvet_vervangen') }}" data-vraag="Frituurvet vandaag vervangen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-rand btn-klein">Vet vervangen</button>
         </form>

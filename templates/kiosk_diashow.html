@@ -112,7 +112,7 @@
             <div class="kt-rij-acties">
                 <a href="{{ url_for('kiosk_sjabloon_bewerken', sjabloon_id=s.id) }}" class="kt-ikoon" title="Bewerken" aria-label="{{ s.naam }} bewerken">{{ ikoon('potlood') }}</a>
                 <form method="post" action="{{ url_for('kiosk_sjabloon_verwijderen', sjabloon_id=s.id) }}" class="kt-inline"
-                      onsubmit="return bevestigEnVerstuur(this, '\'{{ s.naam }}\' verwijderen?{{ (' Wordt gebruikt door ' ~ aantal_gebruikt ~ ' dia(s), die vallen dan terug op het standaardsjabloon.') if aantal_gebruikt else '' }}');">
+                      data-vraag="'{{ s.naam }}' verwijderen?{{ (' Wordt gebruikt door ' ~ aantal_gebruikt ~ ' dia(s), die vallen dan terug op het standaardsjabloon.') if aantal_gebruikt else '' }}" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="kt-ikoon kt-ikoon--gevaar" title="Verwijderen" aria-label="{{ s.naam }} verwijderen">{{ ikoon('prullenbak') }}</button>
                 </form>

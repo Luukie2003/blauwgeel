@@ -1,9 +1,14 @@
 {% extends "base.html" %}
 {% block titel %}{{ 'Leverancier bewerken' if leverancier else 'Nieuwe leverancier' }}{% endblock %}
 {% macro waarde(veld, standaard='') %}{{ ingevuld.get(veld, leverancier[veld] if leverancier and leverancier[veld] is not none else standaard) }}{% endmacro %}
+{% block venster_titel %}
+{% from '_iconen.html' import icoon %}
+<a href="{{ url_for('leveranciers_lijst') }}" class="cs-terug">{{ icoon('terug') }} Leveranciers</a>
+<div class="cs-titel">
+    <h1>{{ 'Leverancier bewerken' if leverancier else 'Nieuwe leverancier' }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>{{ 'Leverancier bewerken' if leverancier else 'Nieuwe leverancier' }}</h1>
-<p class="subtitel"><a href="{{ url_for('leveranciers_lijst') }}">&larr; Terug naar leveranciers</a></p>
 
 <form method="post" class="kaart">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -70,7 +75,7 @@
 
 {% if leverancier %}
 <form method="post" action="{{ url_for('leverancier_verwijderen', leverancier_id=leverancier.id) }}" class="kaart"
-      onsubmit="return bevestigEnVerstuur(this, 'Leverancier {{ leverancier.naam }} verwijderen? De producten blijven bestaan.');">
+      data-vraag="Leverancier {{ leverancier.naam }} verwijderen? De producten blijven bestaan." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit" class="btn btn-gevaar">Leverancier verwijderen</button>
 </form>

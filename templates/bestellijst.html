@@ -1,5 +1,15 @@
 {% extends basis_template %}
 {% block titel %}Bestellijst{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Bestellijst</h1>
+    <span class="cs-titel-tekst">Bestel wat nodig is, of boek in wat er binnenkomt.</span>
+    <div class="cs-rechts">
+        {% if suggesties %}<a href="{{ url_for('bestellijst_pdf_route') }}" class="btn btn-rand">Bestellijst (PDF)</a>{% endif %}
+        <a href="{{ url_for('bestelling_nieuw') }}" class="btn btn-rand">Al besteld? Bestelling klaarzetten</a>
+    </div>
+</div>
+{% endblock %}
 {% block inhoud %}
 {% macro gekozen_badge(keuze) -%}
 {% if keuze.gecontroleerd %}
@@ -9,19 +19,11 @@
 <span class="badge badge-in" title="Zelf gekozen bij het product{% if keuze.door %} door {{ keuze.door }}{% endif %}; geldt tot het besteld is">{{ 'niet bestellen' if keuze.eenheden == 0 else 'zelf gekozen' }}{% if keuze.door %} ({{ keuze.door }}){% endif %}</span>
 {% endif %}
 {%- endmacro %}
+{% if pda_modus %}
 <div class="actiebalk">
-    {% if pda_modus %}
     <p class="subtitel" style="margin:0">Boek bestellingen in zodra de levering binnenkomt, en zie wat er nog besteld moet worden.</p>
-    {% else %}
-    <p class="subtitel" style="margin:0">Bestel wat nodig is, of boek in wat er binnenkomt.</p>
-    <div style="display:flex; gap:0.5rem">
-        {% if suggesties %}
-        <a href="{{ url_for('bestellijst_pdf_route') }}" class="btn btn-rand">Bestellijst (PDF)</a>
-        {% endif %}
-        <a href="{{ url_for('bestelling_nieuw') }}" class="btn btn-rand">Al besteld? Bestelling klaarzetten</a>
-    </div>
-    {% endif %}
 </div>
+{% endif %}
 
 <div class="kaart">
     <h2>Openstaande bestellingen</h2>
@@ -50,7 +52,7 @@
                 <textarea id="bestel-tekst-{{ b.id }}" class="visueel-verborgen" readonly tabindex="-1" aria-hidden="true">{{ bestel_teksten[b.id] }}</textarea>
                 {% endif %}
                 <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
-                      onsubmit="return bevestigEnVerstuur(this, 'Bestelling #{{ b.id }} verwijderen?');">
+                      data-vraag="Bestelling #{{ b.id }} verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-gevaar btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
                         {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>{% endif %}
@@ -640,7 +642,7 @@
                     Bewerken
                 </a>
                 <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
-                      onsubmit="return bevestigEnVerstuur(this, 'Bestelling #{{ b.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan.');">
+                      data-vraag="Bestelling #{{ b.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-gevaar btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
                         {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>{% endif %}

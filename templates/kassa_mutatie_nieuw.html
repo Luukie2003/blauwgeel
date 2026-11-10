@@ -1,7 +1,13 @@
 {% extends basis_template %}
 {% block titel %}Afdracht / toevoeging{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Afdracht / toevoeging</h1>
+    <div class="cs-rechts"><a href="{{ url_for('kassa_geschiedenis') }}" class="btn btn-rand">Kassa geschiedenis</a></div>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Afdracht / toevoeging</h1>
+{% if pda_modus %}<h1>Afdracht / toevoeging</h1>{% endif %}
 <p class="subtitel">
     Boek een overboeking tussen kassalade en kluis, zonder meteen een volledige telling te
     doen: een afdracht haalt geld uit de kassalade en stopt het in de kluis, een toevoeging

@@ -66,7 +66,7 @@
                 {% endif %}
                 {% if huidige_gebruiker_rol == 'beheerder' or m.naam == huidige_gebruiker %}
                 <form method="post" action="{{ url_for('mededeling_verwijderen', mededeling_id=m.id) }}"
-                      onsubmit="return bevestigEnVerstuur(this, 'Deze mededeling verwijderen?');">
+                      data-vraag="Deze mededeling verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn-tekstlink">Verwijderen</button>
                 </form>

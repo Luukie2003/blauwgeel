@@ -1,7 +1,13 @@
 {% extends basis_template %}
 {% block titel %}Storting / opname{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Storting / opname</h1>
+    <div class="cs-rechts"><a href="{{ url_for('kluis_geschiedenis') }}" class="btn btn-rand">Kluis geschiedenis</a></div>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Storting / opname</h1>
+{% if pda_modus %}<h1>Storting / opname</h1>{% endif %}
 <p class="subtitel">
     Boek geld dat de kluis in- of uitgaat van/naar buiten de boekhouding om (bank,
     penningmeester) &mdash; niet te verwarren met een afdracht/toevoeging, dat de

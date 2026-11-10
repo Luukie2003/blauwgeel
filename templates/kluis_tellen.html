@@ -1,14 +1,15 @@
 {% extends basis_template %}
 {% block titel %}Kluis tellen{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Kluis tellen</h1>
+    <span class="cs-titel-tekst">Tel per coupure. De kluis heeft geen eigen omzet: wat je verwacht, is de bekende stand.</span>
+    <div class="cs-rechts"><a href="{{ url_for('kluis_geschiedenis') }}" class="btn btn-rand">Kluis geschiedenis</a></div>
+</div>
+{% endblock %}
 {% block inhoud %}
 {% if pda_modus %}
 <p class="subtitel">Tel per coupure hoeveel er in de kluis zit.</p>
-{% else %}
-<h1>Kluis tellen</h1>
-<p class="subtitel">
-    Tel de kluis per coupure. In tegenstelling tot de kassalade heeft de kluis geen eigen
-    omzet &mdash; het verwachte bedrag is gewoon de bekende stand.
-</p>
 {% endif %}
 
 <div class="statgrid">

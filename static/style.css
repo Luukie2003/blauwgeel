@@ -1034,6 +1034,7 @@ input:focus, select:focus, textarea:focus {
     flex: 0 0 auto;
     white-space: nowrap;
 }
+.boodschappen-weg { font-size: 0.75rem; }
 
 .tag-mention {
     background: rgba(252, 212, 47, 0.35);

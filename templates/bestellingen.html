@@ -1,6 +1,16 @@
 {% extends basis_template %}
+{# Bestellingen. Op de computer in 2.0 (clubstijl.css): wat nog niet geleverd is bovenaan, en elke bestelling als
+   regel die je openklapt. De handterminal-weergave (base_pda.html) houdt zijn eigen opmaak. #}
 {% block titel %}Bestellingen{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Bestellingen</h1>
+    <span class="cs-titel-tekst">{{ totaal }} {{ 'bestelling' if totaal == 1 else 'bestellingen' }}{% if status == 'besteld' %} klaargezet{% elif status == 'ontvangen' %} ontvangen{% endif %}</span>
+    <div class="cs-rechts"><a href="{{ url_for('bestellijst') }}" class="btn btn-geel">Naar de bestellijst</a></div>
+</div>
+{% endblock %}
 {% block inhoud %}
+{% if pda_modus %}
 <h1>Bestellingen</h1>
 <p class="subtitel">
     Alle bestellingen, ook de ontvangen: die blijven bewaard, met per product wat er besteld en wat er binnengekomen is.
@@ -98,4 +108,100 @@
     </div>
     {% endif %}
 </div>
+{% else %}
+
+{% if manco_per_leverancier %}
+<section class="cs-paneel cs-paneel-let-op">
+    <div class="cs-paneel-kop">
+        <h2>Nog niet geleverd</h2>
+        <span class="cs-zacht">Dit kwam niet of te weinig binnen. Het staat bij &ldquo;Voorgesteld om te bestellen&rdquo; tot je het weer bestelt, of tot je op &ldquo;Niet meer nodig&rdquo; tikt.</span>
+    </div>
+    <div class="tabel-wrap">
+        <table>
+            <tbody>
+                {% for leverancier, regels in manco_per_leverancier %}
+                <tr class="cs-groep-rij"><th colspan="3">{{ leverancier or 'Zonder leverancier' }}</th></tr>
+                {% for m in regels %}
+                <tr>
+                    <td><strong>{{ m.naam }}</strong><div class="cs-zacht">Bestelling #{{ m.bestelling_id }}, ontvangen {{ m.ontvangen_op|dag_maand }}</div></td>
+                    <td class="cs-getal cs-nowrap"><span class="cs-rood">{{ m.tekort }} {{ m.eenheid }} niet geleverd</span><div class="cs-zacht">{{ m.aantal_ontvangen }} van {{ m.aantal_besteld }}</div></td>
+                    <td class="cs-getal">
+                        <form method="post" action="{{ url_for('manco_afhandelen', product_id=m.product_id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-rand btn-klein">Niet meer nodig</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop">
+        <h2>Alle bestellingen</h2>
+        <div class="cs-rechts">
+            {% for waarde, label in [('', 'Alle'), ('besteld', 'Klaargezet'), ('ontvangen', 'Ontvangen')] %}
+            <a href="{{ url_for('bestellingen_overzicht', status=waarde or None) }}" class="btn {{ 'btn-geel' if status == waarde else 'btn-rand' }} btn-klein">{{ label }}</a>
+            {% endfor %}
+        </div>
+    </div>
+    {% for b, regels in bestellingen %}
+    {% set tekort = regels|selectattr('manco')|list %}
+    <details class="cs-bestelling">
+        <summary>
+            <span class="cs-bestelling-nr">#{{ b.id }}</span>
+            <span class="cs-bestelling-wie">
+                <strong>{{ b.leverancier_naam or 'Zonder leverancier' }}{% if b.referentie %} <span class="cs-zacht">{{ b.referentie }}</span>{% endif %}</strong>
+                <span class="cs-zacht">{{ b.aangemaakt_op|dag_lang }}{% if b.besteld_door %}, door {{ b.besteld_door }}{% endif %}, {{ regels|length }} {{ 'product' if regels|length == 1 else 'producten' }}</span>
+            </span>
+            <span class="cs-bestelling-stand">
+                {% if b.status == 'besteld' %}<span class="cs-punt cs-oranje">Klaargezet</span>
+                {% else %}<span class="cs-punt cs-groen">Ontvangen {{ b.ontvangen_op|dag_maand }}</span>{% if tekort %}<span class="cs-punt cs-rood">{{ tekort|length }} manco</span>{% endif %}{% endif %}
+            </span>
+        </summary>
+        <div class="tabel-wrap">
+            <table>
+                <thead><tr><th>Product</th><th class="cs-getal">Besteld</th>{% if b.status == 'ontvangen' %}<th class="cs-getal">Ontvangen</th>{% endif %}</tr></thead>
+                <tbody>
+                    {% for r in regels %}
+                    <tr>
+                        <td>{{ r.product_naam }}</td>
+                        <td class="cs-getal cs-nowrap">{{ r.aantal_besteld|naar_besteleenheden(r) }} {{ r|besteleenheid_naam }}{% if r.besteleenheid_factor > 1 %} <span class="cs-zacht">({{ r.aantal_besteld }} {{ r.eenheid }})</span>{% endif %}</td>
+                        {% if b.status == 'ontvangen' %}
+                        <td class="cs-getal cs-nowrap">
+                            {{ r.aantal_ontvangen or 0 }} {{ r.eenheid }}
+                            {% if (r.aantal_ontvangen or 0) < r.aantal_besteld %}<div class="cs-rood">{{ 'niet geleverd' if not r.aantal_ontvangen else 'te weinig' }}</div>{% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="cs-knoppen">
+            {% if b.status == 'besteld' %}
+            <a href="{{ url_for('factuur_voor_bestelling', bestelling_id=b.id) }}" class="btn btn-geel btn-klein">Inboeken met de factuur</a>
+            <a href="{{ url_for('bestelling_bewerken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Bewerken</a>
+            <a href="{{ url_for('bestelling_pdf_route', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">PDF voor de leverancier</a>
+            {% else %}
+            <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">Ontvangen aantallen corrigeren</a>
+            {% endif %}
+        </div>
+    </details>
+    {% else %}
+    <p class="cs-leeg">Nog geen bestellingen. Een nieuwe zet je klaar op de <a href="{{ url_for('bestellijst') }}">bestellijst</a>.</p>
+    {% endfor %}
+    {% if paginas > 1 %}
+    <div class="cs-paneel-voet">
+        {% for n in range(1, paginas + 1) %}
+        <a href="{{ url_for('bestellingen_overzicht', status=status or None, pagina=n) }}" class="btn {{ 'btn-geel' if n == pagina else 'btn-rand' }} btn-klein">{{ n }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+{% endif %}
 {% endblock %}

@@ -31,7 +31,7 @@
                 <td>{{ b.aangemaakt_op|datum_nl }}</td>
                 <td>
                     <form method="post" action="{{ url_for('bier_verwijderen', bier_id=b.id) }}"
-                          onsubmit="return bevestigEnVerstuur(this, 'Dit biertje uit de bibliotheek verwijderen?');">
+                          data-vraag="Dit biertje uit de bibliotheek verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn-tekstlink">Verwijderen</button>
                     </form>

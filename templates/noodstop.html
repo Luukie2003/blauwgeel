@@ -20,7 +20,7 @@
     <p class="flash flash-error">Te veel foute pogingen. Probeer het over {{ wachten }} minuut/minuten opnieuw.</p>
     {% else %}
     <form method="post" action="{{ url_for('noodstop_open') }}" class="formgrid" style="align-items:end"
-          onsubmit="return bevestigEnVerstuur(this, 'De site en de schermen weer openen? Iedereen kan dan weer inloggen.');">
+          data-vraag="De site en de schermen weer openen? Iedereen kan dan weer inloggen." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="veld" style="margin:0"><label for="open_wachtwoord">Je wachtwoord</label><input type="password" id="open_wachtwoord" name="wachtwoord" autocomplete="current-password" required></div>
         {% if toestand.code_ingesteld %}
@@ -44,7 +44,7 @@
     <p class="flash flash-warning" style="margin:0.8rem 0 0">Stel eerst hieronder een noodcode in: zonder noodcode kan na het afsluiten niemand meer inloggen.</p>
     {% else %}
     <form method="post" action="{{ url_for('noodstop_dicht') }}" class="formgrid" style="align-items:end; margin-top:0.8rem"
-          onsubmit="return bevestigEnVerstuur(this, 'Nu de hele site en alle schermen afsluiten? Iedereen wordt uitgelogd.');">
+          data-vraag="Nu de hele site en alle schermen afsluiten? Iedereen wordt uitgelogd." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="veld" style="margin:0"><label for="reden">Reden <span class="tekst-zacht">(alleen voor jezelf, mag leeg)</span></label><input type="text" id="reden" name="reden" maxlength="200"></div>
         <div class="veld" style="margin:0"><label for="dicht_wachtwoord">Je wachtwoord</label><input type="password" id="dicht_wachtwoord" name="wachtwoord" autocomplete="current-password" required></div>

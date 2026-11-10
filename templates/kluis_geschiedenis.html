@@ -1,6 +1,17 @@
 {% extends basis_template %}
 {% block titel %}Kluis geschiedenis{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Kluis geschiedenis</h1>
+    <span class="cs-titel-tekst">Alle kluistellingen, stortingen en opnames, en overboekingen vanuit de kassalade.</span>
+    <div class="cs-rechts">
+        <a href="{{ url_for('kluis_mutatie_nieuw') }}" class="btn btn-rand">Storting / opname boeken</a>
+        <a href="{{ url_for('kluis_tellen') }}" class="btn btn-geel">Kluis tellen</a>
+    </div>
+</div>
+{% endblock %}
 {% block inhoud %}
+{% if pda_modus %}
 <div class="actiebalk">
     <p class="subtitel" style="margin:0">
         Alle kluistellingen, stortingen/opnames en overboekingen vanuit de kassalade op een rij.
@@ -10,6 +21,7 @@
         <a href="{{ url_for('kluis_tellen') }}" class="btn btn-geel">Kluis tellen</a>
     </div>
 </div>
+{% endif %}
 
 <div class="statgrid">
     <div class="stat">
@@ -96,7 +108,7 @@
                 {% endif %}
                 {% elif regel.soort in ('storting', 'opname') %}
                 <form method="post" action="{{ url_for('kluis_mutatie_corrigeren', mutatie_id=item.id) }}"
-                      onsubmit="return bevestigEnVerstuur(this, '{{ 'Storting' if regel.soort == 'storting' else 'Opname' }} corrigeren?');"
+                      data-vraag="{{ 'Storting' if regel.soort == 'storting' else 'Opname' }} corrigeren?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);"
                       style="display:flex; gap:0.4rem; align-items:center">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="number" step="0.01" min="0.01" name="bedrag" value="{{ '%.2f'|format(item.bedrag) }}" style="width:6rem">
@@ -167,7 +179,7 @@
                         {% endif %}
                         {% elif regel.soort in ('storting', 'opname') %}
                         <form method="post" action="{{ url_for('kluis_mutatie_corrigeren', mutatie_id=item.id) }}"
-                              onsubmit="return bevestigEnVerstuur(this, '{{ 'Storting' if regel.soort == 'storting' else 'Opname' }} corrigeren?');"
+                              data-vraag="{{ 'Storting' if regel.soort == 'storting' else 'Opname' }} corrigeren?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);"
                               style="display:flex; gap:0.3rem; align-items:center">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="number" step="0.01" min="0.01" name="bedrag" value="{{ '%.2f'|format(item.bedrag) }}" style="width:5.5rem">

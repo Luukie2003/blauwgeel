@@ -2,14 +2,18 @@
 {% block titel %}Omzet en kassa{% endblock %}
 {% macro euro(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
 {% macro pct(x) %}{% if x is none %}&mdash;{% else %}{{ '%+.0f'|format(x) }}%{% endif %}{% endmacro %}
-{% block inhoud %}
-<div class="actiebalk">
-    <p class="subtitel" style="margin:0">
-        Wat PayPal zegt dat er is betaald (contant plus kaart) naast wat er volgens de voorraadtellingen is verkocht,
-        per periode tussen twee kassatellingen. Is de omzet uit de voorraad hoger, dan is er meer weg dan er is
-        afgerekend: een telfout, iets dat niet is aangeslagen, derving of diefstal.
-    </p>
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Omzet en kassa</h1>
+    <span class="cs-titel-tekst">Wat PayPal zegt dat er is betaald, naast wat er volgens de tellingen is verkocht.</span>
 </div>
+{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+    Per periode tussen twee kassatellingen: contant plus kaart volgens PayPal, en de omzet uit de voorraadtellingen. Is
+    die laatste hoger, dan is er meer weg dan er is afgerekend: een telfout, iets dat niet is aangeslagen, derving of
+    diefstal.
+</p>
 
 {% set t = uitkomst.totaal %}
 <div class="statgrid">

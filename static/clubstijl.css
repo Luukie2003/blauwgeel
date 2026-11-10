@@ -109,6 +109,9 @@ main { padding: 1.6rem 2rem 2.5rem; }
 .venster-inhoud { background: none; border: 0; padding: 0; }
 .subtitel { font-size: 0.95rem; }
 .kaart { border-color: var(--rand); padding: 1.1rem 1.25rem; }
+/* Een kaart met een kop (de pagina's die nog niet opnieuw zijn ingedeeld): de kop zoals in een cs-paneel, met een lijn
+   eronder over de hele breedte van de kaart. */
+.kaart > h2:first-child { margin: -0.3rem -1.25rem 0.85rem; padding: 0 1.25rem 0.75rem; border-bottom: 1px solid var(--rand-licht); font-size: 1.45rem; }
 fieldset.groupbox { border-color: var(--rand); background: var(--kaart); }
 fieldset.groupbox legend { letter-spacing: 0.06em; }
 input, select, textarea { border-color: #cfc8b8; font-size: 0.95rem; }
@@ -415,6 +418,18 @@ table:not(.zoekt) > tbody.dicht > tr:not(.cs-groep-rij) { display: none; }
 .cs-kolomlijst li { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.25rem 0; border-bottom: 1px solid var(--rand-licht); font-size: 0.92rem; break-inside: avoid; }
 .cs-kolomlijst li span { white-space: nowrap; font-variant-numeric: tabular-nums; }
 details.cs-uitklap > summary { padding: 0 1.1rem 0.8rem; color: var(--blauw); font-weight: 600; cursor: pointer; }
+
+/* Een regel die je openklapt, zoals een bestelling (Bestellingen) of een mutatie: links het nummer, dan wie en wanneer,
+   rechts de stand. Open staat de inhoud (een tabel en knoppen) eronder. */
+details.cs-bestelling { border-top: 1px solid var(--rand-licht); }
+details.cs-bestelling > summary { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem 1rem; padding: 0.75rem 1.1rem; cursor: pointer; list-style: none; }
+details.cs-bestelling > summary::-webkit-details-marker { display: none; }
+details.cs-bestelling > summary:hover, details.cs-bestelling[open] > summary { background: #fbf8ee; }
+.cs-bestelling-nr { min-width: 3.2rem; font: 700 1.2rem/1 var(--cs-koppen); color: var(--tekst-zacht); font-variant-numeric: tabular-nums; }
+.cs-bestelling-wie { flex: 1 1 16rem; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+.cs-bestelling-stand { display: flex; flex-wrap: wrap; gap: 0.4rem 0.9rem; }
+details.cs-bestelling > .tabel-wrap { border-top: 1px solid var(--rand-licht); }
+details.cs-bestelling > .cs-knoppen { margin: 0; padding: 0.75rem 1.1rem 0.95rem; }
 
 /* De looplijst (tellen_lopen.html) in de clubstijl. De handterminal-weergave laadt dit bestand niet en houdt zijn eigen vorm. */
 .loop-kaart { max-width: 520px; padding: 1.3rem 1.3rem 1.1rem; }

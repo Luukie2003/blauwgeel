@@ -53,10 +53,11 @@ def test_bestellingen_pagina_bewaart_alles_en_toont_manco_per_leverancier(ingelo
     db.commit()
     b = _ontvangen_bestelling(db, [(cola, 10, 4)])
     pagina = ingelogde_client.get("/bestellingen").data.decode()
-    assert "Nog niet geleverd" in pagina and "Sligro" in pagina and "6 stuks niet geleverd (4 van 10)" in pagina
-    assert f"<strong>#{b}</strong>" in pagina and "1 manco" not in pagina  # te weinig is geen 'manco'-vlag, wel 'te weinig'
+    assert "Nog niet geleverd" in pagina and "Sligro" in pagina and "6 stuks niet geleverd" in pagina and "4 van 10" in pagina
+    nummer = f'class="cs-bestelling-nr">#{b}</span>'
+    assert nummer in pagina and "1 manco" not in pagina  # te weinig is geen 'manco'-vlag, wel 'te weinig'
     assert "te weinig" in pagina
-    assert f"<strong>#{b}</strong>" not in ingelogde_client.get("/bestellingen?status=besteld").data.decode()
+    assert nummer not in ingelogde_client.get("/bestellingen?status=besteld").data.decode()
 
 
 def test_oud_manco_komt_niet_ineens_terug(db):

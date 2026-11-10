@@ -55,7 +55,7 @@
                             <button type="submit" class="btn btn-rand btn-klein">Zet op bestellijst</button>
                         </form>
                         <form method="post" action="{{ url_for('verbruiksvoorwerp_verwijderen', item_id=item.id) }}"
-                              onsubmit="return bevestigEnVerstuur(this, '\'{{ item.naam }}\' verwijderen?');">
+                              data-vraag="'{{ item.naam }}' verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-gevaar btn-klein">Verwijderen</button>
                         </form>
