@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.8.0"
+HUIDIGE_VERSIE = "2.9.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.9.0",
+        "datum": "12 november 2026",
+        "punten": [
+            "Alle pdf's in de clubstijl, net als de site: de Barlow-letter, bovenaan een donkerblauwe balk met het logo en een gele streep, de titel groot, en rustige tabellen met de kop in kleine grijze hoofdletters. Dat geldt voor de bestelling en de bestellijst, het voorraadoverzicht, tellingen en kassatellingen, de prijslijst, de verkoop- en seizoensrapporten, de compacte uitdraai, het logboek, de schaplabels, de kaartjes en de stemposter.",
+            "Loopt een tabel door op een volgende pagina, dan staat de kop daar opnieuw, met de titel klein erboven. Onderaan elke pagina staat 'pagina 1 van 3'.",
+            "Een productnaam met een teken dat niet in de letter zit, zoals een emoji, geeft geen foutmelding meer bij het maken van een pdf. Zo'n teken valt weg, en een pijl wordt ->.",
+        ],
+    },
     {
         "versie": "2.8.0",
         "datum": "11 november 2026",
@@ -1457,13 +1466,13 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.17.0", "sinds": "0.1.0", "laatst": "2.1.0",
+    {"naam": "Voorraad & tellen", "versie": "1.17.1", "sinds": "0.1.0", "laatst": "2.9.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.22.0", "sinds": "0.4.0", "laatst": "2.8.0",
+    {"naam": "Bestellen & prognose", "versie": "1.22.1", "sinds": "0.4.0", "laatst": "2.9.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), de bestellijst nalopen met vinkjes (ook op de computer) en het besteloverzicht voor de webshop, leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
-    {"naam": "Producten & prijzen", "versie": "1.16.1", "sinds": "0.1.0", "laatst": "1.72.0",
+    {"naam": "Producten & prijzen", "versie": "1.16.2", "sinds": "0.1.0", "laatst": "2.9.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
-    {"naam": "Geld (kassa & kluis)", "versie": "1.5.0", "sinds": "1.0.0", "laatst": "2.7.0",
+    {"naam": "Geld (kassa & kluis)", "versie": "1.5.1", "sinds": "1.0.0", "laatst": "2.9.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.7.0", "sinds": "1.6.0", "laatst": "1.75.0",
      "inhoud": "Keukenvoorraad met een eigen, blinde telling (ook als looplijst met dozen scannen, en een begintelling), inboeken per verpakking (per merk, ook door te scannen), weggooien en bijstellen, prijzen, de boodschappenlijst bij een tekort, en de herinnering voor het frituurvet"},
@@ -1471,9 +1480,9 @@ MODULES = [
      "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's, effecten en griezelposters met tekeningen), sponsoren, standen, Man of the Match, seizoen in cijfers, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, het Halloween-thema, en de tablet-app Kantine Beheer"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
-    {"naam": "Stemmen", "versie": "1.0.0", "sinds": "", "laatst": "",
+    {"naam": "Stemmen", "versie": "1.0.1", "sinds": "", "laatst": "2.9.0",
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
-    {"naam": "Rapporten", "versie": "1.15.0", "sinds": "0.1.0", "laatst": "2.6.0",
+    {"naam": "Rapporten", "versie": "1.15.1", "sinds": "0.1.0", "laatst": "2.9.0",
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, seizoen in cijfers, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.3", "sinds": "1.5.0", "laatst": "2.4.0",
      "inhoud": "De weergave voor de handterminal op de site: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft (staat sinds 2.4.0 tijdelijk uit; op de Zebra werkt de app)"},
@@ -1481,7 +1490,7 @@ MODULES = [
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (nalopen met vinkjes, klaarzetten met het besteloverzicht, verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken (inboeken per verpakking, blind tellen, weggooien), Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst, momenten met de schijnwerper, mappen en dia's aan of uit, en het Halloween-thema), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.11.1", "sinds": "0.1.0", "laatst": "2.7.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},
-    {"naam": "Back-ups & beheer", "versie": "1.10.1", "sinds": "0.2.0", "laatst": "2.4.1",
+    {"naam": "Back-ups & beheer", "versie": "1.10.2", "sinds": "0.2.0", "laatst": "2.9.0",
      "inhoud": "Dagelijkse back-up en herstelcontrole, logboek, opslag, gebruiksstatistieken, privacy"},
     {"naam": "Overzicht & prikbord", "versie": "1.14.2", "sinds": "0.2.0", "laatst": "2.7.1",
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},

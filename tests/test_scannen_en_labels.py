@@ -54,16 +54,9 @@ def test_bulk_labels_pdf_negeert_geknoei_in_querystring(ingelogde_client, db):
 
 
 def _pdf_tekst(data):
-    import re
-    import zlib
+    from pdf_tekst import pdf_tekst
 
-    inhoud = b""
-    for stroom in re.findall(rb"stream\r?\n(.*?)\r?\nendstream", data, re.S):
-        try:
-            inhoud += zlib.decompress(stroom)
-        except zlib.error:
-            inhoud += stroom
-    return inhoud
+    return pdf_tekst(data)
 
 
 def test_schaplabel_met_bestelinformatie_en_prijs(ingelogde_client, db):
@@ -76,11 +69,11 @@ def test_schaplabel_met_bestelinformatie_en_prijs(ingelogde_client, db):
     )
     db.commit()
     tekst = _pdf_tekst(ingelogde_client.get(f"/producten/{pid}/label.pdf").data)
-    assert b"Min. voorraad: 48 stuks \\(2 tray\\)" in tekst and b"Bestellen per tray van 24" in tekst
-    assert b"Sligro \xb7 art.nr. A1" in tekst and b"Scan met de handterminal" in tekst
-    assert b"2,25" not in tekst  # de prijs alleen als je erom vraagt
+    assert "Min. voorraad: 48 stuks (2 tray)" in tekst and "Bestellen per tray van 24" in tekst
+    assert "Sligro · art.nr. A1" in tekst and "Scan met de handterminal" in tekst
+    assert "2,25" not in tekst  # de prijs alleen als je erom vraagt
     klein = _pdf_tekst(ingelogde_client.get(f"/producten/{pid}/label.pdf?formaat=klein&prijs=1").data)
-    assert b"\x80 2,25" in klein and b"Cola Label" in klein
+    assert "€ 2,25" in klein and "Cola Label" in klein
 
 
 def test_kleine_schaplabels_zestien_per_vel(ingelogde_client, db):
@@ -110,7 +103,7 @@ def test_verbruiksvoorwerp_label_in_het_klein(ingelogde_client, db):
     ).lastrowid
     db.commit()
     tekst = _pdf_tekst(ingelogde_client.get(f"/verbruiksvoorwerpen/{item}/label.pdf?formaat=klein").data)
-    assert b"Handzeep" in tekst and b"Op? Scan met de handterminal" in tekst
+    assert "Handzeep" in tekst and "Op? Scan met de handterminal" in tekst
 
 
 def test_printvenster_voor_schaplabels(ingelogde_client, db):

@@ -1,6 +1,6 @@
 """PDF van een kassatelling."""
 
-from pdf.basis import Rapport, _euro
+from pdf.basis import LETTER, Rapport, _euro
 
 
 def kassa_pdf(telling, coupures):
@@ -21,7 +21,7 @@ def kassa_pdf(telling, coupures):
             zebra=i % 2 == 1,
         )
     pdf.ln(2)
-    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_font(LETTER, "B", 10)
     pdf.cell(100, 8, "", border=0)
     pdf.cell(40, 8, "Totaal geteld", align="R")
     pdf.cell(40, 8, _euro(telling["geteld_bedrag"]), align="R", new_x="LMARGIN", new_y="NEXT")

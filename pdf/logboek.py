@@ -1,6 +1,6 @@
 """PDF van het logboek."""
 
-from pdf.basis import KLEUR_RAND, KLEUR_WIT, KLEUR_ZEBRA, Rapport, _kort
+from pdf.basis import KLEUR_RAND_LICHT, KLEUR_WIT, KLEUR_ZEBRA, LETTER, Rapport, _kort
 
 
 def _logboek_kop(pdf):
@@ -14,9 +14,9 @@ def logboek_pdf(regels, periode):
         pdf.leeg_bericht("Niets gelogd in deze periode.")
         return bytes(pdf.output())
     _logboek_kop(pdf)
-    pdf.set_font("Helvetica", "", 8)
+    pdf.set_font(LETTER, "", 8)
     for i, r in enumerate(regels):
-        pdf.set_font("Helvetica", "", 8)
+        pdf.set_font(LETTER, "", 8)
         # Details kunnen lang zijn: laat ze over meerdere regels lopen, en maak de
         # rij zo hoog als dat nodig is.
         regels_details = pdf.multi_cell(81, 4.2, r["details"] or " ", align="L", dry_run=True, output="LINES")
@@ -24,16 +24,18 @@ def logboek_pdf(regels, periode):
         if pdf.get_y() + hoogte > pdf.page_break_trigger:
             pdf.add_page()
             _logboek_kop(pdf)
-            pdf.set_font("Helvetica", "", 8)
+            pdf.set_font(LETTER, "", 8)
         x, y = pdf.get_x(), pdf.get_y()
         pdf.set_fill_color(*(KLEUR_ZEBRA if i % 2 == 1 else KLEUR_WIT))
-        pdf.set_draw_color(*KLEUR_RAND)
+        pdf.set_draw_color(*KLEUR_RAND_LICHT)
+        pdf.set_line_width(0.2)
         for tekst, breedte in ((r["moment"], 33), (r["wie"], 27), (r["actie"], 48)):
             pdf.set_xy(x, y)
-            pdf.cell(breedte, hoogte, _kort(pdf, tekst, breedte), border=1, fill=True)
+            pdf.cell(breedte, hoogte, _kort(pdf, tekst, breedte), border="B", fill=True)
             x += breedte
         pdf.set_xy(x, y)
-        pdf.rect(x, y, 82, hoogte, style="DF")
+        pdf.rect(x, y, 82, hoogte, style="F")
+        pdf.line(x, y + hoogte, x + 82, y + hoogte)
         pdf.set_xy(x + 0.5, y + 0.65)
         pdf.multi_cell(81, 4.2, r["details"], align="L", new_x="LMARGIN", new_y="NEXT")
         pdf.set_xy(10, y + hoogte)

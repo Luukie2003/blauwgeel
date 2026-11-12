@@ -1,6 +1,6 @@
 """PDF van de omzet per seizoen, en de vergelijkingstabel die de uitdraai ook gebruikt."""
 
-from pdf.basis import KLEUR_GRIJS, Rapport, _euro, _kort
+from pdf.basis import KLEUR_GRIJS, KLEUR_TEKST, LETTER, Rapport, _euro, _kort
 
 
 SEIZOEN_PDF_MAX_SEIZOENEN = 5
@@ -45,7 +45,7 @@ def seizoen_samenvatting_tabel(pdf, rapport, max_seizoenen=SEIZOEN_PDF_MAX_SEIZO
     onvolledig = [s for s in seizoenen if not s["volledig"]]
     ingevuld = [s for s in seizoenen if s["handmatige_maanden"]]
     if onvolledig or ingevuld:
-        pdf.set_font("Helvetica", "I", 8)
+        pdf.set_font(LETTER, "I", 8)
         pdf.set_text_color(*KLEUR_GRIJS)
         for s in onvolledig:
             if s["gegevens_vanaf"]:
@@ -61,7 +61,7 @@ def seizoen_samenvatting_tabel(pdf, rapport, max_seizoenen=SEIZOEN_PDF_MAX_SEIZO
                 new_x="LMARGIN",
                 new_y="NEXT",
             )
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*KLEUR_TEKST)
 
 
 def seizoensrapport_pdf(rapport):
@@ -93,16 +93,16 @@ def seizoensrapport_pdf(rapport):
             zebra=i % 2 == 1,
         )
     if rapport["heeft_ingevulde_maanden"]:
-        pdf.set_font("Helvetica", "I", 8)
+        pdf.set_font(LETTER, "I", 8)
         pdf.set_text_color(*KLEUR_GRIJS)
         pdf.cell(0, 4.5, "* met de hand ingevuld (maandtotaal uit de oude administratie)", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*KLEUR_TEKST)
 
     pdf.sectie("Meest verkochte producten per seizoen")
     for s in reversed(seizoenen):
         if not s["top_producten"]:
             continue
-        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_font(LETTER, "B", 10)
         pdf.cell(0, 6, s["seizoen"], new_x="LMARGIN", new_y="NEXT")
         for i, p in enumerate(s["top_producten"], start=1):
             pdf.data_rij(

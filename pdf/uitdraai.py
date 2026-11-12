@@ -1,6 +1,9 @@
 """De compacte uitdraai: kas, kluis, voorraad, bestellijst, prognose en seizoenen."""
 
-from pdf.basis import KLEUR_BLAUW, KLEUR_GRIJS, KLEUR_KOPRIJ, Rapport, _datum_nl, _euro, _kort
+from pdf.basis import (
+    KLEUR_BLAUW_DONKER, KLEUR_GRIJS, KLEUR_KOPRIJ, KLEUR_ROOD, KLEUR_TEKST, KOPLETTER, LETTER, Rapport, _datum_nl,
+    _euro, _kort,
+)
 from pdf.seizoen import seizoen_samenvatting_tabel
 
 
@@ -19,32 +22,32 @@ def _uitdraai_geldblok(pdf, x, y, titel, gegevens):
     Geeft de y-positie onder het blok terug."""
     breedte = UITDRAAI_KOLOM_BREEDTE
     pdf.set_xy(x, y)
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.set_text_color(*KLEUR_BLAUW)
+    pdf.set_font(KOPLETTER, "B", 13)
+    pdf.set_text_color(*KLEUR_BLAUW_DONKER)
     pdf.cell(breedte, 6, titel, new_x="LEFT", new_y="NEXT")
-    pdf.set_text_color(0, 0, 0)
+    pdf.set_text_color(*KLEUR_TEKST)
 
     def regel(label, waarde, vet=False, kleur=None):
         pdf.set_x(x)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font(LETTER, "", 9)
         pdf.cell(48, 5, label)
-        pdf.set_font("Helvetica", "B" if vet else "", 9)
+        pdf.set_font(LETTER, "B" if vet else "", 9)
         if kleur:
             pdf.set_text_color(*kleur)
         pdf.cell(breedte - 48, 5, _kort(pdf, str(waarde), breedte - 48), align="R", new_x="LEFT", new_y="NEXT")
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*KLEUR_TEKST)
 
     pdf.set_x(x)
-    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_font(KOPLETTER, "B", 15)
     pdf.cell(breedte, 8, f"Stand: {_euro(gegevens['stand'])}", new_x="LEFT", new_y="NEXT")
 
     telling = gegevens["laatste_telling"]
     if telling:
         pdf.set_x(x)
-        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_font(LETTER, "B", 9)
         pdf.set_text_color(*KLEUR_GRIJS)
         pdf.cell(breedte, 5, f"Laatste telling - {_datum_nl(telling['datum'])}", new_x="LEFT", new_y="NEXT")
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*KLEUR_TEKST)
         regel("Geteld door:", telling["naam"] or "-")
         regel("Verwacht:", _euro(telling["verwacht"]))
         regel("Geteld:", _euro(telling["geteld"]))
@@ -52,33 +55,33 @@ def _uitdraai_geldblok(pdf, x, y, titel, gegevens):
         if verschil > 0:
             regel("Overschot:", _euro(verschil), vet=True)
         elif verschil < 0:
-            regel("Tekort:", _euro(-verschil), vet=True, kleur=(180, 30, 30))
+            regel("Tekort:", _euro(-verschil), vet=True, kleur=KLEUR_ROOD)
         else:
             regel("Verschil:", _euro(0), vet=True)
         regel("Goedgekeurd door:", telling["goedgekeurd_door"] or "-")
     else:
         pdf.set_x(x)
-        pdf.set_font("Helvetica", "I", 9)
+        pdf.set_font(LETTER, "I", 9)
         pdf.cell(breedte, 5, "Nog geen afgesloten telling.", new_x="LEFT", new_y="NEXT")
 
     if gegevens["open_tellingen"]:
         pdf.set_x(x)
-        pdf.set_font("Helvetica", "I", 8)
-        pdf.set_text_color(180, 30, 30)
+        pdf.set_font(LETTER, "I", 8)
+        pdf.set_text_color(*KLEUR_ROOD)
         n = gegevens["open_tellingen"]
         pdf.cell(breedte, 5, f"Let op: {n} telling{'en' if n != 1 else ''} nog niet goedgekeurd.", new_x="LEFT", new_y="NEXT")
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*KLEUR_TEKST)
 
     pdf.ln(1)
     pdf.set_x(x)
-    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_font(LETTER, "B", 9)
     pdf.set_text_color(*KLEUR_GRIJS)
     pdf.cell(breedte, 5, "Laatste geldbewegingen", new_x="LEFT", new_y="NEXT")
-    pdf.set_text_color(0, 0, 0)
+    pdf.set_text_color(*KLEUR_TEKST)
     if gegevens["mutaties"]:
         for m in gegevens["mutaties"]:
             pdf.set_x(x)
-            pdf.set_font("Helvetica", "", 8)
+            pdf.set_font(LETTER, "", 8)
             bedrag = m["bedrag"]
             teken = "+" if bedrag >= 0 else "-"
             pdf.cell(22, 4.6, _datum_nl(m["datum"])[:10])
@@ -86,7 +89,7 @@ def _uitdraai_geldblok(pdf, x, y, titel, gegevens):
             pdf.cell(breedte - 66, 4.6, f"{teken} {_euro(abs(bedrag))}", align="R", new_x="LEFT", new_y="NEXT")
     else:
         pdf.set_x(x)
-        pdf.set_font("Helvetica", "I", 8)
+        pdf.set_font(LETTER, "I", 8)
         pdf.cell(breedte, 4.6, "Geen bewegingen.", new_x="LEFT", new_y="NEXT")
     return pdf.get_y()
 
@@ -199,8 +202,8 @@ def compacte_uitdraai_pdf(
 
     if voorraad:
         pdf.set_x(10)
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.set_text_color(*KLEUR_BLAUW)
+        pdf.set_font(KOPLETTER, "B", 13)
+        pdf.set_text_color(*KLEUR_BLAUW_DONKER)
         pdf.cell(
             0,
             6,
@@ -209,7 +212,7 @@ def compacte_uitdraai_pdf(
             new_x="LMARGIN",
             new_y="NEXT",
         )
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*KLEUR_TEKST)
 
         rijen = _uitdraai_voorraadrijen(voorraad)
         hoogte = UITDRAAI_RIJ_HOOGTE
@@ -241,15 +244,15 @@ def compacte_uitdraai_pdf(
                 for soort, inhoud in kolom_rijen:
                     pdf.set_xy(x, y)
                     if soort == "kop":
-                        pdf.set_font("Helvetica", "B", 8.5)
+                        pdf.set_font(LETTER, "B", 8.5)
                         pdf.set_fill_color(*KLEUR_KOPRIJ)
                         pdf.cell(UITDRAAI_KOLOM_BREEDTE, hoogte, inhoud, fill=True)
                     else:
                         if inhoud["laag"]:
-                            pdf.set_font("Helvetica", "B", 8)
-                            pdf.set_text_color(180, 30, 30)
+                            pdf.set_font(LETTER, "B", 8)
+                            pdf.set_text_color(*KLEUR_ROOD)
                         else:
-                            pdf.set_font("Helvetica", "", 8)
+                            pdf.set_font(LETTER, "", 8)
                         pdf.cell(60, hoogte, _kort(pdf, inhoud["naam"], 60))
                         pdf.cell(
                             UITDRAAI_KOLOM_BREEDTE - 60,
@@ -257,7 +260,7 @@ def compacte_uitdraai_pdf(
                             f"{inhoud['voorraad']} / min {inhoud['minimum']}",
                             align="R",
                         )
-                        pdf.set_text_color(0, 0, 0)
+                        pdf.set_text_color(*KLEUR_TEKST)
                     y += hoogte
             index += verbruikt
             pdf.set_y(y_start + max(len(k) for k in kolommen) * hoogte)

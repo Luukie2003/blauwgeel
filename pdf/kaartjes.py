@@ -6,9 +6,8 @@ sluiten op elkaar aan, met stippellijntjes om langs te knippen."""
 
 from collections import namedtuple
 
-from fpdf import FPDF
 
-from pdf.basis import KLEUR_BLAUW, KLEUR_GEEL, LOGO_PAD
+from pdf.basis import KLEUR_BLAUW, KLEUR_GEEL, LETTER, LOGO_PAD, ClubPDF
 
 # Meer hardlopers past niet: de ontwerpen hebben ruimte voor 2 kolommen van 2 (of 1 kolom van 4). Bewust weinig:
 # hoe minder artikelen, hoe meer vrije regels er overblijven om op te schrijven.
@@ -55,15 +54,10 @@ def hardlopers_over(tekst):
     return _alle_namen(tekst)[MAX_HARDLOPERS:]
 
 
-def _veilig(tekst):
-    """De standaardlettertypes van een pdf kennen alleen Latijn-1: iets anders (bijv. een emoji) wordt een ?."""
-    return tekst.encode("latin-1", "replace").decode("latin-1")
-
-
 class _Tekenaar:
     def __init__(self, pdf, hardlopers, zwartwit=False):
         self.pdf = pdf
-        self.hardlopers = [_veilig(naam) for naam in hardlopers[:MAX_HARDLOPERS]]
+        self.hardlopers = list(hardlopers[:MAX_HARDLOPERS])  # een teken buiten de letter: zie ClubPDF
         self.blauw = ZWARTWIT_ACCENT if zwartwit else KLEUR_BLAUW
         self.geel = (255, 255, 255) if zwartwit else KLEUR_GEEL
 
@@ -90,7 +84,7 @@ class _Tekenaar:
         self.pdf.line(x1, y + 1.0, x2, y + 1.0)
 
     def label(self, tekst, x, y, maat=6.5, stijl="", kleur=GRIJS):
-        self.pdf.set_font("Helvetica", stijl, maat)
+        self.pdf.set_font(LETTER, stijl, maat)
         self.pdf.set_text_color(*kleur)
         self.pdf.text(x, y, tekst)
         return self.pdf.get_string_width(tekst)
@@ -105,17 +99,17 @@ class _Tekenaar:
         maten = []
         for naam in self.hardlopers:
             m = maat
-            self.pdf.set_font("Helvetica", "", m)
+            self.pdf.set_font(LETTER, "", m)
             while self.pdf.get_string_width(naam) > ruimte and m > 4.2:
                 m -= 0.2
-                self.pdf.set_font("Helvetica", "", m)
+                self.pdf.set_font(LETTER, "", m)
             maten.append(m)
         return maten
 
     def _langste(self, maten):
         langste = 0
         for naam, m in zip(self.hardlopers, maten):
-            self.pdf.set_font("Helvetica", "", m)
+            self.pdf.set_font(LETTER, "", m)
             langste = max(langste, self.pdf.get_string_width(naam))
         return langste
 
@@ -125,7 +119,7 @@ class _Tekenaar:
         maten = self._maten(maat, breedte)
         for i, (naam, m) in enumerate(zip(self.hardlopers, maten)):
             cy = y_eerste + i * stap
-            self.pdf.set_font("Helvetica", "", m)
+            self.pdf.set_font(LETTER, "", m)
             self.pdf.set_text_color(*ZWART)
             self.pdf.text(x, cy, naam)
             self.pdf.set_draw_color(*LIJN)
@@ -142,7 +136,7 @@ class _Tekenaar:
         for i, (naam, m) in enumerate(zip(self.hardlopers, maten)):
             cx = x + (i // per_kol) * (kol_b + tussen)
             cy = y_eerste + (i % per_kol) * rij_h
-            self.pdf.set_font("Helvetica", "", m)
+            self.pdf.set_font(LETTER, "", m)
             self.pdf.set_text_color(*ZWART)
             self.pdf.text(cx, cy, naam)
             bx, by = cx + kol_b - vak_b, cy + 0.7 - hoogte
@@ -170,10 +164,10 @@ class _Tekenaar:
         pdf.rect(x + 0.6, y, w - 1.2, 6.0, style="F")  # smaller dan het kaartje: de snijlijn blijft zichtbaar
         if LOGO_PAD.exists():
             pdf.image(str(LOGO_PAD), x=x + 2.0, y=y + 0.7, h=4.6)
-        pdf.set_font("Helvetica", "B", 7)
+        pdf.set_font(LETTER, "B", 7)
         pdf.set_text_color(*self.geel)
         pdf.text(x + 7.4, y + 4.1, "BLAUW-GEEL")
-        pdf.set_font("Helvetica", "", 5.6)
+        pdf.set_font(LETTER, "", 5.6)
         pdf.set_text_color(255, 255, 255)
         pdf.text(x + w - 2.0 - pdf.get_string_width("kantine"), y + 4.0, "kantine")
         p = 3.5
@@ -240,7 +234,7 @@ class _Tekenaar:
         for r in range(rij):
             for c in range(kol):
                 teken(x0 + c * w, y0 + r * h, w, h)
-        pdf.set_font("Helvetica", "", 6)
+        pdf.set_font(LETTER, "", 6)
         pdf.set_text_color(*GRIJS)
         pdf.text(
             10, 293.5,
@@ -250,7 +244,7 @@ class _Tekenaar:
 
 
 def _nieuw():
-    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf = ClubPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(False)
     pdf.set_margin(0)
     return pdf

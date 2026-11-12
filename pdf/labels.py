@@ -2,16 +2,18 @@
 
 import io
 
-from fpdf import FPDF
 
-from pdf.basis import KLEUR_BLAUW, KLEUR_GEEL, KLEUR_GRIJS, KLEUR_RAND, KLEUR_WIT, LOGO_PAD, _euro, _kort
+from pdf.basis import (
+    KLEUR_BLAUW, KLEUR_GEEL, KLEUR_GRIJS, KLEUR_RAND, KLEUR_TEKST, KLEUR_WIT, KOPLETTER, LETTER, LOGO_PAD, ClubPDF,
+    _euro, _kort,
+)
 
 
 def stemming_poster_pdf(titel, qr_png_bytes):
     """Een A4-poster om op te hangen/neer te leggen bij de bar: groot de
     vraag, groot de QR-code. Bewust geen Rapport (dat is de kleine,
     zakelijke koptekst-stijl) -- dit mag een blikvanger zijn."""
-    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf = ClubPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(False)
     pdf.add_page()
 
@@ -22,14 +24,17 @@ def stemming_poster_pdf(titel, qr_png_bytes):
         pdf.image(str(LOGO_PAD), x=85, y=18, w=40)
 
     pdf.set_xy(15, 66)
-    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_font(KOPLETTER, "B", 14)
     pdf.set_text_color(*KLEUR_GEEL)
-    pdf.cell(180, 7, "S.V. BLAUW-GEEL 1915 - STEMMEN!", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_char_spacing(0.8)
+    pdf.cell(180, 7, "S.V. BLAUW-GEEL 1915 · STEMMEN!", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_char_spacing(0)
 
+    # De vraag in de smalle kopletter van de site, zoals de titels daar.
     pdf.set_xy(15, 78)
-    pdf.set_font("Helvetica", "B", 30)
+    pdf.set_font(KOPLETTER, "B", 38)
     pdf.set_text_color(*KLEUR_WIT)
-    pdf.multi_cell(180, 13, titel, align="C")
+    pdf.multi_cell(180, 14, titel, align="C")
 
     kaart_breedte = 125
     kaart_x = (210 - kaart_breedte) / 2
@@ -47,14 +52,14 @@ def stemming_poster_pdf(titel, qr_png_bytes):
     )
 
     pdf.set_xy(15, kaart_y + kaart_hoogte + 10)
-    pdf.set_font("Helvetica", "B", 20)
+    pdf.set_font(KOPLETTER, "B", 26)
     pdf.set_text_color(*KLEUR_GEEL)
-    pdf.cell(180, 10, "Scan en stem mee!", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(180, 11, "Scan en stem mee!", align="C", new_x="LMARGIN", new_y="NEXT")
 
     pdf.set_xy(15, 283)
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_font(LETTER, "", 9)
     pdf.set_text_color(*KLEUR_WIT)
-    pdf.cell(180, 6, "Kantine Beheer - s.v. Blauw-Geel 1915", align="C")
+    pdf.cell(180, 6, "Kantine Beheer  ·  s.v. Blauw-Geel 1915", align="C")
 
     return bytes(pdf.output())
 
@@ -104,8 +109,7 @@ def schaplabels_pdf(producten, formaat="groot", met_prijs=False):
     overgeslagen): subcategorie, artikelcode, leverancier, min_voorraad, eenheid, besteleenheid, besteleenheid_factor,
     verkoopprijs, qr_png (kant-en-klare PNG-bytes), qr_hint (de regel onder de QR-code) en foto_pad. Zonder foto of
     QR-code krijgt de tekst die ruimte erbij."""
-    pdf = FPDF(orientation="P", unit="mm", format="A4")
-    pdf.core_fonts_encoding = "cp1252"  # voor het euroteken, zie Rapport in pdf/basis.py
+    pdf = ClubPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(False)
 
     klein = formaat == "klein"
@@ -161,7 +165,7 @@ def _passend(pdf, tekst, breedte, stijl, grootte, kleinste):
     """Zet het lettertype op de grootste maat (van grootte tot kleinste) waarin de tekst in de breedte past. Past hij
     ook in de kleinste maat niet, dan wordt hij ingekort (_kort)."""
     while True:
-        pdf.set_font("Helvetica", stijl, grootte)
+        pdf.set_font(LETTER, stijl, grootte)
         if pdf.get_string_width(tekst) <= breedte - 2 or grootte <= kleinste:
             return _kort(pdf, tekst, breedte)
         grootte -= 0.5
@@ -204,13 +208,13 @@ def _label_tekst(pdf, product, x, y, breedte, met_prijs, klein):
     prijs = product.get("verkoopprijs") if met_prijs else None
     if prijs:
         tekst = _euro(prijs)
-        pdf.set_font("Helvetica", "B", naam_grootte)
+        pdf.set_font(LETTER, "B", naam_grootte)
         prijs_breedte = pdf.get_string_width(tekst) + 2
         pdf.set_text_color(*KLEUR_BLAUW)
         pdf.set_xy(x + breedte - prijs_breedte, y)
         pdf.cell(prijs_breedte, naam_hoogte, tekst, align="R")
         naam_breedte -= prijs_breedte + 2
-    pdf.set_text_color(0, 0, 0)
+    pdf.set_text_color(*KLEUR_TEKST)
     naam = _passend(pdf, product["naam"], naam_breedte, "B", naam_grootte, naam_kleinste)
     pdf.set_xy(x, y)
     pdf.cell(naam_breedte, naam_hoogte, naam)
@@ -220,7 +224,7 @@ def _label_tekst(pdf, product, x, y, breedte, met_prijs, klein):
     if product.get("subcategorie"):
         subtekst += f" · {product['subcategorie']}"
     if subtekst:
-        pdf.set_font("Helvetica", "", 7.5 if klein else 9)
+        pdf.set_font(LETTER, "", 7.5 if klein else 9)
         pdf.set_text_color(*KLEUR_GRIJS)
         pdf.set_xy(x, y)
         pdf.cell(breedte, 4 if klein else 5, _kort(pdf, subtekst, breedte))
@@ -228,7 +232,7 @@ def _label_tekst(pdf, product, x, y, breedte, met_prijs, klein):
 
     for soort, tekst in label_regels(product):
         stijl, groot, kleiner, kleur = _REGEL_OPMAAK[soort]
-        pdf.set_font("Helvetica", stijl, kleiner if klein else groot)
+        pdf.set_font(LETTER, stijl, kleiner if klein else groot)
         pdf.set_text_color(*kleur)
         pdf.set_xy(x, y)
         pdf.cell(breedte, 4 if klein else 5, _kort(pdf, tekst, breedte))

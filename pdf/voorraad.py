@@ -1,6 +1,6 @@
 """PDF's over voorraad: bestellijst en voorraadoverzicht."""
 
-from pdf.basis import Rapport, _datum_nl, _euro, _kort
+from pdf.basis import LETTER, Rapport, _datum_nl, _euro, _kort
 
 
 def bestellijst_pdf(suggesties, ondertitel="Producten onder de minimumvoorraad"):
@@ -130,7 +130,7 @@ def voorraadoverzicht_pdf(gegevens):
 
     pdf.sectie("Opvallende zaken")
     if gegevens["inactief_met_voorraad"]:
-        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_font(LETTER, "B", 10)
         pdf.cell(
             0,
             7,
@@ -138,7 +138,7 @@ def voorraadoverzicht_pdf(gegevens):
             new_x="LMARGIN",
             new_y="NEXT",
         )
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font(LETTER, "", 9)
         for p in gegevens["inactief_met_voorraad"]:
             pdf.cell(
                 0,
@@ -150,7 +150,7 @@ def voorraadoverzicht_pdf(gegevens):
         pdf.ln(2)
 
     if gegevens["zonder_prijs"]:
-        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_font(LETTER, "B", 10)
         pdf.cell(
             0,
             7,
@@ -158,15 +158,15 @@ def voorraadoverzicht_pdf(gegevens):
             new_x="LMARGIN",
             new_y="NEXT",
         )
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font(LETTER, "", 9)
         namen = ", ".join(p["naam"] for p in gegevens["zonder_prijs"])
         pdf.multi_cell(0, 6, f"  {namen}")
         pdf.ln(2)
 
     if gegevens["langst_niet_geteld"]:
-        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_font(LETTER, "B", 10)
         pdf.cell(0, 7, "Langst niet geteld:", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font(LETTER, "", 9)
         for regel in gegevens["langst_niet_geteld"]:
             pdf.cell(
                 0,

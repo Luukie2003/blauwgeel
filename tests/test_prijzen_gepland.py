@@ -211,20 +211,14 @@ def test_de_kijktaak_kan_ook_aan_een_vrijwilliger_maar_de_aanpastaak_niet(app, d
 
 
 def test_de_prijslijst_pdf_toont_wat_op_de_tv_staat(ingelogde_client, db):
-    import re
-    import zlib
+    from pdf_tekst import pdf_tekst
 
     _product(db, "Vrijwillig op de tv", categorie="Bier", verkoop=2.5, toon_op_kiosk=1)
     _product(db, "Niet op de tv", categorie="Bier", verkoop=2.5, toon_op_kiosk=0)
     resp = ingelogde_client.get("/prijslijst/pdf")
     assert resp.status_code == 200 and resp.mimetype == "application/pdf" and resp.data.startswith(b"%PDF")
-    inhoud = b""
-    for stroom in re.findall(rb"stream\r?\n(.*?)\r?\nendstream", resp.data, re.S):
-        try:
-            inhoud += zlib.decompress(stroom)
-        except zlib.error:
-            inhoud += stroom
-    assert b"Vrijwillig op de tv" in inhoud and b"Niet op de tv" not in inhoud and b"Prijslijst" in inhoud
+    tekst = pdf_tekst(resp.data)
+    assert "Vrijwillig op de tv" in tekst and "Niet op de tv" not in tekst and "Prijslijst" in tekst
     assert "attachment" in ingelogde_client.get("/prijslijst/pdf?download=1").headers["Content-Disposition"]
 
 

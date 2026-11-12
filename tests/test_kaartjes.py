@@ -4,6 +4,7 @@ import re
 
 import pytest
 from conftest import stel_csrf_token_in as _csrf
+from pdf_tekst import pdf_tekst
 from test_secties_rechten import _login, _maak_vrijwilliger
 
 from kaartjes import bewaar_instellingen, groepeer_op_merk, lees_instellingen, topverkopers
@@ -122,8 +123,8 @@ def test_de_turfvakken_zijn_leeg_zonder_streepjes_erin():
 
 
 def test_de_hardlopers_staan_op_de_kaartjes():
-    inhoud = _ontvouw(kaartjes_pdf("D", ["Pils tap", "Bozu"]))
-    assert b"Pils tap" in inhoud and b"Bozu" in inhoud and b"Sonnema" not in inhoud
+    tekst = pdf_tekst(kaartjes_pdf("D", ["Pils tap", "Bozu"]))
+    assert "Pils tap" in tekst and "Bozu" in tekst and "Sonnema" not in tekst
 
 
 # ---------- Meest verkocht, merken samengenomen ----------
@@ -225,7 +226,7 @@ def test_de_pdf_komt_uit_de_opgeslagen_instellingen(ingelogde_client, db):
     download = ingelogde_client.get("/kaartjes/pdf?download=1")
 
     assert pdf.mimetype == "application/pdf" and _paginas(pdf.data) == 2  # 2 vellen
-    assert b"Eigen Drank" in _ontvouw(pdf.data)
+    assert "Eigen Drank" in pdf_tekst(pdf.data)
     assert _paginas(voorbeeld.data) == 1  # het voorbeeld is 1 vel
     assert _paginas(alle.data) == len(OPTIES)
     assert pdf.headers["Content-Disposition"].startswith("inline") and download.headers["Content-Disposition"].startswith("attachment")
@@ -281,8 +282,8 @@ def test_geen_melding_als_alles_past(ingelogde_client, db):
 def test_vier_hardlopers_staan_in_twee_kolommen_van_twee():
     from pdf.kaartjes import hardlopers_over
 
-    inhoud = _ontvouw(kaartjes_pdf("D", ["Een", "Twee", "Drie", "Vier", "Vijf"]))
-    assert b"Vier" in inhoud and b"Vijf" not in inhoud  # de vijfde past niet
+    tekst = pdf_tekst(kaartjes_pdf("D", ["Een", "Twee", "Drie", "Vier", "Vijf"]))
+    assert "Vier" in tekst and "Vijf" not in tekst  # de vijfde past niet
     assert hardlopers_over("Een\nTwee\nDrie\nVier\nVijf\nZes") == ["Vijf", "Zes"]
 
 
@@ -319,5 +320,5 @@ def test_de_vijf_ontwerpen_zijn_echt_verschillend_van_vorm():
 
 def test_op_elk_kaartje_staan_naam_team_en_datum():
     for optie in OPTIES:
-        inhoud = _ontvouw(kaartjes_pdf(optie.sleutel, STANDAARD))
-        assert b"Naam" in inhoud and b"Team" in inhoud and b"Datum" in inhoud, optie.sleutel
+        tekst = pdf_tekst(kaartjes_pdf(optie.sleutel, STANDAARD))
+        assert "Naam" in tekst and "Team" in tekst and "Datum" in tekst, optie.sleutel

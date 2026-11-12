@@ -1,6 +1,6 @@
 """PDF's over verkoop: verkooprapport per telling of per periode."""
 
-from pdf.basis import KLEUR_BLAUW, Rapport, _euro, _kort
+from pdf.basis import KLEUR_BLAUW_DONKER, KLEUR_TEKST, KOPLETTER, LETTER, Rapport, _euro, _kort
 
 
 def periode_verkoop_pdf(van_tekst, tot_tekst, regels):
@@ -43,7 +43,7 @@ def periode_verkoop_pdf(van_tekst, tot_tekst, regels):
         pdf.leeg_bericht("Geen verkoop geregistreerd in deze periode.")
     else:
         pdf.ln(2)
-        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_font(LETTER, "B", 10)
         pdf.cell(108, 8, "", border=0)
         pdf.cell(32, 8, "Totaal", align="R")
         pdf.cell(30, 8, _euro(totaal_omzet), align="R", new_x="LMARGIN", new_y="NEXT")
@@ -51,10 +51,10 @@ def periode_verkoop_pdf(van_tekst, tot_tekst, regels):
     correcties = [r for r in regels if r["correctie"] > 0]
     if correcties:
         pdf.ln(8)
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.set_text_color(*KLEUR_BLAUW)
+        pdf.set_font(KOPLETTER, "B", 13)
+        pdf.set_text_color(*KLEUR_BLAUW_DONKER)
         pdf.cell(0, 8, "Correcties (extra gevonden voorraad)", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*KLEUR_TEKST)
         pdf.kop_rij([("Product", 100, "L"), ("Extra geteld", 40, "R")])
         for i, r in enumerate(correcties):
             pdf.data_rij(
@@ -98,7 +98,7 @@ def verkoop_pdf(telling_id, periode_tekst, regels):
         pdf.leeg_bericht("Geen verkoop geregistreerd in deze periode.")
     else:
         pdf.ln(2)
-        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_font(LETTER, "B", 10)
         pdf.cell(116, 8, "", border=0)
         pdf.cell(32, 8, "Totaal", align="R")
         pdf.cell(32, 8, _euro(totaal_omzet), align="R", new_x="LMARGIN", new_y="NEXT")
@@ -106,10 +106,10 @@ def verkoop_pdf(telling_id, periode_tekst, regels):
     correcties = [r for r in regels if r["correctie"] > 0]
     if correcties:
         pdf.ln(8)
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.set_text_color(*KLEUR_BLAUW)
+        pdf.set_font(KOPLETTER, "B", 13)
+        pdf.set_text_color(*KLEUR_BLAUW_DONKER)
         pdf.cell(0, 8, "Correcties (extra gevonden voorraad)", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*KLEUR_TEKST)
         pdf.kop_rij([("Product", 100, "L"), ("Extra geteld", 40, "R")])
         for i, r in enumerate(correcties):
             pdf.data_rij(
