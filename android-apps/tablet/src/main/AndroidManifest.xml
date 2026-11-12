@@ -183,6 +183,12 @@
             android:exported="false"
             android:theme="@style/Thema.Handterminal.Instellingen" />
 
+        <!-- 2.11.0: de rapporten van de site, in één scherm. -->
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.RapportActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
         <!-- De eigen tv-schermen van de tablet (package nl.kantineblauwgeel.tablet), in hun eigen thema. -->
         <activity
             android:name="nl.kantineblauwgeel.tablet.ProductenActivity"

@@ -325,11 +325,28 @@ class StartActivity : BasisActivity() {
         clubMeer += Meer(getString(R.string.agenda), getString(R.string.uitleg_agenda), R.drawable.ic_agenda) { AgendaActivity.open(this) }
         if (heeft("club_van_20")) clubMeer += Meer(getString(R.string.club_van_20), getString(R.string.uitleg_club_van_20), R.drawable.ic_aanmeldingen,
             aantal(R.plurals.stand_open, aanmeldingen)) { AanmeldingenActivity.open(this) }
+        // De rapporten van de site (2.11.0, zie RapportActivity); marge, derving, niet-lopers en bardiensten alleen voor
+        // beheerders, net als op de site.
+        val rapportenMeer = mutableListOf<Meer>()
+        fun rapport(sleutel: String, naam: Int, uitleg: Int, icoon: Int) {
+            rapportenMeer += Meer(getString(naam), getString(uitleg), icoon) { RapportActivity.open(this, sleutel, getString(naam)) }
+        }
+        rapport("verkoop", R.string.rapport_verkoop, R.string.uitleg_rapport_verkoop, R.drawable.ic_prognose)
+        rapport("week", R.string.rapport_week, R.string.uitleg_rapport_week, R.drawable.ic_agenda)
+        rapport("seizoenen", R.string.rapport_seizoenen, R.string.uitleg_rapport_seizoenen, R.drawable.ic_tellingen)
+        rapport("seizoen-in-cijfers", R.string.rapport_seizoen_in_cijfers, R.string.uitleg_rapport_seizoen_in_cijfers, R.drawable.ic_prognose)
+        if (beheerder) {
+            rapport("marge", R.string.rapport_marge, R.string.uitleg_rapport_marge, R.drawable.ic_kassa)
+            rapport("derving", R.string.rapport_derving, R.string.uitleg_rapport_derving, R.drawable.ic_eruit)
+            rapport("niet-lopers", R.string.rapport_niet_lopers, R.string.uitleg_rapport_niet_lopers, R.drawable.ic_voorraad)
+            rapport("bardiensten", R.string.rapport_bardiensten, R.string.uitleg_rapport_bardiensten, R.drawable.ic_aanmeldingen)
+        }
         toonOnderwerpen(listOf(
             Onderwerp(getString(R.string.groep_voorraad), R.drawable.ic_voorraad, voorraadMeer),
             Onderwerp(getString(R.string.groep_kantine), R.drawable.ic_keuken, kantineMeer),
             Onderwerp(getString(R.string.groep_geld), R.drawable.ic_kassa, geldMeer),
             Onderwerp(getString(R.string.groep_club), R.drawable.ic_prikbord, clubMeer),
+            Onderwerp(getString(R.string.groep_rapporten), R.drawable.ic_prognose, rapportenMeer),
         ))
 
         b.standTekst.text = telling?.tekstOfNull("datum")?.let {

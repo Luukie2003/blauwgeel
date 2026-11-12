@@ -55,7 +55,7 @@ from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 HANDTERMINAL_APP_VERSIE = "3.0.0"
 # De tablet-app ("Kantine Beheer", android-apps/tablet) bouwt sinds 3.0 op dezelfde schermen; zijn startscherm kijkt hier
 # of er een nieuwere is (App.versieSleutel in de app).
-TABLET_APP_VERSIE = "3.1"
+TABLET_APP_VERSIE = "3.2"
 
 MAX_AANTAL = 100000
 

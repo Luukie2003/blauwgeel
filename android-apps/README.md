@@ -9,7 +9,7 @@ Drie losstaande Android-apps rond kantineblauwgeel.nl:
   (zoom per scherm, bewaard op de tv). Start vanzelf na een
   herstart en herstelt zichzelf na een storing. Zie het kopje "Hoe de apps met de
   website praten".
-- **`tablet/`** — "Kantine Beheer" (3.1), voor de tablet in de kantine. Sinds 3.0 bouwt hij op de schermen van de
+- **`tablet/`** — "Kantine Beheer" (3.2), voor de tablet in de kantine. Sinds 3.0 bouwt hij op de schermen van de
   handterminal-app: `tablet/build.gradle.kts` neemt de code en resources van `handterminal/src/main` mee (sourceSets, met
   dezelfde namespace, een eigen applicationId), zodat de tablet alles kan wat de handterminal kan, met dezelfde inlog,
   het startscherm, "Wat moet er nu?", de noodstop en het automatisch uitloggen. Wat alleen op de handterminal hoort,
@@ -25,6 +25,9 @@ Drie losstaande Android-apps rond kantineblauwgeel.nl:
   `boek_kluis_mutatie`), de verkoopdagen (`/api/app/verkoopdagen`) en de rest van een product bewerken
   (`/api/app/producten/<id>/bewerken`, beheerders). Die schermen zitten in de gedeelde code, dus de handterminal
   krijgt ze bij zijn volgende versie ook.
+  Sinds 3.2 staan de rapporten erin (`RapportActivity`, de groep Rapporten op het startscherm): één scherm voor alle
+  rapporten, die de site in dezelfde vorm geeft (`routes/app_api_rapporten.py`: kerncijfers, lijsten, tekst en de
+  periodekeuze), met dezelfde rechten als de rapportpagina's.
   Gebouwd als debug-APK van deze Mac (zelfde sleutel als de tv-app, zodat hij over de oude heen installeert):
   `JAVA_HOME=~/Library/Java/JavaVirtualMachines/jbr-21.0.11/Contents/Home ./gradlew :tablet:assembleDebug`, buildmap
   `~/.kantine-apps/build/tablet`.

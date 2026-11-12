@@ -238,6 +238,13 @@
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Thema.Handterminal.Instellingen" />
+        <!-- 2.11.0: de rapporten van de site, in één scherm. -->
+        <activity
+            android:name=".RapportActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
         <!-- De wekker van een bestelherinnering, en na een herstart of update de wekkers opnieuw zetten. -->
         <receiver
             android:name=".HerinneringOntvanger"

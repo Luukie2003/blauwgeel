@@ -1106,4 +1106,24 @@
     <string name="inkoop_uit_artikelen">Deze rekent de site uit de artikelen met een inkoopprijs (Barcodes).</string>
     <string name="vaste_bestelhoeveelheid">Vaste bestelhoeveelheid in %1$s (0 = tot het minimum)</string>
     <string name="product_actief">Actief</string>
+
+    <!-- De rapporten in de app (2.11.0) -->
+    <string name="groep_rapporten">Rapporten</string>
+    <string name="rapport_verkoop">Verkoop</string>
+    <string name="uitleg_rapport_verkoop">Omzet en wat het best verkocht, per periode</string>
+    <string name="rapport_week">Weekoverzicht</string>
+    <string name="uitleg_rapport_week">Deze week naast de vorige</string>
+    <string name="rapport_seizoenen">Omzet per seizoen</string>
+    <string name="uitleg_rapport_seizoenen">Elk seizoen naast elkaar</string>
+    <string name="rapport_seizoen_in_cijfers">Seizoen in cijfers</string>
+    <string name="uitleg_rapport_seizoen_in_cijfers">Het seizoen in een paar getallen</string>
+    <string name="rapport_marge">Marge</string>
+    <string name="uitleg_rapport_marge">Winst per product en categorie</string>
+    <string name="rapport_derving">Derving</string>
+    <string name="uitleg_rapport_derving">Wat er zonder te verkopen verdween</string>
+    <string name="rapport_niet_lopers">Niet-lopers</string>
+    <string name="uitleg_rapport_niet_lopers">Op voorraad, maar niet verkocht</string>
+    <string name="rapport_bardiensten">Omzet per bardienst</string>
+    <string name="uitleg_rapport_bardiensten">De omzet per persoon achter de bar</string>
+    <string name="rapporten">Rapporten</string>
 </resources>

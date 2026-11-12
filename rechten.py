@@ -202,6 +202,11 @@ BEHEERDER_ENDPOINTS = {
     "prijs_gepland_verwijderen",
     # Wat elk product oplevert (met de inkoopprijzen) en wat er zonder te verkopen uit de voorraad verdwijnt.
     "marge_rapport",
+    # De rapporten in de app (routes/app_api_rapporten.py), net als hun pagina op de site.
+    "api_app_rapport_marge",
+    "api_app_rapport_derving",
+    "api_app_rapport_niet_lopers",
+    "api_app_rapport_bardiensten",
     "derving_rapport",
     "marge_doelmarge",
     # Verkoopprijzen van de keuken (de keuken zelf tellen en inboeken mag iedereen met de keukensectie).
