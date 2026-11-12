@@ -46,8 +46,11 @@ class StartActivity : BasisActivity() {
         b.startDatum.text = SimpleDateFormat("EEEE d MMMM", Locale("nl", "NL")).format(Date())
 
         b.zoekKnop.setOnClickListener { ProductenActivity.open(this, ProductenActivity.Modus.ZOEKEN) }
+        b.zoekScanIcoon.isVisible = !App.isTablet  // de tablet heeft geen scanner
         tegel(b.tegelFactuur, R.drawable.ic_factuur, R.string.tegel_factuur) { startActivity(Intent(this, FacturenActivity::class.java)) }
-        tegel(b.tegelTellen, R.drawable.ic_tellen, R.string.tegel_tellen) { startActivity(Intent(this, TellenActivity::class.java)) }
+        // Op de tablet geen looplijst (tellen doe je met de handterminal, zie App): daar bekijk je de tellingen.
+        if (App.metLooplijst) tegel(b.tegelTellen, R.drawable.ic_tellen, R.string.tegel_tellen) { startActivity(Intent(this, TellenActivity::class.java)) }
+        else tegel(b.tegelTellen, R.drawable.ic_tellingen, R.string.tellingen) { TellingenActivity.open(this) }
         tegel(b.tegelBoeken, R.drawable.ic_boeken, R.string.tegel_boeken) { ProductenActivity.open(this, ProductenActivity.Modus.BOEKEN) }
         tegel(b.tegelVoorraad, R.drawable.ic_voorraad, R.string.tegel_voorraad) { ProductenActivity.open(this, ProductenActivity.Modus.VOORRAAD) }
         b.verversen.setColorSchemeResources(R.color.blauw_donker)
@@ -167,6 +170,10 @@ class StartActivity : BasisActivity() {
         val looplijst = start.optJSONObject("looplijst")
         val telling = start.optJSONObject("telling")
         when {
+            !App.metLooplijst && telling?.has("dagen_geleden") == true && !telling.isNull("dagen_geleden") -> zetTegel(
+                b.tegelTellen, dagenGeleden(telling.optInt("dagen_geleden")), if (telling.optBoolean("ok", true)) R.color.groen else R.color.rood,
+            )
+            !App.metLooplijst -> zetTegel(b.tegelTellen, getString(R.string.uitleg_tellingen))
             looplijst?.optBoolean("in_controle") == true -> zetTegel(b.tegelTellen, getString(R.string.verder_controleren), R.color.oranje)
             looplijst != null -> zetTegel(
                 b.tegelTellen,
@@ -298,6 +305,10 @@ class StartActivity : BasisActivity() {
             kantineMeer += Meer(getString(R.string.op_de_tv), getString(R.string.uitleg_op_de_tv), R.drawable.ic_kiosk,
                 aantal(R.plurals.n_uitverkocht, uitverkocht.size)) { UitverkochtActivity.open(this) }
         }
+        // De eigen tv-schermen van de tablet-app (zie App.tabletSchermen); op de handterminal is dit leeg.
+        for (extra in App.tabletSchermen) if (heeft(extra.sectie)) {
+            kantineMeer += Meer(extra.naam, extra.uitleg, extra.icoon) { extra.open(this) }
+        }
         val timers = start.optJSONArray("timers")?.length() ?: 0
         kantineMeer += Meer(getString(R.string.timer), getString(R.string.uitleg_timer), R.drawable.ic_timer,
             aantal(R.plurals.stand_timers, timers)) { TimerActivity.open(this) }
@@ -325,7 +336,7 @@ class StartActivity : BasisActivity() {
             getString(R.string.laatst_geteld, it.take(10).split("-").reversed().joinToString("-"), telling.tekstOfNull("door") ?: "?")
         } ?: ""
 
-        val nieuwste = start.optString("app_versie")
+        val nieuwste = start.optString(App.versieSleutel)
         b.updateMelding.isVisible = nieuwer(nieuwste, BuildConfig.VERSION_NAME)
         b.updateMelding.text = getString(R.string.update_beschikbaar, nieuwste)
     }

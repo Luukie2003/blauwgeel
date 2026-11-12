@@ -7,7 +7,8 @@ import android.content.Intent
 object Schermen {
 
     private val schermen: Map<String, (BasisActivity) -> Unit> = buildMap {
-        for (e in listOf("tellen", "tellen_lopen", "tellen_lopen_starten", "tellen_lopen_hervatten", "tellen_lopen_controleren")) {
+        // Tellen met de looplijst kan alleen op de handterminal (zie App); op de tablet kan dat niet in de app.
+        if (App.metLooplijst) for (e in listOf("tellen", "tellen_lopen", "tellen_lopen_starten", "tellen_lopen_hervatten", "tellen_lopen_controleren")) {
             put(e) { it.startActivity(Intent(it, TellenActivity::class.java)) }
         }
         for (e in listOf("kassa_tellen", "kassa_geschiedenis")) put(e) { GeldActivity.open(it, GeldActivity.KASSA) }

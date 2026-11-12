@@ -1,9 +1,10 @@
 package nl.kantineblauwgeel.tablet
 
+import nl.kantineblauwgeel.handterminal.R
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
-import nl.kantineblauwgeel.tablet.databinding.ActivityWedstrijddagBinding
+import nl.kantineblauwgeel.handterminal.databinding.ActivityWedstrijddagBinding
 
 /** Native scherm voor de wedstrijddag-welkomstmelding (zie
  * kiosk_wedstrijddag_welkom_instellingen in routes/kiosk.py) -- alleen aan/

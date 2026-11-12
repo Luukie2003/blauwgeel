@@ -35,6 +35,8 @@ class InlogActivity : BasisActivity() {
         }
         b = InlogLaagBinding.inflate(layoutInflater)
         setContentView(b.root)
+        // Op de tablet (een breed scherm) het cijferpad niet over de hele breedte; de kop wel.
+        if (App.isTablet) b.toetsen.layoutParams = b.toetsen.layoutParams.apply { width = dp(this@InlogActivity, 560) }
         Scanner.stelIn(this)
 
         listOf(

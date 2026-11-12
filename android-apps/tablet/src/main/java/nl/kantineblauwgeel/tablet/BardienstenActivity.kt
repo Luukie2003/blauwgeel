@@ -1,5 +1,6 @@
 package nl.kantineblauwgeel.tablet
 
+import nl.kantineblauwgeel.handterminal.R
 import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
@@ -13,7 +14,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import nl.kantineblauwgeel.tablet.databinding.ActivityBardienstenBinding
+import nl.kantineblauwgeel.handterminal.databinding.ActivityBardienstenBinding
 import java.util.Calendar
 
 private data class Bardienst(

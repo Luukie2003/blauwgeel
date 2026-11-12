@@ -71,7 +71,9 @@ class KeukenActivity : BasisActivity() {
         Lijst.kop(inhoud, getString(R.string.tellen_en_inboeken))
         val acties = Lijst.kaart(inhoud)
         val bezig = getSharedPreferences("keuken_tellen", MODE_PRIVATE).getString("stand", null) != null
-        Lijst.knop(acties, getString(if (bezig) R.string.keukentelling_verder else R.string.keukentelling)) { KeukenTellenActivity.open(this) }
+        if (App.metLooplijst) {  // de keukentelling is een looplijst: alleen op de handterminal (zie App)
+            Lijst.knop(acties, getString(if (bezig) R.string.keukentelling_verder else R.string.keukentelling)) { KeukenTellenActivity.open(this) }
+        }
         Lijst.knop(acties, getString(R.string.keuken_inboeken)) { KeukenInvoerActivity.open(this, KeukenInvoerActivity.INBOEKEN) }
 
         val producten = data.getJSONArray("producten").objecten()

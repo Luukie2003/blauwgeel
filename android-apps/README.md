@@ -9,12 +9,25 @@ Drie losstaande Android-apps rond kantineblauwgeel.nl:
   (zoom per scherm, bewaard op de tv). Start vanzelf na een
   herstart en herstelt zichzelf na een storing. Zie het kopje "Hoe de apps met de
   website praten".
-- **`tablet/`** — "Kantine Beheer" (2.0), voor de tablet in de kantine. Een native app (geen website) voor de
-  kantine-tv: na de 6-cijferige code een menu met de producten op het prijzenscherm, acties, bardiensten, het uitgelichte
-  product, de wedstrijddag-welkomst, en (sinds 2.0) de tv's, dia's, uitverkocht en de timer. Die laatste vier gebruiken
-  dezelfde JSON-API als de handterminal-app (`routes/app_api_tv.py` en `/api/app/prijzenscherm`, `/api/app/timers`).
-  Logt uit na 10 minuten niets doen en gaat op slot bij een noodstop (`BasisActivity`). Gebouwd als debug-APK van deze
-  Mac (zelfde sleutel als de tv-app), buildmap `~/.kantine-apps/build/tablet`.
+- **`tablet/`** — "Kantine Beheer" (3.1), voor de tablet in de kantine. Sinds 3.0 bouwt hij op de schermen van de
+  handterminal-app: `tablet/build.gradle.kts` neemt de code en resources van `handterminal/src/main` mee (sourceSets, met
+  dezelfde namespace, een eigen applicationId), zodat de tablet alles kan wat de handterminal kan, met dezelfde inlog,
+  het startscherm, "Wat moet er nu?", de noodstop en het automatisch uitloggen. Wat alleen op de handterminal hoort,
+  regelt `App.kt` daar (`App.isTablet`): geen looplijst (tellen, ook in de keuken) en geen koppelronde; de tegel Tellen
+  wordt Tellingen (bekijken), en de scanknop valt weg. Op een breed scherm staat de inhoud in het midden (`App.centreer`).
+  Daarbij de eigen tv-schermen van de tablet (`tablet/src/main/java`: het prijzenscherm, acties, bardiensten,
+  uitgelicht en de wedstrijddag), die het startscherm op naam opent (`App.tabletSchermen`) en die via `tablet/Api.kt` de
+  gedeelde sessie gebruiken. Teksten die op de tablet anders zijn, staan in `tablet/src/tablet/res` (die gaat vóór de
+  handterminal-resources). Komt er in de handterminal een scherm bij, zet het dan ook in `tablet/src/main/AndroidManifest.xml`
+  (zonder `screenOrientation`). De nieuwste versie staat op de site in `TABLET_APP_VERSIE` (`routes/app_api.py`).
+  Sinds 3.1 kan de app ook wat eerst alleen op de site kon: geld afdragen of toevoegen en storten of opnemen
+  (`/api/app/kassa/mutatie`, `/api/app/kluis/mutatie`, met dezelfde boeking als de site: `boek_kassa_mutatie` en
+  `boek_kluis_mutatie`), de verkoopdagen (`/api/app/verkoopdagen`) en de rest van een product bewerken
+  (`/api/app/producten/<id>/bewerken`, beheerders). Die schermen zitten in de gedeelde code, dus de handterminal
+  krijgt ze bij zijn volgende versie ook.
+  Gebouwd als debug-APK van deze Mac (zelfde sleutel als de tv-app, zodat hij over de oude heen installeert):
+  `JAVA_HOME=~/Library/Java/JavaVirtualMachines/jbr-21.0.11/Contents/Home ./gradlew :tablet:assembleDebug`, buildmap
+  `~/.kantine-apps/build/tablet`.
 - **`handterminal/`** — "Kantine Handterminal", voor de Zebra TC51 (en andere
   Android-handterminals vanaf Android 6). Zie het kopje hieronder.
 

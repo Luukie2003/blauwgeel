@@ -59,12 +59,16 @@ from keukenbeheer import (
 from leveranciers import alle_leveranciers
 from productkaart import BESTELEENHEDEN, EENHEDEN, KEUKEN_CATEGORIE
 from routes.app_api import _data, _foto, _fout, _getal, _product, eenmalig, taak_vragen
-from routes.kassa import keur_kassa_telling_goed, maak_kassa_telling
-from routes.kluis import keur_kluis_telling_goed, maak_kluis_telling
+from routes.kassa import boek_kassa_mutatie, keur_kassa_telling_goed, maak_kassa_telling
+from routes.kluis import boek_kluis_mutatie, keur_kluis_telling_goed, maak_kluis_telling
+from voorspelling.basis import lees_verkoopdagen, lees_wedstrijddagen
 from routes.logboek import schrijf_logboek
 
 RECENTE_GELDTELLINGEN = 6
+RECENTE_GELDBEWEGINGEN = 5
 MAX_STUKS = 100000
+MAX_GELDBEDRAG = 100000
+_WEEKDAGEN = ("maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag")
 
 
 def _kommagetal(waarde):
@@ -225,12 +229,39 @@ def _geld_overzicht(db, tabel, stand, met_omzet):
     recent = db.execute(
         f"SELECT * FROM {tabel} WHERE afgesloten = 1 ORDER BY datum DESC, id DESC LIMIT ?", (RECENTE_GELDTELLINGEN,)
     ).fetchall()
+    # De laatste geldbewegingen: bij de kassa afdrachten en toevoegingen, bij de kluis stortingen en opnames.
+    mutaties = db.execute(
+        f"SELECT * FROM {'kassa_mutaties' if tabel == 'kassa_tellingen' else 'kluis_mutaties'} ORDER BY datum DESC, id DESC LIMIT ?",
+        (RECENTE_GELDBEWEGINGEN,),
+    ).fetchall()
     return {
         "stand": stand["stand"],
         "coupures": [{"veld": kolom, "waarde": waarde, "naam": naam} for kolom, waarde, naam in KASSA_COUPURES],
         "concepten": [_geld_telling_json(t, met_omzet) for t in concepten],
         "recent": [_geld_telling_json(t, met_omzet) for t in recent],
+        "mutaties": [{"id": m["id"], "type": m["type"], "bedrag": m["bedrag"], "datum": m["datum"], "naam": m["naam"],
+                      "ontvanger": m["ontvanger"] or None, "opmerking": m["opmerking"] or None} for m in mutaties],
     }
+
+
+def _geld_mutatie(soorten, boek, stand):
+    """Een geldbeweging uit de app (zie api_app_kassa_mutatie en api_app_kluis_mutatie): {type, bedrag, ontvanger,
+    opmerking, verzoek_id}, met dezelfde controle als het formulier op de site."""
+    data = _data()
+    soort = str(data.get("type") or "")
+    bedrag = _kommagetal(data.get("bedrag"))
+    if soort not in soorten:
+        return _fout("Kies wat je doet.", 400, "type")
+    if bedrag is None or not 0 < bedrag <= MAX_GELDBEDRAG:
+        return _fout("Vul een bedrag groter dan 0 in.")
+    ontvanger = str(data.get("ontvanger") or "")[:100]
+    opmerking = str(data.get("opmerking") or "")[:500]
+
+    def actie(db):
+        melding = boek(db, soort, bedrag, session.get("gebruiker_naam"), session.get("gebruiker_id"), ontvanger, opmerking)
+        return {"melding": melding, "stand": stand(db)["stand"]}, 200
+
+    return eenmalig(actie)
 
 
 def _geld_formulier(data, met_omzet):
@@ -508,6 +539,45 @@ def register_routes(app):
             return {"melding": "Kluistelling goedgekeurd.", "stand": bereken_kluis_stand(db)["stand"]}, 200
 
         return eenmalig(actie)
+
+    @app.route("/api/app/kassa/mutatie", methods=["POST"])
+    def api_app_kassa_mutatie():
+        """Geld uit de kassalade naar de kluis ('afdracht') of uit de kluis erbij ('toevoeging'), zoals Kassa > Afdracht
+        of toevoeging op de site (boek_kassa_mutatie). Voor wie de kassa doet, net als op de site."""
+        return _geld_mutatie(("afdracht", "toevoeging"), boek_kassa_mutatie, bereken_kassalade_stand)
+
+    @app.route("/api/app/kluis/mutatie", methods=["POST"])
+    def api_app_kluis_mutatie():
+        """(Beheerders) Geld in de kluis ('storting') of eruit ('opname'), zoals Kluis > Storting of opname op de site."""
+        return _geld_mutatie(("storting", "opname"), boek_kluis_mutatie, bereken_kluis_stand)
+
+    # ------------------------------------------------------------ verkoopdagen (bij de prognose)
+
+    @app.route("/api/app/verkoopdagen", methods=["GET", "POST"])
+    def api_app_verkoopdagen():
+        """Op welke dagen de kantine open is, zoals Prognose > Verkoopdagen op de site: per weekdag (maandag = 0)
+        'altijd', 'wedstrijd' (alleen bij een thuiswedstrijd) of 'dicht'. POST {dagen: {"0": "altijd", ...}}; minstens één
+        dag moet altijd open zijn. De prognose rekent er meteen mee (de verkoopdagen zitten in zijn vingerafdruk)."""
+        db = get_db()
+        melding = None
+        if request.method == "POST":
+            dagen = _data().get("dagen") if isinstance(_data().get("dagen"), dict) else {}
+            keuzes = {i: str(dagen.get(str(i)) or "dicht") for i in range(7)}
+            altijd = [i for i in range(7) if keuzes[i] == "altijd"]
+            bij_wedstrijd = [i for i in range(7) if keuzes[i] == "wedstrijd"]
+            if not altijd:
+                return _fout("Kies minstens één dag waarop de kantine altijd open is.")
+            db.execute("UPDATE instellingen SET verkoopdagen = ?, verkoopdagen_wedstrijd = ? WHERE id = 1",
+                       (",".join(map(str, altijd)), ",".join(map(str, bij_wedstrijd))))
+            db.commit()
+            melding = "Verkoopdagen opgeslagen. De prognose rekent er meteen mee."
+        altijd, _ = lees_verkoopdagen(db)
+        wedstrijd = lees_wedstrijddagen(db)
+        return jsonify({
+            "dagen": [{"dag": i, "naam": _WEEKDAGEN[i],
+                       "keuze": "altijd" if i in altijd else ("wedstrijd" if i in wedstrijd else "dicht")} for i in range(7)],
+            "melding": melding,
+        })
 
     # ------------------------------------------------------------ keuken
 

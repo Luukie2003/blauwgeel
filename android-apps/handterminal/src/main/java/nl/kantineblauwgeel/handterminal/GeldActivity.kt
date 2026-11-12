@@ -4,17 +4,22 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
+import android.text.method.DigitsKeyListener
+import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.appcompat.widget.AppCompatEditText
+import androidx.appcompat.widget.AppCompatRadioButton
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 
 /** De kassa (of de kluis, alleen voor beheerders): de stand, de tellingen die op goedkeuring wachten en de laatste
- * goedgekeurde. Tellen gaat in [GeldTellenActivity]. Goedkeuren kan hier; corrigeren, bewerken, heropenen en geld
- * afdragen of overboeken kan alleen op de website. Zelfde logica als Kassa en Kluis op de site. */
+ * goedgekeurde, en de laatste geldbewegingen. Tellen gaat in [GeldTellenActivity]. Goedkeuren en geld afdragen,
+ * toevoegen, storten of opnemen kan hier (2.10.0); corrigeren, bewerken en heropenen alleen op de website. Zelfde logica als Kassa en Kluis op de site. */
 class GeldActivity : BasisActivity() {
 
     private lateinit var b: ActivityLijstBinding
@@ -76,12 +81,106 @@ class GeldActivity : BasisActivity() {
             recent.forEach { telling(kaart, it, coupures, concept = false) }
         }
 
-        Lijst.kop(inhoud, getString(R.string.op_de_computer))
-        val computer = Lijst.kaart(inhoud)
-        Lijst.knop(computer, getString(R.string.telling_corrigeren)) { nietInApp(getString(R.string.wat_geld_corrigeren)) }
-        Lijst.knop(computer, getString(if (isKassa) R.string.geld_afdragen else R.string.geld_storten)) {
-            nietInApp(getString(if (isKassa) R.string.wat_geld_afdragen else R.string.wat_geld_storten))
+        // Geldbewegingen (2.10.0): afdragen of toevoegen bij de kassa, storten of opnemen bij de kluis, zoals op de site.
+        val mutaties = data.optJSONArray("mutaties")?.objecten().orEmpty()
+        Lijst.kop(inhoud, getString(R.string.geldbewegingen))
+        val geld = Lijst.kaart(inhoud)
+        if (mutaties.isEmpty()) Lijst.tekst(geld, getString(R.string.geen_geldbewegingen))
+        for (m in mutaties) {
+            val erbij = m.optString("type") in setOf("toevoeging", "storting")
+            Lijst.regel(
+                geld, mutatieNaam(m.optString("type")),
+                listOfNotNull(Lijst.datum(m.tekstOfNull("datum")), m.tekstOfNull("naam"), m.tekstOfNull("ontvanger"),
+                    m.tekstOfNull("opmerking")).joinToString(" · "),
+                (if (erbij) "+ " else "− ") + Lijst.euro(m.optDouble("bedrag")), if (erbij) R.color.groen else R.color.tekst,
+            )
         }
+        Lijst.knop(geld, getString(if (isKassa) R.string.geld_afdragen_of_toevoegen else R.string.geld_storten_of_opnemen)) {
+            geldBoeken()
+        }
+
+        Lijst.kop(inhoud, getString(R.string.op_de_computer))
+        Lijst.knop(Lijst.kaart(inhoud), getString(R.string.telling_corrigeren)) { nietInApp(getString(R.string.wat_geld_corrigeren)) }
+    }
+
+    private fun mutatieNaam(type: String) = getString(when (type) {
+        "afdracht" -> R.string.mutatie_afdracht
+        "toevoeging" -> R.string.mutatie_toevoeging
+        "storting" -> R.string.mutatie_storting
+        else -> R.string.mutatie_opname
+    })
+
+    /** Geld afdragen of toevoegen (kassa), storten of opnemen (kluis): wat je doet, het bedrag, aan of van wie en een
+     * opmerking. Dezelfde boeking als het formulier op de site (api_app_kassa_mutatie / api_app_kluis_mutatie). */
+    private fun geldBoeken() {
+        val soorten = if (isKassa) listOf("afdracht" to R.string.geld_afdracht_uitleg, "toevoeging" to R.string.geld_toevoeging_uitleg)
+            else listOf("storting" to R.string.geld_storting_uitleg, "opname" to R.string.geld_opname_uitleg)
+        val groep = RadioGroup(this)
+        soorten.forEachIndexed { i, (type, tekst) ->
+            groep.addView(AppCompatRadioButton(this).apply {
+                id = View.generateViewId()
+                text = getString(tekst)
+                tag = type
+                isChecked = i == 0
+            })
+        }
+        val bedrag = AppCompatEditText(this).apply {
+            hint = getString(R.string.bedrag_hint)
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            keyListener = DigitsKeyListener.getInstance("0123456789,.")
+        }
+        val ontvanger = AppCompatEditText(this).apply {
+            hint = getString(R.string.ontvanger_optioneel)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        }
+        val opmerking = AppCompatEditText(this).apply {
+            hint = getString(R.string.opmerking_optioneel)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+        }
+        val vorm = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(context, 20), dp(context, 4), dp(context, 20), 0)
+            addView(groep)
+            addView(bedrag)
+            addView(ontvanger)
+            addView(opmerking)
+        }
+        val verzoekId = Api.nieuwVerzoekId()
+        val dialoog = AlertDialog.Builder(this)
+            .setCustomTitle(dialoogTitel(getString(if (isKassa) R.string.geld_afdragen_of_toevoegen else R.string.geld_storten_of_opnemen)))
+            .setView(vorm)
+            .setNegativeButton(R.string.annuleren, null)
+            .setPositiveButton(R.string.boeken, null)
+            .create()
+        dialoog.setOnShowListener {
+            val knop = dialoog.getButton(AlertDialog.BUTTON_POSITIVE)
+            knop.setOnClickListener {
+                val waarde = bedrag.text.toString().trim().replace(',', '.').toDoubleOrNull()
+                if (waarde == null || waarde <= 0) {
+                    bedrag.error = getString(R.string.vul_een_bedrag_in)
+                    return@setOnClickListener
+                }
+                val type = groep.findViewById<RadioButton>(groep.checkedRadioButtonId)?.tag as? String ?: soorten[0].first
+                knop.isEnabled = false
+                bezig {
+                    try {
+                        val antwoord = Api.post(
+                            this, "/api/app/$soort/mutatie",
+                            JSONObject().put("type", type).put("bedrag", waarde)
+                                .put("ontvanger", ontvanger.text.toString().trim()).put("opmerking", opmerking.text.toString().trim()),
+                            verzoekId = verzoekId,
+                        )
+                        tril(60)
+                        melding(antwoord.optString("melding"))
+                        dialoog.dismiss()
+                        laad()
+                    } finally {
+                        knop.isEnabled = true
+                    }
+                }
+            }
+        }
+        dialoog.show()
     }
 
     private fun telling(kaart: LinearLayout, t: JSONObject, coupures: List<JSONObject>, concept: Boolean) {

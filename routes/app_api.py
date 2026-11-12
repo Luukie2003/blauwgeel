@@ -43,7 +43,7 @@ from helpers import (
 )
 from helpers.afbeeldingen import kleine_afbeelding
 from keukenbeheer import KEUKEN_NIET_BESTELLEN
-from productkaart import KEUKEN_CATEGORIE, TELLEN_VOORWAARDE
+from productkaart import KEUKEN_CATEGORIE, TELLEN_VOORWAARDE, artikelcode_in_gebruik
 from routes.logboek import schrijf_logboek
 from routes.tellen.looplijst import controle_regels, optellen
 from routes.tellen.looplijst_opslag import bewaar_stand, bewaarde_stand, stand_verlopen, wis_stand
@@ -53,6 +53,9 @@ from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 # De nieuwste versie van de app. Draait er een oudere, dan meldt de app dat er een nieuwe is.
 HANDTERMINAL_APP_VERSIE = "3.0.0"
+# De tablet-app ("Kantine Beheer", android-apps/tablet) bouwt sinds 3.0 op dezelfde schermen; zijn startscherm kijkt hier
+# of er een nieuwere is (App.versieSleutel in de app).
+TABLET_APP_VERSIE = "3.1"
 
 MAX_AANTAL = 100000
 
@@ -130,6 +133,13 @@ _PRODUCT_SELECT = """SELECT id, naam, categorie, subcategorie, merk, eenheid, vo
                             besteleenheid_factor, afbeelding,
                             (SELECT l.naam FROM leveranciers l WHERE l.id = producten.leverancier_id) AS leverancier
                      FROM producten"""
+
+
+def _leesbaar(waarde):
+    """Een waarde voor het logboek: ja/nee in plaats van True/False, en '-' voor leeg."""
+    if isinstance(waarde, bool):
+        return "ja" if waarde else "nee"
+    return "-" if waarde in (None, "") else str(waarde)
 
 
 def _product(db, product_id):
@@ -286,6 +296,7 @@ def register_routes(app):
                 """SELECT naam FROM producten WHERE actief = 1 AND toon_op_kiosk = 1 AND kiosk_uitverkocht = 1
                    ORDER BY naam COLLATE NOCASE""").fetchall()] if toegang["voorraad"] else None,
             "app_versie": HANDTERMINAL_APP_VERSIE,
+            "tablet_versie": TABLET_APP_VERSIE,
         })
 
     @app.route("/api/app/producten")
@@ -824,6 +835,88 @@ def register_routes(app):
         schrijf_logboek(db, "api_app_product_instellingen", f"{p['naam']}: " + ", ".join(wijzigingen) + " (handterminal)")
         db.commit()
         return jsonify({"product": _product(db, product_id), "melding": "Opgeslagen."})
+
+    @app.route("/api/app/producten/<int:product_id>/bewerken", methods=["GET", "POST"])
+    def api_app_product_bewerken(product_id):
+        """(Beheerders, 2.10.0, eerst voor de tablet) De rest van een product die je op de site bij Bewerken aanpast: de
+        categorie, de leverancier, het artikelnummer, de inkoopprijs, de vaste bestelhoeveelheid, of hij op het
+        prijzenscherm staat, of hij actief is, en de opmerking. GET geeft de stand en de keuzelijsten. Een andere
+        inkoopprijs komt in de prijsgeschiedenis; rekent de site hem uit de artikelen (Barcodes), dan telt het veld niet,
+        net als op de site. De foto en de prijsopties blijven op de computer."""
+        db = get_db()
+        p = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+        if p is None:
+            return _fout("Dit product bestaat niet (meer).", 404, "niet_gevonden")
+        uit_artikelen = barcodes.inkoop_uit_artikelen(db, product_id) is not None
+        categorieen = [r["naam"] for r in db.execute("SELECT naam FROM categorieen ORDER BY naam COLLATE NOCASE").fetchall()]
+        leveranciers = [{"id": r["id"], "naam": r["naam"]}
+                        for r in db.execute("SELECT id, naam FROM leveranciers ORDER BY naam COLLATE NOCASE").fetchall()]
+
+        def stand(rij):
+            return {"categorie": rij["categorie"], "leverancier_id": rij["leverancier_id"], "artikelcode": rij["artikelcode"] or "",
+                    "inkoopprijs": rij["inkoopprijs"] or 0, "inkoop_uit_artikelen": uit_artikelen,
+                    "bestel_hoeveelheid": rij["bestel_hoeveelheid"] or 0, "toon_op_kiosk": bool(rij["toon_op_kiosk"]),
+                    "actief": bool(rij["actief"]), "opmerking": rij["opmerking"] or "",
+                    "categorieen": categorieen, "leveranciers": leveranciers}
+
+        if request.method == "GET":
+            return jsonify(stand(p))
+        data = _data()
+        categorie = str(data.get("categorie") or "").strip()
+        if categorie not in categorieen:
+            return _fout("Kies een categorie uit de lijst.")
+        leverancier_id = data.get("leverancier_id")
+        if leverancier_id in ("", None):
+            leverancier_id = None
+        elif _getal(leverancier_id) not in {lev["id"] for lev in leveranciers}:
+            return _fout("Kies een leverancier uit de lijst.")
+        else:
+            leverancier_id = _getal(leverancier_id)
+        artikelcode = str(data.get("artikelcode") or "").strip()[:50] or None
+        ander = artikelcode_in_gebruik(db, artikelcode, product_id)
+        if ander:
+            return _fout(f"Artikelnummer {artikelcode} hoort al bij {ander}.")
+        inkoopprijs = p["inkoopprijs"] or 0
+        if not uit_artikelen and data.get("inkoopprijs") not in (None, ""):
+            try:
+                inkoopprijs = round(float(str(data["inkoopprijs"]).replace("€", "").replace(",", ".").strip()), 2)
+            except ValueError:
+                return _fout("Vul een geldige inkoopprijs in, bijvoorbeeld 0,85.")
+            if not 0 <= inkoopprijs <= 1000:
+                return _fout("Vul een geldige inkoopprijs in, bijvoorbeeld 0,85.")
+        bestel_hoeveelheid = _getal(data.get("bestel_hoeveelheid"), 0)
+        if bestel_hoeveelheid is None or not 0 <= bestel_hoeveelheid <= MAX_AANTAL:
+            return _fout("Vul een bestelhoeveelheid van 0 of meer in.")
+        actief = bool(data.get("actief"))
+        toon_op_kiosk = bool(data.get("toon_op_kiosk"))
+        opmerking = str(data.get("opmerking") or "").strip()[:500]
+
+        db.execute(
+            """UPDATE producten SET categorie = ?, leverancier_id = ?, artikelcode = ?, inkoopprijs = ?, bestel_hoeveelheid = ?,
+               actief = ?, toon_op_kiosk = ?, opmerking = ? WHERE id = ?""",
+            (categorie, leverancier_id, artikelcode, inkoopprijs, bestel_hoeveelheid, int(actief), int(toon_op_kiosk),
+             opmerking, product_id),
+        )
+        wijzigingen = []
+        if abs((p["inkoopprijs"] or 0) - inkoopprijs) > 0.001:
+            db.execute(
+                """INSERT INTO prijs_geschiedenis (product_id, veld, oude_prijs, nieuwe_prijs, datum, naam, gebruiker_id)
+                   VALUES (?, 'inkoopprijs', ?, ?, ?, ?, ?)""",
+                (product_id, p["inkoopprijs"] or 0, inkoopprijs, now_str(), session.get("gebruiker_naam"), session.get("gebruiker_id")),
+            )
+            wijzigingen.append(f"inkoopprijs € {p['inkoopprijs'] or 0:.2f} → € {inkoopprijs:.2f}")
+        for veld, oud, nieuw in (("categorie", p["categorie"], categorie), ("leverancier", p["leverancier_id"], leverancier_id),
+                                 ("artikelnummer", p["artikelcode"] or None, artikelcode),
+                                 ("bestelhoeveelheid", p["bestel_hoeveelheid"] or 0, bestel_hoeveelheid),
+                                 ("actief", bool(p["actief"]), actief), ("op het prijzenscherm", bool(p["toon_op_kiosk"]), toon_op_kiosk),
+                                 ("opmerking", p["opmerking"] or "", opmerking)):
+            if oud != nieuw:
+                wijzigingen.append(f"{veld} {_leesbaar(oud)} → {_leesbaar(nieuw)}")
+        if wijzigingen:
+            schrijf_logboek(db, "api_app_product_bewerken", f"{p['naam']}: " + ", ".join(wijzigingen) + " (app)")
+        db.commit()
+        return jsonify({"product": _product(db, product_id), **stand(db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()),
+                        "melding": "Opgeslagen." if wijzigingen else "Er was niets veranderd."})
 
     @app.route("/api/app/bestellijst/gemeld/<int:product_id>/afhandelen", methods=["POST"])
     def api_app_bestellijst_melding_afhandelen(product_id):

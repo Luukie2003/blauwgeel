@@ -69,6 +69,7 @@ def test_startscherm(app_client, db):
     assert {"Bestellijst", "Prikbord", "Kluis"} <= {p["label"] for p in start["paginas"]}
     assert all(p["pad"].startswith("/") for p in start["paginas"])
     assert start["app_versie"]
+    assert start["tablet_versie"]  # de tablet-app (3.0) kijkt hiernaar, zie App.versieSleutel in de app
 
 
 def test_productlijst_met_barcodes_en_etag(app_client, db):

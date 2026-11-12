@@ -1,5 +1,6 @@
 package nl.kantineblauwgeel.tablet
 
+import nl.kantineblauwgeel.handterminal.R
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,7 +10,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import nl.kantineblauwgeel.tablet.databinding.ActivityProductenBinding
+import nl.kantineblauwgeel.handterminal.databinding.TabletPrijzenschermBinding
 import org.json.JSONObject
 
 private data class Product(
@@ -30,13 +31,13 @@ private data class Product(
  * schakelen, precies zoals op de website zelf. */
 class ProductenActivity : BasisActivity() {
 
-    private lateinit var binding: ActivityProductenBinding
+    private lateinit var binding: TabletPrijzenschermBinding
     private val producten = mutableListOf<Product>()
     private lateinit var adapter: ProductenAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityProductenBinding.inflate(layoutInflater)
+        binding = TabletPrijzenschermBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         binding.terugKnop.setOnClickListener { finish() }
@@ -136,7 +137,7 @@ private class ProductenAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Houder =
-        Houder(LayoutInflater.from(parent.context).inflate(R.layout.item_product, parent, false))
+        Houder(LayoutInflater.from(parent.context).inflate(R.layout.tablet_item_prijs, parent, false))
 
     override fun getItemCount(): Int = items.size
 

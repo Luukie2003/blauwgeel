@@ -33,7 +33,8 @@ class BarcodesActivity : BasisActivity() {
         richtBalkIn(b.balk, getString(R.string.barcodes))
         b.verversen.setColorSchemeResources(R.color.blauw_donker)
         b.verversen.setOnRefreshListener { laad() }
-        b.onderKnop.visibility = android.view.View.VISIBLE
+        // De koppelronde scant de producten één voor één: alleen op de handterminal (zie App).
+        b.onderKnop.visibility = if (App.metLooplijst) android.view.View.VISIBLE else android.view.View.GONE
         b.onderKnop.setText(R.string.koppelronde_starten)
         b.onderKnop.setOnClickListener { KoppelrondeActivity.open(this) }
         zoekveld = AppCompatEditText(this).apply {

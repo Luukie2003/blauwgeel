@@ -3,7 +3,15 @@ package nl.kantineblauwgeel.handterminal
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.graphics.Typeface
+import android.view.View
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
+import android.widget.ScrollView
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.AppCompatRadioButton
+import androidx.appcompat.widget.AppCompatTextView
 import nl.kantineblauwgeel.handterminal.databinding.ActivityLijstBinding
 import org.json.JSONObject
 import kotlin.math.roundToInt
@@ -95,8 +103,74 @@ class PrognoseActivity : BasisActivity() {
         val ok = producten.size - urgent.size - letOp.size
         Lijst.tekst(inhoud, resources.getQuantityString(R.plurals.genoeg_voorraad, ok, ok), grootte = 12f)
 
-        Lijst.kop(inhoud, getString(R.string.op_de_computer))
-        Lijst.knop(Lijst.kaart(inhoud), getString(R.string.verkoopdagen_instellen)) { nietInApp(getString(R.string.wat_verkoopdagen)) }
+        Lijst.kop(inhoud, getString(R.string.verkoopdagen))
+        Lijst.knop(Lijst.kaart(inhoud), getString(R.string.verkoopdagen_instellen)) { verkoopdagen() }
+    }
+
+    /** Per weekdag: open, alleen bij een thuiswedstrijd, of dicht, zoals Prognose > Verkoopdagen op de site
+     * (api_app_verkoopdagen). Minstens één dag moet altijd open zijn; dat zegt de site anders. */
+    private fun verkoopdagen() {
+        bezig {
+            val dagen = Api.getJson(this, "/api/app/verkoopdagen").getJSONArray("dagen").objecten()
+            val keuzes = listOf("altijd" to R.string.dag_altijd, "wedstrijd" to R.string.dag_wedstrijd, "dicht" to R.string.dag_dicht)
+            val vorm = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(context, 20), dp(context, 4), dp(context, 20), dp(context, 4))
+            }
+            vorm.addView(AppCompatTextView(this).apply {
+                text = getString(R.string.verkoopdagen_uitleg)
+                textSize = 13f
+                setTextColor(getColor(R.color.tekst_zacht))
+            })
+            val groepen = mutableMapOf<Int, RadioGroup>()
+            for (d in dagen) {
+                vorm.addView(AppCompatTextView(this).apply {
+                    text = d.optString("naam").replaceFirstChar { it.uppercase() }
+                    textSize = 15f
+                    setTextColor(getColor(R.color.tekst))
+                    setTypeface(typeface, Typeface.BOLD)
+                    setPadding(0, dp(context, 10), 0, 0)
+                })
+                val groep = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
+                for ((sleutel, tekst) in keuzes) {
+                    groep.addView(AppCompatRadioButton(this).apply {
+                        id = View.generateViewId()
+                        text = getString(tekst)
+                        tag = sleutel
+                        isChecked = d.optString("keuze") == sleutel
+                    })
+                }
+                groepen[d.getInt("dag")] = groep
+                vorm.addView(groep)
+            }
+            val dialoog = AlertDialog.Builder(this)
+                .setCustomTitle(dialoogTitel(getString(R.string.verkoopdagen)))
+                .setView(ScrollView(this).apply { addView(vorm) })
+                .setNegativeButton(R.string.annuleren, null)
+                .setPositiveButton(R.string.opslaan, null)
+                .create()
+            dialoog.setOnShowListener {
+                val knop = dialoog.getButton(AlertDialog.BUTTON_POSITIVE)
+                knop.setOnClickListener {
+                    val gekozen = JSONObject()
+                    for ((dag, groep) in groepen) {
+                        gekozen.put(dag.toString(), groep.findViewById<RadioButton>(groep.checkedRadioButtonId)?.tag as? String ?: "dicht")
+                    }
+                    knop.isEnabled = false
+                    bezig {
+                        try {
+                            val antwoord = Api.post(this, "/api/app/verkoopdagen", JSONObject().put("dagen", gekozen), herhaalbaar = true)
+                            melding(antwoord.optString("melding"))
+                            dialoog.dismiss()
+                            laad()
+                        } finally {
+                            knop.isEnabled = true
+                        }
+                    }
+                }
+            }
+            dialoog.show()
+        }
     }
 
     private fun productLijst(kaart: LinearLayout, producten: List<JSONObject>) {

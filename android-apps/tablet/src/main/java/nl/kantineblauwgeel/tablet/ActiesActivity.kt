@@ -1,5 +1,6 @@
 package nl.kantineblauwgeel.tablet
 
+import nl.kantineblauwgeel.handterminal.R
 import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -14,7 +15,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import nl.kantineblauwgeel.tablet.databinding.ActivityActiesBinding
+import nl.kantineblauwgeel.handterminal.databinding.ActivityActiesBinding
 import org.json.JSONObject
 
 private data class ActieProduct(val id: Int, val naam: String, val categorie: String)

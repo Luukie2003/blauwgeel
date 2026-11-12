@@ -481,7 +481,7 @@
     <string name="gecorrigeerd_door">gecorrigeerd door %1$s (was %2$d)</string>
     <string name="product_bewerken">Product bewerken</string>
     <string name="schaplabel_printen">Schaplabel printen</string>
-    <string name="verkoopdagen_instellen">Verkoopdagen en evenementen instellen</string>
+    <string name="verkoopdagen_instellen">Verkoopdagen instellen</string>
     <string name="kantine_tv">Kantine-tv</string>
 
     <!-- Productinformatie -->
@@ -772,7 +772,7 @@
     <string name="hoeveel_bestellen">%1$s: hoeveel bestellen?</string>
     <string name="n_eenheid">%1$d %2$s</string>
     <string name="minimum_en_besteleenheid">Naam, prijs, minimum en besteleenheid aanpassen</string>
-    <string name="product_bewerken_rest">Categorie, foto en de rest bewerken</string>
+    <string name="product_bewerken_rest">Categorie, leverancier en meer bewerken</string>
     <string name="naam">Naam</string>
     <string name="verkoopprijs_in">Verkoopprijs per %1$s (bijv. 2,50)</string>
     <string name="minimumvoorraad_in">Minimumvoorraad (in %1$s)</string>
@@ -1078,4 +1078,32 @@
     <!-- Laden bij het tellen (TellenActivity) -->
     <string name="laden_producten">Producten van de looplijst ophalen…</string>
     <string name="fotos_klaarzetten">Foto\'s klaarzetten %1$d/%2$d</string>
+
+    <!-- Geld afdragen, storten en de verkoopdagen in de app (2.10.0, eerst voor de tablet) -->
+    <string name="geldbewegingen">Geldbewegingen</string>
+    <string name="geen_geldbewegingen">Nog geen geldbewegingen.</string>
+    <string name="geld_afdragen_of_toevoegen">Geld afdragen of toevoegen</string>
+    <string name="geld_storten_of_opnemen">Geld storten of opnemen</string>
+    <string name="geld_afdracht_uitleg">Afdragen: uit de kassalade naar de kluis</string>
+    <string name="geld_toevoeging_uitleg">Toevoegen: uit de kluis in de kassalade (wisselgeld)</string>
+    <string name="geld_storting_uitleg">Storten: geld in de kluis</string>
+    <string name="geld_opname_uitleg">Opnemen: geld uit de kluis, bijvoorbeeld naar de bank</string>
+    <string name="bedrag_hint">Bedrag in euro, bijv. 50,00</string>
+    <string name="ontvanger_optioneel">Aan of van wie (mag leeg)</string>
+    <string name="boeken">Boeken</string>
+    <string name="vul_een_bedrag_in">Vul een bedrag groter dan 0 in.</string>
+    <string name="mutatie_afdracht">Afdracht</string>
+    <string name="mutatie_toevoeging">Toevoeging</string>
+    <string name="mutatie_storting">Storting</string>
+    <string name="mutatie_opname">Opname</string>
+    <string name="verkoopdagen">Verkoopdagen</string>
+    <string name="verkoopdagen_uitleg">Op welke dagen verkoopt de kantine? De prognose rekent hier meteen mee.</string>
+    <string name="dag_altijd">Open</string>
+    <string name="dag_wedstrijd">Bij wedstrijd</string>
+    <string name="dag_dicht">Dicht</string>
+    <string name="artikelnummer">Artikelnummer</string>
+    <string name="inkoopprijs_in">Inkoopprijs per %1$s</string>
+    <string name="inkoop_uit_artikelen">Deze rekent de site uit de artikelen met een inkoopprijs (Barcodes).</string>
+    <string name="vaste_bestelhoeveelheid">Vaste bestelhoeveelheid in %1$s (0 = tot het minimum)</string>
+    <string name="product_actief">Actief</string>
 </resources>

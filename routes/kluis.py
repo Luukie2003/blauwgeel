@@ -58,6 +58,21 @@ def keur_kluis_telling_goed(db, telling_id, naam, gebruiker_id, opmerking=""):
     return None
 
 
+def boek_kluis_mutatie(db, type_, bedrag, naam, gebruiker_id, ontvanger="", opmerking=""):
+    """Geld in de kluis ('storting') of eruit ('opname', bijvoorbeeld naar de bank), op de site (Kluis > Storting of
+    opname) en in de app. type_ en bedrag (> 0, op centen) zijn al gecontroleerd. Commit; geeft de melding."""
+    db.execute(
+        """INSERT INTO kluis_mutaties (type, bedrag, datum, naam, gebruiker_id, ontvanger, opmerking)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (type_, bedrag, now_str(), naam, gebruiker_id, (ontvanger or "").strip(), (opmerking or "").strip()),
+    )
+    delta = bedrag if type_ == "storting" else -bedrag
+    db.execute("UPDATE instellingen SET kluis_stand = kluis_stand + ? WHERE id = 1", (delta,))
+    db.commit()
+    werkwoord = "Storting" if type_ == "storting" else "Opname"
+    return f"{werkwoord} van € {bedrag:.2f} geboekt.".replace(".", ",", 1)  # € 50,25
+
+
 def register_routes(app):
 
     @app.route("/kluis/tellen", methods=["GET", "POST"])
@@ -350,31 +365,11 @@ def register_routes(app):
             if bedrag <= 0:
                 flash("Vul een bedrag groter dan 0 in.", "error")
                 return redirect(url_for("kluis_mutatie_nieuw"))
-            ontvanger = request.form.get("ontvanger", "").strip()
-            opmerking = request.form.get("opmerking", "").strip()
-
-            db.execute(
-                """INSERT INTO kluis_mutaties
-                   (type, bedrag, datum, naam, gebruiker_id, ontvanger, opmerking)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    type_,
-                    bedrag,
-                    now_str(),
-                    session.get("gebruiker_naam"),
-                    session.get("gebruiker_id"),
-                    ontvanger,
-                    opmerking,
-                ),
+            melding = boek_kluis_mutatie(
+                db, type_, bedrag, session.get("gebruiker_naam"), session.get("gebruiker_id"),
+                request.form.get("ontvanger", ""), request.form.get("opmerking", ""),
             )
-            delta = bedrag if type_ == "storting" else -bedrag
-            db.execute(
-                "UPDATE instellingen SET kluis_stand = kluis_stand + ? WHERE id = 1",
-                (delta,),
-            )
-            db.commit()
-            werkwoord = "Storting" if type_ == "storting" else "Opname"
-            flash(f"{werkwoord} van € {bedrag:.2f} geboekt.", "success")
+            flash(melding, "success")
             return redirect(url_for("kluis_geschiedenis"))
 
         kluis_stand = bereken_kluis_stand(db)

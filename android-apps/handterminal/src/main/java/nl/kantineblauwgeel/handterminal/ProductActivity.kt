@@ -7,12 +7,16 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.text.InputType
 import android.widget.ArrayAdapter
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
+import androidx.appcompat.widget.AppCompatCheckBox
 import androidx.appcompat.widget.AppCompatEditText
 import androidx.appcompat.widget.AppCompatTextView
 import nl.kantineblauwgeel.handterminal.databinding.ActivityProductBinding
@@ -413,7 +417,7 @@ class ProductActivity : BasisActivity() {
         val beheer = Lijst.kaart(onder)
         if (inst.beheerder) {
             Lijst.knop(beheer, getString(R.string.minimum_en_besteleenheid)) { instellingenAanpassen() }
-            Lijst.knop(beheer, getString(R.string.product_bewerken_rest)) { nietInApp(getString(R.string.wat_product_bewerken)) }
+            Lijst.knop(beheer, getString(R.string.product_bewerken_rest)) { productBewerken() }
         }
         Lijst.knop(beheer, getString(R.string.schaplabel_printen)) { nietInApp(getString(R.string.wat_schaplabel)) }
     }
@@ -471,6 +475,111 @@ class ProductActivity : BasisActivity() {
                 }
             }
             .show()
+    }
+
+    /** (Beheerders, 2.10.0) De rest van het product, zoals Bewerken op de site: de categorie, de leverancier, het
+     * artikelnummer, de inkoopprijs, de vaste bestelhoeveelheid, op het prijzenscherm, actief en de opmerking
+     * (api_app_product_bewerken). Rekent de site de inkoopprijs uit de artikelen, dan staat hij er alleen ter info. */
+    private fun productBewerken() {
+        val p = product ?: return
+        bezig {
+            val stand = Api.getJson(this, "/api/app/producten/$productId/bewerken")
+            val dp = { n: Int -> dp(this, n) }
+            val vak = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(22), dp(8), dp(22), dp(4))
+            }
+            fun label(tekst: String) = vak.addView(AppCompatTextView(this).apply {
+                text = tekst
+                textSize = 13f
+                setTextColor(getColor(R.color.tekst_zacht))
+                setPadding(0, dp(10), 0, 0)
+            })
+            fun keuzelijst(tekst: String, opties: List<String>, gekozen: Int): Spinner {
+                label(tekst)
+                return Spinner(this).apply {
+                    adapter = ArrayAdapter(this@ProductActivity, android.R.layout.simple_spinner_dropdown_item, opties)
+                    setSelection(gekozen.coerceIn(0, (opties.size - 1).coerceAtLeast(0)))
+                    vak.addView(this)
+                }
+            }
+            fun tekstveld(tekst: String, waarde: String, soort: Int): AppCompatEditText {
+                label(tekst)
+                return AppCompatEditText(this).apply {
+                    setText(waarde)
+                    inputType = soort
+                    vak.addView(this)
+                }
+            }
+            val categorieen = stand.getJSONArray("categorieen").let { l -> (0 until l.length()).map { l.getString(it) } }
+            val categorie = keuzelijst(getString(R.string.categorie), categorieen, categorieen.indexOf(stand.optString("categorie")))
+            val leveranciers = stand.getJSONArray("leveranciers").objecten()
+            val leverancierNamen = listOf(getString(R.string.geen_leverancier)) + leveranciers.map { it.optString("naam") }
+            val huidig = leveranciers.indexOfFirst { !stand.isNull("leverancier_id") && it.getInt("id") == stand.optInt("leverancier_id") }
+            val leverancier = keuzelijst(getString(R.string.leverancier), leverancierNamen, huidig + 1)
+            val artikelcode = tekstveld(getString(R.string.artikelnummer), stand.optString("artikelcode"),
+                InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS)
+            val uitArtikelen = stand.optBoolean("inkoop_uit_artikelen")
+            val inkoop = tekstveld(getString(R.string.inkoopprijs_in, p.eenheid),
+                String.format(java.util.Locale("nl", "NL"), "%.2f", stand.optDouble("inkoopprijs")),
+                InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL)
+            if (uitArtikelen) {
+                inkoop.isEnabled = false
+                vak.addView(AppCompatTextView(this).apply {
+                    text = getString(R.string.inkoop_uit_artikelen)
+                    textSize = 12f
+                    setTextColor(getColor(R.color.tekst_zacht))
+                })
+            }
+            val bestelHoeveelheid = tekstveld(getString(R.string.vaste_bestelhoeveelheid, p.eenheid),
+                stand.optInt("bestel_hoeveelheid").toString(), InputType.TYPE_CLASS_NUMBER)
+            val opPrijzenscherm = AppCompatCheckBox(this).apply {
+                text = getString(R.string.op_het_prijzenscherm)
+                isChecked = stand.optBoolean("toon_op_kiosk")
+                vak.addView(this)
+            }
+            val actief = AppCompatCheckBox(this).apply {
+                text = getString(R.string.product_actief)
+                isChecked = stand.optBoolean("actief")
+                vak.addView(this)
+            }
+            val opmerking = tekstveld(getString(R.string.opmerking), stand.optString("opmerking"),
+                InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE)
+            val dialoog = AlertDialog.Builder(this)
+                .setCustomTitle(dialoogTitel(p.naam))
+                .setView(ScrollView(this).apply { addView(vak) })
+                .setNegativeButton(R.string.annuleren, null)
+                .setPositiveButton(R.string.opslaan, null)
+                .create()
+            dialoog.setOnShowListener {
+                val knop = dialoog.getButton(AlertDialog.BUTTON_POSITIVE)
+                knop.setOnClickListener {
+                    val gekozenLeverancier = leverancier.selectedItemPosition - 1
+                    val body = JSONObject()
+                        .put("categorie", categorieen.getOrNull(categorie.selectedItemPosition) ?: "")
+                        .put("leverancier_id", if (gekozenLeverancier >= 0) leveranciers[gekozenLeverancier].getInt("id") else JSONObject.NULL)
+                        .put("artikelcode", artikelcode.text.toString().trim())
+                        .put("bestel_hoeveelheid", bestelHoeveelheid.text.toString().toIntOrNull() ?: -1)
+                        .put("toon_op_kiosk", opPrijzenscherm.isChecked)
+                        .put("actief", actief.isChecked)
+                        .put("opmerking", opmerking.text.toString().trim())
+                    if (!uitArtikelen) body.put("inkoopprijs", inkoop.text.toString().trim())
+                    knop.isEnabled = false
+                    bezig {
+                        try {
+                            val antwoord = Api.post(this, "/api/app/producten/$productId/bewerken", body, herhaalbaar = true)
+                            Catalogus.werkBij(this, Catalogus.product(antwoord.getJSONObject("product")))
+                            melding(antwoord.optString("melding"))
+                            dialoog.dismiss()
+                            laadDetail()
+                        } finally {
+                            knop.isEnabled = true
+                        }
+                    }
+                }
+            }
+            dialoog.show()
+        }
     }
 
     private fun laadVerkoop() {

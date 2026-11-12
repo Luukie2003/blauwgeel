@@ -6,8 +6,18 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.9.0"
+HUIDIGE_VERSIE = "2.10.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.10.0",
+        "datum": "12 november 2026",
+        "punten": [
+            "Kantine Beheer op de tablet (versie 3.1) kan nu bijna alles wat de handterminal-app kan, als eigen app: het startscherm met 'Wat moet er nu?', zoeken en boeken, de voorraad en alles over een product, factuur inboeken, de bestellijst en boodschappen, de prognose, de tellingen bekijken, de kassa en de kluis, de keuken, het prikbord, de agenda, de Club van 20-aanmeldingen en de kantine-tv. Je logt één keer in met je code.",
+            "Nieuw in de app, eerst op de tablet: geld afdragen of toevoegen bij de kassa en storten of opnemen bij de kluis (met de laatste geldbewegingen), de verkoopdagen instellen bij de prognose, en als beheerder de rest van een product bewerken: de categorie, de leverancier, het artikelnummer, de inkoopprijs, de vaste bestelhoeveelheid, of hij op het prijzenscherm staat, actief en de opmerking. Het komt meteen zo op de site.",
+            "De tv-schermen die de tablet al had (het prijzenscherm, acties, bardiensten, uitgelicht en de wedstrijddag) staan op het startscherm onder Kantine en keuken. Tellen met de looplijst (ook in de keuken) en de koppelronde blijven op de handterminal: op de tablet bekijk je de tellingen. Op een breed scherm staat alles netjes in het midden.",
+            "Een afdracht, toevoeging, storting of opname noemt het bedrag nu met een komma, zoals € 50,25.",
+        ],
+    },
     {
         "versie": "2.9.0",
         "datum": "12 november 2026",
@@ -1468,16 +1478,18 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.17.1", "sinds": "0.1.0", "laatst": "2.9.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.22.1", "sinds": "0.4.0", "laatst": "2.9.0",
+    {"naam": "Bestellen & prognose", "versie": "1.23.0", "sinds": "0.4.0", "laatst": "2.10.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), de bestellijst nalopen met vinkjes (ook op de computer) en het besteloverzicht voor de webshop, leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
-    {"naam": "Producten & prijzen", "versie": "1.16.2", "sinds": "0.1.0", "laatst": "2.9.0",
+    {"naam": "Producten & prijzen", "versie": "1.17.0", "sinds": "0.1.0", "laatst": "2.10.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
-    {"naam": "Geld (kassa & kluis)", "versie": "1.5.1", "sinds": "1.0.0", "laatst": "2.9.0",
+    {"naam": "Geld (kassa & kluis)", "versie": "1.6.0", "sinds": "1.0.0", "laatst": "2.10.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.7.0", "sinds": "1.6.0", "laatst": "1.75.0",
      "inhoud": "Keukenvoorraad met een eigen, blinde telling (ook als looplijst met dozen scannen, en een begintelling), inboeken per verpakking (per merk, ook door te scannen), weggooien en bijstellen, prijzen, de boodschappenlijst bij een tekort, en de herinnering voor het frituurvet"},
     {"naam": "Kantine-tv", "versie": "1.29.1", "sinds": "1.10.1", "laatst": "2.7.1",
-     "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's, effecten en griezelposters met tekeningen), sponsoren, standen, Man of the Match, seizoen in cijfers, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, het Halloween-thema, en de tablet-app Kantine Beheer"},
+     "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's, effecten en griezelposters met tekeningen), sponsoren, standen, Man of the Match, seizoen in cijfers, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, en het Halloween-thema"},
+    {"naam": "Tablet-app", "versie": "1.0.0", "sinds": "", "laatst": "2.10.0",
+     "inhoud": "Kantine Beheer op de tablet (3.1): de schermen van de handterminal-app zonder de looplijsten, met geld afdragen en storten, de verkoopdagen en het hele product bewerken (zoeken, boeken, voorraad en producten, factuur inboeken, bestellijst, boodschappen, prognose, tellingen bekijken, kassa en kluis, keuken, prikbord, agenda, Club van 20-aanmeldingen, kantine-tv), en de eigen tv-schermen: prijzenscherm, acties, bardiensten, uitgelicht en de wedstrijddag"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.1", "sinds": "", "laatst": "2.9.0",

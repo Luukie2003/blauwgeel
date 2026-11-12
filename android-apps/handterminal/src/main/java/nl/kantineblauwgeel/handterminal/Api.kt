@@ -33,7 +33,7 @@ object Api {
     class Antwoord(val status: Int, val json: JSONObject?, val etag: String?)
 
     val userAgent: String
-        get() = "KantineHandterminal/${BuildConfig.VERSION_NAME} (Linux; Android ${Build.VERSION.RELEASE}; ${Build.MODEL}) Mobile"
+        get() = "${App.userAgentNaam}/${BuildConfig.VERSION_NAME} (Linux; Android ${Build.VERSION.RELEASE}; ${Build.MODEL}) Mobile"
 
     fun nieuwVerzoekId(): String = UUID.randomUUID().toString()
 

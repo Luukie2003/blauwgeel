@@ -1,23 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Kantine Beheer 3.0 (de tablet): de schermen van de handterminal-app (zie App.kt daar), zonder de looplijsten en de
+     koppelronde (tellen doe je met de handterminal), plus de eigen tv-schermen van de tablet. Dit manifest is gemaakt uit
+     dat van de handterminal; komt daar een scherm bij, zet het dan hier ook (zonder screenOrientation). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <uses-feature
         android:name="android.hardware.touchscreen"
         android:required="false" />
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@drawable/app_icon"
-        android:label="@string/app_name"
-        android:theme="@style/Theme.KantineTablet"
-        android:networkSecurityConfig="@xml/netwerkbeveiliging">
+        android:label="@string/app_naam"
+        android:networkSecurityConfig="@xml/netwerkbeveiliging"
+        android:supportsRtl="false"
+        android:theme="@style/Thema.Handterminal">
 
         <activity
-            android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:exported="true">
+            android:name="nl.kantineblauwgeel.handterminal.InlogActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="stateAlwaysHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -25,58 +36,187 @@
         </activity>
 
         <activity
-            android:name=".BeheerMenuActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:exported="false" />
-
-        <activity
-            android:name=".ProductenActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:exported="false" />
-
-        <activity
-            android:name=".ActiesActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:exported="false" />
-
-        <activity
-            android:name=".BardienstenActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:exported="false" />
-
-        <activity
-            android:name=".UitgelichtActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:exported="false" />
-
-        <activity
-            android:name=".WedstrijddagActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:exported="false" />
-
-        <activity
-            android:name=".TvsActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:exported="false" />
-
-        <activity
-            android:name=".DiasActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:exported="false" />
-
-        <activity
-            android:name=".UitverkochtActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:exported="false" />
-
-        <activity
-            android:name=".TimerActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:exported="false" />
-
-        <activity
-            android:name=".SettingsActivity"
+            android:name="nl.kantineblauwgeel.handterminal.StartActivity"
             android:exported="false"
-            android:label="@string/instellingen" />
+            android:launchMode="singleTask"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.ProductenActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.ProductActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.KoppelenActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.FacturenActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.FactuurActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.TellingenActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.PrikbordActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.BestellijstActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.GeschiedenisActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.GeldActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.GeldTellenActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.KeukenActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.KeukenInvoerActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.BesteloverzichtActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.KeukenTellingActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.BoodschappenActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.AanmeldingenActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.AgendaActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.PrognoseActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.BarcodesActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.TaakActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.UitverkochtActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.TimerActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.KantineTvActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.DiasActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Licht" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.VergrendeldActivity"
+            android:exported="false" />
+
+        <activity
+            android:name="nl.kantineblauwgeel.handterminal.InstellingenActivity"
+            android:exported="false"
+            android:theme="@style/Thema.Handterminal.Instellingen" />
+
+        <!-- De eigen tv-schermen van de tablet (package nl.kantineblauwgeel.tablet), in hun eigen thema. -->
+        <activity
+            android:name="nl.kantineblauwgeel.tablet.ProductenActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:theme="@style/Theme.KantineTablet" />
+        <activity
+            android:name="nl.kantineblauwgeel.tablet.ActiesActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:theme="@style/Theme.KantineTablet" />
+        <activity
+            android:name="nl.kantineblauwgeel.tablet.BardienstenActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:theme="@style/Theme.KantineTablet" />
+        <activity
+            android:name="nl.kantineblauwgeel.tablet.UitgelichtActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:theme="@style/Theme.KantineTablet" />
+        <activity
+            android:name="nl.kantineblauwgeel.tablet.WedstrijddagActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:theme="@style/Theme.KantineTablet" />
+
+        <receiver
+            android:name="nl.kantineblauwgeel.handterminal.HerinneringOntvanger"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

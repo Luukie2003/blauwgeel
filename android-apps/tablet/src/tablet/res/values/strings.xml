@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Teksten van de handterminal-code die op de tablet anders zijn: de naam, en waar het over scannen ging (de tablet heeft
+     geen scanner; zoeken werkt overal). Deze map gaat vóór de handterminal-resources (zie build.gradle.kts). -->
+<resources>
+    <string name="app_naam">Kantine Beheer</string>
+    <string name="merk_sub">Beheer</string>
+    <string name="vergrendeld_toestel">Zoeken en boeken kan nu even niet</string>
+    <string name="inst_uitloggen_uitleg">Iedereen gebruikt dezelfde tablet met een eigen code. Na deze tijd zonder aanraken logt de app uit, zodat niemand op jouw naam verder werkt.</string>
+    <string name="zoek_of_scan">Zoek een product</string>
+    <string name="dozen_scannen">Levering inboeken</string>
+    <string name="scan_de_levering">Boek de levering in bij Factuur inboeken</string>
+    <string name="kies_of_scan">Kies een product</string>
+    <string name="uitleg_barcodes">Barcodes opzoeken en koppelen</string>
+    <string name="uitleg_keuken">Keukenvoorraad, inboeken en frituurvet</string>
+</resources>

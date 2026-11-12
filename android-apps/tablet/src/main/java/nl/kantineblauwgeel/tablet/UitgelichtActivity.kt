@@ -1,10 +1,11 @@
 package nl.kantineblauwgeel.tablet
 
+import nl.kantineblauwgeel.handterminal.R
 import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Toast
-import nl.kantineblauwgeel.tablet.databinding.ActivityUitgelichtBinding
+import nl.kantineblauwgeel.handterminal.databinding.ActivityUitgelichtBinding
 
 private data class UitgelichtProduct(val id: Int, val naam: String, val categorie: String)
 

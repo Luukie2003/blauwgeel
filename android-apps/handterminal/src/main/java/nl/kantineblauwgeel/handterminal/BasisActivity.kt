@@ -73,6 +73,12 @@ abstract class BasisActivity : AppCompatActivity() {
         }
     }
 
+    /** Op de tablet staat de inhoud op een breed scherm in het midden (zie App.centreer). */
+    override fun onContentChanged() {
+        super.onContentChanged()
+        if (App.isTablet && vereistInlog) App.centreer(this)  // het inlogscherm en de instellingen regelen het zelf
+    }
+
     override fun onResume() {
         super.onResume()
         if (vereistInlog && !Sessie.isIngelogd(this)) {

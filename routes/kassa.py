@@ -77,6 +77,24 @@ def keur_kassa_telling_goed(db, telling_id, naam, gebruiker_id, opmerking=""):
     return None
 
 
+def boek_kassa_mutatie(db, type_, bedrag, naam, gebruiker_id, ontvanger="", opmerking=""):
+    """Geld van de kassalade naar de kluis ('afdracht') of andersom ('toevoeging'), op de site (Kassa > Afdracht of
+    toevoeging) en in de app. Het is een gesloten overboeking: de kluis krijgt precies het spiegelbeeld. type_ en bedrag
+    (> 0, op centen) zijn al gecontroleerd. Commit; geeft de melding ('Afdracht van € 50.00 geboekt.')."""
+    db.execute(
+        """INSERT INTO kassa_mutaties (type, bedrag, datum, naam, gebruiker_id, ontvanger, opmerking)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (type_, bedrag, now_str(), naam, gebruiker_id, (ontvanger or "").strip(), (opmerking or "").strip()),
+    )
+    # delta is +bedrag voor een toevoeging (naar de kassalade) en -bedrag voor een afdracht (uit de kassalade).
+    delta = bedrag if type_ == "toevoeging" else -bedrag
+    db.execute("UPDATE instellingen SET kassalade_stand = kassalade_stand + ? WHERE id = 1", (delta,))
+    db.execute("UPDATE instellingen SET kluis_stand = kluis_stand - ? WHERE id = 1", (delta,))
+    db.commit()
+    werkwoord = "Afdracht" if type_ == "afdracht" else "Toevoeging"
+    return f"{werkwoord} van € {bedrag:.2f} geboekt.".replace(".", ",", 1)  # € 50,25
+
+
 def register_routes(app):
 
     @app.route("/kassa/tellen", methods=["GET", "POST"])
@@ -488,39 +506,11 @@ def register_routes(app):
             if bedrag <= 0:
                 flash("Vul een bedrag groter dan 0 in.", "error")
                 return redirect(url_for("kassa_mutatie_nieuw"))
-            ontvanger = request.form.get("ontvanger", "").strip()
-            opmerking = request.form.get("opmerking", "").strip()
-
-            db.execute(
-                """INSERT INTO kassa_mutaties
-                   (type, bedrag, datum, naam, gebruiker_id, ontvanger, opmerking)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    type_,
-                    bedrag,
-                    now_str(),
-                    session.get("gebruiker_naam"),
-                    session.get("gebruiker_id"),
-                    ontvanger,
-                    opmerking,
-                ),
+            melding = boek_kassa_mutatie(
+                db, type_, bedrag, session.get("gebruiker_naam"), session.get("gebruiker_id"),
+                request.form.get("ontvanger", ""), request.form.get("opmerking", ""),
             )
-            # Een afdracht/toevoeging is een gesloten overboeking tussen
-            # kassalade en kluis: delta is al +bedrag voor toevoeging (naar
-            # de kassalade) / -bedrag voor afdracht (uit de kassalade), dus
-            # de kluis krijgt precies het spiegelbeeld.
-            delta = bedrag if type_ == "toevoeging" else -bedrag
-            db.execute(
-                "UPDATE instellingen SET kassalade_stand = kassalade_stand + ? WHERE id = 1",
-                (delta,),
-            )
-            db.execute(
-                "UPDATE instellingen SET kluis_stand = kluis_stand - ? WHERE id = 1",
-                (delta,),
-            )
-            db.commit()
-            werkwoord = "Afdracht" if type_ == "afdracht" else "Toevoeging"
-            flash(f"{werkwoord} van € {bedrag:.2f} geboekt.", "success")
+            flash(melding, "success")
             return redirect(url_for("kassa_geschiedenis"))
 
         kassalade_stand = bereken_kassalade_stand(db)
