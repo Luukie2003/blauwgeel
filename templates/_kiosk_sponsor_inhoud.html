@@ -109,6 +109,34 @@
         <div class="gz-pompoen gz-pompoen--rechts"><div class="gz-gloed"></div><svg viewBox="0 0 120 100"><path d="M57 24c-1-8 2-15 9-19l4 4c-5 3-7 8-6 15z" fill="#4f7a2c"/><ellipse cx="36" cy="60" rx="30" ry="35" fill="#d95e08"/><ellipse cx="84" cy="60" rx="30" ry="35" fill="#d95e08"/><ellipse cx="60" cy="60" rx="31" ry="38" fill="#ff8a1f"/><path d="M60 23c-7 12-7 62 0 75M46 26c-14 10-16 58-3 71M74 26c14 10 16 58 3 71" fill="none" stroke="#c9520a" stroke-width="2"/><g class="gezicht" fill="#ffd23f"><path d="M34 50l12-13 10 13z"/><path d="M64 50l10-13 12 13z"/><path d="M55 58l5-7 5 7z"/><path d="M30 68c9 13 51 13 60 0l-6 4-4-5-5 6-5-5-5 6-5-6-5 5-5-6-4 5z"/></g></svg></div>
         <div class="gz-kaarsen"><i></i><i></i><i></i><i></i><i></i><i></i></div>
     </div>
+{% elif slide.sjabloon == 'feest' %}
+    {# Een feestdia (2.12.0, zie kiosk_feest.py): in de clubkleuren, met stralen, twee slingers met vlaggetjes en het label
+       op een geel lint. De titel staat zo groot als hij past (de laatste regel in het geel), regels uit de tekst eronder,
+       en de laatste regel van de tekst is de knaller op een gele sticker, met een getal extra groot. Met een tekening
+       staat die linksonder en de sticker rechts. Confetti en vuurwerk komen met het effect feest uit kiosk_effecten.js. #}
+    {% set fs = slide.fs %}
+    <div class="fs fs--{{ fs.vorm }}{{ ' fs--zonder-knaller' if not fs.knal else '' }}{{ ' fs--zonder-label' if not slide.label else '' }}">
+        <div class="fs-stralen"><svg viewBox="-100 -100 200 200" aria-hidden="true" focusable="false"><path d="M0 0L150 0L148 26ZM0 0L141 51L130 75ZM0 0L115 96L96 115ZM0 0L75 130L51 141ZM0 0L26 148L0 150ZM0 0L-26 148L-51 141ZM0 0L-75 130L-96 115ZM0 0L-115 96L-130 75ZM0 0L-141 51L-148 26ZM0 0L-150 0L-148 -26ZM0 0L-141 -51L-130 -75ZM0 0L-115 -96L-96 -115ZM0 0L-75 -130L-51 -141ZM0 0L-26 -148L0 -150ZM0 0L26 -148L51 -141ZM0 0L75 -130L96 -115ZM0 0L115 -96L130 -75ZM0 0L141 -51L148 -26Z"/></svg></div>
+        <div class="fs-licht"></div>
+        <svg class="fs-slinger" viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M-40 26Q470 236 980 44M940 44Q1450 236 1960 26"/></svg>
+        {% for links, boven, hoek, kleur, wacht in slide.vlaggen %}<i class="fs-vlag" style="left: {{ links }}%; top: {{ boven }}%; --r: {{ hoek }}deg; --c: {{ kleur }}; animation-delay: -{{ wacht }}s;"></i>{% endfor %}
+        {% if slide.tekening %}<div class="fs-tekening fs-tekening--{{ slide.tekening }}">{% include '_kiosk_tekening.html' %}</div>{% endif %}
+        <div class="fs-inhoud">
+            {% if slide.label %}<div class="fs-lint" style="font-size: {{ fs.label_vw }}vw;"><span>{{ slide.label }}</span></div>{% endif %}
+            {% if fs.titel_regels %}<h2 class="fs-titel" style="font-size: {{ fs.titel_vw }}vw;">{% for regel in fs.titel_regels %}<span>{{ regel }}</span>{% endfor %}</h2>{% endif %}
+            {% for regel, vw in fs.regels %}<p class="fs-regel" style="font-size: {{ vw }}vw;">{{ regel }}</p>{% endfor %}
+            {% if fs.knal %}
+            <div class="fs-knaller">
+                <div class="fs-sticker">
+                    {% if fs.aanloop %}<p class="fs-aanloop" style="font-size: {{ fs.aanloop_vw }}vw;">{{ fs.aanloop }}</p>{% endif %}
+                    {% for regel in fs.knal %}<p class="fs-knal" style="font-size: {{ fs.knal_vw }}vw;">{% for deel, getal in regel %}{% if getal %}<span class="fs-getal">{{ deel }}</span>{% else %}{{ deel }}{% endif %}{% endfor %}</p>{% endfor %}
+                    <i class="fs-glans"></i>
+                </div>
+                <i class="fs-fonkel"></i><i class="fs-fonkel"></i><i class="fs-fonkel"></i>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 {% else %}
     {% if slide.titel %}<h2>{{ slide.titel }}</h2>{% endif %}
     {% if slide.tekst %}<p>{{ slide.tekst }}</p>{% endif %}

@@ -63,12 +63,14 @@
             '<div class="km-nu">NU!</div>' + (m.titel ? '<div class="km-naam">' + tekst(m.titel) + '</div>' : '') + '</div>';
         var dia = laag.querySelector('.km-dia');
         if (m.effect && window.KioskEffecten) window.KioskEffecten.maak(dia, m.effect, m.opties);
-        laag.className = 'km km--aan km--intro';
+        // Een feestdia (2.12.0) krijgt een intro in de clubkleuren (zie kiosk_effecten.css).
+        var soort = / sjabloon-feest( |$)/.test(' ' + m.klasse) ? ' km--feest' : '';
+        laag.className = 'km km--aan km--intro' + soort;
         document.body.classList.add('km-bezig');
         flits();
         clearTimeout(introKlok);
         introKlok = setTimeout(function () {
-            laag.className = 'km km--aan km--dia';
+            laag.className = 'km km--aan km--dia' + soort;
             flits();
         }, INTRO_MS);
         clearInterval(flitsKlok);

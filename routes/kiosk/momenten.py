@@ -142,22 +142,23 @@ def register_routes(app):
 
     @app.route("/kiosk/griezel-voorbeeld")
     def kiosk_griezel_voorbeeld():
-        """Een griezeldia zoals hij op de tv komt, voor het live voorbeeld bij het dia-formulier: een pagina van 1920 bij
-        1080 die het formulier verkleind in een iframe toont, zodat de maten (in vw en vh) kloppen. Bij een programma
-        licht de eerste regel op, zodat je ziet hoe dat eruitziet."""
+        """Een griezeldia (of sinds 2.12.0 een feestdia, met sjabloon=feest) zoals hij op de tv komt, voor het live
+        voorbeeld bij het dia-formulier: een pagina van 1920 bij 1080 die het formulier verkleind in een iframe toont,
+        zodat de maten (in vw en vh) kloppen. Bij een programma licht de eerste regel op, zodat je ziet hoe dat eruitziet."""
         db = get_db()
         args = request.args
+        sjabloon = args.get("sjabloon") if args.get("sjabloon") in kiosk_momenten.EIGEN_OPMAAK else "griezel"
         effect = args.get("effect") if args.get("effect") in kiosk_momenten.EFFECTEN else None
         try:
             map_id = int(args.get("map_id") or 0) or None
         except ValueError:
             map_id = None
         dia = {
-            "id": 0, "sjabloon": "griezel", "titel": (args.get("titel") or "").strip() or None,
+            "id": 0, "sjabloon": sjabloon, "titel": (args.get("titel") or "").strip() or None,
             "tekst": (args.get("tekst") or "").strip() or None,
             "label": " ".join((args.get("label") or "").split())[:30] or None,
             "moment": kiosk_momenten.tekst(kiosk_momenten.tijdstip(args.get("moment"))), "map_id": map_id,
-            "effect": effect, "effect_opties": kiosk_momenten.schoon_opties(effect, None, None, None, "griezel",
+            "effect": effect, "effect_opties": kiosk_momenten.schoon_opties(effect, None, None, None, sjabloon,
                                                                             args.get("tekening")),
             "weergave_duur_seconden": 10, "herhalingen": 1, "video": None, "video_duur": None, "video_hele_duur": 0,
             "video_geluid": 0, "afbeelding": None, "overgang": "fade", "tekst_grootte": "normaal",

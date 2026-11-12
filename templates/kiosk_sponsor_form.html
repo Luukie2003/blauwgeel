@@ -13,6 +13,7 @@
         <li><strong>Kantine-info</strong> &mdash; openingstijden, happy hour, een nieuwe kaart of actie.</li>
         <li><strong>Mededeling</strong> &mdash; een interne oproep (bijv. "kantinedienst gezocht") met een duidelijk MEDEDELING-label, zodat 'm niemand voor een betaalde sponsor aanziet.</li>
         <li><strong>Video</strong> &mdash; een filmpje (bijv. een sponsorfilm of een samenvatting van de wedstrijd) dat schermvullend afspeelt, met optioneel een onderschrift.</li>
+        <li><strong>Feestdia</strong> &mdash; een actie die moet opvallen (bijv. &ldquo;Bij winst van Blauw-Geel trakteert de topscoorder op 2 pitchers!&rdquo;), in de clubkleuren met vlaggetjes, een sticker voor de knaller en eventueel twee pitchers, een beker of een bal.</li>
     </ul>
     <p class="tekst-zacht" style="margin-bottom:0">
         Kies hieronder een sjabloon; de invoervelden tonen dan een voorbeeld van wat erin past. Kies je "Eigen
@@ -241,20 +242,21 @@
                     <span class="tekst-zacht">Leeg: tot het volgende moment in de map, het einde van de map of een uur.</span>
                 </div>
                 <div class="veld" id="label-veld">
-                    <label for="label">Label linksboven (griezeldia)</label>
+                    <label for="label" id="label-naam">Label linksboven (griezeldia)</label>
                     <input type="text" id="label" name="label" maxlength="30" value="{{ sponsor.label if sponsor and sponsor.label else '' }}"
                            placeholder="Leeg: de tijd, zoals 16:00 uur">
                 </div>
             </div>
             <div class="veld" id="tekening-veld">
-                <label for="tekening">Tekening (griezeldia)</label>
+                <label for="tekening" id="tekening-naam">Tekening (griezeldia)</label>
                 <select id="tekening" name="tekening">
                     <option value="">Geen: titel en tekst in het midden</option>
                     {% for sleutel, naam in tekeningen.items() %}
                     <option value="{{ sleutel }}" {{ 'selected' if tekening == sleutel }}>{{ naam }}</option>
                     {% endfor %}
                 </select>
-                <span class="tekst-zacht">Met een tekening wordt de dia een poster: de titel bovenaan, de tekening linksonder en de prijs op een bord (de regel met €, met de regel erboven, zoals "4 shotjes voor"). Met het effect Programma worden regels als "16:00 Feest start!" het programma, waarin het tijdslot van nu oplicht; de andere regels komen op het bord.</span>
+                <span class="tekst-zacht" id="tekening-uitleg-griezel">Met een tekening wordt de dia een poster: de titel bovenaan, de tekening linksonder en de prijs op een bord (de regel met €, met de regel erboven, zoals "4 shotjes voor"). Met het effect Programma worden regels als "16:00 Feest start!" het programma, waarin het tijdslot van nu oplicht; de andere regels komen op het bord.</span>
+                <span class="tekst-zacht" id="tekening-uitleg-feest" hidden>De feestdia: het label staat op een geel lint bovenaan, de titel zo groot als hij past (de laatste regel in het geel), en de laatste regel van de tekst wordt de knaller op een gele sticker, met een getal extra groot (zoals de 2 in "op 2 pitchers!"). Regels daarboven staan onder de titel. Met een tekening staat die linksonder en de sticker rechts. Kies het effect Feest voor confetti en vuurwerk.</span>
             </div>
             <div class="veld">
                 <label for="balk_tekst">Balk op het prijzenscherm (optioneel)</label>
@@ -337,6 +339,20 @@
         tekstVeld.placeholder = voorbeeld[1] || '';
     }
 
+    var tekeningVeld = document.getElementById('tekening');
+    var tekeningenPerSjabloon = {{ tekeningen_per_sjabloon|tojson }};
+    var tekeningenVan = null;
+    function tekeningenVoor(sjabloon) {
+        if (tekeningenVan === sjabloon) return;
+        var gekozen = tekeningVeld.value;
+        while (tekeningVeld.options.length > 1) tekeningVeld.remove(1);
+        (tekeningenPerSjabloon[sjabloon] || []).forEach(function (t) {
+            tekeningVeld.add(new Option(t[1], t[0], false, t[0] === gekozen));
+        });
+        if (tekeningVeld.value !== gekozen) tekeningVeld.value = '';
+        tekeningenVan = sjabloon;
+    }
+
     function bijwerkenZichtbaarheid() {
         var sjabloon = sjabloonVeld.value;
         document.getElementById('custom-sjabloon-veld').hidden = sjabloon !== 'aangepast';
@@ -345,9 +361,17 @@
         document.getElementById('video-veld').hidden = sjabloon !== 'video_volledig';
         document.getElementById('webpagina-veld').hidden = sjabloon !== 'webpagina';
         var effect = effectVeld.value;
-        document.getElementById('label-veld').hidden = sjabloon !== 'griezel';
-        document.getElementById('tekening-veld').hidden = sjabloon !== 'griezel';
-        document.getElementById('prijs-plek-veld').hidden = !effect || effect === 'programma' || sjabloon === 'griezel';
+        var eigenOpmaak = sjabloon === 'griezel' || sjabloon === 'feest';
+        if (sjabloon === 'feest') document.getElementById('tekst-grootte-veld').hidden = true;  // de feestdia past zelf de letters aan
+        document.getElementById('label-veld').hidden = !eigenOpmaak;
+        document.getElementById('tekening-veld').hidden = !eigenOpmaak;
+        document.getElementById('label-naam').textContent = sjabloon === 'feest' ? 'Label op het lint (feestdia)' : 'Label linksboven (griezeldia)';
+        document.getElementById('label').placeholder = sjabloon === 'feest' ? 'Bijv. Bij winst van Blauw-Geel (leeg: de tijd van het moment)' : 'Leeg: de tijd, zoals 16:00 uur';
+        document.getElementById('tekening-naam').textContent = sjabloon === 'feest' ? 'Tekening (feestdia)' : 'Tekening (griezeldia)';
+        document.getElementById('tekening-uitleg-griezel').hidden = sjabloon !== 'griezel';
+        document.getElementById('tekening-uitleg-feest').hidden = sjabloon !== 'feest';
+        if (eigenOpmaak) tekeningenVoor(sjabloon);
+        document.getElementById('prijs-plek-veld').hidden = !effect || effect === 'programma' || eigenOpmaak;
         document.getElementById('rijen-veld').hidden = effect !== 'programma';
     }
 
@@ -363,20 +387,20 @@
             var rijen = document.getElementById('programma_rijen').value.split(',').map(function (r) { return r.trim(); }).filter(Boolean);
             if (rijen.length) opties.rijen = rijen;
             opties.momenten = [{ tijd: opties.rijen[0], van: 0, einde: 9e15 }];
-        } else if (effecten[effect] && effecten[effect].prijs && sjabloonVeld.value !== 'griezel') {
+        } else if (effecten[effect] && effecten[effect].prijs && sjabloonVeld.value !== 'griezel' && sjabloonVeld.value !== 'feest') {
             opties.prijs = prijsLinks.value !== '' ? [parseFloat(prijsLinks.value), parseFloat(prijsBoven.value)] : effecten[effect].prijs;
         }
         return opties;
     }
 
-    // Een griezeldia staat in het voorbeeld precies zoals op de tv (1.77.0): de server maakt hem op een pagina van 1920
-    // bij 1080 (met tekening, bord en programma), en die staat hier verkleind in een iframe.
+    // Een griezeldia (1.77.0) en een feestdia (2.12.0) staan in het voorbeeld precies zoals op de tv: de server maakt ze op
+    // een pagina van 1920 bij 1080 (met tekening, bord, programma of sticker), en die staat hier verkleind in een iframe.
     var griezelFrame = document.getElementById('griezel-voorbeeld');
     var griezelUrl = "{{ url_for('kiosk_griezel_voorbeeld') }}";
     var griezelKlok = null;
     function griezelVoorbeeld() {
         var velden = {
-            titel: titelVeld.value, tekst: tekstVeld.value, label: document.getElementById('label').value,
+            sjabloon: sjabloonVeld.value, titel: titelVeld.value, tekst: tekstVeld.value, label: document.getElementById('label').value,
             moment: document.getElementById('moment').value, effect: effectVeld.value,
             tekening: document.getElementById('tekening').value, map_id: document.getElementById('map_id').value
         };
@@ -394,7 +418,7 @@
         var titel = titelVeld.value;
         var tekst = tekstVeld.value;
         var slide = document.getElementById('voorbeeld-slide');
-        var griezel = sjabloon === 'griezel';
+        var griezel = sjabloon === 'griezel' || sjabloon === 'feest';
         griezelFrame.style.display = griezel ? 'block' : 'none';
         slide.style.display = griezel ? 'none' : '';
         if (griezel) {
@@ -479,6 +503,12 @@
         var schaal = venster.clientWidth / 1920;
         scherm.style.transform = 'scale(' + schaal + ')';
     }
+
+    sjabloonVeld.addEventListener('change', function () {
+        if (sjabloonVeld.value === 'feest' && !effectVeld.value && effectVeld.querySelector('option[value="feest"]')) {
+            effectVeld.value = 'feest';
+        }
+    });
 
     function allesBijwerken() {
         bijwerkenPlaceholders();

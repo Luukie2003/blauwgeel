@@ -17,6 +17,7 @@ KIOSK_SPONSOR_SJABLONEN = [
     ("mededeling_groot", "Mededeling (met label, geen afbeelding)"),
     ("video_volledig", "Video (schermvullend, met optioneel onderschrift)"),
     ("griezel", "Griezeldia (griezelletters en pompoenen)"),
+    ("feest", "Feestdia (clubkleuren, vlaggetjes en een knaller)"),
     ("webpagina", "Webpagina (zoals de tussenstand van Shout-out!)"),
 ]
 
@@ -59,6 +60,10 @@ KIOSK_SPONSOR_SJABLOON_VOORBEELDEN = {
     ),
     "video_volledig": ("Bijv. 'Sponsorfilm Bakkerij Jansen' (onderschrift, mag leeg)", ""),
     "griezel": ("Bijv. 'Griezelshot'", "Bijv. 'De hele avond' en op de volgende regel '4 dropshot voor € 8'"),
+    "feest": (
+        "Bijv. 'Topscoorder trakteert'",
+        "Bijv. 'op 2 pitchers!' (de laatste regel wordt de knaller op de sticker; regels erboven staan onder de titel)",
+    ),
     "webpagina": ("Bijv. 'Tussenstand Shout-out!' (alleen voor de lijst met dia's)", ""),
 }
 

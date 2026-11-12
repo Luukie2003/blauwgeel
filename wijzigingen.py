@@ -6,8 +6,16 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.11.0"
+HUIDIGE_VERSIE = "2.12.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.12.0",
+        "datum": "12 november 2026",
+        "punten": [
+            "Kantine-tv: de feestdia, een nieuwe layout voor een actie die moet opvallen, zoals 'Bij winst van Blauw-Geel trakteert de topscoorder op 2 pitchers!'. In de clubkleuren, met vlaggetjes en stralen, het label op een geel lint, de titel zo groot als hij past en de laatste regel van de tekst als knaller op een gele sticker, met een getal extra groot.",
+            "Bij de feestdia kies je een tekening: twee pitchers die proosten, een kampioensbeker of een stuiterende bal. Het nieuwe effect Feest geeft confetti, vuurwerk en glitters in blauw-geel (dat past ook over elke andere dia). In de schijnwerper krijgt een feestdia een intro in de clubkleuren.",
+        ],
+    },
     {
         "versie": "2.11.0",
         "datum": "12 november 2026",
@@ -1494,8 +1502,8 @@ MODULES = [
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.7.0", "sinds": "1.6.0", "laatst": "1.75.0",
      "inhoud": "Keukenvoorraad met een eigen, blinde telling (ook als looplijst met dozen scannen, en een begintelling), inboeken per verpakking (per merk, ook door te scannen), weggooien en bijstellen, prijzen, de boodschappenlijst bij een tekort, en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.29.1", "sinds": "1.10.1", "laatst": "2.7.1",
-     "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's, effecten en griezelposters met tekeningen), sponsoren, standen, Man of the Match, seizoen in cijfers, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, en het Halloween-thema"},
+    {"naam": "Kantine-tv", "versie": "1.30.0", "sinds": "1.10.1", "laatst": "2.12.0",
+     "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's, effecten, griezelposters met tekeningen en feestdia's in de clubkleuren), sponsoren, standen, Man of the Match, seizoen in cijfers, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, en het Halloween-thema"},
     {"naam": "Tablet-app", "versie": "1.1.0", "sinds": "", "laatst": "2.11.0",
      "inhoud": "Kantine Beheer op de tablet (3.2): de schermen van de handterminal-app zonder de looplijsten, met geld afdragen en storten, de verkoopdagen, het hele product bewerken en de rapporten (zoeken, boeken, voorraad en producten, factuur inboeken, bestellijst, boodschappen, prognose, tellingen bekijken, kassa en kluis, keuken, prikbord, agenda, Club van 20-aanmeldingen, kantine-tv), en de eigen tv-schermen: prijzenscherm, acties, bardiensten, uitgelicht en de wedstrijddag"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",

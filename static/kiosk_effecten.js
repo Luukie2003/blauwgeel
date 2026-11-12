@@ -1,4 +1,5 @@
-/* Bewegende effecten over een dia op de kantine-tv (1.76.0, zie kiosk_momenten.EFFECTEN en kiosk_effecten.css).
+/* Bewegende effecten over een dia op de kantine-tv (1.76.0, zie kiosk_momenten.EFFECTEN en kiosk_effecten.css), sinds
+   2.12.0 ook feest: confetti, vuurwerk en glitters in blauw-geel (voor de feestdia, maar het past over elke dia).
 
    Elke dia met data-effect (en data-opties) krijgt bij het laden een laag met deeltjes die met CSS bewegen. De
    schijnwerper (templates/_kiosk_moment.html) gebruikt hetzelfde: KioskEffecten.maak(doel, effect, opties). Alles met
@@ -19,6 +20,8 @@
         '<path d="M100 16l32-12-18 14z"/><path d="M96 18l28-4v3l-27 4z"/><path d="M112 56l28 4-2 4-28-3z"/></svg>';
     var SCHICHT = '<svg viewBox="0 0 64 200"><path d="M38 0L6 110h24L16 200l42-118H34L52 0z"/></svg>';
     var CONFETTI = ['#ffd23f', '#ff4fd8', '#9dff2e', '#4fc3ff', '#ff8a1f', '#ffffff'];
+    // De clubkleuren voor het effect feest (2.12.0): geel, wit en een licht blauw (donkerblauw zie je niet op de dia).
+    var CLUBKLEUREN = ['#fcd42f', '#ffffff', '#5b8cff', '#ffe36e', '#a8c4ff', '#fcd42f'];
 
     function r(a, b) { return a + Math.random() * (b - a); }
 
@@ -83,6 +86,30 @@
                 'left:' + r(0, 100).toFixed(1) + '%;--s:' + r(0.7, 1.4).toFixed(2) + ';--c:' + CONFETTI[i % CONFETTI.length] + ';' +
                 '--dx:' + r(-8, 8).toFixed(1) + ';animation-delay:-' + (begin + r(0, 1.2)).toFixed(2) + 's');
         }
+    }
+
+    // Snippers in de clubkleuren die de hele tijd dwarrelen, elk met een eigen tempo (zie fx-snipper).
+    function snippers(laag, n) {
+        for (var i = 0; i < n; i++) {
+            var d = r(6.5, 11);
+            deeltje(laag, 'fx-snipper' + (i % 4 === 0 ? ' fx-snipper--rond' : ''),
+                'left:' + r(0, 100).toFixed(1) + '%;--s:' + r(0.7, 1.4).toFixed(2) + ';--c:' + CLUBKLEUREN[i % CLUBKLEUREN.length] + ';' +
+                '--dx:' + r(-7, 7).toFixed(1) + ';--rot:' + r(360, 900).toFixed(0) + 'deg;' +
+                'animation-duration:' + d.toFixed(2) + 's;animation-delay:-' + r(0, d).toFixed(2) + 's');
+        }
+    }
+
+    // Vuurwerk op een paar plekken [links, boven] (in %), om de beurt: per knal een flits en vonken die alle kanten op gaan.
+    function vuurwerk(laag, plekken) {
+        plekken.forEach(function (plek, nr) {
+            var d = r(3.8, 4.6).toFixed(2) + 's', wacht = '-' + (nr * 1.4 + r(0, 0.6)).toFixed(2) + 's';
+            var kleur = nr % 2 ? '#ffffff' : '#fcd42f';
+            var plaats = 'left:' + plek[0] + '%;top:' + plek[1] + '%;--c:' + kleur + ';animation-duration:' + d + ';animation-delay:' + wacht + ';';
+            for (var i = 0; i < 12; i++) {
+                deeltje(laag, 'fx-spat', plaats + '--a:' + (i * 30 + r(-8, 8)).toFixed(0) + 'deg;--r:' + r(6.5, 9.5).toFixed(1) + 'vw');
+            }
+            deeltje(laag, 'fx-pof', plaats);
+        });
     }
 
     function kaarsen(laag) {
@@ -194,6 +221,11 @@
             veel(laag, 5, 'fx-damp', [0, 100, 72, 96], [9, 14], [0.9, 1.5]);
             confetti(laag);
             prijs(laag, o);
+        },
+        feest: function (laag) {
+            snippers(laag, 34);
+            vuurwerk(laag, [[13, 32], [87, 27], [62, 7]]);
+            veel(laag, 10, 'fx-glitter', [4, 96, 8, 70], [1.8, 3.2], [0.5, 1.2]);
         },
         programma: function (laag, o) {
             vleermuizen(laag, 4);

@@ -6,6 +6,7 @@ from datetime import datetime, time, timedelta
 
 from flask import url_for
 
+import kiosk_feest
 import kiosk_momenten
 import qr
 import seizoen_in_cijfers
@@ -90,6 +91,12 @@ def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None, venster=None, tijd
         if effect == "programma":
             slide["programma_rijen"], regels = kiosk_momenten.programma_regels(regels, opties.get("momenten", []))
         slide["gz"] = kiosk_momenten.griezel_delen(regels)
+    if s["sjabloon"] == "feest":
+        # Een feestdia (2.12.0, zie kiosk_feest.py): de titel en de knaller zo groot als ze passen.
+        slide["tekening"] = kiosk_momenten.tekening_van(s)
+        slide["fs"] = kiosk_feest.delen(s["titel"], slide["tekst_regels"], bool(slide["tekening"]), slide["label"])
+        slide["vlaggen"] = kiosk_feest.VLAGGEN
+        slide["kleur"] = kiosk_feest.GEEL
     if s["sjabloon"] != KIOSK_SPONSOR_SJABLOON_AANGEPAST:
         return slide
     sjabloon = eigen_sjablonen.get(s["custom_sjabloon_id"])

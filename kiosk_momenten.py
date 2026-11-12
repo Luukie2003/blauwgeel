@@ -19,6 +19,8 @@ import json
 import re
 from datetime import datetime, timedelta
 
+import kiosk_feest
+
 FORMAAT = "%Y-%m-%d %H:%M"
 STANDAARD_MINUTEN = 5
 MAX_SCHIJNWERPER_MINUTEN = 30
@@ -38,7 +40,11 @@ EFFECTEN = {
     "duivel": ("Duivel: rode bliksem, sintels en bloed", "#ff2a2a", (77, 73)),
     "zombie": ("Zombie: groen slijm en confetti", "#9dff2e", (55, 56)),
     "programma": ("Programma: vleermuizen, kaarslicht en het tijdslot van nu licht op", "#ff9326", None),
+    "feest": ("Feest: confetti, vuurwerk en glitters in blauw-geel", kiosk_feest.GEEL, None),
 }
+# Dia's met een eigen opmaak voor de tekst (een griezel- of feestdia): daar klopt de prijs zelf, dus geen gloed op een
+# aangetikte plek, en ze kunnen een tekening hebben.
+EIGEN_OPMAAK = ("griezel", "feest")
 STANDAARD_KLEUR = "#ff9326"
 # Het programma: de regels van boven naar beneden (hun tijd) en waar ze staan, in % van de afbeelding: het midden van de
 # bovenste en de onderste regel, de hoogte van een regel en de linker- en rechterkant. Zo staat het in het ontwerp van
@@ -112,7 +118,7 @@ def effect_opties(dia):
     if not isinstance(opties, dict):
         opties = {}
     effect = dia["effect"]
-    if effect in EFFECTEN and EFFECTEN[effect][2] and dia["sjabloon"] != "griezel":
+    if effect in EFFECTEN and EFFECTEN[effect][2] and dia["sjabloon"] not in EIGEN_OPMAAK:
         prijs = opties.get("prijs")
         if not (isinstance(prijs, list) and len(prijs) == 2 and all(isinstance(v, (int, float)) for v in prijs)):
             opties["prijs"] = list(EFFECTEN[effect][2])
@@ -129,17 +135,22 @@ def effect_opties(dia):
     return opties
 
 
+def tekeningen_voor(sjabloon):
+    """De tekeningen die bij een sjabloon horen: die van de griezeldia (TEKENINGEN) of van de feestdia (2.12.0)."""
+    return {"griezel": TEKENINGEN, "feest": kiosk_feest.TEKENINGEN}.get(sjabloon, {})
+
+
 def tekening_van(dia):
-    """De tekening van een griezeldia (een sleutel uit TEKENINGEN), of None. Hij staat bij de opties van het effect, maar
-    hoort bij de griezeldia: hij geldt ook zonder effect."""
-    if dia["sjabloon"] != "griezel":
+    """De tekening van een griezel- of feestdia (een sleutel uit tekeningen_voor), of None. Hij staat bij de opties van
+    het effect, maar hoort bij de dia: hij geldt ook zonder effect."""
+    if dia["sjabloon"] not in EIGEN_OPMAAK:
         return None
     try:
         opties = json.loads(dia["effect_opties"] or "{}")
     except (TypeError, ValueError):
         return None
     waarde = opties.get("tekening") if isinstance(opties, dict) else None
-    return waarde if waarde in TEKENINGEN else None
+    return waarde if waarde in tekeningen_voor(dia["sjabloon"]) else None
 
 
 def griezel_delen(regels):
@@ -176,16 +187,16 @@ def programma_regels(regels, momenten=()):
 
 
 def schoon_opties(effect, prijs_links, prijs_boven, rijen_tekst, sjabloon=None, tekening=None):
-    """De opties uit het dia-formulier als JSON (of None): de aangetikte plek van de prijs (niet bij een griezeldia:
-    daar klopt de prijs zelf), de tijden van de regels van het programma ("16:00, 17:00, ...") en bij een griezeldia de
-    tekening. De rest van het programma (waar de regels staan) blijft de standaard."""
+    """De opties uit het dia-formulier als JSON (of None): de aangetikte plek van de prijs (niet bij een griezel- of
+    feestdia: daar klopt de prijs zelf), de tijden van de regels van het programma ("16:00, 17:00, ...") en bij een
+    griezel- of feestdia de tekening. De rest van het programma (waar de regels staan) blijft de standaard."""
     opties = {}
-    if sjabloon == "griezel" and tekening in TEKENINGEN:
+    if tekening and tekening in tekeningen_voor(sjabloon):
         opties["tekening"] = tekening
     try:
         links, boven = float(prijs_links), float(prijs_boven)
         if (0 <= links <= 100 and 0 <= boven <= 100 and effect in EFFECTEN and EFFECTEN[effect][2]
-                and sjabloon != "griezel"):
+                and sjabloon not in EIGEN_OPMAAK):
             opties["prijs"] = [round(links, 1), round(boven, 1)]
     except (TypeError, ValueError):
         pass

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-{# Het live voorbeeld van een griezeldia bij het dia-formulier (1.77.0, zie kiosk_griezel_voorbeeld in
-   routes/kiosk/momenten.py): de dia zoals op de tv, op een pagina van 1920 bij 1080 die het formulier verkleind toont. #}
+{# Het live voorbeeld van een griezeldia (1.77.0) of feestdia (2.12.0) bij het dia-formulier (zie kiosk_griezel_voorbeeld
+   in routes/kiosk/momenten.py): de dia zoals op de tv, op een pagina van 1920 bij 1080 die het formulier verkleind toont. #}
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Voorbeeld griezeldia</title>
+    <title>Voorbeeld dia</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_scherm_stijl.css') }}?v={{ kiosk_stijl_versie|default('') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='kiosk_effecten.css') }}?v={{ kiosk_effecten_versie|default('') }}">
     <style>
@@ -14,7 +14,7 @@
 </head>
 <body>
 <div class="scherm">
-    <section class="slide slide-sponsor actief sjabloon-griezel tekst-{{ slide.tekst_grootte }}"{% if slide.effect %} data-effect="{{ slide.effect }}" data-opties="{{ slide.opties|tojson|forceescape }}"{% endif %}>
+    <section class="slide slide-sponsor actief sjabloon-{{ slide.sjabloon }} tekst-{{ slide.tekst_grootte }}"{% if slide.effect %} data-effect="{{ slide.effect }}" data-opties="{{ slide.opties|tojson|forceescape }}"{% endif %}>
         {% include '_kiosk_sponsor_inhoud.html' %}
     </section>
 </div>
