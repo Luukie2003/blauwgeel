@@ -78,19 +78,36 @@
 
     <div class="kt-kaart">
         <div class="kt-kaart-kop"><h2>Snel</h2></div>
-        <div class="kt-rij" id="thema">
+        {% set clubstijl = kiosk_stijl() == 'club' %}
+        <div class="kt-rij" id="stijl">
             <span class="kt-ikoon" aria-hidden="true">{{ ikoon('thema') }}</span>
             <div class="kt-rij-hoofd">
-                <div class="kt-rij-titel">Halloween-thema</div>
-                <div class="kt-rij-sub">Vleermuizen, pompoenen en mist op alle tv's</div>
+                <div class="kt-rij-titel">Clubstijl</div>
+                <div class="kt-rij-sub">De dia's en het prijzenscherm in de stijl van de feestdia: koppen op een geel lint</div>
+            </div>
+            <form method="post" action="{{ url_for('kiosk_stijl_zetten') }}" class="kt-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="stijl" value="{{ '' if clubstijl else 'club' }}">
+                <button type="submit" class="kt-schakelaar{{ ' aan' if clubstijl else '' }}" role="switch"
+                        aria-checked="{{ 'true' if clubstijl else 'false' }}" aria-label="Clubstijl {{ 'uitzetten' if clubstijl else 'aanzetten' }}"></button>
+            </form>
+        </div>
+        {# Eén thema tegelijk: een ander thema aanzetten zet het vorige uit. #}
+        {% for sleutel, naam, uitleg in kiosk_themas %}
+        <div class="kt-rij"{% if loop.first %} id="thema"{% endif %}>
+            <span class="kt-ikoon" aria-hidden="true">{{ ikoon('thema') }}</span>
+            <div class="kt-rij-hoofd">
+                <div class="kt-rij-titel">{{ naam }}-thema</div>
+                <div class="kt-rij-sub">{{ uitleg }}</div>
             </div>
             <form method="post" action="{{ url_for('kiosk_thema_zetten') }}" class="kt-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="thema" value="{{ '' if thema == 'halloween' else 'halloween' }}">
-                <button type="submit" class="kt-schakelaar{{ ' aan' if thema == 'halloween' else '' }}" role="switch"
-                        aria-checked="{{ 'true' if thema == 'halloween' else 'false' }}" aria-label="Halloween-thema {{ 'uitzetten' if thema == 'halloween' else 'aanzetten' }}"></button>
+                <input type="hidden" name="thema" value="{{ '' if thema == sleutel else sleutel }}">
+                <button type="submit" class="kt-schakelaar{{ ' aan' if thema == sleutel else '' }}" role="switch"
+                        aria-checked="{{ 'true' if thema == sleutel else 'false' }}" aria-label="{{ naam }}-thema {{ 'uitzetten' if thema == sleutel else 'aanzetten' }}"></button>
             </form>
         </div>
+        {% endfor %}
         <div class="kt-rij">
             <span class="kt-ikoon" aria-hidden="true">{{ ikoon('wissel') }}</span>
             <div class="kt-rij-hoofd">

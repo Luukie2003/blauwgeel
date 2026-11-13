@@ -533,6 +533,7 @@ SECTIE_ENDPOINTS = {
         "api_tablet_bardiensten",
         "kiosk_tv_wisselen",
         "kiosk_thema_zetten",
+        "kiosk_stijl_zetten",
         # Mappen, momenten en de schijnwerper (1.76.0, zie kiosk_momenten.py).
         "kiosk_moment_nu",
         "kiosk_moment_stop",

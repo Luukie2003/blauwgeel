@@ -185,6 +185,8 @@
         }
     </style>
     {% include '_kiosk_klok.html' %}
+    {# De clubstijl (kiosk_clubstijl.css) over de gewone opmaak heen, als die aan staat. #}
+    {% if kiosk_stijl is defined and kiosk_stijl() == "club" %}<link rel="stylesheet" href="{{ url_for('static', filename='kiosk_clubstijl.css') }}?v={{ kiosk_effecten_versie|default('') }}">{% endif %}
 </head>
 <body>
     {% include '_kiosk_herstel.html' %}
@@ -389,6 +391,8 @@
         pasInhoudSchaalAan();
         setInterval(function () { werkKlokBij(); werkBardienstBij(); }, 15000);
         window.addEventListener('resize', pasInhoudSchaalAan);
+        // Een letter van de site (zoals in de clubstijl) laadt soms pas na het meten: dan nog een keer passend maken.
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(pasInhoudSchaalAan);
     </script>
 
     <script>

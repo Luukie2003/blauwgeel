@@ -6,14 +6,15 @@ app.py werken ongewijzigd."""
 
 from database import get_db
 from routes.kiosk import prijzen, bardienst, acties, sponsoren_sjablonen, scherm, timer, tvs, momenten
-from routes.kiosk.gedeeld import kiosk_thema
+from routes.kiosk.gedeeld import THEMA_UITLEG, THEMAS, kiosk_stijl, kiosk_thema
 
 
 def register_routes(app):
     @app.context_processor
     def _kiosk_thema_voor_schermen():
         # Voor templates/_kiosk_thema.html: een functie, dus alleen een query als een scherm hem aanroept.
-        return {"kiosk_thema": lambda: kiosk_thema(get_db())}
+        return {"kiosk_thema": lambda: kiosk_thema(get_db()), "kiosk_stijl": lambda: kiosk_stijl(get_db()),
+                "kiosk_themas": [(k, naam, THEMA_UITLEG.get(k, "")) for k, naam in THEMAS.items()]}
 
     prijzen.register_routes(app)
     bardienst.register_routes(app)

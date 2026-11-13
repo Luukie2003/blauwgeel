@@ -40,6 +40,8 @@
         .club-badge span { font-size: max(0.7rem, calc(15 * var(--u))); font-weight: 800; letter-spacing: 0.04em; color: var(--geel); white-space: nowrap; }
     </style>
     {% include '_kiosk_klok.html' %}
+    {# De clubstijl (kiosk_clubstijl.css) over de gewone opmaak heen, als die aan staat. #}
+    {% if kiosk_stijl is defined and kiosk_stijl() == "club" %}<link rel="stylesheet" href="{{ url_for('static', filename='kiosk_clubstijl.css') }}?v={{ kiosk_effecten_versie|default('') }}">{% endif %}
 </head>
 <body>
     {% include '_kiosk_herstel.html' %}

@@ -25,7 +25,15 @@ from routes.kiosk.dia_gegevens import (
     _unieke_poule_sleutel,
     avond_tijd,
 )
-from routes.kiosk.gedeeld import THEMAS, _scherm_instellingen, bewaarde_uitkomst, dias_versie, zet_kiosk_thema
+from routes.kiosk.gedeeld import (
+    STIJLEN,
+    THEMAS,
+    _scherm_instellingen,
+    bewaarde_uitkomst,
+    dias_versie,
+    zet_kiosk_stijl,
+    zet_kiosk_thema,
+)
 from routes.kiosk.momenten import schermgegevens
 from routes.kiosk.prijzen_gegevens import (
     _prijzen_poll,
@@ -519,6 +527,16 @@ def register_routes(app):
             flash(f"{THEMAS[thema]}-thema staat aan: binnen 10 seconden op alle tv's.", "success")
         else:
             flash("Thema uit: de tv's zijn binnen 10 seconden weer gewoon.", "success")
+        return redirect(request.referrer or url_for("kiosk_hub"))
+
+    @app.route("/kiosk/stijl", methods=["POST"])
+    def kiosk_stijl_zetten():
+        """Kiosk-hub: de clubstijl op alle schermen aan (stijl=club) of uit (leeg)."""
+        stijl = zet_kiosk_stijl(get_db(), request.form.get("stijl") or None)
+        if stijl:
+            flash(f"{STIJLEN[stijl]} staat aan: binnen 10 seconden op alle tv's.", "success")
+        else:
+            flash("De gewone stijl staat weer aan: binnen 10 seconden op alle tv's.", "success")
         return redirect(request.referrer or url_for("kiosk_hub"))
 
     @app.route("/kiosk/tv/wisselen", methods=["POST"])

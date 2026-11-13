@@ -395,6 +395,8 @@ KOLOM_MIGRATIES = [
     ("bestel_bijstellingen", "gecontroleerd", "INTEGER NOT NULL DEFAULT 0"),
     # Een thema over alle kantine-tv-schermen (1.74.0, bijvoorbeeld Halloween), zie routes/kiosk/gedeeld.py.
     ("kiosk_scherm_instellingen", "thema", "TEXT"),
+    # De stijl van de kantine-tv (2.13.0): leeg is de gewone, "club" de clubstijl (static/kiosk_clubstijl.css).
+    ("kiosk_scherm_instellingen", "stijl", "TEXT"),
     # Mappen en momenten voor de dia's (1.76.0), zie kiosk_momenten.py: de map van een dia, zijn tijdslot, hoe lang hij
     # dan alle tv's overneemt (de schijnwerper), het effect over de afbeelding, de balk op het prijzenscherm en het
     # label van een griezeldia. Op het scherm: een schijnwerper die met de hand is gestart of gestopt.

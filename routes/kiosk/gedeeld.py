@@ -39,7 +39,15 @@ def _scherm_instellingen(db):
 # Een thema over alle schermen heen (1.74.0): versiering die over het prijzenscherm en de dia's komt, zonder iets aan
 # de inhoud te veranderen (zie templates/_kiosk_thema.html). Aan of uit met één klik op de Kiosk-hub of in de
 # handterminal-app (Kantine-tv).
-THEMAS = {"halloween": "Halloween"}
+THEMAS = {"halloween": "Halloween", "kerst": "Kerst"}
+THEMA_UITLEG = {
+    "halloween": "Vleermuizen, pompoenen en mist op alle tv's",
+    "kerst": "Lampjes, sneeuw en een kerstboom op alle tv's",
+}
+
+# De stijl van de schermen (2.13.0): de gewone, of de clubstijl (static/kiosk_clubstijl.css) in de stijl van de
+# feestdia, met de koppen op een geel lint. Een thema komt daar gewoon overheen.
+STIJLEN = {"club": "Clubstijl"}
 
 
 def kiosk_thema(db):
@@ -58,9 +66,25 @@ def zet_kiosk_thema(db, thema):
     return thema
 
 
+def kiosk_stijl(db):
+    """De stijl van de schermen ("club"), of None voor de gewone."""
+    rij = _scherm_instellingen(db)
+    stijl = rij["stijl"] if rij is not None and "stijl" in rij.keys() else None
+    return stijl if stijl in STIJLEN else None
+
+
+def zet_kiosk_stijl(db, stijl):
+    """De clubstijl aan ("club") of uit (None). Telt mee in de versie van de schermen: binnen 10 seconden op de tv's."""
+    stijl = stijl if stijl in STIJLEN else None
+    db.execute("UPDATE kiosk_scherm_instellingen SET stijl = ? WHERE id = 1", (stijl,))
+    db.commit()
+    return stijl
+
+
 def dias_versie(db, slides, *extra):
-    """De versie van het dia-scherm: de dia's en het thema. [extra] geeft een eigen versie, zoals voor /kiosk/tv."""
-    return _versie(*extra, slides, kiosk_thema(db))
+    """De versie van het dia-scherm: de dia's, het thema en de stijl. [extra] geeft een eigen versie, zoals voor
+    /kiosk/tv."""
+    return _versie(*extra, slides, kiosk_thema(db), kiosk_stijl(db))
 
 
 def _prijzen_instellingen(db):

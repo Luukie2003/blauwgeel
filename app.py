@@ -391,7 +391,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             "kiosk_stijl_versie": int((BASE_DIR / "static" / "kiosk_scherm_stijl.css").stat().st_mtime),
             "kiosk_welkom_stijl_versie": int((BASE_DIR / "static" / "kiosk_welkom_stijl.css").stat().st_mtime),
             "kiosk_effecten_versie": max(int((BASE_DIR / "static" / naam).stat().st_mtime)
-                                         for naam in ("kiosk_effecten.css", "kiosk_effecten.js")),
+                                         for naam in ("kiosk_effecten.css", "kiosk_effecten.js", "kiosk_clubstijl.css")),
             "kt_stijl_versie": int((BASE_DIR / "static" / "kantine_tv_beheer.css").stat().st_mtime),
             "clubstijl_versie": int((BASE_DIR / "static" / "clubstijl.css").stat().st_mtime),
             "site_banner_tekst": banner_tekst,

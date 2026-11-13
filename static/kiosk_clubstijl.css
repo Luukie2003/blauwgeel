@@ -1,0 +1,292 @@
+/* De clubstijl van de kantine-tv: dezelfde dia's als altijd, maar in de stijl van de feestdia. Diep clubblauw met
+   stralen, de kop op een geel lint, alles in de koppenletter van de site (Barlow Condensed), kaarten met een donkere
+   glans en wat eruit moet springen (het eigen team, de eerstvolgende wedstrijd, de nummer 1) als gele sticker.
+
+   Dit bestand komt over kiosk_scherm_stijl.css heen (en over de eigen stijl van het prijzenscherm), en alleen als de
+   clubstijl aan staat. De kleuren staan in --cs-*; een thema (Halloween, Kerst, zie _kiosk_thema.html) zet die om. Net als
+   de rest rekent het in --u (1 pixel van een scherm van 1920 bij 1080). */
+
+@font-face { font-family: "Barlow"; src: url("fonts/barlow-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Barlow"; src: url("fonts/barlow-600.woff2") format("woff2"); font-weight: 600 700; font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("fonts/barlow-condensed-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("fonts/barlow-condensed-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+:root {
+    --cs-licht: #2a52bd;
+    --cs-midden: #1e3a8a;
+    --cs-diep: #132a6a;
+    --cs-rand: #0a1638;
+    --cs-vignet: rgba(3, 8, 28, 0.6);
+    --cs-straal: rgba(140, 175, 255, 0.07);
+    --cs-accent: #fcd42f;
+    --cs-accent-licht: #ffe45e;
+    --cs-accent-donker: #e9b800;
+    --cs-op-accent: #0f1f4d;
+    --cs-lint: var(--cs-accent);
+    --cs-lint-licht: var(--cs-accent-licht);
+    --cs-lint-donker: #c59600;
+    --cs-lint-tekst: var(--cs-op-accent);
+    --cs-lint-letter: "Barlow Condensed", "Arial Narrow", sans-serif;
+    --cs-kaart: rgba(6, 16, 52, 0.58);
+    --cs-kaart-rand: rgba(150, 180, 255, 0.24);
+    --cs-tekst-zacht: #b9c8f0;
+    --cs-schaduw: #0b1a45;
+    --cs-kop: "Barlow Condensed", "Arial Narrow", sans-serif;
+    --cs-letter: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ---------- De achtergrond: clubblauw met stralen en een donkere rand ---------- */
+body {
+    font-family: var(--cs-letter);
+    background: radial-gradient(ellipse 80% 75% at 50% 42%, var(--cs-licht) 0%, var(--cs-midden) 42%, var(--cs-diep) 72%, var(--cs-rand) 100%), var(--cs-midden);
+}
+/* Onder alles (ook onder de versiering van een thema, die op -1 staat), op elk scherm. */
+body::before {
+    content: ""; position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: -2; pointer-events: none;
+    background: radial-gradient(ellipse 85% 85% at 50% 45%, rgba(0, 0, 0, 0) 50%, var(--cs-vignet) 100%),
+        repeating-conic-gradient(from -4deg at 50% 44%, var(--cs-straal) 0deg 8deg, rgba(0, 0, 0, 0) 8deg 20deg);
+}
+.c20 { background: transparent; --c20-font: var(--cs-kop); }
+.c20 > .c20-overlay { background: rgba(10, 22, 70, 0.78); }
+
+/* ---------- De kop op een geel lint, met ingekeepte staarten ---------- */
+.slide-wedstrijden h2, .slide-stand h2, .slide-motm h2, .slide-seizoen_cijfers h2, .slide-seizoen_top h2,
+.slide-club_van_20 .c20-kop h2, .slide-club_van_20_teams .c20-kop h2, .slide-club_van_20_nieuw .c20-kop h2,
+.c20-teller h2, .sponsordia-titel {
+    position: relative; display: inline-block; margin: 0 0 calc(34 * var(--u)); padding: 0.16em 0.8em 0.2em;
+    font-family: var(--cs-lint-letter); font-weight: 700; font-size: calc(58 * var(--u)); line-height: 1;
+    letter-spacing: 0.05em; text-transform: uppercase; color: var(--cs-lint-tekst); text-shadow: none; white-space: nowrap;
+    background: linear-gradient(var(--cs-lint-licht), var(--cs-lint) 58%, var(--cs-lint-donker));
+    box-shadow: 0 0.12em 0.3em rgba(0, 0, 0, 0.45); transform: rotate(-1.5deg);
+}
+.slide-wedstrijden h2::before, .slide-stand h2::before, .slide-motm h2::before, .slide-seizoen_cijfers h2::before,
+.slide-seizoen_top h2::before, .slide-club_van_20 .c20-kop h2::before, .slide-club_van_20_teams .c20-kop h2::before,
+.slide-club_van_20_nieuw .c20-kop h2::before, .c20-teller h2::before, .sponsordia-titel::before,
+.slide-wedstrijden h2::after, .slide-stand h2::after, .slide-motm h2::after, .slide-seizoen_cijfers h2::after,
+.slide-seizoen_top h2::after, .slide-club_van_20 .c20-kop h2::after, .slide-club_van_20_teams .c20-kop h2::after,
+.slide-club_van_20_nieuw .c20-kop h2::after, .c20-teller h2::after, .sponsordia-titel::after {
+    content: ""; position: absolute; top: 0.2em; width: 0; height: 0; border: 0.68em solid var(--cs-lint-donker);
+}
+.slide-wedstrijden h2::before, .slide-stand h2::before, .slide-motm h2::before, .slide-seizoen_cijfers h2::before,
+.slide-seizoen_top h2::before, .slide-club_van_20 .c20-kop h2::before, .slide-club_van_20_teams .c20-kop h2::before,
+.slide-club_van_20_nieuw .c20-kop h2::before, .c20-teller h2::before, .sponsordia-titel::before {
+    left: -1.1em; border-left-color: transparent;
+}
+.slide-wedstrijden h2::after, .slide-stand h2::after, .slide-motm h2::after, .slide-seizoen_cijfers h2::after,
+.slide-seizoen_top h2::after, .slide-club_van_20 .c20-kop h2::after, .slide-club_van_20_teams .c20-kop h2::after,
+.slide-club_van_20_nieuw .c20-kop h2::after, .c20-teller h2::after, .sponsordia-titel::after {
+    right: -1.1em; border-right-color: transparent;
+}
+
+/* ---------- Kaarten en de gele sticker voor wat eruit springt ---------- */
+.wedstrijd-dag, .standdia-rij, .motmdia-kaart, .seizoendia-tegel, .seizoendia-lijst li {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 55%), var(--cs-kaart);
+    border: 1px solid var(--cs-kaart-rand);
+    box-shadow: 0 calc(10 * var(--u)) calc(26 * var(--u)) rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.wedstrijd-dag--eerstvolgende, .standdia-rij--eigen, .seizoendia-tegel:first-child, .seizoendia-lijst li:first-child {
+    background: linear-gradient(165deg, var(--cs-accent-licht) 0%, var(--cs-accent) 48%, var(--cs-accent-donker) 100%);
+    border: calc(3 * var(--u)) solid var(--cs-op-accent); color: var(--cs-op-accent);
+    box-shadow: 0 0 0 calc(3 * var(--u)) #ffffff, 0 calc(12 * var(--u)) calc(30 * var(--u)) rgba(0, 0, 0, 0.45),
+        0 0 calc(50 * var(--u)) rgba(252, 212, 47, 0.35);
+}
+/* Een rondje met een nummer: donker met een gele rand, op een sticker juist donker met gele letters. */
+.standdia-positie, .seizoendia-lijst .plek {
+    background: var(--cs-op-accent); border: calc(3 * var(--u)) solid var(--cs-accent); color: var(--cs-accent);
+    font-family: var(--cs-kop); font-weight: 700;
+}
+.standdia-rij--eigen .standdia-positie, .seizoendia-lijst li:first-child .plek { border-color: var(--cs-op-accent); }
+
+/* ---------- Komende thuiswedstrijden ---------- */
+.slide.slide-wedstrijden { padding: calc(56 * var(--u)) calc(80 * var(--u)) calc(100 * var(--u)); }
+.wedstrijden-lijst { max-width: calc(1380 * var(--u)); gap: calc(20 * var(--u)); }
+.wedstrijd-dag { gap: calc(34 * var(--u)); padding: calc(22 * var(--u)) calc(34 * var(--u)); border-radius: calc(18 * var(--u)); }
+.wedstrijd-dag .datumbadge {
+    width: calc(104 * var(--u)); height: calc(104 * var(--u)); border-radius: calc(16 * var(--u));
+    background: var(--cs-op-accent); border: calc(3 * var(--u)) solid var(--cs-accent); font-family: var(--cs-kop);
+}
+.wedstrijd-dag .datumbadge .dag-kort { font-size: calc(18 * var(--u)); font-weight: 700; letter-spacing: 0.08em; }
+.wedstrijd-dag .datumbadge .dag-nummer { font-size: calc(44 * var(--u)); font-weight: 700; line-height: 1; color: #ffffff; }
+.wedstrijd-dag .datumbadge .maand-kort { font-size: calc(16 * var(--u)); font-weight: 600; letter-spacing: 0.06em; }
+.wedstrijd-dag .teams { font-family: var(--cs-kop); font-size: calc(38 * var(--u)); font-weight: 700; line-height: 1.3; letter-spacing: 0.01em; }
+.wedstrijd-tijd { min-width: calc(110 * var(--u)); color: var(--cs-accent); }
+.wedstrijd-dag .eerstvolgende-label {
+    background: var(--cs-op-accent); color: var(--cs-accent); font-family: var(--cs-kop); font-weight: 700;
+    font-size: calc(18 * var(--u)); letter-spacing: 0.1em; padding: calc(4 * var(--u)) calc(14 * var(--u)); border-radius: calc(6 * var(--u));
+    transform: rotate(-2deg);
+}
+.wedstrijd-dag--eerstvolgende .wedstrijd-tijd { color: var(--cs-op-accent); }
+.wedstrijd-dag--eerstvolgende .weer { color: var(--cs-op-accent); }
+.wedstrijd-dag .weer { font-family: var(--cs-kop); font-weight: 700; font-size: calc(24 * var(--u)); }
+.wedstrijden-lijst--vol .teams { font-size: calc(30 * var(--u)); }
+.wedstrijden-lijst--vol .datumbadge { width: calc(84 * var(--u)); height: calc(84 * var(--u)); }
+
+/* ---------- Stand ---------- */
+.standdia-lijst { max-width: calc(1240 * var(--u)); }
+.standdia-rij { border-radius: calc(var(--rij) * 0.18); }
+.standdia-positie { font-size: calc(var(--rij) * 0.34); }
+.standdia-naam { font-family: var(--cs-kop); font-size: calc(var(--rij) * 0.5); font-weight: 700; letter-spacing: 0.01em; }
+.standdia-vorm { font-family: var(--cs-kop); font-weight: 600; font-size: calc(var(--rij) * 0.3); letter-spacing: 0.04em; color: var(--cs-tekst-zacht); }
+.standdia-punten {
+    min-width: calc(var(--rij) * 1.25); padding: calc(var(--rij) * 0.06) calc(var(--rij) * 0.16); border-radius: 999px;
+    background: var(--cs-accent); color: var(--cs-op-accent); font-family: var(--cs-kop); font-weight: 700; font-size: calc(var(--rij) * 0.42);
+}
+.standdia-rij--eigen .standdia-vorm { color: var(--cs-op-accent); }
+.standdia-rij--eigen .standdia-punten { background: var(--cs-op-accent); color: var(--cs-accent); }
+
+/* ---------- Man of the Match: kaarten naast elkaar, de uitslag groot ---------- */
+.slide.slide-motm { padding: calc(50 * var(--u)) calc(80 * var(--u)) calc(100 * var(--u)); }
+.motmdia-lijst {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(26 * var(--u)) calc(30 * var(--u));
+    max-width: calc(1640 * var(--u));
+}
+.motmdia-kaart:only-child, .motmdia-kaart:last-child:nth-child(odd) { grid-column: 1 / -1; justify-self: center; width: 50%; }
+.motmdia-kaart { padding: calc(26 * var(--u)) calc(30 * var(--u)) calc(24 * var(--u)); border-radius: calc(22 * var(--u)); }
+.motmdia-wedstrijd { gap: calc(30 * var(--u)); }
+.motmdia-club { width: calc(230 * var(--u)); gap: calc(10 * var(--u)); }
+.motmdia-clublogo { width: calc(76 * var(--u)); height: calc(76 * var(--u)); }
+.motmdia-club span { font-family: var(--cs-kop); font-size: calc(24 * var(--u)); font-weight: 700; letter-spacing: 0.04em; color: #ffffff; }
+.motmdia-score {
+    font-family: var(--cs-kop); font-weight: 700; font-size: calc(92 * var(--u)); line-height: 1; letter-spacing: 0.02em; color: #ffffff;
+    text-shadow: 0 0.04em 0 var(--cs-schaduw), 0 0.08em 0 var(--cs-schaduw), 0 0.12em 0.1em rgba(0, 0, 0, 0.5);
+}
+.motmdia-score--gewonnen, .motmdia-score--verloren, .motmdia-score--gelijk { color: #ffffff; }
+.motmdia-resultaat {
+    margin-top: calc(8 * var(--u)); padding: calc(4 * var(--u)) calc(14 * var(--u)); border-radius: calc(6 * var(--u));
+    font-family: var(--cs-kop); font-size: calc(20 * var(--u)); font-weight: 700; letter-spacing: 0.1em; color: #ffffff; background: rgba(255, 255, 255, 0.15);
+}
+.motmdia-resultaat--gewonnen { background: #1fa855; color: #ffffff; }
+.motmdia-resultaat--verloren { background: #d6343c; color: #ffffff; }
+.motmdia-resultaat--gelijk { background: var(--cs-accent); color: var(--cs-op-accent); }
+.motmdia-motm { margin-top: calc(18 * var(--u)); padding-top: calc(16 * var(--u)); gap: calc(8 * var(--u)); border-top-color: var(--cs-kaart-rand); }
+.motmdia-motm-label {
+    padding: calc(3 * var(--u)) calc(14 * var(--u)); border-radius: calc(5 * var(--u)); background: var(--cs-accent); color: var(--cs-op-accent);
+    font-family: var(--cs-kop); font-size: calc(19 * var(--u)); font-weight: 700; letter-spacing: 0.12em; transform: rotate(-2deg);
+}
+.motmdia-speler { font-family: var(--cs-kop); font-size: calc(50 * var(--u)); font-weight: 700; color: #ffffff; letter-spacing: 0.01em; }
+
+/* ---------- Seizoen in cijfers en de toppers ---------- */
+.slide-seizoen_cijfers h2, .slide-seizoen_top h2 { margin-bottom: calc(14 * var(--u)); }
+.seizoendia-ondertitel { font-family: var(--cs-kop); font-weight: 700; letter-spacing: 0.3em; color: var(--cs-tekst-zacht); }
+.seizoendia-tegel { border-radius: calc(20 * var(--u)); padding: calc(30 * var(--u)) calc(20 * var(--u)) calc(26 * var(--u)); }
+.seizoendia-getal {
+    font-family: var(--cs-kop); font-weight: 700; font-size: calc(124 * var(--u)); letter-spacing: 0.01em;
+    text-shadow: 0 0.035em 0 var(--cs-schaduw), 0 0.07em 0 var(--cs-schaduw), 0 0.1em 0.08em rgba(0, 0, 0, 0.45);
+}
+.seizoendia-label { font-family: var(--cs-kop); font-size: calc(32 * var(--u)); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cs-accent); }
+.seizoendia-sub { color: var(--cs-tekst-zacht); }
+.seizoendia-tegel:first-child .seizoendia-getal { color: var(--cs-op-accent); text-shadow: 0.03em 0.03em 0 #ffffff; }
+.seizoendia-tegel:first-child .seizoendia-label, .seizoendia-tegel:first-child .seizoendia-sub { color: var(--cs-op-accent); }
+.seizoendia-drukste { font-family: var(--cs-kop); font-weight: 600; font-size: calc(32 * var(--u)); letter-spacing: 0.02em; }
+.seizoendia-lijst li { border-radius: calc(16 * var(--u)); }
+.seizoendia-lijst .naam { font-family: var(--cs-kop); font-size: calc(44 * var(--u)); letter-spacing: 0.01em; }
+.seizoendia-lijst .aantal { font-family: var(--cs-kop); font-weight: 700; font-size: calc(46 * var(--u)); color: var(--cs-accent); }
+.seizoendia-lijst li:first-child .aantal, .seizoendia-lijst li:first-child .aantal small { color: var(--cs-op-accent); }
+.seizoendia-keuken h3 { font-family: var(--cs-kop); font-size: calc(34 * var(--u)); letter-spacing: 0.06em; text-transform: uppercase; color: var(--cs-accent); }
+
+/* ---------- Club van 20 ---------- */
+.c20-seizoen { font-family: var(--cs-kop); font-weight: 700; letter-spacing: 0.24em; color: var(--cs-tekst-zacht); }
+.c20-kop { margin-bottom: calc(26 * var(--u)); }
+.slide-club_van_20 .c20-kop h2 { margin-bottom: calc(10 * var(--u)); }
+.c20-bordje {
+    border: 0.1em solid #ffffff; border-radius: calc(8 * var(--u)); color: var(--cs-op-accent);
+    background: linear-gradient(180deg, #ffffff, #e6ecfb); box-shadow: 0 calc(6 * var(--u)) calc(16 * var(--u)) rgba(0, 0, 0, 0.35);
+}
+.c20-bordje--glans { border-color: #fff3b0; }
+.c20-bordje--niet-betaald { background: linear-gradient(180deg, #ffe1e1, #ffc9c9); }
+.c20-bordje--leeg {
+    background: rgba(255, 255, 255, 0.07); border: 0.08em dashed rgba(255, 255, 255, 0.4); color: rgba(255, 255, 255, 0.55); box-shadow: none;
+}
+.c20-bordje .c20-sterren { background: var(--cs-op-accent); color: var(--cs-accent); }
+.c20-label-nieuw { background: var(--cs-accent); color: var(--cs-op-accent); font-family: var(--cs-kop); }
+.c20-voet { font-family: var(--cs-kop); font-size: calc(22 * var(--u)); letter-spacing: 0.03em; color: var(--cs-tekst-zacht); }
+
+/* Samen opgehaald: het bedrag groot, de balk met strepen. */
+.c20-teller { gap: calc(90 * var(--u)); }
+.c20-teller h2 { font-size: calc(54 * var(--u)); }
+.c20-bedrag {
+    font-family: var(--cs-kop); font-size: calc(230 * var(--u)); color: var(--cs-accent); letter-spacing: 0.01em; margin: calc(4 * var(--u)) 0 calc(10 * var(--u));
+    text-shadow: 0 0.03em 0 var(--cs-schaduw), 0 0.06em 0 var(--cs-schaduw), 0 0.09em 0 var(--cs-schaduw), 0 0.13em 0.1em rgba(0, 0, 0, 0.5);
+}
+.c20-sub { font-family: var(--cs-kop); font-weight: 600; font-size: calc(30 * var(--u)); letter-spacing: 0.02em; color: var(--cs-tekst-zacht); }
+.c20-doel-kop { font-family: var(--cs-kop); font-weight: 700; font-size: calc(36 * var(--u)); }
+.c20-doel-kop strong { color: var(--cs-accent); }
+.c20-balk { height: calc(46 * var(--u)); background: var(--cs-kaart); border: calc(3 * var(--u)) solid rgba(255, 255, 255, 0.45); }
+.c20-balk-vulling {
+    background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.28) 0, rgba(255, 255, 255, 0.28) calc(12 * var(--u)), rgba(255, 255, 255, 0) calc(12 * var(--u)), rgba(255, 255, 255, 0) calc(24 * var(--u))),
+        linear-gradient(var(--cs-accent-licht), var(--cs-accent-donker));
+}
+.c20-teller-rechts {
+    padding: calc(34 * var(--u)) calc(40 * var(--u)); border-radius: calc(22 * var(--u)); border: 1px solid var(--cs-kaart-rand);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 55%), var(--cs-kaart);
+    box-shadow: 0 calc(10 * var(--u)) calc(26 * var(--u)) rgba(0, 0, 0, 0.35);
+}
+.c20-teller-rechts h3 { font-family: var(--cs-kop); font-size: calc(44 * var(--u)); letter-spacing: 0.04em; text-transform: uppercase; color: var(--cs-accent); }
+.c20-projecten { font-family: var(--cs-kop); font-weight: 700; font-size: calc(40 * var(--u)); }
+.c20-projecten li { gap: calc(18 * var(--u)); padding: calc(12 * var(--u)) 0; border-bottom-color: var(--cs-kaart-rand); align-items: center; }
+.c20-vink {
+    flex: none; display: inline-flex; align-items: center; justify-content: center; width: calc(46 * var(--u)); height: calc(46 * var(--u));
+    border-radius: 50%; background: var(--cs-accent); color: var(--cs-op-accent); font-size: calc(28 * var(--u));
+}
+
+/* Welk team steunt het meest */
+.c20-team { font-family: var(--cs-kop); }
+.c20-team-balk { background: var(--cs-kaart); border: 1px solid var(--cs-kaart-rand); border-radius: calc(10 * var(--u)); }
+.c20-team-vulling { border-radius: calc(8 * var(--u)); background: linear-gradient(#ffffff, #dfe7fb); }
+.c20-team--eerste .c20-team-vulling { background: linear-gradient(var(--cs-accent-licht), var(--cs-accent-donker)); }
+.c20-team-aantal { color: var(--cs-accent); }
+.c20-teams-onder { font-family: var(--cs-kop); font-weight: 700; color: var(--cs-accent); letter-spacing: 0.02em; }
+
+/* Welkom nieuwe leden: de namen als gele stickers. */
+.c20-nieuw-namen .c20-bordje--goud {
+    background: linear-gradient(165deg, var(--cs-accent-licht), var(--cs-accent) 50%, var(--cs-accent-donker));
+    border: 0.08em solid var(--cs-op-accent); color: var(--cs-op-accent);
+    box-shadow: 0 0 0 0.08em #ffffff, 0 calc(14 * var(--u)) calc(30 * var(--u)) rgba(0, 0, 0, 0.45);
+}
+.c20-nieuw-namen .c20-bordje--goud:nth-child(odd) { transform: rotate(-2deg); }
+.c20-nieuw-namen .c20-bordje--goud:nth-child(even) { transform: rotate(1.5deg); }
+
+/* Leden? Steun de club! blijft rood en dramatisch, nu in de koppenletter. */
+.c20-steun-kop h2 { font-family: var(--cs-kop); letter-spacing: 0.02em; }
+
+/* Ook bij de Club van 20? De vraag groot in wit, zoals de titel van de feestdia. */
+.c20-werving h2 {
+    font-family: var(--cs-kop); font-size: calc(118 * var(--u)); line-height: 0.95; text-transform: uppercase; color: #ffffff;
+    text-shadow: 0 0.035em 0 var(--cs-schaduw), 0 0.07em 0 var(--cs-schaduw), 0 0.105em 0 var(--cs-schaduw), 0 0.16em 0.12em rgba(0, 0, 0, 0.55);
+    transform: skewX(-7deg);
+}
+.c20-werving .c20-werving-groot { font-family: var(--cs-kop); font-size: calc(60 * var(--u)); color: var(--cs-accent); }
+.c20-werving p { font-family: var(--cs-letter); font-weight: 600; }
+.c20-qr-code { border: calc(6 * var(--u)) solid var(--cs-accent); box-shadow: 0 calc(14 * var(--u)) calc(34 * var(--u)) rgba(0, 0, 0, 0.45); }
+.c20-qr span, .c20-qr {
+    font-family: var(--cs-kop); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--cs-accent);
+}
+
+/* ---------- Sponsors ---------- */
+.sponsordia-kop { font-family: var(--cs-kop); color: var(--cs-accent); letter-spacing: 0.04em; }
+.sponsordia-logo--wit { border-radius: calc(18 * var(--u)); box-shadow: 0 0 0 calc(4 * var(--u)) rgba(255, 255, 255, 0.35), 0 calc(16 * var(--u)) calc(44 * var(--u)) rgba(0, 0, 0, 0.45); }
+.sponsordia-naam { font-family: var(--cs-kop); color: var(--cs-op-accent); }
+
+/* ---------- Het clubbadge rechtsonder ---------- */
+.club-badge { background: rgba(6, 16, 52, 0.72); border-color: var(--cs-accent); }
+.club-badge span { font-family: var(--cs-kop); color: var(--cs-accent); letter-spacing: 0.08em; }
+
+/* ---------- Het prijzenscherm (zijn eigen opmaak staat in kiosk_prijzen_scherm.html) ---------- */
+header h1 {
+    font-family: var(--cs-kop); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+    text-shadow: 0 0.04em 0 var(--cs-schaduw), 0 0.08em 0 var(--cs-schaduw), 0 0.12em 0.1em rgba(0, 0, 0, 0.5);
+}
+header .club { font-family: var(--cs-kop); font-weight: 700; letter-spacing: 0.16em; color: var(--cs-accent); }
+#klok { font-family: var(--cs-kop); color: var(--cs-accent); }
+.categorie-blok h2 {
+    display: inline-block; padding: 0.1em 0.6em 0.14em; border: 0; border-radius: 0.14em;
+    font-family: var(--cs-lint-letter); font-weight: 700; letter-spacing: 0.06em; color: var(--cs-lint-tekst);
+    background: linear-gradient(var(--cs-lint-licht), var(--cs-lint) 58%, var(--cs-lint-donker));
+    box-shadow: 0 0.1em 0.25em rgba(0, 0, 0, 0.4); transform: rotate(-1.5deg);
+}
+.prijs-regel .naam { font-family: var(--cs-letter); font-weight: 600; }
+.prijs-regel .bedrag { font-family: var(--cs-kop); font-weight: 700; color: var(--cs-accent); letter-spacing: 0.02em; }
+.prijs-regel .stippel { border-bottom-color: rgba(255, 255, 255, 0.22); }
+.bedrag-uitverkocht { font-family: var(--cs-kop); letter-spacing: 0.06em; }
+.uitgelicht-kaart { font-family: var(--cs-kop); }
+.c20 .sponsordia-titel, .c20 .c20-kop h2, .c20 .c20-teller h2 { color: var(--cs-lint-tekst); }
