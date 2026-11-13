@@ -23,7 +23,12 @@ TEKENINGEN = {
     "pitchers": "Twee pitchers bier die proosten",
     "beker": "Kampioensbeker",
     "bal": "Stuiterende voetbal",
+    "poppetje": "Clubgenoot met een praatwolkje (de laatste regel)",
 }
+# Met deze tekeningen staat de laatste regel van de tekst niet op een sticker maar in een praatwolkje (2.15.0).
+MET_WOLK = {"poppetje"}
+_WOLK = (31, 15.5)  # de ruimte in het wolkje (breedte, hoogte in vw)
+_MAX_WOLK = 5.4
 
 # De breedte van de hoofdletters en tekens in Barlow Condensed Bold, in em (gemeten uit de letter zelf, zie
 # pdf/letters/BarlowCondensed-Bold.ttf). Wat er niet in staat, telt als een gemiddelde letter.
@@ -126,11 +131,11 @@ def _aanloop(regel):
     return voor, regel[gevonden.start():].strip()
 
 
-def delen(titel, regels, met_tekening, label=None):
+def delen(titel, regels, met_tekening, label=None, wolk=False):
     """Wat er op een feestdia staat, met de lettergroottes die passen (zie de uitleg bovenaan).
 
-    regels: de regels van de tekst (de laatste is de knaller); label: de tekst op het lint (of None). Geeft een dict voor
-    _kiosk_sponsor_inhoud.html."""
+    regels: de regels van de tekst (de laatste is de knaller); label: de tekst op het lint (of None); wolk: de knaller in
+    een praatwolkje (zie MET_WOLK) in plaats van op een sticker. Geeft een dict voor _kiosk_sponsor_inhoud.html."""
     vorm = "poster" if met_tekening else "midden"
     ruimte = _RUIMTE[vorm]
     regels = [r for r in regels if r]
@@ -148,7 +153,10 @@ def delen(titel, regels, met_tekening, label=None):
     )
 
     aanloop, knal, knal_vw = None, [], 0.0
-    if knaller:
+    if knaller and wolk:
+        knal_regels, knal_vw = _passend(knaller, _WOLK[0], _WOLK[1], 3, _maat, lambda r: 1.12, lambda aantal: _MAX_WOLK)
+        knal = [[(r, False)] for r in knal_regels]
+    elif knaller:
         aanloop, rest = _aanloop(knaller)
         knal_regels, knal_vw = _passend(
             rest, ruimte["knal"][0], ruimte["knal"][1], 2, _knal_maat,
@@ -158,6 +166,7 @@ def delen(titel, regels, met_tekening, label=None):
         knal = [delen_van(r) for r in knal_regels]
     return {
         "vorm": vorm,
+        "wolk": bool(wolk and knal),
         "titel_regels": titel_regels,
         "titel_vw": titel_vw,
         "regels": onder,

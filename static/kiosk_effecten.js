@@ -222,6 +222,9 @@
             confetti(laag);
             prijs(laag, o);
         },
+        sneeuw: function (laag) {
+            veel(laag, 46, 'fx-vlok', [0, 100, 0, 0], [8, 14], [0.4, 1.4], zijwaarts);
+        },
         feest: function (laag) {
             snippers(laag, 34);
             vuurwerk(laag, [[13, 32], [87, 27], [62, 7]]);

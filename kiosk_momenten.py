@@ -41,6 +41,7 @@ EFFECTEN = {
     "zombie": ("Zombie: groen slijm en confetti", "#9dff2e", (55, 56)),
     "programma": ("Programma: vleermuizen, kaarslicht en het tijdslot van nu licht op", "#ff9326", None),
     "feest": ("Feest: confetti, vuurwerk en glitters in blauw-geel", kiosk_feest.GEEL, None),
+    "sneeuw": ("Sneeuw: vlokken die rustig naar beneden dwarrelen", "#dff1ff", None),
 }
 # Dia's met een eigen opmaak voor de tekst (een griezel- of feestdia): daar klopt de prijs zelf, dus geen gloed op een
 # aangetikte plek, en ze kunnen een tekening hebben.

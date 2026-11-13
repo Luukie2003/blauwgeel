@@ -115,7 +115,7 @@
        en de laatste regel van de tekst is de knaller op een gele sticker, met een getal extra groot. Met een tekening
        staat die linksonder en de sticker rechts. Confetti en vuurwerk komen met het effect feest uit kiosk_effecten.js. #}
     {% set fs = slide.fs %}
-    <div class="fs fs--{{ fs.vorm }}{{ ' fs--zonder-knaller' if not fs.knal else '' }}{{ ' fs--zonder-label' if not slide.label else '' }}">
+    <div class="fs fs--{{ fs.vorm }}{{ ' fs--wolk' if fs.wolk else '' }}{{ ' fs--zonder-knaller' if not fs.knal else '' }}{{ ' fs--zonder-label' if not slide.label else '' }}">
         <div class="fs-stralen"><svg viewBox="-100 -100 200 200" aria-hidden="true" focusable="false"><path d="M0 0L150 0L148 26ZM0 0L141 51L130 75ZM0 0L115 96L96 115ZM0 0L75 130L51 141ZM0 0L26 148L0 150ZM0 0L-26 148L-51 141ZM0 0L-75 130L-96 115ZM0 0L-115 96L-130 75ZM0 0L-141 51L-148 26ZM0 0L-150 0L-148 -26ZM0 0L-141 -51L-130 -75ZM0 0L-115 -96L-96 -115ZM0 0L-75 -130L-51 -141ZM0 0L-26 -148L0 -150ZM0 0L26 -148L51 -141ZM0 0L75 -130L96 -115ZM0 0L115 -96L130 -75ZM0 0L141 -51L148 -26Z"/></svg></div>
         <div class="fs-licht"></div>
         <svg class="fs-slinger" viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M-40 26Q470 236 980 44M940 44Q1450 236 1960 26"/></svg>
@@ -125,7 +125,10 @@
             {% if slide.label %}<div class="fs-lint" style="font-size: {{ fs.label_vw }}vw;"><span>{{ slide.label }}</span></div>{% endif %}
             {% if fs.titel_regels %}<h2 class="fs-titel" style="font-size: {{ fs.titel_vw }}vw;">{% for regel in fs.titel_regels %}<span>{{ regel }}</span>{% endfor %}</h2>{% endif %}
             {% for regel, vw in fs.regels %}<p class="fs-regel" style="font-size: {{ vw }}vw;">{{ regel }}</p>{% endfor %}
-            {% if fs.knal %}
+            {% if fs.wolk %}
+            {# Een praatwolkje (2.15.0) bij het poppetje: de laatste regel van de tekst. #}
+            <div class="fs-wolk"><p style="font-size: {{ fs.knal_vw }}vw;">{% for regel in fs.knal %}<span>{{ regel[0][0] }}</span>{% endfor %}</p></div>
+            {% elif fs.knal %}
             <div class="fs-knaller">
                 <div class="fs-sticker">
                     {% if fs.aanloop %}<p class="fs-aanloop" style="font-size: {{ fs.aanloop_vw }}vw;">{{ fs.aanloop }}</p>{% endif %}

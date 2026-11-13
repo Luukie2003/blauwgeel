@@ -88,3 +88,15 @@ def test_een_feestdia_opslaan_en_het_voorbeeld(ingelogde_client, db):
     assert "sjabloon-feest" in html and "fs-tekening--beker" in html and "<span>Kampioen!</span>" in html
     # Een onbekend sjabloon in het adres: gewoon de griezeldia.
     assert "sjabloon-griezel" in ingelogde_client.get("/kiosk/griezel-voorbeeld?sjabloon=onzin&titel=X").get_data(as_text=True)
+
+
+def test_het_poppetje_met_een_praatwolkje(ingelogde_client, client, db):
+    fs = kiosk_feest.delen("Koud in de kantine?", ["Vraag het aan Koen", "Regelen we binnenkort!"], True, "Brrr!", wolk=True)
+    assert fs["wolk"] and fs["aanloop"] is None and fs["knal"] == [[("Regelen we", False)], [("binnenkort!", False)]]
+    dia = _dia(db, "Koud in de kantine?", sjabloon="feest", effect="sneeuw", tekst="Vraag het aan Koen\nRegelen we binnenkort!")
+    db.execute("UPDATE kiosk_sponsoren SET effect_opties = ? WHERE id = ?", (json.dumps({"tekening": "poppetje"}), dia))
+    db.commit()
+    html = client.get("/kiosk/scherm").get_data(as_text=True)
+    assert "fs--wolk" in html and '<div class="fs-wolk">' in html and "fs-tekening--poppetje" in html
+    assert 'data-effect="sneeuw"' in html and "fs-sticker" not in html
+    assert "sneeuw" in kiosk_momenten.EFFECTEN and "poppetje" in kiosk_momenten.tekeningen_voor("feest")
