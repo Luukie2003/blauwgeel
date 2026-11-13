@@ -23,6 +23,22 @@ AANTAL_TOP_BAR = 5
 AANTAL_TOP_KEUKEN = 3
 MAX_TEGELS_TV = 6
 
+# Wat er op de tv kan staan (2.14.0): elk getal, de drukste dag en de dia met de toppers. Bij Kantine-tv > Diashow zet
+# je ze apart aan of uit; bewaard is wat UIT staat (kiosk_scherm_instellingen.seizoen_verborgen), zodat iets nieuws
+# vanzelf meedoet.
+ONDERDELEN = [
+    ("bar", "Keer iets aan de bar"),
+    ("getapt", "Glazen getapt"),
+    ("keuken", "Kroketten (of iets uit de keuken)"),
+    ("thuis", "Thuiswedstrijden"),
+    ("tellingen", "Tellingen"),
+    ("frituurvet", "Keer vers frituurvet"),
+    ("stemmen", "Stemmen uitgebracht"),
+    ("drukste", "De drukste dag"),
+    ("toppers", "De dia met de toppers van de bar en de keuken"),
+]
+_SLEUTELS = {sleutel for sleutel, _ in ONDERDELEN}
+
 
 def _getal(n):
     """1234 -> '1.234'."""
@@ -35,9 +51,33 @@ def _zonder_fust(naam):
     return kaal or naam
 
 
-def _tegel(getal, enkelvoud, meervoud=None, sub=None):
-    return {"getal": getal, "tekst": _getal(getal), "label": enkelvoud if getal == 1 else (meervoud or enkelvoud),
-            "sub": sub}
+def _tegel(sleutel, getal, enkelvoud, meervoud=None, sub=None):
+    return {"sleutel": sleutel, "getal": getal, "tekst": _getal(getal),
+            "label": enkelvoud if getal == 1 else (meervoud or enkelvoud), "sub": sub}
+
+
+def _sleutel_van(tegel):
+    """De sleutel van een tegel; een uitkomst die nog van voor 2.14.0 bewaard is, heeft er geen: dan uit het label."""
+    if tegel.get("sleutel"):
+        return tegel["sleutel"]
+    label = tegel.get("label", "")
+    for stuk, sleutel in (("bar", "bar"), ("getapt", "getapt"), ("kroket", "keuken"), ("keuken", "keuken"),
+                          ("thuiswedstrijd", "thuis"), ("telling", "tellingen"), ("frituurvet", "frituurvet"),
+                          ("stem", "stemmen")):
+        if stuk in label:
+            return sleutel
+    return None
+
+
+def verborgen_uit(tekst):
+    """'drukste,stemmen' (zoals bewaard) -> {'drukste', 'stemmen'}; onbekende stukken vallen weg."""
+    return {s.strip() for s in str(tekst or "").split(",") if s.strip() in _SLEUTELS}
+
+
+def verborgen_tekst(getoond):
+    """De aangevinkte onderdelen uit het formulier -> wat er uit staat, zoals het bewaard wordt (of None)."""
+    uit = [sleutel for sleutel, _ in ONDERDELEN if sleutel not in set(getoond)]
+    return ",".join(uit) or None
 
 
 def bereken(db, nu=None):
@@ -108,25 +148,25 @@ def bereken(db, nu=None):
     cijfers = []
     totaal_bar = sum(b["aantal"] for b in bar)
     if totaal_bar:
-        cijfers.append(_tegel(totaal_bar, "keer iets aan de bar", sub="glazen, flesjes en snacks samen"))
+        cijfers.append(_tegel("bar", totaal_bar, "keer iets aan de bar", sub="glazen, flesjes en snacks samen"))
     if round(glazen):
         fusten_rond = round(fusten)
         sub = f"uit {_getal(fusten_rond)} {'fust' if fusten_rond == 1 else 'fusten'}" if fusten_rond else None
-        cijfers.append(_tegel(round(glazen), "glas getapt", "glazen getapt", sub=sub))
+        cijfers.append(_tegel("getapt", round(glazen), "glas getapt", "glazen getapt", sub=sub))
     if kroketten:
-        cijfers.append(_tegel(kroketten, "kroket", "kroketten", sub="uit de keuken"))
+        cijfers.append(_tegel("keuken", kroketten, "kroket", "kroketten", sub="uit de keuken"))
     elif keuken:
-        cijfers.append(_tegel(sum(k["aantal"] for k in keuken), "keer iets uit de keuken",
+        cijfers.append(_tegel("keuken", sum(k["aantal"] for k in keuken), "keer iets uit de keuken",
                               sub=f"het meest: {keuken[0]['naam']}"))
     if thuis:
-        cijfers.append(_tegel(thuis, "thuiswedstrijd", "thuiswedstrijden"))
+        cijfers.append(_tegel("thuis", thuis, "thuiswedstrijd", "thuiswedstrijden"))
     if tellingen:
         sub = f"door {tellers} {'vrijwilliger' if tellers == 1 else 'vrijwilligers'}" if tellers else None
-        cijfers.append(_tegel(tellingen, "telling", "tellingen", sub=sub))
+        cijfers.append(_tegel("tellingen", tellingen, "telling", "tellingen", sub=sub))
     if frituurvet:
-        cijfers.append(_tegel(frituurvet, "keer vers frituurvet"))
+        cijfers.append(_tegel("frituurvet", frituurvet, "keer vers frituurvet"))
     if stemmen:
-        cijfers.append(_tegel(stemmen, "stem uitgebracht", "stemmen uitgebracht"))
+        cijfers.append(_tegel("stemmen", stemmen, "stem uitgebracht", "stemmen uitgebracht"))
 
     drukste = None
     if per_dag:
@@ -193,13 +233,17 @@ def lees(db, nu=None):
     return {**gegevens, "berekend_op": rij["berekend_op"]}
 
 
-def tv_slides(cijfers, duur):
-    """De dia's voor de Kantine-tv: de getallen met de drukste dag, en de toppers van de bar en de keuken."""
+def tv_slides(cijfers, duur, verborgen=()):
+    """De dia's voor de Kantine-tv: de getallen met de drukste dag, en de toppers van de bar en de keuken. verborgen: de
+    onderdelen die uit staan (zie ONDERDELEN)."""
+    verborgen = set(verborgen)
+    tegels = [t for t in cijfers["cijfers"] if _sleutel_van(t) not in verborgen]
+    drukste = None if "drukste" in verborgen else cijfers["drukste_dag"]
     slides = []
-    if cijfers["cijfers"] or cijfers["drukste_dag"]:
+    if tegels or drukste:
         slides.append({"type": "seizoen_cijfers", "duur": duur, "kort": cijfers["kort"],
-                       "cijfers": cijfers["cijfers"][:MAX_TEGELS_TV], "drukste_dag": cijfers["drukste_dag"]})
-    if cijfers["top_bar"]:
+                       "cijfers": tegels[:MAX_TEGELS_TV], "drukste_dag": drukste})
+    if cijfers["top_bar"] and "toppers" not in verborgen:
         slides.append({"type": "seizoen_top", "duur": duur, "kort": cijfers["kort"],
                        "top_bar": cijfers["top_bar"], "top_keuken": cijfers["top_keuken"]})
     return slides

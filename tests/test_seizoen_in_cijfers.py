@@ -233,3 +233,30 @@ def test_aanzetten_bij_de_diashow(ingelogde_client, db):
 def test_het_voorverwarmen_werkt_de_cijfers_bij(ingelogde_client, db, vandaag_iets_verkocht):
     assert ingelogde_client.get("/voorspelling/opwarmen").status_code == 204
     assert seizoen_in_cijfers.lees(db)["top_bar"][0]["naam"] == "Pils"
+
+
+def test_zelf_kiezen_wat_er_op_de_tv_staat(ingelogde_client, client, db, vandaag_iets_verkocht):
+    seizoen_in_cijfers.ververs(db)
+    _zet(db, toon_seizoen=1)
+    assert "glazen getapt" in client.get("/kiosk/scherm").data.decode()
+    pagina = ingelogde_client.get("/kiosk/diashow").data.decode()
+    assert 'name="seizoen_tonen" value="getapt" checked' in pagina
+
+    # Alles behalve de getapte glazen en de toppers aan: die twee staan niet meer op de tv.
+    getoond = [s for s, _ in seizoen_in_cijfers.ONDERDELEN if s not in ("getapt", "toppers")]
+    ingelogde_client.post("/kiosk/scherm/instellingen", data={
+        "csrf_token": stel_csrf_token_in(ingelogde_client), "toon_seizoen": "on", "seizoen_tonen": getoond})
+    assert db.execute("SELECT seizoen_verborgen FROM kiosk_scherm_instellingen").fetchone()[0] == "getapt,toppers"
+    tekst = client.get("/kiosk/scherm").data.decode()
+    assert "slide-seizoen_cijfers" in tekst and "glazen getapt" not in tekst and "slide-seizoen_top" not in tekst
+    assert 'name="seizoen_tonen" value="getapt" >' in ingelogde_client.get("/kiosk/diashow").data.decode()
+
+
+def test_een_oude_bewaarde_uitkomst_zonder_sleutels():
+    oud = {"kort": "26/27", "drukste_dag": {"tekst": "zaterdag"}, "top_bar": [], "top_keuken": [],
+           "cijfers": [{"getal": 5, "tekst": "5", "label": "kroketten", "sub": None},
+                       {"getal": 3, "tekst": "3", "label": "thuiswedstrijden", "sub": None}]}
+    dia = seizoen_in_cijfers.tv_slides(oud, 10, {"keuken", "drukste"})[0]
+    assert [c["label"] for c in dia["cijfers"]] == ["thuiswedstrijden"] and dia["drukste_dag"] is None
+    assert seizoen_in_cijfers.verborgen_uit("drukste, onzin ,stemmen") == {"drukste", "stemmen"}
+    assert seizoen_in_cijfers.verborgen_tekst([s for s, _ in seizoen_in_cijfers.ONDERDELEN]) is None

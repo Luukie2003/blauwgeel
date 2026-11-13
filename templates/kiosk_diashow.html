@@ -45,6 +45,17 @@
                                 <input type="number" name="{{ o.sleutel }}_duur_seconden" min="3" value="{{ instellingen[o.sleutel ~ '_duur_seconden'] }}">
                             </label>
                         </div>
+                        {% if o.sleutel == 'seizoen' %}
+                        {# Welke getallen erop staan (2.14.0): wat je uitvinkt, komt niet op de tv. #}
+                        <fieldset class="kt-onderdeel-velden" style="border:0; padding:0; margin:0.4rem 0 0">
+                            <legend class="kt-uitleg" style="padding:0">Wat er op de dia's staat</legend>
+                            {% for sleutel, naam in seizoen_onderdelen %}
+                            <label style="display:inline-flex; align-items:center; gap:0.35rem; font-weight:500">
+                                <input type="checkbox" name="seizoen_tonen" value="{{ sleutel }}" {{ 'checked' if sleutel not in seizoen_verborgen }}> {{ naam }}
+                            </label>
+                            {% endfor %}
+                        </fieldset>
+                        {% endif %}
                         {% elif o.sleutel == 'club_van_20' %}
                         <div class="kt-onderdeel-velden"><a href="{{ url_for('club_van_20_instellingen') }}" class="kt-knop kt-knop--klein">Scherm en werving instellen</a></div>
                         {% endif %}

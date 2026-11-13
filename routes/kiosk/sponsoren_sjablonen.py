@@ -7,6 +7,7 @@ from urllib.parse import urlsplit
 from flask import flash, redirect, render_template, request, url_for
 
 import kiosk_momenten
+import seizoen_in_cijfers
 from club_van_20 import bereken_club_van_20_status
 from database import get_db
 from helpers import (
@@ -316,6 +317,8 @@ def register_routes(app):
         )
         return render_template(
             "kiosk_diashow.html",
+            seizoen_onderdelen=seizoen_in_cijfers.ONDERDELEN,
+            seizoen_verborgen=seizoen_in_cijfers.verborgen_uit(_scherm_instellingen(db)["seizoen_verborgen"]),
             club_van_20=bereken_club_van_20_status(db),
             sjablonen_custom=sjablonen_custom,
             aantal_elementen_per_sjabloon={s["id"]: len(json.loads(s["elementen"])) for s in sjablonen_custom},

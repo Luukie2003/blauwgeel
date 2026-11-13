@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.13.0"
+HUIDIGE_VERSIE = "2.14.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.14.0",
+        "datum": "13 november 2026",
+        "punten": [
+            "Seizoen in cijfers op de tv: bij Kantine-tv > Diashow vink je zelf aan welke getallen op de dia staan (zoals de getapte glazen, de kroketten of de stemmen), en of de drukste dag en de dia met de toppers van de bar en de keuken meedoen.",
+        ],
+    },
     {
         "versie": "2.13.0",
         "datum": "13 november 2026",
@@ -1510,7 +1517,7 @@ MODULES = [
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.7.0", "sinds": "1.6.0", "laatst": "1.75.0",
      "inhoud": "Keukenvoorraad met een eigen, blinde telling (ook als looplijst met dozen scannen, en een begintelling), inboeken per verpakking (per merk, ook door te scannen), weggooien en bijstellen, prijzen, de boodschappenlijst bij een tekort, en de herinnering voor het frituurvet"},
-    {"naam": "Kantine-tv", "versie": "1.31.0", "sinds": "1.10.1", "laatst": "2.13.0",
+    {"naam": "Kantine-tv", "versie": "1.32.0", "sinds": "1.10.1", "laatst": "2.14.0",
      "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's, effecten, griezelposters met tekeningen en feestdia's in de clubkleuren), de clubstijl, het Kerst-thema, sponsoren, standen, Man of the Match, seizoen in cijfers, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, en het Halloween-thema"},
     {"naam": "Tablet-app", "versie": "1.1.0", "sinds": "", "laatst": "2.11.0",
      "inhoud": "Kantine Beheer op de tablet (3.2): de schermen van de handterminal-app zonder de looplijsten, met geld afdragen en storten, de verkoopdagen, het hele product bewerken en de rapporten (zoeken, boeken, voorraad en producten, factuur inboeken, bestellijst, boodschappen, prognose, tellingen bekijken, kassa en kluis, keuken, prikbord, agenda, Club van 20-aanmeldingen, kantine-tv), en de eigen tv-schermen: prijzenscherm, acties, bardiensten, uitgelicht en de wedstrijddag"},

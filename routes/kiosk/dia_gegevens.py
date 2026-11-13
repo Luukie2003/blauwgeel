@@ -331,7 +331,8 @@ def _bouw_slides(db, nu=None):
         # Alleen lezen wat er bewaard is: het rekenen gebeurt bij het voorverwarmen en op de pagina (zie
         # seizoen_in_cijfers.ververs), nooit hier, want het scherm vraagt elke minuut om de dia's.
         cijfers = seizoen_in_cijfers.lees(db)
-        slides = seizoen_in_cijfers.tv_slides(cijfers, instellingen["seizoen_duur_seconden"]) if cijfers else []
+        verborgen = seizoen_in_cijfers.verborgen_uit(instellingen["seizoen_verborgen"])
+        slides = seizoen_in_cijfers.tv_slides(cijfers, instellingen["seizoen_duur_seconden"], verborgen) if cijfers else []
         if slides:
             blokken.append((instellingen["seizoen_volgorde"], _alleen_overdag(slides, instellingen, "seizoen", overdag)))
 

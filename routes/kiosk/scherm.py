@@ -6,6 +6,7 @@ from flask import flash, jsonify, redirect, render_template, request, url_for
 
 import kiosk_timers
 import kiosk_webpagina
+import seizoen_in_cijfers
 from club_van_20 import welkom_wachtrij
 from database import get_db
 from helpers import (
@@ -63,7 +64,7 @@ def register_routes(app):
                        wedstrijden_duur_seconden = ?,
                        toon_standen = ?, standen_volgorde = ?, standen_duur_seconden = ?,
                        toon_motm = ?, motm_volgorde = ?, motm_duur_seconden = ?, motm_titel = ?,
-                       toon_seizoen = ?, seizoen_volgorde = ?, seizoen_duur_seconden = ?
+                       toon_seizoen = ?, seizoen_volgorde = ?, seizoen_duur_seconden = ?, seizoen_verborgen = ?
                    WHERE id = 1""",
                 (
                     1 if request.form.get("toon_sponsoren") else 0,
@@ -83,6 +84,7 @@ def register_routes(app):
                     1 if request.form.get("toon_seizoen") else 0,
                     _getal("seizoen_volgorde", 6),
                     max(3, _getal("seizoen_duur_seconden", 15)),
+                    seizoen_in_cijfers.verborgen_tekst(request.form.getlist("seizoen_tonen")),
                 ),
             )
             db.commit()
