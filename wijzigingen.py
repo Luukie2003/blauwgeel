@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.15.0"
+HUIDIGE_VERSIE = "2.16.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.16.0",
+        "datum": "18 november 2026",
+        "punten": [
+            "Nieuw rapport Inkoop en verkoop (beheerders, bij Rapporten): wat er in de gekozen periode is ingekocht naast wat ervan verkocht is, per maand, per categorie en per product, met de brutowinst en de omzet per euro inkoop. Je ziet ook welke voorraad nog minstens 6 weken meegaat (ook na de bestellingen die onderweg zijn), welke leveringen anders binnenkwamen dan besteld, en waar je bij het tellen vaak meer vindt dan verwacht.",
+        ],
+    },
     {
         "versie": "2.15.0",
         "datum": "13 november 2026",
@@ -1533,8 +1540,8 @@ MODULES = [
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.1", "sinds": "", "laatst": "2.9.0",
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
-    {"naam": "Rapporten", "versie": "1.16.0", "sinds": "0.1.0", "laatst": "2.11.0",
-     "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, seizoen in cijfers, compacte uitdraai, omzettrend"},
+    {"naam": "Rapporten", "versie": "1.17.0", "sinds": "0.1.0", "laatst": "2.16.0",
+     "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, seizoen in cijfers, inkoop en verkoop, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.6.3", "sinds": "1.5.0", "laatst": "2.4.0",
      "inhoud": "De weergave voor de handterminal op de site: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft (staat sinds 2.4.0 tijdelijk uit; op de Zebra werkt de app)"},
     {"naam": "Handterminal-app", "versie": "0.26.0", "sinds": "1.53.0", "laatst": "2.3.0",

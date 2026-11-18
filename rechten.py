@@ -202,6 +202,8 @@ BEHEERDER_ENDPOINTS = {
     "prijs_gepland_verwijderen",
     # Wat elk product oplevert (met de inkoopprijzen) en wat er zonder te verkopen uit de voorraad verdwijnt.
     "marge_rapport",
+    # Inkoop tegen verkoop: met de inkoopprijzen en wat leveringen afwijken van de bestellingen.
+    "inkoop_verkoop_rapport",
     # De rapporten in de app (routes/app_api_rapporten.py), net als hun pagina op de site.
     "api_app_rapport_marge",
     "api_app_rapport_derving",

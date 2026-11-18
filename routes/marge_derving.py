@@ -1,7 +1,9 @@
-"""Rapporten: het marge-overzicht en de derving (wat er zonder te verkopen uit de voorraad verdwijnt)."""
+"""Rapporten: het marge-overzicht, inkoop en verkoop, en de derving (wat er zonder te verkopen uit de voorraad
+verdwijnt)."""
 
 from flask import flash, redirect, render_template, request, url_for
 
+import inkoop_verkoop
 from database import get_db
 from derving import DERVING_REDENEN, bereken_derving
 from helpers.tijd import vandaag_amsterdam
@@ -48,6 +50,19 @@ def register_routes(app):
         except ValueError:
             flash("Vul de doelmarge in als heel getal, bijvoorbeeld 30.", "error")
         return redirect(url_for("marge_rapport", weken=request.form.get("weken") or None))
+
+    @app.route("/rapporten/inkoop-verkoop")
+    def inkoop_verkoop_rapport():
+        db = get_db()
+        weken = inkoop_verkoop.kies_weken(request.args.get("weken"))
+        vandaag = vandaag_amsterdam()
+        return render_template(
+            "inkoop_verkoop.html",
+            weken=weken,
+            weken_keuzes=inkoop_verkoop.WEKEN_KEUZES,
+            rapport=inkoop_verkoop.bereken_inkoop_verkoop(db, weken, vandaag),
+            derving=bereken_derving(db, weken, vandaag)["totaal"],
+        )
 
     @app.route("/rapporten/derving")
     def derving_rapport():

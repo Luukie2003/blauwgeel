@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block titel %}Inkoop en verkoop{% endblock %}
+{% macro euro(x) %}{% set heel = (x|abs|round(2) + 0.5)|int %}{% if x < 0 and heel > 0 %}&minus;{% endif %}&euro; {{ '{:,.0f}'.format(heel)|replace(',', '.') }}{% endmacro %}
+{% macro stuks(n) %}{{ '{:,}'.format(n)|replace(',', '.') }}{% endmacro %}
+{% macro euro2(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% macro pct(x) %}{% if x is none %}&mdash;{% else %}{{ '%.0f'|format(x) }}%{% endif %}{% endmacro %}
+{% macro getal(x, d=1) %}{% if x is none %}&mdash;{% else %}{{ ('%.' ~ d ~ 'f')|format(x)|replace('.', ',') }}{% endif %}{% endmacro %}
+{% macro dm(datum) %}{{ datum[8:10]|int }}-{{ datum[5:7]|int }}{% endmacro %}
+{% block inhoud %}
+<style>
+    .iv-r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .iv-balken { min-width: 140px; width: 34%; }
+    .iv-balk { display: block; height: 7px; border-radius: 0 3px 3px 0; margin: 2px 0; min-width: 2px; }
+    .iv-balk-in { background: var(--blauw); }
+    .iv-balk-uit { background: var(--geel-donker); }
+    .iv-legenda { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; font-size: 0.88rem; color: var(--tekst-zacht); margin: -0.3rem 0 0.7rem; }
+    .iv-legenda i { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 0.35rem; vertical-align: -1px; }
+    .iv-cat { display: block; font-size: 0.82rem; color: var(--tekst-zacht); font-weight: 400; }
+    .iv-meer { color: var(--groen); font-weight: 600; white-space: nowrap; }
+    .iv-minder { color: var(--rood); font-weight: 600; white-space: nowrap; }
+    .iv-zin { margin: 0 0 1.4rem; max-width: 70ch; }
+</style>
+
+<div class="actiebalk">
+    <p class="subtitel" style="margin:0">
+        Wat er is ingekocht, wat ervan verkocht is en wat het opleverde, welke voorraad blijft liggen en of de leveringen
+        klopten met de bestellingen. Alles tegen de huidige inkoopprijs; de verkoop komt uit de tellingen.
+    </p>
+    <form method="get" style="margin:0; display:flex; gap:0.4rem; align-items:center">
+        <label for="weken" style="margin:0; font-weight:400">Periode</label>
+        <select id="weken" name="weken" onchange="this.form.submit()">
+            {% for w in weken_keuzes %}<option value="{{ w }}" {{ 'selected' if w == weken }}>Laatste {{ w }} weken</option>{% endfor %}
+        </select>
+    </form>
+</div>
+
+{% set t = rapport.totaal %}
+<div class="statgrid">
+    <div class="stat"><div class="getal">{{ euro(t.inkoop) }}</div><div class="label">Ingekocht sinds {{ dm(rapport.vanaf) }} ({{ stuks(t.inkoop_stuks) }} stuks)</div></div>
+    <div class="stat"><div class="getal">{{ euro(t.omzet) }}</div><div class="label">Omzet volgens de tellingen ({{ stuks(t.verkocht) }} stuks)</div></div>
+    <div class="stat"><div class="getal">{{ euro(t.winst) }}</div><div class="label">Brutowinst, {{ pct(t.marge_pct) }} marge</div></div>
+    <div class="stat"><div class="getal">{{ euro(t.voorraad) }}</div><div class="label">Voorraad nu, tegen inkoopprijs</div></div>
+</div>
+
+{% if t.omzet_per_euro %}
+<p class="iv-zin">
+    Van elke euro inkoop kwam {{ euro2(t.omzet_per_euro) }} omzet terug.
+    {% if t.groei >= 0 %}Er is voor {{ euro(t.groei) }} meer ingekocht dan er verkocht is (tegen inkoopprijs): zoveel is de voorraad gegroeid.
+    {% else %}Er is voor {{ euro(-t.groei) }} meer verkocht dan er ingekocht is (tegen inkoopprijs): zoveel is de voorraad gekrompen.{% endif %}
+</p>
+{% endif %}
+
+<div class="kaart">
+    <h2>Per maand</h2>
+    {% if rapport.per_maand %}
+    {% set hoogste = rapport.per_maand|map(attribute='inkoop')|list + rapport.per_maand|map(attribute='verkocht')|list %}
+    {% set hoogste = [hoogste|max, 1]|max %}
+    <div class="iv-legenda"><span><i style="background:var(--blauw)"></i>Ingekocht</span><span><i style="background:var(--geel-donker)"></i>Verkocht, tegen inkoopprijs</span></div>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Maand</th><th></th><th class="iv-r">Ingekocht</th><th class="iv-r">Verkocht (inkoop)</th><th class="iv-r">Omzet</th><th class="iv-r">Voorraad</th></tr></thead>
+            <tbody>
+                {% for m in rapport.per_maand %}
+                <tr>
+                    <td>{{ m.label }}</td>
+                    <td class="iv-balken" aria-hidden="true">
+                        <span class="iv-balk iv-balk-in" style="width:{{ [m.inkoop, 0]|max / hoogste * 100 }}%"></span>
+                        <span class="iv-balk iv-balk-uit" style="width:{{ [m.verkocht, 0]|max / hoogste * 100 }}%"></span>
+                    </td>
+                    <td class="iv-r">{{ euro(m.inkoop) }}</td>
+                    <td class="iv-r">{{ euro(m.verkocht) }}</td>
+                    <td class="iv-r">{{ euro(m.omzet) }}</td>
+                    <td class="iv-r">{% if m.verschil >= 0 %}+{% endif %}{{ euro(m.verschil) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="tekst-zacht" style="margin:0.6rem 0 0">De eerste en de laatste maand tellen alleen het deel dat in de periode valt. De verkoop staat in de maand van de telling.</p>
+    {% else %}
+    <p class="leeg">In deze periode is er niets ingekocht of geteld.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Per categorie</h2>
+    {% if rapport.categorieen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Categorie</th><th class="iv-r">Ingekocht</th><th class="iv-r">Omzet</th><th class="iv-r">Brutowinst</th><th class="iv-r">Marge</th><th class="iv-r">Voorraad nu</th></tr></thead>
+            <tbody>
+                {% for c in rapport.categorieen %}
+                <tr>
+                    <td>{{ c.naam }}</td>
+                    <td class="iv-r">{{ euro(c.inkoop) }}</td>
+                    <td class="iv-r">{{ euro(c.omzet) }}</td>
+                    <td class="iv-r">{% if c.omzet_met_inkoop %}{{ euro(c.winst) }}{% else %}&mdash;{% endif %}</td>
+                    <td class="iv-r">{{ pct(c.marge_pct) }}</td>
+                    <td class="iv-r">{{ euro(c.voorraad) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="tekst-zacht" style="margin:0.6rem 0 0">Brutowinst is de omzet min de inkoopprijs van wat verkocht is. Een product zonder inkoopprijs telt niet mee in de marge (zie <a href="{{ url_for('marge_rapport', weken=weken) }}">Marge</a>).</p>
+    {% else %}
+    <p class="leeg">Nog niets ingekocht of verkocht in deze periode.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Voorraad die blijft liggen</h2>
+    <p class="tekst-zacht" style="margin-top:-0.4rem">
+        Producten waarvan de voorraad bij de verkoop van deze periode nog minstens {{ rapport.lang_weken }} weken meegaat.
+        Wat helemaal niet verkocht wordt{% if rapport.niet_verkocht %} ({{ rapport.niet_verkocht }} {{ 'product' if rapport.niet_verkocht == 1 else 'producten' }}){% endif %}, staat bij
+        <a href="{{ url_for('niet_lopers_rapport') }}">Niet-lopers</a>.
+    </p>
+    {% if not rapport.verkoopweken %}
+    <p class="leeg">Er is in deze periode nog geen week aan tellingen, dus nog niets te zeggen over hoe snel iets verkoopt.</p>
+    {% elif rapport.lang_liggen %}
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th class="iv-r">Voorraad</th><th class="iv-r">Verkoop per week</th><th class="iv-r">Weken voorraad</th><th class="iv-r">Waarde</th></tr></thead>
+            <tbody>
+                {% for r in rapport.lang_liggen %}
+                <tr>
+                    <td>{{ r.naam }}<span class="iv-cat">{{ r.categorie }}</span></td>
+                    <td class="iv-r">{{ r.voorraad }} {{ r.eenheid }}</td>
+                    <td class="iv-r">{{ getal(r.per_week) }}</td>
+                    <td class="iv-r">{{ getal(r.weken_voorraad, 0) }}</td>
+                    <td class="iv-r">{{ euro2(r.voorraad_waarde) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Niets: alles wat op voorraad ligt, is binnen {{ rapport.lang_weken }} weken op.</p>
+    {% endif %}
+
+    {% if rapport.na_levering %}
+    <h3 style="margin-top:1.1rem">Na de openstaande bestellingen</h3>
+    <p class="tekst-zacht" style="margin-top:0">Wat er nu besteld is maar nog niet binnen, maakt deze voorraden ruim. Pas de bestelling aan als dat nog kan.</p>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th class="iv-r">Voorraad</th><th class="iv-r">Onderweg</th><th class="iv-r">Verkoop per week</th><th class="iv-r">Weken na levering</th></tr></thead>
+            <tbody>
+                {% for r in rapport.na_levering %}
+                <tr>
+                    <td>{{ r.naam }}</td>
+                    <td class="iv-r">{{ r.voorraad }}</td>
+                    <td class="iv-r">+{{ r.onderweg }}</td>
+                    <td class="iv-r">{{ getal(r.per_week) }}</td>
+                    <td class="iv-r">{{ getal(r.weken_na_levering, 0) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+{% set l = rapport.leveringen %}
+<div class="kaart">
+    <h2>Besteld tegen geleverd</h2>
+    {% if l.bestellingen %}
+    <p style="margin-top:-0.3rem">
+        Van de {{ l.regels }} bestelregels {{ 'kwam' if l.regels_goed == 1 else 'kwamen' }} er {{ l.regels_goed }} binnen zoals besteld
+        ({{ pct(l.regels_goed / l.regels * 100 if l.regels else none) }}). Besteld voor {{ euro(l.besteld) }}, geleverd voor {{ euro(l.geleverd) }}.
+        Kijk bij een groot verschil na of de factuur klopt met wat er binnenkwam.
+    </p>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Bestelling</th><th>Binnen</th><th class="iv-r">Regels goed</th><th class="iv-r">Besteld</th><th class="iv-r">Geleverd</th><th>Anders geleverd</th></tr></thead>
+            <tbody>
+                {% for b in l.bestellingen %}
+                <tr>
+                    <td>#{{ b.id }}{% if b.referentie %}<span class="iv-cat">{{ b.referentie }}</span>{% endif %}</td>
+                    <td>{{ dm(b.ontvangen_op) }}</td>
+                    <td class="iv-r">{{ b.regels_goed }}/{{ b.regels }}</td>
+                    <td class="iv-r">{{ euro(b.besteld) }}</td>
+                    <td class="iv-r">{{ euro(b.geleverd) }}</td>
+                    <td>
+                        {% for a in b.afwijkend %}{{ a.naam }} <span class="{{ 'iv-meer' if a.verschil > 0 else 'iv-minder' }}">{{ '+' if a.verschil > 0 else '&minus;'|safe }}{{ a.verschil|abs }}</span>{{ ', ' if not loop.last }}{% else %}<span class="tekst-zacht">alles zoals besteld</span>{% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="tekst-zacht" style="margin:0.6rem 0 0">Alle bestellingen staan bij <a href="{{ url_for('bestellingen_overzicht') }}">Bestellingen</a>.</p>
+    {% else %}
+    <p class="leeg">In deze periode is er geen bestelling binnengekomen.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Meer geteld dan verwacht</h2>
+    {% if t.telverschil %}
+    <p style="margin-top:-0.3rem">
+        Bij het tellen stond er {{ t.telverschil }} keer een stuk meer dan de app verwachtte, samen {{ euro(t.telverschil_waarde) }} aan verkoopwaarde
+        ({{ pct(t.telverschil_waarde / t.omzet * 100 if t.omzet else none) }} van de omzet). Meestal is de telling ervoor te laag geweest (dan telde
+        de verkoop toen te hoog mee) of is een levering niet ingeboekt. Bij smaken van hetzelfde product: kijk of ze niet door elkaar zijn geteld.
+    </p>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th class="iv-r">Meer geteld</th><th class="iv-r">Verkoopwaarde</th></tr></thead>
+            <tbody>
+                {% for r in rapport.telverschillen %}
+                <tr><td>{{ r.naam }}</td><td class="iv-r">+{{ r.telverschil }}</td><td class="iv-r">{{ euro2(r.telverschil_waarde) }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Bij geen enkele telling stond er meer dan verwacht.</p>
+    {% endif %}
+</div>
+
+<div class="kaart">
+    <h2>Wat de omzet niet vertelt</h2>
+    <p style="margin-top:-0.3rem">
+        Verkocht is wat er bij het tellen weg was. Breuk, gratis drankjes en eigen gebruik tellen dus als verkocht, tenzij ze bij het uitboeken een
+        reden kregen: in deze periode is er voor {{ euro2(derving.waarde) }} aan <a href="{{ url_for('derving_rapport', weken=weken) }}">derving</a> geboekt.
+        Of de omzet ook echt is afgerekend, zie je bij <a href="{{ url_for('kassa_omzet_controle') }}">Omzet en kassa</a>: daar staat hij naast het
+        contante geld en de pinbetalingen die bij een kassatelling zijn ingevuld.
+    </p>
+</div>
+
+<div class="kaart">
+    <h2>Alle producten</h2>
+    {% if rapport.producten %}
+    <p class="tekst-zacht" style="margin-top:-0.4rem">Verkoop per week over {{ getal(rapport.verkoopweken) }} weken aan tellingen. Onderweg is wat besteld is en nog niet binnen.</p>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Product</th><th class="iv-r">Ingekocht</th><th class="iv-r">Verkocht</th><th class="iv-r">Voorraad</th><th class="iv-r">Onderweg</th><th class="iv-r">Omzet</th><th class="iv-r">Marge</th><th class="iv-r">Per week</th><th class="iv-r">Weken voorraad</th></tr></thead>
+            <tbody>
+                {% for r in rapport.producten %}
+                <tr>
+                    <td>{{ r.naam }}<span class="iv-cat">{{ r.categorie }}{% if not r.actief %} · inactief{% endif %}</span></td>
+                    <td class="iv-r">{{ r.inkoop }}</td>
+                    <td class="iv-r">{{ r.verkocht }}</td>
+                    <td class="iv-r">{{ r.voorraad }}</td>
+                    <td class="iv-r">{% if r.onderweg %}+{{ r.onderweg }}{% endif %}</td>
+                    <td class="iv-r">{{ euro(r.omzet) }}</td>
+                    <td class="iv-r">{{ pct(r.marge_pct) }}</td>
+                    <td class="iv-r">{{ getal(r.per_week) }}</td>
+                    <td class="iv-r">{% if r.voorraad == 0 %}op{% elif r.weken_voorraad is none %}<span class="tekst-zacht">niet verkocht</span>{% else %}{{ getal(r.weken_voorraad, 0) }}{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="leeg">Nog geen producten met inkoop, verkoop of voorraad.</p>
+    {% endif %}
+</div>
+
+<p class="tekst-zacht" style="font-size:0.88rem; max-width:80ch">
+    Inkoop is alles wat met een bestelling, een factuur of een losse levering is bijgeboekt, behalve correcties (een opmerking met
+    &lsquo;correctie&rsquo;) en min wat als retour is uitgeboekt. De waarde is het aantal maal de inkoopprijs per stuk (de inkoopprijs per krat of
+    doos gedeeld door wat erin zit). Omzet is wat er bij de tellingen verkocht is maal de prijs van dat moment; een fust telt als glazen
+    maal de prijs per glas. De keuken telt apart en staat hier niet in.
+</p>
+{% endblock %}

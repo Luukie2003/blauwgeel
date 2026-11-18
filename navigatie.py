@@ -433,6 +433,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Rapporten",
+        "endpoints": ["inkoop_verkoop_rapport"],
+        "url_endpoint": "inkoop_verkoop_rapport",
+        "label": "Inkoop en verkoop",
+    },
+    {
+        "groep": "Rapporten",
         "endpoints": ["derving_rapport"],
         "url_endpoint": "derving_rapport",
         "label": "Derving",
@@ -549,6 +555,7 @@ NAV_ITEM_ALLEEN_BEHEERDER = {
     # Omzet naast het afgerekende geld: een tekort kan op diefstal wijzen, dus alleen voor beheerders.
     "kassa_omzet_controle",
     "marge_rapport",
+    "inkoop_verkoop_rapport",
     "gegevenscontrole",
     "derving_rapport",
     "niet_lopers_rapport",
