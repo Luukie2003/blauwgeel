@@ -6,8 +6,15 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.16.0"
+HUIDIGE_VERSIE = "2.16.1"
 WIJZIGINGEN = [
+    {
+        "versie": "2.16.1",
+        "datum": "23 november 2026",
+        "punten": [
+            "Geen mail 'Kantine Beheer is niet bereikbaar' meer bij een korte hapering van de hosting. Krijgt de controle die elk uur draait geen antwoord, dan probeert hij het na een minuut nog twee keer; pas als ook dat niet lukt, krijgt de systeembeheerder de mail. Een hapering die vanzelf over ging, staat wel bij Beheer > Systeemstatus.",
+        ],
+    },
     {
         "versie": "2.16.0",
         "datum": "18 november 2026",
@@ -1554,6 +1561,6 @@ MODULES = [
      "inhoud": "Dashboard, 'Wat moet er nu?', agenda, prikbord, zoekbalk en de tips-pagina"},
     {"naam": "Taken", "versie": "0.3.0", "sinds": "1.43.0", "laatst": "1.44.0",
      "inhoud": "Eigen taken voor mensen bij 'Wat moet er nu?': terugkerend, met checklists, en de vraag 'Taak afgerond?' na het opslaan"},
-    {"naam": "Techniek & beveiliging", "versie": "1.10.1", "sinds": "1.1.0", "laatst": "2.7.0",
+    {"naam": "Techniek & beveiliging", "versie": "1.10.2", "sinds": "1.1.0", "laatst": "2.16.1",
      "inhoud": "Geautomatiseerde tests, beveiligingsheaders, de noodstop, bereikbaarheidscontrole, systeemstatus, snelheid"},
 ]

@@ -9,10 +9,18 @@ virtualenv nodig). Onthoudt de laatste status in uptime_status.txt, zodat er
 maar één mail wordt gestuurd bij het begin van een storing en één zodra de
 site weer bereikbaar is, in plaats van elk uur opnieuw dezelfde melding.
 
-Elke controle komt ook in de systeemstatus (taakstatus.py). Omdat deze taak elk
-uur draait, merkt hij daarbij ook op dat een dagelijkse taak is stilgevallen.
+Eén trage of mislukte poging is nog geen storing: bij PythonAnywhere hapert
+een enkel verzoek soms even (in november 2026 een paar keer 's ochtends, met
+een time-out na 15 seconden terwijl de site een uur later gewoon reageerde).
+Daarom wordt het na een mislukte poging nog een paar keer geprobeerd, met een
+minuut ertussen, en gaat de mail pas uit als geen enkele poging lukt.
+
+Elke controle komt ook in de systeemstatus (taakstatus.py), ook een hapering
+die vanzelf over ging. Omdat deze taak elk uur draait, merkt hij daarbij ook op
+dat een dagelijkse taak is stilgevallen.
 """
 
+import time
 import urllib.request
 from pathlib import Path
 
@@ -23,15 +31,38 @@ BASE_DIR = Path(__file__).parent
 STATUS_PAD = BASE_DIR / "uptime_status.txt"
 DB_PAD = BASE_DIR / "voorraad.db"
 CONTROLE_URL = "https://www.kantineblauwgeel.nl/login"
-TIMEOUT_SECONDEN = 15
+TIMEOUT_SECONDEN = 30
+POGINGEN = 3
+PAUZE_SECONDEN = 60
 
 
 def site_bereikbaar():
+    """Eén poging: (bereikbaar, foutmelding)."""
     try:
         with urllib.request.urlopen(CONTROLE_URL, timeout=TIMEOUT_SECONDEN) as response:
-            return response.status == 200, None
+            if response.status == 200:
+                return True, None
+            return False, f"HTTP-status {response.status}"
     except Exception as fout:
         return False, str(fout)
+
+
+def _wacht(seconden):
+    time.sleep(seconden)
+
+
+def probeer():
+    """Tot POGINGEN keer, met PAUZE_SECONDEN ertussen; stopt zodra een poging lukt. Geeft (bereikbaar, fouten) terug:
+    fouten zijn de foutmeldingen van de mislukte pogingen, in volgorde."""
+    fouten = []
+    for poging in range(1, POGINGEN + 1):
+        bereikbaar, foutmelding = site_bereikbaar()
+        if bereikbaar:
+            return True, fouten
+        fouten.append(foutmelding)
+        if poging < POGINGEN:
+            _wacht(PAUZE_SECONDEN)
+    return False, fouten
 
 
 def vorige_status():
@@ -49,9 +80,18 @@ def ontvanger():
     return mail.systeembeheerder_adres(db_pad=DB_PAD)
 
 
+def samenvatting(bereikbaar, fouten):
+    """Wat de controle meldt, in één zin: voor de systeemstatus en de uitvoer van de taak."""
+    if bereikbaar and not fouten:
+        return "Site bereikbaar"
+    if bereikbaar:
+        return f"Site bereikbaar, pas bij poging {len(fouten) + 1} (eerst: {fouten[0]})"
+    return f"Site reageerde niet, ook niet na {len(fouten)} pogingen: {fouten[-1]}"
+
+
 def controleer():
     """Eén controle, zoals de taak die elk uur doet."""
-    bereikbaar, foutmelding = site_bereikbaar()
+    bereikbaar, fouten = probeer()
     status = "ok" if bereikbaar else "down"
     vorige = vorige_status()
 
@@ -59,10 +99,11 @@ def controleer():
         if status == "down":
             mail.stuur_mail(
                 "Kantine Beheer is niet bereikbaar",
-                f"De site {CONTROLE_URL} reageert niet goed sinds de laatste controle "
-                "(elk uur).\n\n"
-                f"Foutmelding: {foutmelding}\n\n"
-                "Dit is een automatische melding, gestuurd bij het begin van de storing.",
+                f"De site {CONTROLE_URL} reageert niet goed: {POGINGEN} pogingen achter elkaar, met telkens "
+                f"{PAUZE_SECONDEN // 60} minuut ertussen, kregen geen goed antwoord.\n\n"
+                f"Foutmelding (laatste poging): {fouten[-1]}\n\n"
+                "De controle draait elk uur. Dit is een automatische melding, gestuurd bij het begin van de storing; "
+                "zodra de site weer reageert, krijg je daar ook een mail over.",
                 naar=ontvanger(),
             )
         else:
@@ -73,11 +114,10 @@ def controleer():
             )
 
     sla_status_op(status)
+    melding = samenvatting(bereikbaar, fouten)
     # De controle zelf is gelukt, ook als de site plat ligt: daarover gaat de mail hierboven al.
-    taakstatus.registreer(
-        "bereikbaarheid", True, "Site bereikbaar" if bereikbaar else f"Site reageerde niet: {foutmelding}", db_pad=DB_PAD
-    )
-    print(f"Status: {status}" + (f" ({foutmelding})" if foutmelding else ""))
+    taakstatus.registreer("bereikbaarheid", True, melding, db_pad=DB_PAD)
+    print(f"Status: {status} ({melding})")
 
 
 if __name__ == "__main__":
