@@ -267,6 +267,20 @@
 
 {# "Factuur gecontroleerd": eerst wat er van de bestelling nog mist (dat wordt manco), dan inboeken. #}
 {% set mist_tekst %}{% if r.bestelling_id %}{% if nog_niet_binnen %}Nog niet (helemaal) binnen: {% for m in nog_niet_binnen %}{{ m.naam }} {{ m.gescand }} van {{ m.besteld }} {{ m.eenheid }}{{ ', ' if not loop.last }}{% endfor %}. Wat mist, komt op manco. {% else %}Alles van de bestelling is binnen. {% endif %}{% endif %}{% endset %}
+{% set veel_tekst %}{% if meer_dan_besteld %}Meer dan besteld: {% for m in meer_dan_besteld %}{{ m.naam|safe }} {{ m.gescand }} {{ m.eenheid|safe }} ({{ m.besteld ~ ' besteld' if m.besteld else 'niet besteld' }}){{ ', ' if not loop.last }}{% endfor %}. {% endif %}{% endset %}
+{% if meer_dan_besteld %}
+<div class="kaart" id="meer-dan-besteld" style="border-left:4px solid var(--oranje, #b45309)">
+    <strong>Meer dan besteld</strong>
+    <ul style="margin:0.3rem 0 0; padding-left:1.2rem">
+        {% for m in meer_dan_besteld %}
+        <li>{{ m.naam }}: {{ m.gescand }} {{ m.eenheid }}, {{ m.besteld ~ ' besteld' if m.besteld else 'niet besteld' }}
+            {%- if m.nog_open %}. Van een eerdere bestelling stonden er nog {{ m.nog_open }} open{% endif %}
+            {%- if m.al_ingeboekt %}. <span class="cs-oranje">Al ingeboekt: {% for e in m.al_ingeboekt %}{{ e.aantal }} op {{ e.datum|dag_maand }}{{ ', ' if not loop.last }}{% endfor %}. Is dit dezelfde levering?</span>{% endif %}</li>
+        {% endfor %}
+    </ul>
+    <p class="tekst-zacht" style="font-size:0.8rem; margin:0.4rem 0 0">Klopt het met de factuur? Dan kun je gewoon inboeken. Anders haal je de scan hierboven weg.</p>
+</div>
+{% endif %}
 {% if r.bestelling_id and nog_niet_binnen %}
 <div class="kaart" style="border-left:4px solid var(--oranje, #b45309)">
     <strong>Nog niet (helemaal) binnen</strong>
@@ -278,7 +292,7 @@
 {% endif %}
 <div class="kaart" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center">
     <form method="post" action="{{ url_for('factuur_afronden', ronde_id=r.id) }}" style="margin:0"
-          onsubmit="return bevestigEnVerstuur(this, {{ (mist_tekst ~ 'Alles inboeken? De voorraad gaat omhoog' ~ (' en bestelling #' ~ r.bestelling_id ~ ' komt op ontvangen te staan' if r.bestelling_id else '') ~ '.')|tojson|forceescape }});">
+          onsubmit="return bevestigEnVerstuur(this, {{ (veel_tekst ~ mist_tekst ~ 'Alles inboeken? De voorraad gaat omhoog' ~ (' en bestelling #' ~ r.bestelling_id ~ ' komt op ontvangen te staan' if r.bestelling_id else '') ~ '.')|tojson|forceescape }});">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-geel" {{ 'disabled' if not g_ronde.regels }}>Factuur gecontroleerd</button>
     </form>

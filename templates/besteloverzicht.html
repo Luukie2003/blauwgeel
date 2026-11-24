@@ -56,7 +56,8 @@
                     <td class="cs-vinkkolom"><input type="checkbox" class="cs-ingevuld" aria-label="{{ r.naam }} ingevuld"></td>
                     <td class="cs-nowrap">{% if r.artikelcode %}<span class="cs-artikelnummer">{{ r.artikelcode }}</span>
                         <button type="button" class="cs-tekstknop" data-kopieer-tekst="{{ r.artikelcode }}" aria-label="Artikelnummer {{ r.artikelcode }} kopiëren">kopiëren</button>{% else %}<span class="cs-grijs">geen</span>{% endif %}</td>
-                    <td><strong>{{ r.naam }}</strong>{% if r.factor > 1 %}<div class="cs-zacht">{{ r.stuks }} {{ r.eenheid }}</div>{% endif %}</td>
+                    <td><strong>{{ r.naam }}</strong>{% if r.factor > 1 %}<div class="cs-zacht">{{ r.stuks }} {{ r.eenheid }}</div>{% endif %}
+                        {%- if r.weken is defined and r.weken is not none %}<div class="cs-oranje">Veel: {% if r.weken > 5200 %}de laatste tijd niet verkocht{% elif r.weken > 52 %}genoeg voor meer dan een jaar{% else %}genoeg voor ongeveer {{ r.weken|round|int }} weken{% endif %}</div>{% endif %}</td>
                     <td class="cs-nowrap"><span class="cs-colli-getal">{{ r.eenheden }}</span> {{ r.besteleenheid }}</td>
                 </tr>
                 {% endfor %}

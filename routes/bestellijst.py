@@ -20,6 +20,7 @@ from helpers import (
     verwerk_auto_inactief,
 )
 from helpers.tijd import vandaag_amsterdam
+from inkoop_verkoop import LANG_WEKEN
 import manco
 from bestellen import (
     bestel_tekst,
@@ -28,6 +29,7 @@ from bestellen import (
     klaargezet_melding,
     maak_bestellingen,
     nalooplijst,
+    verwachte_stand,
 )
 from keukenbeheer import KEUKEN_NIET_BESTELLEN
 from leveranciers import GEEN, filter_suggesties, per_leverancier
@@ -268,7 +270,14 @@ def register_routes(app):
             zonder_leverancier=any(not r["leverancier"] for r in alle),
             gemeld={m["product"]["id"]: m["aantal"] for m in meldingen["producten"]},
             gemelde_teksten=[t["tekst"] for t in meldingen["teksten"]],
+            lang_weken=LANG_WEKEN,
         )
+
+    @app.route("/bestellijst/nalopen/stand")
+    def bestellijst_stand():
+        """Per product (id) wat er nu waarschijnlijk nog ligt, bij Bestellijst nalopen apart opgehaald omdat het
+        voorspelmodel soms even rekent (bestellen.verwachte_stand)."""
+        return jsonify({"stand": verwachte_stand(get_db())})
 
     @app.route("/bestellijst/nalopen/controleren", methods=["POST"])
     def bestellijst_controleren():

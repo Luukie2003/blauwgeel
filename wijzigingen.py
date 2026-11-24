@@ -6,8 +6,17 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.16.1"
+HUIDIGE_VERSIE = "2.17.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.17.0",
+        "datum": "24 november 2026",
+        "punten": [
+            "Bestellijst nalopen laat per product zien wat er nu waarschijnlijk nog ligt: de laatste telling min wat er sindsdien naar verwachting verkocht is, met een marge. Zit iets daardoor waarschijnlijk al onder het minimum, dan staat dat bovenaan. Het besteladvies zelf rekent nog met de voorraad in de app.",
+            "Een seintje als je veel bestelt: gaat het met wat er ligt en onderweg is nog weken mee, dan staat er bij Nalopen en in het besteloverzicht 'genoeg voor ongeveer 20 weken' (ook voor wat je op de handterminal klaarzet). Niet bij één krat van iets dat langzaam gaat en dat je toch nodig hebt.",
+            "Factuur inboeken: komt er minstens een hele colli meer binnen dan besteld, of iets dat niet besteld was, dan staat dat bij 'Meer dan besteld' en in de vraag bij 'Factuur gecontroleerd'. Erbij staat of er van een eerdere bestelling nog iets openstond, en of het de afgelopen twee weken al is ingeboekt. Het houdt het inboeken niet tegen.",
+        ],
+    },
     {
         "versie": "2.16.1",
         "datum": "23 november 2026",
@@ -1531,7 +1540,7 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.17.1", "sinds": "0.1.0", "laatst": "2.9.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.23.0", "sinds": "0.4.0", "laatst": "2.10.0",
+    {"naam": "Bestellen & prognose", "versie": "1.24.0", "sinds": "0.4.0", "laatst": "2.17.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), de bestellijst nalopen met vinkjes (ook op de computer) en het besteloverzicht voor de webshop, leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.17.0", "sinds": "0.1.0", "laatst": "2.10.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},

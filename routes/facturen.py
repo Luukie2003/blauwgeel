@@ -112,6 +112,7 @@ def register_routes(app):
             colli_code=request.args.get("code", ""),
             plu=facturen.plu_lijst(db, gegevens["besteld"], {p["product_id"]: p for p in gegevens["per_product"]}),
             nog_niet_binnen=facturen.nog_niet_binnen(gegevens),
+            meer_dan_besteld=facturen.meer_dan_besteld(db, gegevens) if gegevens["ronde"]["status"] == "open" else [],
         )
 
     def _colli_keuzes():

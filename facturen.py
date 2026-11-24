@@ -15,9 +15,13 @@ Bij het afronden gaat de voorraad omhoog (een boeking per product). Hoort de ron
 staat die daarna op ontvangen: per bestelregel wat er is binnengekomen, wat niet is gescand is manco, en wat er extra
 meekwam komt er als regel bij (besteld: 0)."""
 
+from datetime import datetime, timedelta
+
 import barcodes
 from helpers.producten import besteleenheid_factor, besteleenheid_naam, inkoop_per_stuk
 from helpers.tijd import now_str
+from inkoop_verkoop import is_correctie
+from manco import open_manco_per_product
 
 STATUSSEN = ("open", "afgerond", "geannuleerd")
 
@@ -406,6 +410,44 @@ def nog_niet_binnen(gegevens):
          "rest": b["rest"], "eenheid": b["eenheid"], "status": b["status"]}
         for b in gegevens["besteld"] if b["rest"] > 0
     ]
+
+
+DUBBEL_DAGEN = 14  # zo lang geleden een boeking die dezelfde levering kan zijn
+
+
+def meer_dan_besteld(db, gegevens):
+    """Voor 'Factuur gecontroleerd': wat er bij deze ronde veel meer binnenkomt dan er besteld is: minstens een hele colli
+    te veel, of helemaal niet besteld. Per product ook wat het kan verklaren: "nog_open", wat bij eerdere bestellingen niet
+    geleverd was, en "al_ingeboekt", wat de afgelopen DUBBEL_DAGEN dagen al is binnengeboekt (misschien dezelfde levering,
+    of die van een vorige keer). Alleen bij een ronde die bij een bestelling hoort. Houdt niets tegen."""
+    besteld = {}
+    for b in gegevens["besteld"]:
+        besteld[b["product_id"]] = besteld.get(b["product_id"], 0) + b["besteld"]
+    if not besteld:
+        return []
+    uit = []
+    mancos = open_manco_per_product(db)
+    vanaf = (datetime.now() - timedelta(days=DUBBEL_DAGEN)).strftime("%Y-%m-%d %H:%M")
+    for p in gegevens["per_product"]:
+        pid, aantal = p["product_id"], besteld.get(p["product_id"], 0)
+        extra = p["eenheden"] - aantal
+        product = db.execute("SELECT * FROM producten WHERE id = ?", (pid,)).fetchone()
+        if extra <= 0 or (aantal and extra < besteleenheid_factor(product)):
+            continue
+        eerder = [
+            {"aantal": m["aantal"], "datum": m["datum"][:10]}
+            for m in db.execute(
+                """SELECT aantal, datum, opmerking FROM mutaties
+                   WHERE product_id = ? AND type = 'in' AND telling_id IS NULL AND datum >= ? ORDER BY datum DESC""",
+                (pid, vanaf),
+            ).fetchall()
+            if not is_correctie(m["opmerking"])
+        ]
+        uit.append({
+            "product_id": pid, "naam": p["naam"], "eenheid": p["eenheid"], "besteld": aantal, "gescand": p["eenheden"],
+            "extra": extra, "nog_open": sum(m["tekort"] for m in mancos.get(pid, [])), "al_ingeboekt": eerder,
+        })
+    return uit
 
 
 def voeg_rest_toe(db, ronde_id, product_id=None):

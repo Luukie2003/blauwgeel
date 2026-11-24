@@ -20,7 +20,8 @@
 <li class="cs-loopregel{{ ' gecontroleerd' if r.gecontroleerd else '' }}" data-id="{{ r.id }}" data-soort="{{ r.soort }}"
     data-aantal="{{ r.aantal }}" data-standaard="{{ r.standaard }}" data-vast="{{ 1 if r.vast else 0 }}"
     data-gecontroleerd="{{ 1 if r.gecontroleerd else 0 }}" data-door="{{ r.door or '' }}" data-factor="{{ r.factor }}"
-    data-colli="{{ r.colli }}" data-eenheid="{{ r.eenheid }}" data-naam="{{ r.naam }}" data-leverancier="{{ r.leverancier or '' }}"
+    data-colli="{{ r.colli }}" data-eenheid="{{ r.eenheid }}" data-naam="{{ r.naam }}"
+    data-voorraad="{{ r.voorraad }}" data-onderweg="{{ r.onderweg_stuks }}" data-per-week="{{ '' if r.per_week is none else r.per_week|round(3) }}" data-leverancier="{{ r.leverancier or '' }}"
     data-zoek="{{ (r.naam ~ ' ' ~ (r.artikelcode or '') ~ ' ' ~ (r.leverancier or '') ~ ' ' ~ r.categorie)|lower }}">
     <button type="button" class="cs-loopvink" aria-pressed="{{ 'true' if r.gecontroleerd else 'false' }}"><span class="visueel-verborgen">{{ r.naam }} afvinken</span></button>
     <div class="cs-loopwat">
@@ -32,6 +33,8 @@
             {%- if gemeld.get(r.id) %} &middot; <span class="cs-oranje">{{ gemeld[r.id] }}&times; gemeld</span>{% endif -%}
             <span class="cs-loopadvies"></span>
         </small>
+        <small class="cs-loopstand"></small>
+        <small class="cs-loopveel cs-oranje"></small>
         {% if r.onderweg %}<small class="cs-oranje">Staat al op bestelling #{{ r.onderweg|join(', #') }}</small>{% endif %}
         <small class="cs-loopdoor">{% if r.gecontroleerd %}Afgevinkt{% if r.door %} door {{ r.door }}{% endif %}{% elif r.vast %}Zelf gekozen bij het product{% if r.door %} door {{ r.door }}{% endif %}{% endif %}</small>
     </div>
@@ -61,6 +64,15 @@
         <a href="{{ url_for('bestellijst') }}">Afhandelen op de bestellijst</a>.</div>
 </div>
 {% endif %}
+
+<div class="cs-melding let-op" id="stand-melding" hidden>
+    {{ icoon('let-op') }}
+    <div class="cs-melding-tekst">
+        <strong>Waarschijnlijk al onder het minimum</strong>
+        <p>Volgens de laatste telling nog niet, maar er is sindsdien naar verwachting verkocht: <span id="stand-namen"></span>.
+            Kijk of je ze erbij wilt zetten.</p>
+    </div>
+</div>
 
 <section class="cs-paneel" id="te-bestellen">
     <div class="cs-paneel-kop">
@@ -128,6 +140,8 @@
     var token = {{ csrf_token()|tojson }};
     var controleUrl = {{ url_for('bestellijst_controleren')|tojson }};
     var zoekUrl = {{ url_for('bestellijst_zoek')|tojson }};
+    var standUrl = {{ url_for('bestellijst_stand')|tojson }};
+    var langWeken = {{ lang_weken|tojson }};
     var prognoseUrl = {{ url_for('bestellijst_prognose')|tojson }};
     var regels = Array.prototype.slice.call(document.querySelectorAll('.cs-loopregel'));
     var formulier = document.getElementById('klaarzet-formulier');
@@ -145,8 +159,25 @@
     // Telt mee bij "x van y afgevinkt": wat te bestellen is, en wat je erbij afvinkte (zoals op de handterminal).
     function telt(s) { return s.soort === 'laag' || s.soort === 'manco' || s.soort === 'gekozen' || s.gecontroleerd; }
 
+    // Hoeveel weken het met dit aantal meegaat, als dat te lang is; anders null. Zelfde regel als voorraadduur.te_veel:
+    // ook met één colli minder is er genoeg voor langWeken weken. De voorraad is wat er nu waarschijnlijk ligt.
+    function teVeel(s) {
+        if (s.perWeek === null || s.n <= 0) return null;
+        var ligt = s.verwacht === null ? s.voorraad : s.verwacht;
+        var zonderLaatste = Math.max(0, ligt) + s.onderweg + (s.n - 1) * s.factor;
+        if (s.perWeek <= 0) return zonderLaatste > 0 ? Infinity : null;
+        if (zonderLaatste / s.perWeek < langWeken) return null;
+        return (zonderLaatste + s.factor) / s.perWeek;
+    }
+    function teVeelTekst(weken) {
+        if (weken === Infinity) return 'de laatste tijd niet verkocht';
+        return weken > 52 ? 'genoeg voor meer dan een jaar' : 'genoeg voor ongeveer ' + Math.round(weken) + ' weken';
+    }
+
     function toon(li) {
         var s = li._s;
+        var weken = teVeel(s);
+        li.querySelector('.cs-loopveel').textContent = weken === null ? '' : 'Veel: ' + teVeelTekst(weken) + '.';
         li.classList.toggle('gecontroleerd', s.gecontroleerd);
         li.classList.toggle('niet', s.gecontroleerd && s.n === 0);
         var vink = li.querySelector('.cs-loopvink');
@@ -259,7 +290,9 @@
         li._s = {
             id: getal(d.id), soort: d.soort, n: getal(d.aantal), standaard: getal(d.standaard), vast: d.vast === '1',
             gecontroleerd: d.gecontroleerd === '1', door: d.door || null, factor: getal(d.factor) || 1, colli: d.colli,
-            eenheid: d.eenheid, naam: d.naam, leverancier: d.leverancier || ''
+            eenheid: d.eenheid, naam: d.naam, leverancier: d.leverancier || '',
+            voorraad: getal(d.voorraad), onderweg: getal(d.onderweg), verwacht: null,
+            perWeek: d.perWeek === '' ? null : parseFloat(d.perWeek)
         };
         var invoer = li.querySelector('.cs-loopgetal');
         li.querySelector('.cs-loopvink').addEventListener('click', function () { vinkAan(li); });
@@ -365,7 +398,10 @@
         });
         var tekst = (namen.length > 1 ? namen.length + ' bestellingen klaarzetten, een per leverancier?' : 'Bestelling klaarzetten?') +
             '\n\n' + namen.map(function (l) {
-                return (l || 'Zonder leverancier') + ':\n' + groepen[l].map(function (s) { return s.n + ' ' + s.colli + ' ' + s.naam; }).join('\n');
+                return (l || 'Zonder leverancier') + ':\n' + groepen[l].map(function (s) { 
+                    var weken = teVeel(s);
+                    return s.n + ' ' + s.colli + ' ' + s.naam + (weken === null ? '' : ' (let op: ' + teVeelTekst(weken) + ')');
+                }).join('\n');
             }).join('\n\n');
         if (open.length) {
             tekst += '\n\nNog niet afgevinkt, dat gaat niet mee: ' + open.map(function (li) { return li._s.naam; }).join(', ') + '.';
@@ -387,6 +423,31 @@
             });
         }, { ja: 'Klaarzetten' });
     });
+
+    // Wat er nu waarschijnlijk nog ligt (bestellijst_stand): de laatste telling min wat er sindsdien verkocht zou zijn.
+    fetch(standUrl, { credentials: 'same-origin' })
+        .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+        .then(function (data) {
+            var onder = [];
+            regels.forEach(function (li) {
+                var s = li._s, p = data.stand[s.id];
+                if (!p) return;
+                s.verwacht = p.verwacht;
+                var marge = p.laag === p.hoog ? '' : ' (' + p.laag + ' tot ' + p.hoog + ')';
+                var vak = li.querySelector('.cs-loopstand');
+                vak.textContent = 'Ligt er nu waarschijnlijk: ' + p.verwacht + ' ' + s.eenheid + marge + ', geteld op ' + p.geteld;
+                if (p.onder_minimum) {
+                    vak.classList.add('cs-tekort');
+                    if (s.soort === 'overig' || s.soort === 'opraken') onder.push(s.naam);
+                }
+                toon(li);
+            });
+            if (onder.length) {
+                document.getElementById('stand-namen').textContent = onder.join(', ');
+                document.getElementById('stand-melding').hidden = false;
+            }
+        })
+        .catch(function () { /* zonder verwachting werkt de lijst gewoon */ });
 
     // De prognose (bestellijst_prognose) rekent soms enkele seconden, dus na het laden: het advies bij elk product, een
     // hoger voorstel als de komende periode meer vraagt, en wat kan opraken.

@@ -18,6 +18,8 @@ from helpers.producten import (
 from helpers.tijd import now_str
 from pdf.basis import NAAM_CLUB
 from productkaart import KEUKEN_CATEGORIE
+from voorraadduur import te_veel, verkoop_per_week
+from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 
 def maak_bestellingen(db, besteleenheden_per_product, door=None, door_id=None):
@@ -142,8 +144,12 @@ def nalooplijst(db):
     in hele colli), wat bij een vorige bestelling niet geleverd is ('manco') en wat iemand zelf koos of al nagelopen heeft
     ('gekozen', ook 'niet bestellen'). "overig": de rest van het assortiment, zonder de keuken (die koopt zelf in). Daaruit
     zet je erbij wat je weet dat op raakt, ook zonder telling. Een gekozen of bevestigd aantal (bestelvoorstel.
-    zet_bestelaantal) gaat voor het voorstel; de prognose verhoogt het voorstel op de pagina zelf (bestellijst_prognose)."""
+    zet_bestelaantal) gaat voor het voorstel; de prognose verhoogt het voorstel op de pagina zelf (bestellijst_prognose).
+    "per_week" en "onderweg_stuks": voor het seintje als er te veel besteld wordt (voorraadduur.te_veel). Wat er nu
+    waarschijnlijk nog ligt, komt er na het laden bij (verwachte_stand)."""
     keuzes = bestelvoorstel.bijstellingen(db)
+    tempo = verkoop_per_week(db)
+    onderweg_stuks = bestelvoorstel.onderweg(db)
     leveranciers = {r["id"]: r["naam"] for r in db.execute("SELECT id, naam FROM leveranciers").fetchall()}
     onderweg = {}
     for r in db.execute(
@@ -170,7 +176,8 @@ def nalooplijst(db):
             "factor": factor, "colli": besteleenheid_naam(p) if factor > 1 else p["eenheid"],
             "soort": soort, "standaard": standaard, "aantal": standaard if gekozen is None else gekozen,
             "vast": gekozen is not None, "gecontroleerd": bool(keuze.get("gecontroleerd")), "door": keuze.get("door"),
-            "onderweg": onderweg.get(p["id"], []), **extra,
+            "onderweg": onderweg.get(p["id"], []), "onderweg_stuks": onderweg_stuks.get(p["id"], 0),
+            "per_week": tempo.get(p["id"]), **extra,
         }
 
     te_bestellen = []
@@ -199,6 +206,35 @@ def nalooplijst(db):
     return {"te_bestellen": te_bestellen, "overig": overig}
 
 
+def verwachte_stand(db, nu=None):
+    """Wat er nu waarschijnlijk nog ligt, als er sinds de laatste telling verkocht zou moeten zijn: de voorraad in de app
+    is de stand van die telling (met wat er sindsdien is geboekt). {product_id: {"verwacht", "laag", "hoog", "geteld"
+    ('za 21-11'), "onder_minimum": nu waarschijnlijk onder het minimum, terwijl de voorraad in de app dat niet is}}. Alleen
+    als het minstens 1 scheelt. Mislukt het model, dan is er gewoon geen verwachting."""
+    try:
+        verkoop = verwachte_verkoop_sinds_telling(db, nu)
+    except Exception as fout:  # het bestellen mag nooit stuk gaan door de voorspelling
+        print(f"[voorspelling] verwachte voorraad mislukt: {fout}")
+        return {}
+    uit = {}
+    for p in db.execute(
+        "SELECT id, voorraad, min_voorraad FROM producten WHERE actief = 1 AND categorie != ?", (KEUKEN_CATEGORIE,)
+    ).fetchall():
+        v = verkoop.get(p["id"])
+        stand = verwachte_voorraad(v, p["voorraad"])
+        if stand is None or p["voorraad"] <= 0 or stand["verwacht"] >= p["voorraad"]:
+            continue
+        minimum = p["min_voorraad"] or 0
+        uit[p["id"]] = {
+            "verwacht": stand["verwacht"],
+            "laag": max(0, round(stand["laag"])),
+            "hoog": max(0, round(stand["hoog"])),
+            "geteld": bestelvoorstel.dag_tekst(v["sinds"]),
+            "onder_minimum": stand["verwacht"] < minimum <= p["voorraad"],
+        }
+    return uit
+
+
 def webadres(tekst):
     """De website van een leverancier als link: 'www.sligro.nl' wordt 'https://www.sligro.nl'. Alleen http(s); iets
     anders (zoals 'javascript:') geeft None."""
@@ -216,17 +252,25 @@ def besteloverzicht(db, ids=None):
     """De klaargezette bestellingen als lijst om bij de leverancier te bestellen, zoals het besteloverzicht op de
     handterminal: per bestelling de leverancier (klantnummer, webshop, tot wanneer je bestelt) en per product het
     artikelnummer en het aantal colli, met de tekst om te kopiëren (bestel_tekst). ids: die bestellingen (bijvoorbeeld net
-    klaargezet), in die volgorde; zonder ids alles wat klaargezet en nog niet ingeboekt is, per leverancier op naam."""
+    klaargezet), in die volgorde; zonder ids alles wat klaargezet en nog niet ingeboekt is, per leverancier op naam.
+    Per regel van een openstaande bestelling "weken": hoe lang het meegaat als dat te lang is (voorraadduur.te_veel)."""
     if not ids:
         ids = [r["id"] for r in db.execute(
             """SELECT b.id FROM bestellingen b LEFT JOIN leveranciers l ON l.id = b.leverancier_id
                WHERE b.status = 'besteld' ORDER BY l.naam IS NULL, l.naam COLLATE NOCASE, b.id"""
         ).fetchall()]
+    tempo = verkoop_per_week(db)
+    onderweg = bestelvoorstel.onderweg(db)
+    voorraad = {p["id"]: p["voorraad"] for p in db.execute("SELECT id, voorraad FROM producten").fetchall()}
     uit = []
     for bid in dict.fromkeys(ids):
         gegevens = bestelling_gegevens(db, bid)
         if gegevens is None:
             continue
+        for r in gegevens["regels"] if gegevens["bestelling"]["status"] == "besteld" else []:
+            pid = r["product_id"]
+            rest = max(0, onderweg.get(pid, 0) - r["stuks"])  # wat er met andere bestellingen nog komt
+            r["weken"] = te_veel(tempo.get(pid), voorraad.get(pid, 0), rest, r["eenheden"], r["factor"])
         lev = gegevens["leverancier"]
         periode = bestelvoorstel.bestelperiode(lev) if lev is not None and gegevens["bestelling"]["status"] == "besteld" else None
         uit.append({

@@ -481,8 +481,7 @@ def verwachte_verkoop_sinds_telling(db, nu=None):
 
     Geeft {product_id: {"verwacht", "laag", "hoog", "ruim_laag", "ruim_hoog",
     "sinds", "waarnemingen"}}; leeg zolang er te weinig tellingen zijn. Het
-    resultaat wordt kort bewaard (het model aanpassen kost wat rekentijd en de
-    looplijst vraagt het voor elk product opnieuw)."""
+    resultaat wordt kort bewaard (de looplijst vraagt het voor elk product opnieuw)."""
     nu = nu or datetime.now()
     laatste = db.execute(
         "SELECT COUNT(*) AS n, COALESCE(MAX(id), 0) AS laatste FROM tellingen"
@@ -492,17 +491,11 @@ def verwachte_verkoop_sinds_telling(db, nu=None):
         return _VERWACHT_CACHE[sleutel]
 
     uitkomst = {}
-    rijen, _ = lees_rijen(db, nu)
-    if rijen:
-        kalender = lees_kalender(
-            db, min(r["start"] for r in rijen).date() - timedelta(days=2), nu.date() + timedelta(days=2)
-        )
-        _voeg_blootstelling_toe(rijen, kalender, nu)
-        effecten, overspreiding, _informatie = pas_model_aan(rijen)
-        snelheid = _snelheden(rijen, effecten)
-        rijen_per_product = {}
-        for r in rijen:
-            rijen_per_product.setdefault(r["pid"], []).append(r)
+    # Het bewaarde model van de prognose (per telling één keer gerekend), niet nog een keer zelf aanpassen.
+    fit = _bewaard(db, "prognose-fit", nu, (), lambda: _prognose_fit(db, nu), model_vingerafdruk, tijdvak="altijd")
+    if fit["beschikbaar"]:
+        effecten, overspreiding = fit["effecten"], fit["overspreiding"]
+        rijen_per_product = fit["rijen_per_product"]
         laatste_telling = {
             r["product_id"]: _parse(r["laatste"])
             for r in db.execute(
@@ -511,15 +504,14 @@ def verwachte_verkoop_sinds_telling(db, nu=None):
                    GROUP BY tr.product_id"""
             ).fetchall()
         }
-        for pid, snel in snelheid.items():
+        begin = min((d for d in laatste_telling.values() if d is not None), default=nu)
+        kalender = lees_kalender(db, begin.date() - timedelta(days=2), nu.date() + timedelta(days=2))
+        for pid, snel in fit["snelheid"].items():
             sinds = laatste_telling.get(pid)
             lijst = rijen_per_product[pid]
             if snel <= 0 or sinds is None or sinds >= nu or len(lijst) < MIN_WAARNEMINGEN_VERWACHTING:
                 continue
-            gewicht_som = sum(r["w"] for r in lijst if not r["afgekapt"]) or sum(r["w"] for r in lijst)
-            gewicht_blootstelling = sum(
-                r["w"] * drukte(r["b"], effecten) for r in lijst if not r["afgekapt"]
-            ) or sum(r["w"] * drukte(r["b"], effecten) for r in lijst)
+            gewicht_som, gewicht_blootstelling = fit["gewicht_som"][pid], fit["gewicht_blootstelling"][pid]
             mu = snel * drukte(blootstelling(sinds, nu, kalender), effecten)
             rel_snelheid_var = 1.0 / max(snel * gewicht_blootstelling, 1e-9) + overspreiding / max(gewicht_som, 1.0)
             var = mu + (mu ** 2) * (overspreiding + rel_snelheid_var + 0.03 ** 2)

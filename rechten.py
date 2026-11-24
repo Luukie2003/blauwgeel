@@ -145,6 +145,7 @@ GEBRUIK_NIET_LOGGEN = {
     # Een scan op de bestellijst opzoeken (JSON), en een product op Bestellijst nalopen afvinken.
     "bestellijst_zoek",
     "bestellijst_controleren",
+    "bestellijst_stand",
     "prognose_resultaat",
     "prognose_terugblik_resultaat",
     "agenda_omzet",
@@ -407,6 +408,7 @@ SECTIE_ENDPOINTS = {
         # Bestellijst nalopen en het besteloverzicht (2.8.0), zoals op de handterminal.
         "bestellijst_nalopen",
         "bestellijst_controleren",
+        "bestellijst_stand",
         "besteloverzicht_pagina",
         "dashboard_wedstrijddag",
         "prognose_pagina",
