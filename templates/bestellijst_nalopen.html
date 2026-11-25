@@ -425,7 +425,8 @@
     });
 
     // Wat er nu waarschijnlijk nog ligt (bestellijst_stand): de laatste telling min wat er sindsdien verkocht zou zijn.
-    fetch(standUrl, { credentials: 'same-origin' })
+    // Pas na de prognose (zie onderaan): die rekent het model zo nodig uit, en dat mag niet twee keer tegelijk.
+    function haalStand() { fetch(standUrl, { credentials: 'same-origin' })
         .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
         .then(function (data) {
             var onder = [];
@@ -447,7 +448,7 @@
                 document.getElementById('stand-melding').hidden = false;
             }
         })
-        .catch(function () { /* zonder verwachting werkt de lijst gewoon */ });
+        .catch(function () { /* zonder verwachting werkt de lijst gewoon */ }); }
 
     // De prognose (bestellijst_prognose) rekent soms enkele seconden, dus na het laden: het advies bij elk product, een
     // hoger voorstel als de komende periode meer vraagt, en wat kan opraken.
@@ -501,7 +502,8 @@
             else if (laag && !metAdvies) status.textContent = 'Nog geen prognose voor deze producten: het voorstel gaat uit van het minimum.';
             else status.textContent = laag ? 'Volgens de prognose is het voorstel genoeg tot de levering daarna.' : '';
         })
-        .catch(function () { status.textContent = 'De prognose kon niet worden geladen; het voorstel gaat uit van het minimum.'; });
+        .catch(function () { status.textContent = 'De prognose kon niet worden geladen; het voorstel gaat uit van het minimum.'; })
+        .then(haalStand);
 })();
 </script>
 {% endblock %}

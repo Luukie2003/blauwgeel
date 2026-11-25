@@ -275,8 +275,8 @@ def register_routes(app):
 
     @app.route("/bestellijst/nalopen/stand")
     def bestellijst_stand():
-        """Per product (id) wat er nu waarschijnlijk nog ligt, bij Bestellijst nalopen apart opgehaald omdat het
-        voorspelmodel soms even rekent (bestellen.verwachte_stand)."""
+        """Per product (id) wat er nu waarschijnlijk nog ligt (bestellen.verwachte_stand). Bestellijst nalopen haalt het op
+        na bestellijst_prognose, die het voorspelmodel zo nodig eerst uitrekent: twee keer tegelijk legt de server stil."""
         return jsonify({"stand": verwachte_stand(get_db())})
 
     @app.route("/bestellijst/nalopen/controleren", methods=["POST"])

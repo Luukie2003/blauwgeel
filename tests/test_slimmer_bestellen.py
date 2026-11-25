@@ -2,6 +2,7 @@
 dan er voorlopig op gaat, en bij Factuur inboeken wat er veel meer binnenkomt dan besteld."""
 
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytest
 from conftest import stel_csrf_token_in as _csrf
@@ -12,6 +13,7 @@ from test_voorspelling import _bouw_geschiedenis
 import bestellen
 import facturen
 import voorraadduur
+import voorspelling
 
 
 def _tellingen(db, pid, verkocht_per_keer, keren=6, dagen=7):
@@ -93,7 +95,7 @@ def test_geen_model_dan_geen_stand(ingelogde_client, db, monkeypatch):
     _product(db, "Zonder Telling")
     assert ingelogde_client.get("/bestellijst/nalopen/stand").get_json() == {"stand": {}}
 
-    def stuk(*_):
+    def stuk(*_, **__):
         raise RuntimeError("model stuk")
 
     monkeypatch.setattr(bestellen, "verwachte_verkoop_sinds_telling", stuk)
@@ -165,3 +167,42 @@ def test_waarschuwing_op_de_pagina_houdt_het_inboeken_niet_tegen(ingelogde_clien
     ingelogde_client.post(f"/facturen/{ronde}/afronden", data={"csrf_token": _csrf(ingelogde_client)})
     assert db.execute("SELECT status FROM inboekrondes WHERE id = ?", (ronde,)).fetchone()[0] == "afgerond"
     assert 'id="meer-dan-besteld"' not in ingelogde_client.get(f"/facturen/{ronde}").data.decode()
+
+
+# ---------- Nooit het model twee keer tegelijk (2.17.1) ----------
+
+
+def test_stand_rekent_het_model_niet_zelf(db, monkeypatch):
+    laatste = (datetime.now() - timedelta(days=4)).replace(minute=0, second=0, microsecond=0)
+    pid = _product(db, "Pils Koud", voorraad=50, minimum=30)
+    _bouw_geschiedenis(db, {pid: 10}, tijdstippen=[laatste - timedelta(days=7 * (9 - i)) for i in range(10)])
+    monkeypatch.setattr(voorspelling, "CACHE_AAN", True)
+    monkeypatch.setattr(voorspelling, "SCHIJF_AAN", False)
+    voorspelling.wis_bewaarde_resultaten()
+    voorspelling._VERWACHT_CACHE.clear()
+
+    def niet_rekenen(*_):
+        raise AssertionError("het model hoort hier niet gerekend te worden")
+
+    with monkeypatch.context() as m:
+        m.setattr(voorspelling, "_prognose_fit", niet_rekenen)
+        m.setattr(voorspelling, "_licht_model", niet_rekenen)
+        assert bestellen.verwachte_stand(db) == {}  # nog niet klaar: geen stand, en niets onthouden
+    with monkeypatch.context() as m:
+        m.setattr(voorspelling, "_prognose_fit", niet_rekenen)
+        licht = voorspelling.verwachte_verkoop_sinds_telling(db)[pid]["verwacht"]  # de looplijst: alleen het lichte deel
+    voorspelling._VERWACHT_CACHE.clear()
+    voorspelling.maak_prognose(db, dagen=7)  # de prognose rekent en bewaart het model
+    monkeypatch.setattr(voorspelling, "_licht_model", niet_rekenen)
+    assert bestellen.verwachte_stand(db)[pid]["onder_minimum"]
+    assert voorspelling.verwachte_verkoop_sinds_telling(db)[pid]["verwacht"] == pytest.approx(licht, rel=0.01)
+    voorspelling.wis_bewaarde_resultaten()
+    voorspelling._VERWACHT_CACHE.clear()
+
+
+def test_stand_pas_na_de_prognose_en_lege_melding_verborgen(ingelogde_client):
+    pagina = ingelogde_client.get("/bestellijst/nalopen").data.decode()
+    assert pagina.count("fetch(standUrl") == 1 and pagina.rstrip().count(".then(haalStand)") == 1
+    assert 'id="stand-melding" hidden' in pagina
+    css = (Path(__file__).parent.parent / "static" / "clubstijl.css").read_text(encoding="utf-8")
+    assert ".cs-melding[hidden] { display: none; }" in css  # .cs-melding is flex: zonder deze regel blijft hij zichtbaar

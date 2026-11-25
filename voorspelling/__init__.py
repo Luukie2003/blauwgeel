@@ -212,15 +212,8 @@ def _prognose_fit(db, nu):
     rijen_per_product = {}
     for r in rijen:
         rijen_per_product.setdefault(r["pid"], []).append(r)
-    gewicht_som = {
-        pid: sum(r["w"] for r in lijst if not r["afgekapt"]) or sum(r["w"] for r in lijst)
-        for pid, lijst in rijen_per_product.items()
-    }
-    gewicht_blootstelling = {
-        pid: sum(r["w"] * drukte(r["b"], effecten) for r in lijst if not r["afgekapt"]) or
-        sum(r["w"] * drukte(r["b"], effecten) for r in lijst)
-        for pid, lijst in rijen_per_product.items()
-    }
+    gewicht_som = _gewicht_som(rijen_per_product)
+    gewicht_blootstelling = _gewicht_blootstelling(rijen_per_product, effecten)
 
     effect_lijst = []
     groepen = sorted(n for n in effecten if n.startswith(GROEP_PREFIX))
@@ -471,7 +464,44 @@ _VERWACHT_CACHE = {}  # (database, telling, kwartier) -> uitkomst; de looplijst 
 _VERWACHT_CACHE_MAX = 4
 
 
-def verwachte_verkoop_sinds_telling(db, nu=None):
+def _licht_model(db, nu):
+    """Van _prognose_fit alleen wat verwachte_verkoop_sinds_telling nodig heeft (zonder het terugtoetsen)."""
+    rijen, _ = lees_rijen(db, nu)
+    if not rijen:
+        return {"beschikbaar": False}
+    kalender = lees_kalender(db, min(r["start"] for r in rijen).date() - timedelta(days=2), nu.date() + timedelta(days=2))
+    _voeg_blootstelling_toe(rijen, kalender, nu)
+    effecten, overspreiding, _informatie = pas_model_aan(rijen)
+    rijen_per_product = {}
+    for r in rijen:
+        rijen_per_product.setdefault(r["pid"], []).append(r)
+    return {
+        "beschikbaar": True,
+        "effecten": effecten,
+        "overspreiding": overspreiding,
+        "snelheid": _snelheden(rijen, effecten),
+        "rijen_per_product": rijen_per_product,
+        "gewicht_som": _gewicht_som(rijen_per_product),
+        "gewicht_blootstelling": _gewicht_blootstelling(rijen_per_product, effecten),
+    }
+
+
+def _gewicht_som(rijen_per_product):
+    return {
+        pid: sum(r["w"] for r in lijst if not r["afgekapt"]) or sum(r["w"] for r in lijst)
+        for pid, lijst in rijen_per_product.items()
+    }
+
+
+def _gewicht_blootstelling(rijen_per_product, effecten):
+    return {
+        pid: sum(r["w"] * drukte(r["b"], effecten) for r in lijst if not r["afgekapt"]) or
+        sum(r["w"] * drukte(r["b"], effecten) for r in lijst)
+        for pid, lijst in rijen_per_product.items()
+    }
+
+
+def verwachte_verkoop_sinds_telling(db, nu=None, alleen_bewaard=False):
     """Per product: hoeveel er volgens het model verkocht is sinds de laatste
     telling van dat product, met een ruime marge. De geregistreerde voorraad
     is namelijk de stand van de laatste telling plus wat er sindsdien is
@@ -481,7 +511,8 @@ def verwachte_verkoop_sinds_telling(db, nu=None):
 
     Geeft {product_id: {"verwacht", "laag", "hoog", "ruim_laag", "ruim_hoog",
     "sinds", "waarnemingen"}}; leeg zolang er te weinig tellingen zijn. Het
-    resultaat wordt kort bewaard (de looplijst vraagt het voor elk product opnieuw)."""
+    resultaat wordt kort bewaard (de looplijst vraagt het voor elk product opnieuw).
+    alleen_bewaard: alleen als het model al klaarstaat, anders {} (Bestellijst nalopen, zie bestellen.verwachte_stand)."""
     nu = nu or datetime.now()
     laatste = db.execute(
         "SELECT COUNT(*) AS n, COALESCE(MAX(id), 0) AS laatste FROM tellingen"
@@ -491,8 +522,13 @@ def verwachte_verkoop_sinds_telling(db, nu=None):
         return _VERWACHT_CACHE[sleutel]
 
     uitkomst = {}
-    # Het bewaarde model van de prognose (per telling één keer gerekend), niet nog een keer zelf aanpassen.
-    fit = _bewaard(db, "prognose-fit", nu, (), lambda: _prognose_fit(db, nu), model_vingerafdruk, tijdvak="altijd")
+    # Liefst het bewaarde model van de prognose. Is dat er (nog) niet, dan alleen het lichte deel ervan zelf rekenen: het
+    # hele model (met het terugtoetsen) duurt op de server soms een minuut, en daar mag de looplijst niet op wachten.
+    fit = _bewaard_model(db, nu)
+    if fit is None and alleen_bewaard and CACHE_AAN:
+        return {}
+    if fit is None:
+        fit = _licht_model(db, nu)
     if fit["beschikbaar"]:
         effecten, overspreiding = fit["effecten"], fit["overspreiding"]
         rijen_per_product = fit["rijen_per_product"]
@@ -832,6 +868,35 @@ def _ruim_schijf_op(map_):
             p.unlink(missing_ok=True)
 
 
+def _sleutel(db, naam, nu, argumenten, vingerafdruk, tijdvak):
+    return (
+        db.execute("PRAGMA database_list").fetchone()[2],
+        naam,
+        argumenten,
+        int(nu.timestamp() // CACHE_BUCKET_SECONDEN) if tijdvak == "uur" else None,
+        None if tijdvak == "altijd" else (nu - timedelta(hours=DAG_BEGIN_UUR)).date().toordinal(),
+        (vingerafdruk or data_vingerafdruk)(db),
+    )
+
+
+def _bewaard_model(db, nu):
+    """Het model (_prognose_fit) als het al gerekend en bewaard is, anders None. Rekent nooit zelf en wacht nergens op."""
+    if not CACHE_AAN:
+        return None
+    sleutel = _sleutel(db, "prognose-fit", nu, (), model_vingerafdruk, "altijd")
+    with _CACHE_SLOT:
+        if sleutel in _CACHE:
+            return _recent_gebruikt(sleutel)
+    uitkomst, van_schijf = _lees_van_schijf(sleutel)
+    if not van_schijf:
+        return None
+    with _CACHE_SLOT:
+        while len(_CACHE) >= CACHE_MAX_ITEMS:
+            _CACHE.pop(next(iter(_CACHE)))
+        _CACHE[sleutel] = uitkomst
+    return uitkomst
+
+
 def _bewaard(db, naam, nu, argumenten, bereken, vingerafdruk=None, tijdvak="uur"):
     """Geeft de bewaarde uitkomst als de gegevens en het tijdvenster hetzelfde zijn, anders
     rekent het opnieuw (zie CACHE_AAN). vingerafdruk: de functie die bepaalt wanneer de gegevens
@@ -841,14 +906,7 @@ def _bewaard(db, naam, nu, argumenten, bereken, vingerafdruk=None, tijdvak="uur"
     (zie _prognose_fit)."""
     if not CACHE_AAN:
         return bereken()
-    sleutel = (
-        db.execute("PRAGMA database_list").fetchone()[2],
-        naam,
-        argumenten,
-        int(nu.timestamp() // CACHE_BUCKET_SECONDEN) if tijdvak == "uur" else None,
-        None if tijdvak == "altijd" else (nu - timedelta(hours=DAG_BEGIN_UUR)).date().toordinal(),
-        (vingerafdruk or data_vingerafdruk)(db),
-    )
+    sleutel = _sleutel(db, naam, nu, argumenten, vingerafdruk, tijdvak)
     with _CACHE_SLOT:
         if sleutel in _CACHE:
             return _recent_gebruikt(sleutel)

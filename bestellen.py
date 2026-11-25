@@ -210,9 +210,10 @@ def verwachte_stand(db, nu=None):
     """Wat er nu waarschijnlijk nog ligt, als er sinds de laatste telling verkocht zou moeten zijn: de voorraad in de app
     is de stand van die telling (met wat er sindsdien is geboekt). {product_id: {"verwacht", "laag", "hoog", "geteld"
     ('za 21-11'), "onder_minimum": nu waarschijnlijk onder het minimum, terwijl de voorraad in de app dat niet is}}. Alleen
-    als het minstens 1 scheelt. Mislukt het model, dan is er gewoon geen verwachting."""
+    als het minstens 1 scheelt. Rekent het model niet zelf uit: de pagina vraagt dit pas na de prognose, die dat al deed.
+    Staat het niet klaar of mislukt het, dan is er gewoon geen verwachting."""
     try:
-        verkoop = verwachte_verkoop_sinds_telling(db, nu)
+        verkoop = verwachte_verkoop_sinds_telling(db, nu, alleen_bewaard=True)
     except Exception as fout:  # het bestellen mag nooit stuk gaan door de voorspelling
         print(f"[voorspelling] verwachte voorraad mislukt: {fout}")
         return {}

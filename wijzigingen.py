@@ -6,8 +6,16 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.17.0"
+HUIDIGE_VERSIE = "2.17.1"
 WIJZIGINGEN = [
+    {
+        "versie": "2.17.1",
+        "datum": "25 november 2026",
+        "punten": [
+            "Bestellijst nalopen: de melding 'Waarschijnlijk al onder het minimum' staat er alleen nog als er producten in staan.",
+            "Bestellijst nalopen laat de site niet meer vastlopen als de prognose nog uitgerekend moet worden (na een telling of een nieuwe versie): wat er nu waarschijnlijk ligt, wordt pas daarna opgehaald.",
+        ],
+    },
     {
         "versie": "2.17.0",
         "datum": "24 november 2026",
@@ -1540,7 +1548,7 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.17.1", "sinds": "0.1.0", "laatst": "2.9.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.24.0", "sinds": "0.4.0", "laatst": "2.17.0",
+    {"naam": "Bestellen & prognose", "versie": "1.24.1", "sinds": "0.4.0", "laatst": "2.17.1",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), de bestellijst nalopen met vinkjes (ook op de computer) en het besteloverzicht voor de webshop, leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
     {"naam": "Producten & prijzen", "versie": "1.17.0", "sinds": "0.1.0", "laatst": "2.10.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
