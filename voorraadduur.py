@@ -22,8 +22,8 @@ def verkoop_per_week(db, nu=None):
     regels = {}
     for r in db.execute(
         """SELECT tr.product_id, t.datum, tr.verkocht FROM telling_regels tr JOIN tellingen t ON t.id = tr.telling_id
-           WHERE t.datum >= ? ORDER BY t.datum, t.id""",
-        (vanaf,),
+           WHERE t.datum >= ? AND t.datum <= ? ORDER BY t.datum, t.id""",
+        (vanaf, nu.strftime("%Y-%m-%d %H:%M")),
     ).fetchall():
         regels.setdefault(r["product_id"], []).append(r)
     uitkomst = {}

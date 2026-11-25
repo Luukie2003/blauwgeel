@@ -182,19 +182,19 @@
             </label>
         </fieldset>
         <fieldset class="groupbox">
-            <legend>Fust verkoop (optioneel)</legend>
+            <legend>Per glas verkocht: fust of fles (optioneel)</legend>
             <p class="tekst-zacht" style="margin-top:-0.3rem">
-                Alleen invullen voor producten die per glas getapt worden. Een fust dat bij een telling minder wordt
-                geteld, telt in de omzet als glazen per fust maal de prijs per glas (bijv. 60 &times; &euro; 2,00 =
-                &euro; 120), ook in de marge en de prognose. Het fust staat dan ook op het
-                <a href="{{ url_for('voorraadoverzicht') }}">voorraadoverzicht</a>.
+                Voor wat je per glas of per shot verkoopt. Een fust of fles die bij een telling minder wordt geteld, telt
+                in de omzet als het aantal glazen maal de prijs per glas (een fust: 60 &times; &euro; 2,00 = &euro; 120;
+                een shotfles: 28 &times; &euro; 3,50 = &euro; 98), ook in de marge en de prognose. Een fust staat dan ook op
+                het <a href="{{ url_for('voorraadoverzicht') }}">voorraadoverzicht</a>.
             </p>
             <div class="formgrid">
                 <div class="veld">
-                    <label for="glazen_per_fust">Glazen per fust</label>
+                    <label for="glazen_per_fust">Glazen per fust of fles</label>
                     <input type="number" id="glazen_per_fust" name="glazen_per_fust" min="0"
                            value="{{ product.glazen_per_fust if product else 0 }}">
-                    <span class="tekst-zacht">Bijv. 60 glazen van 33 cl uit 1 fust. 0 = geen fust.</span>
+                    <span class="tekst-zacht">Bijv. 60 glazen van 33 cl uit een fust, of 28 shots van 2,5 cl uit een fles van 70 cl. 0 = wordt niet per glas verkocht.</span>
                 </div>
                 <div class="veld">
                     <label for="prijs_per_glas">Verkoopprijs per glas</label>
@@ -202,6 +202,10 @@
                            value="{{ '%.2f'|format(product.prijs_per_glas) if product else '0.00' }}">
                 </div>
             </div>
+            {% if oude_tellingen %}
+            <p style="margin:0.6rem 0 0">In {{ oude_tellingen }} oude {{ 'tellingregel telt' if oude_tellingen == 1 else 'tellingregels telt' }} een fles nog
+                voor de prijs van &eacute;&eacute;n glas. <a href="{{ url_for('product_oude_tellingen', product_id=product.id) }}">Bekijken en omrekenen</a></p>
+            {% endif %}
         </fieldset>
         <fieldset class="groupbox">
             <legend>Kantine-tv (optioneel)</legend>

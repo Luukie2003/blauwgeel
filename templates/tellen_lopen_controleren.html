@@ -20,7 +20,7 @@
         <input type="hidden" name="actie" id="loop-controleren-actie" value="bevestigen">
         <div id="loop-controleren-kaarten">
             {% for r in regels %}
-            <div class="pda-kaartje{{ ' pda-kaartje--manco' if r.afwijking or r.model_afwijking else '' }}">
+            <div class="pda-kaartje{{ ' pda-kaartje--manco' if r.afwijking or r.model_afwijking or r.verwisseld else '' }}">
                 <div class="pda-kaartje-vink" style="cursor:default">
                     <span class="pda-kaartje-naam">{{ r.product.naam }}</span>
                     {% if r.afwijking %}
@@ -40,6 +40,11 @@
                     {% if r.model_afwijking == 'minder' %}Nog eens tellen?{% else %}Is er een levering niet ingeboekt?{% endif %}
                 </p>
                 {% endif %}
+                {% if r.verwisseld %}
+<p class="loop-model-afwijking">
+Door elkaar geteld met {{ r.verwisseld.met }}? Hier staan er {{ r.verwisseld.aantal }} {{ 'meer' if r.verwisseld.meer else 'minder' }} dan verwacht, daar ongeveer evenveel {{ 'minder' if r.verwisseld.meer else 'meer' }}.
+</p>
+{% endif %}
                 <div class="veld pda-kaartje-veld">
                     <label>Totaal ({{ r.product.eenheid }})</label>
                     <input type="number" name="totaal_{{ r.product.id }}" min="0" value="{{ r.totaal }}">
@@ -83,7 +88,7 @@
                 </thead>
                 <tbody>
                     {% for r in regels %}
-                    <tr class="{{ 'rij-waarschuwing' if r.afwijking or r.model_afwijking }}">
+                    <tr class="{{ 'rij-waarschuwing' if r.afwijking or r.model_afwijking or r.verwisseld }}">
                         <td>
                             {{ r.product.naam }}
                             <div class="cs-alleen-smal cs-zacht">Bar {{ r.bar }}, voorraadhok {{ r.hok }} {{ r.product.eenheid }}</div>
@@ -98,6 +103,11 @@
                                 {% if r.model_afwijking == 'minder' %}Nog eens tellen?{% else %}Levering niet ingeboekt?{% endif %}
                             </div>
                             {% endif %}
+                            {% if r.verwisseld %}
+<div class="cs-waarschuwing">
+Door elkaar geteld met {{ r.verwisseld.met }}? Hier staan er {{ r.verwisseld.aantal }} {{ 'meer' if r.verwisseld.meer else 'minder' }} dan verwacht, daar ongeveer evenveel {{ 'minder' if r.verwisseld.meer else 'meer' }}.
+</div>
+{% endif %}
                         </td>
                         <td class="cs-getal cs-nowrap cs-verberg-smal">{{ r.bar }}<span class="cs-eenheid">{{ r.product.eenheid }}</span></td>
                         <td class="cs-getal cs-nowrap cs-verberg-smal">{{ r.hok }}<span class="cs-eenheid">{{ r.product.eenheid }}</span></td>

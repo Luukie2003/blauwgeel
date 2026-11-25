@@ -5,6 +5,7 @@ import sqlite3
 from flask import flash, redirect, render_template, request, session, url_for
 
 import barcodes
+import glazen
 from database import get_db
 from productinfo import HANDMATIG_AANGEPAST
 from productkaart import BESTELEENHEDEN, EENHEDEN, artikelcode_in_gebruik, eenheid_uit_formulier
@@ -253,6 +254,9 @@ def register_routes(app):
                     f"'{request.form['naam']}' is automatisch op inactief gezet (voorraad op 0).",
                     "warning",
                 )
+            nieuw = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+            if nieuw["glazen_per_fust"] != product["glazen_per_fust"] and glazen.te_corrigeren(db, nieuw):
+                return redirect(url_for("product_oude_tellingen", product_id=product_id))
             return redirect(url_for("producten_lijst"))
         categorieen = db.execute(
             "SELECT naam FROM categorieen ORDER BY naam"
@@ -282,8 +286,28 @@ def register_routes(app):
             artikelen=barcodes.artikelen_van(db, product_id),
             inkoop_artikelen=inkoop_artikelen,
             per_eenheid=barcodes.per_eenheid,
+            oude_tellingen=len(glazen.te_corrigeren(db, product)),
             **_keuzelijsten(db),
         )
+
+    @app.route("/producten/<int:product_id>/oude-tellingen", methods=["GET", "POST"])
+    def product_oude_tellingen(product_id):
+        """Een fles die per glas verkocht wordt, telde in oude tellingen voor de prijs van één glas: eerst laten zien wat er
+        verandert, en met Omrekenen rechtzetten (glazen.py)."""
+        db = get_db()
+        product = db.execute("SELECT * FROM producten WHERE id = ?", (product_id,)).fetchone()
+        if product is None:
+            flash("Dit product bestaat niet (meer).", "error")
+            return redirect(url_for("producten_lijst"))
+        if request.method == "POST":
+            aantal, erbij = glazen.corrigeer(db, product)
+            if aantal:
+                bedrag = f"{erbij:.2f}".replace(".", ",")
+                flash(f"{product['naam']}: {aantal} tellingregel(s) omgerekend, € {bedrag} omzet erbij.", "success")
+            else:
+                flash("Er was niets om te rekenen.", "warning")
+            return redirect(url_for("product_detail", product_id=product_id))
+        return render_template("product_oude_tellingen.html", product=product, regels=glazen.te_corrigeren(db, product))
 
     @app.route("/producten/<int:product_id>/verwijderen", methods=["POST"])
     def product_verwijderen(product_id):

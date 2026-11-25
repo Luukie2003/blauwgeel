@@ -15,6 +15,7 @@ import re
 from datetime import datetime
 
 from club_van_20 import seizoen_kort, seizoen_van_datum
+from helpers.producten import is_fles_per_glas
 from helpers.tijd import datum_lang
 from seizoensrapport import seizoen_start
 from voorspelling import verdeling
@@ -105,7 +106,9 @@ def bereken(db, nu=None):
         p = producten.get(pid)
         if p is None or aantal <= 0:
             continue
-        if (p["glazen_per_fust"] or 0) > 0:
+        if is_fles_per_glas(p):  # shots of wijn: wel glazen, maar niet getapt
+            bar.append({"naam": p["naam"], "aantal": round(aantal * p["glazen_per_fust"]), "eenheid": "glazen"})
+        elif (p["glazen_per_fust"] or 0) > 0:
             fusten += aantal
             glazen += aantal * p["glazen_per_fust"]
             bar.append({"naam": _zonder_fust(p["naam"]), "aantal": round(aantal * p["glazen_per_fust"]), "eenheid": "glazen"})

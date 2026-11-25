@@ -9,8 +9,10 @@ from flask import flash, redirect, render_template, request, session, url_for
 
 import bestelvoorstel
 import seizoen_in_cijfers
+import sluitperiode
 from database import get_db
 from helpers import bereken_komende_thuiswedstrijden, now_str
+from helpers.tijd import vandaag_amsterdam
 from voorspelling import (
     _WEEKDAG,
     dag_is_open,
@@ -312,3 +314,23 @@ def register_routes(app):
     def prognose_terugblik_resultaat():
         perioden = terugblik(get_db())
         return render_template("_prognose_terugblik.html", perioden=perioden, samenvatting=vat_terugblik_samen(perioden))
+
+    def _stop_periode():
+        perioden = sluitperiode.perioden(get_db(), vandaag_amsterdam())
+        nr = request.args.get("nr", 0, type=int)
+        nr = nr if 0 <= nr < len(perioden) else 0
+        return perioden, nr, (perioden[nr] if perioden else None)
+
+    @app.route("/prognose/winterstop")
+    def prognose_stop():
+        """Bestellen > Prognose, tabblad Winterstop: wat er voor en na een sluitperiode nodig is (sluitperiode.py). Het plan
+        rekent met het voorspelmodel, dus dat haalt de pagina na het laden apart op."""
+        perioden, nr, periode = _stop_periode()
+        return render_template("prognose_stop.html", perioden=perioden, nr=nr, periode=periode, min_dagen=sluitperiode.MIN_DAGEN)
+
+    @app.route("/prognose/winterstop/resultaat")
+    def prognose_stop_resultaat():
+        _perioden, _nr, periode = _stop_periode()
+        if periode is None:
+            return ""
+        return render_template("_prognose_stop.html", plan=sluitperiode.plan(get_db(), periode), periode=periode)

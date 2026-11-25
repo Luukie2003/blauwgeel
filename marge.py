@@ -129,7 +129,8 @@ def bereken_tap(db):
     verloren gaat aan schuim en spoelen, na hoeveel glazen het fust is terugverdiend, en de kostprijs van een
     prijsoptie (bijv. een pitcher) waarbij is ingevuld hoeveel glazen erin gaan."""
     fusten = db.execute(
-        """SELECT * FROM producten WHERE glazen_per_fust > 0 AND inkoopprijs > 0
+        """SELECT * FROM producten p WHERE glazen_per_fust > 0 AND inkoopprijs > 0
+             AND LOWER(TRIM(COALESCE(p.eenheid, ''))) NOT IN ('fles', 'flesje')
            ORDER BY actief DESC, naam COLLATE NOCASE"""
     ).fetchall()
     uitkomst = []

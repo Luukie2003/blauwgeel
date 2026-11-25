@@ -4,6 +4,7 @@ from datetime import datetime
 
 from flask import Response, flash, g, redirect, render_template, request, session, url_for
 
+import verwisseld
 from database import get_db
 from helpers import bereken_trend, bestel_suggesties, format_datum, now_str, verwerk_auto_inactief
 from pdf import periode_verkoop_pdf, verkoop_pdf
@@ -271,6 +272,7 @@ def register_routes(app):
             totaal_omzet=totaal_omzet,
             besteladvies=besteladvies,
             later_geteld=later_geteld,
+            verwisseld=verwisseld.bij_telling(db, telling),
             voorraad_afwijking=_voorraad_afwijkingen(db, telling, regels, later_geteld),
         )
 

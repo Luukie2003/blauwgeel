@@ -4,6 +4,7 @@ from flask import Response, g, render_template
 
 from database import get_db
 from helpers import bereken_fust_verkopen, categorienamen_zonder_verkoopprijsplicht, csv_response
+from helpers.producten import is_fles_per_glas
 from productkaart import NIET_GEARCHIVEERD, in_gewone_telling
 from pdf import voorraadoverzicht_pdf
 from routes.producten.overzicht import render_voorraad_pda
@@ -106,7 +107,7 @@ def bereken_voorraadoverzicht(db):
     # Fusten hebben geen eigen tabel -- gewoon producten met
     # glazen_per_fust > 0, hier meegenomen i.p.v. op een eigen pagina
     # (zie routes/fusten.py, die alleen nog doorverwijst hierheen).
-    fust_producten = [p for p in producten if p["glazen_per_fust"] > 0]
+    fust_producten = [p for p in producten if p["glazen_per_fust"] > 0 and not is_fles_per_glas(p)]
 
     return {
         "producten": producten,

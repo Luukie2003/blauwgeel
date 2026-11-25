@@ -2,6 +2,7 @@
 
 from flask import flash, redirect, render_template, request, session, url_for
 
+import verwisseld
 from database import get_db
 from helpers import now_str
 from productkaart import TELLEN_VOORWAARDE
@@ -285,4 +286,4 @@ def controle_regels(db, review, bar_waarden, hok_waarden):
             }
         )
     regels.sort(key=lambda r: (r["product"]["categorie"], r["product"]["naam"]))
-    return regels
+    return verwisseld.op_controlescherm(regels)

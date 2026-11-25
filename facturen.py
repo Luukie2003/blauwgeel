@@ -18,7 +18,7 @@ meekwam komt er als regel bij (besteld: 0)."""
 from datetime import datetime, timedelta
 
 import barcodes
-from helpers.producten import besteleenheid_factor, besteleenheid_naam, inkoop_per_stuk
+from helpers.producten import besteleenheid_factor, besteleenheid_naam, inkoop_per_stuk, is_fles_per_glas
 from helpers.tijd import now_str
 from inkoop_verkoop import is_correctie
 from manco import open_manco_per_product
@@ -301,7 +301,8 @@ def plu_lijst(db, besteld=None, per_product=None):
     for p in db.execute(
         """SELECT * FROM producten
            WHERE actief = 1 AND COALESCE(gearchiveerd, 0) = 0
-             AND (COALESCE(geen_barcode, 0) = 1 OR COALESCE(glazen_per_fust, 0) > 0)
+             AND (COALESCE(geen_barcode, 0) = 1 OR (COALESCE(glazen_per_fust, 0) > 0
+                  AND LOWER(TRIM(COALESCE(eenheid, ''))) NOT IN ('fles', 'flesje')))
            ORDER BY naam COLLATE NOCASE"""
     ).fetchall():
         factor = besteleenheid_factor(p)
@@ -313,7 +314,7 @@ def plu_lijst(db, besteld=None, per_product=None):
             "besteleenheid": besteleenheid_naam(p) if factor > 1 else p["eenheid"],
             "per_besteleenheid": factor,
             "prijs_per_besteleenheid": round(inkoop_per_stuk(p) * factor, 4),
-            "fust": bool(p["glazen_per_fust"]),
+            "fust": bool(p["glazen_per_fust"]) and not is_fles_per_glas(p),
             "besteld": b["besteld"] if b else 0,
             "gescand": per_product.get(p["id"], {}).get("eenheden", 0),
         })

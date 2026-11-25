@@ -124,7 +124,7 @@
                     </tr>
                     {% if p.glazen_per_fust %}
                     <tr class="prijzen-sub" data-categorie="{{ p.categorie }}" data-volgt="{{ p.id }}">
-                        <td>&#8627; Per glas (voor de omzetschatting van het fust)</td><td></td>
+                        <td>&#8627; Per glas (voor de omzet van {{ "de fles" if (p.eenheid or "")|lower in ("fles", "flesje") else "het fust" }})</td><td></td>
                         <td>{{ prijsveld('glas_' ~ p.id, p.prijs_per_glas, 'Prijs per glas ' ~ p.naam) }}</td><td></td>
                     </tr>
                     {% endif %}

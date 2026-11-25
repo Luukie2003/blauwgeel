@@ -1,0 +1,56 @@
+{# Het berekende deel van het winterstop-plan (sluitperiode.plan). #}
+{% macro euro(x) %}&euro; {{ '%.0f'|format(x) }}{% endmacro %}
+{% macro momenten(lijst) %}{% for naam, tekst in lijst %}{{ 'Bij ' ~ naam ~ ' uiterlijk ' ~ tekst }}{{ ', ' if not loop.last else '.' }}{% endfor %}{% endmacro %}
+{% if not plan.beschikbaar %}
+<div class="cs-paneel"><p class="cs-leeg">Er zijn nog te weinig tellingen om de verkoop te voorspellen.</p></div>
+{% else %}
+<div class="cs-scorebord">
+    <div><strong>{{ plan.bestellen|length }}</strong><span>nog bestellen v&oacute;&oacute;r de stop</span></div>
+    <div><strong>{{ plan.opmaken|length }}</strong><span>beter eerst opmaken</span></div>
+    <div><strong>{{ plan.herstart|length }}</strong><span>bestellen voor de herstart</span></div>
+    <div><strong>{{ euro(plan.waarde_over) }}</strong><span>ligt er tijdens de stop (inkoop)</span></div>
+</div>
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Nog bestellen v&oacute;&oacute;r de stop</h2><span class="cs-aantal">{{ plan.bestellen|length }}</span>
+        {% if plan.bestellen %}<div class="cs-rechts"><a href="{{ url_for('bestellijst_nalopen') }}" class="btn btn-geel">Bestellijst nalopen</a></div>{% endif %}</div>
+    {% if plan.bestellen %}
+    <p class="cs-paneel-tekst cs-zacht">Genoeg voor wat er tot de stop verwacht wordt, zonder het minimum. {{ momenten(plan.bestel_voor) }}</p>
+    <div class="tabel-wrap"><table>
+        <thead><tr><th>Product</th><th class="cs-getal">Ligt er nu</th><th class="cs-getal cs-verberg-smal">Onderweg</th><th class="cs-getal">Verwacht tot de stop</th><th class="cs-getal">Bestellen</th></tr></thead>
+        <tbody>{% for p in plan.bestellen %}<tr><td>{{ p.naam }}</td><td class="cs-getal">{{ p.ligt }}</td><td class="cs-getal cs-verberg-smal">{{ p.onderweg or '' }}</td><td class="cs-getal">{{ p.verwacht }} <span class="cs-zacht">(tot {{ p.hoog }})</span></td><td class="cs-getal cs-nowrap"><strong>{{ p.bestellen }}</strong> {{ p.colli }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="cs-leeg">Er ligt genoeg tot de stop. Je hoeft niets meer te bestellen.</p>{% endif %}
+</section>
+
+{% if plan.wachten %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Hoeft niet v&oacute;&oacute;r de stop</h2><span class="cs-aantal">{{ plan.wachten|length }}</span></div>
+    <p class="cs-paneel-tekst cs-zacht">Deze zitten onder het minimum en staan dus op de bestellijst, maar er ligt genoeg tot de stop:
+        {% for p in plan.wachten %}{{ p.naam }} ({{ p.ligt }}{% if p.onderweg %} + {{ p.onderweg }} onderweg{% endif %} van {{ p.minimum }}){{ ', ' if not loop.last else '.' }}{% endfor %}</p>
+</section>
+{% endif %}
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Beter eerst opmaken</h2><span class="cs-aantal">{{ plan.opmaken|length }}</span></div>
+    {% if plan.opmaken %}
+    <p class="cs-paneel-tekst cs-zacht">Hier is meer van dan er tot de stop &eacute;n in de eerste twee weken erna nodig is. Zet het in een actie,
+        en kijk of de datum het haalt.</p>
+    <div class="tabel-wrap"><table>
+        <thead><tr><th>Product</th><th class="cs-getal">Ligt er nu</th><th class="cs-getal">Verwacht tot de stop</th><th class="cs-getal">Blijft liggen</th><th class="cs-getal cs-verberg-smal">Waarde</th></tr></thead>
+        <tbody>{% for p in plan.opmaken %}<tr><td>{{ p.naam }}</td><td class="cs-getal">{{ p.ligt }}{% if p.onderweg %} <span class="cs-zacht">+ {{ p.onderweg }} onderweg</span>{% endif %}</td><td class="cs-getal">{{ p.verwacht }}</td><td class="cs-getal"><strong>{{ p.over }}</strong> {{ p.eenheid }}</td><td class="cs-getal cs-verberg-smal">{{ euro(p.waarde) }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="cs-leeg">Er blijft niets opvallends liggen.</p>{% endif %}
+</section>
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Bestellen voor de herstart</h2><span class="cs-aantal">{{ plan.herstart|length }}</span></div>
+    {% if plan.herstart %}
+    <p class="cs-paneel-tekst cs-zacht">Voor de eerste twee weken open en het minimum, met wat er dan nog ligt. {{ momenten(plan.bestel_herstart) }}</p>
+    <div class="tabel-wrap"><table>
+        <thead><tr><th>Product</th><th class="cs-getal">Blijft liggen</th><th class="cs-getal cs-verberg-smal">Verwacht na de stop</th><th class="cs-getal cs-verberg-smal">Minimum</th><th class="cs-getal">Bestellen</th></tr></thead>
+        <tbody>{% for p in plan.herstart %}<tr><td>{{ p.naam }}</td><td class="cs-getal">{{ p.over }}</td><td class="cs-getal cs-verberg-smal">{{ p.na }}</td><td class="cs-getal cs-verberg-smal">{{ p.minimum }}</td><td class="cs-getal cs-nowrap"><strong>{{ p.herstart }}</strong> {{ p.colli }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="cs-leeg">Er ligt na de stop genoeg om open te gaan.</p>{% endif %}
+</section>
+{% endif %}

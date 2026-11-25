@@ -113,7 +113,7 @@ NAV_ITEMS = [
     {
         "groep": "Bestellen",
         # Met Prognose en verkoop als tweede tabblad (_prognose_tabs.html).
-        "endpoints": ["prognose_pagina", "prognose_resultaat", "prognose_terugblik"],
+        "endpoints": ["prognose_pagina", "prognose_resultaat", "prognose_terugblik", "prognose_stop"],
         "url_endpoint": "prognose_pagina",
         "label": "Prognose",
     },
@@ -147,6 +147,7 @@ NAV_ITEMS = [
             "producten_lijst",
             "product_nieuw",
             "product_bewerken",
+            "product_oude_tellingen",
             "categorieen_lijst",
             "producten_bulk_bewerken",
             "producten_gearchiveerd",

@@ -47,6 +47,7 @@ LOGBOEK_ACTIES = {
     "kluis_mutatie_corrigeren": "Kluis storting/opname gecorrigeerd",
     "product_nieuw": "Product aangemaakt",
     "product_bewerken": "Product bewerkt",
+    "product_oude_tellingen": "Oude tellingen omgerekend naar glazen",
     "product_verwijderen": "Product verwijderd",
     "producten_bulk_bewerken": "Producten in bulk bewerkt",
     "producten_prijzen": "Verkoopprijzen in bulk gewijzigd of klaargezet",

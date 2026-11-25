@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{# De oude tellingen van een fles die per glas verkocht wordt: eerst kijken wat er verandert, dan omrekenen. Zie glazen.py. #}
+{% from '_iconen.html' import icoon %}
+{% macro euro(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% block titel %}Oude tellingen van {{ product.naam }}{% endblock %}
+{% block venster_titel %}
+<a href="{{ url_for('product_bewerken', product_id=product.id) }}" class="cs-terug">{{ icoon('terug') }} {{ product.naam }}</a>
+<div class="cs-titel">
+    <h1>Oude tellingen omrekenen</h1>
+    <span class="cs-titel-tekst">{{ product.naam }}: {{ product.glazen_per_fust }} glazen per {{ product.eenheid|lower }}, {{ euro(product.prijs_per_glas) }} per glas</span>
+</div>
+{% endblock %}
+{% block inhoud %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Wat er verandert</h2><span class="cs-aantal">{{ regels|length }}</span></div>
+    {% if regels %}
+    <p class="cs-paneel-tekst cs-zacht">In deze tellingen telde een lege {{ product.eenheid|lower }} voor de prijs van &eacute;&eacute;n glas.
+        Omrekenen maakt daar de prijs van toen maal {{ product.glazen_per_fust }} glazen van. De omzet, de marge en de
+        prognose gaan mee; de voorraad en wat er geteld is niet. Terugdraaien kan niet met een knop.</p>
+    <div class="tabel-wrap">
+        <table>
+            <thead><tr><th>Telling</th><th class="cs-getal">Verkocht</th><th class="cs-getal">Was per {{ product.eenheid|lower }}</th><th class="cs-getal">Wordt</th><th class="cs-getal">Omzet erbij</th></tr></thead>
+            <tbody>
+                {% for r in regels %}
+                <tr>
+                    <td><a href="{{ url_for('telling_detail', telling_id=r.telling_id) }}">{{ r.datum|dag_maand }} {{ r.datum[:4] }}</a></td>
+                    <td class="cs-getal">{{ r.verkocht }}</td>
+                    <td class="cs-getal cs-nowrap">{{ euro(r.oud) }}</td>
+                    <td class="cs-getal cs-nowrap">{{ euro(r.nieuw) }}</td>
+                    <td class="cs-getal cs-nowrap">{{ euro(r.erbij) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot><tr><td><strong>Samen</strong></td><td class="cs-getal"><strong>{{ regels|sum(attribute='verkocht') }}</strong></td><td></td><td></td><td class="cs-getal cs-nowrap"><strong>{{ euro(regels|sum(attribute='erbij')) }}</strong></td></tr></tfoot>
+        </table>
+    </div>
+    <div class="cs-paneel-voet">
+        <form method="post" data-vraag="De oude tellingen omrekenen? De omzet van {{ regels|length }} tellingregel(s) verandert." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);" style="margin:0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-geel">Omrekenen</button>
+        </form>
+        <a href="{{ url_for('producten_lijst') }}" class="btn btn-rand">Niet nu</a>
+    </div>
+    {% else %}
+    <p class="cs-leeg">Er is niets om te rekenen: alle tellingen van dit product kloppen met het aantal glazen.</p>
+    {% endif %}
+</section>
+{% endblock %}

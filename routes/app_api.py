@@ -465,7 +465,7 @@ def register_routes(app):
             {"product_id": r["product"]["id"], "naam": r["product"]["naam"], "categorie": r["product"]["categorie"] or "",
              "eenheid": r["product"]["eenheid"], "voorraad": r["product"]["voorraad"], "bar": r["bar"], "hok": r["hok"],
              "totaal": r["totaal"], "verwacht": r["verwacht"], "afwijking": r["afwijking"],
-             "model_afwijking": r["model_afwijking"]}
+             "model_afwijking": r["model_afwijking"], "verwisseld": r["verwisseld"]}
             for r in regels
         ]})
 

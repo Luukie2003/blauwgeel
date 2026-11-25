@@ -34,6 +34,20 @@
 </section>
 {% endif %}
 
+{% if verwisseld %}
+<div class="cs-melding let-op" id="verwisseld">
+    {{ icoon('let-op') }}
+    <div class="cs-melding-tekst">
+        <strong>Door elkaar geteld?</strong>
+        {% for v in verwisseld %}
+        <p>Van {{ v.meer.naam }} staan er {{ v.meer.verschil|round|int }} meer dan er volgens de app waren, en van {{ v.minder.naam }}
+            zijn er {{ (-v.minder.verschil)|round|int }} meer weg dan gewoonlijk. Zijn er ongeveer {{ v.aantal }} bij de verkeerde geteld,
+            verbeter ze dan hieronder allebei met Corrigeren.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 {% set met_correctie = regels|selectattr('correctie', 'gt', 0)|list|length %}
 <div class="cs-scorebord">
     <div><strong>{{ "€ %.2f"|format(totaal_omzet) }}</strong><span>omzet volgens deze telling</span></div>

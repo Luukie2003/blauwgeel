@@ -56,7 +56,7 @@
                     <td style="text-align:right"><strong>{{ bedrag(o.prijs) }}</strong></td>
                 </tr>
                 {% endfor %}
-                {% if p.glazen_per_fust and p.prijs_per_glas %}
+                {% if p.glazen_per_fust and p.prijs_per_glas and p.prijs_per_glas != p.verkoopprijs %}
                 <tr>
                     <td style="padding-left:1.6rem" class="tekst-zacht">&#8627; per glas</td>
                     <td style="text-align:right"><strong>{{ bedrag(p.prijs_per_glas) }}</strong></td>

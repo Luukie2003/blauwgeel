@@ -74,9 +74,15 @@ def inkoop_per_stuk(product):
     )
 
 
+def is_fles_per_glas(product):
+    """Een fles die per glas verkocht wordt (shots, wijn): glazen ingevuld, en geteld per fles. Al het andere met glazen is
+    een fust: dat wordt getapt, en alleen dat staat bij Fusten, het schuimverlies en de getapte glazen."""
+    return _veld(product, "glazen_per_fust") > 0 and str(_veld(product, "eenheid", "")).strip().lower() in ("fles", "flesje")
+
+
 def omzet_per_eenheid(product):
-    """Wat één eenheid van dit product oplevert als hij verkocht is. Normaal de verkoopprijs; bij een fust (glazen per
-    fust ingevuld) het aantal glazen maal de prijs per glas, want een fust wordt nooit als geheel verkocht."""
+    """Wat één eenheid van dit product oplevert als hij verkocht is. Normaal de verkoopprijs; bij een fust of een fles die
+    per glas gaat (glazen ingevuld) het aantal glazen maal de prijs per glas, want die wordt nooit als geheel verkocht."""
     glazen = _veld(product, "glazen_per_fust")
     if glazen > 0:
         return glazen * _veld(product, "prijs_per_glas")
@@ -132,6 +138,7 @@ def bereken_fust_verkopen(db, limiet=100):
            JOIN tellingen t ON t.id = tr.telling_id
            JOIN producten p ON p.id = tr.product_id
            WHERE p.glazen_per_fust > 0 AND tr.verkocht > 0
+             AND LOWER(TRIM(COALESCE(p.eenheid, ''))) NOT IN ('fles', 'flesje')
            ORDER BY t.datum DESC, t.id DESC
            LIMIT ?""",
         (limiet,),

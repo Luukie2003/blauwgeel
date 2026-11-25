@@ -4,6 +4,7 @@
 {% macro getal(waarde) %}{{ ('%.1f'|format(waarde)).replace('.0', '').replace('.', ',') }}{% endmacro %}
 {% set beheerder = huidige_gebruiker_rol == 'beheerder' %}
 {% block inhoud %}
+{% set vat = product.eenheid|lower if (product.eenheid or '')|lower in ('fles', 'flesje') else 'fust' %}
 <p class="subtitel"><a href="javascript:history.back()">&larr; Terug</a></p>
 
 {# ---------- Kop: foto, naam, kenmerken en wat je ermee kunt ---------- #}
@@ -53,7 +54,7 @@
     <div class="stat">
         {% if product.glazen_per_fust %}
         <div class="getal">{{ euro(product.prijs_per_glas) }}</div>
-        <div class="label">Per glas &middot; {{ product.glazen_per_fust }} glazen per fust = {{ euro(info.verkoop_stuk) }}</div>
+        <div class="label">Per glas &middot; {{ product.glazen_per_fust }} glazen per {{ vat }} = {{ euro(info.verkoop_stuk) }}</div>
         {% else %}
         <div class="getal">{{ euro(product.verkoopprijs) if product.verkoopprijs else '—' }}</div>
         <div class="label">Verkoopprijs per {{ product.eenheid }}{% if info.prijsopties %} &middot; {{ info.prijsopties|length }} prijsoptie{{ 's' if info.prijsopties|length > 1 }}{% endif %}</div>
@@ -161,7 +162,7 @@
             <h2>Prijzen</h2>
             <dl class="info-lijst">
                 {% if product.glazen_per_fust %}
-                <dt>Per glas</dt><dd>{{ euro(product.prijs_per_glas) }} <span class="tekst-zacht">&middot; {{ product.glazen_per_fust }} glazen per fust = {{ euro(info.verkoop_stuk) }} per fust</span></dd>
+                <dt>Per glas</dt><dd>{{ euro(product.prijs_per_glas) }} <span class="tekst-zacht">&middot; {{ product.glazen_per_fust }} glazen per {{ vat }} = {{ euro(info.verkoop_stuk) }} per {{ vat }}</span></dd>
                 {% else %}
                 <dt>Verkoopprijs</dt><dd>{{ euro(product.verkoopprijs) if product.verkoopprijs else 'nog niet ingevuld' }} <span class="tekst-zacht">per {{ product.eenheid }}</span></dd>
                 {% endif %}

@@ -79,6 +79,18 @@ def controleer(db):
 
     regels = []
     for p in actief:
+        if ("shot" in (p["categorie"] or "").lower() and (p["eenheid"] or "").strip().lower() in ("fles", "flesje")
+                and p["glazen_per_fust"] <= 0 and not p["niet_tellen"]):
+            regels.append(_regel(p, "hoeveel shots gaan er uit een fles?"))
+    controles.append(_controle(
+        "shotfles_zonder_glazen", "Shotfles zonder aantal shots",
+        "Een lege fles telt nu voor de prijs van één shot in de omzet. Vul bij het product glazen per fles en de prijs per "
+        "glas in; daarna kun je de oude tellingen meteen laten omrekenen.",
+        "hoog", regels,
+    ))
+
+    regels = []
+    for p in actief:
         if p["categorie"] in zonder_prijsplicht or p["niet_tellen"] or (p["eenheid"] or "").lower() == "fust":
             continue  # een fust staat al bij 'Fust zonder glazen of glasprijs' als het daar ontbreekt
         if omzet_per_eenheid(p) <= 0:

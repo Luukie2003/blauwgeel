@@ -51,7 +51,7 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from statistics import NormalDist
 
-from helpers import TRAININGSDAG, bestel_suggesties
+from helpers import TRAININGSDAG, bestel_suggesties, omzet_per_eenheid
 
 from voorspelling.basis import (  # noqa: F401
     aanname,
@@ -370,8 +370,9 @@ def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
         # Het besteladvies zelf rekent bestelvoorstel.advies uit (met het minimum, de bestelperiode van de leverancier
         # en een eigen bijstelling): hier alleen de verwachting en de kansen.
         per_dag = mu / dagen if dagen else 0
-        omzet_gem += mu * product["verkoopprijs"]
-        omzet_toeval += (product["verkoopprijs"] ** 2) * mu
+        opbrengst = omzet_per_eenheid(product)  # een fust, of een fles die per glas gaat: de glazen maal de prijs per glas
+        omzet_gem += mu * opbrengst
+        omzet_toeval += (opbrengst ** 2) * mu
         aantal_waarnemingen = len(rijen_per_product[pid])
         uitkomst.append(
             {
@@ -499,6 +500,27 @@ def _gewicht_blootstelling(rijen_per_product, effecten):
         sum(r["w"] * drukte(r["b"], effecten) for r in lijst)
         for pid, lijst in rijen_per_product.items()
     }
+
+
+def verwacht_tussen(db, van, tot, nu=None):
+    """De verwachte verkoop per product in een willekeurig venster (bijvoorbeeld de eerste weken na de winterstop):
+    {product_id: {"verwacht", "laag", "hoog"}}, met dezelfde snelheden en marges als de prognose. Leeg zonder voorspelling
+    of als er in het venster niets open is. Rekent het model zo nodig uit, dus alleen voor iets dat na het laden komt."""
+    nu = nu or datetime.now()
+    fit = _bewaard(db, "prognose-fit", nu, (), lambda: _prognose_fit(db, nu), model_vingerafdruk, tijdvak="altijd")
+    if not fit["beschikbaar"] or tot <= van:
+        return {}
+    kalender = lees_kalender(db, van.date() - timedelta(days=1), tot.date() + timedelta(days=1))
+    E_h = drukte(blootstelling(van, tot, kalender), fit["effecten"])
+    uit = {}
+    for pid, snel in fit["snelheid"].items():
+        mu = snel * E_h
+        if mu <= 0:
+            continue
+        rel = 1.0 / max(snel * fit["gewicht_blootstelling"][pid], 1e-9) + fit["overspreiding"] / max(fit["gewicht_som"][pid], 1.0)
+        var = mu + (mu ** 2) * (fit["overspreiding"] + rel + 0.03 ** 2)
+        uit[pid] = {"verwacht": mu, "laag": kwantiel(mu, var, 0.1), "hoog": kwantiel(mu, var, DEKKING_SERVICENIVEAU)}
+    return uit
 
 
 def verwachte_verkoop_sinds_telling(db, nu=None, alleen_bewaard=False):
@@ -774,7 +796,8 @@ def data_vingerafdruk(db):
         tuple(
             db.execute(
                 """SELECT COUNT(*), COALESCE(MAX(id), 0), TOTAL(voorraad), TOTAL(min_voorraad), TOTAL(actief),
-                          TOTAL(besteleenheid_factor), TOTAL(CAST(verkoopprijs * 100 AS INTEGER))
+                          TOTAL(besteleenheid_factor), TOTAL(CAST(verkoopprijs * 100 AS INTEGER)),
+                          TOTAL(CAST(glazen_per_fust * prijs_per_glas * 100 AS INTEGER))
                    FROM producten"""
             ).fetchone()
         ),

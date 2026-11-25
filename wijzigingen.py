@@ -6,8 +6,18 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.17.1"
+HUIDIGE_VERSIE = "2.18.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.18.0",
+        "datum": "25 november 2026",
+        "punten": [
+            "Shots goed in de omzet: bij een product dat per fles geteld en per glas of shot verkocht wordt, vul je glazen per fles en de prijs per glas in, zoals bij een fust. Een lege fles telt dan voor al zijn shots. Stond dat er eerst niet, dan laat de site zien welke oude tellingen nog de prijs van één shot gebruiken en reken je die in één keer om (beheerders). Gegevenscontrole noemt shotflessen waar het nog ontbreekt.",
+            "Door elkaar geteld? Staat er van de ene smaak meer dan kan en van de andere minder dan verwacht, dan vraagt het controlescherm van de looplijst of ze verwisseld zijn. Ook bij een opgeslagen telling, dus ook voor een telling met de handterminal, waar je het meteen kunt corrigeren.",
+            "Nieuw tabblad Winterstop bij Prognose: wat je voor een sluitperiode van twee weken of langer nog moet bestellen (en tot wanneer), wat niet meer hoeft, wat je beter eerst opmaakt en wat je nodig hebt om weer open te gaan.",
+            "De verwachte omzet bij Prognose telt een fust nu ook mee als glazen maal de prijs per glas, net als de tellingen. Daardoor kan de verwachting hoger uitvallen dan eerst.",
+        ],
+    },
     {
         "versie": "2.17.1",
         "datum": "25 november 2026",
@@ -1546,11 +1556,11 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.17.1", "sinds": "0.1.0", "laatst": "2.9.0",
+    {"naam": "Voorraad & tellen", "versie": "1.18.0", "sinds": "0.1.0", "laatst": "2.18.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.24.1", "sinds": "0.4.0", "laatst": "2.17.1",
+    {"naam": "Bestellen & prognose", "versie": "1.25.0", "sinds": "0.4.0", "laatst": "2.18.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), de bestellijst nalopen met vinkjes (ook op de computer) en het besteloverzicht voor de webshop, leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
-    {"naam": "Producten & prijzen", "versie": "1.17.0", "sinds": "0.1.0", "laatst": "2.10.0",
+    {"naam": "Producten & prijzen", "versie": "1.18.0", "sinds": "0.1.0", "laatst": "2.18.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
     {"naam": "Geld (kassa & kluis)", "versie": "1.6.0", "sinds": "1.0.0", "laatst": "2.10.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
