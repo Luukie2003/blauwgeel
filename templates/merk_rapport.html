@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{# Merkanalyse (merkanalyse.py): alles over één merk voor een gesprek met de vertegenwoordiger. #}
+{% from '_iconen.html' import icoon %}
+{% macro euro(x) %}{% if x is none %}&mdash;{% else %}&euro; {{ '{:,.0f}'.format(x)|replace(',', '.') }}{% endif %}{% endmacro %}
+{% macro euro2(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% macro getal(x, d=1) %}{% if x is none %}&mdash;{% else %}{{ ('%.' ~ d ~ 'f')|format(x)|replace('.', ',') }}{% endif %}{% endmacro %}
+{% block titel %}Merkanalyse{% if a %} {{ a.merk }}{% endif %}{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Merkanalyse{% if a %} {{ a.merk }}{% endif %}</h1>
+    <span class="cs-titel-tekst">Alles over &eacute;&eacute;n merk, voor een gesprek met de vertegenwoordiger</span>
+    {% if a %}
+    <div class="cs-rechts">
+        <a href="{{ url_for('merk_rapport_pdf', merk=a.merk, weken=weken, seizoen=seizoen, deelbaar=1) }}" class="btn btn-rand">Pdf om te laten zien</a>
+        <a href="{{ url_for('merk_rapport_pdf', merk=a.merk, weken=weken, seizoen=seizoen) }}" class="btn btn-geel">Pdf voor jezelf</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block inhoud %}
+<section class="cs-paneel">
+    <form method="get" style="display:flex; flex-wrap:wrap; gap:0.6rem 1rem; align-items:flex-end; padding:0.9rem 1.1rem; margin:0">
+        <div class="veld" style="margin:0"><label for="merk">Merk</label>
+            <select id="merk" name="merk" onchange="this.form.submit()">
+                <option value="">Kies een merk&hellip;</option>
+                {% for m in merken %}<option value="{{ m }}" {{ 'selected' if m|lower == merk|lower }}>{{ m }}</option>{% endfor %}
+            </select></div>
+        <div class="veld" style="margin:0"><label for="weken">Periode</label>
+            <select id="weken" name="weken" onchange="this.form.submit()">
+                {% for w in weken_keuzes %}<option value="{{ w }}" {{ 'selected' if w == weken }}>Laatste {{ w }} weken</option>{% endfor %}
+            </select></div>
+        <div class="veld" style="margin:0"><label for="seizoen">Weken open per seizoen</label>
+            <input type="number" id="seizoen" name="seizoen" value="{{ seizoen }}" min="1" max="52" style="width:6rem" onchange="this.form.submit()"></div>
+        <noscript><button class="btn btn-rand">Tonen</button></noscript>
+    </form>
+</section>
+
+{% if not a %}
+<section class="cs-paneel"><p class="cs-leeg">Kies een merk. Een merk is wat je bij een product als merk invult, of anders het eerste woord van de naam, zoals Bozu.</p></section>
+{% else %}
+{% set t = a.totaal %}
+<div class="cs-scorebord">
+    <div><strong>{{ t.verkocht }}</strong><span>verkocht sinds {{ a.vanaf|dag_maand }}{% if t.per_week %}, {{ getal(t.per_week, 0) }} per week{% endif %}</span></div>
+    <div><strong>{{ euro(t.omzet) }}</strong><span>omzet{% if t.aandeel %}, {{ getal(t.aandeel, 0) }}% van alles{% endif %}{% if t.plek %} (nummer {{ t.plek }}){% endif %}</span></div>
+    <div><strong>{{ euro(t.winst) }}</strong><span>brutowinst{% if t.marge_pct is not none %}, {{ getal(t.marge_pct, 0) }}% marge{% endif %}</span></div>
+    <div><strong>{{ euro(t.inkoop) }}</strong><span>ingekocht, {{ t.inkoop_stuks }} stuks</span></div>
+    <div><strong>{{ t.voorraad }}</strong><span>ligt er nu{% if t.onderweg %}, {{ t.onderweg }} onderweg{% endif %}</span></div>
+</div>
+
+{% if a.punten %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Gesprekspunten</h2><span class="cs-zacht">Wat er uit de cijfers volgt</span></div>
+    <ul style="margin:0; padding:0.6rem 1.1rem 0.9rem 2.2rem">
+        {% for p in a.punten %}<li style="margin:0.35rem 0"><strong>{{ p.titel }}.</strong> {{ p.tekst }}</li>{% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Per product</h2></div>
+    <div class="tabel-wrap"><table>
+        <thead><tr><th>Product</th><th class="cs-getal">Verkocht</th><th class="cs-getal">Per week</th><th class="cs-getal cs-verberg-smal">Eerst / nu</th><th class="cs-getal cs-verberg-smal">Omzet</th><th class="cs-getal cs-verberg-smal">Inkoop per doos</th><th class="cs-getal">Marge</th><th class="cs-getal cs-verberg-smal">Ligt er</th><th class="cs-getal">Weken</th></tr></thead>
+        <tbody>
+        {% for p in a.producten %}
+        <tr>
+            <td><a href="{{ url_for('product_detail', product_id=p.id) }}">{{ p.naam }}</a>{% if p.gearchiveerd or not p.actief %} <span class="cs-zacht">niet meer in het assortiment</span>{% endif %}</td>
+            <td class="cs-getal">{{ p.verkocht }} <span class="cs-zacht">{{ getal(p.aandeel, 0) }}%</span></td>
+            <td class="cs-getal">{{ getal(p.per_week) }}</td>
+            <td class="cs-getal cs-nowrap cs-verberg-smal">{{ getal(p.voor, 0) }} / {{ getal(p.na, 0) }}</td>
+            <td class="cs-getal cs-nowrap cs-verberg-smal">{{ euro(p.omzet) }}</td>
+            <td class="cs-getal cs-nowrap cs-verberg-smal">{% if p.heeft_inkoop %}{{ euro2(p.inkoop_doos) }}{% else %}&mdash;{% endif %}</td>
+            <td class="cs-getal">{% if p.marge_pct is none %}&mdash;{% else %}{{ getal(p.marge_pct, 0) }}%{% endif %}</td>
+            <td class="cs-getal cs-verberg-smal">{{ p.voorraad }}{% if p.onderweg %} <span class="cs-zacht">+{{ p.onderweg }}</span>{% endif %}</td>
+            <td class="cs-getal{{ ' cs-oranje' if p.weken_voorraad is not none and p.weken_voorraad >= 9 }}">{{ getal(p.weken_voorraad) }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+    <p class="cs-paneel-tekst cs-zacht">Verkocht is zonder telfouten: wat er later bij een telling te veel bleek te staan ({{ t.telverschil }} stuks), is er weer
+        afgehaald. Daarom kan het lager zijn dan bij Inkoop en verkoop. Eerst / nu: per week in de eerste en de tweede helft van de
+        periode. Btw en statiegeld zijn in de marge niet meegenomen.</p>
+</section>
+
+{% if a.volume.scenario %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Wat een betere afspraak scheelt</h2></div>
+    <p class="cs-paneel-tekst cs-zacht">In dit tempo ongeveer {{ getal(a.volume.dozen, 0) }} dozen van {{ a.volume.doos }} per seizoen van {{ a.seizoen_weken }} weken, voor {{ euro2(a.volume.doosprijs) }} per doos: {{ euro(a.volume.inkoop) }}.</p>
+    <div class="tabel-wrap"><table>
+        <thead><tr><th>Afspraak</th><th class="cs-getal">Scheelt per seizoen</th></tr></thead>
+        <tbody>{% for s in a.volume.scenario %}<tr><td>{{ s.wat }}</td><td class="cs-getal">{{ euro(s.scheelt) }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+</section>
+{% endif %}
+
+{% if a.per_maand %}
+{% set hoogste = [a.per_maand|map(attribute='totaal')|max, 1]|max %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Per maand</h2><span class="cs-zacht">De eerste en de laatste maand tellen alleen het deel in de periode</span></div>
+    <div class="tabel-wrap"><table><tbody>
+        {% for m in a.per_maand %}<tr><td class="cs-nowrap" style="width:6rem">{{ (m.maand ~ '-01')|dag_maand|replace('1 ', '') }} {{ m.maand[:4] }}</td>
+            <td aria-hidden="true"><span style="display:block; height:0.8rem; border-radius:0 3px 3px 0; background:var(--blauw); width:{{ ([m.totaal, 0]|max / hoogste * 100)|round(1) }}%"></span></td>
+            <td class="cs-getal" style="width:5rem">{{ m.totaal }}</td></tr>{% endfor %}
+    </tbody></table></div>
+</section>
+{% endif %}
+
+{% if a.andere %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>De rest van {{ a.categorieen|join(' en ') }}</h2>{% if t.aandeel_categorie %}<span class="cs-zacht">{{ a.merk }} is {{ getal(t.aandeel_categorie, 0) }}% van de omzet hiervan</span>{% endif %}</div>
+    <div class="tabel-wrap"><table>
+        <thead><tr><th>Product</th><th class="cs-getal">Verkocht</th><th class="cs-getal">Per week</th><th class="cs-getal cs-verberg-smal">Omzet</th><th class="cs-getal">Marge</th></tr></thead>
+        <tbody>{% for r in a.andere %}<tr><td>{{ r.naam }}</td><td class="cs-getal">{{ r.verkocht }}</td><td class="cs-getal">{{ getal(r.per_week) }}</td><td class="cs-getal cs-verberg-smal">{{ euro(r.omzet) }}</td><td class="cs-getal">{% if r.marge_pct is none %}&mdash;{% else %}{{ getal(r.marge_pct, 0) }}%{% endif %}</td></tr>{% endfor %}</tbody>
+    </table></div>
+</section>
+{% endif %}
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Leveringen die afweken</h2><span class="cs-zacht">{{ a.leveringen|length - a.afwijkend|length }} van de {{ a.leveringen|length }} bestelregels kwamen zoals besteld</span></div>
+    {% if a.afwijkend %}
+    <div class="tabel-wrap"><table>
+        <thead><tr><th>Datum</th><th>Product</th><th class="cs-getal">Besteld</th><th class="cs-getal">Geleverd</th><th class="cs-getal">Verschil</th></tr></thead>
+        <tbody>{% for f in a.afwijkend %}<tr><td class="cs-nowrap">{{ f.datum|dag_maand }}</td><td>{{ f.naam }}{% if f.nagekomen %} <span class="cs-zacht">{{ f.nagekomen.aantal }} los nagekomen op {{ f.nagekomen.datum|dag_maand }}</span>{% endif %}</td><td class="cs-getal">{{ f.besteld }}</td><td class="cs-getal">{{ f.geleverd }}</td><td class="cs-getal">{{ '%+d'|format(f.verschil) }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="cs-leeg">Alles kwam binnen zoals besteld.</p>{% endif %}
+</section>
+
+{% if a.prijzen %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Prijswijzigingen</h2></div>
+    <div class="tabel-wrap"><table><tbody>{% for p in a.prijzen %}<tr><td class="cs-nowrap">{{ p.datum|dag_maand }}</td><td>{{ p.naam }}, {{ p.veld }}</td><td class="cs-getal cs-nowrap">{{ euro2(p.oud) }} &rarr; {{ euro2(p.nieuw) }}</td></tr>{% endfor %}</tbody></table></div>
+</section>
+{% endif %}
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Vragen om te stellen</h2></div>
+    <ul style="margin:0; padding:0.6rem 1.1rem 0.9rem 2.2rem">{% for v in vragen %}<li style="margin:0.3rem 0">{{ v }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

@@ -440,6 +440,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Rapporten",
+        "endpoints": ["merk_rapport", "merk_rapport_pdf"],
+        "url_endpoint": "merk_rapport",
+        "label": "Merkanalyse",
+    },
+    {
+        "groep": "Rapporten",
         "endpoints": ["derving_rapport"],
         "url_endpoint": "derving_rapport",
         "label": "Derving",

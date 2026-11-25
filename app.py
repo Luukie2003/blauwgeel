@@ -628,6 +628,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
         leveranciers,
         logboek,
         marge_derving,
+        merkanalyse,
         noodstop as noodstop_routes,
         opslag,
         privacy,
@@ -677,6 +678,7 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     leveranciers.register_routes(app)
     logboek.register_routes(app)
     marge_derving.register_routes(app)
+    merkanalyse.register_routes(app)
     noodstop_routes.register_routes(app)
     opslag.register_routes(app)
     producten.register_routes(app)

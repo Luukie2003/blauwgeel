@@ -30,6 +30,7 @@ from pdf.basis import (
 from pdf.voorraad import bestelling_pdf, bestellijst_pdf, voorraadoverzicht_pdf
 from pdf.prijslijst import prijslijst_pdf
 from pdf.kas import kassa_pdf
+from pdf.merkanalyse import merkanalyse_pdf
 from pdf.kaartjes import (
     MAX_HARDLOPERS,
     OPTIES as KAARTJES_OPTIES,
@@ -96,6 +97,7 @@ __all__ = [
     "bestellijst_pdf",
     "voorraadoverzicht_pdf",
     "kassa_pdf",
+    "merkanalyse_pdf",
     "periode_verkoop_pdf",
     "verkoop_pdf",
     "LABEL_BREEDTE",

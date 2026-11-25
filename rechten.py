@@ -206,6 +206,9 @@ BEHEERDER_ENDPOINTS = {
     "marge_rapport",
     # Inkoop tegen verkoop: met de inkoopprijzen en wat leveringen afwijken van de bestellingen.
     "inkoop_verkoop_rapport",
+    # Een merk voor het gesprek met de vertegenwoordiger: ook met de inkoopprijzen.
+    "merk_rapport",
+    "merk_rapport_pdf",
     # De rapporten in de app (routes/app_api_rapporten.py), net als hun pagina op de site.
     "api_app_rapport_marge",
     "api_app_rapport_derving",
