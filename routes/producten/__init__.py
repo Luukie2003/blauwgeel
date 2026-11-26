@@ -4,7 +4,7 @@ Vroeger 1 bestand van ruim 900 regels; nu per onderwerp opgesplitst. Alle routes
 behouden hun eigen endpoint-namen."""
 
 from routes.producten import assortiment, categorieen, overzicht, prijslijst, prijzen, scannen, voorraadoverzicht
-from routes.producten.overzicht import render_producten_pagina, render_voorraad_pda
+from routes.producten.overzicht import render_producten_pagina
 
 
 def register_routes(app):
@@ -17,4 +17,4 @@ def register_routes(app):
     categorieen.register_routes(app)
 
 
-__all__ = ["register_routes", "render_producten_pagina", "render_voorraad_pda"]
+__all__ = ["register_routes", "render_producten_pagina"]

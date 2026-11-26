@@ -1,7 +1,7 @@
 import re
 from datetime import datetime, timedelta
 
-from flask import current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
+from flask import flash, g, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import mail
@@ -10,7 +10,6 @@ from database import WACHTWOORD_HASH_METHODE, get_db
 from helpers import (
     csrf_token,
     genereer_wachtwoord_token,
-    handterminal_weergave_aan,
     now_str,
     veilig_redirect_pad,
     vind_gebruiker_bij_token,
@@ -130,7 +129,6 @@ def register_routes(app):
                 # Eenmalig vlaggetje (net als flash()) -- inject_nav() haalt
                 # 'm er weer af zodra de eerste pagina na het inloggen is
                 # gerenderd, zodat de welkom-pop-up maar 1x verschijnt.
-                session["toon_welkom_popup"] = True
                 db.execute(
                     "UPDATE gebruikers SET laatste_login = ? WHERE id = ?",
                     (now_str(), gebruiker["id"]),
@@ -178,31 +176,14 @@ def register_routes(app):
         flash("Je bent uitgelogd.", "success")
         return redirect(url_for("login"))
 
-    def _zet_weergave_cookie_en_ga_terug(modus):
-        """Onthoudt de gekozen weergave op dit toestel/browser (geen
-        accountinstelling, dus geldt niet mee op een ander toestel) en
-        stuurt terug naar waar de knop werd geklikt."""
-        respons = redirect(request.referrer or url_for("dashboard"))
-        respons.set_cookie(
-            "weergave",
-            modus,
-            max_age=60 * 60 * 24 * 365,
-            samesite="Lax",
-            secure=current_app.config.get("SESSION_COOKIE_SECURE", True),
-        )
-        return respons
-
     @app.route("/weergave/pda")
-    def weergave_pda():
-        if not handterminal_weergave_aan():
-            # Tijdelijk uit (zie handterminal_weergave_aan): niets vastzetten, wel zeggen waarom er niets verandert.
-            flash("De handterminal-weergave staat tijdelijk uit. Op de Zebra werk je met de app Kantine Handterminal.", "warning")
-            return redirect(request.referrer or url_for("dashboard"))
-        return _zet_weergave_cookie_en_ga_terug("pda")
-
     @app.route("/weergave/desktop")
     def weergave_desktop():
-        return _zet_weergave_cookie_en_ga_terug("desktop")
+        """De keuze tussen de gewone en de handterminal-weergave bestaat sinds 2.23.0 niet meer (op de Zebra werkt de app):
+        een oude bladwijzer gaat gewoon terug, en een oud weergave-cookie gaat weg."""
+        respons = redirect(request.referrer or url_for("dashboard"))
+        respons.delete_cookie("weergave")
+        return respons
 
     @app.route("/wachtwoord-vergeten", methods=["GET", "POST"])
     def wachtwoord_vergeten():
@@ -381,7 +362,6 @@ def register_routes(app):
             session["sessie_versie"] = gebruiker["sessie_versie"]  # zie vereis_login (app.py)
             session["gebruiker_naam"] = gebruiker["naam"]
             session["gebruiker_rol"] = gebruiker["rol"]
-            session["toon_welkom_popup"] = True
             db.execute(
                 "UPDATE gebruikers SET laatste_login = ? WHERE id = ?",
                 (now_str(), gebruiker["id"]),

@@ -209,6 +209,8 @@ BEHEERDER_ENDPOINTS = {
     # Een merk voor het gesprek met de vertegenwoordiger: ook met de inkoopprijzen.
     "merk_rapport",
     "merk_rapport_pdf",
+    "merk_afspraak_toevoegen",
+    "merk_afspraak_verwijderen",
     # De rapporten in de app (routes/app_api_rapporten.py), net als hun pagina op de site.
     "api_app_rapport_marge",
     "api_app_rapport_derving",

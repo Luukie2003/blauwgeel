@@ -351,6 +351,13 @@ def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
                WHERE b.status = 'besteld' GROUP BY br.product_id"""
         ).fetchall()
     }
+    # Wat er nu waarschijnlijk ligt (2.21.0): de voorraad in de app is de stand van de laatste telling, met wat er sindsdien
+    # is geboekt. Wat er sinds die telling verkocht is, weet de app pas bij de volgende; het model schat het.
+    try:
+        sinds_telling = verwachte_verkoop_sinds_telling(db, nu)
+    except Exception as fout:  # zonder schatting gewoon de voorraad in de app
+        print(f"[voorspelling] verkoop sinds de telling mislukt: {fout}")
+        sinds_telling = {}
     uitkomst, omzet_gem, omzet_toeval = [], 0.0, 0.0
     for pid, snel in snelheid.items():
         product = producten.get(pid)
@@ -361,8 +368,10 @@ def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
         # tussen periodes (overspreiding) + onzekerheid over de snelheid zelf.
         rel_snelheid_var = 1.0 / max(snel * gewicht_blootstelling[pid], 1e-9) + overspreiding / max(gewicht_som[pid], 1.0)
         var = mu + (mu ** 2) * (overspreiding + rel_snelheid_var + 0.03 ** 2)
-        voorraad = max(0, product["voorraad"])
-        aanwezig = voorraad + onderweg.get(pid, 0)  # voorraad plus wat al besteld is
+        in_app = max(0, product["voorraad"])
+        verkocht_sinds = sinds_telling.get(pid, {}).get("verwacht", 0.0)
+        voorraad = max(0, round(in_app - verkocht_sinds))
+        aanwezig = voorraad + onderweg.get(pid, 0)  # wat er waarschijnlijk ligt, plus wat al besteld is
         kans = kans_meer_dan(mu, var, aanwezig)
         status = "urgent" if kans >= 0.5 else "let_op" if kans >= 0.2 else "ok"
         q90 = kwantiel(mu, var, serviceniveau)
@@ -377,7 +386,8 @@ def _maak_prognose(db, dagen=7, nu=None, serviceniveau=DEKKING_SERVICENIVEAU):
         uitkomst.append(
             {
                 "product": product,
-                "voorraad": voorraad,
+                "voorraad": voorraad,  # wat er nu waarschijnlijk ligt
+                "voorraad_app": in_app,  # de stand van de laatste telling, met de boekingen erna
                 "verwacht": mu,
                 "laag": q10,
                 "hoog": q90,
@@ -837,13 +847,30 @@ def _gewone_typen(obj):
     return obj
 
 
+def _code_vingerafdruk():
+    """Een vingerafdruk van de code die de uitkomsten berekent (dit pakket, het besteladvies en de helpers die het
+    gebruikt). Tot 2.21.0 hoorde de siteversie in de sleutel: elke nieuwe versie gooide alles weg en liet de eerste die
+    daarna bestelde of de prognose opende, op de server tot een minuut wachten, ook als er aan de prognose niets veranderd
+    was. Nu alleen als deze code verandert."""
+    basis = Path(__file__).resolve().parent
+    bestanden = sorted(basis.glob("*.py")) + [basis.parent / "bestelvoorstel.py", basis.parent / "helpers" / "producten.py"]
+    inhoud = hashlib.sha1()
+    for pad in bestanden:
+        try:
+            inhoud.update(pad.read_bytes())
+        except OSError:
+            inhoud.update(pad.name.encode())
+    return inhoud.hexdigest()[:16]
+
+
+_CODE_VINGERAFDRUK = _code_vingerafdruk()
+
+
 def _schijf_pad(sleutel):
     """Het bestand voor deze sleutel, of None (geen databasebestand, bijvoorbeeld een database in het geheugen)."""
     if not sleutel[0]:
         return None
-    from wijzigingen import HUIDIGE_VERSIE
-
-    naam = hashlib.sha1(repr((SCHIJF_VERSIE, HUIDIGE_VERSIE, sleutel)).encode()).hexdigest() + ".pkl"
+    naam = hashlib.sha1(repr((SCHIJF_VERSIE, _CODE_VINGERAFDRUK, sleutel)).encode()).hexdigest() + ".pkl"
     return Path(sleutel[0]).parent / "voorspelling_cache" / naam
 
 

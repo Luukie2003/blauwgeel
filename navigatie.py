@@ -440,7 +440,7 @@ NAV_ITEMS = [
     },
     {
         "groep": "Rapporten",
-        "endpoints": ["merk_rapport", "merk_rapport_pdf"],
+        "endpoints": ["merk_rapport", "merk_rapport_pdf", "merk_afspraak_toevoegen", "merk_afspraak_verwijderen"],
         "url_endpoint": "merk_rapport",
         "label": "Merkanalyse",
     },
@@ -594,12 +594,6 @@ NAV_GROEP_ICOON = {
     "Beheer": "beheer",
 }
 
-# De PDA-modus (zie WEERGAVE_TELEFOON_PATROON hieronder) heeft zijn eigen
-# kop met alleen een kort label per pagina (geen zijbalk): vloerwerk plus een
-# paar overzichten om te bekijken, geen beheer en geen zware rapportages.
-# Bewust een losse lijst i.p.v. een subset-vlag op NAV_ITEMS: die twee
-# navigaties verschillen te veel (geen groepen, kortere labels) om hetzelfde
-# datamodel te delen. De knoppen op het startscherm staan in pda_start.html.
 # Eenvoudige weergave (Mijn voorkeuren): wie dat aanzet, ziet in het menu alleen zijn favorieten (de rest achter
 # "Alle onderdelen") en op het overzicht grote knoppen. Zonder eigen keuze zijn dit de favorieten.
 STANDAARD_FAVORIETEN = ["tellen", "boeken", "bestellijst", "bijzonderheden"]
@@ -611,24 +605,3 @@ def favoriete_items(zichtbare_items, favorieten):
     gekozen = [f for f in (favorieten or "").split(",") if f] or STANDAARD_FAVORIETEN
     per_endpoint = {item["url_endpoint"]: item for item in zichtbare_items}
     return [per_endpoint[f] for f in gekozen if f in per_endpoint]
-
-
-PDA_NAV_ITEMS = [
-    {"url_endpoint": "tellen", "pda_label": "Tellen"},
-    {"url_endpoint": "boeken", "pda_label": "Boeken"},
-    {"url_endpoint": "bijzonderheden", "pda_label": "Prikbord"},
-    {"url_endpoint": "kassa_tellen", "pda_label": "Kassa"},
-    {"url_endpoint": "kiosk_prijzen_instellingen", "pda_label": "Kiosk"},
-    {"url_endpoint": "bestellijst", "pda_label": "Bestellijst"},
-    {"url_endpoint": "geschiedenis", "pda_label": "Geschiedenis"},
-    {"url_endpoint": "boodschappenlijst", "pda_label": "Boodschappen"},
-    {"url_endpoint": "voorraadoverzicht", "pda_label": "Voorraad"},
-    {"url_endpoint": "tellingen_overzicht", "pda_label": "Tellingen"},
-    {"url_endpoint": "prognose_pagina", "pda_label": "Prognose"},
-    {"url_endpoint": "keuken_voorraad", "pda_label": "Keuken"},
-    {"url_endpoint": "kluis_tellen", "pda_label": "Kluis"},
-    {"url_endpoint": "club_van_20_aanmeldingen", "pda_label": "Club 20"},
-    {"url_endpoint": "facturen_overzicht", "pda_label": "Factuur"},
-    {"url_endpoint": "barcodes_overzicht", "pda_label": "Barcodes"},
-    {"url_endpoint": "agenda", "pda_label": "Agenda"},
-]

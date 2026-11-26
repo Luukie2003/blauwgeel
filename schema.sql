@@ -1039,3 +1039,20 @@ CREATE TABLE IF NOT EXISTS seizoen_cijfers (
     berekend_op TEXT NOT NULL,
     gegevens TEXT NOT NULL
 );
+
+-- Afspraken met een leverancier of merk (2.22.0, zie afspraken.py), zoals "€ 1 korting per doos" of "1 doos gratis op
+-- 10": vastgelegd bij de Merkanalyse, met een herinnering bij Factuur inboeken. merk is zoals merkanalyse.merk_van het
+-- noemt ('Bozu'); soort is 'korting' (bedrag euro per doos), 'gratis' (1 doos gratis op 'aantal') of 'anders' (alleen de
+-- omschrijving).
+CREATE TABLE IF NOT EXISTS afspraken (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    merk TEXT NOT NULL,
+    soort TEXT NOT NULL DEFAULT 'anders',
+    bedrag REAL,
+    aantal INTEGER,
+    omschrijving TEXT,
+    vanaf TEXT NOT NULL,
+    tot TEXT,
+    aangemaakt_door TEXT,
+    aangemaakt_op TEXT NOT NULL
+);

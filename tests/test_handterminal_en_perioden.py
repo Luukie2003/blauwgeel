@@ -3,7 +3,6 @@
 from datetime import date
 
 from conftest import stel_csrf_token_in as _csrf
-from test_secties_rechten import _login, _maak_vrijwilliger
 
 from voorspelling import lees_kalender
 
@@ -53,40 +52,3 @@ def test_foute_periodes_worden_geweigerd(ingelogde_client, db):
 
 
 # ---------- De handterminal ----------
-
-
-def test_startscherm_per_onderwerp_met_tabbalk(ingelogde_client, db):
-    ingelogde_client.get("/weergave/pda")
-    tekst = ingelogde_client.get("/").data.decode()
-    for stuk in ("Factuur inboeken", "pda-snel-knop", ">Voorraad</h2>", ">Bestellen</h2>", ">Kantine</h2>",
-                 ">Beheer</h2>", "pda-tabbalk", 'id="pda-tab-zoek"', "Uitloggen", "/barcodes", "/agenda"):
-        assert stuk in tekst, stuk
-    assert 'class="pda-tab actief" aria-current=page' in tekst  # Start is actief
-
-
-def test_tabbalk_en_terugknop_op_een_andere_pagina(ingelogde_client, db):
-    ingelogde_client.get("/weergave/pda")
-    tekst = ingelogde_client.get("/tellen").data.decode()
-    assert ">Terug</span>" in tekst
-    assert tekst.count("pda-tab actief") == 1 and 'href="/tellen" class="pda-tab actief"' in tekst
-
-
-def test_barcodepaginas_in_de_handterminal_opmaak(ingelogde_client, db):
-    ingelogde_client.get("/weergave/pda")
-    for url in ("/barcodes", "/barcodes/zoek?code=4006381333931", "/barcodes/nieuw"):
-        assert "pda-tabbalk" in ingelogde_client.get(url).data.decode(), url
-
-
-def test_voorraad_met_categorieknoppen(ingelogde_client, db):
-    ingelogde_client.get("/weergave/pda")
-    tekst = ingelogde_client.get("/voorraadoverzicht").data.decode()
-    assert 'class="pda-chip actief" data-categorie=""' in tekst and 'data-categorie="Bier"' in tekst
-
-
-def test_tabbalk_zonder_voorraad_sectie(client, db):
-    _maak_vrijwilliger(db, "kassahulp", "kassa")
-    _login(client, "kassahulp")
-    client.get("/weergave/pda")
-    tekst = client.get("/").data.decode()
-    assert "pda-tabbalk" in tekst and 'id="pda-tab-zoek"' not in tekst and "Factuur inboeken" not in tekst
-    assert "/kassa" in tekst and ">Kantine</h2>" in tekst

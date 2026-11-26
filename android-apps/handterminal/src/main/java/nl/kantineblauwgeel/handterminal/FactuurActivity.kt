@@ -387,6 +387,23 @@ class FactuurActivity : BasisActivity() {
                 }
                 append("\n\n")
             }
+            // 2.24.0: veel meer binnen dan besteld (minstens een hele colli, of niet besteld), en de afspraken met het merk.
+            val meer = r.optJSONArray("meer_dan_besteld")?.objecten().orEmpty()
+            if (meer.isNotEmpty()) {
+                append(getString(R.string.meer_dan_besteld))
+                for (m in meer) {
+                    append("\n").append(getString(R.string.meer_dan_besteld_regel, m.optString("naam"), m.optInt("gescand"),
+                        m.optString("eenheid"), m.optInt("besteld")))
+                    if (m.optInt("nog_open") > 0) append(" ").append(getString(R.string.meer_dan_besteld_open, m.optInt("nog_open")))
+                    if ((m.optJSONArray("al_ingeboekt")?.length() ?: 0) > 0) append(" ").append(getString(R.string.meer_dan_besteld_al))
+                }
+                append("\n\n")
+            }
+            for (a in r.optJSONArray("afspraken")?.objecten().orEmpty()) {
+                append(getString(R.string.afspraak_regel, a.optString("merk"), a.optString("tekst")))
+                if (a.optInt("gratis") > 0) append(" ").append(getString(R.string.afspraak_gratis, a.optInt("gratis")))
+                append("\n\n")
+            }
             append(getString(R.string.afronden_vraag, r.optInt("scans")))
             if (Math.abs(verschil) >= 0.005) append("\n\n").append(getString(R.string.afronden_verschil, euro(verschil)))
         }

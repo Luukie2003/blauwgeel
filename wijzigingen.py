@@ -6,8 +6,46 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.20.0"
+HUIDIGE_VERSIE = "2.25.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.25.0",
+        "datum": "26 november 2026",
+        "punten": [
+            "Producten (en Keuken > Producten) in de clubstijl: de titel met de knoppen ernaast, de kerncijfers als scorebord, en de lijst in een paneel met Schaplabels printen en Selectie archiveren in de kop, naast het aantal producten.",
+        ],
+    },
+    {
+        "versie": "2.24.0",
+        "datum": "26 november 2026",
+        "punten": [
+            "Handterminal-app 3.1.0 voor de Zebra: geld boeken bij de kassa en de kluis (afdragen naar de kluis, toevoegen uit de kluis, storten en opnemen), zoals op de site en de tablet. Bij Kassa of Kluis staat onder de geldbewegingen de knop om iets te boeken.",
+            "Handterminal-app 3.1.0: het controlescherm van de looplijst vraagt of twee smaken door elkaar zijn geteld, en Factuur gecontroleerd laat zien wat er veel meer binnenkomt dan besteld en welke afspraken er met het merk gelden.",
+        ],
+    },
+    {
+        "versie": "2.23.0",
+        "datum": "26 november 2026",
+        "punten": [
+            "De handterminal-weergave van de site is weg (hij stond sinds 4 november al uit): op de Zebra werk je met de app, en op een telefoon zie je de gewone site. Een oude bladwijzer naar de handterminal-weergave brengt je gewoon terug.",
+        ],
+    },
+    {
+        "versie": "2.22.0",
+        "datum": "26 november 2026",
+        "punten": [
+            "Afspraken met een merk vastleggen, bij Rapporten > Merkanalyse: een korting per doos, 1 doos gratis op zoveel, of iets anders (zoals een koelkast in bruikleen), met een begin en eventueel een einde. Je ziet wat de afspraak tot nu toe zou moeten opleveren: hoeveel dozen je sindsdien hebt ingekocht, en wat dat aan korting of gratis dozen is.",
+            "Bij Factuur inboeken staat een seintje als er iets binnenkomt van een merk met een lopende afspraak: staat de korting op de factuur, en hoeveel gratis dozen horen er inmiddels bij?",
+        ],
+    },
+    {
+        "versie": "2.21.0",
+        "datum": "26 november 2026",
+        "punten": [
+            "Het besteladvies rekent met wat er nu waarschijnlijk ligt: de voorraad van de laatste telling min wat er sindsdien naar verwachting verkocht is. Na een weekend zonder telling bestel je zo niet meer te weinig. Dat geldt overal waar het advies staat: de bestellijst, Bestellijst nalopen, het product, de Prognose en de handterminal. Bij Prognose staat de stand van de app ernaast als die anders is.",
+            "Na een nieuwe versie van de site hoeft de prognose niet meer opnieuw te rekenen, tenzij er aan de prognose zelf iets veranderd is. Bestellen en Prognose openen dan meteen.",
+        ],
+    },
     {
         "versie": "2.20.0",
         "datum": "26 november 2026",
@@ -1573,9 +1611,9 @@ MODULES_UITLEG = (
 MODULES = [
     {"naam": "Voorraad & tellen", "versie": "1.18.0", "sinds": "0.1.0", "laatst": "2.18.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
-    {"naam": "Bestellen & prognose", "versie": "1.25.0", "sinds": "0.4.0", "laatst": "2.18.0",
+    {"naam": "Bestellen & prognose", "versie": "1.26.0", "sinds": "0.4.0", "laatst": "2.21.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), de bestellijst nalopen met vinkjes (ook op de computer) en het besteloverzicht voor de webshop, leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
-    {"naam": "Producten & prijzen", "versie": "1.18.0", "sinds": "0.1.0", "laatst": "2.18.0",
+    {"naam": "Producten & prijzen", "versie": "1.18.1", "sinds": "0.1.0", "laatst": "2.25.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
     {"naam": "Geld (kassa & kluis)", "versie": "1.6.0", "sinds": "1.0.0", "laatst": "2.10.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
@@ -1589,9 +1627,9 @@ MODULES = [
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.1", "sinds": "", "laatst": "2.9.0",
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
-    {"naam": "Rapporten", "versie": "1.18.0", "sinds": "0.1.0", "laatst": "2.19.0",
+    {"naam": "Rapporten", "versie": "1.19.0", "sinds": "0.1.0", "laatst": "2.22.0",
      "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, seizoen in cijfers, inkoop en verkoop, merkanalyse, compacte uitdraai, omzettrend"},
-    {"naam": "Handterminal", "versie": "1.6.3", "sinds": "1.5.0", "laatst": "2.4.0",
+    {"naam": "Handterminal", "versie": "1.7.0", "sinds": "1.5.0", "laatst": "2.24.0",
      "inhoud": "De weergave voor de handterminal op de site: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft (staat sinds 2.4.0 tijdelijk uit; op de Zebra werkt de app)"},
     {"naam": "Handterminal-app", "versie": "0.26.0", "sinds": "1.53.0", "laatst": "2.3.0",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (nalopen met vinkjes, klaarzetten met het besteloverzicht, verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken (inboeken per verpakking, blind tellen, weggooien), Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst, momenten met de schijnwerper, mappen en dia's aan of uit, en het Halloween-thema), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},

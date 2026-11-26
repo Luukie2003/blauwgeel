@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from flask import Response, flash, g, redirect, render_template, request, session, url_for
+from flask import Response, flash, redirect, render_template, request, session, url_for
 
 import verwisseld
 from database import get_db
@@ -136,7 +136,7 @@ def register_routes(app):
         # enkele seconden. Die haalt de pagina daarom na het laden apart op (zie tellingen_cijfers), zodat de
         # tellingen zelf meteen klaarstaan.
         return render_template(
-            "pda_tellingen.html" if g.get("weergave_modus") == "pda" else "tellingen_overzicht.html",
+            "tellingen_overzicht.html",
             tellingen=tellingen,
         )
 
@@ -170,7 +170,7 @@ def register_routes(app):
             prognose = None
 
         return render_template(
-            "_pda_tellingen_cijfers.html" if g.get("weergave_modus") == "pda" else "_tellingen_cijfers.html",
+            "_tellingen_cijfers.html",
             omzet_per_week=omzet_per_week,
             huidige_jaar=huidige_jaar,
             huidige_week=huidige_week,
@@ -266,7 +266,7 @@ def register_routes(app):
         later_geteld = _later_geteld(db, telling)
 
         return render_template(
-            "pda_telling_detail.html" if g.get("weergave_modus") == "pda" else "telling_detail.html",
+            "telling_detail.html",
             telling=telling,
             regels=regels,
             totaal_omzet=totaal_omzet,

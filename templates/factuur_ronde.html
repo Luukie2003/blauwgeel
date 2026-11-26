@@ -13,14 +13,7 @@
 </div>
 {% endblock %}
 {% block inhoud %}
-{% if pda_modus %}
-<p class="subtitel">
-    <a href="{{ url_for('facturen_overzicht') }}">&larr; Factuur inboeken</a>
-    &middot; {{ r.leverancier_naam or 'geen leverancier' }}
-    {% if r.bestelling_id %}&middot; bestelling #{{ r.bestelling_id }}{% if r.bestelling_referentie %} ({{ r.bestelling_referentie }}){% endif %}{% endif %}
-    &middot; {% if r.status == 'afgerond' %}<span class="badge badge-ok">ingeboekt {{ r.afgerond_op|datum_nl }}</span>{% elif r.status == 'geannuleerd' %}<span class="badge badge-neutraal">geannuleerd</span>{% else %}<span class="badge badge-in">bezig</span>{% endif %}
-</p>
-{% endif %}
+
 
 {% if open %}
 <div class="kaart">
@@ -268,6 +261,17 @@
 {# "Factuur gecontroleerd": eerst wat er van de bestelling nog mist (dat wordt manco), dan inboeken. #}
 {% set mist_tekst %}{% if r.bestelling_id %}{% if nog_niet_binnen %}Nog niet (helemaal) binnen: {% for m in nog_niet_binnen %}{{ m.naam }} {{ m.gescand }} van {{ m.besteld }} {{ m.eenheid }}{{ ', ' if not loop.last }}{% endfor %}. Wat mist, komt op manco. {% else %}Alles van de bestelling is binnen. {% endif %}{% endif %}{% endset %}
 {% set veel_tekst %}{% if meer_dan_besteld %}Meer dan besteld: {% for m in meer_dan_besteld %}{{ m.naam|safe }} {{ m.gescand }} {{ m.eenheid|safe }} ({{ m.besteld ~ ' besteld' if m.besteld else 'niet besteld' }}){{ ', ' if not loop.last }}{% endfor %}. {% endif %}{% endset %}
+{% if afspraken %}
+<div class="kaart" id="afspraken" style="border-left:4px solid var(--blauw, #1e3a8a)">
+    <strong>Afspraken die gelden</strong>
+    <ul style="margin:0.3rem 0 0; padding-left:1.2rem">
+        {% for f in afspraken %}<li>{{ f.merk }}: {{ f.tekst }}.
+            {%- if f.soort == 'korting' %} Staat de korting op de factuur? Pas anders de prijs per scan aan.
+            {%- elif f.soort == 'gratis' and f.gratis %} Er zijn sinds het begin {{ f.dozen|round|int }} dozen ingekocht: daar {{ 'hoort' if f.gratis == 1 else 'horen' }} {{ f.gratis }} gratis {{ 'doos' if f.gratis == 1 else 'dozen' }} bij. Zit die erbij?
+            {%- elif f.soort == 'gratis' %} Nog {{ (f.dozen|round|int) }} dozen ingekocht; de eerste gratis doos komt later.{% endif %}</li>{% endfor %}
+    </ul>
+</div>
+{% endif %}
 {% if meer_dan_besteld %}
 <div class="kaart" id="meer-dan-besteld" style="border-left:4px solid var(--oranje, #b45309)">
     <strong>Meer dan besteld</strong>

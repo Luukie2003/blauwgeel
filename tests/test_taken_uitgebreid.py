@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 from conftest import stel_csrf_token_in as _csrf
-from test_eigen_taken import ADMIN, _nieuwe_taak_via_formulier, _taak, _vrijwilliger
+from test_eigen_taken import ADMIN, _nieuwe_taak_via_formulier, _vrijwilliger
 
 import eigen_taken
 from eigen_taken import (
@@ -234,16 +234,6 @@ def test_het_formulier_bewaart_de_stappen(ingelogde_client, db):
 
 
 # ---------- Op de handterminal ----------
-
-
-def test_de_taken_staan_op_het_startscherm_van_de_handterminal(ingelogde_client, db):
-    _taak(db, "Prijzenlijst nalopen", soort="preset:prijzen", deadline=(_vandaag() - timedelta(days=1)).isoformat())
-    _maak(db, titel="Kerstboom ophalen")
-    ingelogde_client.get("/weergave/pda")
-    tekst = ingelogde_client.get("/").data.decode()
-    assert "pda-kop-menuknop" in tekst
-    assert "Prijzenlijst nalopen" in tekst and "Kerstboom ophalen" in tekst and "(te laat)" in tekst
-    assert "pda-status--slecht" in tekst  # de te late taak valt op
 
 
 def test_zonder_taken_geen_extra_regels_op_de_handterminal(ingelogde_client):

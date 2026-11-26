@@ -338,18 +338,6 @@ def test_product_toon_op_kiosk_wisselen_vereist_beheerder(client, db):
     assert rij["toon_op_kiosk"] == 0
 
 
-def test_kiosk_pagina_toont_kaartjes_in_pda_weergave(ingelogde_client, db):
-    _voeg_product_toe(db, "PDA Kaartje Product", toon_op_kiosk=1)
-    ingelogde_client.get("/weergave/pda")
-
-    resp = ingelogde_client.get("/kiosk/prijzen/instellingen")
-
-    assert resp.status_code == 200
-    assert b"pda-kaartje" in resp.data
-    assert b"PDA Kaartje Product" in resp.data
-    assert b"Alles opslaan" not in resp.data
-
-
 def test_kiosk_tegel_op_pda_start_alleen_voor_beheerder(client, db):
     _maak_vrijwilliger(db, "vrijwilliger_start", "voorraad")
     _login(client, "vrijwilliger_start")
@@ -515,17 +503,6 @@ def test_prijzen_versie_geeft_uitverkocht_namenlijst_voor_de_pop_up(ingelogde_cl
     assert na["uitverkocht"] == ["Pop-up Product"]
 
 
-def test_kiosk_pda_pagina_toont_uitverkocht_knop(ingelogde_client, db):
-    _voeg_product_toe(db, "Kaartje Met Knop", toon_op_kiosk=1)
-    ingelogde_client.get("/weergave/pda")
-
-    resp = ingelogde_client.get("/kiosk/prijzen/instellingen")
-
-    assert resp.status_code == 200
-    assert b"Uitverkocht" in resp.data
-    assert b"btn-uitverkocht" in resp.data
-
-
 # ---------- Acties (onderdeel van het prijzenscherm) ----------
 
 
@@ -633,18 +610,6 @@ def test_prijzenscherm_bevat_actiegegevens_voor_de_pop_up(client, db):
     assert resp.status_code == 200
     assert b"Zichtbaar Actieproduct" in resp.data
     assert b"Nu in de aanbieding" in resp.data
-
-
-def test_kiosk_pda_pagina_toont_acties_sectie(ingelogde_client, db):
-    product_id = _voeg_product_toe(db, "PDA Actieproduct")
-    _voeg_actie_toe(db, product_id, tekst="PDA actietekst", actief=1)
-    ingelogde_client.get("/weergave/pda")
-
-    resp = ingelogde_client.get("/kiosk/prijzen/instellingen")
-
-    assert resp.status_code == 200
-    assert b"PDA Actieproduct" in resp.data
-    assert b"PDA actietekst" in resp.data
 
 
 # ---------- Onderdeel 2: Sponsoren/leden beheren ----------
@@ -798,7 +763,6 @@ def test_kantine_scherm_toont_vast_clubbeeldmerk_op_elke_dia(client, db):
     assert b"S.V. BLAUW-GEEL 1915" in resp.data
 
 
-
 def test_kantine_scherm_verbergt_wedstrijden_blok_zonder_wedstrijden(client, db):
     resp = client.get("/kiosk/scherm")
     assert resp.status_code == 200
@@ -837,7 +801,6 @@ def test_kantine_scherm_wedstrijden_duur_is_instelbaar(client, db):
 
     assert resp.status_code == 200
     assert b'data-duur="25"' in resp.data
-
 
 
 def test_kantine_scherm_toont_lege_staat_als_alles_uit_staat(client, db):

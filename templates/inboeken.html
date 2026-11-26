@@ -9,76 +9,21 @@
 </div>
 {% endblock %}
 {% block inhoud %}
-{% if pda_modus %}
-<h1>Bestelling #{{ bestelling.id }} {{ 'aanpassen' if is_bewerken else 'inboeken' }}</h1>
-<p class="subtitel"><a href="{{ url_for('bestellijst') }}">&larr; Terug naar bestellijst</a></p>
-{% endif %}
+
 
 <div class="kaart">
     {% if is_bewerken %}
-    {% if pda_modus %}
-    <p class="tekst-zacht">Al ingeboekt — pas aan wat nodig is.</p>
-    {% else %}
+    
     <p class="tekst-zacht">Deze bestelling is al ingeboekt. Pas aan wat nodig is — de voorraad wordt automatisch gecorrigeerd op basis van het verschil.</p>
-    {% endif %}
+    
     {% else %}
-    {% if pda_modus %}
-    <p class="tekst-zacht">Alles begint als manco — vink aan wat je fysiek binnen ziet komen.</p>
-    {% else %}
+    
     <p class="tekst-zacht">Alles staat aanvankelijk op manco. Vink een regel pas aan zodra je 'm fysiek hebt gecontroleerd en binnen zag komen.</p>
-    {% endif %}
+    
     {% endif %}
     <form method="post" id="inboeken-formulier">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        {% if pda_modus %}
-        <div id="inboeken-kaarten">
-            {% for r in regels %}
-            {% set besteld_eenh = r.aantal_besteld|naar_besteleenheden(r) %}
-            {% set ontvangen_eenh = r.aantal_ontvangen|naar_besteleenheden(r) if (r.aantal_ontvangen is not none and r.aantal_ontvangen > 0) else besteld_eenh %}
-            {% set start_binnen = is_bewerken and not r.manco %}
-            <div class="pda-kaartje pda-regel-kaartje{{ '' if start_binnen else ' pda-kaartje--manco' }}">
-                <div class="pda-kaartje-vink" style="cursor:default">
-                    {% if r.afbeelding %}
-                    <img src="{{ url_for('static', filename='product_afbeeldingen/' + (r.afbeelding|foto_klein)) }}" alt="" class="product-thumb">
-                    {% endif %}
-                    <span class="pda-kaartje-naam">{{ r.product_naam }}</span>
-                    <span class="badge badge-laag manco-badge" {{ 'hidden' if start_binnen else '' }}>Manco</span>
-                </div>
-                <div class="pda-kaartje-info">
-                    <span class="tekst-zacht">Besteld: {{ besteld_eenh }} {{ r|besteleenheid_naam }}{% if r.besteleenheid_factor > 1 %} (= {{ r.aantal_besteld }} {{ r.eenheid }}){% endif %}</span>
-                </div>
-                <label class="pda-binnen-toggle">
-                    <input type="checkbox" class="binnen-vinkje" name="binnen_{{ r.id }}"
-                           {{ 'checked' if start_binnen else '' }}>
-                    <span>Binnengekomen</span>
-                </label>
-                <div class="veld pda-kaartje-veld">
-                    <label>Aantal ontvangen ({{ r|besteleenheid_naam }})</label>
-                    <input type="number" name="ontvangen_{{ r.id }}" min="0" class="ontvangen-veld"
-                           value="{{ ontvangen_eenh }}" {{ '' if start_binnen else 'disabled' }}>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% if beschikbare_producten %}
-        <div class="veld">
-            <label for="nieuw-product-select">+ Product toevoegen dat meekwam</label>
-            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap">
-                <select id="nieuw-product-select" style="flex:1">
-                    <option value="">Kies een product...</option>
-                    {% for p in beschikbare_producten %}
-                    <option value="{{ p.id }}" data-naam="{{ p.naam }}" data-eenheid="{{ p|besteleenheid_naam }}"
-                            data-afbeelding="{{ p.afbeelding|foto_klein }}">{{ p.naam }}</option>
-                    {% endfor %}
-                </select>
-                <button type="button" id="product-toevoegen-knop" class="btn btn-rand btn-klein btn-icoon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-                    Toevoegen
-                </button>
-            </div>
-        </div>
-        {% endif %}
-        {% else %}
+        
         <div class="tabel-wrap">
             <table id="inboeken-tabel">
                 <thead>
@@ -131,16 +76,14 @@
             <button type="button" id="product-toevoegen-knop" class="btn btn-rand btn-klein">Toevoegen</button>
         </div>
         {% endif %}
-        {% endif %}
+        
 
         <div class="veld" style="max-width:300px; margin-top:1rem">
             <label>Geboekt door</label>
             <p class="veld-waarde">{{ huidige_gebruiker }}</p>
         </div>
-        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
-            {% if pda_modus %}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-            {% endif %}
+        <button type="submit" class="btn btn-geel">
+            
             {{ 'Aanpassing opslaan' if is_bewerken else 'Inboeken en voorraad bijwerken' }}
         </button>
     </form>
@@ -149,13 +92,13 @@
 <div class="kaart">
     <div class="actiebalk">
         <span class="tekst-zacht">
-            {% if pda_modus %}Bestelling helemaal verwijderen?{% else %}Bestelling volledig verwijderen? Dit maakt ook de voorraadwijziging ervan ongedaan.{% endif %}
+            Bestelling volledig verwijderen? Dit maakt ook de voorraadwijziging ervan ongedaan.
         </span>
         <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=bestelling.id) }}"
               data-vraag="Bestelling #{{ bestelling.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan en kan niet ongedaan worden gemaakt." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-gevaar btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
-                {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>{% endif %}
+            <button type="submit" class="btn btn-gevaar btn-klein">
+                
                 Bestelling verwijderen
             </button>
         </form>

@@ -40,13 +40,6 @@ def test_de_pagina_rekent_het_voorspelmodel_niet_zelf_uit(ingelogde_client, zond
         assert f'data-lazy-bron="{deel}' in tekst and "data-lazy-status" in tekst  # de plek voor het rekenwerk, tot het er is
 
 
-@pytest.mark.parametrize("pagina, deel", LAZY_PAGINA.items())
-def test_de_pagina_ook_op_de_handterminal(ingelogde_client, zonder_model, pagina, deel):
-    ingelogde_client.get("/weergave/pda")
-    tekst = ingelogde_client.get(pagina).data.decode()
-    assert "pda-kop-menuknop" in tekst and f'data-lazy-bron="{deel}' in tekst
-
-
 def test_het_deel_van_de_bestellijst_is_leeg_zonder_tekorten_en_toont_ze_anders(ingelogde_client, db):
     assert "Voorspelde tekorten" not in ingelogde_client.get("/bestellijst/voorspeld").data.decode()  # niets verwacht: leeg
     pid = _product(db, "Pils krat", voorraad=30, factor=24, besteleenheid="krat")
@@ -56,9 +49,6 @@ def test_het_deel_van_de_bestellijst_is_leeg_zonder_tekorten_en_toont_ze_anders(
     )
     tekst = ingelogde_client.get("/bestellijst/voorspeld").data.decode()
     assert "Voorspelde tekorten" in tekst and "Pils krat" in tekst and "<html" not in tekst
-    ingelogde_client.get("/weergave/pda")
-    pda = ingelogde_client.get("/bestellijst/voorspeld").data.decode()
-    assert "Pils krat" in pda and "pda-kaartje" in pda and "<html" not in pda
 
 
 def test_de_prognose_krijgt_horizon_en_categorie_mee_naar_het_deel(ingelogde_client):

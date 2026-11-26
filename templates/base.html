@@ -41,7 +41,6 @@
                 <a href="{{ url_for('account_wachtwoord') }}">Wachtwoord wijzigen</a>
                 <a href="{{ url_for('tablet_code_instellen') }}">Tablet-code wijzigen</a>
                 <a href="{{ url_for('account_voorkeuren') }}">Mijn voorkeuren</a>
-                {% if handterminal_weergave_aan %}<a href="{{ url_for('weergave_pda') }}">Naar handterminal-weergave</a>{% endif %}
                 <div class="menu-scheiding"></div>
                 <a href="{{ url_for('help_pagina') }}">Help &middot; Over deze app</a>
                 <div class="menu-scheiding"></div>
@@ -65,7 +64,6 @@
     </div>
     {% endif %}
     <script src="{{ url_for('static', filename='gedeeld.js') }}?v={{ gedeeld_js_versie }}"></script>
-    {% include "_welkom_popup.html" %}
     {% include "_taak_vraag.html" %}
     <div class="app-layout">
         <nav class="app-zijbalk{{ ' eenvoudig' if eenvoudig else '' }}" id="app-zijbalk">

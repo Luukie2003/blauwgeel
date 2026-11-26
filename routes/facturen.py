@@ -5,6 +5,7 @@ csrf_token mee in de header X-CSRF-Token."""
 
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
 
+import afspraken
 import barcodes
 import facturen
 from database import get_db
@@ -43,7 +44,7 @@ def _scan_inhoud(db, ronde_id, code):
         "melding": uitkomst["melding"],
         "regel_id": uitkomst["regel_id"],
         "barcode": barcodes.als_json(uitkomst["barcode"]) if uitkomst["barcode"] else None,
-        "ronde": facturen.als_json(facturen.ronde(db, ronde_id)),
+        "ronde": facturen.als_json(facturen.ronde(db, ronde_id), db),
     }, 200
 
 
@@ -113,6 +114,7 @@ def register_routes(app):
             plu=facturen.plu_lijst(db, gegevens["besteld"], {p["product_id"]: p for p in gegevens["per_product"]}),
             nog_niet_binnen=facturen.nog_niet_binnen(gegevens),
             meer_dan_besteld=facturen.meer_dan_besteld(db, gegevens) if gegevens["ronde"]["status"] == "open" else [],
+            afspraken=afspraken.bij_factuur(db, [p["product_id"] for p in gegevens["per_product"]]) if gegevens["ronde"]["status"] == "open" else [],
         )
 
     def _colli_keuzes():
@@ -235,9 +237,9 @@ def register_routes(app):
             data = _data()
             ronde_id = facturen.start_ronde(db, data.get("leverancier_id"), data.get("factuurnummer"),
                                             data.get("bestelling_id"), bron="app", **_door())
-            return jsonify(facturen.als_json(facturen.ronde(db, ronde_id))), 201
+            return jsonify(facturen.als_json(facturen.ronde(db, ronde_id), db)), 201
         return jsonify({
-            "open": [facturen.als_json(facturen.ronde(db, r["id"])) for r in facturen.open_rondes(db)],
+            "open": [facturen.als_json(facturen.ronde(db, r["id"]), db) for r in facturen.open_rondes(db)],
             "leveranciers": [{"id": r["id"], "naam": r["naam"]} for r in alle_leveranciers(db, alleen_actief=True)],
             "bestellingen": facturen.open_bestellingen(db),
             "producten": [dict(r) for r in _producten(db)],
@@ -251,7 +253,7 @@ def register_routes(app):
         ronde_id = facturen.ronde_voor_bestelling(db, bestelling_id, bron="app", **_door())
         if ronde_id is None:
             return jsonify({"fout": "Deze bestelling staat niet (meer) klaar om in te boeken."}), 404
-        return jsonify(facturen.als_json(facturen.ronde(db, ronde_id)))
+        return jsonify(facturen.als_json(facturen.ronde(db, ronde_id), db))
 
     @app.route("/api/facturen/<int:ronde_id>", methods=["GET", "POST"])
     def api_factuur(ronde_id):
@@ -261,7 +263,7 @@ def register_routes(app):
         if request.method == "POST":
             facturen.werk_gegevens_bij(db, ronde_id, _data())
         gegevens = facturen.ronde(db, ronde_id)
-        return jsonify(facturen.als_json(gegevens)) if gegevens else _niet_gevonden_json()
+        return jsonify(facturen.als_json(gegevens, db)) if gegevens else _niet_gevonden_json()
 
     @app.route("/api/facturen/<int:ronde_id>/scan", methods=["POST"])
     def api_factuur_scan(ronde_id):
@@ -300,7 +302,7 @@ def register_routes(app):
             _, fout = facturen.voeg_rest_toe(db, ronde_id, product_id)
             if fout:
                 return {"status": "fout", "melding": fout}, 400
-            return facturen.als_json(facturen.ronde(db, ronde_id)), 200
+            return facturen.als_json(facturen.ronde(db, ronde_id), db), 200
 
         return eenmalig(zoals_besteld)
 
@@ -320,7 +322,7 @@ def register_routes(app):
             fout = facturen.voeg_plu_toe(db, ronde_id, data.get("product_id"), data.get("aantal"))
             if fout:
                 return {"status": "fout", "melding": fout}, 400
-            return facturen.als_json(facturen.ronde(db, ronde_id)), 200
+            return facturen.als_json(facturen.ronde(db, ronde_id), db), 200
 
         return eenmalig(plu)
 
@@ -332,7 +334,7 @@ def register_routes(app):
         if fout:
             return jsonify({"status": "fout", "melding": fout}), 400
         gegevens = facturen.ronde(db, ronde_id)
-        return jsonify(facturen.als_json(gegevens)) if gegevens else _niet_gevonden_json()
+        return jsonify(facturen.als_json(gegevens, db)) if gegevens else _niet_gevonden_json()
 
     @app.route("/api/facturen/<int:ronde_id>/afronden", methods=["POST"])
     def api_factuur_afronden(ronde_id):
@@ -342,6 +344,6 @@ def register_routes(app):
             if fout:
                 return {"status": "fout", "melding": fout}, 400
             return {"status": "afgerond", "samenvatting": samenvatting,
-                    "ronde": facturen.als_json(facturen.ronde(db, ronde_id))}, 200
+                    "ronde": facturen.als_json(facturen.ronde(db, ronde_id), db)}, 200
 
         return eenmalig(rond_af)

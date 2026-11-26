@@ -21,16 +21,12 @@
 <span class="badge badge-in" title="Zelf gekozen bij het product{% if keuze.door %} door {{ keuze.door }}{% endif %}; geldt tot het besteld is">{{ 'niet bestellen' if keuze.eenheden == 0 else 'zelf gekozen' }}{% if keuze.door %} ({{ keuze.door }}){% endif %}</span>
 {% endif %}
 {%- endmacro %}
-{% if pda_modus %}
-<div class="actiebalk">
-    <p class="subtitel" style="margin:0">Boek bestellingen in zodra de levering binnenkomt, en zie wat er nog besteld moet worden.</p>
-</div>
-{% endif %}
+
 
 <div class="kaart">
     <h2>Openstaande bestellingen</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">Klaargezet en onderweg. Elke bestelling staat als concept bij Factuur inboeken: komt de levering binnen, scan hem dan in (ook met de handterminal) en je ziet per product wat er besteld is en wat er al binnen is.
-        {% if open_bestellingen and not pda_modus %}Wat je bij de leverancier invult, met de artikelnummers, staat in het <a href="{{ url_for('besteloverzicht_pagina') }}">besteloverzicht</a>.{% endif %}</p>
+        {% if open_bestellingen %}Wat je bij de leverancier invult, met de artikelnummers, staat in het <a href="{{ url_for('besteloverzicht_pagina') }}">besteloverzicht</a>.{% endif %}</p>
     {% if open_bestellingen %}
     {% for b, regels in open_bestellingen %}
     <div style="border:1px solid var(--rand); border-radius:8px; padding:0.9rem; margin-bottom:0.9rem;">
@@ -40,27 +36,27 @@
                 <span class="tekst-zacht">— aangemaakt {{ b.aangemaakt_op|datum_nl }}{% if b.besteld_door %} door {{ b.besteld_door }}{% endif %}</span>
             </div>
             <div class="tabel-acties">
-                <a href="{{ url_for('factuur_voor_bestelling', bestelling_id=b.id) }}" class="btn btn-geel btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
-                    {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>{% endif %}
+                <a href="{{ url_for('factuur_voor_bestelling', bestelling_id=b.id) }}" class="btn btn-geel btn-klein">
+                    
                     Inboeken
                 </a>
-                <a href="{{ url_for('bestelling_bewerken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
-                    {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>{% endif %}
+                <a href="{{ url_for('bestelling_bewerken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">
+                    
                     Bewerken
                 </a>
-                {% if not pda_modus %}
+                
                 {# Voor de leverancier: het overzicht met de artikelnummers, de lijst als pdf, of als tekst om in een mail of
                    WhatsApp te plakken. #}
                 <a href="{{ url_for('besteloverzicht_pagina', id=b.id) }}" class="btn btn-rand btn-klein">Besteloverzicht</a>
                 <a href="{{ url_for('bestelling_pdf_route', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">PDF voor de leverancier</a>
                 <button type="button" class="btn btn-rand btn-klein" data-kopieer="bestel-tekst-{{ b.id }}">Tekst kopiëren</button>
                 <textarea id="bestel-tekst-{{ b.id }}" class="visueel-verborgen" readonly tabindex="-1" aria-hidden="true">{{ bestel_teksten[b.id] }}</textarea>
-                {% endif %}
+                
                 <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
                       data-vraag="Bestelling #{{ b.id }} verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-gevaar btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
-                        {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>{% endif %}
+                    <button type="submit" class="btn btn-gevaar btn-klein">
+                        
                         Verwijderen
                     </button>
                 </form>
@@ -102,7 +98,7 @@
     {% endif %}
 </div>
 
-{% if not pda_modus and per_leverancier %}
+{% if per_leverancier %}
 <div class="kaart">
     <h2>Bestellen per leverancier</h2>
     <div class="tabel-wrap">
@@ -127,7 +123,7 @@
 </div>
 {% endif %}
 
-{% if not pda_modus %}
+
 <div class="kaart">
     <h2>Voorgesteld om te bestellen</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
@@ -564,73 +560,7 @@
     {% endif %}
 </div>
 {% endif %}
-{% else %}
-{# ---------- Handterminal: alleen kijken wat er besteld moet worden. De bestelling
-   zelf klaarzetten blijft op de computer (zie bestelling_aanmaken). ---------- #}
-<div class="kaart">
-    <h2>Nu bestellen</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">Onder het minimum. Een bestelling klaarzetten doe je met de handterminal-app (Bestellijst) of op de computer.</p>
-    {% if suggesties %}
-    {% for p in suggesties %}
-    {% set tekort = p.bestel_hoeveelheid if p.bestel_hoeveelheid > 0 else (p.min_voorraad - p.voorraad) %}
-    {% set besteleenheden = tekort|naar_besteleenheden(p) %}
-    <div class="pda-kaartje">
-        <div class="pda-regel-kop">
-            <strong><a href="{{ url_for('product_detail', product_id=p.id) }}">{{ p.naam }}</a></strong>
-            <span class="badge badge-laag">{{ p.voorraad }} {{ p.eenheid }}</span>
-        </div>
-        <div class="pda-regel-info">
-            <span class="tekst-zacht">minimum {{ p.min_voorraad }} {{ p.eenheid }}</span>
-            <span>Bestel <strong>{{ besteleenheden }} {{ p|besteleenheid_naam }}</strong></span>
-        </div>
-    </div>
-    {% endfor %}
-    {% else %}
-    <p class="leeg">Niets nodig, alle voorraad zit boven het minimum.</p>
-    {% endif %}
-</div>
 
-{# De kaart 'Voorspelde tekorten' komt uit _bestellijst_voorspeld.html en laadt na de rest: het voorspelmodel rekent op de
-   server soms enkele seconden (zie gedeeld.js, data-lazy-bron). Zijn er geen verwachte tekorten, dan verdwijnt dit blokje. #}
-<div data-lazy-bron="{{ url_for('bestellijst_voorspeld') }}"
-     data-lazy-fout="De voorspelde tekorten konden niet worden geladen. Ververs de pagina om het opnieuw te proberen.">
-    <p class="tekst-zacht" data-lazy-status style="margin:0 0 1rem">Verwachte tekorten worden berekend&hellip;</p>
-</div>
-
-{% if meldingen.producten or meldingen.teksten %}
-<div class="kaart">
-    <h2>Gemeld</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">Via een gescande schaplabel-QR of handmatig op de lijst gezet.</p>
-    {% for m in meldingen.producten %}
-    <div class="pda-kaartje">
-        <div class="pda-regel-kop">
-            <strong><a href="{{ url_for('product_detail', product_id=m.product.id) }}">{{ m.product.naam }}</a></strong>
-            <span class="badge badge-laag">{{ m.aantal }}x gemeld</span>
-        </div>
-        <div class="pda-regel-info">
-            <span class="tekst-zacht">laatst {{ m.laatste_melding|datum_nl }}</span>
-            <form method="post" action="{{ url_for('bestellijst_melding_product_afhandelen', product_id=m.product.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-rand btn-klein">Afhandelen</button>
-            </form>
-        </div>
-    </div>
-    {% endfor %}
-    {% for t in meldingen.teksten %}
-    <div class="pda-kaartje">
-        <div class="pda-regel-kop"><strong>{{ t.tekst }}</strong></div>
-        <div class="pda-regel-info">
-            <span class="tekst-zacht">{{ t.aangemaakt_op|datum_nl }} &middot; verbruiksvoorwerp</span>
-            <form method="post" action="{{ url_for('bestellijst_melding_afhandelen', melding_id=t.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-rand btn-klein">Afhandelen</button>
-            </form>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
-{% endif %}
 
 {% if recent_ontvangen %}
 <div class="kaart">
@@ -643,15 +573,15 @@
                 <span class="tekst-zacht">— ontvangen {{ b.ontvangen_op|datum_nl }}</span>
             </div>
             <div class="tabel-acties">
-                <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
-                    {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>{% endif %}
+                <a href="{{ url_for('bestelling_inboeken', bestelling_id=b.id) }}" class="btn btn-rand btn-klein">
+                    
                     Bewerken
                 </a>
                 <form method="post" action="{{ url_for('bestelling_verwijderen', bestelling_id=b.id) }}"
                       data-vraag="Bestelling #{{ b.id }} verwijderen? Dit maakt de voorraadwijziging ongedaan." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-gevaar btn-klein{{ ' btn-icoon' if pda_modus else '' }}">
-                        {% if pda_modus %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>{% endif %}
+                    <button type="submit" class="btn btn-gevaar btn-klein">
+                        
                         Verwijderen
                     </button>
                 </form>

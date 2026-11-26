@@ -43,85 +43,13 @@ def _heeft_pda_schil(tekst):
 # ---------- Startscherm ----------
 
 
-def test_start_toont_wat_aandacht_nodig_heeft(ingelogde_client, db):
-    _product_rij(db, "Laag Bier", 1, 10)
-    _product_rij(db, "Genoeg Bier", 50, 10)
-    db.execute("INSERT INTO mededelingen (tekst, naam, datum, urgent) VALUES ('Koelkast stuk', 'x', '2026-10-01 10:00', 1)")
-    db.execute("INSERT INTO bestellingen (status, aangemaakt_op) VALUES ('besteld', '2026-10-01 10:00')")
-    db.commit()
-
-    tekst = _pda(ingelogde_client).get("/").data.decode()
-
-    laag = db.execute("SELECT COUNT(*) AS n FROM producten WHERE actief = 1 AND voorraad < min_voorraad "
-                      "AND categorie != 'Keuken'").fetchone()["n"]
-    assert laag >= 1
-    assert f"{laag} {'product' if laag == 1 else 'producten'} onder het minimum" in tekst
-    assert "/voorraadoverzicht?alleen=laag" in tekst
-    assert "1 bestelling om in te boeken" in tekst
-    assert "Prikbord: 1 urgent" in tekst and "1 open in totaal" in tekst
-    assert "Nog nooit geteld" in tekst
-    assert "Vet vervangen" in tekst  # beheerder heeft ook de keuken-sectie
-
-
-def test_start_menu_heeft_de_nieuwe_ingangen_voor_een_beheerder(ingelogde_client):
-    tekst = _pda(ingelogde_client).get("/").data.decode()
-    for label in ["Voorraad", "Prognose", "Tellingen", "Keuken", "Kluis", "Club van 20", "QR scannen", "Kantine-tv",
-                  "Barcodes", "Agenda", "Facturen"]:
-        assert f'pda-tegel-label">{label}<' in tekst, label
-    assert "Tips &amp; functies" in tekst
-
-
-def test_start_toont_een_vrijwilliger_alleen_wat_bij_de_rechten_past(client, db):
-    _maak_vrijwilliger(db, "keukenhulp", "keuken")
-    _product_rij(db, "Laag Bier", 1, 10)
-    _login(client, "keukenhulp")
-
-    tekst = _pda(client).get("/").data.decode()
-
-    assert "Vet vervangen" in tekst and 'pda-tegel-label">Keuken<' in tekst
-    assert "onder het minimum" not in tekst and "Alles op orde" not in tekst
-    for label in ["Voorraad", "Kluis", "Club van 20", "Prognose", "Facturen"]:
-        assert f'pda-tegel-label">{label}<' not in tekst, label
-    assert 'href="/tellen"' not in tekst  # geen snelle knop en geen tab voor tellen
-
-
 # ---------- Voorraadlijst ----------
-
-
-def test_voorraadlijst_in_de_handterminal_schil(ingelogde_client, db):
-    _product_rij(db, "Laag Bier", 1, 10)
-    _product_rij(db, "Genoeg Bier", 50, 10)
-    _product_rij(db, "Oud Product", 5, 1, actief=0)
-
-    resp = _pda(ingelogde_client).get("/voorraadoverzicht?alleen=laag")
-    tekst = resp.data.decode()
-
-    assert _heeft_pda_schil(tekst)
-    assert "Laag Bier" in tekst and "Genoeg Bier" in tekst
-    assert "Oud Product" not in tekst
-    assert "pda-voorraad-rij--laag" in tekst
-    assert "var alleenLaag = true;" in tekst
-    assert "Voorraadwaarde per categorie" not in tekst
 
 
 def test_voorraadoverzicht_op_desktop_blijft_zoals_het_was(ingelogde_client, db):
     ingelogde_client.get("/weergave/desktop")
     tekst = ingelogde_client.get("/voorraadoverzicht").data.decode()
     assert "Voorraadwaarde per categorie" in tekst and "pda-kop-menuknop" not in tekst
-
-
-def test_keuken_in_de_handterminal_toont_alleen_keuken_producten(client, db):
-    _maak_vrijwilliger(db, "keukenhulp", "keuken")
-    _product_rij(db, "Frituurvet", 3, 1, categorie="Keuken")
-    _product_rij(db, "Heineken", 30, 10, categorie="Bier")
-    _login(client, "keukenhulp")
-
-    tekst = _pda(client).get("/keuken").data.decode()
-
-    assert _heeft_pda_schil(tekst)
-    assert "Frituurvet" in tekst and "Heineken" not in tekst
-    # Geen voorraad-rechten: geen links naar productpagina's en geen productzoeker.
-    assert 'href="/producten/' not in tekst and 'id="pda-zoek-invoer"' not in tekst
 
 
 # ---------- Tellingen ----------
@@ -136,20 +64,6 @@ def _maak_telling(client, db):
     return resp.headers["Location"], pid
 
 
-def test_telling_detail_en_overzicht_in_de_handterminal_schil(ingelogde_client, db):
-    pad, _ = _maak_telling(ingelogde_client, db)
-    _pda(ingelogde_client)
-
-    detail = ingelogde_client.get(pad).data.decode()
-    assert _heeft_pda_schil(detail)
-    assert "Getelde Cola" in detail and "Corrigeren" in detail and "Verkooprapport (PDF)" in detail
-
-    overzicht = ingelogde_client.get("/tellingen").data.decode()
-    assert _heeft_pda_schil(overzicht)
-    assert "Alle tellingen" in overzicht and 'data-lazy-bron="/tellingen/cijfers"' in overzicht
-    assert "Omzet per week" in ingelogde_client.get("/tellingen/cijfers").data.decode()  # komt na het laden binnen
-
-
 def test_telling_detail_op_desktop_blijft_de_tabel(ingelogde_client, db):
     pad, _ = _maak_telling(ingelogde_client, db)
     ingelogde_client.get("/weergave/desktop")
@@ -158,21 +72,6 @@ def test_telling_detail_op_desktop_blijft_de_tabel(ingelogde_client, db):
 
 
 # ---------- Bestellijst ----------
-
-
-def test_bestellijst_in_de_handterminal_toont_wat_er_besteld_moet_worden(ingelogde_client, db):
-    _product_rij(db, "Bijna Op", 2, 10)
-    db.execute(
-        "INSERT INTO bestellijst_meldingen (tekst, bron, aangemaakt_op) VALUES ('Wc-papier', 'verbruiksvoorwerp', '2026-10-01 10:00')"
-    )
-    db.commit()
-
-    tekst = _pda(ingelogde_client).get("/bestellijst").data.decode()
-
-    assert "Nu bestellen" in tekst and "Bijna Op" in tekst
-    assert "Wc-papier" in tekst and "Afhandelen" in tekst
-    # Een bestelling klaarzetten blijft op de computer.
-    assert "Bestelling aanmaken" not in tekst and "Voorgesteld om te bestellen" not in tekst
 
 
 # ---------- Aanmeldingen ----------
@@ -190,32 +89,6 @@ def _aanmelding(db, naam="Jan Jansen", bordje="Jan & Co"):
         "test-ip",
     )
     return aanmelding_id
-
-
-def test_aanmelding_goedkeuren_op_de_handterminal(ingelogde_client, db):
-    aanmelding_id = _aanmelding(db)
-    tekst = _pda(ingelogde_client).get("/club-van-20/aanmeldingen").data.decode()
-
-    assert _heeft_pda_schil(tekst)
-    assert "Jan &amp; Co" in tekst and "Contant" in tekst and "bardienst: Piet" in tekst
-
-    # Zonder het vinkje "betaling gecontroleerd" gebeurt er niets.
-    resp = ingelogde_client.post(
-        f"/club-van-20/aanmeldingen/{aanmelding_id}/goedkeuren",
-        data={"csrf_token": _csrf(ingelogde_client), "modus": "nieuw", "bordje": "Jan & Co",
-              "voornaam": "Jan", "achternaam": "Jansen", "bedrag": "20", "betaalwijze": "contant"},
-    )
-    assert resp.status_code == 302
-    assert db.execute("SELECT status FROM club_van_20_aanmeldingen").fetchone()["status"] == "nieuw"
-
-    ingelogde_client.post(
-        f"/club-van-20/aanmeldingen/{aanmelding_id}/goedkeuren",
-        data={"csrf_token": _csrf(ingelogde_client), "betaling_gecontroleerd": "1", "modus": "nieuw",
-              "bordje": "Jan & Co", "voornaam": "Jan", "achternaam": "Jansen", "bedrag": "20",
-              "betaalwijze": "contant"},
-    )
-    assert db.execute("SELECT status FROM club_van_20_aanmeldingen").fetchone()["status"] == "goedgekeurd"
-    assert db.execute("SELECT COUNT(*) AS n FROM club_van_20_leden WHERE naam = 'Jan & Co'").fetchone()["n"] == 1
 
 
 def test_aanmeldingen_op_desktop_houden_de_tabel(ingelogde_client, db):

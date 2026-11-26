@@ -26,24 +26,10 @@ def test_de_pagina_rekent_het_voorspelmodel_niet_zelf_uit(ingelogde_client, zond
     assert "Verwachting &amp; trend" in tekst
 
 
-def test_de_handterminalpagina_ook_niet(ingelogde_client, zonder_model):
-    ingelogde_client.get("/weergave/pda")
-    resp = ingelogde_client.get("/tellingen")
-    tekst = resp.data.decode()
-    assert resp.status_code == 200 and f'data-lazy-bron="{CIJFERS}"' in tekst
-    assert "pda-kop-menuknop" in tekst and 'class="app-zijbalk"' not in tekst  # echt de handterminal-weergave
-
-
 def test_het_deel_met_de_cijfers_toont_beide_kaarten(ingelogde_client):
     tekst = ingelogde_client.get(CIJFERS).data.decode()
     assert "Verwachting &amp; trend" in tekst and "Omzet per week" in tekst
     assert "<html" not in tekst  # alleen de kaarten, geen hele pagina
-
-
-def test_het_deel_met_de_cijfers_voor_de_handterminal(ingelogde_client):
-    ingelogde_client.get("/weergave/pda")
-    tekst = ingelogde_client.get(CIJFERS).data.decode()
-    assert "Omzet per week" in tekst and "<html" not in tekst and "pda-kopje" in tekst
 
 
 def test_gaat_het_voorspelmodel_stuk_dan_blijven_de_cijfers_werken(ingelogde_client, monkeypatch):

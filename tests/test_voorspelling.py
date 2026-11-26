@@ -335,14 +335,14 @@ def test_kans_op_tekort_stijgt_als_de_voorraad_daalt(db):
     ids = [_product(db, f"P{v}", voorraad=v) for v in (0, 100, 250, 400, 2000)]
     laatste = _bouw_geschiedenis(db, {pid: 30 for pid in ids})
     prog = maak_prognose(db, dagen=7, nu=laatste + timedelta(hours=1))
-    kans = {p["voorraad"]: p["kans_tekort"] for p in prog["producten"]}
+    kans = {p["voorraad_app"]: p["kans_tekort"] for p in prog["producten"]}
     assert kans[0] > 0.99 and kans[2000] < 0.01
     assert kans[0] >= kans[100] >= kans[250] >= kans[400] >= kans[2000]
     assert kans[100] > 0.9 and kans[400] < 0.5
     # Producten staan gesorteerd op risico.
     kansen = [p["kans_tekort"] for p in prog["producten"]]
     assert kansen == sorted(kansen, reverse=True)
-    status = {p["voorraad"]: p["status"] for p in prog["producten"]}
+    status = {p["voorraad_app"]: p["status"] for p in prog["producten"]}
     assert status[0] == "urgent" and status[2000] == "ok"
 
 

@@ -21,7 +21,8 @@ De bijstelling in stuks van 1.68.0 (de prognose zelf plus of min) is sinds 1.72.
 naar colli werd afgerond, en sinds 1.69.0 kies je gewoon het aantal colli.
 
 Advies (advies): genoeg voor de periode (het 90%-punt van de verwachting, en minstens het minimum),
-min wat er ligt en wat al onderweg is, naar boven afgerond op hele besteleenheden; moet er besteld worden en heeft het
+min wat er nu waarschijnlijk ligt (sinds 2.21.0: de voorraad van de laatste telling min wat er sindsdien naar verwachting
+verkocht is, zie voorspelling.maak_prognose) en wat al onderweg is, naar boven afgerond op hele besteleenheden; moet er besteld worden en heeft het
 product een vaste bestelhoeveelheid, dan minstens die. Dit is het enige besteladvies (sinds 1.71.0): de bestellijst, het
 product, de Prognose, de tekorten op het overzicht, de uitdraai en de app halen het hier (adviezen, voor_product), zodat
 er overal hetzelfde aantal staat. Het voorspelmodel zelf geeft alleen de verwachting en de kansen."""
@@ -161,7 +162,8 @@ def advies(product, regel, al_onderweg=0):
     verwacht = regel["verwacht"] if regel else 0.0
     hoog = regel["hoog"] if regel else 0.0
     onderweg = al_onderweg
-    voorraad = max(0, product["voorraad"])
+    # Wat er nu waarschijnlijk ligt (2.21.0): de prognose trekt er af wat er sinds de laatste telling verkocht is.
+    voorraad = max(0, regel["voorraad"] if regel and "voorraad" in regel else product["voorraad"])
     nodig = max(product["min_voorraad"] or 0, hoog) - voorraad - onderweg
     stuks = max(0, math.ceil(nodig - 1e-9))
     vast = product["bestel_hoeveelheid"] if "bestel_hoeveelheid" in product.keys() else 0

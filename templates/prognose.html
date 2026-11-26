@@ -21,7 +21,7 @@
     <a href="{{ url_for('prognose_pagina', dagen=h, categorie=categorie or None) }}"
        class="btn {{ 'btn-geel' if h == dagen else 'btn-rand' }}">Komende {{ h }} dagen</a>
     {% endfor %}
-    {% if pda_modus %}<a href="{{ url_for('bestellijst') }}" class="btn btn-rand">Naar de bestellijst</a>{% endif %}
+    
 </div>
 
 {% if thuiswedstrijden %}

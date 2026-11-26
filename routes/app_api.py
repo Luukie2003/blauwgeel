@@ -52,7 +52,7 @@ from routes.tellen.verwerken import verwerk_telling
 from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 # De nieuwste versie van de app. Draait er een oudere, dan meldt de app dat er een nieuwe is.
-HANDTERMINAL_APP_VERSIE = "3.0.0"
+HANDTERMINAL_APP_VERSIE = "3.1.0"
 # De tablet-app ("Kantine Beheer", android-apps/tablet) bouwt sinds 3.0 op dezelfde schermen; zijn startscherm kijkt hier
 # of er een nieuwere is (App.versieSleutel in de app).
 TABLET_APP_VERSIE = "3.2"

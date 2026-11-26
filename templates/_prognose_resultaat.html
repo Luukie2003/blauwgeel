@@ -108,7 +108,7 @@
                     <td><a href="{{ url_for('product_detail', product_id=p.product.id) }}">{{ p.product.naam }}</a>
                         {% if p.nu_op %}<span class="badge badge-laag">nu op</span>{% endif %}
                         {% if p.weinig_data %}<span class="tekst-zacht" title="Nog weinig tellingen van dit product, dus een grove schatting">*</span>{% endif %}</td>
-                    <td>{{ p.voorraad }} {{ p.product.eenheid }}{% if p.onderweg %} <span class="tekst-zacht">(+{{ p.onderweg }} onderweg)</span>{% endif %}</td>
+                    <td>{{ p.voorraad }} {{ p.product.eenheid }}{% if p.voorraad_app is defined and p.voorraad_app != p.voorraad %} <span class="tekst-zacht" title="Volgens de laatste telling, met de boekingen erna">(app: {{ p.voorraad_app }})</span>{% endif %}{% if p.onderweg %} <span class="tekst-zacht">(+{{ p.onderweg }} onderweg)</span>{% endif %}</td>
                     <td>{{ '%.0f'|format(p.verwacht) }} <span class="tekst-zacht">({{ p.laag }} tot {{ p.hoog }})</span></td>
                     <td>{% if p.dekking_dagen is none %}&ndash;{% elif p.dekking_dagen >= 28 %}28+ dagen{% else %}{{ '%.1f'|format(p.dekking_dagen) }} dagen{% endif %}</td>
                     <td>

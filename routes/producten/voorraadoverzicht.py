@@ -1,13 +1,12 @@
 """Voorraadoverzicht: waarde per categorie, tekorten en de PDF/CSV-export."""
 
-from flask import Response, g, render_template
+from flask import Response, render_template
 
 from database import get_db
 from helpers import bereken_fust_verkopen, categorienamen_zonder_verkoopprijsplicht, csv_response
 from helpers.producten import is_fles_per_glas
 from productkaart import NIET_GEARCHIVEERD, in_gewone_telling
 from pdf import voorraadoverzicht_pdf
-from routes.producten.overzicht import render_voorraad_pda
 
 
 def bereken_voorraadoverzicht(db):
@@ -134,8 +133,6 @@ def bereken_voorraadoverzicht(db):
 def register_routes(app):
     @app.route("/voorraadoverzicht")
     def voorraadoverzicht():
-        if g.get("weergave_modus") == "pda":
-            return render_voorraad_pda()
         db = get_db()
         return render_template(
             "voorraadoverzicht.html", **bereken_voorraadoverzicht(db)

@@ -56,6 +56,37 @@
 </section>
 {% endif %}
 
+<section class="cs-paneel" id="afspraken">
+    <div class="cs-paneel-kop"><h2>Afspraken</h2><span class="cs-zacht">Wat je met {{ a.merk }} hebt afgesproken; bij Factuur inboeken krijg je een seintje</span></div>
+    {% if afspraken %}
+    <div class="tabel-wrap"><table>
+        <thead><tr><th>Afspraak</th><th>Loopt</th><th class="cs-getal">Dozen sindsdien</th><th class="cs-getal">Zou moeten opleveren</th><th></th></tr></thead>
+        <tbody>{% for f in afspraken %}<tr>
+            <td>{{ f.tekst }}</td>
+            <td class="cs-nowrap">{{ f.vanaf|dag_maand }}{% if f.tot %} t/m {{ f.tot|dag_maand }}{% endif %}{% if not f.loopt %} <span class="cs-zacht">(niet nu)</span>{% endif %}</td>
+            <td class="cs-getal">{{ getal(f.dozen, 0) }}</td>
+            <td class="cs-getal cs-nowrap">{% if f.korting is not none %}{{ euro2(f.korting) }}{% elif f.gratis is not none %}{{ f.gratis }} gratis {{ 'doos' if f.gratis == 1 else 'dozen' }}{% else %}&mdash;{% endif %}</td>
+            <td class="cs-getal"><form method="post" action="{{ url_for('merk_afspraak_verwijderen', afspraak_id=f.id) }}" style="margin:0" data-vraag="Deze afspraak verwijderen?" onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="merk" value="{{ a.merk }}"><input type="hidden" name="weken" value="{{ weken }}">
+                <button type="submit" class="btn btn-rand btn-klein">Verwijderen</button></form></td>
+        </tr>{% endfor %}</tbody>
+    </table></div>
+    {% endif %}
+    <details class="cs-uitklap" {{ 'open' if not afspraken }}>
+        <summary>Afspraak vastleggen</summary>
+        <form method="post" action="{{ url_for('merk_afspraak_toevoegen') }}" style="display:flex; flex-wrap:wrap; gap:0.6rem 1rem; align-items:flex-end; padding:0.6rem 1.1rem 1rem; margin:0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="merk" value="{{ a.merk }}"><input type="hidden" name="weken" value="{{ weken }}">
+            <div class="veld" style="margin:0"><label for="soort">Soort</label><select id="soort" name="soort">{% for k, v in soorten.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+            <div class="veld" style="margin:0"><label for="bedrag">Korting per doos (&euro;)</label><input type="text" inputmode="decimal" id="bedrag" name="bedrag" placeholder="1,00" style="width:7rem"></div>
+            <div class="veld" style="margin:0"><label for="aantal">Gratis op zoveel dozen</label><input type="number" id="aantal" name="aantal" min="1" placeholder="10" style="width:7rem"></div>
+            <div class="veld" style="margin:0; flex:1 1 14rem"><label for="omschrijving">Omschrijving <span class="cs-zacht">(mag leeg bij korting of gratis)</span></label><input type="text" id="omschrijving" name="omschrijving" maxlength="200" placeholder="Bijv. koelkast in bruikleen"></div>
+            <div class="veld" style="margin:0"><label for="vanaf">Vanaf</label><input type="date" id="vanaf" name="vanaf" value="{{ vandaag }}" required></div>
+            <div class="veld" style="margin:0"><label for="tot">Tot en met <span class="cs-zacht">(mag leeg)</span></label><input type="date" id="tot" name="tot"></div>
+            <button type="submit" class="btn btn-geel">Opslaan</button>
+        </form>
+    </details>
+</section>
+
 <section class="cs-paneel">
     <div class="cs-paneel-kop"><h2>Per product</h2></div>
     <div class="tabel-wrap"><table>

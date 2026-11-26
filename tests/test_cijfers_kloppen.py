@@ -157,8 +157,7 @@ def test_smaken_verwisseld_op_het_controlescherm(db):
     assert per[cola] is None
 
 
-@pytest.mark.parametrize("pda", [False, True])
-def test_de_vraag_staat_op_het_controlescherm(app, db, pda):
+def test_de_vraag_staat_op_het_controlescherm(app, db):
     from flask import render_template
 
     peach, green = _smaak(db, "Bozu Peach", 60), _smaak(db, "Bozu Green", 60)
@@ -166,8 +165,7 @@ def test_de_vraag_staat_op_het_controlescherm(app, db, pda):
     for r in regels:
         r.update(bar="1", hok="2")
     with app.test_request_context("/tellen/lopen/controleren"):
-        pagina = render_template("tellen_lopen_controleren.html", regels=regels, pda_modus=pda,
-                                 basis_template="base_pda.html" if pda else "base.html")
+        pagina = render_template("tellen_lopen_controleren.html", regels=regels, basis_template="base.html")
     tekst = " ".join(pagina.split())
     assert "Door elkaar geteld met Bozu Green? Hier staan er 22 minder dan verwacht, daar ongeveer evenveel meer." in tekst
 

@@ -108,22 +108,6 @@ def test_productpagina_toont_recente_boeking_met_link(ingelogde_client, db):
     assert f"/geschiedenis?product_id={product['id']}" in body
 
 
-def test_pda_inboeken_toont_kaarten_met_manco_toggle(ingelogde_client, db):
-    product = db.execute("SELECT * FROM producten WHERE naam = 'Tap Bier'").fetchone()
-    _maak_bestelling(ingelogde_client, product["id"], 4)
-    bestelling = db.execute("SELECT * FROM bestellingen ORDER BY id DESC LIMIT 1").fetchone()
-    # Het formulier is er voor een ontvangen bestelling (corrigeren); een openstaande boek je in bij Factuur inboeken.
-    db.execute("UPDATE bestellingen SET status = 'ontvangen' WHERE id = ?", (bestelling["id"],))
-    db.commit()
-
-    ingelogde_client.get("/weergave/pda")
-    resp = ingelogde_client.get(f"/bestellingen/{bestelling['id']}/inboeken")
-    body = resp.data.decode()
-    assert 'id="inboeken-kaarten"' in body
-    assert 'id="inboeken-tabel"' not in body
-    assert "Binnengekomen" in body
-
-
 def test_desktop_inboeken_toont_gewoon_de_tabel(ingelogde_client, db):
     product = db.execute("SELECT * FROM producten WHERE naam = 'Tap Bier'").fetchone()
     _maak_bestelling(ingelogde_client, product["id"], 4)

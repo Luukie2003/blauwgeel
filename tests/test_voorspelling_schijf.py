@@ -81,16 +81,20 @@ def test_het_model_geldt_tot_er_een_telling_bijkomt_ook_voor_een_ander_proces(db
     assert schijf["aantal"]["model"] == 1
 
 
-def test_een_nieuwe_versie_van_de_site_gebruikt_oude_bestanden_niet(db, schijf, monkeypatch):
+def test_andere_rekencode_gebruikt_oude_bestanden_niet_een_nieuwe_siteversie_wel(db, schijf, monkeypatch):
     voorspelling.maak_prognose(db, dagen=7, nu=NU)
     _nieuw_proces()
     monkeypatch.setattr(voorspelling, "SCHIJF_VERSIE", voorspelling.SCHIJF_VERSIE + 1)
     voorspelling.maak_prognose(db, dagen=7, nu=NU)
     assert schijf["aantal"]["model"] == 2
+    _nieuw_proces()
+    monkeypatch.setattr(voorspelling, "_CODE_VINGERAFDRUK", "andere-code")  # de prognose zelf is veranderd
+    voorspelling.maak_prognose(db, dagen=7, nu=NU)
+    assert schijf["aantal"]["model"] == 3
     import wijzigingen
 
     _nieuw_proces()
-    monkeypatch.setattr(wijzigingen, "HUIDIGE_VERSIE", "99.0.0")  # ook een nieuwe uitgave van de site
+    monkeypatch.setattr(wijzigingen, "HUIDIGE_VERSIE", "99.0.0")  # een nieuwe versie die de prognose niet raakt (2.21.0)
     voorspelling.maak_prognose(db, dagen=7, nu=NU)
     assert schijf["aantal"]["model"] == 3
 

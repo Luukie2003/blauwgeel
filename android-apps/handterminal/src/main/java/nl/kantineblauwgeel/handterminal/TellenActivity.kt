@@ -531,7 +531,12 @@ class TellenActivity : BasisActivity() {
             textSize = 12f
             setTextColor(getColor(R.color.tekst_zacht))
         })
+        val verwisseld = r.optJSONObject("verwisseld")  // 2.18.0: twee smaken door elkaar geteld?
         val waarschuwing = when {
+            verwisseld != null -> getString(
+                if (verwisseld.optBoolean("meer")) R.string.verwisseld_meer else R.string.verwisseld_minder,
+                verwisseld.optString("met"), verwisseld.optInt("aantal"),
+            )
             !r.isNull("afwijking") -> getString(R.string.afwijking_tikfout)
             r.optString("model_afwijking") == "minder" -> getString(R.string.afwijking_minder)
             r.optString("model_afwijking") == "meer" -> getString(R.string.afwijking_meer)

@@ -1,36 +1,24 @@
 {% extends "base.html" %}
 {% block titel %}{{ categorie_vergrendeld or 'Producten' }}{% endblock %}
-{% block inhoud %}
-{% if categorie_vergrendeld == 'Keuken' %}{% include '_keuken_subnav.html' %}{% endif %}
-<div class="actiebalk">
-    {% if categorie_vergrendeld %}
-    <p class="subtitel" style="margin:0">Voorraad van {{ categorie_vergrendeld|lower }}producten.</p>
-    {% else %}
-    <p class="subtitel" style="margin:0">Beheer het assortiment en de minimumvoorraad.</p>
-    {% endif %}
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
-        {% if huidige_gebruiker_rol == 'beheerder' %}
+{% block venster_titel %}
+{# Producten in de clubstijl (2.25.0): de titel met de knoppen ernaast, en de lijst in een paneel. #}
+<div class="cs-titel">
+    <h1>{{ categorie_vergrendeld or 'Producten' }}</h1>
+    <span class="cs-titel-tekst">{% if categorie_vergrendeld %}Voorraad van {{ categorie_vergrendeld|lower }}producten{% else %}Het assortiment en de minimumvoorraad{% endif %}</span>
+    {% if huidige_gebruiker_rol == 'beheerder' %}
+    <div class="cs-rechts">
         {% if not categorie_vergrendeld %}
-        <a href="{{ url_for('categorieen_lijst') }}" class="btn btn-rand">Categorieën beheren</a>
+        <a href="{{ url_for('categorieen_lijst') }}" class="btn btn-rand">Categorieën</a>
         <a href="{{ url_for('producten_bulk_bewerken') }}" class="btn btn-rand">Bulk bewerken</a>
         <a href="{{ url_for('producten_prijzen') }}" class="btn btn-rand">Prijzen aanpassen</a>
         {% endif %}
-        <a href="{{ url_for('product_nieuw', categorie=categorie_vergrendeld) }}" class="btn btn-geel">
-            + Nieuw {{ (categorie_vergrendeld ~ '-product') if categorie_vergrendeld else 'product' }}
-        </a>
-        {% endif %}
-        <button type="button" id="labels-printen-knop" class="btn btn-rand" disabled>Schaplabels printen</button>
-        {% if huidige_gebruiker_rol == 'beheerder' %}
-        <form method="post" action="{{ url_for('producten_archiveren') }}" id="archiveer-form" style="margin:0"
-              data-vraag="De geselecteerde inactieve producten archiveren? Ze staan dan in geen enkele lijst meer; terugzetten kan onder Gearchiveerd." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="ids" id="archiveer-ids">
-            <button type="submit" id="archiveer-knop" class="btn btn-rand" disabled>Selectie archiveren</button>
-        </form>
-        {% endif %}
+        <a href="{{ url_for('product_nieuw', categorie=categorie_vergrendeld) }}" class="btn btn-geel">Nieuw {{ (categorie_vergrendeld|lower ~ '-product') if categorie_vergrendeld else 'product' }}</a>
     </div>
+    {% endif %}
 </div>
-
+{% endblock %}
+{% block inhoud %}
+{% if categorie_vergrendeld == 'Keuken' %}{% include '_keuken_subnav.html' %}{% endif %}
 {% if producten and samenvatting.actief %}
 {# Kerncijfers: een klik zet het bijbehorende snelfilter aan. #}
 <div class="statgrid producten-kerncijfers">
@@ -59,7 +47,23 @@
 </div>
 {% endif %}
 
-<div class="kaart">
+<section class="cs-paneel">
+    <div class="cs-paneel-kop">
+        <h2>Alle producten</h2>
+        <span class="cs-aantal" id="filter-aantal"></span>
+        <div class="cs-rechts">
+            <button type="button" id="labels-printen-knop" class="btn btn-rand btn-klein" disabled>Schaplabels printen</button>
+            {% if huidige_gebruiker_rol == 'beheerder' %}
+            <form method="post" action="{{ url_for('producten_archiveren') }}" id="archiveer-form" style="margin:0"
+                  data-vraag="De geselecteerde inactieve producten archiveren? Ze staan dan in geen enkele lijst meer; terugzetten kan onder Gearchiveerd." onsubmit="return bevestigEnVerstuur(this, this.dataset.vraag);">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="ids" id="archiveer-ids">
+                <button type="submit" id="archiveer-knop" class="btn btn-rand btn-klein" disabled>Selectie archiveren</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    <div class="cs-paneel-tekst">
     {% if producten %}
     <div class="snelfilters" role="group" aria-label="Snelfilter">
         <button type="button" class="snelfilter actief" data-snel="">Alles</button>
@@ -107,7 +111,6 @@
             <input type="checkbox" id="label-select-alles" style="width:auto">
             Alles selecteren
         </label>
-        <span id="filter-aantal" class="tekst-zacht"></span>
     </div>
     <div id="producten-groepen">
         {% for categorie, producten_in_categorie in producten|groupby('categorie') %}
@@ -238,7 +241,8 @@
         {% endif %}
     </p>
     {% endif %}
-</div>
+    </div>
+</section>
 
 <script>
 (function () {

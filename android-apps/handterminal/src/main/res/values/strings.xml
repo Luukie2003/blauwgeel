@@ -325,6 +325,14 @@
     <string name="gecontroleerd_compleet">Alles van de bestelling is binnen.</string>
     <string name="terug_naar_factuur">Terug</string>
     <string name="inboeken">Inboeken</string>
+    <string name="verwisseld_meer">Door elkaar geteld met %1$s? Hier %2$d meer dan verwacht, daar ongeveer evenveel minder.</string>
+    <string name="verwisseld_minder">Door elkaar geteld met %1$s? Hier %2$d minder dan verwacht, daar ongeveer evenveel meer.</string>
+    <string name="meer_dan_besteld">Meer dan besteld:</string>
+    <string name="meer_dan_besteld_regel">• %1$s: %2$d %3$s binnen, %4$d besteld.</string>
+    <string name="meer_dan_besteld_open">Er stonden er nog %1$d open van een eerdere bestelling.</string>
+    <string name="meer_dan_besteld_al">Het is de laatste twee weken ook al ingeboekt: dezelfde levering?</string>
+    <string name="afspraak_regel">Afspraak met %1$s: %2$s.</string>
+    <string name="afspraak_gratis">Daar horen inmiddels %1$d gratis dozen bij: zit die erbij?</string>
     <string name="afronden_vraag">Alles van deze factuur (%1$d scans) in de voorraad zetten? Een gekoppelde bestelling komt op ontvangen.</string>
     <string name="afronden_verschil">Let op: het gescande totaal wijkt %1$s af van het bedrag op de factuur.</string>
     <string name="ingeboekt">Ingeboekt</string>

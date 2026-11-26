@@ -613,9 +613,16 @@ def afronden(db, ronde_id, door=None, door_id=None):
             "manco": manco, "prijzen": prijzen}, None
 
 
-def als_json(gegevens):
-    """Een ronde (zie ronde()) als JSON voor de app op de handterminal."""
+def als_json(gegevens, db=None):
+    """Een ronde (zie ronde()) als JSON voor de app op de handterminal. Met db (2.24.0) ook wat er bij een open ronde veel
+    meer binnenkomt dan besteld (meer_dan_besteld) en de lopende afspraken met de merken (afspraken.bij_factuur)."""
     r = gegevens["ronde"]
+    extra = {}
+    if db is not None and r["status"] == "open":
+        import afspraken  # hier pas: afspraken leunt (via de merkanalyse) op modules die dit bestand ook gebruiken
+
+        extra = {"meer_dan_besteld": meer_dan_besteld(db, gegevens),
+                 "afspraken": afspraken.bij_factuur(db, [p["product_id"] for p in gegevens["per_product"]])}
     return {
         "id": r["id"],
         "status": r["status"],
@@ -642,4 +649,5 @@ def als_json(gegevens):
         "bestelling_referentie": r["bestelling_referentie"],
         "besteld": [{k: v for k, v in b.items() if k != "inkoop_per_stuk"} for b in gegevens["besteld"]],
         "nog_niet_binnen": nog_niet_binnen(gegevens),
+        **extra,
     }

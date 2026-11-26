@@ -39,8 +39,6 @@ def test_voorkeuren_mail_en_weergave_met_een_knop(ingelogde_client, db):
 def test_niet_gevonden_in_de_clubstijl_en_op_de_handterminal(ingelogde_client):
     resp = ingelogde_client.get("/bestaat-niet")
     assert resp.status_code == 404 and 'class="cs-titel"' in resp.data.decode()
-    ingelogde_client.get("/weergave/pda")
-    assert "Terug naar het overzicht" in ingelogde_client.get("/bestaat-niet").data.decode()
 
 
 def test_offline_pagina_heeft_alles_in_de_cache(client):

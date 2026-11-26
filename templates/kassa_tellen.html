@@ -8,9 +8,7 @@
 </div>
 {% endblock %}
 {% block inhoud %}
-{% if pda_modus %}
-<p class="subtitel">Tel per coupure en vul de contante omzet (PayPal) in.</p>
-{% endif %}
+
 
 <div class="statgrid">
     <div class="stat">
@@ -76,10 +74,8 @@
             </div>
         </div>
 
-        <button type="submit" class="btn btn-geel{{ ' btn-icoon' if pda_modus else '' }}">
-            {% if pda_modus %}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-            {% endif %}
+        <button type="submit" class="btn btn-geel">
+            
             Telling opslaan
         </button>
     </form>

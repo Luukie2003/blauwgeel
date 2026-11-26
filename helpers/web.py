@@ -2,13 +2,11 @@
 
 import csv
 import io
-import re
 import secrets
 
-from flask import Response, current_app, request, session
+from flask import Response, request, session
 
 
-WEERGAVE_TELEFOON_PATROON = re.compile(r"iPhone|iPod|Android.+Mobile", re.IGNORECASE)
 
 
 def csv_response(bestandsnaam, kop, rijen):
@@ -55,29 +53,3 @@ def veilig_redirect_pad(pad, fallback):
     return pad
 
 
-def is_handterminal_app():
-    """Draait de site in de handterminal-app voor de Zebra (android-apps/handterminal)? Die zet dit in de User-Agent."""
-    return "KantineHandterminal/" in request.headers.get("User-Agent", "")
-
-
-def handterminal_weergave_aan():
-    """Staat de handterminal-weergave van de site (base_pda.html) aan? Sinds november 2026 tijdelijk niet: op de Zebra
-    werkt de app (android-apps/handterminal) en een telefoon krijgt de gewone site in de clubstijl. De code blijft
-    bestaan; HANDTERMINAL_WEERGAVE in create_app zet hem weer aan."""
-    return bool(current_app.config.get("HANDTERMINAL_WEERGAVE"))
-
-
-def bepaal_weergave_modus():
-    """'pda' of 'desktop'. Het weergave-cookie (per toestel/browser, geen
-    accountinstelling) wint altijd zodra het gezet is -- ook als iemand
-    'm handmatig heeft omgezet. Pas als het cookie nog volledig ontbreekt
-    (allereerste bezoek op dit toestel) wordt er op basis van de
-    User-Agent geraden, en zet beveiligingsheaders() dat resultaat meteen
-    vast in een cookie zodat het daarna 'onthouden' blijft. Staat de
-    handterminal-weergave uit, dan altijd 'desktop' (ook met een oud cookie)."""
-    if not handterminal_weergave_aan():
-        return "desktop"
-    cookie_waarde = request.cookies.get("weergave")
-    if cookie_waarde in ("pda", "desktop"):
-        return cookie_waarde
-    return "pda" if WEERGAVE_TELEFOON_PATROON.search(request.headers.get("User-Agent", "")) else "desktop"

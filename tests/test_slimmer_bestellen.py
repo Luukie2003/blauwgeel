@@ -206,3 +206,23 @@ def test_stand_pas_na_de_prognose_en_lege_melding_verborgen(ingelogde_client):
     assert 'id="stand-melding" hidden' in pagina
     css = (Path(__file__).parent.parent / "static" / "clubstijl.css").read_text(encoding="utf-8")
     assert ".cs-melding[hidden] { display: none; }" in css  # .cs-melding is flex: zonder deze regel blijft hij zichtbaar
+
+
+# ---------- Het advies rekent met wat er nu ligt (2.21.0) ----------
+
+
+def test_advies_trekt_de_verkoop_sinds_de_telling_eraf(db):
+    from helpers.producten import bestel_advies
+
+    laatste = (datetime.now() - timedelta(days=4)).replace(minute=0, second=0, microsecond=0)
+    pid = _product(db, "Pils Advies", voorraad=60, minimum=10)
+    _bouw_geschiedenis(db, {pid: 10}, tijdstippen=[laatste - timedelta(days=7 * (9 - i)) for i in range(10)])
+    db.execute("UPDATE producten SET voorraad = 60 WHERE id = ?", (pid,))
+    db.commit()
+    regel = next(p for p in voorspelling.maak_prognose(db, dagen=7)["producten"] if p["product"]["id"] == pid)
+    assert regel["voorraad_app"] == 60 and 0 <= regel["voorraad"] < 40  # zo'n 4 dagen van 10 zijn al weg
+    import bestelvoorstel
+
+    a = bestelvoorstel.adviezen(db)["producten"][pid]
+    assert a["nodig"] == max(0, __import__("math").ceil(max(10, a["hoog"]) - regel["voorraad"] - 1e-9))
+    assert bestel_advies(db)["extra"] or bestel_advies(db)["producten"] or a["nodig"] == 0

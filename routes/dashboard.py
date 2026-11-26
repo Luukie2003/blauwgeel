@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta
 
-from flask import Response, flash, g, jsonify, redirect, render_template, request, session, url_for
+from flask import Response, flash, jsonify, redirect, render_template, request, session, url_for
 
 import backup as backup_module
 from club_van_20 import bereken_club_van_20_status
@@ -17,11 +17,9 @@ from helpers import (
     bereken_voorspelde_tekorten,
     bestel_suggesties,
     bouw_weektrend,
-    bereken_pda_start,
     bereken_wedstrijd_geschiedenis,
     bereken_week_overzicht,
     csv_response,
-    dagdeel_groet,
     format_datum,
     heeft_sectie_toegang,
     is_ajax_verzoek,
@@ -136,16 +134,6 @@ def register_routes(app):
 
     @app.route("/")
     def dashboard():
-        if g.get("weergave_modus") == "pda":
-            # De zware dashboard-cijfers (omzettrend, top-verkopers) zijn niet
-            # relevant op de vloer; wel een paar korte regels met wat er nu
-            # aandacht nodig heeft (zie bereken_pda_start).
-            pda = bereken_pda_start(
-                get_db(), session.get("gebruiker_rol"), session.get("gebruiker_secties"), session.get("gebruiker_id")
-            )
-            pda["eigen_taken"] = [{**t, "url": url_for(t["endpoint"], **t["kwargs"])} for t in pda["eigen_taken"]]
-            return render_template("pda_start.html", groet=dagdeel_groet(), **pda)
-
         db = get_db()
         producten = db.execute(
             "SELECT * FROM producten WHERE actief = 1 ORDER BY categorie, naam"

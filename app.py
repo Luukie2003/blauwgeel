@@ -24,7 +24,6 @@ from helpers import (
     STEM_AFBEELDINGEN_MAP,
     VIDEO_UPLOAD_ENDPOINTS,
     VIDEO_UPLOAD_MAX_BYTES,
-    bepaal_weergave_modus,
     bereken_bestelling_status,
     bereken_frituurvet_status,
     bereken_kassa_coupure_bedrag,
@@ -48,11 +47,9 @@ from helpers import (
     format_datum_kort,
     format_laatst_actief,
     SECTIES,
-    handterminal_weergave_aan,
     heeft_sectie_toegang,
     inkoop_per_stuk,
     is_ajax_verzoek,
-    is_handterminal_app,
     kleine_afbeelding,
     met_tags_filter,
     naar_besteleenheden,
@@ -70,7 +67,6 @@ from navigatie import (  # noqa: F401
     NAV_ITEM_ALLEEN_EIGENAAR,
     NAV_ITEM_SECTIE,
     NAV_ITEMS,
-    PDA_NAV_ITEMS,
 )
 from rechten import (  # noqa: F401
     BEHEERDER_ENDPOINTS,
@@ -119,10 +115,6 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     # hieronder). Zonder dit stond hier geen Cache-Control-header op, dus
     # werd elk statisch bestand bij elk bezoek opnieuw gevalideerd.
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 31536000  # 365 dagen
-    # De handterminal-weergave van de site (base_pda.html) staat tijdelijk uit: op de Zebra werkt de app
-    # (android-apps/handterminal) en een telefoon krijgt de gewone site in de clubstijl. De code blijft; True zet hem
-    # weer aan (zie handterminal_weergave_aan in helpers/web.py).
-    app.config["HANDTERMINAL_WEERGAVE"] = False
 
     register_db(app)
     init_db(app, admin_wachtwoord=admin_wachtwoord)
@@ -147,16 +139,6 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
     def start_klok():
         """Het begin van het verzoek, voor de laadtijd in de gebruiksstatistieken (zie log_paginabezoek)."""
         g.verzoek_start = time.perf_counter()
-
-    @app.before_request
-    def zet_weergave_modus():
-        """Moet als allereerste before_request draaien, vóór alles wat een
-        request kan afkappen met een redirect (met name vereis_login()
-        hieronder) -- anders krijgt een nog niet ingelogde telefoon nooit de
-        kans om herkend te worden: de omleiding naar /login zou dan al
-        (verkeerd) 'desktop' vastzetten in het cookie voordat deze functie
-        ooit draait, en dat cookie wint daarna altijd van de User-Agent."""
-        g.weergave_modus = bepaal_weergave_modus()
 
     @app.before_request
     def noodstop_bewaken():
@@ -363,15 +345,6 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             gebruiker_rol, gebruiker_secties, "club_van_20"
         ):
             club_aanmeldingen_open = aantal_openstaand(get_db())
-        pda_modus = g.get("weergave_modus") == "pda"
-        pda_actieve_item = next(
-            (
-                item
-                for item in PDA_NAV_ITEMS
-                if actieve_nav and item["url_endpoint"] == actieve_nav["url_endpoint"]
-            ),
-            None,
-        )
         sectie_toegang = {
             sectie: heeft_sectie_toegang(gebruiker_rol, gebruiker_secties, sectie) for sectie in SECTIES
         }
@@ -383,7 +356,6 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             "sectie_toegang": sectie_toegang,
             "club_aanmeldingen_open": club_aanmeldingen_open,
             "actieve_nav": actieve_nav,
-            "pda_actieve_label": pda_actieve_item["pda_label"] if pda_actieve_item else None,
             "huidige_gebruiker": session.get("gebruiker_naam"),
             "huidige_gebruiker_rol": session.get("gebruiker_rol"),
             "css_versie": int((BASE_DIR / "static" / "style.css").stat().st_mtime),
@@ -396,15 +368,8 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             "clubstijl_versie": int((BASE_DIR / "static" / "clubstijl.css").stat().st_mtime),
             "site_banner_tekst": banner_tekst,
             "csrf_token": csrf_token,
-            "pda_modus": pda_modus,
-            "basis_template": "base_pda.html" if pda_modus else "base.html",
-            # In de handterminal-app is de weergave al gekozen (zie android-apps/handterminal), en staat de
-            # handterminal-weergave uit, dan is er niets te kiezen.
-            "toon_welkom_popup": session.pop("toon_welkom_popup", False) and not is_handterminal_app()
-            and handterminal_weergave_aan(),
-            "handterminal_weergave_aan": handterminal_weergave_aan(),
-            # De app heeft een eigen kop, zoekbalk en scanner: base_pda.html laat de zijne dan weg.
-            "in_app": is_handterminal_app(),
+            # Alle sjablonen bouwen op base.html; de handterminal-weergave (base_pda.html) is weg sinds 2.23.0.
+            "basis_template": "base.html",
             "noodstop_toestand": g.get("noodstop"),
             "welkom_groet": dagdeel_groet(),
         }
@@ -483,26 +448,6 @@ def create_app(database_path=None, admin_wachtwoord=None, sjablonen_voorladen=Fa
             # inlogpagina met een inmiddels verlopen csrf-token laat zien --
             # dat gaf af en toe een "Bad Request" bij het inloggen.
             response.headers["Cache-Control"] = "no-store"
-        weergave_al_gezet_door_view = any(
-            c.startswith("weergave=") for c in response.headers.getlist("Set-Cookie")
-        )
-        # Staat de handterminal-weergave uit, dan niets vastzetten: gaat hij weer aan, dan wordt een telefoon nog
-        # gewoon herkend.
-        if handterminal_weergave_aan() and "weergave" not in request.cookies and not weergave_al_gezet_door_view:
-            # Allereerste bezoek op dit toestel: de op de User-Agent
-            # gebaseerde gok (zie bepaal_weergave_modus()) meteen vastzetten
-            # in een cookie, zodat 'ie vanaf nu "onthouden" is -- ook al is
-            # er nooit bewust op de PDA/desktop-knop geklikt. (Als de route
-            # zelf al expliciet een weergave-cookie heeft gezet -- zoals de
-            # "Aanmelden in handterminal-weergave"-knop -- laten we die keuze
-            # ongemoeid in plaats van 'm hier stiekem te overschrijven.)
-            response.set_cookie(
-                "weergave",
-                g.get("weergave_modus", "desktop"),
-                max_age=60 * 60 * 24 * 365,
-                samesite="Lax",
-                secure=app.config.get("SESSION_COOKIE_SECURE", True),
-            )
         return response
 
     @app.after_request

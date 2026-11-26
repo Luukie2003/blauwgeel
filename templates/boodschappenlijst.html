@@ -9,25 +9,9 @@
 </div>
 {% endblock %}
 {% block inhoud %}
-{% if pda_modus %}
-<p class="subtitel">Dingen die ingekocht moeten worden, los van de vaste voorraad (bijv. schoonmaakspullen, kantoorbenodigdheden).</p>
 
-<div class="kaart">
-    <form method="post" action="{{ url_for('boodschappenlijst') }}" style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="veld" style="flex:1; min-width:200px; margin:0">
-            <label for="tekst">Wat is er nodig?</label>
-            <input type="text" id="tekst" name="tekst" placeholder="Bijv. vuilniszakken, schoonmaakmiddel..." required>
-        </div>
-        <button type="submit" class="btn btn-geel btn-icoon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-            Toevoegen
-        </button>
-    </form>
-</div>
-{% endif %}
 
-{% if not pda_modus %}
+
 <section class="cs-paneel">
     <form method="post" action="{{ url_for('boodschappenlijst') }}" class="cs-velden twee">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -41,11 +25,10 @@
         </div>
     </form>
 </section>
-{% endif %}
 
-<{{ 'div' if pda_modus else 'section' }} class="{{ 'kaart' if pda_modus else 'cs-paneel' }}">
-    {% if pda_modus %}<h2>Nog te kopen{% if open_items %} ({{ open_items|length }}){% endif %}</h2>
-    {% else %}<div class="cs-paneel-kop"><h2>Nog te kopen</h2>{% if open_items %}<span class="cs-aantal">{{ open_items|length }}</span>{% endif %}</div>{% endif %}
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Nog te kopen</h2>{% if open_items %}<span class="cs-aantal">{{ open_items|length }}</span>{% endif %}</div>
     {% if open_items %}
     <ul class="boodschappen-lijst">
         {% for item in open_items %}
@@ -66,13 +49,13 @@
         {% endfor %}
     </ul>
     {% else %}
-    <p class="{{ 'leeg' if pda_modus else 'cs-leeg' }}">Niets op de lijst. Wat er nodig is, zet je hierboven erop.</p>
+    <p class="cs-leeg">Niets op de lijst. Wat er nodig is, zet je hierboven erop.</p>
     {% endif %}
-</{{ 'div' if pda_modus else 'section' }}>
+</section>
 
 {% if afgevinkt_items %}
-<{{ 'div' if pda_modus else 'section' }} class="{{ 'kaart' if pda_modus else 'cs-paneel' }}">
-    {% if pda_modus %}<h2>Recent gekocht</h2>{% else %}<div class="cs-paneel-kop"><h2>Recent gekocht</h2><span class="cs-zacht">Tik op het vinkje om het terug op de lijst te zetten.</span></div>{% endif %}
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Recent gekocht</h2><span class="cs-zacht">Tik op het vinkje om het terug op de lijst te zetten.</span></div>
     <ul class="boodschappen-lijst">
         {% for item in afgevinkt_items %}
         <li class="boodschappen-item boodschappen-item-afgevinkt">
@@ -85,6 +68,6 @@
         </li>
         {% endfor %}
     </ul>
-</{{ 'div' if pda_modus else 'section' }}>
+</section>
 {% endif %}
 {% endblock %}

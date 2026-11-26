@@ -3,40 +3,14 @@
 {% block inhoud %}
 <div class="kt">
 {% include '_kt_kop.html' %}
-{% if pda_modus %}
-<p class="subtitel">Zet met 1 tik welke producten op het prijzenscherm staan.</p>
 
-<div class="kaart">
-    <h2>Gedeeld scherm</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Toont nu: <strong id="tv-modus-tekst">{{ "de dia's" if instellingen.actief_tv_scherm == 'dias' else 'de prijzenlijst' }}</strong>
-    </p>
-    <form method="post" action="{{ url_for('kiosk_tv_wisselen') }}" class="js-ajax-form" id="tv-wissel-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-geel btn-icoon" id="tv-wissel-knop">
-            Wissel naar {{ 'de prijzenlijst' if instellingen.actief_tv_scherm == 'dias' else "de dia's" }}
-        </button>
-    </form>
-</div>
-<script>
-(function () {
-    var form = document.getElementById('tv-wissel-form');
-    form.addEventListener('ajax-form:success', function (e) {
-        var modus = e.detail.modus;
-        document.getElementById('tv-modus-tekst').textContent = modus === 'dias' ? "de dia's" : 'de prijzenlijst';
-        document.getElementById('tv-wissel-knop').textContent = 'Wissel naar ' + (modus === 'dias' ? 'de prijzenlijst' : "de dia's");
-    });
-})();
-</script>
-
-{% else %}
 <p class="subtitel">
     Vink aan welke producten op het prijzenscherm getoond moeten worden en sla in één keer alles op.
 </p>
 {% include "_kiosk_prijzen_subnav.html" %}
-{% endif %}
 
-{% if not pda_modus %}
+
+
 <div class="kaart" id="wedstrijddag-welkom">
     <h2 style="margin-top:0">Wedstrijddag-welkomstbanner</h2>
     <p class="tekst-zacht" style="margin-top:-0.4rem">
@@ -216,7 +190,7 @@
         <button type="submit" class="btn btn-geel">Opslaan</button>
     </form>
 </div>
-{% endif %}
+
 
 <div class="kaart">
     {% if producten %}
@@ -224,33 +198,7 @@
         <input type="text" id="filter-zoek" placeholder="Zoek op naam of artikelcode...">
         <span id="filter-aantal" class="tekst-zacht"></span>
     </div>
-    {% if pda_modus %}
-    <div class="pda-producten-kaarten">
-        {% for p in producten %}
-        <div class="pda-kaartje filter-rij{{ ' pda-kaartje--uitverkocht' if p.kiosk_uitverkocht else '' }}" data-zoek="{{ (p.naam ~ ' ' ~ (p.artikelcode or '') ~ ' ' ~ p.categorie)|lower }}">
-            <div class="pda-product-kop">
-                <form method="post" action="{{ url_for('kiosk_product_toon_wisselen', product_id=p.id) }}" class="js-ajax-form pda-kaartje-vink">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <label class="schuif" title="{{ 'Staat op het prijzenscherm, tik om te verbergen' if p.toon_op_kiosk else 'Staat niet op het prijzenscherm, tik om te tonen' }}">
-                        <input type="checkbox" {{ 'checked' if p.toon_op_kiosk else '' }} onchange="this.form.requestSubmit()">
-                        <span class="schuif-balk"></span>
-                    </label>
-                    <span class="pda-kaartje-naam">{{ p.naam }}</span>
-                </form>
-                <form method="post" action="{{ url_for('kiosk_product_uitverkocht_wisselen', product_id=p.id) }}" class="js-ajax-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-klein btn-uitverkocht{{ ' actief' if p.kiosk_uitverkocht else '' }}">
-                        Uitverkocht
-                    </button>
-                </form>
-            </div>
-            <div class="pda-kaartje-info">
-                <span class="tekst-zacht">{{ p.categorie }} &middot; &euro; {{ '%.2f'|format(p.verkoopprijs) }}</span>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
+    
     <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="tabel-wrap">
@@ -282,40 +230,13 @@
         </div>
         <button type="submit" class="btn btn-geel" style="margin-top:1rem">Alles opslaan</button>
     </form>
-    {% endif %}
+    
     {% else %}
     <p class="leeg">Nog geen actieve producten om te kiezen.</p>
     {% endif %}
 </div>
 
-{% if pda_modus and acties %}
-<div class="kaart">
-    <h2>Acties</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
-        Zet met 1 tik welke acties af en toe op het prijzenscherm verschijnen. Nieuwe acties maak je op de
-        desktop-versie.
-    </p>
-    <div class="pda-producten-kaarten">
-        {% for a in acties %}
-        <div class="pda-kaartje">
-            <div class="pda-product-kop">
-                <form method="post" action="{{ url_for('kiosk_actie_toon_wisselen', actie_id=a.id) }}" class="js-ajax-form pda-kaartje-vink">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <label class="schuif" title="{{ 'Staat aan, tik om uit te zetten' if a.actief else 'Staat uit, tik om aan te zetten' }}">
-                        <input type="checkbox" {{ 'checked' if a.actief else '' }} onchange="this.form.requestSubmit()">
-                        <span class="schuif-balk"></span>
-                    </label>
-                    <span class="pda-kaartje-naam">{{ a.product_naam }}</span>
-                </form>
-            </div>
-            {% if a.tekst %}
-            <div class="pda-kaartje-info"><span class="tekst-zacht">{{ a.tekst }}</span></div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
+
 
 <script>
 (function () {

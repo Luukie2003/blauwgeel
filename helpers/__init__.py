@@ -70,13 +70,9 @@ from helpers.tijd import (
     voeg_maanden_toe,
 )
 from helpers.web import (
-    WEERGAVE_TELEFOON_PATROON,
-    bepaal_weergave_modus,
     csrf_token,
     csv_response,
-    handterminal_weergave_aan,
     is_ajax_verzoek,
-    is_handterminal_app,
     veilig_redirect_pad,
 )
 from helpers.toegang import (
@@ -195,13 +191,9 @@ __all__ = [
     "now_str",
     "vandaag_amsterdam",
     "voeg_maanden_toe",
-    "WEERGAVE_TELEFOON_PATROON",
-    "bepaal_weergave_modus",
-    "handterminal_weergave_aan",
     "csrf_token",
     "csv_response",
     "is_ajax_verzoek",
-    "is_handterminal_app",
     "veilig_redirect_pad",
     "SECTIES",
     "SECTIE_LABELS",

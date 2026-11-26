@@ -48,6 +48,3 @@ def test_tellen_en_levering_tellen_wat_er_is_ingevuld(ingelogde_client):
 def test_boeken_op_de_computer_met_de_grote_in_uit_keuze(ingelogde_client):
     tekst = ingelogde_client.get("/boeken").data.decode()
     assert 'class="cs-inuit"' in tekst and 'class="toggle-type"' not in tekst
-    ingelogde_client.get("/weergave/pda")
-    tekst = ingelogde_client.get("/boeken").data.decode()
-    assert 'class="toggle-type"' in tekst and "cs-inuit" not in tekst

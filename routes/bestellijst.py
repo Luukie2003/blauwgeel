@@ -1,6 +1,6 @@
 import re
 
-from flask import Response, flash, g, jsonify, redirect, render_template, request, session, url_for
+from flask import Response, flash, jsonify, redirect, render_template, request, session, url_for
 
 import barcodes
 import bestelvoorstel
@@ -154,7 +154,7 @@ def register_routes(app):
         enkele seconden, dus de bestellijst zelf staat meteen klaar en deze kaart komt er na het laden bij (leeg als er
         geen tekorten verwacht worden)."""
         return render_template(
-            "_pda_bestellijst_voorspeld.html" if g.get("weergave_modus") == "pda" else "_bestellijst_voorspeld.html",
+            "_bestellijst_voorspeld.html",
             voorspelde_tekorten=bereken_voorspelde_tekorten(get_db()),
         )
 

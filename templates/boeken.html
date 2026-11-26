@@ -13,73 +13,7 @@
 </div>
 {% endblock %}
 {% block inhoud %}
-{% if pda_modus %}
-<p class="subtitel">Kies 'in' of 'uit', het product en het aantal.</p>
 
-<div class="kaart">
-    <form method="post" class="boeking-formulier" data-offline-wachtrij="Boeking">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="toggle-type">
-            <label><input type="radio" name="type" value="in" checked><span>In (levering / aanvulling)</span></label>
-            <label><input type="radio" name="type" value="uit"><span>Uit (verkocht / verbruikt)</span></label>
-        </div>
-        <fieldset class="groupbox">
-            <legend>Boeking</legend>
-            <div class="formgrid">
-                <div class="veld">
-                    <label for="product_id">Product</label>
-                    <div style="display:flex; align-items:center; gap:0.6rem">
-                        <img id="product-voorbeeld" class="product-thumb-preview" alt="" hidden>
-                        <select id="product_id" name="product_id" required style="flex:1">
-                            <option value="" disabled selected>Kies een product</option>
-                            {% for p in producten %}
-                            <option value="{{ p.id }}" data-afbeelding="{{ p.afbeelding|foto_klein }}">{{ p.naam }} ({{ p.voorraad }} {{ p.eenheid }} op voorraad)</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="veld">
-                    <label for="aantal">Aantal</label>
-                    <input type="number" id="aantal" name="aantal" min="1" required>
-                </div>
-                <div class="veld">
-                    <label>Geboekt door</label>
-                    <p class="veld-waarde">{{ huidige_gebruiker }}</p>
-                </div>
-            </div>
-            <div class="veld">
-                <label for="opmerking">Opmerking (optioneel)</label>
-                <input type="text" id="opmerking" name="opmerking" placeholder="Bijv. kapotte krat, telling gecorrigeerd, ...">
-            </div>
-            {% include "_derving_reden.html" %}
-        </fieldset>
-        <button type="submit" class="btn btn-geel btn-icoon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-            Boeken
-        </button>
-    </form>
-</div>
-
-<div class="kaart">
-    <h2>Laatste boekingen</h2>
-    {% if recente_mutaties %}
-    <ul class="mutatie-lijst">
-        {% for m in recente_mutaties %}
-        <li>
-            <div class="mutatie-lijst-regel">
-                <span class="badge badge-{{ m.type }}">{{ 'in' if m.type == 'in' else 'uit' }}</span>
-                <strong><a href="{{ url_for('product_detail', product_id=m.product_id) }}">{{ m.product_naam }}</a></strong>
-                <span class="tekst-zacht">{{ m.aantal }} {{ m.eenheid }}</span>
-            </div>
-            <div class="tekst-zacht mutatie-lijst-opmerking">{{ m.datum|datum_nl }}{% if m.naam %} &middot; {{ m.naam }}{% endif %}{% if m.reden %} &middot; {{ m.reden|reden_naam }}{% endif %}{% if m.opmerking %} &middot; {{ m.opmerking }}{% endif %}</div>
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p class="leeg">Nog geen boekingen.</p>
-    {% endif %}
-</div>
-{% else %}
 <section class="cs-paneel">
     <form method="post" class="boeking-formulier" data-offline-wachtrij="Boeking">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -144,7 +78,7 @@
     <p class="cs-leeg">Nog geen boekingen: de eerste staat hier zodra je iets boekt.</p>
     {% endif %}
 </section>
-{% endif %}
+
 
 <script>
 // Een foto van het gekozen product naast de keuzelijst. Op document, zodat het ook werkt nadat de inhoud na een
