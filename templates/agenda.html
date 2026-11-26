@@ -1,5 +1,10 @@
 {% extends basis_template %}
 {% block titel %}Agenda{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <style>
     .agenda-week { margin-top: 1.2rem; }

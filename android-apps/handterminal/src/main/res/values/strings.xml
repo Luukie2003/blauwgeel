@@ -240,6 +240,7 @@
     <string name="was_voorraad">was %1$d</string>
     <string name="afwijking_tikfout">Wijkt sterk af van eerdere tellingen: tikfout?</string>
     <string name="afwijking_minder">Minder dan verwacht: tikfout of verlies?</string>
+    <string name="meer_dan_kon">Meer dan kon: hooguit %1$d. Nog eens tellen, of een levering inboeken?</string>
     <string name="afwijking_meer">Meer dan verwacht: een levering die nog niet is ingeboekt?</string>
     <string name="terug_naar_tellen">Terug</string>
     <string name="telling_opslaan">Telling opslaan</string>

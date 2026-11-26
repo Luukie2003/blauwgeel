@@ -1,16 +1,18 @@
 {% extends "base.html" %}
 {% block titel %}Bierbibliotheek{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Bierbibliotheek</h1>
+    <div class="cs-rechts">
+        <a href="{{ url_for('stemmen_overzicht') }}" class="btn btn-rand">&larr; Alle stemmingen</a>
+    </div>
+</div>
+{% endblock %}
 {% block inhoud %}
-<div class="actiebalk">
-    <div>
-        <h1 style="margin-bottom:0.2rem">Bierbibliotheek</h1>
-        <p class="subtitel" style="margin:0">
+<p class="subtitel">
             Naam + foto van eerder gebruikte stemopties. Vul bij een nieuwe stemming dezelfde naam
             in en de foto wordt automatisch hergebruikt &mdash; geen nieuwe upload nodig.
         </p>
-    </div>
-    <a href="{{ url_for('stemmen_overzicht') }}" class="btn btn-rand">&larr; Alle stemmingen</a>
-</div>
 
 {% if bieren %}
 <div class="tabel-wrap">

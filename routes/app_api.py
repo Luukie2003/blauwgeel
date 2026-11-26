@@ -52,7 +52,7 @@ from routes.tellen.verwerken import verwerk_telling
 from voorspelling import verwachte_verkoop_sinds_telling, verwachte_voorraad
 
 # De nieuwste versie van de app. Draait er een oudere, dan meldt de app dat er een nieuwe is.
-HANDTERMINAL_APP_VERSIE = "3.1.0"
+HANDTERMINAL_APP_VERSIE = "3.2.0"
 # De tablet-app ("Kantine Beheer", android-apps/tablet) bouwt sinds 3.0 op dezelfde schermen; zijn startscherm kijkt hier
 # of er een nieuwere is (App.versieSleutel in de app).
 TABLET_APP_VERSIE = "3.3"
@@ -465,7 +465,8 @@ def register_routes(app):
             {"product_id": r["product"]["id"], "naam": r["product"]["naam"], "categorie": r["product"]["categorie"] or "",
              "eenheid": r["product"]["eenheid"], "voorraad": r["product"]["voorraad"], "bar": r["bar"], "hok": r["hok"],
              "totaal": r["totaal"], "verwacht": r["verwacht"], "afwijking": r["afwijking"],
-             "model_afwijking": r["model_afwijking"], "verwisseld": r["verwisseld"]}
+             "model_afwijking": r["model_afwijking"], "verwisseld": r["verwisseld"],
+             "meer_dan_kon": r["meer_dan_kon"]}
             for r in regels
         ]})
 

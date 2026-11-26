@@ -1,6 +1,11 @@
 {% extends basis_template %}
 {% block titel %}{{ 'Artikel bewerken' if artikel else 'Nieuw artikel met barcode' }}{% endblock %}
 {% macro waarde(veld, standaard='') %}{{ waarden.get(veld) if waarden.get(veld) not in (none, '') else (artikel[veld] if artikel and artikel[veld] is not none else standaard) }}{% endmacro %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     <a href="{{ url_for('factuur_ronde', ronde_id=ronde_id) if ronde_id else (url_for('barcode_zoeken', code=zoekcode) if zoekcode else url_for('barcodes_overzicht')) }}">&larr; Terug</a>

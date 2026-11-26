@@ -29,7 +29,7 @@
                 </thead>
                 <tbody>
                     {% for r in regels %}
-                    <tr class="{{ 'rij-waarschuwing' if r.afwijking or r.model_afwijking or r.verwisseld }}">
+                    <tr class="{{ 'rij-waarschuwing' if r.afwijking or r.model_afwijking or r.verwisseld or r.meer_dan_kon }}">
                         <td>
                             {{ r.product.naam }}
                             <div class="cs-alleen-smal cs-zacht">Bar {{ r.bar }}, voorraadhok {{ r.hok }} {{ r.product.eenheid }}</div>
@@ -37,7 +37,12 @@
                             <span class="cs-punt cs-rood"
                                   title="Normaal gemiddeld ~{{ '%.0f'|format(r.afwijking.gemiddelde) }} {{ r.product.eenheid }} verschil per telling, nu {{ r.afwijking.mutatie_nu }}. Typefout?">Controleer</span>
                             {% endif %}
-                            {% if r.model_afwijking %}
+                            {% if r.meer_dan_kon and not r.verwisseld %}
+                            <div class="cs-waarschuwing">
+                                Meer dan kon: volgens de app liggen er hooguit {{ r.product.voorraad }} (de vorige telling plus wat er is ingeboekt), nu {{ r.meer_dan_kon }} meer.
+                                Nog eens tellen, of een levering inboeken?
+                            </div>
+                            {% elif r.model_afwijking %}
                             <div class="cs-waarschuwing">
                                 {% if r.model_afwijking == 'minder' %}Veel minder dan verwacht{% else %}Meer dan verwacht{% endif %}:
                                 verwacht ongeveer {{ r.verwacht.verwacht }} ({{ r.verwacht.laag }} tot {{ r.verwacht.hoog }}).

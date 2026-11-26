@@ -5,6 +5,11 @@
 <span class="prijs-veld">&euro; <input type="text" inputmode="decimal" name="{{ naam }}" class="prijs-invoer" style="width:6rem; text-align:right"
        value="{{ ingevuld.get(naam, bedrag(huidig)) }}" data-orig="{{ bedrag(huidig) }}" {% if label %}aria-label="{{ label }}"{% endif %}></span>
 {% endmacro %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <style>
     .prijs-invoer.prijs-gewijzigd { background: #fff6cf; border-color: var(--geel-donker); font-weight: 700; }

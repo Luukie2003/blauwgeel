@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Verbruiksvoorwerpen{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Dingen die geen echte voorraadproducten zijn (bijv. bakjes, servetten) maar wel een

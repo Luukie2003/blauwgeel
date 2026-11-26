@@ -2,6 +2,11 @@
 {# Winterstop-plan (sluitperiode.py): de periode staat meteen klaar, het plan rekent met het voorspelmodel en komt na het
    laden (prognose_stop_resultaat). #}
 {% block titel %}Winterstop{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 {% include "_prognose_tabs.html" %}
 {% if periode %}

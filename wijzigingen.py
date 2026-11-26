@@ -6,8 +6,19 @@ WIJZIGINGEN een item toevoegen (zie CLAUDE.md)."""
 # Handmatig bijgehouden versie-overzicht voor de Help-pagina. Geen
 # geautomatiseerd systeem (geen releases/tags) -- gewoon een leesbaar logje
 # van wat er is toegevoegd, bijgewerkt bij noemenswaardige wijzigingen.
-HUIDIGE_VERSIE = "2.26.0"
+HUIDIGE_VERSIE = "2.27.0"
 WIJZIGINGEN = [
+    {
+        "versie": "2.27.0",
+        "datum": "27 november 2026",
+        "punten": [
+            "Meer dan kon: tel je meer dan er volgens de app kan liggen (de vorige telling plus wat er is ingeboekt), dan zie je dat meteen bij het tellen, op de site en op het controlescherm van de looplijst in de Zebra-app. Nog eens tellen, of de vergeten levering inboeken.",
+            "Telfouten tellen niet meer als verkocht in de marge en bij de toppers op het overzicht, in het verkooprapport en in het weekoverzicht, net als al in de merkanalyse.",
+            "Rapporten overzichtelijker: in het menu staan alleen nog Alle rapporten, het Verkooprapport, de Marge en het Weekoverzicht. Alle rapporten zet de rest per onderwerp op een rij, met in één zin wat je er ziet.",
+            "De laatste pagina's in de clubstijl: kassa- en kluistellingen, producten en artikelen, prijzen, barcodes, agenda, taken, stemmen en zoeken hebben nu ook de grote titel met de knoppen ernaast.",
+            "Zebra-app 3.2.0 met de waarschuwing Meer dan kon.",
+        ],
+    },
     {
         "versie": "2.26.0",
         "datum": "27 november 2026",
@@ -1619,29 +1630,29 @@ MODULES_UITLEG = (
     "derde de versies met een kleine verbetering of fix."
 )
 MODULES = [
-    {"naam": "Voorraad & tellen", "versie": "1.19.0", "sinds": "0.1.0", "laatst": "2.26.0",
+    {"naam": "Voorraad & tellen", "versie": "1.20.0", "sinds": "0.1.0", "laatst": "2.27.0",
      "inhoud": "Voorraadoverzicht, in- en uitboeken, tellen (ook met de looplijst), tellingen, leveringen inboeken, schaplabels en kaartjes printen"},
     {"naam": "Bestellen & prognose", "versie": "1.27.0", "sinds": "0.4.0", "laatst": "2.26.0",
      "inhoud": "Bestellijst met de prognose erin (ook per leverancier), de bestellijst nalopen met vinkjes (ook op de computer) en het besteloverzicht voor de webshop, leveranciers, bestellen en de klaargezette bestelling als concept van de factuur, voorspelde tekorten, prognose van de verkoop met evenementen en de vergelijking met de werkelijke verkoop, boodschappenlijst"},
-    {"naam": "Producten & prijzen", "versie": "1.18.1", "sinds": "0.1.0", "laatst": "2.25.0",
+    {"naam": "Producten & prijzen", "versie": "1.18.2", "sinds": "0.1.0", "laatst": "2.27.0",
      "inhoud": "Assortiment, categorieën, prijsopties, verbruiksvoorwerpen, gegevenscontrole en alle verkoopprijzen in één keer aanpassen (ook als actie)"},
-    {"naam": "Geld (kassa & kluis)", "versie": "1.6.0", "sinds": "1.0.0", "laatst": "2.10.0",
+    {"naam": "Geld (kassa & kluis)", "versie": "1.6.1", "sinds": "1.0.0", "laatst": "2.27.0",
      "inhoud": "Kassa tellen met vier-ogen-goedkeuring en kaartbetalingen, omzet en kassa naast elkaar, afdracht en toevoeging, kluis, geschiedenis"},
     {"naam": "Keuken", "versie": "1.7.0", "sinds": "1.6.0", "laatst": "1.75.0",
      "inhoud": "Keukenvoorraad met een eigen, blinde telling (ook als looplijst met dozen scannen, en een begintelling), inboeken per verpakking (per merk, ook door te scannen), weggooien en bijstellen, prijzen, de boodschappenlijst bij een tekort, en de herinnering voor het frituurvet"},
     {"naam": "Kantine-tv", "versie": "1.34.0", "sinds": "1.10.1", "laatst": "2.20.0",
      "inhoud": "Prijzenscherm, dia's (in mappen, met momenten, de schijnwerper over alle tv's, effecten, griezelposters met tekeningen en feestdia's in de clubkleuren), de clubstijl, het Kerst-thema, sponsoren, standen, Man of the Match, seizoen in cijfers, video's en meldingen op het scherm, gekoppelde tv's die je op afstand beheert (ook vanaf de handterminal), zelfherstel en de timer op de tv, en het Halloween-thema"},
     {"naam": "Tablet-app", "versie": "1.1.0", "sinds": "", "laatst": "2.11.0",
-     "inhoud": "Kantine Beheer op de tablet (3.2): de schermen van de handterminal-app zonder de looplijsten, met geld afdragen en storten, de verkoopdagen, het hele product bewerken en de rapporten (zoeken, boeken, voorraad en producten, factuur inboeken, bestellijst, boodschappen, prognose, tellingen bekijken, kassa en kluis, keuken, prikbord, agenda, Club van 20-aanmeldingen, kantine-tv), en de eigen tv-schermen: prijzenscherm, acties, bardiensten, uitgelicht en de wedstrijddag"},
+     "inhoud": "Kantine Beheer op de tablet (3.3): de schermen van de handterminal-app zonder de looplijsten, met geld afdragen en storten, de verkoopdagen, het hele product bewerken en de rapporten (zoeken, boeken, voorraad en producten, factuur inboeken, bestellijst, boodschappen, prognose, tellingen bekijken, kassa en kluis, keuken, prikbord, agenda, Club van 20-aanmeldingen, kantine-tv), en de eigen tv-schermen: prijzenscherm, acties, bardiensten, uitgelicht en de wedstrijddag"},
     {"naam": "Club van 20", "versie": "1.11.6", "sinds": "1.16.0", "laatst": "1.38.0",
      "inhoud": "Ledenlijst, betalingen, naammuur en dia's, openbare pagina, aanmelden en verlengen, importeren"},
     {"naam": "Stemmen", "versie": "1.0.1", "sinds": "", "laatst": "2.9.0",
      "inhoud": "Stemvragen met een openbare stempagina (staat niet apart in dit logboek, dus een gok)"},
-    {"naam": "Rapporten", "versie": "1.19.0", "sinds": "0.1.0", "laatst": "2.22.0",
-     "inhoud": "Verkooprapport, weekoverzicht, omzet per seizoen en bardienst, seizoen in cijfers, inkoop en verkoop, merkanalyse, compacte uitdraai, omzettrend"},
+    {"naam": "Rapporten", "versie": "1.20.0", "sinds": "0.1.0", "laatst": "2.27.0",
+     "inhoud": "Alle rapporten op één pagina, verkooprapport, weekoverzicht, omzet per seizoen en bardienst, seizoen in cijfers, inkoop en verkoop, merkanalyse, compacte uitdraai, omzettrend"},
     {"naam": "Handterminal", "versie": "1.7.0", "sinds": "1.5.0", "laatst": "2.24.0",
      "inhoud": "De weergave voor de handterminal op de site: boeken, inboeken, tellen en een startscherm met wat aandacht nodig heeft (staat sinds 2.4.0 tijdelijk uit; op de Zebra werkt de app)"},
-    {"naam": "Handterminal-app", "versie": "0.26.0", "sinds": "1.53.0", "laatst": "2.3.0",
+    {"naam": "Handterminal-app", "versie": "0.27.0", "sinds": "1.53.0", "laatst": "2.27.0",
      "inhoud": "De zelfstandige Android-app voor de Zebra: zoeken, productinformatie (ook door een schaplabel te scannen), boeken, tellen, factuur inboeken (ook een klaargezette bestelling), barcodes (aanpassen en de koppelronde), artikelen en nieuwe producten, prikbord, bestellijst (nalopen met vinkjes, klaarzetten met het besteloverzicht, verbruiksvoorwerpen melden), boodschappen, prognose, agenda, kassa en kluis, keuken (inboeken per verpakking, blind tellen, weggooien), Club van 20-aanmeldingen en taken, uitverkocht op de tv, de timer en de kantine-tv (tv's koppelen en beheren, specials, bardienst, momenten met de schijnwerper, mappen en dia's aan of uit, en het Halloween-thema), plus inloggen met je code, de scanner, verbindingsbewaking en het vergrendel-scherm bij een noodstop"},
     {"naam": "Accounts & rechten", "versie": "1.11.1", "sinds": "0.1.0", "laatst": "2.7.0",
      "inhoud": "Inloggen, rollen en rechten per sectie, tablet-code, blokkeren en overal uitloggen"},

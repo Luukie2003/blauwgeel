@@ -8,6 +8,16 @@ from helpers.producten import bestel_suggesties, categorienamen_zonder_verkooppr
 DASHBOARD_AANTAL_WEKEN = 8
 
 
+def netto_verkocht(regel="tr", telling="t"):
+    """SQL voor wat er van een tellingregel echt verkocht is (2.27.0): verkocht min wat er bij dezelfde telling te veel
+    stond, behalve de eerste keer dat het product geteld is (dan is alles nieuw). Te veel betekent dat het eerder ten
+    onrechte als verkocht is geteld (telfouten.py). Over een periode klopt het zo met wat er is ingekocht en wat er ligt;
+    voor één telling kan het onder nul komen. regel/telling: de aliassen van telling_regels en tellingen in de query."""
+    return f"""({regel}.verkocht - CASE WHEN {regel}.correctie > 0 AND EXISTS (
+                SELECT 1 FROM telling_regels n_r JOIN tellingen n_t ON n_t.id = n_r.telling_id
+                WHERE n_r.product_id = {regel}.product_id AND n_t.datum < {telling}.datum) THEN {regel}.correctie ELSE 0 END)"""
+
+
 def bouw_weektrend(weken, wedstrijd_datums, vandaag, aantal=DASHBOARD_AANTAL_WEKEN):
     """De omzettrend per week voor het dashboard. 'weken' komt uit voorspelling.omzet_per_week (nieuwste eerst, de
     omzet is verdeeld over de dagen waarop is verkocht, dus het maakt niet uit wanneer er geteld is);
@@ -179,15 +189,17 @@ def bereken_omzet_trend_periode(db, van, tot):
     if tellingen:
         telling_ids = [t["id"] for t in tellingen]
         placeholders = ",".join("?" for _ in telling_ids)
+        netto = netto_verkocht()
         top_verkopers = db.execute(
             f"""SELECT p.naam AS product_naam, p.eenheid, p.categorie, p.subcategorie,
-                       SUM(tr.verkocht) AS verkocht,
-                       SUM(tr.verkocht * tr.verkoopprijs) AS omzet
+                       SUM({netto}) AS verkocht,
+                       SUM({netto} * tr.verkoopprijs) AS omzet
                 FROM telling_regels tr
+                JOIN tellingen t ON t.id = tr.telling_id
                 JOIN producten p ON p.id = tr.product_id
                 WHERE tr.telling_id IN ({placeholders})
                 GROUP BY tr.product_id
-                HAVING SUM(tr.verkocht) > 0
+                HAVING SUM({netto}) > 0
                 ORDER BY omzet DESC
                 LIMIT 6""",
             telling_ids,

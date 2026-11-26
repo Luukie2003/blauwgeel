@@ -96,7 +96,7 @@
                         <td class="cs-getal cs-nowrap cs-verberg-smal">{{ p.voorraad }}<span class="cs-eenheid">{{ p.eenheid }}</span></td>
                         <td class="cs-telcel">
                             <input type="number" name="geteld_{{ p.id }}" min="0" inputmode="numeric" class="cs-invoer-getal"
-                                   placeholder="overslaan" aria-label="{{ p.naam }}"
+                                   placeholder="overslaan" aria-label="{{ p.naam }}"{% if p.id in eerder %} data-kon="{{ p.voorraad }}"{% endif %}
                                    data-turf="1,5,{% if p.besteleenheid_factor and p.besteleenheid_factor > 1 %}{{ p.besteleenheid_factor }}:{{ p|besteleenheid_naam }}{% else %}10{% endif %}">
                         </td>
                     </tr>
@@ -112,5 +112,21 @@
         <button type="submit" class="btn btn-geel">Telling verwerken</button>
     </div>
 </form>
+<script>
+/* Meer dan kon (2.27.0): meer geteld dan er volgens de app kan liggen is altijd een fout. Meteen zeggen, dan telt de
+   vrijwilliger het nog eens terwijl hij er nog staat. */
+document.querySelectorAll('input[data-kon]').forEach(function (veld) {
+    var melding = document.createElement('div');
+    melding.className = 'cs-waarschuwing';
+    melding.hidden = true;
+    veld.closest('td').appendChild(melding);
+    veld.addEventListener('input', function () {
+        var kon = parseInt(veld.dataset.kon, 10), nu = parseInt(veld.value, 10);
+        var teVeel = isNaN(nu) ? 0 : nu - kon;
+        melding.hidden = teVeel <= 0;
+        melding.textContent = teVeel > 0 ? 'Meer dan kon: hooguit ' + kon + '. Nog eens tellen, of een levering inboeken?' : '';
+    });
+});
+</script>
 
 {% endblock %}

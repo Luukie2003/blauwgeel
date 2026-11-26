@@ -1,24 +1,15 @@
 {% extends basis_template %}
 {% block titel %}Kluistelling #{{ telling.id }}{% endblock %}
-{% block inhoud %}
-<div class="actiebalk">
-    <div>
-        <h1 style="margin-bottom:0.2rem">
-            Kluistelling #{{ telling.id }}
-            {% if telling.afgesloten %}
-            <span class="badge badge-ok">Goedgekeurd</span>
-            {% else %}
-            <span class="badge badge-laag">Nog open (concept)</span>
-            {% endif %}
-        </h1>
-        <p class="subtitel" style="margin:0">
-            {{ telling.datum|datum_nl }}{% if telling.naam %} &mdash; geteld door {{ telling.naam }}{% endif %}
-            {% if telling.afgesloten and telling.goedgekeurd_door %} &mdash; goedgekeurd door {{ telling.goedgekeurd_door }}{% if telling.goedgekeurd_op %} op {{ telling.goedgekeurd_op|datum_nl }}{% endif %}{% if zelf_goedgekeurd %} <span class="badge badge-neutraal" title="De teller heeft deze telling zelf goedgekeurd, niet iemand anders.">zelf goedgekeurd</span>{% endif %}{% endif %}
-            &nbsp;&middot;&nbsp; <a href="{{ url_for('kluis_geschiedenis') }}">&larr; Kluis geschiedenis</a>
-            &nbsp;&middot;&nbsp; <a href="{{ url_for('kluis_tellen') }}">Nieuwe telling</a>
-        </p>
-    </div>
-    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; max-width:100%">
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Kluistelling #{{ telling.id }}
+        {% if telling.afgesloten %}
+        <span class="badge badge-ok">Goedgekeurd</span>
+        {% else %}
+        <span class="badge badge-laag">Nog open (concept)</span>
+        {% endif %}</h1>
+    <div class="cs-rechts">
+        <div style="display:flex; flex-wrap:wrap; gap:0.5rem; max-width:100%">
         {% if not telling.afgesloten %}
         <a href="{{ url_for('kluis_telling_bewerken', telling_id=telling.id) }}" class="btn btn-rand">Bewerken</a>
         <form method="post" action="{{ url_for('kluis_telling_goedkeuren', telling_id=telling.id) }}"
@@ -37,7 +28,16 @@
         </form>
         {% endif %}
     </div>
+    </div>
 </div>
+{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+            {{ telling.datum|datum_nl }}{% if telling.naam %} &mdash; geteld door {{ telling.naam }}{% endif %}
+            {% if telling.afgesloten and telling.goedgekeurd_door %} &mdash; goedgekeurd door {{ telling.goedgekeurd_door }}{% if telling.goedgekeurd_op %} op {{ telling.goedgekeurd_op|datum_nl }}{% endif %}{% if zelf_goedgekeurd %} <span class="badge badge-neutraal" title="De teller heeft deze telling zelf goedgekeurd, niet iemand anders.">zelf goedgekeurd</span>{% endif %}{% endif %}
+            &nbsp;&middot;&nbsp; <a href="{{ url_for('kluis_geschiedenis') }}">&larr; Kluis geschiedenis</a>
+            &nbsp;&middot;&nbsp; <a href="{{ url_for('kluis_tellen') }}">Nieuwe telling</a>
+        </p>
 
 <div class="statgrid">
     <div class="stat">

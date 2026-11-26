@@ -279,6 +279,7 @@ a.cs-scorebord-vak:hover { background: #fbf8ee; text-decoration: none; }
 .cs-invoer-getal { width: 6.4rem; text-align: right; font-variant-numeric: tabular-nums; }
 /* De cel met het invulveld (en de turfknoppen): op een telefoon komen de knoppen onder het veld. */
 .cs-telcel { white-space: nowrap; }
+.cs-telcel .cs-waarschuwing { white-space: normal; max-width: 17rem; }
 
 /* De velden van een formulier in een paneel: naast elkaar, op een telefoon onder elkaar. Met 'twee' een breed veld met
    een smal veld ernaast (product en aantal). */
@@ -634,3 +635,14 @@ main.cs-ingang-inhoud { display: flex; flex-direction: column; align-items: cent
     /* Het menu wordt op een telefoon een uitklapbalk boven de pagina (zie style.css): niet de breedte van hierboven. */
     .app-zijbalk { width: 100%; min-height: auto; padding: 0; border-right: 0; border-bottom: 1px solid var(--rand); }
 }
+
+/* Alle rapporten (2.27.0): de onderwerpen naast elkaar, per rapport een regel om op te klikken. */
+.cs-rapporten { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 1rem; align-items: start; }
+.cs-rapporten .cs-paneel { margin: 0; }
+.cs-rapportlijst { list-style: none; margin: 0; padding: 0; }
+.cs-rapportlijst li + li { border-top: 1px solid var(--rand-licht); }
+.cs-rapportlijst a { display: block; padding: 0.7rem 1rem; color: var(--tekst); text-decoration: none; border-left: 4px solid transparent; }
+.cs-rapportlijst a:hover, .cs-rapportlijst a:focus-visible { background: #fbf8ee; border-left-color: var(--geel); }
+.cs-rapportlijst strong { display: block; font-weight: 600; }
+.cs-rapportlijst small { display: block; margin-top: 0.1rem; color: var(--tekst-zacht); font-size: 0.86rem; }
+@media (max-width: 600px) { .cs-rapporten { grid-template-columns: 1fr; } }

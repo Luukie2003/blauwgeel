@@ -1,7 +1,11 @@
 {% extends basis_template %}
 {% block titel %}Kluistelling #{{ telling.id }} bewerken{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Kluistelling #{{ telling.id }} bewerken</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Kluistelling #{{ telling.id }} bewerken</h1>
 <p class="subtitel">
     Nog niet afgesloten, dus je kunt de aantallen hier aanpassen.
     <a href="{{ url_for('kluis_telling_detail', telling_id=telling.id) }}">&larr; Terug naar de telling</a>

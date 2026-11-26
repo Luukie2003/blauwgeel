@@ -1,5 +1,10 @@
 {% extends basis_template %}
 {% block titel %}Scannen{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">Richt de camera op de QR-code op een schaplabel om direct bij dat product uit te komen.</p>
 

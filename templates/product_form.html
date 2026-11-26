@@ -15,8 +15,12 @@
        placeholder="Typ de eenheid" aria-label="Andere eenheid" style="margin-top:0.4rem" {{ '' if anders else 'hidden' }}>
 {% endmacro %}
 {% block titel %}{{ 'Product bewerken' if product else 'Nieuw product' }}{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ 'Product bewerken' if product else 'Nieuw product' }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>{{ 'Product bewerken' if product else 'Nieuw product' }}</h1>
 <p class="subtitel"><a href="{{ url_for('producten_lijst') }}">&larr; Terug naar producten</a></p>
 
 {% if product and product.gearchiveerd %}

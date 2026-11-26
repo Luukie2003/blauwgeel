@@ -1,7 +1,11 @@
 {% extends basis_template %}
 {% block titel %}Kluistelling #{{ telling.id }} corrigeren{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Kluistelling #{{ telling.id }}: getelde bedrag corrigeren</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Kluistelling #{{ telling.id }}: getelde bedrag corrigeren</h1>
 <p class="subtitel">
     Voor een miswelging die pas achteraf opvalt. Het verwachte bedrag van
     déze telling verandert niet mee &mdash; alleen het getelde bedrag en het

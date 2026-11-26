@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Bulk bewerken{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Alle producten in één overzicht: minimumvoorraad en besteleenheid (bijv.

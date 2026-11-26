@@ -11,6 +11,7 @@ niet in: de verkoopprijs is wat de klant betaalt, de inkoopprijs wat bij het pro
 
 from datetime import date, timedelta
 
+from helpers.omzet import netto_verkocht
 from helpers.producten import besteleenheid_factor, besteleenheid_naam
 from inkoop_verkoop import LANG_WEKEN, bereken_inkoop_verkoop, is_correctie
 from productkaart import KEUKEN_CATEGORIE
@@ -43,10 +44,7 @@ def merken(db):
     return sorted((g["naam"] for g in groepen.values() if g["ingevuld"] or g["aantal"] >= 2), key=str.lower)
 
 
-# Verkocht min wat er bij dezelfde telling te veel stond, behalve de eerste keer dat het product geteld is (dan is alles nieuw).
-_NETTO = """(tr.verkocht - CASE WHEN tr.correctie > 0 AND EXISTS (
-                SELECT 1 FROM telling_regels r2 JOIN tellingen t2 ON t2.id = r2.telling_id
-                WHERE r2.product_id = tr.product_id AND t2.datum < t.datum) THEN tr.correctie ELSE 0 END)"""
+_NETTO = netto_verkocht()  # zie helpers/omzet.py
 
 
 def _netto(r):

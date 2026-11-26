@@ -1,15 +1,18 @@
 {% extends "base.html" %}
 {% block titel %}Stemmen{% endblock %}
-{% block inhoud %}
-<div class="actiebalk">
-    <p class="subtitel" style="margin:0">
-        Laat de club meedenken: bijvoorbeeld welk fust voor het weizen, of welk seizoensbiertje.
-    </p>
-    <div style="display:flex; gap:0.5rem">
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+    <div class="cs-rechts">
         <a href="{{ url_for('bieren_lijst') }}" class="btn btn-rand">Bierbibliotheek</a>
         <a href="{{ url_for('stemvraag_nieuw') }}" class="btn btn-geel">Nieuwe stemming</a>
     </div>
 </div>
+{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+        Laat de club meedenken: bijvoorbeeld welk fust voor het weizen, of welk seizoensbiertje.
+    </p>
 
 {% if stemvragen %}
 <div class="tabel-wrap">

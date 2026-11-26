@@ -1,21 +1,13 @@
 {% extends "base.html" %}
 {% block titel %}Stemming: {{ stemvraag.titel }}{% endblock %}
-{% block inhoud %}
-<div class="actiebalk">
-    <div>
-        <h1 style="margin-bottom:0.2rem">
-            {{ stemvraag.titel }}
-            {% if stemming_is_open(stemvraag) %}<span class="badge badge-ok">Open</span>
-            {% elif stemvraag.actief %}<span class="badge badge-neutraal">Verlopen</span>
-            {% else %}<span class="badge badge-neutraal">Gesloten</span>{% endif %}
-        </h1>
-        <p class="subtitel" style="margin:0">
-            {{ stemvraag.aangemaakt_op|datum_nl }}{% if stemvraag.aangemaakt_door %} door {{ stemvraag.aangemaakt_door }}{% endif %}
-            {% if stemvraag.sluit_op %}&nbsp;&middot;&nbsp; sluit op {{ stemvraag.sluit_op|datum_nl }}{% endif %}
-            &nbsp;&middot;&nbsp; <a href="{{ url_for('stemmen_overzicht') }}">&larr; Alle stemmingen</a>
-        </p>
-    </div>
-    <div style="display:flex; flex-wrap:wrap; gap:0.5rem">
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ stemvraag.titel }}
+        {% if stemming_is_open(stemvraag) %}<span class="badge badge-ok">Open</span>
+        {% elif stemvraag.actief %}<span class="badge badge-neutraal">Verlopen</span>
+        {% else %}<span class="badge badge-neutraal">Gesloten</span>{% endif %}</h1>
+    <div class="cs-rechts">
+        <div style="display:flex; flex-wrap:wrap; gap:0.5rem">
         <a href="{{ url_for('stemvraag_poster_pdf', stemvraag_id=stemvraag.id) }}" class="btn btn-rand">Poster (A4 PDF)</a>
         {% if stemvraag.actief %}
         <form method="post" action="{{ url_for('stemvraag_sluiten', stemvraag_id=stemvraag.id) }}"
@@ -35,7 +27,15 @@
             <button type="submit" class="btn btn-gevaar">Verwijderen</button>
         </form>
     </div>
+    </div>
 </div>
+{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+            {{ stemvraag.aangemaakt_op|datum_nl }}{% if stemvraag.aangemaakt_door %} door {{ stemvraag.aangemaakt_door }}{% endif %}
+            {% if stemvraag.sluit_op %}&nbsp;&middot;&nbsp; sluit op {{ stemvraag.sluit_op|datum_nl }}{% endif %}
+            &nbsp;&middot;&nbsp; <a href="{{ url_for('stemmen_overzicht') }}">&larr; Alle stemmingen</a>
+        </p>
 
 {% if stemvraag.omschrijving %}
 <p class="tekst-zacht">{{ stemvraag.omschrijving }}</p>

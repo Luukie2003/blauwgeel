@@ -1,5 +1,10 @@
 {% extends basis_template %}
 {% block titel %}Barcodes{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Welke artikelen je inkoopt, met hun barcode (EAN) en die van de doos. Een artikel hoort bij een product: &lsquo;AH

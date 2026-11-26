@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% block titel %}Nieuwe stemming{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Nieuwe stemming</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Nieuwe stemming</h1>
 <p class="subtitel">
     <a href="{{ url_for('stemmen_overzicht') }}">&larr; Terug naar stemmen</a>
     &nbsp;&middot;&nbsp; <a href="{{ url_for('bieren_lijst') }}">Bierbibliotheek</a>

@@ -537,6 +537,8 @@ class TellenActivity : BasisActivity() {
                 if (verwisseld.optBoolean("meer")) R.string.verwisseld_meer else R.string.verwisseld_minder,
                 verwisseld.optString("met"), verwisseld.optInt("aantal"),
             )
+            // 2.27.0: meer dan er volgens de app kan liggen is altijd een fout
+            r.optInt("meer_dan_kon", 0) > 0 -> getString(R.string.meer_dan_kon, r.optInt("voorraad"))
             !r.isNull("afwijking") -> getString(R.string.afwijking_tikfout)
             r.optString("model_afwijking") == "minder" -> getString(R.string.afwijking_minder)
             r.optString("model_afwijking") == "meer" -> getString(R.string.afwijking_meer)

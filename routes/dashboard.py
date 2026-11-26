@@ -26,6 +26,7 @@ from helpers import (
     now_str,
     stuur_tag_notificaties,
 )
+from helpers.omzet import netto_verkocht
 from helpers.tijd import datum_lang, vandaag_amsterdam
 from helpers.wedstrijden import OVERIG_TEAM, agenda_teams, voeg_thuiswedstrijd_toe
 from pdf import periode_verkoop_pdf
@@ -73,16 +74,17 @@ def register_routes(app):
         if dagen:
             dag_lijst = [d["dag"] for d in dagen]
             placeholders = ",".join("?" for _ in dag_lijst)
+            netto = netto_verkocht()  # een telfout telt niet als verkocht (2.27.0)
             top_verkopers = db.execute(
                 f"""SELECT p.naam AS product_naam, p.eenheid,
-                           SUM(tr.verkocht) AS verkocht,
-                           SUM(tr.verkocht * tr.verkoopprijs) AS omzet
+                           SUM({netto}) AS verkocht,
+                           SUM({netto} * tr.verkoopprijs) AS omzet
                     FROM telling_regels tr
                     JOIN producten p ON p.id = tr.product_id
                     JOIN tellingen t ON t.id = tr.telling_id
                     WHERE date(t.datum) IN ({placeholders})
                     GROUP BY tr.product_id
-                    HAVING SUM(tr.verkocht) > 0
+                    HAVING SUM({netto}) > 0
                     ORDER BY omzet DESC
                     LIMIT 6""",
                 dag_lijst,

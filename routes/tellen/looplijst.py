@@ -254,6 +254,19 @@ def optellen(producten, bar_waarden, hok_waarden):
     return geparsed
 
 
+def eerder_geteld(db):
+    """De producten die al eens geteld zijn. Bij de eerste telling is alles nieuw: dan zegt meer dan de administratie niets."""
+    return {r[0] for r in db.execute("SELECT DISTINCT product_id FROM telling_regels")}
+
+
+def meer_dan_kon(product, totaal, eerder):
+    """Hoeveel er meer geteld is dan er volgens de app kan liggen (de vorige telling plus wat er sindsdien is ingeboekt),
+    of None. Dat is altijd een fout: nu of de vorige keer verkeerd geteld, een levering die niet is ingeboekt, of een
+    verwisselde smaak (2.27.0; telfouten.py telt het achteraf)."""
+    te_veel = totaal - product["voorraad"]
+    return te_veel if te_veel > 0 and product["id"] in eerder else None
+
+
 def controle_regels(db, review, bar_waarden, hok_waarden):
     """De regels van het controlescherm: per product de bar, het voorraadhok, het totaal, wat er verwacht werd en of het
     opvallend afwijkt. Voor de site en voor de handterminal-app."""
@@ -262,6 +275,7 @@ def controle_regels(db, review, bar_waarden, hok_waarden):
     except Exception as fout:
         print(f"[voorspelling] verwachte voorraad mislukt: {fout}")
         verwachting = {}
+    eerder = eerder_geteld(db)
     regels = []
     for product_id_str, totaal in review.items():
         product = db.execute(
@@ -283,6 +297,7 @@ def controle_regels(db, review, bar_waarden, hok_waarden):
                 "model_afwijking": telling_ver_van_verwachting(
                     verwachting.get(product["id"]), product["voorraad"], totaal
                 ),
+                "meer_dan_kon": meer_dan_kon(product, totaal, eerder),
             }
         )
     regels.sort(key=lambda r: (r["product"]["categorie"], r["product"]["naam"]))

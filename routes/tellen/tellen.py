@@ -5,6 +5,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 from database import get_db
 from helpers import now_datetime_local, now_str
 from productkaart import TELLEN_VOORWAARDE
+from routes.tellen.looplijst import eerder_geteld
 from routes.tellen.looplijst_opslag import loop_bijwerken, loop_onderbroken
 from routes.tellen.verwerken import verwerk_telling
 
@@ -57,6 +58,7 @@ def register_routes(app):
             producten=producten,
             nu_datetime_local=now_datetime_local(),
             loop_onderbroken=loop_onderbroken(db, len(producten)),
+            eerder=eerder_geteld(db),  # alleen daar waarschuwt het formulier bij meer dan kon
             # Voor de titel: wanneer en door wie er voor het laatst geteld is.
             laatste_telling=db.execute("SELECT datum, naam FROM tellingen ORDER BY datum DESC, id DESC LIMIT 1").fetchone(),
         )

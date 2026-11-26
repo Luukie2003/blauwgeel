@@ -1,5 +1,10 @@
 {% extends basis_template %}
 {% block titel %}{{ taak.titel }}{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel"><a href="{{ url_for('dashboard') }}">&larr; Terug naar het overzicht</a></p>
 

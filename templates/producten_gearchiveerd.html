@@ -1,14 +1,19 @@
 {% extends "base.html" %}
 {% block titel %}Gearchiveerde producten{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+    <div class="cs-rechts">
+        <a href="{{ url_for('producten_lijst') }}" class="btn btn-rand">&larr; Terug naar producten</a>
+    </div>
+</div>
+{% endblock %}
 {% block inhoud %}
-<div class="actiebalk">
-    <p class="subtitel" style="margin:0">
+<p class="subtitel">
         Oude producten die in tellingen of bestellingen staan en daarom niet weg kunnen. Ze staan in geen enkele lijst
         meer, maar de tellingen, rapporten en prijsgeschiedenis van toen kloppen nog. Zet je er een terug, dan staat het
         weer in de productlijst als inactief product.
     </p>
-    <a href="{{ url_for('producten_lijst') }}" class="btn btn-rand">&larr; Terug naar producten</a>
-</div>
 <div class="kaart">
     {% if producten %}
     <div class="tabel-wrap">

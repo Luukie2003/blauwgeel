@@ -8,6 +8,7 @@ apart genoemd."""
 
 from datetime import timedelta
 
+from helpers.omzet import netto_verkocht
 from helpers.producten import inkoop_per_stuk, omzet_per_eenheid
 
 WEKEN_KEUZES = (4, 8, 13, 26, 52)
@@ -55,12 +56,12 @@ def bereken_marge(db, weken, vandaag):
     weken (vandaag: een date)."""
     vanaf = (vandaag - timedelta(weeks=weken)).strftime("%Y-%m-%d 00:00")
     rijen = db.execute(
-        """SELECT p.id, p.naam, p.categorie, p.eenheid, p.verkoopprijs, p.inkoopprijs, p.besteleenheid_factor, p.actief,
+        f"""SELECT p.id, p.naam, p.categorie, p.eenheid, p.verkoopprijs, p.inkoopprijs, p.besteleenheid_factor, p.actief,
                   p.glazen_per_fust, p.prijs_per_glas,
-                  COALESCE(SUM(tr.verkocht), 0) AS aantal,
-                  COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0) AS omzet
+                  MAX(0, COALESCE(SUM(tr.verkocht), 0)) AS aantal,  -- de telfout kan van voor de periode zijn
+                  MAX(0, COALESCE(SUM(tr.verkocht * tr.verkoopprijs), 0)) AS omzet
            FROM producten p
-           LEFT JOIN (SELECT r.product_id, r.verkocht, r.verkoopprijs
+           LEFT JOIN (SELECT r.product_id, {netto_verkocht('r', 't')} AS verkocht, r.verkoopprijs  -- netto: een telfout is niet verkocht
                       FROM telling_regels r JOIN tellingen t ON t.id = r.telling_id WHERE t.datum >= ?
                       UNION ALL  -- de keuken telt apart (zie keukenbeheer.py)
                       SELECT k.product_id, k.verkocht, k.verkoopprijs

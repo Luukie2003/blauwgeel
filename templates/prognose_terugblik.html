@@ -1,5 +1,10 @@
 {% extends basis_template %}
 {% block titel %}Prognose en verkoop{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 {% include "_prognose_tabs.html" %}
 <p class="subtitel">

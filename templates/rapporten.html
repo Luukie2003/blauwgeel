@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{# Alle rapporten (2.27.0, routes/rapporten_overzicht.py): per onderwerp een paneel met de rapporten en wat je er ziet. #}
+{% block titel %}Rapporten{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Rapporten</h1>
+    <span class="cs-titel-tekst">Alle cijfers op een rij. De meest gebruikte staan ook in het menu.</span>
+</div>
+{% endblock %}
+{% block inhoud %}
+<div class="cs-rapporten">
+    {% for r in rubrieken %}
+    <section class="cs-paneel">
+        <div class="cs-paneel-kop"><h2>{{ r.naam }}</h2><span class="cs-zacht">{{ r.tekst }}</span></div>
+        <ul class="cs-rapportlijst">
+            {% for rapport in r.rapporten %}
+            <li><a href="{{ url_for(rapport.endpoint) }}"><strong>{{ rapport.label }}</strong>{% if rapport.uitleg %}<small>{{ rapport.uitleg }}</small>{% endif %}</a></li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endfor %}
+</div>
+{% endblock %}

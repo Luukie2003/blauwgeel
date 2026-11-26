@@ -82,7 +82,9 @@
             <button type="button" class="zijbalk-alles-knop" id="zijbalk-alles-knop" aria-expanded="false">Alle onderdelen</button>
             {% endif %}
             {% set ns = namespace(vorige_groep=None, eerste=True) %}
-            {% for item in nav_items %}
+            {# Een verborgen pagina (navigatie.py) staat niet in het menu; staat hij open, dan licht "Alle rapporten" op. #}
+            {% set menu_actief = 'rapporten_overzicht' if actieve_nav and actieve_nav.verborgen else (actieve_nav.url_endpoint if actieve_nav else None) %}
+            {% for item in nav_items if not item.verborgen %}
             {% if item.groep != ns.vorige_groep %}
             {% if not ns.eerste %}
                 </ul>
@@ -99,7 +101,7 @@
             {% endif %}
                     <li>
                         <a href="{{ url_for(item.url_endpoint) }}"
-                           class="{{ 'actief' if item == actieve_nav else '' }}">{{ item.label }}{% if item.url_endpoint == 'club_van_20_aanmeldingen' and club_aanmeldingen_open %} <span class="nav-badge" title="Wachten op goedkeuring">{{ club_aanmeldingen_open }}</span>{% endif %}</a>
+                           class="{{ 'actief' if item.url_endpoint == menu_actief else '' }}">{{ item.label }}{% if item.url_endpoint == 'club_van_20_aanmeldingen' and club_aanmeldingen_open %} <span class="nav-badge" title="Wachten op goedkeuring">{{ club_aanmeldingen_open }}</span>{% endif %}</a>
                     </li>
             {% endfor %}
                 </ul>

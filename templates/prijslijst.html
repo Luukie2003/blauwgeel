@@ -1,18 +1,21 @@
 {% extends "base.html" %}
 {% block titel %}Prijslijst{% endblock %}
 {% macro bedrag(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
-{% block inhoud %}
-<div class="actiebalk">
-    <p class="subtitel" style="margin:0">
-        Alle verkoopprijzen om na te lopen. Klopt er iets niet? Zet het op het <a href="{{ url_for('bijzonderheden') }}">prikbord</a>.
-    </p>
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+    <div class="cs-rechts">
         <a href="{{ url_for('prijslijst_pdf_route') }}" class="btn btn-rand" target="_blank" rel="noopener">Prijslijst voor aan de bar (pdf)</a>
         {% if huidige_gebruiker_rol == 'beheerder' %}
         <a href="{{ url_for('producten_prijzen') }}" class="btn btn-geel">Prijzen aanpassen</a>
         {% endif %}
     </div>
 </div>
+{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+        Alle verkoopprijzen om na te lopen. Klopt er iets niet? Zet het op het <a href="{{ url_for('bijzonderheden') }}">prikbord</a>.
+    </p>
 
 {% for t in mijn_taken %}
 <div class="kaart" style="border-left:4px solid var(--geel-donker, #e0ba17)">

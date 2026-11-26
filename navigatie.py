@@ -2,7 +2,8 @@
 bij welke sectie horen, plus het kortere menu van de handterminal-weergave.
 
 Puur gegevens (geen code). Een nieuwe pagina in het menu: voeg een item toe aan
-NAV_ITEMS (groep, endpoints, url_endpoint, label)."""
+NAV_ITEMS (groep, endpoints, url_endpoint, label). Met "verborgen": True staat een pagina niet in de zijbalk, maar wel
+in het zoeken, bij de favorieten en (voor een rapport) op Alle rapporten; daar staat dan de zijbalk op."""
 
 # Voor het filteren van de zijbalk: welke navigatiegroep hoort bij welke
 # sectie. "Start" en "Rapporten" staan hier bewust niet in -- die blijven
@@ -399,6 +400,12 @@ NAV_ITEMS = [
     },
     {
         "groep": "Rapporten",
+        "endpoints": ["rapporten_overzicht"],
+        "url_endpoint": "rapporten_overzicht",
+        "label": "Alle rapporten",
+    },
+    {
+        "groep": "Rapporten",
         "endpoints": ["verkooprapport", "verkooprapport_pdf_route", "verkooprapport_csv_route"],
         "url_endpoint": "verkooprapport",
         "label": "Verkooprapport",
@@ -407,24 +414,28 @@ NAV_ITEMS = [
         "groep": "Rapporten",
         "endpoints": ["seizoensrapport", "seizoensrapport_csv_route", "seizoensrapport_pdf_route"],
         "url_endpoint": "seizoensrapport",
+        "verborgen": True,
         "label": "Omzet per seizoen",
     },
     {
         "groep": "Rapporten",
         "endpoints": ["seizoen_in_cijfers_pagina"],
         "url_endpoint": "seizoen_in_cijfers_pagina",
+        "verborgen": True,
         "label": "Seizoen in cijfers",
     },
     {
         "groep": "Rapporten",
         "endpoints": ["compacte_uitdraai", "compacte_uitdraai_pdf_route"],
         "url_endpoint": "compacte_uitdraai",
+        "verborgen": True,
         "label": "Compacte uitdraai",
     },
     {
         "groep": "Rapporten",
         "endpoints": ["bardienstrapport"],
         "url_endpoint": "bardienstrapport",
+        "verborgen": True,
         "label": "Omzet per bardienst",
     },
     {
@@ -437,24 +448,28 @@ NAV_ITEMS = [
         "groep": "Rapporten",
         "endpoints": ["inkoop_verkoop_rapport"],
         "url_endpoint": "inkoop_verkoop_rapport",
+        "verborgen": True,
         "label": "Inkoop en verkoop",
     },
     {
         "groep": "Rapporten",
         "endpoints": ["merk_rapport", "merk_rapport_pdf", "merk_afspraak_toevoegen", "merk_afspraak_verwijderen"],
         "url_endpoint": "merk_rapport",
+        "verborgen": True,
         "label": "Merkanalyse",
     },
     {
         "groep": "Rapporten",
         "endpoints": ["derving_rapport"],
         "url_endpoint": "derving_rapport",
+        "verborgen": True,
         "label": "Derving",
     },
     {
         "groep": "Rapporten",
         "endpoints": ["niet_lopers_rapport"],
         "url_endpoint": "niet_lopers_rapport",
+        "verborgen": True,
         "label": "Niet-lopers",
     },
     {
@@ -467,6 +482,7 @@ NAV_ITEMS = [
         "groep": "Rapporten",
         "endpoints": ["wedstrijden_overzicht"],
         "url_endpoint": "wedstrijden_overzicht",
+        "verborgen": True,
         "label": "Wedstrijden",
     },
     {
@@ -564,6 +580,7 @@ NAV_ITEM_ALLEEN_BEHEERDER = {
     "kassa_omzet_controle",
     "marge_rapport",
     "inkoop_verkoop_rapport",
+    "merk_rapport",  # met de inkoopprijzen, net als de route (rechten.py)
     "gegevenscontrole",
     "derving_rapport",
     "niet_lopers_rapport",
@@ -606,3 +623,27 @@ def favoriete_items(zichtbare_items, favorieten):
     gekozen = [f for f in (favorieten or "").split(",") if f] or STANDAARD_FAVORIETEN
     per_endpoint = {item["url_endpoint"]: item for item in zichtbare_items}
     return [per_endpoint[f] for f in gekozen if f in per_endpoint]
+
+
+# Alle rapporten (2.27.0): het overzicht per onderwerp, met in één zin wat je er ziet. Alleen wat dit account in het menu
+# mag zien komt erop (zie app.py); een rapport dat hier niet staat, komt onder "Overig".
+RAPPORT_RUBRIEKEN = [
+    ("Omzet", "Wat er verkocht is, per periode, per week en per seizoen."),
+    ("Winst en inkoop", "Wat het oplevert en hoe het zit met de leveranciers."),
+    ("Voorraad", "Wat er weggaat zonder te verkopen, en wat stil blijft liggen."),
+    ("Overig", "Om uit te printen, en de wedstrijden waar de prognose mee rekent."),
+]
+RAPPORT_UITLEG = {
+    "verkooprapport": ("Omzet", "Omzet en verkochte aantallen tussen twee datums, ook als pdf of csv."),
+    "week_overzicht": ("Omzet", "De afgelopen week, elke maandagochtend bijgewerkt en ook per mail."),
+    "seizoensrapport": ("Omzet", "Dit seizoen naast de vorige, bijvoorbeeld voor de penningmeester."),
+    "seizoen_in_cijfers_pagina": ("Omzet", "Het seizoen in een paar grote getallen, zonder bedragen (ook op de tv)."),
+    "bardienstrapport": ("Omzet", "Wat er gemiddeld verkocht wordt in de diensten van iedereen op de planning."),
+    "marge_rapport": ("Winst en inkoop", "Wat elk product en elke categorie oplevert, en waar je het minst verdient."),
+    "inkoop_verkoop_rapport": ("Winst en inkoop", "Wat er is ingekocht naast wat er verkocht is en nog ligt."),
+    "merk_rapport": ("Winst en inkoop", "Alles over één merk, voor een gesprek met de vertegenwoordiger."),
+    "derving_rapport": ("Voorraad", "Wat er zonder te verkopen uit de voorraad ging: breuk, over de datum, weggegeven."),
+    "niet_lopers_rapport": ("Voorraad", "Producten die wel geteld zijn maar niet verkopen: daar zit geld vast."),
+    "compacte_uitdraai": ("Overig", "Kasverslag, kluis en voorraad op één A4, om uit te printen."),
+    "wedstrijden_overzicht": ("Overig", "De komende thuiswedstrijden; zelf een wedstrijd toevoegen of afgelasten."),
+}

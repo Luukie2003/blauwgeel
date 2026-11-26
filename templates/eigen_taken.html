@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Taken{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Voeg een taak toe aan &ldquo;Wat moet er nu?&rdquo; op het overzicht van de mensen die je tagt. Hoort er een pagina bij,
