@@ -3,9 +3,10 @@ de mappen beheren, en bijsturen op de avond (Nu tonen, Stop, Later, Voorbeeld)."
 
 import hashlib
 import json
+import os
 from datetime import datetime
 
-from flask import flash, jsonify, redirect, render_template, request, url_for
+from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
 
 import kiosk_momenten
 import kiosk_tvs
@@ -97,6 +98,15 @@ def _kt_status(db):
             "schijnwerper": kiosk_momenten.in_schijnwerper(db)}
 
 
+def _bestaande_afbeelding(naam):
+    """Een afbeelding uit static/kiosk_afbeeldingen voor het voorbeeld van een dia, of None: alleen een gewone
+    bestandsnaam die er staat (geen pad)."""
+    naam = (naam or "").strip()
+    if not naam or naam != os.path.basename(naam) or naam.startswith("."):
+        return None
+    return naam if os.path.isfile(os.path.join(current_app.static_folder, "kiosk_afbeeldingen", naam)) else None
+
+
 def register_routes(app):
     @app.context_processor
     def _momenten_voor_schermen():
@@ -161,7 +171,8 @@ def register_routes(app):
             "effect": effect, "effect_opties": kiosk_momenten.schoon_opties(effect, None, None, None, sjabloon,
                                                                             args.get("tekening")),
             "weergave_duur_seconden": 10, "herhalingen": 1, "video": None, "video_duur": None, "video_hele_duur": 0,
-            "video_geluid": 0, "afbeelding": None, "overgang": "fade", "tekst_grootte": "normaal",
+            "video_geluid": 0, "afbeelding": _bestaande_afbeelding(args.get("afbeelding")), "overgang": "fade",
+            "tekst_grootte": "normaal",
             "achtergrond_afbeelding": None, "custom_sjabloon_id": None, "webpagina_url": None,
         }
         tijden = kiosk_momenten.tijden_per_map(db, db.execute("SELECT * FROM kiosk_sponsoren WHERE actief = 1").fetchall())

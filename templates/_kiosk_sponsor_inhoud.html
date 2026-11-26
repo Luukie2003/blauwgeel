@@ -120,7 +120,8 @@
         <div class="fs-licht"></div>
         <svg class="fs-slinger" viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M-40 26Q470 236 980 44M940 44Q1450 236 1960 26"/></svg>
         {% for links, boven, hoek, kleur, wacht in slide.vlaggen %}<i class="fs-vlag" style="left: {{ links }}%; top: {{ boven }}%; --r: {{ hoek }}deg; --c: {{ kleur }}; animation-delay: -{{ wacht }}s;"></i>{% endfor %}
-        {% if slide.tekening %}<div class="fs-tekening fs-tekening--{{ slide.tekening }}">{% include '_kiosk_tekening.html' %}</div>{% endif %}
+        {% if slide.tekening == 'foto' %}<div class="fs-tekening fs-tekening--foto"><img src="{{ url_for('static', filename='kiosk_afbeeldingen/' + slide.afbeelding) }}" alt=""></div>
+        {% elif slide.tekening %}<div class="fs-tekening fs-tekening--{{ slide.tekening }}">{% include '_kiosk_tekening.html' %}</div>{% endif %}
         <div class="fs-inhoud">
             {% if slide.label %}<div class="fs-lint" style="font-size: {{ fs.label_vw }}vw;"><span>{{ slide.label }}</span></div>{% endif %}
             {% if fs.titel_regels %}<h2 class="fs-titel" style="font-size: {{ fs.titel_vw }}vw;">{% for regel in fs.titel_regels %}<span>{{ regel }}</span>{% endfor %}</h2>{% endif %}

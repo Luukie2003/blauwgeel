@@ -94,8 +94,11 @@ def _sponsor_slide(s, eigen_sjablonen, producten_bij_id=None, venster=None, tijd
     if s["sjabloon"] == "feest":
         # Een feestdia (2.12.0, zie kiosk_feest.py): de titel en de knaller zo groot als ze passen.
         slide["tekening"] = kiosk_momenten.tekening_van(s)
+        if slide["tekening"] == kiosk_feest.FOTO and not s["afbeelding"]:
+            slide["tekening"] = None  # een eigen foto zonder afbeelding: dan gewoon zonder
         slide["fs"] = kiosk_feest.delen(s["titel"], slide["tekst_regels"], bool(slide["tekening"]), slide["label"],
-                                        wolk=slide["tekening"] in kiosk_feest.MET_WOLK)
+                                        wolk=slide["tekening"] in kiosk_feest.MET_WOLK,
+                                        foto=slide["tekening"] == kiosk_feest.FOTO)
         slide["vlaggen"] = kiosk_feest.VLAGGEN
         slide["kleur"] = kiosk_feest.GEEL
     if s["sjabloon"] != KIOSK_SPONSOR_SJABLOON_AANGEPAST:

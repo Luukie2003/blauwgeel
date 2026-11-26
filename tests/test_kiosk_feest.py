@@ -100,3 +100,49 @@ def test_het_poppetje_met_een_praatwolkje(ingelogde_client, client, db):
     assert "fs--wolk" in html and '<div class="fs-wolk">' in html and "fs-tekening--poppetje" in html
     assert 'data-effect="sneeuw"' in html and "fs-sticker" not in html
     assert "sneeuw" in kiosk_momenten.EFFECTEN and "poppetje" in kiosk_momenten.tekeningen_voor("feest")
+
+
+# ---------- Een eigen foto (2.20.0) ----------
+
+
+def test_een_eigen_foto_links_en_de_tekst_ernaast(client, db):
+    fs = kiosk_feest.delen("Graansilo Weizen", ["Zilver in Brussel", "Banaan · vol romig · 5,9%", "€ 6,00"], True,
+                           "Prijswinnaar", foto=True)
+    assert fs["vorm"] == "foto" and fs["knal"] == [[("€ 6,00", True)]]
+    assert [r for r, _ in fs["regels"]] == ["Zilver in Brussel", "Banaan · vol romig · 5,9%"]
+    for regel, vw in fs["regels"]:
+        assert kiosk_feest._maat(regel) * vw <= 50.01  # past rechts van de foto
+    assert max(kiosk_feest._maat(r) for r in fs["titel_regels"]) * fs["titel_vw"] <= 50.01
+
+    dia = _dia(db, "Graansilo Weizen", sjabloon="feest", tekst="Banaan · romig\n€ 6,00", label="Prijswinnaar",
+               afbeelding="graansilo-weizen.png")
+    db.execute("UPDATE kiosk_sponsoren SET effect_opties = ? WHERE id = ?", (json.dumps({"tekening": "foto"}), dia))
+    db.commit()
+    html = client.get("/kiosk/scherm").get_data(as_text=True)
+    assert 'class="fs fs--foto' in html and "fs-tekening--foto" in html
+    assert 'src="/static/kiosk_afbeeldingen/graansilo-weizen.png"' in html
+    # Zonder afbeelding: gewoon zonder foto, in het midden.
+    db.execute("UPDATE kiosk_sponsoren SET afbeelding = NULL WHERE id = ?", (dia,))
+    db.commit()
+    html = client.get("/kiosk/scherm").get_data(as_text=True)
+    assert "fs-tekening--foto" not in html and 'class="fs fs--midden' in html
+
+
+def test_het_voorbeeld_met_de_foto_van_de_dia(ingelogde_client, app, tmp_path, monkeypatch):
+    import os
+
+    map_ = os.path.join(app.static_folder, "kiosk_afbeeldingen")
+    os.makedirs(map_, exist_ok=True)
+    naam = "test-voorbeeld-foto-2-20.png"
+    with open(os.path.join(map_, naam), "wb") as f:
+        f.write(b"png")
+    try:
+        html = ingelogde_client.get(f"/kiosk/griezel-voorbeeld?sjabloon=feest&titel=Bier&tekst=%E2%82%AC+6&tekening=foto&afbeelding={naam}").get_data(as_text=True)
+        assert "fs-tekening--foto" in html and naam in html
+        # Alleen een bestand dat er staat, en nooit een pad.
+        for slecht in ("bestaat-niet.png", "../app.py", "/etc/passwd"):
+            html = ingelogde_client.get(f"/kiosk/griezel-voorbeeld?sjabloon=feest&titel=Bier&tekening=foto&afbeelding={slecht}").get_data(as_text=True)
+            assert "fs-tekening--foto" not in html
+    finally:
+        os.remove(os.path.join(map_, naam))
+    assert "foto" in kiosk_momenten.tekeningen_voor("feest") and "foto" not in kiosk_momenten.tekeningen_voor("griezel")

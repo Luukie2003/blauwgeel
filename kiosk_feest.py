@@ -6,7 +6,8 @@ Wat er op staat, komt uit het gewone dia-formulier:
 - de titel, zo groot als hij past, over hooguit drie regels; de laatste regel in het geel;
 - de tekst: de laatste regel is de knaller, op een gele sticker ("op 2 pitchers!"), waarin een getal extra groot staat;
   de regels ervoor staan onder de titel;
-- eventueel een tekening (twee pitchers, een beker of een bal): die staat dan linksonder en de sticker rechts.
+- eventueel een tekening (twee pitchers, een beker of een bal) of een eigen foto, zoals een fles bier: die staat dan
+  linksonder en de sticker rechts.
 
 De lettergroottes rekent de server uit met de breedte van de letters (Barlow Condensed Bold, de koppenletter van de
 site): zo past elke tekst die je intikt, zonder dat de tv iets hoeft op te meten. De maten zijn in vw, op een scherm van
@@ -24,7 +25,11 @@ TEKENINGEN = {
     "beker": "Kampioensbeker",
     "bal": "Stuiterende voetbal",
     "poppetje": "Clubgenoot met een praatwolkje (de laatste regel)",
+    "foto": "Eigen foto (de afbeelding hierboven, bijvoorbeeld een fles en een glas)",
 }
+# Met 'foto' (2.20.0) staat de afbeelding van de dia zelf op de plek van de tekening: een uitgeknipte foto (png met een
+# doorzichtige achtergrond) staat het mooist.
+FOTO = "foto"
 # Met deze tekeningen staat de laatste regel van de tekst niet op een sticker maar in een praatwolkje (2.15.0).
 MET_WOLK = {"poppetje"}
 _WOLK = (31, 15.5)  # de ruimte in het wolkje (breedte, hoogte in vw)
@@ -59,6 +64,8 @@ _REGEL_AANLOOP = AANLOOP_FACTOR * 1.1
 _RUIMTE = {
     "poster": {"titel": (90, 18.6), "knal": (34, 14.6)},
     "midden": {"titel": (88, 19.5), "knal": (62, 12.6)},
+    # Met een eigen foto: de foto links over de hele hoogte, alles rechts ervan (2.20.0).
+    "foto": {"titel": (50, 17.5), "knal": (38, 10.0)},
 }
 _ZONDER_KNALLER = 13.0
 _ZONDER_LABEL = 4.5
@@ -131,18 +138,18 @@ def _aanloop(regel):
     return voor, regel[gevonden.start():].strip()
 
 
-def delen(titel, regels, met_tekening, label=None, wolk=False):
+def delen(titel, regels, met_tekening, label=None, wolk=False, foto=False):
     """Wat er op een feestdia staat, met de lettergroottes die passen (zie de uitleg bovenaan).
 
     regels: de regels van de tekst (de laatste is de knaller); label: de tekst op het lint (of None); wolk: de knaller in
     een praatwolkje (zie MET_WOLK) in plaats van op een sticker. Geeft een dict voor _kiosk_sponsor_inhoud.html."""
-    vorm = "poster" if met_tekening else "midden"
+    vorm = "foto" if foto else "poster" if met_tekening else "midden"
     ruimte = _RUIMTE[vorm]
     regels = [r for r in regels if r]
     knaller = regels[-1] if regels else None
     onder = [(r, round(min(_MAX_REGEL, ruimte["titel"][0] / max(_maat(r), 0.1)), 2)) for r in regels[:-1][:3]]
 
-    hoogte = ruimte["titel"][1] - _PER_REGEL * len(onder)
+    hoogte = ruimte["titel"][1] - (sum(vw * 1.25 for _, vw in onder) if foto else _PER_REGEL * len(onder))
     if not knaller:
         hoogte += _ZONDER_KNALLER
     if not label:

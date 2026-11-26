@@ -256,7 +256,7 @@
                     {% endfor %}
                 </select>
                 <span class="tekst-zacht" id="tekening-uitleg-griezel">Met een tekening wordt de dia een poster: de titel bovenaan, de tekening linksonder en de prijs op een bord (de regel met €, met de regel erboven, zoals "4 shotjes voor"). Met het effect Programma worden regels als "16:00 Feest start!" het programma, waarin het tijdslot van nu oplicht; de andere regels komen op het bord.</span>
-                <span class="tekst-zacht" id="tekening-uitleg-feest" hidden>De feestdia: het label staat op een geel lint bovenaan, de titel zo groot als hij past (de laatste regel in het geel), en de laatste regel van de tekst wordt de knaller op een gele sticker, met een getal extra groot (zoals de 2 in "op 2 pitchers!"). Regels daarboven staan onder de titel. Met een tekening staat die linksonder en de sticker rechts. Kies het effect Feest voor confetti en vuurwerk.</span>
+                <span class="tekst-zacht" id="tekening-uitleg-feest" hidden>De feestdia: het label staat op een geel lint bovenaan, de titel zo groot als hij past (de laatste regel in het geel), en de laatste regel van de tekst wordt de knaller op een gele sticker, met een getal extra groot (zoals de 2 in "op 2 pitchers!"). Regels daarboven staan onder de titel. Met een tekening staat die linksonder en de sticker rechts; kies Eigen foto voor de afbeelding hierboven (een uitgeknipte png staat het mooist; het voorbeeld toont hem na het opslaan). Kies het effect Feest voor confetti en vuurwerk.</span>
             </div>
             <div class="veld">
                 <label for="balk_tekst">Balk op het prijzenscherm (optioneel)</label>
@@ -402,7 +402,8 @@
         var velden = {
             sjabloon: sjabloonVeld.value, titel: titelVeld.value, tekst: tekstVeld.value, label: document.getElementById('label').value,
             moment: document.getElementById('moment').value, effect: effectVeld.value,
-            tekening: document.getElementById('tekening').value, map_id: document.getElementById('map_id').value
+            tekening: document.getElementById('tekening').value, map_id: document.getElementById('map_id').value,
+            afbeelding: {{ (sponsor.afbeelding if sponsor and sponsor.afbeelding else '')|tojson }}
         };
         var adres = griezelUrl + '?' + Object.keys(velden).map(function (k) {
             return k + '=' + encodeURIComponent(velden[k]);

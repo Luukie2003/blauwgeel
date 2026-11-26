@@ -726,6 +726,15 @@
 /* De tekening linksonder (zonder knaller in het midden), met een gele gloed eronder. */
 .fs-tekening { position: absolute; left: 1vw; bottom: 2vh; width: 50vw; height: 51vh; z-index: 2; }
 .fs--zonder-knaller .fs-tekening { left: 25vw; }
+/* Een eigen foto (2.20.0), zoals een fles en een glas: links over de hele hoogte, met een schaduw; de tekst ernaast. */
+.fs-tekening--foto { left: 3vw; bottom: 3vh; width: 40vw; height: 82vh; }
+.fs--foto .fs-inhoud { left: 42vw; padding: 12vh 3vw 6vh 1vw; justify-content: center; }
+.fs--foto .fs-regel { margin-top: 0.6vh; }
+.fs--foto .fs-knaller { margin-top: 5vh; }
+.fs-tekening--foto img {
+    display: block; width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%;
+    filter: drop-shadow(0 2vh 2.2vh rgba(0, 0, 0, 0.55)) drop-shadow(0 0 3vw rgba(252, 212, 47, 0.35));
+}
 .fs-tekening svg { position: relative; display: block; width: 100%; height: 100%; overflow: visible; }
 .fs-tekening .gz-ster { transform-box: fill-box; transform-origin: 50% 50%; animation: fx-twinkel 1.8s ease-in-out infinite; }
 .fs-tekening .fs-gloei { animation: gz-gloeien 1.8s ease-in-out infinite alternate; }
