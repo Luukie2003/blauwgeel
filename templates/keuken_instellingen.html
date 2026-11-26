@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Keuken instellingen{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">Instellingen en herinnering voor het frituurvet.</p>
 

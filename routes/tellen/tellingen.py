@@ -4,8 +4,10 @@ from datetime import datetime
 
 from flask import Response, flash, redirect, render_template, request, session, url_for
 
+import telfouten
 import verwisseld
 from database import get_db
+from helpers.tijd import vandaag_amsterdam
 from helpers import bereken_trend, bestel_suggesties, format_datum, now_str, verwerk_auto_inactief
 from pdf import periode_verkoop_pdf, verkoop_pdf
 from voorspelling import maak_prognose, omzet_per_week as omzet_per_week_berekend
@@ -244,6 +246,13 @@ def register_routes(app):
             if huidig != verwacht:
                 uitkomst[r["id"]] = (huidig, verwacht)
         return uitkomst
+
+    @app.route("/tellingen/telfouten")
+    def tellingen_telfouten():
+        """Waar we vaak mis tellen (telfouten.py)."""
+        weken = telfouten.kies_weken(request.args.get("weken"))
+        return render_template("telfouten.html", weken=weken, weken_keuzes=telfouten.WEKEN_KEUZES,
+                               u=telfouten.bereken(get_db(), weken, vandaag_amsterdam()))
 
     @app.route("/tellingen/<int:telling_id>")
     def telling_detail(telling_id):

@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Scherm &amp; werving · Club van 20{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Hoe de Club van 20 op het kantine scherm en op de publieke pagina verschijnt. Waar het blok in de diashow

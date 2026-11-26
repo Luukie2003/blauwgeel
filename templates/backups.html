@@ -1,17 +1,22 @@
 {% extends "base.html" %}
 {% block titel %}Back-ups{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+    <div class="cs-rechts">
+        <form method="post" action="{{ url_for('backup_nu') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-geel">Nu een back-up maken</button>
+    </form>
+    </div>
+</div>
+{% endblock %}
 {% block inhoud %}
-<div class="actiebalk">
-    <p class="subtitel" style="margin:0">
+<p class="subtitel">
         Elke dag wordt hier automatisch een back-up van de database bijgezet
         (bewaard tot 90 dagen terug). Je kunt ook zelf op elk moment een
         back-up maken of downloaden.
     </p>
-    <form method="post" action="{{ url_for('backup_nu') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-geel">Nu een back-up maken</button>
-    </form>
-</div>
 
 {% if not backup_status.ok %}
 <div class="kaart" style="border-left:4px solid #c0392b">

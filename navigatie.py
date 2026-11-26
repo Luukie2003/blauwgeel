@@ -93,7 +93,8 @@ NAV_ITEMS = [
     },
     {
         "groep": "Voorraad",
-        "endpoints": ["tellingen_overzicht", "tellingen_cijfers", "telling_detail", "telling_regels", "tellingen_gecombineerd_pdf"],
+        "endpoints": ["tellingen_overzicht", "tellingen_cijfers", "telling_detail", "telling_regels", "tellingen_gecombineerd_pdf",
+                      "tellingen_telfouten"],
         "url_endpoint": "tellingen_overzicht",
         "label": "Tellingen",
     },

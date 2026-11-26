@@ -397,6 +397,7 @@ SECTIE_ENDPOINTS = {
         "tellen_lopen",
         "tellen_lopen_controleren",
         "tellingen_overzicht",
+        "tellingen_telfouten",
         "tellingen_cijfers",
         "tellingen_gecombineerd_pdf",
         # Leveranciers bekijken (contact, besteldag) mag iedereen die bestelt; beheren alleen een beheerder.

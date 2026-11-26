@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% block titel %}Tips & functies{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Tips &amp; functies</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Tips &amp; functies</h1>
 <p class="subtitel">
     Deze app kan best veel &mdash; hieronder een overzicht per onderdeel, zodat je niets mist.
     Bullets met 💡 zijn dingen die makkelijk over het hoofd worden gezien.
@@ -79,6 +83,7 @@
         <li>💡 <strong>Een telling openen</strong> &mdash; klik bij Tellingen op de datum van een telling: je ziet per product wat er geteld en verkocht is, met de omzet, en kunt daar een regel corrigeren. &ldquo;Bekijken&rdquo; laat de regels snel zien in een venster.</li>
         <li>💡 <strong>Tellingen combineren tot één PDF</strong> &mdash; vink zelf een aantal tellingen aan en download er één samengevoegd verkooprapport van, bijv. voor een heel toernooiweekend.</li>
         <li>💡 <strong>Tellingregel achteraf corrigeren</strong> &mdash; corrigeer een verkeerd geteld aantal in een al afgeronde telling, voor als er bijv. een krat over het hoofd is gezien. De verkoop en de omzet van die telling gaan mee. Is het de laatste telling van dat product, dan past de huidige voorraad zich ook aan met het verschil (vinkje &ldquo;Ook de huidige voorraad aanpassen&rdquo;, haal het weg als je het al met boeken hebt rechtgezet). Klopt de voorraad na een correctie niet met de telling en de boekingen daarna (bijvoorbeeld bij een correctie van v&oacute;&oacute;r deze versie), dan staat bij die regel wat het zou moeten zijn, met een knop &ldquo;Voorraad op &hellip; zetten&rdquo;.</li>
+        <li>💡 <strong>Waar we mis tellen</strong> &mdash; bij Voorraad &rarr; Tellingen, knop &ldquo;Waar we mis tellen&rdquo;: per product hoe vaak er bij een telling meer stond dan kon, en welke smaken waarschijnlijk door elkaar zijn geteld. Leg die bij het tellen apart.</li>
         <li>💡 <strong>Door elkaar geteld?</strong> &mdash; staat er van de ene Bozu ineens meer dan kan en van de andere minder dan verwacht, dan vraagt het controlescherm van de looplijst of je ze verwisseld hebt. Ook bij een opgeslagen telling (ook van de handterminal) staat die vraag bovenaan, met Corrigeren eronder.</li>
         <li>💡 <strong>Shots tellen per glas</strong> &mdash; (beheerders) vul bij een shotfles in hoeveel shots eruit gaan en wat een shot kost (Producten &rarr; Bewerken, &ldquo;Per glas verkocht&rdquo;). Een lege fles telt dan voor al zijn shots in de omzet. Oude tellingen die nog de prijs van &eacute;&eacute;n shot gebruiken, reken je daarna in &eacute;&eacute;n keer om.</li>
         <li>💡 <strong>Tapbier telt mee</strong> &mdash; een fust dat bij een telling minder wordt geteld, telt in de omzet als glazen per fust maal de prijs per glas (nu 60 glazen van 33 cl &agrave; &euro; 2,00 = &euro; 120 per fust). Dat geldt ook voor de weekomzet, de trend, de marge en de prognose; de eerdere tellingen zijn aangevuld.</li>

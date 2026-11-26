@@ -1,5 +1,10 @@
 {% extends basis_template %}
 {% block titel %}Noodstop{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Bij een vermoeden van een hack of misbruik sluit je hier met één knop de hele site en de tv-schermen af. Daarna

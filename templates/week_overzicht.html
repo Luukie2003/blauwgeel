@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Weekoverzicht{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Week van {{ overzicht.week_van.strftime('%d-%m-%Y') }} t/m {{ overzicht.week_tot.strftime('%d-%m-%Y') }}.

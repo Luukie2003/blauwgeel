@@ -1,8 +1,12 @@
 {% extends basis_template %}
 {% block titel %}Keukentellingen{% endblock %}
 {% macro euro(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Keukentellingen</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Keukentellingen</h1>
 {% include '_keuken_subnav.html' %}
 <p class="subtitel">Wat er per keukentelling is verkocht en wat dat opbracht. Deze omzet staat los van de weekomzet van de kantine, maar telt wel mee in Marge en in Omzet en kassa.</p>
 <div class="kaart">

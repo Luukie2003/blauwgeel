@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Importeren · Club van 20{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Zet de Club van 20-spreadsheet in &eacute;&eacute;n keer over: upload het Excel-bestand (.xlsx) of een CSV, of selecteer alle

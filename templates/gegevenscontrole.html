@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Gegevenscontrole{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <div class="actiebalk">
     <p class="subtitel" style="margin:0">

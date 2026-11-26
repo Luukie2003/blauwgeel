@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Wedstrijden{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Uit de gekoppelde teamagenda's en de weersverwachting. Ververst automatisch elke nacht. Staat een thuiswedstrijd

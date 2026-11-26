@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}{{ lid.naam if lid else 'Nieuw lid' }} · Club van 20{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel"><a href="{{ url_for('club_van_20_overzicht') }}">&larr; Terug naar alle leden</a></p>
 

@@ -6,6 +6,11 @@
 {% macro pct(x) %}{% if x is none %}&mdash;{% else %}{{ '%.0f'|format(x) }}%{% endif %}{% endmacro %}
 {% macro getal(x, d=1) %}{% if x is none %}&mdash;{% else %}{{ ('%.' ~ d ~ 'f')|format(x)|replace('.', ',') }}{% endif %}{% endmacro %}
 {% macro dm(datum) %}{{ datum[8:10]|int }}-{{ datum[5:7]|int }}{% endmacro %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <style>
     .iv-r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }

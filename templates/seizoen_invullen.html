@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% block titel %}Eerdere seizoenen invullen{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Omzet van eerdere seizoenen invullen</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Omzet van eerdere seizoenen invullen</h1>
 <p class="subtitel">
     Heb je de omzet per maand uit de oude administratie? Vul die hier in, dan kan het rapport
     <a href="{{ url_for('seizoensrapport') }}">Omzet per seizoen</a> ook seizoenen vergelijken die

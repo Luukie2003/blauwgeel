@@ -1,5 +1,10 @@
 {% extends basis_template %}
 {% block titel %}Keuken tellen (looplijst){% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 {# De looplijst van de keuken (zie keuken_tellen_lopen in routes/keuken.py): product voor product, losse stuks met de
    hand en volle dozen of zakken met een scan of een knop per verpakking. Blind: wat de site verwacht, staat pas op het

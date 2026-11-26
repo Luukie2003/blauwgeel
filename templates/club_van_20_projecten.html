@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Projecten · Club van 20{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Waar het Club van 20-geld aan besteed wordt. Projecten die klaar zijn of waar aan gewerkt wordt komen op de

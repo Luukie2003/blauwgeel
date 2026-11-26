@@ -7,7 +7,7 @@
 <div class="cs-titel">
     <h1>Tellingen</h1>
     {% if tellingen %}<span class="cs-titel-tekst">{{ tellingen|length }} {{ 'telling' if tellingen|length == 1 else 'tellingen' }}, de laatste op {{ tellingen[0].datum|dag_lang }}</span>{% endif %}
-    <div class="cs-rechts"><a href="{{ url_for('tellen') }}" class="btn btn-geel">Nieuwe telling</a></div>
+    <div class="cs-rechts"><a href="{{ url_for('tellingen_telfouten') }}" class="btn btn-rand">Waar we mis tellen</a><a href="{{ url_for('tellen') }}" class="btn btn-geel">Nieuwe telling</a></div>
 </div>
 {% endblock %}
 {% block inhoud %}

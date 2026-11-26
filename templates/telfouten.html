@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{# Waar we vaak mis tellen (telfouten.py), in de clubstijl. #}
+{% from '_iconen.html' import icoon %}
+{% macro euro(x) %}&euro; {{ '{:,.0f}'.format(x)|replace(',', '.') }}{% endmacro %}
+{% block titel %}Waar we mis tellen{% endblock %}
+{% block venster_titel %}
+<a href="{{ url_for('tellingen_overzicht') }}" class="cs-terug">{{ icoon('terug') }} Tellingen</a>
+<div class="cs-titel">
+    <h1>Waar we mis tellen</h1>
+    <span class="cs-titel-tekst">Sinds {{ u.vanaf|dag_maand }}, {{ u.tellingen }} {{ 'telling' if u.tellingen == 1 else 'tellingen' }}</span>
+    <div class="cs-rechts">
+        <form method="get" style="margin:0"><select name="weken" onchange="this.form.submit()" aria-label="Periode">
+            {% for w in weken_keuzes %}<option value="{{ w }}" {{ 'selected' if w == weken }}>Laatste {{ w }} weken</option>{% endfor %}
+        </select></form>
+    </div>
+</div>
+{% endblock %}
+{% block inhoud %}
+<div class="cs-scorebord">
+    <div><strong>{{ u.te_veel }}</strong><span>keer meer geteld dan kon{% if u.pct is not none %}, {{ '%.0f'|format(u.pct) }}% van de regels{% endif %}</span></div>
+    <div><strong>{{ u.stuks }}</strong><span>stuks te veel</span></div>
+    <div><strong>{{ euro(u.waarde) }}</strong><span>aan verkoopwaarde: zoveel omzet stond eerder ten onrechte als verkocht</span></div>
+    <div><strong>{{ u.paren|length }}</strong><span>{{ 'paar' if u.paren|length == 1 else 'paren' }} die door elkaar zijn geteld</span></div>
+</div>
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Door elkaar geteld</h2><span class="cs-aantal">{{ u.paren|length }}</span></div>
+    {% if u.paren %}
+    <p class="cs-paneel-tekst cs-zacht">Van het ene product stond er meer dan kon, van het andere ging ongeveer evenveel meer weg dan gewoonlijk.
+        Leg deze bij het tellen apart, of tel ze per doos.</p>
+    <div class="tabel-wrap"><table>
+        <thead><tr><th>Producten</th><th class="cs-getal">Keer</th><th class="cs-getal">Stuks</th><th>Laatst</th></tr></thead>
+        <tbody>{% for v in u.paren %}<tr><td>{{ v.namen|join(' en ') }}</td><td class="cs-getal">{{ v.keer }}</td><td class="cs-getal">{{ v.stuks }}</td>
+            <td class="cs-nowrap"><a href="{{ url_for('telling_detail', telling_id=v.laatst.id) }}">{{ v.laatst.datum|dag_maand }}</a></td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="cs-leeg">Geen producten die duidelijk door elkaar zijn geteld.</p>{% endif %}
+</section>
+
+<section class="cs-paneel">
+    <div class="cs-paneel-kop"><h2>Meer geteld dan kon</h2><span class="cs-aantal">{{ u.producten|length }}</span></div>
+    {% if u.producten %}
+    <p class="cs-paneel-tekst cs-zacht">Een eerdere telling te laag, een levering die niet is ingeboekt, of een verwisselde smaak. De eerste keer dat een product
+        geteld is, telt niet mee.</p>
+    <div class="tabel-wrap"><table>
+        <thead><tr><th>Product</th><th class="cs-getal">Keer te veel</th><th class="cs-getal cs-verberg-smal">Van de tellingen</th><th class="cs-getal">Stuks</th><th class="cs-getal cs-verberg-smal">Waarde</th></tr></thead>
+        <tbody>{% for p in u.producten %}<tr>
+            <td><a href="{{ url_for('product_detail', product_id=p.id) }}">{{ p.naam }}</a> <span class="cs-zacht">{{ p.categorie }}</span></td>
+            <td class="cs-getal{{ ' cs-oranje' if p.fout >= 3 }}">{{ p.fout }}</td>
+            <td class="cs-getal cs-verberg-smal">{{ p.keer }} ({{ '%.0f'|format(p.pct) }}%)</td>
+            <td class="cs-getal cs-nowrap">{{ p.stuks }} <span class="cs-eenheid">{{ p.eenheid }}</span></td>
+            <td class="cs-getal cs-verberg-smal">{{ euro(p.waarde) }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="cs-leeg">In deze periode is nergens meer geteld dan kon.</p>{% endif %}
+</section>
+{% endblock %}

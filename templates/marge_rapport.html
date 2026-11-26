@@ -2,19 +2,24 @@
 {% block titel %}Marge{% endblock %}
 {% macro euro(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
 {% macro pct(x) %}{% if x is none %}&mdash;{% else %}{{ '%.0f'|format(x) }}%{% endif %}{% endmacro %}
-{% block inhoud %}
-<div class="actiebalk">
-    <p class="subtitel" style="margin:0">
-        Wat elk product en elke categorie oplevert, en welke producten het minst verdienen. De omzet komt uit de tellingen; de
-        winst is een schatting met de huidige inkoopprijs.
-    </p>
-    <form method="get" style="margin:0; display:flex; gap:0.4rem; align-items:center">
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+    <div class="cs-rechts">
+        <form method="get" style="margin:0; display:flex; gap:0.4rem; align-items:center">
         <label for="weken" style="margin:0; font-weight:400">Periode</label>
         <select id="weken" name="weken" onchange="this.form.submit()">
             {% for w in weken_keuzes %}<option value="{{ w }}" {{ 'selected' if w == weken }}>Laatste {{ w }} weken</option>{% endfor %}
         </select>
     </form>
+    </div>
 </div>
+{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+        Wat elk product en elke categorie oplevert, en welke producten het minst verdienen. De omzet komt uit de tellingen; de
+        winst is een schatting met de huidige inkoopprijs.
+    </p>
 
 {% set t = rapport.totaal %}
 <div class="statgrid">

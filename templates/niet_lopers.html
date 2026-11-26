@@ -1,19 +1,24 @@
 {% extends "base.html" %}
 {% block titel %}Niet-lopers{% endblock %}
 {% macro euro(x) %}&euro; {{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
-{% block inhoud %}
-<div class="actiebalk">
-    <p class="subtitel" style="margin:0">
-        Producten met voorraad die in deze periode wel zijn geteld, maar niet verkocht. Het geld zit vast in het hok:
-        bestel minder, zet het in de aanbieding of haal het uit het assortiment. De waarde is tegen inkoopprijs.
-    </p>
-    <form method="get" style="margin:0; display:flex; gap:0.4rem; align-items:center">
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+    <div class="cs-rechts">
+        <form method="get" style="margin:0; display:flex; gap:0.4rem; align-items:center">
         <label for="weken" style="margin:0; font-weight:400">Periode</label>
         <select id="weken" name="weken" onchange="this.form.submit()">
             {% for w in weken_keuzes %}<option value="{{ w }}" {{ 'selected' if w == weken }}>Laatste {{ w }} weken</option>{% endfor %}
         </select>
     </form>
+    </div>
 </div>
+{% endblock %}
+{% block inhoud %}
+<p class="subtitel">
+        Producten met voorraad die in deze periode wel zijn geteld, maar niet verkocht. Het geld zit vast in het hok:
+        bestel minder, zet het in de aanbieding of haal het uit het assortiment. De waarde is tegen inkoopprijs.
+    </p>
 
 <div class="statgrid">
     <div class="stat {{ 'waarschuwing' if uitkomst.niet_lopers else '' }}"><div class="getal">{{ uitkomst.niet_lopers|length }}</div><div class="label">Niet verkocht sinds {{ uitkomst.vanaf[8:10] }}-{{ uitkomst.vanaf[5:7] }}</div></div>

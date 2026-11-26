@@ -272,3 +272,25 @@ def test_winterstop_zonder_stop_of_voorspelling(ingelogde_client, db):
     assert ingelogde_client.get("/prognose/winterstop/resultaat").data == b""
     _dicht(db, datetime.now().date() + timedelta(days=8), 30)
     assert "te weinig tellingen" in ingelogde_client.get("/prognose/winterstop/resultaat").data.decode()
+
+
+# ---------- Waar we mis tellen (2.26.0) ----------
+
+
+def test_waar_we_mis_tellen(ingelogde_client, db):
+    import telfouten
+
+    peach, green = _smaak(db, "Bozu Peach", 60), _smaak(db, "Bozu Green", 60)
+    for pid in (peach, green):
+        _tellingen(db, pid, 10)
+    t = db.execute("INSERT INTO tellingen (datum, naam) VALUES (?, 'zebra')", (datetime.now().strftime("%Y-%m-%d %H:%M"),)).lastrowid
+    for pid, geteld, verkocht, correctie in ((peach, 20, 40, 0), (green, 85, 0, 25)):
+        db.execute("""INSERT INTO telling_regels (telling_id, product_id, voorraad_voor, geteld_aantal, verkocht, correctie, verkoopprijs)
+                      VALUES (?, ?, 60, ?, ?, ?, 2)""", (t, pid, geteld, verkocht, correctie))
+    db.commit()
+    u = telfouten.bereken(db, 13, date.today())
+    assert [(p["naam"], p["fout"], p["stuks"]) for p in u["producten"]] == [("Bozu Green", 1, 25)]
+    assert u["te_veel"] == 1 and u["waarde"] == 50.0  # de eerste telling (alles nieuw) telt niet mee
+    assert [(v["namen"], v["keer"]) for v in u["paren"]] == [(("Bozu Green", "Bozu Peach"), 1)]
+    pagina = ingelogde_client.get("/tellingen/telfouten?weken=13").data.decode()
+    assert "Bozu Green en Bozu Peach" in pagina and "Waar we mis tellen" in ingelogde_client.get("/tellingen").data.decode()

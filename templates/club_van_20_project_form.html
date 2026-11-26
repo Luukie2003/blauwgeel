@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}{{ project.naam }} · Projecten{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel"><a href="{{ url_for('club_van_20_projecten') }}">&larr; Terug naar projecten</a></p>
 

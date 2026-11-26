@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Club van 20{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Alle Club van 20-leden met hun betalingen per seizoen (een seizoen loopt van 1 juli t/m 30 juni).

@@ -1,8 +1,12 @@
 {% extends basis_template %}
 {% block titel %}Keuken prijzen{% endblock %}
 {% macro bedrag(x) %}{{ '%.2f'|format(x)|replace('.', ',') }}{% endmacro %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Keuken prijzen</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Keuken prijzen</h1>
 {% include '_keuken_subnav.html' %}
 <p class="subtitel">De verkoopprijs per portie of stuk. Een gewijzigde prijs komt in de prijsgeschiedenis van het product; de tv volgt vanzelf.</p>
 {% if producten %}

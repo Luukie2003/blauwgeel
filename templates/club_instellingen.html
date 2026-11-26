@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Club instellingen{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">Koppel de team-agenda's (iCal-links, bijv. van Sportlink), zodat het dashboard laat zien welke dagen er thuis gespeeld wordt.</p>
 

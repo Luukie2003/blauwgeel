@@ -58,8 +58,8 @@ def test_desktop_modus_toont_wel_voorgesteld_om_te_bestellen(ingelogde_client):
     resp = ingelogde_client.get("/bestellijst")
     body = resp.data.decode()
     assert "Voorgesteld om te bestellen" in body
-    assert "Al besteld? Bestelling klaarzetten" in body
-    assert 'id="suggesties-tabel"' in body
+    assert ">Al besteld?</a>" in body and 'id="bestellen-oproep"' in body  # Nalopen is de route (2.26.0)
+    assert 'id="suggesties-tabel"' in body and '<details class="kaart" id="oude-lijst">' in body
 
 
 def test_desktop_tellen_lopen_controleren_toont_tabel(ingelogde_client, db):

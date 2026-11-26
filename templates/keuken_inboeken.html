@@ -1,7 +1,11 @@
 {% extends basis_template %}
 {% block titel %}Keuken inboeken{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>Keuken inboeken</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
-<h1>Keuken inboeken</h1>
 {% include '_keuken_subnav.html' %}
 <p class="subtitel">
     Scan wat er binnenkomt: elke scan is een zak of doos, en de site weet per merk hoeveel erin zit. Zonder barcode vul

@@ -6,9 +6,7 @@
     <span class="cs-titel-tekst">Bestel wat nodig is, of boek in wat er binnenkomt.</span>
     <div class="cs-rechts">
         {% if suggesties %}<a href="{{ url_for('bestellijst_pdf_route') }}" class="btn btn-rand">Bestellijst (PDF)</a>{% endif %}
-        <a href="{{ url_for('bestelling_nieuw') }}" class="btn btn-rand">Al besteld? Bestelling klaarzetten</a>
-        {# Zoals op de handterminal: per product de colli kiezen en afvinken, dan het besteloverzicht (2.8.0). #}
-        <a href="{{ url_for('bestellijst_nalopen') }}" class="btn btn-geel">Nalopen en klaarzetten</a>
+        <a href="{{ url_for('bestelling_nieuw') }}" class="btn btn-rand" title="Al telefonisch of in de webshop besteld? Leg de bestelling dan hier vast">Al besteld?</a>
     </div>
 </div>
 {% endblock %}
@@ -21,6 +19,16 @@
 <span class="badge badge-in" title="Zelf gekozen bij het product{% if keuze.door %} door {{ keuze.door }}{% endif %}; geldt tot het besteld is">{{ 'niet bestellen' if keuze.eenheden == 0 else 'zelf gekozen' }}{% if keuze.door %} ({{ keuze.door }}){% endif %}</span>
 {% endif %}
 {%- endmacro %}
+{% set te_doen = (suggesties|length) + (manco_extra|length) + (gekozen_extra|length) %}
+<section class="cs-paneel" id="bestellen-oproep">
+    <div class="cs-paneel-kop">
+        <h2>Bestellen</h2>
+        <span class="cs-aantal">{% if te_doen %}{{ te_doen }} {{ 'product' if te_doen == 1 else 'producten' }} om na te lopen{% else %}niets onder het minimum{% endif %}</span>
+        <div class="cs-rechts"><a href="{{ url_for('bestellijst_nalopen') }}" class="btn btn-geel">Nalopen en klaarzetten</a></div>
+    </div>
+    <p class="cs-paneel-tekst cs-zacht">Loop de lijst na zoals op de handterminal: per product de dozen of kratten kiezen en afvinken, met de prognose en wat er
+        nu waarschijnlijk ligt. Daarna staat per leverancier de bestelling klaar, met het overzicht voor de webshop.</p>
+</section>
 
 
 <div class="kaart">
@@ -124,9 +132,10 @@
 {% endif %}
 
 
-<div class="kaart">
-    <h2>Voorgesteld om te bestellen</h2>
-    <p class="tekst-zacht" style="margin-top:-0.4rem">
+{# Eén manier van bestellen (2.26.0): Bestellijst nalopen is de route; deze tabel is er nog voor wie alles in één keer wil zien. #}
+<details class="kaart" id="oude-lijst">
+    <summary style="cursor:pointer"><strong>Voorgesteld om te bestellen</strong> <span class="tekst-zacht">&middot; alles in één tabel{% if suggesties %}, {{ suggesties|length }} onder het minimum{% endif %}</span></summary>
+    <p class="tekst-zacht" style="margin-top:0.6rem">
         Liever product voor product, zoals op de handterminal? <a href="{{ url_for('bestellijst_nalopen') }}">Loop de bestellijst na</a>.
         Wat onder het minimum zit, en wat volgens de prognose waarschijnlijk opraakt vóór de levering ná deze bestelling
         (per leverancier, uit de besteldagen; anders de komende 7 dagen). Thuiswedstrijden, trainingsavonden en het weer
@@ -502,7 +511,7 @@
     {% else %}
     <p class="leeg">Niets nodig — alle voorraad zit boven het minimum.</p>
     {% endif %}
-</div>
+</details>
 
 {% if meldingen.producten or meldingen.teksten %}
 <div class="kaart">

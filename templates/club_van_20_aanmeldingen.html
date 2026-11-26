@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block titel %}Aanmeldingen · Club van 20{% endblock %}
+{% block venster_titel %}
+<div class="cs-titel">
+    <h1>{{ self.titel() }}</h1>
+</div>
+{% endblock %}
 {% block inhoud %}
 <p class="subtitel">
     Nieuwe aanmeldingen via de website staan hier als <strong>concept</strong>. Controleer eerst de betaling
